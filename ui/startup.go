@@ -13,7 +13,10 @@ import (
 	"unicode/utf8"
 )
 
-var ramp []string
+var (
+	ramp []string
+	lastWidth float64
+)
 
 func updateStartup(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
@@ -122,8 +125,9 @@ func progressView(m NeteaseModel) string {
 	width := float64(WindowWidth - 2)
 
 	startColor, endColor := GetRandomRgbColor(true)
-	if len(ramp) == 0 {
+	if width != lastWidth {
 		ramp = makeRamp(startColor, endColor, width)
+		lastWidth = width
 	}
 
 	fullSize := int(math.Round(width*m.loadedPercent))

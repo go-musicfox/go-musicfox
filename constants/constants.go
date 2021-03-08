@@ -28,4 +28,3 @@ const AppHelpTemplate = `%s
 
 Use "<cyan>{$binName} {COMMAND} -h</>" for more information about a command
 `
-

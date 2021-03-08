@@ -30,7 +30,6 @@ func (m NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		WindowHeight = msg.Height
 		WindowWidth  = msg.Width
-		//return m,
 	}
 
 	// Hand off the message and model to the approprate update function for the

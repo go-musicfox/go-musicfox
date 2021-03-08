@@ -9,3 +9,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/muesli/termenv v0.7.4
 )
+
+replace (
+	github.com/anhoder/bubbletea => ../bubbletea
+)
