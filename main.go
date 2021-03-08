@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/anhoder/go-musicfox/commands"
 	"github.com/anhoder/go-musicfox/constants"
+	"github.com/anhoder/go-musicfox/ui"
 	"github.com/anhoder/go-musicfox/utils"
 	"github.com/gookit/gcli/v2"
 )
@@ -14,23 +16,15 @@ func main() {
 	app.Description = constants.AppDescription
 
 	logo := utils.GetAlphaAscii(app.Name)
-	randomColor := utils.GetRandomColor()
+	randomColor := ui.GetRandomLogoColor()
+	logoColorful := ui.SetFgStyle(logo, randomColor)
 
-	gcli.AppHelpTemplate = fmt.Sprintf(constants.AppHelpTemplate, randomColor, utils.GetAlphaAscii(app.Name))
-	app.Logo.Text = logo
-	app.Logo.Style = randomColor
+	gcli.AppHelpTemplate = fmt.Sprintf(constants.AppHelpTemplate, logoColorful)
+	app.Logo.Text = logoColorful
 
-	app.Add(&gcli.Command{
-		Name: "player",
-		// allow color tag and {$cmd} will be replace to 'demo'
-		UseFor: "this is a description <info>message</> for command",
-		Aliases: []string{"dm"},
-		Func: func (cmd *gcli.Command, args []string) error {
-			gcli.Println("hello, in the demo command")
-			return nil
-		},
-	})
-	app.DefaultCommand("player")
+	playerCommand := commands.NewPlayerCommand()
+	app.Add(playerCommand)
+	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()
 }

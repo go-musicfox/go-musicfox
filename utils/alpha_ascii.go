@@ -540,8 +540,16 @@ var alphaAscii = map[rune]string{
 `,
 }
 
+const AsciiHeight = 7
+
+var cache = map[string]string{}
+
 // GetAlphaAscii get ascii string
 func GetAlphaAscii(str string) string {
+	if _, exists := cache[str]; exists {
+		return cache[str]
+	}
+
 	upperStr := strings.ToUpper(str)
 
 	var format [][]string
@@ -552,7 +560,7 @@ func GetAlphaAscii(str string) string {
 	}
 
 	var lines []string
-	for i := 0; i < 7; i++ {
+	for i := 0; i < AsciiHeight; i++ {
 		line := ""
 		for _, item := range format {
 			if i > len(item) {
@@ -563,5 +571,7 @@ func GetAlphaAscii(str string) string {
 		lines = append(lines, line)
 	}
 
-	return strings.Join(lines, "\n")
+	cache[str] = strings.Join(lines, "\n")
+
+	return cache[str]
 }
