@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/anhoder/musicfox/constants"
-	"github.com/anhoder/musicfox/utils"
+	"github.com/anhoder/go-musicfox/constants"
+	"github.com/anhoder/go-musicfox/utils"
 	"github.com/gookit/gcli/v2"
 )
 

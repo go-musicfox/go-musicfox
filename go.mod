@@ -1,4 +1,4 @@
-module github.com/anhoder/musicfox
+module github.com/anhoder/go-musicfox
 
 go 1.16
 
