@@ -18,6 +18,7 @@ var (
 	lastWidth float64
 )
 
+// startup func
 func updateStartup(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 
@@ -38,19 +39,21 @@ func updateStartup(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
 		//	return m, frame()
 		//}
 
-	case tickMsg:
+	case tickStartupMsg:
 		if m.loadedDuration >= m.TotalDuration {
-			m.Quitting = true
-			return m, tea.Quit
+			m.Loaded = true
+			termenv.ClearScreen()
+			return m, tickMainUI(time.Nanosecond)
 		}
 		m.loadedDuration += constants.StartupTickDuration
 		m.loadedPercent = ease.OutBounce(float64(m.loadedDuration) / float64(m.TotalDuration))
-		return m, tick(constants.StartupTickDuration)
+		return m, tickStartup(constants.StartupTickDuration)
 	}
 
 	return m, nil
 }
 
+// startup view
 func startupView(m NeteaseModel) string {
 
 	if WindowWidth <= 0 || WindowHeight <= 0 {
@@ -75,10 +78,6 @@ func startupView(m NeteaseModel) string {
 	view := fmt.Sprintf("%s%s\n\n%s\n\n%s%s", strings.Repeat("\n", top-1), logo, tips, progress, strings.Repeat("\n", buttom))
 
 	return view
-}
-
-func startupResize() {
-
 }
 
 // get logo

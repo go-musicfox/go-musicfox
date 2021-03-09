@@ -14,7 +14,7 @@ type NeteaseModel struct {
 }
 
 func (m NeteaseModel) Init() tea.Cmd {
-	return tick(time.Millisecond)
+	return tickStartup(time.Nanosecond)
 }
 
 func (m NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -37,19 +37,18 @@ func (m NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !m.Loaded {
 		return updateStartup(msg, m)
 	}
-	return m, tea.Quit
+
+	return updateMainUI(msg, m)
 }
 
 func (m NeteaseModel) View() string {
-	var s string
 	if m.Quitting {
 		return ""
 	}
 	if !m.Loaded {
-		s = startupView(m)
-	} else {
-		//s = chosenView(m)
+		return startupView(m)
 	}
-	return s
+
+	return mainUIView(m)
 }
 
