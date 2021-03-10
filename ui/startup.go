@@ -18,8 +18,16 @@ var (
 	lastWidth float64
 )
 
+type startupModel struct {
+	TotalDuration  time.Duration
+	loadedDuration time.Duration
+	loadedPercent  float64
+	loaded         bool
+	quitting       bool
+}
+
 // startup func
-func updateStartup(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
+func updateStartup(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 
 	case tea.KeyMsg:
@@ -41,7 +49,7 @@ func updateStartup(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
 
 	case tickStartupMsg:
 		if m.loadedDuration >= m.TotalDuration {
-			m.Loaded = true
+			m.loaded = true
 			termenv.ClearScreen()
 			return m, tickMainUI(time.Nanosecond)
 		}
@@ -54,9 +62,9 @@ func updateStartup(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
 }
 
 // startup view
-func startupView(m NeteaseModel) string {
+func startupView(m neteaseModel) string {
 
-	if WindowWidth <= 0 || WindowHeight <= 0 {
+	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
 	}
 	
@@ -65,11 +73,11 @@ func startupView(m NeteaseModel) string {
 	progressHeight := 1
 	height := utils.AsciiHeight + blankLine + tipsHeight + blankLine + progressHeight
 	var top, buttom int
-	if WindowHeight - height > 0 {
-		top = (WindowHeight - height) / 2
+	if m.WindowHeight - height > 0 {
+		top = (m.WindowHeight - height) / 2
 	}
-	if WindowHeight - top - height > 0 {
-		buttom = WindowHeight - top - height
+	if m.WindowHeight - top - height > 0 {
+		buttom = m.WindowHeight - top - height
 	}
 
 	logo := logoView(m)
@@ -81,8 +89,8 @@ func startupView(m NeteaseModel) string {
 }
 
 // get logo
-func logoView(m NeteaseModel) string {
-	if WindowWidth <= 0 || WindowHeight <= 0 {
+func logoView(m neteaseModel) string {
+	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
 	}
 
@@ -93,8 +101,8 @@ func logoView(m NeteaseModel) string {
 	}
 
 	var left int
-	if WindowWidth - logoWidth > 0 {
-		left = (WindowWidth - logoWidth) / 2
+	if m.WindowWidth - logoWidth > 0 {
+		left = (m.WindowWidth - logoWidth) / 2
 	}
 
 	leftSpace := strings.Repeat(" ", left)
@@ -106,11 +114,11 @@ func logoView(m NeteaseModel) string {
 }
 
 // get tips
-func tipsView(m NeteaseModel) string {
+func tipsView(m neteaseModel) string {
 	example := "Enter after 11.1 seconds..."
 	var left int
-	if WindowWidth - len(example) > 0 {
-		left = (WindowWidth - len(example)) / 2
+	if m.WindowWidth - len(example) > 0 {
+		left = (m.WindowWidth - len(example)) / 2
 	}
 	tips := fmt.Sprintf("%sEnter after %.1f seconds...",
 		strings.Repeat(" ", left),
@@ -120,8 +128,8 @@ func tipsView(m NeteaseModel) string {
 }
 
 // get progress
-func progressView(m NeteaseModel) string {
-	width := float64(WindowWidth - 2)
+func progressView(m neteaseModel) string {
+	width := float64(m.WindowWidth - 2)
 
 	startColor, endColor := GetRandomRgbColor(true)
 	if width != lastWidth {

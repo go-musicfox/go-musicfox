@@ -10,8 +10,6 @@ import (
 )
 
 var (
-	WindowWidth  = 0
-	WindowHeight = 0
 	termProfile  = termenv.ColorProfile()
 	primaryColor termenv.Color
 )

@@ -6,7 +6,7 @@ import (
 )
 
 // update main ui
-func updateMainUI(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
+func updateMainUI(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
@@ -22,10 +22,10 @@ func updateMainUI(msg tea.Msg, m NeteaseModel) (tea.Model, tea.Cmd) {
 }
 
 // get main ui view
-func mainUIView(m NeteaseModel) string {
+func mainUIView(m neteaseModel) string {
 	return "test"
 }
 
-func keyMsgHandle(msg tea.KeyMsg, m NeteaseModel) (tea.Model, tea.Cmd) {
+func keyMsgHandle(msg tea.KeyMsg, m neteaseModel) (tea.Model, tea.Cmd) {
 	return m, nil
 }
