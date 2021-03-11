@@ -129,7 +129,7 @@ func tipsView(m neteaseModel) string {
 
 // get progress
 func progressView(m neteaseModel) string {
-	width := float64(m.WindowWidth - 2)
+	width := float64(m.WindowWidth)
 
 	startColor, endColor := GetRandomRgbColor(true)
 	if width != lastWidth {
