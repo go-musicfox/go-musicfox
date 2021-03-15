@@ -2,6 +2,7 @@ package ui
 
 import (
 	tea "github.com/anhoder/bubbletea"
+	"github.com/anhoder/go-musicfox/constants"
 	"time"
 )
 
@@ -24,7 +25,11 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *neteaseModel) {
 }
 
 func (m neteaseModel) Init() tea.Cmd {
-	return tickStartup(time.Nanosecond)
+	if constants.AppShowStartup {
+		return tickStartup(time.Nanosecond)
+	}
+
+	return tickMainUI(time.Nanosecond)
 }
 
 func (m neteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -44,7 +49,7 @@ func (m neteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Hand off the message and model to the approprate update function for the
 	// appropriate view based on the current state.
-	if !m.loaded {
+	if constants.AppShowStartup && !m.loaded {
 		return updateStartup(msg, m)
 	}
 
@@ -55,7 +60,7 @@ func (m neteaseModel) View() string {
 	if m.quitting {
 		return ""
 	}
-	if !m.loaded {
+	if constants.AppShowStartup && !m.loaded {
 		return startupView(m)
 	}
 

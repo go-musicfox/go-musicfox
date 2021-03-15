@@ -2,7 +2,10 @@ package ui
 
 import (
 	tea "github.com/anhoder/bubbletea"
+	"github.com/anhoder/go-musicfox/constants"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type mainMenuModel struct {
@@ -27,9 +30,30 @@ func updateMainUI(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
 
 // get main ui view
 func mainUIView(m neteaseModel) string {
-	//var builder strings.Builder
-	//builder.WriteString()
-	return "test"
+	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
+		return ""
+	}
+
+	var builder strings.Builder
+
+	// title
+	if constants.MainShowTitle {
+		var titleBuilder strings.Builder
+		titleLen := utf8.RuneCountInString(constants.AppName)+2
+		prefixLen := (m.WindowWidth-titleLen)/2
+		suffixLen := m.WindowWidth-prefixLen-titleLen
+		titleBuilder.WriteString(strings.Repeat("─", prefixLen))
+		titleBuilder.WriteString(" ")
+		titleBuilder.WriteString(strings.ToTitle(constants.AppName))
+		titleBuilder.WriteString(" ")
+		titleBuilder.WriteString(strings.Repeat("─", suffixLen))
+
+		builder.WriteString(SetFgStyle(titleBuilder.String(), primaryColor))
+	}
+
+	//
+
+	return builder.String()
 }
 
 func keyMsgHandle(msg tea.KeyMsg, m neteaseModel) (tea.Model, tea.Cmd) {

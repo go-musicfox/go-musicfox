@@ -6,10 +6,13 @@ const AppName = "musicfox"
 const AppVersion = "2.0.0"
 const AppVersionInt = 20000
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
+const AppShowStartup = false
 const ProgressFullChar = '#'
 const ProgressEmptyChar = ' '
 const StartupLoadingDuration = time.Second * 2
 const StartupTickDuration = time.Millisecond * 10
+
+const MainShowTitle = true
 
 const AppHelpTemplate = `%s
 
