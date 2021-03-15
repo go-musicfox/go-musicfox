@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+type mainMenuModel struct {
+
+}
+
 // update main ui
 func updateMainUI(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -23,6 +27,8 @@ func updateMainUI(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
 
 // get main ui view
 func mainUIView(m neteaseModel) string {
+	//var builder strings.Builder
+	//builder.WriteString()
 	return "test"
 }
 

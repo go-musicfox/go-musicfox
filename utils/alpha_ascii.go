@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -561,14 +560,16 @@ func GetAlphaAscii(str string) string {
 
 	var lines []string
 	for i := 0; i < AsciiHeight; i++ {
-		line := ""
+		var line strings.Builder
 		for _, item := range format {
 			if i > len(item) {
 				continue
 			}
-			line = fmt.Sprintf("%s %s", line, item[i])
+			line.WriteString(" ")
+			line.WriteString(item[i])
 		}
-		lines = append(lines, line)
+		lines = append(lines, line.String())
+		line.Reset()
 	}
 
 	cache[str] = strings.Join(lines, "\n")

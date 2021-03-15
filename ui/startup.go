@@ -72,20 +72,24 @@ func startupView(m neteaseModel) string {
 	tipsHeight := 1
 	progressHeight := 1
 	height := utils.AsciiHeight + blankLine + tipsHeight + blankLine + progressHeight
-	var top, buttom int
+	var top, bottom int
 	if m.WindowHeight - height > 0 {
 		top = (m.WindowHeight - height) / 2
 	}
 	if m.WindowHeight - top - height > 0 {
-		buttom = m.WindowHeight - top - height
+		bottom = m.WindowHeight - top - height
 	}
 
-	logo := logoView(m)
-	tips := tipsView(m)
-	progress := progressView(m)
-	view := fmt.Sprintf("%s%s\n\n%s\n\n%s%s", strings.Repeat("\n", top-1), logo, tips, progress, strings.Repeat("\n", buttom))
+	var uiBuilder strings.Builder
+	uiBuilder.WriteString(strings.Repeat("\n", top-1))
+	uiBuilder.WriteString(logoView(m))
+	uiBuilder.WriteString("\n\n")
+	uiBuilder.WriteString(tipsView(m))
+	uiBuilder.WriteString("\n\n")
+	uiBuilder.WriteString(progressView(m))
+	uiBuilder.WriteString(strings.Repeat("\n", bottom))
 
-	return view
+	return uiBuilder.String()
 }
 
 // get logo
