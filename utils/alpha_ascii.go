@@ -541,13 +541,8 @@ var alphaAscii = map[rune]string{
 
 const AsciiHeight = 7
 
-var cache = map[string]string{}
-
 // GetAlphaAscii get ascii string
 func GetAlphaAscii(str string) string {
-	if _, exists := cache[str]; exists {
-		return cache[str]
-	}
 
 	upperStr := strings.ToUpper(str)
 
@@ -572,7 +567,5 @@ func GetAlphaAscii(str string) string {
 		line.Reset()
 	}
 
-	cache[str] = strings.Join(lines, "\n")
-
-	return cache[str]
+	return strings.Join(lines, "\n")
 }

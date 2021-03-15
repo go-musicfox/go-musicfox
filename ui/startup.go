@@ -14,8 +14,10 @@ import (
 )
 
 var (
-	ramp []string
-	lastWidth float64
+	progressRamp       []string
+	progressLastWidth  float64
+	progressStartColor string
+	progressEndColor   string
 )
 
 type startupModel struct {
@@ -109,12 +111,15 @@ func logoView(m neteaseModel) string {
 		left = (m.WindowWidth - logoWidth) / 2
 	}
 
+	var logoBuilder strings.Builder
 	leftSpace := strings.Repeat(" ", left)
 	lines := strings.Split(originLogo, "\n")
-	for i := range lines {
-		lines[i] = leftSpace + lines[i]
+	for _, line := range lines {
+		logoBuilder.WriteString(leftSpace)
+		logoBuilder.WriteString(line)
+		logoBuilder.WriteString("\n")
 	}
-	return SetFgStyle(strings.Join(lines, "\n"), primaryColor)
+	return SetFgStyle(logoBuilder.String(), primaryColor)
 }
 
 // get tips
@@ -135,16 +140,18 @@ func tipsView(m neteaseModel) string {
 func progressView(m neteaseModel) string {
 	width := float64(m.WindowWidth)
 
-	startColor, endColor := GetRandomRgbColor(true)
-	if width != lastWidth {
-		ramp = makeRamp(startColor, endColor, width)
-		lastWidth = width
+	if progressStartColor == "" || progressEndColor == "" {
+		progressStartColor, progressEndColor = GetRandomRgbColor(true)
+	}
+	if width != progressLastWidth {
+		progressRamp = makeRamp(progressStartColor, progressEndColor, width)
+		progressLastWidth = width
 	}
 
 	fullSize := int(math.Round(width*m.loadedPercent))
 	var fullCells string
 	for i := 0; i < fullSize; i++ {
-		fullCells += termenv.String(string(constants.ProgressFullChar)).Foreground(termProfile.Color(ramp[i])).String()
+		fullCells += termenv.String(string(constants.ProgressFullChar)).Foreground(termProfile.Color(progressRamp[i])).String()
 	}
 
 	emptySize := int(width) - fullSize
