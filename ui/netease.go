@@ -14,6 +14,7 @@ type neteaseModel struct {
 	startupModel
 
 	// main ui
+	mainMenuModel
 }
 
 // NewNeteaseModel get netease model
