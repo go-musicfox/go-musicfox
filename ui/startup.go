@@ -29,7 +29,7 @@ type startupModel struct {
 }
 
 // startup func
-func updateStartup(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
+func updateStartup(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 
 	case tea.KeyMsg:
@@ -64,7 +64,7 @@ func updateStartup(msg tea.Msg, m neteaseModel) (tea.Model, tea.Cmd) {
 }
 
 // startup view
-func startupView(m neteaseModel) string {
+func startupView(m *neteaseModel) string {
 
 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
@@ -95,7 +95,7 @@ func startupView(m neteaseModel) string {
 }
 
 // get logo
-func logoView(m neteaseModel) string {
+func logoView(m *neteaseModel) string {
 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
 	}
@@ -123,7 +123,7 @@ func logoView(m neteaseModel) string {
 }
 
 // get tips
-func tipsView(m neteaseModel) string {
+func tipsView(m *neteaseModel) string {
 	example := "Enter after 11.1 seconds..."
 	var left int
 	if m.WindowWidth - len(example) > 0 {
@@ -137,7 +137,7 @@ func tipsView(m neteaseModel) string {
 }
 
 // get progress
-func progressView(m neteaseModel) string {
+func progressView(m *neteaseModel) string {
 	width := float64(m.WindowWidth)
 
 	if progressStartColor == "" || progressEndColor == "" {

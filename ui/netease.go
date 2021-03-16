@@ -21,11 +21,12 @@ type neteaseModel struct {
 func NewNeteaseModel(loadingDuration time.Duration) (m *neteaseModel) {
 	m = new(neteaseModel)
 	m.TotalDuration = loadingDuration
+	m.menuTitle = "网易云音乐"
 
 	return
 }
 
-func (m neteaseModel) Init() tea.Cmd {
+func (m *neteaseModel) Init() tea.Cmd {
 	if constants.AppShowStartup {
 		return tickStartup(time.Nanosecond)
 	}
@@ -33,31 +34,34 @@ func (m neteaseModel) Init() tea.Cmd {
 	return tickMainUI(time.Nanosecond)
 }
 
-func (m neteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *neteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Make sure these keys always quit
-	switch msg := msg.(type) {
+	switch msgWithType := msg.(type) {
 	case tea.KeyMsg:
-		k := msg.String()
+		k := msgWithType.String()
 		if k == "q" || k == "esc" || k == "ctrl+c" {
 			m.quitting = true
 			return m, tea.Quit
 		}
 
 	case tea.WindowSizeMsg:
-		m.WindowHeight = msg.Height
-		m.WindowWidth  = msg.Width
+		m.WindowHeight = msgWithType.Height
+		m.WindowWidth  = msgWithType.Width
 	}
 
 	// Hand off the message and model to the approprate update function for the
 	// appropriate view based on the current state.
 	if constants.AppShowStartup && !m.loaded {
+		if _, ok := msg.(tea.WindowSizeMsg); ok {
+			updateMainUI(msg, m)
+		}
 		return updateStartup(msg, m)
 	}
 
 	return updateMainUI(msg, m)
 }
 
-func (m neteaseModel) View() string {
+func (m *neteaseModel) View() string {
 	if m.quitting {
 		return ""
 	}
