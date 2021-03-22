@@ -13,6 +13,8 @@ const StartupLoadingDuration = time.Second * 2
 const StartupTickDuration = time.Millisecond * 10
 
 const MainShowTitle = true
+const MainMenuUnselectedColor = "#d7d7d7"
+const MainTickDuration = time.Millisecond * 50
 
 const AppHelpTemplate = `%s
 

@@ -7,8 +7,9 @@ import (
 )
 
 type neteaseModel struct {
-    WindowWidth  int
-    WindowHeight int
+    WindowWidth    int
+    WindowHeight   int
+    isListeningKey bool
 
     // startup
     startupModel
@@ -22,6 +23,28 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *neteaseModel) {
     m = new(neteaseModel)
     m.TotalDuration = loadingDuration
     m.menuTitle = "网易云音乐"
+    m.isListeningKey = !constants.AppShowStartup
+
+    m.mainMenuModel.menuList = []string{
+        "测试1",
+        "测试2",
+        "测试3",
+        "测试1",
+        "测试2",
+        "测试3",
+        "测试1",
+        "测试2",
+        "测试3",
+        "测试1",
+        "测试2",
+        "测试3",
+        "测试1",
+        "测试2",
+        "测试3",
+    }
+    m.mainMenuModel.menuCurPage = 1
+    m.mainMenuModel.menuPageSize = 10
+    m.mainMenuModel.selectedIndex = 0
 
     return
 }

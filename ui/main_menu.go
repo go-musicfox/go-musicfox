@@ -1,6 +1,7 @@
 package ui
 
 import (
+    "fmt"
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/go-musicfox/constants"
     "github.com/muesli/termenv"
@@ -26,6 +27,11 @@ type mainMenuModel struct {
 
     menuList      []string // 菜单列表
     selectedIndex int	   // 当前选中的菜单index
+
+    beforePrePageHook  func(*neteaseModel) // 切换上一页前的Hook
+    beforeNextPageHook func(*neteaseModel) // 切换下一页前的Hook
+    bottomOutHook      func(*neteaseModel) // 触底Hook
+    topOutHook         func(*neteaseModel) // 触顶Hook
 }
 
 // update main ui
@@ -37,7 +43,7 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
 
     case tickMainUIMsg:
         // every second update ui
-        return m, tickMainUI(time.Second)
+        return m, tickMainUI(constants.MainTickDuration)
 
     case tea.WindowSizeMsg:
         m.doubleColumn = msg.Width>=80
@@ -89,6 +95,7 @@ func mainUIView(m *neteaseModel) string {
     builder.WriteString(menuTitleView(m, &top))
 
     // menu list
+    builder.WriteString(menuListView(m, &top))
 
 
     return builder.String()
@@ -129,25 +136,73 @@ func menuTitleView(m *neteaseModel, top *int) string {
     return menuTitleBuilder.String()
 }
 
+// 菜单列表
 func menuListView(m *neteaseModel, top *int) string {
     var menuListBuilder strings.Builder
     menus := getCurPageMenus(m)
-    var lines int
+    var lines, maxLines int
     if m.doubleColumn {
         lines = int(math.Ceil(float64(len(menus))/2))
+        maxLines = int(math.Ceil(float64(m.menuPageSize)/2))
     } else {
         lines = len(menus)
+        maxLines = m.menuPageSize
     }
 
     menuListBuilder.WriteString(strings.Repeat("\n", m.menuStartRow-*top))
 
+    var str string
     for i := 0; i < lines; i++ {
-        if m.doubleColumn {
-
-        }
+        str = menuLineView(m, i)
+        menuListBuilder.WriteString(str)
+        menuListBuilder.WriteString("\n")
+    }
+    if maxLines > lines {
+        menuListBuilder.WriteString(strings.Repeat(" ", m.WindowWidth - m.menuStartColumn))
+        menuListBuilder.WriteString("\n")
     }
 
     return menuListBuilder.String()
+}
+
+// 菜单Line
+func menuLineView(m *neteaseModel, line int) string {
+    var menuLineBuilder strings.Builder
+    var index int
+    if m.doubleColumn {
+        index = line * 2 + (m.menuCurPage - 1) * m.menuPageSize
+    } else {
+        index = line + (m.menuCurPage - 1) * m.menuPageSize
+    }
+    if index > len(m.menuList) - 1 {
+        index = len(m.menuList) - 1
+    }
+    menuLineBuilder.WriteString(strings.Repeat(" ", m.menuStartColumn - 4))
+    menuLineBuilder.WriteString(menuItemView(m, index))
+    if m.doubleColumn && index < len(m.menuList) - 1 {
+        menuLineBuilder.WriteString(strings.Repeat(" ", 20))
+        menuLineBuilder.WriteString(menuItemView(m, index + 1))
+    }
+
+    return menuLineBuilder.String()
+}
+
+// 菜单Item
+func menuItemView(m *neteaseModel, index int) string {
+    var menuItemBuilder strings.Builder
+
+    menuName := []rune(m.menuList[index])
+    if len(menuName) > 20 {
+        menuName = menuName[:20]
+    }
+
+    if index == m.selectedIndex {
+        menuItemBuilder.WriteString(SetFgStyle(fmt.Sprintf(" => %d. %s", index, string(menuName)), primaryColor))
+    } else {
+        menuItemBuilder.WriteString(SetFgStyle(fmt.Sprintf("    %d. %s", index, string(menuName)), termProfile.Color(constants.MainMenuUnselectedColor)))
+    }
+
+    return menuItemBuilder.String()
 }
 
 // 获取当前页的菜单
@@ -160,5 +215,20 @@ func getCurPageMenus(m *neteaseModel) []string {
 
 // key handle
 func keyMsgHandle(msg tea.KeyMsg, m *neteaseModel) (tea.Model, tea.Cmd) {
-    return m, nil
+    if !m.isListeningKey {
+        return m, nil
+    }
+    switch msg.String() {
+    case "j", "down":
+       moveDown(m)
+    case "k", "up":
+       moveUp(m)
+    case "h", "left":
+        moveLeft(m)
+    case "l", "right":
+        moveRight(m)
+    case "enter":
+    }
+
+    return m, tickMainUI(time.Nanosecond)
 }

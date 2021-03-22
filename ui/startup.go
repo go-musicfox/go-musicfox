@@ -32,26 +32,10 @@ type startupModel struct {
 func updateStartup(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
     switch msg.(type) {
 
-    case tea.KeyMsg:
-        //switch msg.String() {
-        //case "j", "down":
-        //	m.Choice += 1
-        //	if m.Choice > 3 {
-        //		m.Choice = 3
-        //	}
-        //case "k", "up":
-        //	m.Choice -= 1
-        //	if m.Choice < 0 {
-        //		m.Choice = 0
-        //	}
-        //case "enter":
-        //	m.Chosen = true
-        //	return m, frame()
-        //}
-
     case tickStartupMsg:
         if m.loadedDuration >= m.TotalDuration {
             m.loaded = true
+            m.isListeningKey = true
             termenv.ClearScreen()
             return m, tickMainUI(time.Nanosecond)
         }
