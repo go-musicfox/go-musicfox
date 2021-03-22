@@ -14,7 +14,7 @@ const StartupTickDuration = time.Millisecond * 15
 
 const MainShowTitle = true
 const MainMenuUnselectedColor = "#d7d7d7"
-const MainTickDuration = time.Millisecond * 1000
+const MainLoadingText = " [加载中...]"
 
 const AppHelpTemplate = `%s
 

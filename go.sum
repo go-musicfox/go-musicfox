@@ -1,3 +1,4 @@
+github.com/anhoder/bubbles v0.7.8 h1:qr68Y2apS1HUdWboxmJq+WbXJWrcpP7QNkimMZ0NP4o=
 github.com/anhoder/bubbles v0.7.8/go.mod h1:TIbWUkJn7FL3JAGNpRx9BVJ7NPjGok7Ex0Nq3isfcAo=
 github.com/anhoder/bubbletea v0.12.6/go.mod h1:LB9GWT1WBmW8zWn4TbaIPsbKAkDouFhDAODhBNujZpM=
 github.com/anhoder/bubbletea v0.12.8 h1:+xOy3NhU96PlPK5qX3FfumE0v7rxsjhxAqZOeaGNpos=
@@ -35,6 +36,7 @@ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJ
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.1 h1:9f412s+6RmYXLWZSEzVVgPGK7C2PphHj5RJrvfx9AWI=
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
+github.com/muesli/reflow v0.2.1-0.20210115123740-9e1d0d53df68 h1:y1p/ycavWjGT9FnmSjdbWUlLGvcxrY0Rw3ATltrxOhk=
 github.com/muesli/reflow v0.2.1-0.20210115123740-9e1d0d53df68/go.mod h1:Xk+z4oIWdQqJzsxyjgl3P22oYZnHdZ8FFTHAQQt5BMQ=
 github.com/muesli/termenv v0.7.4 h1:/pBqvU5CpkY53tU0vVn+xgs2ZTX63aH5nY+SSps5Xa8=
 github.com/muesli/termenv v0.7.4/go.mod h1:pZ7qY9l3F7e5xsAOS0zCew2tME+p7bWeBkotCEcIIcc=

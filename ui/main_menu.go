@@ -43,8 +43,7 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
         return keyMsgHandle(msg, m)
 
     case tickMainUIMsg:
-        // every second update ui
-        return m, tickMainUI(constants.MainTickDuration)
+        return m, nil
 
     case tea.WindowSizeMsg:
         m.doubleColumn = msg.Width>=80
@@ -67,7 +66,7 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
             }
         } else if !constants.MainShowTitle && m.menuStartRow > 1 {
             if m.menuStartRow > 3 {
-                m.menuTitleStartColumn = m.menuStartRow - 3
+                m.menuTitleStartRow = m.menuStartRow - 3
             }
         }
 

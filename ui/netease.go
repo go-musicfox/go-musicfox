@@ -45,6 +45,9 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *neteaseModel) {
     m.mainMenuModel.menuCurPage = 1
     m.mainMenuModel.menuPageSize = 10
     m.mainMenuModel.selectedIndex = 0
+    m.mainMenuModel.bottomOutHook = func(model *neteaseModel) {
+        time.Sleep(time.Second * 2)
+    }
 
     return
 }
