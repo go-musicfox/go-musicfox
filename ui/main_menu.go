@@ -28,10 +28,11 @@ type mainMenuModel struct {
     menuList      []string // 菜单列表
     selectedIndex int	   // 当前选中的菜单index
 
-    beforePrePageHook  func(*neteaseModel) // 切换上一页前的Hook
-    beforeNextPageHook func(*neteaseModel) // 切换下一页前的Hook
-    bottomOutHook      func(*neteaseModel) // 触底Hook
-    topOutHook         func(*neteaseModel) // 触顶Hook
+    beforePrePageHook   func(*neteaseModel) // 切换上一页前的Hook
+    beforeNextPageHook  func(*neteaseModel) // 切换下一页前的Hook
+    beforeEnterMenuHook func(*neteaseModel) // 进入菜单项前的Hook
+    bottomOutHook       func(*neteaseModel) // 触底Hook
+    topOutHook          func(*neteaseModel) // 触顶Hook
 }
 
 // update main ui
@@ -84,7 +85,7 @@ func mainUIView(m *neteaseModel) string {
     var builder strings.Builder
 
     // 距离顶部的行数
-    var top int
+    top := 0
 
     // title
     if constants.MainShowTitle {

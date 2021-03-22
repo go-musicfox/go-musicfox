@@ -36,7 +36,6 @@ func updateStartup(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
         if m.loadedDuration >= m.TotalDuration {
             m.loaded = true
             m.isListeningKey = true
-            termenv.ClearScreen()
             return m, tickMainUI(time.Nanosecond)
         }
         m.loadedDuration += constants.StartupTickDuration
@@ -134,11 +133,14 @@ func progressView(m *neteaseModel) string {
 
     fullSize := int(math.Round(width*m.loadedPercent))
     var fullCells string
-    for i := 0; i < fullSize; i++ {
+    for i := 0; i < fullSize && i < len(progressRamp); i++ {
         fullCells += termenv.String(string(constants.ProgressFullChar)).Foreground(termProfile.Color(progressRamp[i])).String()
     }
 
-    emptySize := int(width) - fullSize
+    emptySize := 0
+    if int(width) - fullSize > 0 {
+        emptySize = int(width) - fullSize
+    }
     emptyCells := strings.Repeat(string(constants.ProgressEmptyChar), emptySize)
 
     return fmt.Sprintf("%s%s", fullCells, emptyCells)
