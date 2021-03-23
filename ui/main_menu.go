@@ -33,6 +33,8 @@ type mainMenuModel struct {
     beforeEnterMenuHook func(*neteaseModel) // 进入菜单项前的Hook
     bottomOutHook       func(*neteaseModel) // 触底Hook
     topOutHook          func(*neteaseModel) // 触顶Hook
+
+    player *Player // 播放器
 }
 
 // update main ui
@@ -68,6 +70,26 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
             if m.menuStartRow > 3 {
                 m.menuTitleStartRow = m.menuStartRow - 3
             }
+        }
+
+        // 播放器歌词
+        spaceHeight := m.WindowHeight - 4 - m.menuBottomRow
+        if spaceHeight < 3 {
+            // 不显示歌词
+            m.player.showLyric = false
+        } else {
+            m.player.showLyric = true
+
+            if spaceHeight > 5 {
+                // 5行歌词
+                m.player.lyricStartRow = (m.WindowHeight - 3 + m.menuBottomRow) / 2 - 2
+                m.player.lyricLines = 5
+            } else {
+                // 3行歌词
+                m.player.lyricStartRow = (m.WindowHeight - 3 + m.menuBottomRow) / 2 - 1
+                m.player.lyricLines = 3
+            }
+
         }
 
     }
