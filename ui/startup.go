@@ -36,6 +36,8 @@ func updateStartup(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
         if m.loadedDuration >= m.TotalDuration {
             m.loaded = true
             m.isListeningKey = true
+            termenv.MoveCursor(0, 0)
+            termenv.ClearScreen()
             return m, tickMainUI(time.Nanosecond)
         }
         m.loadedDuration += constants.StartupTickDuration

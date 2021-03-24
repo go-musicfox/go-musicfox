@@ -181,7 +181,7 @@ func menuListView(m *neteaseModel, top *int) string {
     }
     if maxLines > lines {
         menuListBuilder.WriteString(strings.Repeat(" ", m.WindowWidth - m.menuStartColumn))
-        menuListBuilder.WriteString("\n")
+        menuListBuilder.WriteString(strings.Repeat("\n", maxLines - lines))
     }
 
     return menuListBuilder.String()
