@@ -6,54 +6,34 @@ import (
     "time"
 )
 
-type neteaseModel struct {
+type NeteaseModel struct {
     WindowWidth    int
     WindowHeight   int
     isListeningKey bool
 
     // startup
-    startupModel
+    *startupModel
 
     // main ui
-    mainMenuModel
+    *mainUIModel
 }
 
 // NewNeteaseModel get netease model
-func NewNeteaseModel(loadingDuration time.Duration) (m *neteaseModel) {
-    m = new(neteaseModel)
-    m.TotalDuration = loadingDuration
-    m.menuTitle = "网易云音乐"
+func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
+    m = new(NeteaseModel)
     m.isListeningKey = !constants.AppShowStartup
 
-    m.player = NewPlayer(m)
-    m.menuList = []string{
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-    }
-    m.menuCurPage = 1
-    m.menuPageSize = 10
-    m.selectedIndex = 0
-    m.bottomOutHook = func(model *neteaseModel) {
-        time.Sleep(time.Second * 2)
-    }
+    // startup
+    m.startupModel = NewStartup()
+    m.TotalDuration = loadingDuration
+
+    // main menu
+    m.mainUIModel = NewMainUIModel(m)
 
     return
 }
 
-func (m *neteaseModel) Init() tea.Cmd {
+func (m *NeteaseModel) Init() tea.Cmd {
     if constants.AppShowStartup {
         return tickStartup(time.Nanosecond)
     }
@@ -61,7 +41,7 @@ func (m *neteaseModel) Init() tea.Cmd {
     return tickMainUI(time.Nanosecond)
 }
 
-func (m *neteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     // Make sure these keys always quit
     switch msgWithType := msg.(type) {
     case tea.KeyMsg:
@@ -88,7 +68,7 @@ func (m *neteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return updateMainUI(msg, m)
 }
 
-func (m *neteaseModel) View() string {
+func (m *NeteaseModel) View() string {
     if m.quitting {
         return ""
     }

@@ -28,20 +28,30 @@ type startupModel struct {
     quitting       bool
 }
 
+func NewStartup() (m *startupModel) {
+    m = new(startupModel)
+    m.TotalDuration = time.Second * 2 // 默认
+
+    return
+}
+
 // startup func
-func updateStartup(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
+func updateStartup(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     switch msg.(type) {
 
     case tickStartupMsg:
         if m.loadedDuration >= m.TotalDuration {
             m.loaded = true
             m.isListeningKey = true
-            termenv.MoveCursor(0, 0)
-            termenv.ClearScreen()
+            //termenv.MoveCursor(0, 0)
+            //termenv.ClearScreen()
             return m, tickMainUI(time.Nanosecond)
         }
         m.loadedDuration += constants.StartupTickDuration
-        m.loadedPercent = ease.OutBounce(float64(m.loadedDuration) / float64(m.TotalDuration))
+        m.loadedPercent = float64(m.loadedDuration) / float64(m.TotalDuration)
+        if constants.StartupProgressOutBounce {
+            m.loadedPercent = ease.OutBounce(m.loadedPercent)
+        }
         return m, tickStartup(constants.StartupTickDuration)
     }
 
@@ -49,7 +59,7 @@ func updateStartup(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
 }
 
 // startup view
-func startupView(m *neteaseModel) string {
+func startupView(m *NeteaseModel) string {
 
     if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
         return ""
@@ -80,7 +90,7 @@ func startupView(m *neteaseModel) string {
 }
 
 // get logo
-func logoView(m *neteaseModel) string {
+func logoView(m *NeteaseModel) string {
     if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
         return ""
     }
@@ -108,7 +118,7 @@ func logoView(m *neteaseModel) string {
 }
 
 // get tips
-func tipsView(m *neteaseModel) string {
+func tipsView(m *NeteaseModel) string {
     example := "Enter after 11.1 seconds..."
     var left int
     if m.WindowWidth - len(example) > 0 {
@@ -122,7 +132,7 @@ func tipsView(m *neteaseModel) string {
 }
 
 // get progress
-func progressView(m *neteaseModel) string {
+func progressView(m *NeteaseModel) string {
     width := float64(m.WindowWidth)
 
     if progressStartColor == "" || progressEndColor == "" {

@@ -11,8 +11,8 @@ import (
     "unicode/utf8"
 )
 
-type mainMenuModel struct {
-    doubleColumn    bool // 是否双列显示
+type mainUIModel struct {
+    doubleColumn bool // 是否双列显示
 
     menuTitle     	     string // 菜单标题
     menuTitleStartRow    int    // 菜单标题开始行
@@ -28,17 +28,25 @@ type mainMenuModel struct {
     menuList      []string // 菜单列表
     selectedIndex int	   // 当前选中的菜单index
 
-    beforePrePageHook   func(*neteaseModel) // 切换上一页前的Hook
-    beforeNextPageHook  func(*neteaseModel) // 切换下一页前的Hook
-    beforeEnterMenuHook func(*neteaseModel) // 进入菜单项前的Hook
-    bottomOutHook       func(*neteaseModel) // 触底Hook
-    topOutHook          func(*neteaseModel) // 触顶Hook
-
+    menu   IMenu   // 菜单
     player *Player // 播放器
 }
 
+func NewMainUIModel(parentModel *NeteaseModel) (m *mainUIModel) {
+    m = new(mainUIModel)
+    m.menuTitle = "网易云音乐"
+    m.player = NewPlayer(parentModel)
+    m.menu = new(MainMenu)
+    m.menuList = m.menu.GetSubMenuViews()
+    m.menuCurPage = 1
+    m.menuPageSize = 10
+    m.selectedIndex = 0
+
+    return
+}
+
 // update main ui
-func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
+func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
 
     case tea.KeyMsg:
@@ -52,6 +60,9 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
 
         // 菜单开始行、列
         m.menuStartRow = msg.Height/3
+        if !constants.MainShowTitle && m.menuStartRow > 1 {
+            m.menuStartRow--
+        }
         if m.doubleColumn {
             m.menuStartColumn = (msg.Width-60)/2
             m.menuBottomRow = m.menuStartRow+int(math.Ceil(float64(m.menuPageSize)/2))-1
@@ -65,10 +76,14 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
         if constants.MainShowTitle && m.menuStartRow > 2 {
             if m.menuStartRow > 4 {
                 m.menuTitleStartRow = m.menuStartRow - 3
+            } else {
+                m.menuTitleStartRow = 2
             }
         } else if !constants.MainShowTitle && m.menuStartRow > 1 {
             if m.menuStartRow > 3 {
                 m.menuTitleStartRow = m.menuStartRow - 3
+            } else {
+                m.menuTitleStartRow = 2
             }
         }
 
@@ -98,7 +113,7 @@ func updateMainUI(msg tea.Msg, m *neteaseModel) (tea.Model, tea.Cmd) {
 }
 
 // get main ui view
-func mainUIView(m *neteaseModel) string {
+func mainUIView(m *NeteaseModel) string {
     if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
         return ""
     }
@@ -111,6 +126,8 @@ func mainUIView(m *neteaseModel) string {
     // title
     if constants.MainShowTitle {
         builder.WriteString(titleView(m, &top))
+    } else {
+        top++
     }
 
     // menu title
@@ -119,12 +136,15 @@ func mainUIView(m *neteaseModel) string {
     // menu list
     builder.WriteString(menuListView(m, &top))
 
+    if top < m.WindowHeight {
+        builder.WriteString(strings.Repeat("\n", m.WindowHeight - top))
+    }
 
     return builder.String()
 }
 
 // title view
-func titleView(m *neteaseModel, top *int) string {
+func titleView(m *NeteaseModel, top *int) string {
     var titleBuilder strings.Builder
     titleLen := utf8.RuneCountInString(constants.AppName)+2
     prefixLen := (m.WindowWidth-titleLen)/2
@@ -141,7 +161,7 @@ func titleView(m *neteaseModel, top *int) string {
 }
 
 // menu title
-func menuTitleView(m *neteaseModel, top *int) string {
+func menuTitleView(m *NeteaseModel, top *int) string {
     var menuTitleBuilder strings.Builder
     var title = m.menuTitle
     if len(m.menuTitle) > 50 {
@@ -153,13 +173,13 @@ func menuTitleView(m *neteaseModel, top *int) string {
     menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
     menuTitleBuilder.WriteString(SetFgStyle(title, termenv.ANSIGreen))
 
-    *top = m.menuTitleStartRow
+    *top += m.menuTitleStartRow
 
     return menuTitleBuilder.String()
 }
 
 // 菜单列表
-func menuListView(m *neteaseModel, top *int) string {
+func menuListView(m *NeteaseModel, top *int) string {
     var menuListBuilder strings.Builder
     menus := getCurPageMenus(m)
     var lines, maxLines int
@@ -184,11 +204,13 @@ func menuListView(m *neteaseModel, top *int) string {
         menuListBuilder.WriteString(strings.Repeat("\n", maxLines - lines))
     }
 
+    *top += maxLines
+
     return menuListBuilder.String()
 }
 
 // 菜单Line
-func menuLineView(m *neteaseModel, line int) string {
+func menuLineView(m *NeteaseModel, line int) string {
     var menuLineBuilder strings.Builder
     var index int
     if m.doubleColumn {
@@ -202,7 +224,6 @@ func menuLineView(m *neteaseModel, line int) string {
     menuLineBuilder.WriteString(strings.Repeat(" ", m.menuStartColumn - 4))
     menuLineBuilder.WriteString(menuItemView(m, index))
     if m.doubleColumn && index < len(m.menuList) - 1 {
-        menuLineBuilder.WriteString(strings.Repeat(" ", 20))
         menuLineBuilder.WriteString(menuItemView(m, index + 1))
     }
 
@@ -210,25 +231,36 @@ func menuLineView(m *neteaseModel, line int) string {
 }
 
 // 菜单Item
-func menuItemView(m *neteaseModel, index int) string {
+func menuItemView(m *NeteaseModel, index int) string {
     var menuItemBuilder strings.Builder
 
-    menuName := []rune(m.menuList[index])
-    if len(menuName) > 20 {
-        menuName = menuName[:20]
+    var menuNameRunes []rune
+    if index == m.selectedIndex {
+        menuNameRunes = []rune(fmt.Sprintf(" => %d. %s", index, m.menuList[index]))
+    } else {
+        menuNameRunes = []rune(fmt.Sprintf("    %d. %s", index, m.menuList[index]))
+    }
+
+    itemMaxLen := 35
+    if len(menuNameRunes) > itemMaxLen {
+        menuNameRunes = menuNameRunes[:itemMaxLen]
     }
 
     if index == m.selectedIndex {
-        menuItemBuilder.WriteString(SetFgStyle(fmt.Sprintf(" => %d. %s", index, string(menuName)), primaryColor))
+        menuItemBuilder.WriteString(SetFgStyle(string(menuNameRunes), primaryColor))
     } else {
-        menuItemBuilder.WriteString(SetFgStyle(fmt.Sprintf("    %d. %s", index, string(menuName)), termProfile.Color(constants.MainMenuUnselectedColor)))
+        menuItemBuilder.WriteString(SetFgStyle(string(menuNameRunes), termProfile.Color(constants.MainMenuUnselectedColor)))
+    }
+
+    if len(menuNameRunes) < itemMaxLen {
+        menuItemBuilder.WriteString(strings.Repeat(" ", itemMaxLen - len(menuNameRunes)))
     }
 
     return menuItemBuilder.String()
 }
 
 // 获取当前页的菜单
-func getCurPageMenus(m *neteaseModel) []string {
+func getCurPageMenus(m *NeteaseModel) []string {
     start := (m.menuCurPage - 1) * m.menuPageSize
     end := int(math.Min(float64(len(m.menuList)), float64(m.menuCurPage*m.menuPageSize)))
 
@@ -236,7 +268,7 @@ func getCurPageMenus(m *neteaseModel) []string {
 }
 
 // key handle
-func keyMsgHandle(msg tea.KeyMsg, m *neteaseModel) (tea.Model, tea.Cmd) {
+func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     if !m.isListeningKey {
         return m, nil
     }

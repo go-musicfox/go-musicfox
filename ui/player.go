@@ -7,7 +7,7 @@ import (
 )
 
 type Player struct {
-    model         *neteaseModel
+    model         *NeteaseModel
 
     playlist      []player.Music
     curMusic      player.Music
@@ -22,7 +22,7 @@ type Player struct {
     startPlayTime time.Time
 }
 
-func NewPlayer(model *neteaseModel) *Player {
+func NewPlayer(model *NeteaseModel) *Player {
     return &Player{
         model: model,
         timer: time.NewTimer(time.Second),

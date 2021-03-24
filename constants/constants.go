@@ -9,6 +9,7 @@ const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
 const AppShowStartup = true
 const ProgressFullChar = '#'
 const ProgressEmptyChar = ' '
+const StartupProgressOutBounce = false
 const StartupLoadingDuration = time.Second * 2
 const StartupTickDuration = time.Millisecond * 15
 

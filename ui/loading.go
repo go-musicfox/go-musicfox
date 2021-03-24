@@ -9,11 +9,11 @@ import (
 )
 
 type Loading struct {
-    model  *neteaseModel
+    model  *NeteaseModel
     curLen int
 }
 
-func NewLoading(m *neteaseModel) *Loading {
+func NewLoading(m *NeteaseModel) *Loading {
     return &Loading{
         model: m,
     }

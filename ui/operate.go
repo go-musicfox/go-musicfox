@@ -5,12 +5,13 @@ import (
 )
 
 // 上移
-func moveUp(m *neteaseModel) {
+func moveUp(m *NeteaseModel) {
+    topHook := m.menu.TopOutHook()
     if m.doubleColumn {
-        if m.selectedIndex - 2 < 0 && m.topOutHook != nil {
+        if m.selectedIndex - 2 < 0 && topHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.topOutHook(m)
+            topHook(m)
             loading.complete()
         }
         if m.selectedIndex - 2 < 0 {
@@ -18,10 +19,10 @@ func moveUp(m *neteaseModel) {
         }
         m.selectedIndex -= 2
     } else {
-        if m.selectedIndex - 1 < 0 && m.topOutHook != nil {
+        if m.selectedIndex - 1 < 0 && topHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.topOutHook(m)
+            topHook(m)
             loading.complete()
         }
         if m.selectedIndex - 1 < 0 {
@@ -35,12 +36,13 @@ func moveUp(m *neteaseModel) {
 }
 
 // 下移
-func moveDown(m *neteaseModel) {
+func moveDown(m *NeteaseModel) {
+    bottomHook := m.menu.BottomOutHook()
     if m.doubleColumn {
-        if m.selectedIndex + 2 > len(m.menuList) - 1 && m.bottomOutHook != nil {
+        if m.selectedIndex + 2 > len(m.menuList) - 1 && bottomHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.bottomOutHook(m)
+            bottomHook(m)
             loading.complete()
         }
         if m.selectedIndex + 2 > len(m.menuList) - 1 {
@@ -48,10 +50,10 @@ func moveDown(m *neteaseModel) {
         }
         m.selectedIndex += 2
     } else {
-        if m.selectedIndex + 1 > len(m.menuList) - 1 && m.bottomOutHook != nil {
+        if m.selectedIndex + 1 > len(m.menuList) - 1 && bottomHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.bottomOutHook(m)
+            bottomHook(m)
             loading.complete()
         }
         if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -65,7 +67,7 @@ func moveDown(m *neteaseModel) {
 }
 
 // 左移
-func moveLeft(m *neteaseModel) {
+func moveLeft(m *NeteaseModel) {
     if !m.doubleColumn || m.selectedIndex % 2 == 0 || m.selectedIndex - 1 < 0 {
         return
     }
@@ -73,14 +75,15 @@ func moveLeft(m *neteaseModel) {
 }
 
 // 右移
-func moveRight(m *neteaseModel) {
+func moveRight(m *NeteaseModel) {
     if !m.doubleColumn || m.selectedIndex % 2 != 0 {
         return
     }
-    if m.selectedIndex + 1 > len(m.menuList) - 1 && m.bottomOutHook != nil {
+    bottomHook := m.menu.BottomOutHook()
+    if m.selectedIndex + 1 > len(m.menuList) - 1 && bottomHook != nil {
         loading := NewLoading(m)
         loading.start()
-        m.bottomOutHook(m)
+        bottomHook(m)
         loading.complete()
     }
     if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -90,16 +93,17 @@ func moveRight(m *neteaseModel) {
 }
 
 // 切换到上一页
-func prePage(m *neteaseModel) {
+func prePage(m *NeteaseModel) {
     m.isListeningKey = false
     defer func() {
         m.isListeningKey = true
     }()
 
-    if m.beforePrePageHook != nil {
+
+    if beforePrePageHook := m.menu.BeforePrePageHook(); beforePrePageHook != nil {
         loading := NewLoading(m)
         loading.start()
-        m.beforePrePageHook(m)
+        beforePrePageHook(m)
         loading.complete()
     }
     if m.menuCurPage <= 1 {
@@ -109,16 +113,16 @@ func prePage(m *neteaseModel) {
 }
 
 // 切换到下一页
-func nextPage(m *neteaseModel) {
+func nextPage(m *NeteaseModel) {
     m.isListeningKey = false
     defer func() {
         m.isListeningKey = true
     }()
 
-    if m.beforeNextPageHook != nil {
+    if beforeNextPageHook := m.menu.BeforeNextPageHook(); beforeNextPageHook != nil {
         loading := NewLoading(m)
         loading.start()
-        m.beforeNextPageHook(m)
+        beforeNextPageHook(m)
         loading.complete()
     }
     if m.menuCurPage >= int(math.Ceil(float64(len(m.menuList)) / float64(m.menuPageSize))) {
