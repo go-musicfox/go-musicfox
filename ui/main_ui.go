@@ -151,7 +151,7 @@ func titleView(m *NeteaseModel, top *int) string {
     suffixLen := m.WindowWidth-prefixLen-titleLen
     titleBuilder.WriteString(strings.Repeat("─", prefixLen))
     titleBuilder.WriteString(" ")
-    titleBuilder.WriteString(strings.ToUpper(constants.AppName))
+    titleBuilder.WriteString(constants.AppName)
     titleBuilder.WriteString(" ")
     titleBuilder.WriteString(strings.Repeat("─", suffixLen))
 
@@ -173,7 +173,7 @@ func menuTitleView(m *NeteaseModel, top *int) string {
     menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
     menuTitleBuilder.WriteString(SetFgStyle(title, termenv.ANSIGreen))
 
-    *top += m.menuTitleStartRow
+    *top = m.menuTitleStartRow
 
     return menuTitleBuilder.String()
 }
@@ -204,7 +204,7 @@ func menuListView(m *NeteaseModel, top *int) string {
         menuListBuilder.WriteString(strings.Repeat("\n", maxLines - lines))
     }
 
-    *top += maxLines
+    *top = m.menuBottomRow
 
     return menuListBuilder.String()
 }
