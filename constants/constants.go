@@ -1,6 +1,8 @@
 package constants
 
-import "time"
+import (
+	"time"
+)
 
 const AppName = "musicfox"
 const AppVersion = "2.0.0"
@@ -14,7 +16,6 @@ const StartupLoadingDuration = time.Second * 2
 const StartupTickDuration = time.Millisecond * 15
 
 const MainShowTitle = true
-const MainMenuUnselectedColor = "#d7d7d7"
 const MainLoadingText = " [加载中...]"
 
 const AppHelpTemplate = `%s

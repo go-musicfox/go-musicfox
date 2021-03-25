@@ -6,6 +6,7 @@ import (
     "github.com/muesli/termenv"
     "math/rand"
     "strconv"
+    "strings"
     "time"
 )
 
@@ -20,7 +21,7 @@ func GetRandomLogoColor() termenv.Color {
         return primaryColor
     }
     rand.Seed(time.Now().UnixNano())
-    primaryColor = termProfile.Color(strconv.Itoa(rand.Intn(231 - 17) + 17))
+    primaryColor = termProfile.Color(strconv.Itoa(rand.Intn(228 - 17) + 17))
 
     return primaryColor
 }
@@ -58,6 +59,12 @@ func SetFgStyle(content string, color termenv.Color) string {
 // SetFgBgStyle Color a string's foreground and background with the given value.
 func SetFgBgStyle(content string, fg, bg termenv.Color) string {
     return termenv.Style{}.Foreground(fg).Background(bg).Styled(content)
+}
+
+// SetNormalStyle dont set any style
+func SetNormalStyle(content string) string {
+    seq := strings.Join([]string{"0"}, ";")
+    return fmt.Sprintf("%s%sm%s%sm", termenv.CSI, seq, content, termenv.CSI+termenv.ResetSeq)
 }
 
 // Generate a blend of colors.

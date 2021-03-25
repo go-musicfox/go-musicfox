@@ -22,3 +22,11 @@ func tickMainUI(duration time.Duration) tea.Cmd {
         return tickMainUIMsg{}
     })
 }
+
+type tickClearScreenMsg struct {}
+
+func tickClearScreen(duration time.Duration) tea.Cmd {
+    return tea.Tick(duration, func(time.Time) tea.Msg {
+        return tickClearScreenMsg{}
+    })
+}

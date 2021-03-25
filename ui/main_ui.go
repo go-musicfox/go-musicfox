@@ -75,13 +75,13 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         m.menuTitleStartColumn = m.menuStartColumn
         if constants.MainShowTitle && m.menuStartRow > 2 {
             if m.menuStartRow > 4 {
-                m.menuTitleStartRow = m.menuStartRow - 3
+                m.menuTitleStartRow = m.menuStartRow-3
             } else {
                 m.menuTitleStartRow = 2
             }
         } else if !constants.MainShowTitle && m.menuStartRow > 1 {
             if m.menuStartRow > 3 {
-                m.menuTitleStartRow = m.menuStartRow - 3
+                m.menuTitleStartRow = m.menuStartRow-3
             } else {
                 m.menuTitleStartRow = 2
             }
@@ -137,7 +137,7 @@ func mainUIView(m *NeteaseModel) string {
     builder.WriteString(menuListView(m, &top))
 
     if top < m.WindowHeight {
-        builder.WriteString(strings.Repeat("\n", m.WindowHeight - top))
+        builder.WriteString(strings.Repeat("\n", m.WindowHeight - top - 1))
     }
 
     return builder.String()
@@ -169,7 +169,9 @@ func menuTitleView(m *NeteaseModel, top *int) string {
         title = string(menuTitleRunes[:50])
     }
 
-    menuTitleBuilder.WriteString(strings.Repeat("\n", m.menuTitleStartRow - *top))
+    if m.menuTitleStartRow - *top > 0 {
+        menuTitleBuilder.WriteString(strings.Repeat("\n", m.menuTitleStartRow - *top))
+    }
     menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
     menuTitleBuilder.WriteString(SetFgStyle(title, termenv.ANSIGreen))
 
@@ -221,7 +223,9 @@ func menuLineView(m *NeteaseModel, line int) string {
     if index > len(m.menuList) - 1 {
         index = len(m.menuList) - 1
     }
-    menuLineBuilder.WriteString(strings.Repeat(" ", m.menuStartColumn - 4))
+    if m.menuStartColumn > 4 {
+        menuLineBuilder.WriteString(strings.Repeat(" ", m.menuStartColumn - 4))
+    }
     menuLineBuilder.WriteString(menuItemView(m, index))
     if m.doubleColumn && index < len(m.menuList) - 1 {
         menuLineBuilder.WriteString(menuItemView(m, index + 1))
@@ -249,7 +253,7 @@ func menuItemView(m *NeteaseModel, index int) string {
     if index == m.selectedIndex {
         menuItemBuilder.WriteString(SetFgStyle(string(menuNameRunes), primaryColor))
     } else {
-        menuItemBuilder.WriteString(SetFgStyle(string(menuNameRunes), termProfile.Color(constants.MainMenuUnselectedColor)))
+        menuItemBuilder.WriteString(SetNormalStyle(string(menuNameRunes)))
     }
 
     if len(menuNameRunes) < itemMaxLen {
