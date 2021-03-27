@@ -1,7 +1,5 @@
 package ui
 
-type Hook func(model *NeteaseModel)
-
 // IMenu menu interface
 type IMenu interface {
     // IsPlayable 当前菜单是否可播放？
@@ -23,19 +21,19 @@ type IMenu interface {
     ExtraView() string
 
     // BeforePrePageHook 切换上一页前的Hook
-    BeforePrePageHook() Hook
+    BeforePrePageHook(m *NeteaseModel)
 
     // BeforeNextPageHook 切换下一页前的Hook
-    BeforeNextPageHook() Hook
+    BeforeNextPageHook(m *NeteaseModel)
 
     // BeforeEnterMenuHook 进入菜单项前的Hook
-    BeforeEnterMenuHook() Hook
+    BeforeEnterMenuHook(m *NeteaseModel) []string
 
     // BottomOutHook 触底的Hook
-    BottomOutHook() Hook
+    BottomOutHook(m *NeteaseModel)
 
     // TopOutHook 触顶Hook
-    TopOutHook() Hook
+    TopOutHook(m *NeteaseModel)
 }
 
 // IDjMenu dj menu interface

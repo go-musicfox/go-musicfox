@@ -4,6 +4,7 @@ import (
     "fmt"
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/go-musicfox/constants"
+    "github.com/anhoder/go-musicfox/utils"
     "github.com/muesli/termenv"
     "math"
     "strings"
@@ -25,8 +26,11 @@ type mainUIModel struct {
     menuCurPage	 int // 菜单当前页
     menuPageSize int // 菜单每页大小
 
-    menuList      []string // 菜单列表
-    selectedIndex int	   // 当前选中的菜单index
+    menuList      []string     // 菜单列表
+    menuStack     *utils.Stack // 菜单栈
+    selectedIndex int	       // 当前选中的菜单index
+    menuData      interface{}  // 数据
+
 
     menu   IMenu   // 菜单
     player *Player // 播放器
@@ -38,6 +42,7 @@ func NewMainUIModel(parentModel *NeteaseModel) (m *mainUIModel) {
     m.player = NewPlayer(parentModel)
     m.menu = new(MainMenu)
     m.menuList = m.menu.GetSubMenuViews()
+    m.menuStack = new(utils.Stack)
     m.menuCurPage = 1
     m.menuPageSize = 10
     m.selectedIndex = 0
@@ -286,6 +291,7 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case "l", "right":
         moveRight(m)
     case "enter":
+        enterMain(m)
     }
 
     return m, tickMainUI(time.Nanosecond)

@@ -1,13 +1,13 @@
 package utils
 
-type Node struct {
+type QNode struct {
     value interface{}
-    next  *Node
+    next  *QNode
 }
 
 type Queue struct {
-    head *Node
-    tail *Node
+    head *QNode
+    tail *QNode
     len  int
 }
 
@@ -22,8 +22,8 @@ func (q *Queue) Peek() interface{} {
     return q.head.value
 }
 
-func (q *Queue) enqueue(value interface{}) {
-    newNode := &Node{value, nil}
+func (q *Queue) Enqueue(value interface{}) {
+    newNode := &QNode{value, nil}
     if q.tail == nil {
         q.head = newNode
         q.tail = newNode
@@ -35,7 +35,7 @@ func (q *Queue) enqueue(value interface{}) {
     newNode = nil
 }
 
-func (q *Queue) dequeue() interface{} {
+func (q *Queue) Dequeue() interface{} {
     if q.head == nil {
         return nil
     }

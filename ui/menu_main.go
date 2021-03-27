@@ -44,31 +44,23 @@ func (m *MainMenu) ExtraView() string {
     return ""
 }
 
-func (m *MainMenu) BeforePrePageHook() Hook {
-    return func(model *NeteaseModel) {
-        time.Sleep(time.Second)
-    }
+func (m *MainMenu) BeforePrePageHook(model *NeteaseModel) {
+    time.Sleep(time.Second)
 }
 
-func (m *MainMenu) BeforeNextPageHook() Hook {
-    return func(model *NeteaseModel) {
-        time.Sleep(time.Second)
-    }
+func (m *MainMenu) BeforeNextPageHook(model *NeteaseModel) {
+    time.Sleep(time.Second)
 }
 
-func (m *MainMenu) BeforeEnterMenuHook() Hook {
+func (m *MainMenu) BeforeEnterMenuHook(model *NeteaseModel) []string {
     return nil
 }
 
-func (m *MainMenu) BottomOutHook() Hook {
-    return func(model *NeteaseModel) {
-        time.Sleep(time.Second)
-    }
+func (m *MainMenu) BottomOutHook(model *NeteaseModel) {
+    time.Sleep(time.Second)
 }
 
-func (m *MainMenu) TopOutHook() Hook {
-    return func(model *NeteaseModel) {
-        time.Sleep(time.Second)
-    }
+func (m *MainMenu) TopOutHook(model *NeteaseModel) {
+    time.Sleep(time.Second)
 }
 
