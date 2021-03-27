@@ -58,6 +58,9 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case tea.KeyMsg:
         return keyMsgHandle(msg, m)
 
+    case tickClearScreenMsg:
+        return m, tickMainUI(time.Nanosecond)
+
     case tickMainUIMsg:
         return m, nil
 

@@ -58,7 +58,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.WindowWidth  = msgWithType.Width
 
     case tickClearScreenMsg:
-        m.clearScreen = true;
+        m.clearScreen = true
 
     }
 
