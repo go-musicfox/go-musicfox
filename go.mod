@@ -9,6 +9,7 @@ require (
 	github.com/gookit/color v1.3.0 // indirect
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/lucasb-eyer/go-colorful v1.2.0
+	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/muesli/termenv v0.7.4
 )
 

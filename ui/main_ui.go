@@ -5,6 +5,7 @@ import (
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/go-musicfox/constants"
     "github.com/anhoder/go-musicfox/utils"
+    "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
     "math"
     "strings"
@@ -41,7 +42,7 @@ func NewMainUIModel(parentModel *NeteaseModel) (m *mainUIModel) {
     m.menuTitle = "网易云音乐"
     m.player = NewPlayer(parentModel)
     m.menu = new(MainMenu)
-    m.menuList = m.menu.GetSubMenuViews()
+    m.menuList = m.menu.MenuViews()
     m.menuStack = new(utils.Stack)
     m.menuCurPage = 1
     m.menuPageSize = 10
@@ -243,26 +244,24 @@ func menuLineView(m *NeteaseModel, line int) string {
 func menuItemView(m *NeteaseModel, index int) string {
     var menuItemBuilder strings.Builder
 
-    var menuNameRunes []rune
+    var menuName string
     if index == m.selectedIndex {
-        menuNameRunes = []rune(fmt.Sprintf(" => %d. %s", index, m.menuList[index]))
+        menuName = fmt.Sprintf(" => %d. %s", index, m.menuList[index])
     } else {
-        menuNameRunes = []rune(fmt.Sprintf("    %d. %s", index, m.menuList[index]))
+        menuName = fmt.Sprintf("    %d. %s", index, m.menuList[index])
     }
 
     itemMaxLen := 35
-    if len(menuNameRunes) > itemMaxLen {
-        menuNameRunes = menuNameRunes[:itemMaxLen]
+    if runewidth.StringWidth(menuName) > itemMaxLen {
+        menuName = runewidth.Truncate(menuName, itemMaxLen, "")
+    } else {
+        menuName = runewidth.FillRight(menuName, itemMaxLen)
     }
 
     if index == m.selectedIndex {
-        menuItemBuilder.WriteString(SetFgStyle(string(menuNameRunes), primaryColor))
+        menuItemBuilder.WriteString(SetFgStyle(menuName, primaryColor))
     } else {
-        menuItemBuilder.WriteString(SetNormalStyle(string(menuNameRunes)))
-    }
-
-    if len(menuNameRunes) < itemMaxLen {
-        menuItemBuilder.WriteString(strings.Repeat(" ", itemMaxLen - len(menuNameRunes)))
+        menuItemBuilder.WriteString(SetNormalStyle(menuName))
     }
 
     return menuItemBuilder.String()

@@ -1,7 +1,5 @@
 package ui
 
-import "time"
-
 type MainMenu struct {}
 
 func (m *MainMenu) IsPlayable() bool {
@@ -16,23 +14,20 @@ func (m *MainMenu) GetMenuKey() string {
     return "main_menu"
 }
 
-func (m *MainMenu) GetSubMenuViews() []string {
+func (m *MainMenu) MenuViews() []string {
     return []string{
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
-        "测试1",
-        "测试2",
-        "测试3",
+        "每日推荐歌曲",
+        "每日推荐歌单",
+        "我的歌单",
+        "私人FM",
+        "专辑列表",
+        "搜索",
+        "排行榜",
+        "精选歌单",
+        "热门歌手",
+        "云盘",
+        "主播电台",
+        "帮助",
     }
 }
 
@@ -44,23 +39,27 @@ func (m *MainMenu) ExtraView() string {
     return ""
 }
 
-func (m *MainMenu) BeforePrePageHook(model *NeteaseModel) {
-    time.Sleep(time.Second)
-}
-
-func (m *MainMenu) BeforeNextPageHook(model *NeteaseModel) {
-    time.Sleep(time.Second)
-}
-
-func (m *MainMenu) BeforeEnterMenuHook(model *NeteaseModel) []string {
+func (m *MainMenu) BeforePrePageHook() Hook {
+    // Nothing to do
     return nil
 }
 
-func (m *MainMenu) BottomOutHook(model *NeteaseModel) {
-    time.Sleep(time.Second)
+func (m *MainMenu) BeforeNextPageHook() Hook {
+    // Nothing to do
+    return nil
 }
 
-func (m *MainMenu) TopOutHook(model *NeteaseModel) {
-    time.Sleep(time.Second)
+func (m *MainMenu) BeforeEnterMenuHook() Hook {
+    return nil
+}
+
+func (m *MainMenu) BottomOutHook() Hook {
+    // Nothing to do
+    return nil
+}
+
+func (m *MainMenu) TopOutHook() Hook {
+    // Nothing to do
+    return nil
 }
 

@@ -9,15 +9,17 @@ type menuStackItem struct {
     selectedIndex int
     menuTitle     string
     menuData      interface{}
+    menu          IMenu
 }
 
 // 上移
 func moveUp(m *NeteaseModel) {
+    topHook := m.menu.TopOutHook()
     if m.doubleColumn {
-        if m.selectedIndex - 2 < 0 {
+        if m.selectedIndex - 2 < 0 && topHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.menu.TopOutHook(m)
+            topHook(m)
             loading.complete()
         }
         if m.selectedIndex - 2 < 0 {
@@ -25,10 +27,10 @@ func moveUp(m *NeteaseModel) {
         }
         m.selectedIndex -= 2
     } else {
-        if m.selectedIndex - 1 < 0 {
+        if m.selectedIndex - 1 < 0 && topHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.menu.TopOutHook(m)
+            topHook(m)
             loading.complete()
         }
         if m.selectedIndex - 1 < 0 {
@@ -43,11 +45,12 @@ func moveUp(m *NeteaseModel) {
 
 // 下移
 func moveDown(m *NeteaseModel) {
+    bottomHook := m.menu.BottomOutHook()
     if m.doubleColumn {
-        if m.selectedIndex + 2 > len(m.menuList) - 1 {
+        if m.selectedIndex + 2 > len(m.menuList) - 1 && bottomHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.menu.TopOutHook(m)
+            bottomHook(m)
             loading.complete()
         }
         if m.selectedIndex + 2 > len(m.menuList) - 1 {
@@ -55,10 +58,10 @@ func moveDown(m *NeteaseModel) {
         }
         m.selectedIndex += 2
     } else {
-        if m.selectedIndex + 1 > len(m.menuList) - 1 {
+        if m.selectedIndex + 1 > len(m.menuList) - 1 && bottomHook != nil {
             loading := NewLoading(m)
             loading.start()
-            m.menu.TopOutHook(m)
+            bottomHook(m)
             loading.complete()
         }
         if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -84,10 +87,10 @@ func moveRight(m *NeteaseModel) {
     if !m.doubleColumn || m.selectedIndex % 2 != 0 {
         return
     }
-    if m.selectedIndex + 1 > len(m.menuList) - 1 {
+    if bottomHook := m.menu.BottomOutHook(); m.selectedIndex + 1 > len(m.menuList) - 1 && bottomHook != nil {
         loading := NewLoading(m)
         loading.start()
-        m.menu.BottomOutHook(m)
+        bottomHook(m)
         loading.complete()
     }
     if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -103,10 +106,12 @@ func prePage(m *NeteaseModel) {
         m.isListeningKey = true
     }()
 
-    loading := NewLoading(m)
-    loading.start()
-    m.menu.BeforePrePageHook(m)
-    loading.complete()
+    if prePageHook := m.menu.BeforePrePageHook(); prePageHook != nil {
+        loading := NewLoading(m)
+        loading.start()
+        prePageHook(m)
+        loading.complete()
+    }
 
     if m.menuCurPage <= 1 {
         return
@@ -121,10 +126,12 @@ func nextPage(m *NeteaseModel) {
         m.isListeningKey = true
     }()
 
-    loading := NewLoading(m)
-    loading.start()
-    m.menu.BeforeNextPageHook(m)
-    loading.complete()
+    if nextPageHook := m.menu.BeforeNextPageHook(); nextPageHook != nil {
+        loading := NewLoading(m)
+        loading.start()
+        nextPageHook(m)
+        loading.complete()
+    }
     if m.menuCurPage >= int(math.Ceil(float64(len(m.menuList)) / float64(m.menuPageSize))) {
         return
     }
@@ -143,24 +150,31 @@ func enterMain(m *NeteaseModel) {
         return
     }
 
-    loading := NewLoading(m)
-    loading.start()
-    newMenu := m.menu.BeforeEnterMenuHook(m)
-    loading.complete()
-
-    if len(newMenu) <= 0 {
-        m.menuStack.Pop()
-        return
+    if enterMenuHook := m.menu.BeforeEnterMenuHook(); enterMenuHook != nil {
+        loading := NewLoading(m)
+        loading.start()
+        enterMenuHook(m)
+        loading.complete()
     }
+
     newTitle := m.menuList[m.selectedIndex]
     stackItem := &menuStackItem{
         menuList: m.menuList,
         selectedIndex: m.selectedIndex,
         menuTitle: m.menuTitle,
         menuData: m.menuData,
+        menu: m.menu,
     }
     m.menuStack.Push(stackItem)
 
+    menuList := m.menu.MenuViews()
+    menu := m.menu.SubMenu(m.selectedIndex)
+    if len(menuList) <= 0 || menu == nil {
+        m.menuStack.Pop()
+        return
+    }
+    m.menuList = menuList
+    m.menu = menu
     m.menuTitle = newTitle
     m.selectedIndex = 0
     m.menuCurPage = 1
