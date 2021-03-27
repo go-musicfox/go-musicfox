@@ -167,15 +167,52 @@ func enterMain(m *NeteaseModel) {
     }
     m.menuStack.Push(stackItem)
 
-    menuList := m.menu.MenuViews()
     menu := m.menu.SubMenu(m.selectedIndex)
-    if len(menuList) <= 0 || menu == nil {
+    if menu == nil {
         m.menuStack.Pop()
         return
     }
-    m.menuList = menuList
+
+    menuList := menu.MenuViews()
+    if len(menuList) <= 0 {
+        m.menuStack.Pop()
+        return
+    }
+
     m.menu = menu
+    m.menuList = menuList
     m.menuTitle = newTitle
     m.selectedIndex = 0
     m.menuCurPage = 1
+}
+
+// 菜单返回
+func backMenu(m *NeteaseModel) {
+    m.isListeningKey = false
+    defer func() {
+        m.isListeningKey = true
+    }()
+
+    if m.menuStack.Len() <= 0 {
+        return
+    }
+
+    stackItem := m.menuStack.Pop()
+    if backMenuHook := m.menu.BeforeBackMenuHook(); backMenuHook != nil {
+        loading := NewLoading(m)
+        loading.start()
+        backMenuHook(m)
+        loading.complete()
+    }
+
+    stackMenu, ok := stackItem.(*menuStackItem)
+    if !ok {
+        return
+    }
+
+    m.menuList = stackMenu.menuList
+    m.menu = stackMenu.menu
+    m.menuTitle = stackMenu.menuTitle
+    m.menuData = stackMenu.menuData
+    m.selectedIndex = stackMenu.selectedIndex
 }

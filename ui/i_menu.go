@@ -31,6 +31,9 @@ type IMenu interface {
     // BeforeEnterMenuHook 进入菜单项前的Hook
     BeforeEnterMenuHook() Hook
 
+    // BeforeBackMenuHook 菜单返回前的Hook
+    BeforeBackMenuHook() Hook
+
     // BottomOutHook 触底的Hook
     BottomOutHook() Hook
 

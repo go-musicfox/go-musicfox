@@ -32,7 +32,15 @@ func (m *MainMenu) MenuViews() []string {
 }
 
 func (m *MainMenu) SubMenu(index int) IMenu {
-    return nil
+    menuList := []IMenu{
+        &TestMenu{},
+    }
+
+    if index >= len(menuList) {
+        return nil
+    }
+
+    return menuList[index]
 }
 
 func (m *MainMenu) ExtraView() string {
@@ -50,6 +58,11 @@ func (m *MainMenu) BeforeNextPageHook() Hook {
 }
 
 func (m *MainMenu) BeforeEnterMenuHook() Hook {
+    return nil
+}
+
+func (m *MainMenu) BeforeBackMenuHook() Hook {
+    // Nothing to do
     return nil
 }
 
