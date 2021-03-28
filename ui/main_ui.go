@@ -58,14 +58,14 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case tea.KeyMsg:
         return keyMsgHandle(msg, m)
 
-    case tickClearScreenMsg:
+    case tea.ClearScreenMsg:
         return m, tickMainUI(time.Nanosecond)
 
     case tickMainUIMsg:
         return m, nil
 
     case tea.WindowSizeMsg:
-        m.doubleColumn = msg.Width>=80
+        m.doubleColumn = msg.Width>=75
 
         // 菜单开始行、列
         m.menuStartRow = msg.Height/3
@@ -171,11 +171,18 @@ func titleView(m *NeteaseModel, top *int) string {
 
 // menu title
 func menuTitleView(m *NeteaseModel, top *int) string {
-    var menuTitleBuilder strings.Builder
-    var title = m.menuTitle
-    if len(m.menuTitle) > 50 {
-        menuTitleRunes := []rune(m.menuTitle)
-        title = string(menuTitleRunes[:50])
+    var (
+    	menuTitleBuilder strings.Builder
+        title string
+        maxLen = 10000
+    )
+    if maxLen > m.WindowWidth {
+        maxLen = m.WindowWidth
+    }
+    if runewidth.StringWidth(m.menuTitle) > maxLen {
+        title = runewidth.Truncate(m.menuTitle, maxLen, "")
+    } else {
+        title = m.menuTitle
     }
 
     if m.menuTitleStartRow - *top > 0 {
@@ -210,6 +217,8 @@ func menuListView(m *NeteaseModel, top *int) string {
         menuListBuilder.WriteString(str)
         menuListBuilder.WriteString("\n")
     }
+
+    // 补全空白
     if maxLines > lines {
         menuListBuilder.WriteString(strings.Repeat(" ", m.WindowWidth - m.menuStartColumn))
         menuListBuilder.WriteString(strings.Repeat("\n", maxLines - lines))

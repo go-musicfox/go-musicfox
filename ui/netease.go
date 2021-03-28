@@ -3,7 +3,6 @@ package ui
 import (
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/go-musicfox/constants"
-    "strings"
     "time"
 )
 
@@ -11,7 +10,6 @@ type NeteaseModel struct {
     WindowWidth    int
     WindowHeight   int
     isListeningKey bool
-    clearScreen    bool
 
     // startup
     *startupModel
@@ -57,9 +55,6 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.WindowHeight = msgWithType.Height
         m.WindowWidth  = msgWithType.Width
 
-    case tickClearScreenMsg:
-        m.clearScreen = true
-
     }
 
     // Hand off the message and model to the approprate update function for the
@@ -77,11 +72,6 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *NeteaseModel) View() string {
     if m.quitting || m.WindowWidth <= 0 || m.WindowHeight <= 0 {
         return ""
-    }
-
-    if m.clearScreen {
-        m.clearScreen = false
-        return strings.Repeat(strings.Repeat(" ", m.WindowWidth), m.WindowHeight)
     }
 
     if constants.AppShowStartup && !m.loaded {
