@@ -25,8 +25,12 @@ func (loading *Loading)start() {
 
     loading.curLen = utf8.RuneCountInString(loading.model.menuTitle) + utf8.RuneCountInString(constants.MainLoadingText)
 
+    var repeatSpace string
+    if loading.model.menuTitleStartColumn > 0 {
+        repeatSpace = strings.Repeat(" ", loading.model.menuTitleStartColumn)
+    }
     fmt.Printf("%s%s%s",
-        strings.Repeat(" ", loading.model.menuTitleStartColumn),
+        repeatSpace,
         SetFgStyle(loading.model.menuTitle, termenv.ANSIGreen),
         SetFgStyle(constants.MainLoadingText, termProfile.Color("#5f5f5f")))
 
@@ -41,8 +45,14 @@ func (loading *Loading)complete() {
     if spaceLen < 0 {
         spaceLen = 0
     }
+
+    var repeatSpace string
+    if loading.model.menuTitleStartColumn > 0 {
+        repeatSpace = strings.Repeat(" ", loading.model.menuTitleStartColumn)
+    }
+
     fmt.Printf("%s%s%s",
-        strings.Repeat(" ", loading.model.menuTitleStartColumn),
+        repeatSpace,
         SetFgStyle(loading.model.menuTitle, termenv.ANSIGreen),
         strings.Repeat("　", spaceLen))
 

@@ -158,11 +158,15 @@ func titleView(m *NeteaseModel, top *int) string {
     titleLen := utf8.RuneCountInString(constants.AppName)+2
     prefixLen := (m.WindowWidth-titleLen)/2
     suffixLen := m.WindowWidth-prefixLen-titleLen
-    titleBuilder.WriteString(strings.Repeat("─", prefixLen))
+    if prefixLen > 0 {
+        titleBuilder.WriteString(strings.Repeat("─", prefixLen))
+    }
     titleBuilder.WriteString(" ")
     titleBuilder.WriteString(constants.AppName)
     titleBuilder.WriteString(" ")
-    titleBuilder.WriteString(strings.Repeat("─", suffixLen))
+    if suffixLen > 0 {
+        titleBuilder.WriteString(strings.Repeat("─", suffixLen))
+    }
 
     *top++
 
@@ -174,21 +178,23 @@ func menuTitleView(m *NeteaseModel, top *int) string {
     var (
     	menuTitleBuilder strings.Builder
         title string
-        maxLen = 10000
+        maxLen = 50
     )
-    if maxLen > m.WindowWidth {
-        maxLen = m.WindowWidth
+    if maxLen > m.WindowWidth - m.menuTitleStartColumn {
+        maxLen = m.WindowWidth - m.menuTitleStartColumn
     }
     if runewidth.StringWidth(m.menuTitle) > maxLen {
         title = runewidth.Truncate(m.menuTitle, maxLen, "")
     } else {
-        title = m.menuTitle
+        title = runewidth.FillRight(m.menuTitle, maxLen)
     }
 
     if m.menuTitleStartRow - *top > 0 {
         menuTitleBuilder.WriteString(strings.Repeat("\n", m.menuTitleStartRow - *top))
     }
-    menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
+    if m.menuTitleStartColumn > 0 {
+        menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
+    }
     menuTitleBuilder.WriteString(SetFgStyle(title, termenv.ANSIGreen))
 
     *top = m.menuTitleStartRow
@@ -220,7 +226,9 @@ func menuListView(m *NeteaseModel, top *int) string {
 
     // 补全空白
     if maxLines > lines {
-        menuListBuilder.WriteString(strings.Repeat(" ", m.WindowWidth - m.menuStartColumn))
+        if m.WindowWidth - m.menuStartColumn > 0 {
+            menuListBuilder.WriteString(strings.Repeat(" ", m.WindowWidth - m.menuStartColumn))
+        }
         menuListBuilder.WriteString(strings.Repeat("\n", maxLines - lines))
     }
 
@@ -254,16 +262,23 @@ func menuLineView(m *NeteaseModel, line int) string {
 
 // 菜单Item
 func menuItemView(m *NeteaseModel, index int) string {
-    var menuItemBuilder strings.Builder
+    var (
+    	menuItemBuilder strings.Builder
+        menuName string
+        itemMaxLen int
+    )
 
-    var menuName string
     if index == m.selectedIndex {
         menuName = fmt.Sprintf(" => %d. %s", index, m.menuList[index])
     } else {
         menuName = fmt.Sprintf("    %d. %s", index, m.menuList[index])
     }
 
-    itemMaxLen := 35
+    if m.doubleColumn {
+        itemMaxLen = (m.WindowWidth-m.menuStartColumn-4)/2
+    } else {
+        itemMaxLen = m.WindowWidth-m.menuStartColumn
+    }
     if runewidth.StringWidth(menuName) > itemMaxLen {
         menuName = runewidth.Truncate(menuName, itemMaxLen, "")
     } else {
