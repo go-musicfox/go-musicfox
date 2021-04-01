@@ -2,11 +2,11 @@ package main
 
 import (
     "fmt"
-    "github.com/anhoder/go-musicfox/commands"
-    "github.com/anhoder/go-musicfox/constants"
-    "github.com/anhoder/go-musicfox/ui"
-    "github.com/anhoder/go-musicfox/utils"
     "github.com/gookit/gcli/v2"
+    "go-musicfox/commands"
+    "go-musicfox/constants"
+    "go-musicfox/ui"
+    "go-musicfox/utils"
 )
 
 func main() {

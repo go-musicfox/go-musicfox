@@ -1,7 +1,7 @@
 package ui
 
 import (
-    "github.com/anhoder/go-musicfox/player"
+    "go-musicfox/player"
     "strings"
     "time"
 )

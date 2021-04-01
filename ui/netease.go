@@ -2,7 +2,7 @@ package ui
 
 import (
     tea "github.com/anhoder/bubbletea"
-    "github.com/anhoder/go-musicfox/constants"
+    "go-musicfox/constants"
     "time"
 )
 

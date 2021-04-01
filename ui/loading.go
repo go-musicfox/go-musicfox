@@ -2,8 +2,8 @@ package ui
 
 import (
     "fmt"
-    "github.com/anhoder/go-musicfox/constants"
     "github.com/muesli/termenv"
+    "go-musicfox/constants"
     "strings"
     "unicode/utf8"
 )

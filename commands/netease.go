@@ -2,8 +2,8 @@ package commands
 
 import (
     tea "github.com/anhoder/bubbletea"
-    "github.com/anhoder/go-musicfox/constants"
-    "github.com/anhoder/go-musicfox/ui"
+    "go-musicfox/constants"
+    "go-musicfox/ui"
     "github.com/gookit/gcli/v2"
 )
 

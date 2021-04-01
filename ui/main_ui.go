@@ -3,10 +3,10 @@ package ui
 import (
     "fmt"
     tea "github.com/anhoder/bubbletea"
-    "github.com/anhoder/go-musicfox/constants"
-    "github.com/anhoder/go-musicfox/utils"
     "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
+    "go-musicfox/constants"
+    "go-musicfox/utils"
     "math"
     "strings"
     "time"
@@ -275,7 +275,15 @@ func menuItemView(m *NeteaseModel, index int) string {
     }
 
     if m.doubleColumn {
-        itemMaxLen = (m.WindowWidth-m.menuStartColumn-4)/2
+        if m.WindowWidth <= 88 {
+            itemMaxLen = (m.WindowWidth-m.menuStartColumn-4)/2
+        } else {
+            if index%2 == 0 {
+                itemMaxLen = 44
+            } else {
+                itemMaxLen = m.WindowWidth-m.menuStartColumn-44
+            }
+        }
     } else {
         itemMaxLen = m.WindowWidth-m.menuStartColumn
     }

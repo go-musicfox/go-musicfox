@@ -3,8 +3,8 @@ package ui
 import (
     "fmt"
     tea "github.com/anhoder/bubbletea"
-    "github.com/anhoder/go-musicfox/constants"
-    "github.com/anhoder/go-musicfox/utils"
+    "go-musicfox/constants"
+    "go-musicfox/utils"
     "github.com/fogleman/ease"
     "github.com/muesli/termenv"
     "math"
