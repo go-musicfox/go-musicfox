@@ -2,7 +2,11 @@ package ui
 
 import (
     tea "github.com/anhoder/bubbletea"
+    "github.com/anhoder/netease-music/util"
+    "github.com/telanflow/cookiejar"
     "go-musicfox/constants"
+    "go-musicfox/utils"
+    "os"
     "time"
 )
 
@@ -37,6 +41,21 @@ func (m *NeteaseModel) Init() tea.Cmd {
     if constants.AppShowStartup {
         return tickStartup(time.Nanosecond)
     }
+
+    // Home目录
+    homeDir, err := utils.Home()
+    if nil != err {
+        panic("未获取到用户Home目录: " + err.Error())
+    }
+    projectDir := homeDir + "/.go-musicfox"
+
+    if _, err := os.Stat(projectDir); os.IsNotExist(err) {
+        _ = os.Mkdir(projectDir, os.ModePerm)
+    }
+
+    // 全局文件Jar
+    cookieJar, _ := cookiejar.NewFileJar(projectDir + "/cookie", nil)
+    util.SetGlobalCookieJar(cookieJar)
 
     return tickMainUI(time.Nanosecond)
 }

@@ -2,9 +2,9 @@ package commands
 
 import (
     tea "github.com/anhoder/bubbletea"
+    "github.com/gookit/gcli/v2"
     "go-musicfox/constants"
     "go-musicfox/ui"
-    "github.com/gookit/gcli/v2"
 )
 
 func NewPlayerCommand() *gcli.Command {
