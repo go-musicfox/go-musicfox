@@ -1,10 +1,5 @@
 package ui
 
-import (
-	"fmt"
-	"github.com/anhoder/netease-music/service"
-)
-
 type TestMenu struct {}
 
 func (m *TestMenu) BeforeBackMenuHook() Hook {
@@ -59,11 +54,7 @@ func (m *TestMenu) BeforeNextPageHook() Hook {
 }
 
 func (m *TestMenu) BeforeEnterMenuHook() Hook {
-	return func(m *NeteaseModel) {
-		recommendSongs := service.RecommendSongsService{}
-		response := recommendSongs.RecommendSongs()
-		fmt.Sprintf("%v", response)
-	}
+	return nil
 }
 
 func (m *TestMenu) BottomOutHook() Hook {

@@ -16,7 +16,7 @@ func main() {
     app.Description = constants.AppDescription
 
     logo := utils.GetAlphaAscii(app.Name)
-    randomColor := ui.GetRandomLogoColor()
+    randomColor := ui.GetPrimaryColor()
     logoColorful := ui.SetFgStyle(logo, randomColor)
 
     gcli.AppHelpTemplate = fmt.Sprintf(constants.AppHelpTemplate, logoColorful)

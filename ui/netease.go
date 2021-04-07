@@ -20,6 +20,9 @@ type NeteaseModel struct {
 
     // main ui
     *mainUIModel
+
+    // login
+    *LoginModel
 }
 
 // NewNeteaseModel get netease model
@@ -33,6 +36,9 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 
     // main menu
     m.mainUIModel = NewMainUIModel(m)
+
+    // login
+    m.LoginModel = NewLogin()
 
     return
 }
@@ -65,7 +71,8 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msgWithType := msg.(type) {
     case tea.KeyMsg:
         k := msgWithType.String()
-        if k == "q" || k == "ctrl+c" {
+        // 登录界面输入q不退出
+        if !m.showLogin && (k == "q" || k == "ctrl+c") {
             m.quitting = true
             return m, tea.Quit
         }
@@ -85,6 +92,10 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return updateStartup(msg, m)
     }
 
+    if m.showLogin {
+        return updateLogin(msg, m)
+    }
+
     return updateMainUI(msg, m)
 }
 
@@ -95,6 +106,10 @@ func (m *NeteaseModel) View() string {
 
     if constants.AppShowStartup && !m.loaded {
         return startupView(m)
+    }
+
+    if m.showLogin {
+        return loginView(m)
     }
 
     return mainUIView(m)

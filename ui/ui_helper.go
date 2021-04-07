@@ -11,19 +11,33 @@ import (
 )
 
 var (
-    termProfile  = termenv.ColorProfile()
-    primaryColor termenv.Color
+    termProfile =   termenv.ColorProfile()
+    primaryColor    termenv.Color
+    primaryColorStr string
 )
 
-// GetRandomLogoColor get random color
-func GetRandomLogoColor() termenv.Color {
+// GetPrimaryColor get random color
+func GetPrimaryColor() termenv.Color {
     if primaryColor != nil {
         return primaryColor
     }
     rand.Seed(time.Now().UnixNano())
-    primaryColor = termProfile.Color(strconv.Itoa(rand.Intn(228 - 17) + 17))
+    primaryColorStr = strconv.Itoa(rand.Intn(228 - 17) + 17)
+    primaryColor = termProfile.Color(primaryColorStr)
 
     return primaryColor
+}
+
+// GetPrimaryColorStr get random color string
+func GetPrimaryColorStr() string {
+    if primaryColorStr != "" {
+        return primaryColorStr
+    }
+    rand.Seed(time.Now().UnixNano())
+    primaryColorStr = strconv.Itoa(rand.Intn(228 - 17) + 17)
+    primaryColor = termProfile.Color(primaryColorStr)
+
+    return primaryColorStr
 }
 
 // GetRandomRgbColor get random rgb color

@@ -22,3 +22,12 @@ func tickMainUI(duration time.Duration) tea.Cmd {
         return tickMainUIMsg{}
     })
 }
+
+// login tick
+type tickLoginMsg struct{}
+
+func tickLogin(duration time.Duration) tea.Cmd {
+    return tea.Tick(duration, func(t time.Time) tea.Msg {
+        return tickLoginMsg{}
+    })
+}

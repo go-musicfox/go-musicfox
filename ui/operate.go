@@ -19,7 +19,10 @@ func moveUp(m *NeteaseModel) {
         if m.selectedIndex - 2 < 0 && topHook != nil {
             loading := NewLoading(m)
             loading.start()
-            topHook(m)
+            if res := topHook(m); !res {
+                loading.complete()
+                return
+            }
             loading.complete()
         }
         if m.selectedIndex - 2 < 0 {
@@ -30,7 +33,10 @@ func moveUp(m *NeteaseModel) {
         if m.selectedIndex - 1 < 0 && topHook != nil {
             loading := NewLoading(m)
             loading.start()
-            topHook(m)
+            if res := topHook(m); !res {
+                loading.complete()
+                return
+            }
             loading.complete()
         }
         if m.selectedIndex - 1 < 0 {
@@ -50,7 +56,10 @@ func moveDown(m *NeteaseModel) {
         if m.selectedIndex + 2 > len(m.menuList) - 1 && bottomHook != nil {
             loading := NewLoading(m)
             loading.start()
-            bottomHook(m)
+            if res := bottomHook(m); !res {
+                loading.complete()
+                return
+            }
             loading.complete()
         }
         if m.selectedIndex + 2 > len(m.menuList) - 1 {
@@ -61,7 +70,10 @@ func moveDown(m *NeteaseModel) {
         if m.selectedIndex + 1 > len(m.menuList) - 1 && bottomHook != nil {
             loading := NewLoading(m)
             loading.start()
-            bottomHook(m)
+            if res := bottomHook(m); !res {
+                loading.complete()
+                return
+            }
             loading.complete()
         }
         if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -90,7 +102,10 @@ func moveRight(m *NeteaseModel) {
     if bottomHook := m.menu.BottomOutHook(); m.selectedIndex + 1 > len(m.menuList) - 1 && bottomHook != nil {
         loading := NewLoading(m)
         loading.start()
-        bottomHook(m)
+        if res := bottomHook(m); !res {
+            loading.complete()
+            return
+        }
         loading.complete()
     }
     if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -109,7 +124,10 @@ func prePage(m *NeteaseModel) {
     if prePageHook := m.menu.BeforePrePageHook(); prePageHook != nil {
         loading := NewLoading(m)
         loading.start()
-        prePageHook(m)
+        if res := prePageHook(m); !res {
+            loading.complete()
+            return
+        }
         loading.complete()
     }
 
@@ -129,7 +147,10 @@ func nextPage(m *NeteaseModel) {
     if nextPageHook := m.menu.BeforeNextPageHook(); nextPageHook != nil {
         loading := NewLoading(m)
         loading.start()
-        nextPageHook(m)
+        if res := nextPageHook(m); !res {
+            loading.complete()
+            return
+        }
         loading.complete()
     }
     if m.menuCurPage >= int(math.Ceil(float64(len(m.menuList)) / float64(m.menuPageSize))) {
@@ -153,7 +174,10 @@ func enterMain(m *NeteaseModel) {
     if enterMenuHook := m.menu.BeforeEnterMenuHook(); enterMenuHook != nil {
         loading := NewLoading(m)
         loading.start()
-        enterMenuHook(m)
+        if res := enterMenuHook(m); !res {
+            loading.complete()
+            return
+        }
         loading.complete()
     }
 
@@ -201,7 +225,10 @@ func backMenu(m *NeteaseModel) {
     if backMenuHook := m.menu.BeforeBackMenuHook(); backMenuHook != nil {
         loading := NewLoading(m)
         loading.start()
-        backMenuHook(m)
+        if res := backMenuHook(m); !res {
+            loading.complete()
+            return
+        }
         loading.complete()
     }
 

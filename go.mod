@@ -3,6 +3,7 @@ module go-musicfox
 go 1.16
 
 require (
+	github.com/anhoder/bubbles v0.7.8 // indirect
 	github.com/anhoder/bubbletea v0.12.8
 	github.com/anhoder/netease-music v1.0.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
@@ -14,4 +15,7 @@ require (
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 )
 
-replace github.com/anhoder/bubbletea => ../bubbletea
+replace (
+	github.com/anhoder/bubbletea => ../bubbletea
+	github.com/anhoder/netease-music => ../netease-music
+)

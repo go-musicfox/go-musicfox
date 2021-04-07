@@ -1,8 +1,10 @@
+github.com/anhoder/bubbles v0.7.8 h1:qr68Y2apS1HUdWboxmJq+WbXJWrcpP7QNkimMZ0NP4o=
 github.com/anhoder/bubbles v0.7.8/go.mod h1:TIbWUkJn7FL3JAGNpRx9BVJ7NPjGok7Ex0Nq3isfcAo=
 github.com/anhoder/netease-music v1.0.0 h1:vf1/eL0JOmA35/yoRVFNG3PTjyOgNhONeJvKYIXmGkw=
 github.com/anhoder/netease-music v1.0.0/go.mod h1:QcKklH86IiEgzN7xLSlLS60Wbau/NA7ygd36jWGyUek=
 github.com/asmcos/requests v0.0.0-20200725080539-508ff1c69720 h1:KaCIlVnUN0lmUHBJI8266IJIFnkfdbVaOBFizMHqXj0=
 github.com/asmcos/requests v0.0.0-20200725080539-508ff1c69720/go.mod h1:Gth3x79qo77CpZ2G1CVOem/N08Vo4kcIRqpfvwssdDY=
+github.com/atotto/clipboard v0.1.2 h1:YZCtFu5Ie8qX2VmVTBnrqLSiU9XOWwqNRmdT3gIQzbY=
 github.com/atotto/clipboard v0.1.2/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
 github.com/containerd/console v1.0.1 h1:u7SFAJyRqWcG6ogaMAx3KjSTy1e3hT9QxqX7Jco7dRc=
 github.com/containerd/console v1.0.1/go.mod h1:XUsP6YE/mKtz6bxc+I8UiKKTP04qjQL4qcS3XoQ5xkw=

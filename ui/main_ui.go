@@ -32,6 +32,8 @@ type mainUIModel struct {
     selectedIndex int	       // 当前选中的菜单index
     menuData      interface{}  // 数据
 
+    showLogin bool // 显示登陆
+
 
     menu   IMenu   // 菜单
     player *Player // 播放器
@@ -140,7 +142,7 @@ func mainUIView(m *NeteaseModel) string {
     }
 
     // menu title
-    builder.WriteString(menuTitleView(m, &top))
+    builder.WriteString(menuTitleView(m, &top, ""))
 
     // menu list
     builder.WriteString(menuListView(m, &top))
@@ -174,7 +176,7 @@ func titleView(m *NeteaseModel, top *int) string {
 }
 
 // menu title
-func menuTitleView(m *NeteaseModel, top *int) string {
+func menuTitleView(m *NeteaseModel, top *int, menuTitle string) string {
     var (
     	menuTitleBuilder strings.Builder
         title string
@@ -183,10 +185,15 @@ func menuTitleView(m *NeteaseModel, top *int) string {
     if maxLen > m.WindowWidth - m.menuTitleStartColumn {
         maxLen = m.WindowWidth - m.menuTitleStartColumn
     }
-    if runewidth.StringWidth(m.menuTitle) > maxLen {
-        title = runewidth.Truncate(m.menuTitle, maxLen, "")
+
+    if len(menuTitle) <= 0 {
+        menuTitle = m.menuTitle
+    }
+
+    if runewidth.StringWidth(menuTitle) > maxLen {
+        title = runewidth.Truncate(menuTitle, maxLen, "")
     } else {
-        title = runewidth.FillRight(m.menuTitle, maxLen)
+        title = runewidth.FillRight(menuTitle, maxLen)
     }
 
     if m.menuTitleStartRow - *top > 0 {

@@ -1,6 +1,6 @@
 package ui
 
-type Hook func(m *NeteaseModel)
+type Hook func(m *NeteaseModel) bool
 
 // IMenu menu interface
 type IMenu interface {
