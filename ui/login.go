@@ -1,12 +1,12 @@
 package ui
 
 import (
-    "fmt"
     "github.com/anhoder/bubbles/textinput"
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/netease-music/service"
     "github.com/muesli/termenv"
     "go-musicfox/constants"
+    "go-musicfox/utils"
     "strings"
     "time"
 )
@@ -16,6 +16,7 @@ type LoginModel struct {
     accountInput  textinput.Model
     passwordInput textinput.Model
     submitButton  string
+    tips          string
 }
 
 var (
@@ -60,6 +61,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
             fallthrough
         case "esc":
             m.showLogin = false
+            m.tips = ""
             backMenu(m)
             return m, tickMainUI(time.Nanosecond)
 
@@ -94,10 +96,22 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                     response = loginService.LoginCellphone()
                 }
 
-                fmt.Sprint(response)
-                // TODO 登录结果校验
+                code := utils.CheckCodeFromResponse(response)
+                switch code {
+                case utils.UnknownError:
+                    m.tips = SetFgStyle("未知错误，请稍后再试~", termenv.ANSIRed)
+                    return m, tickLogin(time.Nanosecond)
+                case utils.Success:
 
-                return m, tea.Quit
+                default:
+                    m.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIRed) +
+                        SetFgStyle("(账号或密码错误)", termProfile.Color("#5f5f5f"))
+                    return m, tickLogin(time.Nanosecond)
+                }
+
+                m.showLogin = false
+                m.tips = ""
+                return m, tickLogin(time.Nanosecond)
             }
 
             // Cycle indexes
@@ -193,7 +207,12 @@ func loginView(m *NeteaseModel) string {
         }
     }
 
-    builder.WriteString("\n\n\n")
+    builder.WriteString("\n\n")
+    if m.menuStartColumn > 0 {
+        builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
+    }
+    builder.WriteString(m.tips)
+    builder.WriteString("\n\n")
     if m.menuStartColumn > 0 {
         builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
     }

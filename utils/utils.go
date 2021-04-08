@@ -61,3 +61,30 @@ func homeWindows() (string, error) {
 
     return home, nil
 }
+
+type ResCode uint8
+const (
+    Success ResCode = iota
+    UnknownError
+    NeedLogin
+    PasswordError
+)
+
+// CheckCodeFromResponse check response code
+func CheckCodeFromResponse(response map[string]interface{}) ResCode {
+    code, ok := response["code"].(float64);
+    if !ok {
+        return UnknownError
+    }
+
+    switch code {
+    case 301:
+        fallthrough
+    case 302:
+        return NeedLogin
+    case 200:
+        return Success
+    }
+
+    return PasswordError
+}

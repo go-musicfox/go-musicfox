@@ -171,16 +171,6 @@ func enterMain(m *NeteaseModel) {
         return
     }
 
-    if enterMenuHook := m.menu.BeforeEnterMenuHook(); enterMenuHook != nil {
-        loading := NewLoading(m)
-        loading.start()
-        if res := enterMenuHook(m); !res {
-            loading.complete()
-            return
-        }
-        loading.complete()
-    }
-
     newTitle := m.menuList[m.selectedIndex]
     stackItem := &menuStackItem{
         menuList: m.menuList,
@@ -195,6 +185,16 @@ func enterMain(m *NeteaseModel) {
     if menu == nil {
         m.menuStack.Pop()
         return
+    }
+
+    if enterMenuHook := menu.BeforeEnterMenuHook(); enterMenuHook != nil {
+        loading := NewLoading(m)
+        loading.start()
+        if res := enterMenuHook(m); !res {
+            loading.complete()
+            return
+        }
+        loading.complete()
     }
 
     menuList := menu.MenuViews()

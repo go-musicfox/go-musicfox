@@ -1,9 +1,5 @@
 package ui
 
-import (
-    "github.com/anhoder/netease-music/service"
-)
-
 type MainMenu struct {}
 
 func (m *MainMenu) IsPlayable() bool {
@@ -37,7 +33,7 @@ func (m *MainMenu) MenuViews() []string {
 
 func (m *MainMenu) SubMenu(index int) IMenu {
     menuList := []IMenu{
-        &TestMenu{},
+        &DailyRecommendSongsMenu{},
     }
 
     if index >= len(menuList) {
@@ -62,22 +58,8 @@ func (m *MainMenu) BeforeNextPageHook() Hook {
 }
 
 func (m *MainMenu) BeforeEnterMenuHook() Hook {
-    return func(model *NeteaseModel) bool {
-        recommendSongs := service.RecommendSongsService{}
-        response := recommendSongs.RecommendSongs()
-        if _, ok := response["code"]; !ok {
-            return false
-        }
-        if code, ok := response["code"].(float64); !ok {
-            return false
-        } else {
-            if code == float64(301) {
-                model.showLogin = true
-            }
-        }
-
-        return true
-    }
+    // Nothing to do
+    return nil
 }
 
 func (m *MainMenu) BeforeBackMenuHook() Hook {
