@@ -20,11 +20,10 @@ type LoginModel struct {
 }
 
 var (
-    color               = termenv.ColorProfile().Color
     focusedPrompt       = termenv.String("> ").Foreground(GetPrimaryColor()).String()
     blurredPrompt       = "> "
     focusedSubmitButton = "[ " + termenv.String("确认").Foreground(GetPrimaryColor()).String() + " ]"
-    blurredSubmitButton = "[ " + termenv.String("确认").Foreground(color("240")).String() + " ]"
+    blurredSubmitButton = "[ " + termenv.String("确认").Foreground(termenv.ANSIBrightBlack).String() + " ]"
 )
 
 func NewLogin() (login *LoginModel) {
@@ -57,9 +56,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case tea.KeyMsg:
         switch msg.String() {
 
-        case "ctrl+c":
-            fallthrough
-        case "esc":
+        case "ctrl+c", "esc":
             m.showLogin = false
             m.tips = ""
             backMenu(m)
@@ -81,31 +78,34 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                 if len(m.accountInput.Value()) <= 0 || len(m.passwordInput.Value()) <= 0 {
                     return m, nil
                 }
-                var response map[string]interface{}
+                var code float64
                 if strings.ContainsRune(m.accountInput.Value(), '@') {
                     loginService := service.LoginEmailService{
                         Email: m.accountInput.Value(),
                         Password: m.passwordInput.Value(),
                     }
-                    response = loginService.LoginEmail()
+                    code, _ = loginService.LoginEmail()
                 } else {
                     loginService := service.LoginCellphoneService{
                         Phone: m.accountInput.Value(),
                         Password: m.passwordInput.Value(),
                     }
-                    response = loginService.LoginCellphone()
+                    code, _ = loginService.LoginCellphone()
                 }
 
-                code := utils.CheckCodeFromResponse(response)
-                switch code {
+                codeType := utils.CheckCode(code)
+                switch codeType {
                 case utils.UnknownError:
                     m.tips = SetFgStyle("未知错误，请稍后再试~", termenv.ANSIRed)
+                    return m, tickLogin(time.Nanosecond)
+                case utils.NetworkError:
+                    m.tips = SetFgStyle("网络异常，请稍后再试~", termenv.ANSIRed)
                     return m, tickLogin(time.Nanosecond)
                 case utils.Success:
 
                 default:
                     m.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIRed) +
-                        SetFgStyle("(账号或密码错误)", termProfile.Color("#5f5f5f"))
+                        SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)
                     return m, tickLogin(time.Nanosecond)
                 }
 

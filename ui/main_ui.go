@@ -13,6 +13,11 @@ import (
     "unicode/utf8"
 )
 
+type MenuItem struct {
+    Title    string
+    Subtitle string
+}
+
 type mainUIModel struct {
     doubleColumn bool // 是否双列显示
 
@@ -27,7 +32,7 @@ type mainUIModel struct {
     menuCurPage	 int // 菜单当前页
     menuPageSize int // 菜单每页大小
 
-    menuList      []string     // 菜单列表
+    menuList      []MenuItem   // 菜单列表
     menuStack     *utils.Stack // 菜单栈
     selectedIndex int	       // 当前选中的菜单index
     menuData      interface{}  // 数据
@@ -271,14 +276,18 @@ func menuLineView(m *NeteaseModel, line int) string {
 func menuItemView(m *NeteaseModel, index int) string {
     var (
     	menuItemBuilder strings.Builder
-        menuName string
+        menuTitle string
         itemMaxLen int
+    	menuName string
     )
 
     if index == m.selectedIndex {
-        menuName = fmt.Sprintf(" => %d. %s", index, m.menuList[index])
+        menuTitle = fmt.Sprintf(" => %d. %s", index, m.menuList[index].Title)
     } else {
-        menuName = fmt.Sprintf("    %d. %s", index, m.menuList[index])
+        menuTitle = fmt.Sprintf("    %d. %s", index, m.menuList[index].Title)
+    }
+    if len(m.menuList[index].Subtitle) != 0 {
+        menuTitle += " "
     }
 
     if m.doubleColumn {
@@ -294,23 +303,36 @@ func menuItemView(m *NeteaseModel, index int) string {
     } else {
         itemMaxLen = m.WindowWidth-m.menuStartColumn
     }
-    if runewidth.StringWidth(menuName) > itemMaxLen {
-        menuName = runewidth.Truncate(menuName, itemMaxLen, "")
+
+    menuTitleLen := runewidth.StringWidth(menuTitle)
+    menuSubtitleLen := runewidth.StringWidth(m.menuList[index].Subtitle)
+    if menuTitleLen > itemMaxLen {
+        if index == m.selectedIndex {
+            menuName = SetFgStyle(runewidth.Truncate(menuTitle, itemMaxLen, ""), primaryColor)
+        } else {
+            menuName = SetNormalStyle(runewidth.Truncate(menuTitle, itemMaxLen, ""))
+        }
+    } else if menuTitleLen + menuSubtitleLen > itemMaxLen {
+        if index == m.selectedIndex {
+            menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, primaryColor), SetFgStyle(runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, ""), termenv.ANSIBrightBlack))
+        } else {
+            menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, ""), termenv.ANSIBrightBlack))
+        }
     } else {
-        menuName = runewidth.FillRight(menuName, itemMaxLen)
+        if index == m.selectedIndex {
+            menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, primaryColor), SetFgStyle(runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen-1), termenv.ANSIBrightBlack))
+        } else {
+            menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen-1), termenv.ANSIBrightBlack))
+        }
     }
 
-    if index == m.selectedIndex {
-        menuItemBuilder.WriteString(SetFgStyle(menuName, primaryColor))
-    } else {
-        menuItemBuilder.WriteString(SetNormalStyle(menuName))
-    }
+    menuItemBuilder.WriteString(menuName)
 
     return menuItemBuilder.String()
 }
 
 // 获取当前页的菜单
-func getCurPageMenus(m *NeteaseModel) []string {
+func getCurPageMenus(m *NeteaseModel) []MenuItem {
     start := (m.menuCurPage - 1) * m.menuPageSize
     end := int(math.Min(float64(len(m.menuList)), float64(m.menuCurPage*m.menuPageSize)))
 
@@ -335,6 +357,8 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         enterMain(m)
     case "esc":
         backMenu(m)
+    case "space":
+
     }
 
     return m, tickMainUI(time.Nanosecond)

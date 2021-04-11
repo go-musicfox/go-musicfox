@@ -1,12 +1,14 @@
 package ui
 
 import (
+    "fmt"
     "math"
 )
 
 type menuStackItem struct {
-    menuList      []string
+    menuList      []MenuItem
     selectedIndex int
+    menuCurPage   int
     menuTitle     string
     menuData      interface{}
     menu          IMenu
@@ -175,6 +177,7 @@ func enterMain(m *NeteaseModel) {
     stackItem := &menuStackItem{
         menuList: m.menuList,
         selectedIndex: m.selectedIndex,
+        menuCurPage: m.menuCurPage,
         menuTitle: m.menuTitle,
         menuData: m.menuData,
         menu: m.menu,
@@ -205,7 +208,7 @@ func enterMain(m *NeteaseModel) {
 
     m.menu = menu
     m.menuList = menuList
-    m.menuTitle = newTitle
+    m.menuTitle = fmt.Sprintf("%s %s", newTitle.Title, newTitle.Subtitle)
     m.selectedIndex = 0
     m.menuCurPage = 1
 }
@@ -242,4 +245,5 @@ func backMenu(m *NeteaseModel) {
     m.menuTitle = stackMenu.menuTitle
     m.menuData = stackMenu.menuData
     m.selectedIndex = stackMenu.selectedIndex
+    m.menuCurPage = stackMenu.menuCurPage
 }

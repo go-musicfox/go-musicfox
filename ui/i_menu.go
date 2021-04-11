@@ -14,7 +14,7 @@ type IMenu interface {
     GetMenuKey() string
 
     // MenuViews 获取子菜单View
-    MenuViews() []string
+    MenuViews() []MenuItem
 
     // SubMenu 根据下标获取菜单Model
     SubMenu(index int) IMenu

@@ -14,20 +14,20 @@ func (m *MainMenu) GetMenuKey() string {
     return "main_menu"
 }
 
-func (m *MainMenu) MenuViews() []string {
-    return []string{
-        "每日推荐歌曲",
-        "每日推荐歌单",
-        "我的歌单",
-        "私人FM",
-        "专辑列表",
-        "搜索",
-        "排行榜",
-        "精选歌单",
-        "热门歌手",
-        "云盘",
-        "主播电台",
-        "帮助",
+func (m *MainMenu) MenuViews() []MenuItem {
+    return []MenuItem{
+        {Title: "每日推荐歌曲"},
+        {Title: "每日推荐歌单"},
+        {Title: "我的歌单"},
+        {Title: "私人FM"},
+        {Title: "专辑列表"},
+        {Title: "搜索"},
+        {Title: "排行榜"},
+        {Title: "精选歌单"},
+        {Title: "热门歌手"},
+        {Title: "云盘"},
+        {Title: "主播电台"},
+        {Title: "帮助"},
     }
 }
 

@@ -32,7 +32,7 @@ func (loading *Loading)start() {
     fmt.Printf("%s%s%s",
         repeatSpace,
         SetFgStyle(loading.model.menuTitle, termenv.ANSIGreen),
-        SetFgStyle(constants.MainLoadingText, termProfile.Color("#5f5f5f")))
+        SetFgStyle(constants.MainLoadingText, termenv.ANSIBrightBlack))
 
     termenv.MoveCursor(0, 0)
 }

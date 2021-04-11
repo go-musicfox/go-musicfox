@@ -3,10 +3,10 @@ package ui
 import (
     "fmt"
     tea "github.com/anhoder/bubbletea"
-    "go-musicfox/constants"
-    "go-musicfox/utils"
     "github.com/fogleman/ease"
     "github.com/muesli/termenv"
+    "go-musicfox/constants"
+    "go-musicfox/utils"
     "math"
     "strings"
     "time"
@@ -131,7 +131,7 @@ func tipsView(m *NeteaseModel) string {
         strings.Repeat(" ", left),
         float64(m.TotalDuration - m.loadedDuration)/float64(time.Second))
 
-    return SetFgStyle(tips, termProfile.Color("8"))
+    return SetFgStyle(tips, termenv.ANSIBrightBlack)
 }
 
 // get progress

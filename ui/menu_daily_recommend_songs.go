@@ -3,10 +3,11 @@ package ui
 import (
 	"github.com/anhoder/netease-music/service"
 	"go-musicfox/utils"
+	"strings"
 )
 
 type DailyRecommendSongsMenu struct {
-	menus []string
+	menus []MenuItem
 }
 
 func (m *DailyRecommendSongsMenu) BeforeBackMenuHook() Hook {
@@ -25,7 +26,7 @@ func (m *DailyRecommendSongsMenu) GetMenuKey() string {
 	return "main_menu"
 }
 
-func (m *DailyRecommendSongsMenu) MenuViews() []string {
+func (m *DailyRecommendSongsMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
@@ -50,22 +51,22 @@ func (m *DailyRecommendSongsMenu) BeforeNextPageHook() Hook {
 func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		recommendSongs := service.RecommendSongsService{}
-		response := recommendSongs.RecommendSongs()
-		if _, ok := response["code"]; !ok {
-			return false
-		}
-		code := utils.CheckCodeFromResponse(response)
-		if code == utils.NeedLogin {
+		code, response := recommendSongs.RecommendSongs()
+		codeType := utils.CheckCode(code)
+		if codeType == utils.NeedLogin {
 			model.showLogin = true
 			return false
 		}
-
-		m.menus = []string{
-			"dasdsad",
-			"dsadsad",
-			"dasdsad",
-			"dsadsad",
+		list := utils.GetListFromSongs(response)
+		for _, song := range list {
+			var artists []string
+			for _, artist := range song.Artists {
+				artists = append(artists, artist.Name)
+			}
+			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
 		}
+
+		model.menuData = list
 
 		return true
 	}

@@ -3,6 +3,8 @@ package utils
 import (
     "bytes"
     "errors"
+    "github.com/buger/jsonparser"
+    "go-musicfox/ds"
     "os"
     "os/exec"
     "os/user"
@@ -66,25 +68,69 @@ type ResCode uint8
 const (
     Success ResCode = iota
     UnknownError
+    NetworkError
     NeedLogin
     PasswordError
 )
 
-// CheckCodeFromResponse check response code
-func CheckCodeFromResponse(response map[string]interface{}) ResCode {
-    code, ok := response["code"].(float64);
-    if !ok {
-        return UnknownError
-    }
-
+// CheckCode check response code
+func CheckCode(code float64) ResCode {
     switch code {
-    case 301:
-        fallthrough
-    case 302:
+    case 301, 302:
         return NeedLogin
+    case 520:
+        return NetworkError
     case 200:
         return Success
     }
 
     return PasswordError
+}
+
+func ReplaceSpecialStr(str string) string {
+    replaceStr := map[string]string{
+        "“": "\"",
+        "”": "\"",
+    }
+    for oldStr, newStr := range replaceStr {
+        str = strings.ReplaceAll(str, oldStr, newStr)
+    }
+
+    return str
+}
+
+func GetListFromSongs(data string) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach([]byte(data), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+       song := ds.Song{}
+       if id, err := jsonparser.GetInt(value, "id"); err == nil {
+           song.Id = id
+       }
+       if name, err := jsonparser.GetString(value, "name"); err == nil {
+           song.Name = name
+       }
+       if alId, err := jsonparser.GetInt(value, "al", "id"); err == nil {
+           song.Album.Id = alId
+       }
+       if alName, err := jsonparser.GetString(value, "al", "name"); err == nil {
+           song.Album.Name = alName
+       }
+       if alPic, err := jsonparser.GetString(value, "al", "string"); err == nil {
+           song.Album.PicUrl = alPic
+       }
+
+       _, _ = jsonparser.ArrayEach(value, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+           artist := ds.Artist{}
+           if arId, err := jsonparser.GetInt(value, "id"); err == nil {
+               artist.Id = arId
+           }
+           if arName, err := jsonparser.GetString(value, "name"); err == nil {
+               artist.Name = arName
+           }
+           song.Artists = append(song.Artists, artist)
+       }, "ar")
+
+        list = append(list, song)
+    }, "data", "dailySongs")
+
+    return
 }

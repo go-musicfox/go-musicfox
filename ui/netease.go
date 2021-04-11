@@ -44,9 +44,6 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 }
 
 func (m *NeteaseModel) Init() tea.Cmd {
-    if constants.AppShowStartup {
-        return tickStartup(time.Nanosecond)
-    }
 
     // Home目录
     homeDir, err := utils.Home()
@@ -62,6 +59,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
     // 全局文件Jar
     cookieJar, _ := cookiejar.NewFileJar(projectDir + "/cookie", nil)
     util.SetGlobalCookieJar(cookieJar)
+
+    if constants.AppShowStartup {
+        return tickStartup(time.Nanosecond)
+    }
 
     return tickMainUI(time.Nanosecond)
 }
