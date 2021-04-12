@@ -92,7 +92,7 @@ func (p *Player) Play(songType SongType, url string) error {
 	defer streamer.Close()
 
 	if !p.isInit {
-		err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Millisecond*300))
+		err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Millisecond*200))
 		if err != nil {
 			p.done <- struct{}{}
 			return err
@@ -191,6 +191,5 @@ func (p *Player) Resume() {
 
 // Close 关闭
 func (p *Player) Close() {
-	speaker.Close()
-	close(p.done)
+	speaker.Clear()
 }
