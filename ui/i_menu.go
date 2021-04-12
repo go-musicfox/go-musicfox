@@ -7,8 +7,8 @@ type IMenu interface {
     // IsPlayable 当前菜单是否可播放？
     IsPlayable() bool
 
-    // ResetPlaylistWhenEnter 进入当前菜单前，是否重置播放列表？
-    ResetPlaylistWhenEnter() bool
+    // ResetPlaylistWhenPlay 空格播放时，是否重置播放列表？
+    ResetPlaylistWhenPlay() bool
 
     // GetMenuKey 菜单唯一Key
     GetMenuKey() string

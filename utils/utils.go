@@ -10,6 +10,7 @@ import (
     "os/user"
     "runtime"
     "strings"
+    "time"
 )
 
 // Home 获取当前用户的Home目录
@@ -107,6 +108,9 @@ func GetListFromSongs(data string) (list []ds.Song) {
        }
        if name, err := jsonparser.GetString(value, "name"); err == nil {
            song.Name = name
+       }
+       if duration, err := jsonparser.GetInt(value, "dt"); err == nil {
+           song.Duration = time.Millisecond * time.Duration(duration)
        }
        if alId, err := jsonparser.GetInt(value, "al", "id"); err == nil {
            song.Album.Id = alId

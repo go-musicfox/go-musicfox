@@ -2,6 +2,8 @@ package ui
 
 import (
     "fmt"
+    "go-musicfox/ds"
+    "go-musicfox/utils"
     "math"
 )
 
@@ -246,4 +248,57 @@ func backMenu(m *NeteaseModel) {
     m.menuData = stackMenu.menuData
     m.selectedIndex = stackMenu.selectedIndex
     m.menuCurPage = stackMenu.menuCurPage
+}
+
+// 空格监听
+func spaceKeyHandle(m *NeteaseModel) {
+    var (
+    	songs []ds.Song
+        inPlayingMenu = m.player.InPlayingMenu()
+    )
+    if inPlayingMenu && !m.menu.ResetPlaylistWhenPlay() {
+        songs = m.player.playlist
+    } else {
+        if newPlaylist, ok := m.menuData.([]ds.Song); ok {
+            songs = newPlaylist
+        } else {
+            songs = []ds.Song{}
+        }
+    }
+
+    selectedIndex := m.selectedIndex
+    if !m.menu.IsPlayable() || len(songs) == 0 || m.selectedIndex > len(songs) - 1 {
+        if m.player.curSongIndex > len(m.player.playlist) - 1 {
+            return
+        }
+
+        switch m.player.State {
+        case utils.Paused:
+            m.player.Resume()
+        case utils.Playing:
+            m.player.Paused()
+        case utils.Stopped:
+            m.player.PlaySong(m.player.playlist[m.player.curSongIndex].Id)
+        }
+
+        return
+    }
+
+
+    if inPlayingMenu && songs[selectedIndex].Id == m.player.playlist[m.player.curSongIndex].Id {
+        switch m.player.State {
+        case utils.Paused:
+            m.player.Resume()
+        case utils.Playing:
+            m.player.Paused()
+        }
+    } else {
+        m.player.curSongIndex = selectedIndex
+        m.player.playingMenuKey = m.menu.GetMenuKey()
+        m.player.playlist = songs
+        m.player.isIntelligence = false
+        _ = m.player.PlaySong(songs[selectedIndex].Id)
+    }
+
+
 }

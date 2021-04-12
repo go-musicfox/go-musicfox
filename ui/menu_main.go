@@ -6,7 +6,7 @@ func (m *MainMenu) IsPlayable() bool {
     return false
 }
 
-func (m *MainMenu) ResetPlaylistWhenEnter() bool {
+func (m *MainMenu) ResetPlaylistWhenPlay() bool {
     return false
 }
 

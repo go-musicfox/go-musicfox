@@ -357,8 +357,8 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         enterMain(m)
     case "esc":
         backMenu(m)
-    case "space":
-
+    case " ":
+        spaceKeyHandle(m)
     }
 
     return m, tickMainUI(time.Nanosecond)

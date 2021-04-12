@@ -15,6 +15,8 @@ const StartupProgressOutBounce = true
 const StartupLoadingDuration = time.Second * 2
 const StartupTickDuration = time.Millisecond * 15
 
+const PlayerSongBr = "999000"
+
 const MainShowTitle = true
 const MainLoadingText = " [加载中...]"
 

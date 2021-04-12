@@ -75,6 +75,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         // 登录界面输入q不退出
         if !m.showLogin && (k == "q" || k == "ctrl+c") {
             m.quitting = true
+            m.player.Close()
             return m, tea.Quit
         }
 

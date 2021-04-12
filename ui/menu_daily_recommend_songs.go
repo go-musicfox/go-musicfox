@@ -15,10 +15,10 @@ func (m *DailyRecommendSongsMenu) BeforeBackMenuHook() Hook {
 }
 
 func (m *DailyRecommendSongsMenu) IsPlayable() bool {
-	return false
+	return true
 }
 
-func (m *DailyRecommendSongsMenu) ResetPlaylistWhenEnter() bool {
+func (m *DailyRecommendSongsMenu) ResetPlaylistWhenPlay() bool {
 	return false
 }
 
