@@ -29,10 +29,20 @@ type Player struct {
 }
 
 func NewPlayer(model *NeteaseModel) *Player {
-    return &Player{
+    player := &Player{
         model: model,
         Player: utils.NewPlayer(),
     }
+
+    // done监听
+    go func() {
+        for {
+            <- player.Player.Done()
+            player.NextSong()
+        }
+    }()
+
+    return player
 }
 
 func (p *Player) playerView() string {
@@ -124,19 +134,54 @@ func (p *Player) PlaySong(songId int64) error {
 
     url, err := jsonparser.GetString([]byte(response), "data", "[0]", "url")
     if err != nil {
-       return err
+       p.NextSong()
+       return nil
     }
 
-    go func() {
-        err := p.Player.Play(utils.Mp3, url)
-        if err != nil {
-           panic(err)
-        }
-    }()
+    p.Player.Play(utils.Mp3, url)
 
     return nil
 }
 
+// NextSong 下一曲
+func (p *Player) NextSong() {
+    if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist) - 1 {
+        //if p.isIntelligence {
+        //    p.intelligence(true)
+        //}
+        if p.model.doubleColumn && p.curSongIndex%2 == 0 {
+            moveRight(p.model)
+        } else {
+            moveDown(p.model)
+        }
+    }
+    //switch (_playMode) {
+    //case PlaylistMode.LIST_LOOP:
+    //    _curSongIndex = _curSongIndex >= songs.length - 1 ? 0 : _curSongIndex + 1;
+    //    break;
+    //case PlaylistMode.SINGLE_LOOP:
+    //    break;
+    //case PlaylistMode.SHUFFLE:
+    //    _curSongIndex = Random().nextInt(songs.length - 1);
+    //    break;
+    //case PlaylistMode.ORDER:
+    //    if (_curSongIndex >= songs.length - 1) return;
+    //    _curSongIndex++;
+    //    break;
+    //}
+    p.curSongIndex++
+    if p.curSongIndex > len(p.playlist) - 1 {
+        p.curSongIndex = 0
+    }
+
+    if p.curSongIndex > len(p.playlist) - 1 {
+        return
+    }
+    song := p.playlist[p.curSongIndex]
+    _ = p.PlaySong(song.Id)
+}
+
+// Close 关闭
 func (p *Player) Close() {
     p.Player.Close()
 }

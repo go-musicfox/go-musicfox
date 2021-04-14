@@ -1,0 +1,185 @@
+goroutine 1 [running]:
+runtime/pprof.writeGoroutineStacks(0x458fe40, 0xc000010008, 0xd0, 0x44bc700)
+	/usr/local/go/src/runtime/pprof/pprof.go:693 +0x9f
+runtime/pprof.writeGoroutine(0x458fe40, 0xc000010008, 0x2, 0xc0003ae900, 0x0)
+	/usr/local/go/src/runtime/pprof/pprof.go:682 +0x45
+runtime/pprof.(*Profile).WriteTo(0x481e700, 0x458fe40, 0xc000010008, 0x2, 0xc000010008, 0x0)
+	/usr/local/go/src/runtime/pprof/pprof.go:331 +0x3f2
+go-musicfox/ui.(*NeteaseModel).Update(0xc00016cd80, 0x44b3f60, 0xc00016ca80, 0x0, 0x0, 0x0)
+	/Users/alan/Desktop/go-musicfox/ui/netease.go:80 +0x392
+github.com/anhoder/bubbletea.(*Program).Start(0xc00016b490, 0x0, 0x0)
+	/Users/alan/Desktop/bubbletea/tea.go:378 +0x76d
+go-musicfox/commands.runPlayer(0xc000001b00, 0xc000021d50, 0x0, 0x0, 0x0, 0x0)
+	/Users/alan/Desktop/go-musicfox/commands/netease.go:24 +0x9e
+github.com/gookit/gcli/v2.(*Command).execute(0xc000001b00, 0xc000021d50, 0x0, 0x0, 0x1, 0x1)
+	/Users/alan/go/pkg/mod/github.com/gookit/gcli/v2@v2.3.4/cmd.go:243 +0x173
+github.com/gookit/gcli/v2.(*App).doRun(0xc0001486e0, 0x4505ad0, 0x7, 0xc000021d50, 0x0, 0x0, 0x1e)
+	/Users/alan/go/pkg/mod/github.com/gookit/gcli/v2@v2.3.4/app_run.go:173 +0x30f
+github.com/gookit/gcli/v2.(*App).Run(0xc0001486e0, 0xc000001b00)
+	/Users/alan/go/pkg/mod/github.com/gookit/gcli/v2@v2.3.4/app_run.go:126 +0x40b
+main.main()
+	/Users/alan/Desktop/go-musicfox/main.go:35 +0x2c8
+
+goroutine 6 [IO wait, 5 minutes]:
+internal/poll.runtime_pollWait(0x4f608f8, 0x72, 0x0)
+	/usr/local/go/src/runtime/netpoll.go:222 +0x55
+internal/poll.(*pollDesc).wait(0xc0001a6018, 0x72, 0x0, 0x0, 0x4504a8e)
+	/usr/local/go/src/internal/poll/fd_poll_runtime.go:87 +0x45
+internal/poll.(*pollDesc).waitRead(...)
+	/usr/local/go/src/internal/poll/fd_poll_runtime.go:92
+internal/poll.(*FD).Accept(0xc0001a6000, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+	/usr/local/go/src/internal/poll/fd_unix.go:401 +0x212
+net.(*netFD).accept(0xc0001a6000, 0x1, 0x49455b8, 0x10)
+	/usr/local/go/src/net/fd_unix.go:172 +0x45
+net.(*TCPListener).accept(0xc00000e630, 0x40516ec, 0x1, 0x4466960)
+	/usr/local/go/src/net/tcpsock_posix.go:139 +0x32
+net.(*TCPListener).Accept(0xc00000e630, 0x1, 0x1, 0xc00008e000, 0x0)
+	/usr/local/go/src/net/tcpsock.go:261 +0x65
+github.com/google/gops/agent.listen()
+	/Users/alan/go/pkg/mod/github.com/google/gops@v0.3.17/agent/agent.go:130 +0x73
+created by github.com/google/gops/agent.Listen
+	/Users/alan/go/pkg/mod/github.com/google/gops@v0.3.17/agent/agent.go:123 +0x38d
+
+goroutine 7 [select]:
+go-musicfox/utils.(*Player).listen(0xc00016cdb0)
+	/Users/alan/Desktop/go-musicfox/utils/player.go:83 +0x147
+go-musicfox/utils.NewPlayer.func1(0xc00016cdb0)
+	/Users/alan/Desktop/go-musicfox/utils/player.go:63 +0x2b
+created by go-musicfox/utils.NewPlayer
+	/Users/alan/Desktop/go-musicfox/utils/player.go:62 +0x157
+
+goroutine 8 [chan receive]:
+go-musicfox/ui.NewPlayer.func1(0xc00016b420)
+	/Users/alan/Desktop/go-musicfox/ui/player.go:42 +0x3c
+created by go-musicfox/ui.NewPlayer
+	/Users/alan/Desktop/go-musicfox/ui/player.go:40 +0x85
+
+goroutine 9 [select, 5 minutes]:
+github.com/anhoder/bubbletea.(*Program).Start.func1(0x4597a38, 0xc000032a80, 0xc000102420)
+	/Users/alan/Desktop/bubbletea/tea.go:255 +0x134
+created by github.com/anhoder/bubbletea.(*Program).Start
+	/Users/alan/Desktop/bubbletea/tea.go:250 +0x265
+
+goroutine 34 [syscall, 5 minutes]:
+os/signal.signal_recv(0x0)
+	/usr/local/go/src/runtime/sigqueue.go:165 +0x9d
+os/signal.loop()
+	/usr/local/go/src/os/signal/signal_unix.go:23 +0x25
+created by os/signal.Notify.func1.1
+	/usr/local/go/src/os/signal/signal.go:151 +0x45
+
+goroutine 11 [syscall]:
+syscall.syscall(0x40be300, 0x0, 0xc0003c4800, 0x100, 0x0, 0x0, 0x0)
+	/usr/local/go/src/runtime/sys_darwin.go:19 +0x2e
+syscall.read(0x0, 0xc0003c4800, 0x100, 0x100, 0x0, 0x400ed5b, 0x400ed5b)
+	/usr/local/go/src/syscall/zsyscall_darwin_amd64.go:1242 +0x66
+syscall.Read(...)
+	/usr/local/go/src/syscall/syscall_unix.go:187
+internal/poll.ignoringEINTRIO(...)
+	/usr/local/go/src/internal/poll/fd_unix.go:581
+internal/poll.(*FD).Read(0xc000076060, 0xc0003c4800, 0x100, 0x100, 0x0, 0x0, 0x0)
+	/usr/local/go/src/internal/poll/fd_unix.go:162 +0x145
+os.(*File).read(...)
+	/usr/local/go/src/os/file_posix.go:31
+os.(*File).Read(0xc000010010, 0xc0003c4800, 0x100, 0x100, 0x1, 0xc00002a248, 0x0)
+	/usr/local/go/src/os/file.go:117 +0x77
+github.com/anhoder/bubbletea.readInput(0x458fe20, 0xc000010010, 0x44b3f60, 0xc00016ca80, 0x0, 0x0)
+	/Users/alan/Desktop/bubbletea/key.go:286 +0x7e
+github.com/anhoder/bubbletea.(*Program).Start.func4(0xc00016b490, 0xc000102480, 0xc000102420)
+	/Users/alan/Desktop/bubbletea/tea.go:303 +0x7d
+created by github.com/anhoder/bubbletea.(*Program).Start
+	/Users/alan/Desktop/bubbletea/tea.go:301 +0xbc5
+
+goroutine 13 [chan receive, 5 minutes]:
+github.com/anhoder/bubbletea.listenForResize(0xc000010018, 0xc000102420, 0xc000102480)
+	/Users/alan/Desktop/bubbletea/signals_unix.go:20 +0x10b
+created by github.com/anhoder/bubbletea.(*Program).Start
+	/Users/alan/Desktop/bubbletea/tea.go:327 +0xb85
+
+goroutine 14 [select]:
+github.com/anhoder/bubbletea.(*Program).Start.func6(0xc0001024e0, 0xc0001023c0, 0xc000102420)
+	/Users/alan/Desktop/bubbletea/tea.go:333 +0x86
+created by github.com/anhoder/bubbletea.(*Program).Start
+	/Users/alan/Desktop/bubbletea/tea.go:331 +0x486
+
+goroutine 99 [select]:
+io.(*pipe).Write(0xc0000aa1e0, 0xc000097a50, 0xf80, 0xf80, 0x7a50, 0x0, 0x0)
+	/usr/local/go/src/io/pipe.go:94 +0x1c5
+io.(*PipeWriter).Write(0xc0000a2048, 0xc000090000, 0x89d0, 0x89d0, 0x74, 0x1, 0x74)
+	/usr/local/go/src/io/pipe.go:163 +0x4c
+github.com/hajimehoshi/oto.(*Player).Write(0xc0000a81e0, 0xc000090000, 0x89d0, 0x89d0, 0x2274, 0x1, 0x0)
+	/Users/alan/go/pkg/mod/github.com/hajimehoshi/oto@v0.7.1/player.go:66 +0x96
+github.com/faiface/beep/speaker.update()
+	/Users/alan/go/pkg/mod/github.com/faiface/beep@v1.0.3-0.20210301102329-98afada94bff/speaker/speaker.go:129 +0x1ae
+github.com/faiface/beep/speaker.Init.func1()
+	/Users/alan/go/pkg/mod/github.com/faiface/beep@v1.0.3-0.20210301102329-98afada94bff/speaker/speaker.go:52 +0x25
+created by github.com/faiface/beep/speaker.Init
+	/Users/alan/go/pkg/mod/github.com/faiface/beep@v1.0.3-0.20210301102329-98afada94bff/speaker/speaker.go:48 +0x1f3
+
+goroutine 98 [chan send]:
+github.com/hajimehoshi/oto.(*driver).TryWrite(0xc0000a0000, 0xc0001d4000, 0x100, 0x8000, 0x44833a0, 0xc0000a81b0, 0xc0000cc0d0)
+	/Users/alan/go/pkg/mod/github.com/hajimehoshi/oto@v0.7.1/driver_darwin.go:233 +0x185
+github.com/hajimehoshi/oto.(*driverWriter).Write(0xc0000a8180, 0xc0001d4000, 0x100, 0x8000, 0x0, 0x0, 0x0)
+	/Users/alan/go/pkg/mod/github.com/hajimehoshi/oto@v0.7.1/context.go:144 +0x113
+io.copyBuffer(0x458f200, 0xc0000a8180, 0x458f220, 0xc00009c100, 0xc0001d4000, 0x8000, 0x8000, 0xc000102420, 0xc0001b8fb0, 0x44876a0)
+	/usr/local/go/src/io/io.go:425 +0x21c
+io.Copy(...)
+	/usr/local/go/src/io/io.go:382
+github.com/hajimehoshi/oto.NewContext.func1(0xc0000a4090)
+	/Users/alan/go/pkg/mod/github.com/hajimehoshi/oto@v0.7.1/context.go:85 +0x69
+created by github.com/hajimehoshi/oto.NewContext
+	/Users/alan/go/pkg/mod/github.com/hajimehoshi/oto@v0.7.1/context.go:84 +0x269
+
+goroutine 263 [select]:
+net/http.(*persistConn).writeLoop(0xc000120900)
+	/usr/local/go/src/net/http/transport.go:2382 +0xf7
+created by net/http.(*Transport).dialConn
+	/usr/local/go/src/net/http/transport.go:1744 +0xc9c
+
+goroutine 262 [select]:
+net/http.(*persistConn).readLoop(0xc000120900)
+	/usr/local/go/src/net/http/transport.go:2203 +0x967
+created by net/http.(*Transport).dialConn
+	/usr/local/go/src/net/http/transport.go:1743 +0xc77
+
+goroutine 219 [IO wait]:
+internal/poll.runtime_pollWait(0x4f60810, 0x72, 0xffffffffffffffff)
+	/usr/local/go/src/runtime/netpoll.go:222 +0x55
+internal/poll.(*pollDesc).wait(0xc00040a118, 0x72, 0x1000, 0x10c6, 0xffffffffffffffff)
+	/usr/local/go/src/internal/poll/fd_poll_runtime.go:87 +0x45
+internal/poll.(*pollDesc).waitRead(...)
+	/usr/local/go/src/internal/poll/fd_poll_runtime.go:92
+internal/poll.(*FD).Read(0xc00040a100, 0xc0005f2600, 0x10c6, 0x10c6, 0x0, 0x0, 0x0)
+	/usr/local/go/src/internal/poll/fd_unix.go:166 +0x1d5
+net.(*netFD).Read(0xc00040a100, 0xc0005f2600, 0x10c6, 0x10c6, 0xe5c, 0xc0005f2865, 0x5)
+	/usr/local/go/src/net/fd_posix.go:55 +0x4f
+net.(*conn).Read(0xc0000b2008, 0xc0005f2600, 0x10c6, 0x10c6, 0x0, 0x0, 0x0)
+	/usr/local/go/src/net/net.go:183 +0x91
+crypto/tls.(*atLeastReader).Read(0xc00000e7e0, 0xc0005f2600, 0x10c6, 0x10c6, 0xe5c, 0xc000300900, 0x0)
+	/usr/local/go/src/crypto/tls/conn.go:776 +0x63
+bytes.(*Buffer).ReadFrom(0xc00017a5f8, 0x458f020, 0xc00000e7e0, 0x400c9a5, 0x448eca0, 0x44e9800)
+	/usr/local/go/src/bytes/buffer.go:204 +0xbe
+crypto/tls.(*Conn).readFromUntil(0xc00017a380, 0x4f2afa0, 0xc0000b2008, 0x5, 0xc0000b2008, 0x13)
+	/usr/local/go/src/crypto/tls/conn.go:798 +0xf3
+crypto/tls.(*Conn).readRecordOrCCS(0xc00017a380, 0x0, 0x0, 0xc000032b00)
+	/usr/local/go/src/crypto/tls/conn.go:605 +0x115
+crypto/tls.(*Conn).readRecord(...)
+	/usr/local/go/src/crypto/tls/conn.go:573
+crypto/tls.(*Conn).Read(0xc00017a380, 0xc00018b000, 0x1000, 0x1000, 0x0, 0x0, 0x0)
+	/usr/local/go/src/crypto/tls/conn.go:1276 +0x165
+bufio.(*Reader).Read(0xc0003818c0, 0xc000418498, 0x9, 0x9, 0x42e9c4b, 0xc00005cc78, 0x4008085)
+	/usr/local/go/src/bufio/bufio.go:227 +0x222
+io.ReadAtLeast(0x458ef00, 0xc0003818c0, 0xc000418498, 0x9, 0x9, 0x9, 0xc000530010, 0x6b005db2194800, 0xc000530010)
+	/usr/local/go/src/io/io.go:328 +0x87
+io.ReadFull(...)
+	/usr/local/go/src/io/io.go:347
+net/http.http2readFrameHeader(0xc000418498, 0x9, 0x9, 0x458ef00, 0xc0003818c0, 0x0, 0x0, 0x0, 0x0)
+	/usr/local/go/src/net/http/h2_bundle.go:1477 +0x89
+net/http.(*http2Framer).ReadFrame(0xc000418460, 0xc0004321b0, 0x0, 0x0, 0x0)
+	/usr/local/go/src/net/http/h2_bundle.go:1735 +0xa5
+net/http.(*http2clientConnReadLoop).run(0xc00005cfa8, 0x0, 0x0)
+	/usr/local/go/src/net/http/h2_bundle.go:8322 +0xd8
+net/http.(*http2ClientConn).readLoop(0xc0003b1c80)
+	/usr/local/go/src/net/http/h2_bundle.go:8244 +0x6f
+created by net/http.(*http2Transport).newClientConn
+	/usr/local/go/src/net/http/h2_bundle.go:7208 +0x6c5

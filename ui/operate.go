@@ -278,7 +278,7 @@ func spaceKeyHandle(m *NeteaseModel) {
         case utils.Playing:
             m.player.Paused()
         case utils.Stopped:
-            m.player.PlaySong(m.player.playlist[m.player.curSongIndex].Id)
+            _ = m.player.PlaySong(m.player.playlist[m.player.curSongIndex].Id)
         }
 
         return
