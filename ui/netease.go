@@ -7,7 +7,6 @@ import (
     "go-musicfox/constants"
     "go-musicfox/utils"
     "os"
-    "runtime/pprof"
     "time"
 )
 
@@ -75,9 +74,6 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         k := msgWithType.String()
         // 登录界面输入q不退出
         if !m.showLogin && (k == "q" || k == "ctrl+c") {
-            f, _ := os.Create("goroutine")
-            defer f.Close()
-            pprof.Lookup("goroutine").WriteTo(f, 2)
             m.quitting = true
             return m, tea.Quit
         }
