@@ -39,6 +39,7 @@ func NewPlayer(model *NeteaseModel) *Player {
         for {
             <- player.Player.Done()
             player.NextSong()
+            model.Rerender()
         }
     }()
 

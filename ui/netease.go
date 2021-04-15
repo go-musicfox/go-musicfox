@@ -14,6 +14,7 @@ type NeteaseModel struct {
     WindowWidth    int
     WindowHeight   int
     isListeningKey bool
+    program        *tea.Program
 
     // startup
     *startupModel
@@ -116,3 +117,12 @@ func (m *NeteaseModel) View() string {
     return mainUIView(m)
 }
 
+func (m *NeteaseModel) BindProgram(program *tea.Program) {
+    m.program = program
+}
+
+func (m *NeteaseModel) Rerender() {
+    if m.program != nil {
+        m.program.Rerender(m.View())
+    }
+}

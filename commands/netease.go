@@ -19,6 +19,7 @@ func NewPlayerCommand() *gcli.Command {
 func runPlayer(cmd *gcli.Command, args []string) error{
     neteaseModel := ui.NewNeteaseModel(constants.StartupLoadingDuration)
     program := tea.NewProgram(neteaseModel)
+    neteaseModel.BindProgram(program)
     program.EnterAltScreen()
     defer program.ExitAltScreen()
     if err := program.Start(); err != nil {
