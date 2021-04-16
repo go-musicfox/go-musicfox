@@ -310,7 +310,7 @@ func menuItemView(m *NeteaseModel, index int) string {
     var tmp string
     if menuTitleLen > itemMaxLen {
         tmp = runewidth.Truncate(menuTitle, itemMaxLen, "")
-        tmp = runewidth.FillRight(tmp, itemMaxLen)
+        tmp = runewidth.FillRight(tmp, itemMaxLen)  // fix: 切割中文后缺少字符导致未对齐
         if index == m.selectedIndex {
             menuName = SetFgStyle(tmp, primaryColor)
         } else {
