@@ -306,23 +306,30 @@ func menuItemView(m *NeteaseModel, index int) string {
 
     menuTitleLen := runewidth.StringWidth(menuTitle)
     menuSubtitleLen := runewidth.StringWidth(m.menuList[index].Subtitle)
+
+    var tmp string
     if menuTitleLen > itemMaxLen {
+        tmp = runewidth.Truncate(menuTitle, itemMaxLen, "")
+        tmp = runewidth.FillRight(tmp, itemMaxLen)
         if index == m.selectedIndex {
-            menuName = SetFgStyle(runewidth.Truncate(menuTitle, itemMaxLen, ""), primaryColor)
+            menuName = SetFgStyle(tmp, primaryColor)
         } else {
-            menuName = SetNormalStyle(runewidth.Truncate(menuTitle, itemMaxLen, ""))
+            menuName = SetNormalStyle(tmp)
         }
     } else if menuTitleLen + menuSubtitleLen > itemMaxLen {
+        tmp = runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, "")
+        tmp = runewidth.FillRight(tmp, itemMaxLen-menuTitleLen)
         if index == m.selectedIndex {
-            menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, primaryColor), SetFgStyle(runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, ""), termenv.ANSIBrightBlack))
+            menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, primaryColor), SetFgStyle(tmp, termenv.ANSIBrightBlack))
         } else {
-            menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, ""), termenv.ANSIBrightBlack))
+            menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(tmp, termenv.ANSIBrightBlack))
         }
     } else {
+        tmp = runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen)
         if index == m.selectedIndex {
-            menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, primaryColor), SetFgStyle(runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen-1), termenv.ANSIBrightBlack))
+            menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, primaryColor), SetFgStyle(tmp, termenv.ANSIBrightBlack))
         } else {
-            menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen-1), termenv.ANSIBrightBlack))
+            menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(tmp, termenv.ANSIBrightBlack))
         }
     }
 
