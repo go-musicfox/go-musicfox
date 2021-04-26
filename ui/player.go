@@ -11,6 +11,14 @@ import (
     "strings"
 )
 
+// 下首歌的方向
+type PlayDuration uint8
+
+const (
+    DurationNext PlayDuration = iota
+    DurationPrev
+)
+
 type Player struct {
     model         *NeteaseModel
 
@@ -123,7 +131,7 @@ func (p *Player) LocatePlayingSong() {
 }
 
 // PlaySong 播放歌曲
-func (p *Player) PlaySong(songId int64) error {
+func (p *Player) PlaySong(songId int64, duration PlayDuration) error {
     p.LocatePlayingSong()
     urlService := service.SongUrlService{}
     urlService.ID = strconv.FormatInt(songId, 10)
@@ -135,7 +143,13 @@ func (p *Player) PlaySong(songId int64) error {
 
     url, err := jsonparser.GetString([]byte(response), "data", "[0]", "url")
     if err != nil {
-       p.NextSong()
+        p.State = utils.Stopped
+        switch duration {
+        case DurationPrev:
+            p.PreSong()
+        case DurationNext:
+            p.NextSong()
+        }
        return nil
     }
 
@@ -179,7 +193,45 @@ func (p *Player) NextSong() {
         return
     }
     song := p.playlist[p.curSongIndex]
-    _ = p.PlaySong(song.Id)
+    _ = p.PlaySong(song.Id, DurationNext)
+}
+
+// PreSong 上一曲
+func (p *Player) PreSong() {
+    if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist) - 1 {
+        //if p.isIntelligence {
+        //    p.intelligence(true)
+        //}
+        if p.model.doubleColumn && p.curSongIndex%2 == 0 {
+            moveUp(p.model)
+        } else {
+            moveLeft(p.model)
+        }
+    }
+    //switch (_playMode) {
+    //case PlaylistMode.LIST_LOOP:
+    //    _curSongIndex = _curSongIndex >= songs.length - 1 ? 0 : _curSongIndex + 1;
+    //    break;
+    //case PlaylistMode.SINGLE_LOOP:
+    //    break;
+    //case PlaylistMode.SHUFFLE:
+    //    _curSongIndex = Random().nextInt(songs.length - 1);
+    //    break;
+    //case PlaylistMode.ORDER:
+    //    if (_curSongIndex >= songs.length - 1) return;
+    //    _curSongIndex++;
+    //    break;
+    //}
+    p.curSongIndex--
+    if p.curSongIndex < 0 {
+        p.curSongIndex = len(p.playlist) - 1
+    }
+
+    if p.curSongIndex < 0 {
+        return
+    }
+    song := p.playlist[p.curSongIndex]
+    _ = p.PlaySong(song.Id, DurationPrev)
 }
 
 // Close 关闭

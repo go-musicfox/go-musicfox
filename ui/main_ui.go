@@ -367,11 +367,9 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case " ":
         spaceKeyHandle(m)
     case "[":
-
+        m.player.PreSong()
     case "]":
-        if m.player.State == utils.Playing {
-            m.player.NextSong()
-        }
+        m.player.NextSong()
     }
 
     return m, tickMainUI(time.Nanosecond)
