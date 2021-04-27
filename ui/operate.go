@@ -186,7 +186,7 @@ func enterMain(m *NeteaseModel) {
     }
     m.menuStack.Push(stackItem)
 
-    menu := m.menu.SubMenu(m.selectedIndex)
+    menu := m.menu.SubMenu(m, m.selectedIndex)
     if menu == nil {
         m.menuStack.Pop()
         return

@@ -17,7 +17,7 @@ type IMenu interface {
     MenuViews() []MenuItem
 
     // SubMenu 根据下标获取菜单Model
-    SubMenu(index int) IMenu
+    SubMenu(model *NeteaseModel, index int) IMenu
 
     // ExtraView 获取额外的View（只在getSubMenuViews返回空时才会渲染到菜单的位置）
     ExtraView() string

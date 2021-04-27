@@ -23,14 +23,14 @@ func (m *DailyRecommendSongsMenu) ResetPlaylistWhenPlay() bool {
 }
 
 func (m *DailyRecommendSongsMenu) GetMenuKey() string {
-	return "main_menu"
+	return "daily_songs"
 }
 
 func (m *DailyRecommendSongsMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *DailyRecommendSongsMenu) SubMenu(index int) IMenu {
+func (m *DailyRecommendSongsMenu) SubMenu(*NeteaseModel, int) IMenu {
 	return nil
 }
 
@@ -57,7 +57,7 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 			model.showLogin = true
 			return false
 		}
-		list := utils.GetListFromSongs(response)
+		list := utils.GetDailySongs(response)
 		for _, song := range list {
 			var artists []string
 			for _, artist := range song.Artists {
