@@ -11,7 +11,7 @@ import (
     "strings"
 )
 
-// 下首歌的方向
+// PlayDuration 下首歌的方向
 type PlayDuration uint8
 
 const (
@@ -132,13 +132,17 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(songId int64, duration PlayDuration) error {
+    loading := NewLoading(p.model)
+    loading.start()
+    defer loading.complete()
+
     p.LocatePlayingSong()
     urlService := service.SongUrlService{}
     urlService.ID = strconv.FormatInt(songId, 10)
     urlService.Br = constants.PlayerSongBr
     code, response := urlService.SongUrl()
     if code != 200 {
-        return errors.New(response)
+        return errors.New(string(response))
     }
 
     url, err := jsonparser.GetString([]byte(response), "data", "[0]", "url")

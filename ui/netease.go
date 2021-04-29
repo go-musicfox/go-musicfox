@@ -5,8 +5,9 @@ import (
     "github.com/anhoder/netease-music/util"
     "github.com/telanflow/cookiejar"
     "go-musicfox/constants"
+    "go-musicfox/db"
+    "go-musicfox/ds"
     "go-musicfox/utils"
-    "os"
     "time"
 )
 
@@ -15,6 +16,7 @@ type NeteaseModel struct {
     WindowHeight   int
     isListeningKey bool
     program        *tea.Program
+    user           *ds.User
 
     // startup
     *startupModel
@@ -46,20 +48,22 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 
 func (m *NeteaseModel) Init() tea.Cmd {
 
-    // Home目录
-    homeDir, err := utils.Home()
-    if nil != err {
-        panic("未获取到用户Home目录: " + err.Error())
-    }
-    projectDir := homeDir + "/.go-musicfox"
-
-    if _, err := os.Stat(projectDir); os.IsNotExist(err) {
-        _ = os.Mkdir(projectDir, os.ModePerm)
-    }
+    projectDir := utils.GetLocalDataDir()
 
     // 全局文件Jar
     cookieJar, _ := cookiejar.NewFileJar(projectDir + "/cookie", nil)
     util.SetGlobalCookieJar(cookieJar)
+
+    // DBManager初始化
+    db.DBManager = &db.LocalDBManager{}
+
+    // 获取用户信息
+    table := db.NewTable()
+    if json, err := table.GetByKVModel(db.User{}); err == nil {
+        if user, err := ds.NewUserFromLocalJson(json); err == nil {
+            m.user = &user
+        }
+    }
 
     if constants.AppShowStartup {
         return tickStartup(time.Nanosecond)

@@ -2,16 +2,35 @@ package utils
 
 import (
     "bytes"
+    "encoding/binary"
     "errors"
+    "fmt"
     "github.com/buger/jsonparser"
+    "go-musicfox/constants"
     "go-musicfox/ds"
     "os"
     "os/exec"
     "os/user"
     "runtime"
     "strings"
-    "time"
 )
+
+// GetLocalDataDir 获取本地数据存储目录
+func GetLocalDataDir() string {
+    // Home目录
+    homeDir, err := Home()
+    if nil != err {
+        panic("未获取到用户Home目录: " + err.Error())
+    }
+
+    projectDir := fmt.Sprintf("%s/%s", homeDir, constants.AppLocalDataDir)
+
+    if _, err := os.Stat(projectDir); os.IsNotExist(err) {
+        _ = os.Mkdir(projectDir, os.ModePerm)
+    }
+
+    return projectDir
+}
 
 // Home 获取当前用户的Home目录
 func Home() (string, error) {
@@ -65,6 +84,20 @@ func homeWindows() (string, error) {
     return home, nil
 }
 
+// IDToBin convert autoincrement ID to []byte
+func IDToBin(ID uint64) []byte {
+    b := make([]byte, 8)
+    binary.BigEndian.PutUint64(b, ID)
+    return b
+}
+
+// BinToID convert []byte to autoincrement ID
+func BinToID(bin []byte) uint64 {
+    ID := binary.BigEndian.Uint64(bin)
+
+    return ID
+}
+
 type ResCode uint8
 const (
     Success ResCode = iota
@@ -74,7 +107,7 @@ const (
     PasswordError
 )
 
-// CheckCode check response code
+// CheckCode 验证响应码
 func CheckCode(code float64) ResCode {
     switch code {
     case 301, 302:
@@ -88,10 +121,21 @@ func CheckCode(code float64) ResCode {
     return PasswordError
 }
 
+// CheckUserInfo 验证用户信息
+func CheckUserInfo(user *ds.User) ResCode {
+    if user == nil || user.UserId == 0 {
+        return NeedLogin
+    }
+
+    return Success
+}
+
+// ReplaceSpecialStr 替换特殊字符
 func ReplaceSpecialStr(str string) string {
     replaceStr := map[string]string{
         "“": "\"",
         "”": "\"",
+        "·": ".",
     }
     for oldStr, newStr := range replaceStr {
         str = strings.ReplaceAll(str, oldStr, newStr)
@@ -101,105 +145,49 @@ func ReplaceSpecialStr(str string) string {
 }
 
 // GetDailySongs 获取每日歌曲列表
-func GetDailySongs(data string) (list []ds.Song) {
-    _, _ = jsonparser.ArrayEach([]byte(data), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-       song := ds.Song{}
-       if id, err := jsonparser.GetInt(value, "id"); err == nil {
-           song.Id = id
-       }
-       if name, err := jsonparser.GetString(value, "name"); err == nil {
-           song.Name = name
-       }
-       if duration, err := jsonparser.GetInt(value, "dt"); err == nil {
-           song.Duration = time.Millisecond * time.Duration(duration)
-       }
-       if alId, err := jsonparser.GetInt(value, "al", "id"); err == nil {
-           song.Album.Id = alId
-       }
-       if alName, err := jsonparser.GetString(value, "al", "name"); err == nil {
-           song.Album.Name = alName
-       }
-       if alPic, err := jsonparser.GetString(value, "al", "picUrl"); err == nil {
-           song.Album.PicUrl = alPic
+func GetDailySongs(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+       if song, err := ds.NewSongFromDailySongsJson(value); err == nil {
+           list = append(list, song)
        }
 
-       _, _ = jsonparser.ArrayEach(value, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-           artist := ds.Artist{}
-           if arId, err := jsonparser.GetInt(value, "id"); err == nil {
-               artist.Id = arId
-           }
-           if arName, err := jsonparser.GetString(value, "name"); err == nil {
-               artist.Name = arName
-           }
-           song.Artists = append(song.Artists, artist)
-       }, "ar")
-
-        list = append(list, song)
     }, "data", "dailySongs")
 
     return
 }
 
-// GetPlaylists 获取播放列表
-func GetPlaylists(data string) (list []ds.Playlist) {
+// GetDailyPlaylists 获取播放列表
+func GetDailyPlaylists(data []byte) (list []ds.Playlist) {
 
-    _, _ = jsonparser.ArrayEach([]byte(data), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-        playlist := ds.Playlist{}
-        if id, err := jsonparser.GetInt(value, "id"); err == nil {
-            playlist.Id = id
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if playlist, err := ds.NewPlaylistFromJson(value); err == nil {
+            list = append(list, playlist)
         }
-        if name, err := jsonparser.GetString(value, "name"); err == nil {
-            playlist.Name = name
-        }
-        if playlistType, err := jsonparser.GetInt(value, "type"); err == nil {
-            playlist.Type = int(playlistType)
-        }
-        if copywriter, err := jsonparser.GetString(value, "copywriter"); err == nil {
-            playlist.Copywriter = copywriter
-        }
-
-        list = append(list, playlist)
     }, "recommend")
 
     return
 }
 
 // GetSongsOfPlaylist 获取播放列表的歌曲
-func GetSongsOfPlaylist(data string) (list []ds.Song) {
-    _, _ = jsonparser.ArrayEach([]byte(data), func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-        song := ds.Song{}
-        if id, err := jsonparser.GetInt(value, "id"); err == nil {
-            song.Id = id
-        }
-        if name, err := jsonparser.GetString(value, "name"); err == nil {
-            song.Name = name
-        }
-        if duration, err := jsonparser.GetInt(value, "dt"); err == nil {
-            song.Duration = time.Millisecond * time.Duration(duration)
-        }
-        if alId, err := jsonparser.GetInt(value, "al", "id"); err == nil {
-            song.Album.Id = alId
-        }
-        if alName, err := jsonparser.GetString(value, "al", "name"); err == nil {
-            song.Album.Name = alName
-        }
-        if alPic, err := jsonparser.GetString(value, "al", "picUrl"); err == nil {
-            song.Album.PicUrl = alPic
+func GetSongsOfPlaylist(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromPlaylistSongsJson(value); err == nil {
+            list = append(list, song)
         }
 
-        _, _ = jsonparser.ArrayEach(value, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-            artist := ds.Artist{}
-            if arId, err := jsonparser.GetInt(value, "id"); err == nil {
-                artist.Id = arId
-            }
-            if arName, err := jsonparser.GetString(value, "name"); err == nil {
-                artist.Name = arName
-            }
-            song.Artists = append(song.Artists, artist)
-        }, "ar")
-
-        list = append(list, song)
     }, "playlist", "tracks")
+
+    return
+}
+
+// GetPlaylists 获取播放列表
+func GetPlaylists(data []byte) (list []ds.Playlist) {
+
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if playlist, err := ds.NewPlaylistFromJson(value); err == nil {
+            list = append(list, playlist)
+        }
+    }, "playlist")
 
     return
 }

@@ -31,10 +31,11 @@ func (m *MainMenu) MenuViews() []MenuItem {
     }
 }
 
-func (m *MainMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *MainMenu) SubMenu(model *NeteaseModel, index int) IMenu {
     menuList := []IMenu{
         &DailyRecommendSongsMenu{},
         &DailyRecommendPlaylistsMenu{},
+        NewUserPlaylistMenu(model.user),
     }
 
     if index >= len(menuList) {

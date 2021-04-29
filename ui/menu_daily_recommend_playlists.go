@@ -35,7 +35,7 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(model *NeteaseModel, index int) IM
 	if !ok || len(playlists) < index {
 		return nil
 	}
-	return &PlaylistDetailMenu{playlistId: playlists[index].Id}
+	return &PlaylistDetailMenu{PlaylistId: playlists[index].Id}
 }
 
 func (m *DailyRecommendPlaylistsMenu) ExtraView() string {
@@ -54,6 +54,11 @@ func (m *DailyRecommendPlaylistsMenu) BeforeNextPageHook() Hook {
 
 func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
+		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+			model.showLogin = true
+			return false
+		}
+
 		recommendPlaylists := service.RecommendResourceService{}
 		code, response := recommendPlaylists.RecommendResource()
 		codeType := utils.CheckCode(code)
@@ -61,7 +66,7 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
 			model.showLogin = true
 			return false
 		}
-		list := utils.GetPlaylists(response)
+		list := utils.GetDailyPlaylists(response)
 		for _, playlist := range list {
 			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
 		}

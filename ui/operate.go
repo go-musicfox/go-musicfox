@@ -27,6 +27,8 @@ func moveUp(m *NeteaseModel) {
                 loading.complete()
                 return
             }
+            // 更新菜单UI
+            m.menuList = m.menu.MenuViews()
             loading.complete()
         }
         if m.selectedIndex - 2 < 0 {
@@ -41,6 +43,7 @@ func moveUp(m *NeteaseModel) {
                 loading.complete()
                 return
             }
+            m.menuList = m.menu.MenuViews()
             loading.complete()
         }
         if m.selectedIndex - 1 < 0 {
@@ -64,6 +67,7 @@ func moveDown(m *NeteaseModel) {
                 loading.complete()
                 return
             }
+            m.menuList = m.menu.MenuViews()
             loading.complete()
         }
         if m.selectedIndex + 2 > len(m.menuList) - 1 {
@@ -78,6 +82,7 @@ func moveDown(m *NeteaseModel) {
                 loading.complete()
                 return
             }
+            m.menuList = m.menu.MenuViews()
             loading.complete()
         }
         if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -110,6 +115,7 @@ func moveRight(m *NeteaseModel) {
             loading.complete()
             return
         }
+        m.menuList = m.menu.MenuViews()
         loading.complete()
     }
     if m.selectedIndex + 1 > len(m.menuList) - 1 {
@@ -165,7 +171,7 @@ func nextPage(m *NeteaseModel) {
 }
 
 // 进入菜单
-func enterMain(m *NeteaseModel) {
+func enterMenu(m *NeteaseModel) {
     m.isListeningKey = false
     defer func() {
         m.isListeningKey = true

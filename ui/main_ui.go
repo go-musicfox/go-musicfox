@@ -282,9 +282,9 @@ func menuItemView(m *NeteaseModel, index int) string {
     )
 
     if index == m.selectedIndex {
-        menuTitle = fmt.Sprintf(" => %d. %s", index, m.menuList[index].Title)
+        menuTitle = fmt.Sprintf(" => %d. %s", index+1, m.menuList[index].Title)
     } else {
-        menuTitle = fmt.Sprintf("    %d. %s", index, m.menuList[index].Title)
+        menuTitle = fmt.Sprintf("    %d. %s", index+1, m.menuList[index].Title)
     }
     if len(m.menuList[index].Subtitle) != 0 {
         menuTitle += " "
@@ -361,7 +361,7 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case "l", "right":
         moveRight(m)
     case "enter":
-        enterMain(m)
+        enterMenu(m)
     case "esc":
         backMenu(m)
     case " ":

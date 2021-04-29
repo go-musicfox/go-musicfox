@@ -6,6 +6,8 @@ import (
     "github.com/anhoder/netease-music/service"
     "github.com/muesli/termenv"
     "go-musicfox/constants"
+    "go-musicfox/db"
+    "go-musicfox/ds"
     "go-musicfox/utils"
     "strings"
     "time"
@@ -78,19 +80,22 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                 if len(m.accountInput.Value()) <= 0 || len(m.passwordInput.Value()) <= 0 {
                     return m, nil
                 }
-                var code float64
+                var (
+                	code     float64
+                	response []byte
+                )
                 if strings.ContainsRune(m.accountInput.Value(), '@') {
                     loginService := service.LoginEmailService{
                         Email: m.accountInput.Value(),
                         Password: m.passwordInput.Value(),
                     }
-                    code, _ = loginService.LoginEmail()
+                    code, response = loginService.LoginEmail()
                 } else {
                     loginService := service.LoginCellphoneService{
                         Phone: m.accountInput.Value(),
                         Password: m.passwordInput.Value(),
                     }
-                    code, _ = loginService.LoginCellphone()
+                    code, response = loginService.LoginCellphone()
                 }
 
                 codeType := utils.CheckCode(code)
@@ -102,7 +107,13 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                     m.tips = SetFgStyle("网络异常，请稍后再试~", termenv.ANSIRed)
                     return m, tickLogin(time.Nanosecond)
                 case utils.Success:
+                    if user, err := ds.NewUserFromJson(response); err == nil {
+                        m.user = &user
 
+                        // 写入本地数据库
+                        table := db.NewTable()
+                        _ = table.SetByKVModel(db.User{}, user)
+                    }
                 default:
                     m.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIRed) +
                         SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)

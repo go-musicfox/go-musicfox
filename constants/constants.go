@@ -15,6 +15,9 @@ const StartupProgressOutBounce = true
 const StartupLoadingDuration = time.Second * 2
 const StartupTickDuration = time.Millisecond * 15
 
+const AppLocalDataDir = ".go-musicfox"
+const AppDBName = "musicfox"
+
 const PlayerSongBr = "999000"
 
 const MainShowTitle = true

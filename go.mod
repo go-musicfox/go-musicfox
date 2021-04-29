@@ -6,6 +6,7 @@ require (
 	github.com/anhoder/bubbles v0.7.8 // indirect
 	github.com/anhoder/bubbletea v0.12.8
 	github.com/anhoder/netease-music v1.0.0
+	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/faiface/beep v1.0.3-0.20210301102329-98afada94bff // indirect
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
@@ -16,7 +17,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.10
 	github.com/muesli/termenv v0.7.4
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
-	golang.org/x/sys v0.0.0-20210414055047-fe65e336abe0 // indirect
+	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 )
 
 replace (
