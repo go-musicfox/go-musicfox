@@ -33,6 +33,8 @@ type Player struct {
     lyricStartRow int
     lyricLines    int
 
+    playErrCount  int // 错误计数，当错误连续超过5次，停止播放
+
     *utils.Player
 }
 
@@ -145,19 +147,32 @@ func (p *Player) PlaySong(songId int64, duration PlayDuration) error {
         return errors.New(string(response))
     }
 
-    url, err := jsonparser.GetString([]byte(response), "data", "[0]", "url")
-    if err != nil {
+    url, err1 := jsonparser.GetString(response, "data", "[0]", "url")
+    musicType, err2 := jsonparser.GetString(response, "data", "[0]", "type")
+    if err1 != nil || err2 != nil || (musicType != "mp3" && musicType != "flac") {
         p.State = utils.Stopped
+        p.playErrCount++
+        if p.playErrCount >= 3 {
+            return nil
+        }
         switch duration {
         case DurationPrev:
             p.PreSong()
         case DurationNext:
             p.NextSong()
         }
-       return nil
+        return nil
     }
 
-    p.Player.Play(utils.Mp3, url)
+
+    switch musicType {
+    case "mp3":
+        p.Player.Play(utils.Mp3, url)
+    case "flac":
+        p.Player.Play(utils.Flac, url)
+    }
+
+    p.playErrCount = 0
 
     return nil
 }
