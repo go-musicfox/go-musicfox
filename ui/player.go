@@ -93,19 +93,15 @@ func (p *Player) InPlayingMenu() bool {
 }
 
 // CompareWithCurPlaylist 与当前播放列表对比，是否一致
-func (p *Player) CompareWithCurPlaylist(playlist interface{}) bool {
-    list, ok := playlist.([]ds.Song)
-    if !ok {
-       return false
-    }
+func (p *Player) CompareWithCurPlaylist(playlist []ds.Song) bool {
 
-    if len(list) != len(p.playlist) {
+    if len(playlist) != len(p.playlist) {
         return false
     }
 
     // 如果前10个一致，则认为相同
-    for i := 0; i < 10 && i < len(list); i++ {
-        if list[i].Id != p.playlist[i].Id {
+    for i := 0; i < 10 && i < len(playlist); i++ {
+        if playlist[i].Id != p.playlist[i].Id {
             return false
         }
     }
@@ -115,7 +111,7 @@ func (p *Player) CompareWithCurPlaylist(playlist interface{}) bool {
 
 // LocatePlayingSong 定位到正在播放的音乐
 func (p *Player) LocatePlayingSong() {
-    if !p.InPlayingMenu() || !p.CompareWithCurPlaylist(p.model.menuData) {
+    if !p.InPlayingMenu() || !p.CompareWithCurPlaylist(p.playlist) {
         return
     }
 

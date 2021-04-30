@@ -7,7 +7,16 @@ import (
 )
 
 type DailyRecommendPlaylistsMenu struct {
-	menus []MenuItem
+	menus     []MenuItem
+	playlists []ds.Playlist
+}
+
+func NewDailyRecommendPlaylistMenu() *DailyRecommendPlaylistsMenu {
+	return new(DailyRecommendPlaylistsMenu)
+}
+
+func (m *DailyRecommendPlaylistsMenu) MenuData() interface{} {
+	return m.playlists
 }
 
 func (m *DailyRecommendPlaylistsMenu) BeforeBackMenuHook() Hook {
@@ -30,12 +39,11 @@ func (m *DailyRecommendPlaylistsMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *DailyRecommendPlaylistsMenu) SubMenu(model *NeteaseModel, index int) IMenu {
-	playlists, ok := model.menuData.([]ds.Playlist)
-	if !ok || len(playlists) < index {
+func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+	if len(m.playlists) < index {
 		return nil
 	}
-	return &PlaylistDetailMenu{PlaylistId: playlists[index].Id}
+	return &PlaylistDetailMenu{PlaylistId: m.playlists[index].Id}
 }
 
 func (m *DailyRecommendPlaylistsMenu) ExtraView() string {
@@ -59,19 +67,24 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
 			return false
 		}
 
+		// 不重复请求
+		if len(m.menus) > 0 && len(m.playlists) > 0 {
+			return true
+		}
+
 		recommendPlaylists := service.RecommendResourceService{}
 		code, response := recommendPlaylists.RecommendResource()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
 			NeedLoginHandle(model, enterMenu)
 			return false
+		} else if codeType != utils.Success {
+			return false
 		}
-		list := utils.GetDailyPlaylists(response)
-		for _, playlist := range list {
+		m.playlists = utils.GetDailyPlaylists(response)
+		for _, playlist := range m.playlists {
 			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
 		}
-
-		model.menuData = list
 
 		return true
 	}

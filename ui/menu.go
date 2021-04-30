@@ -16,6 +16,9 @@ type IMenu interface {
     // MenuViews 获取子菜单View
     MenuViews() []MenuItem
 
+    // MenuData 获取当前菜单的数据
+    MenuData() interface{}
+
     // SubMenu 根据下标获取菜单Model
     SubMenu(model *NeteaseModel, index int) IMenu
 

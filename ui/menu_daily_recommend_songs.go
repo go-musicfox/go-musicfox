@@ -2,12 +2,22 @@ package ui
 
 import (
 	"github.com/anhoder/netease-music/service"
+	"go-musicfox/ds"
 	"go-musicfox/utils"
 	"strings"
 )
 
 type DailyRecommendSongsMenu struct {
 	menus []MenuItem
+	songs []ds.Song
+}
+
+func NewDailyRecommendSongsMenu() *DailyRecommendSongsMenu {
+	return new(DailyRecommendSongsMenu)
+}
+
+func (m *DailyRecommendSongsMenu) MenuData() interface{} {
+	return m.songs
 }
 
 func (m *DailyRecommendSongsMenu) BeforeBackMenuHook() Hook {
@@ -55,23 +65,28 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 			return false
 		}
 
+		// 不重复请求
+		if len(m.menus) > 0 && len(m.songs) > 0 {
+			return true
+		}
+
 		recommendSongs := service.RecommendSongsService{}
 		code, response := recommendSongs.RecommendSongs()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
 			NeedLoginHandle(model, enterMenu)
 			return false
+		} else if codeType != utils.Success {
+			return false
 		}
-		list := utils.GetDailySongs(response)
-		for _, song := range list {
+		m.songs = utils.GetDailySongs(response)
+		for _, song := range m.songs {
 			var artists []string
 			for _, artist := range song.Artists {
 				artists = append(artists, artist.Name)
 			}
 			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
 		}
-
-		model.menuData = list
 
 		return true
 	}

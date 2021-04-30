@@ -191,3 +191,15 @@ func GetPlaylists(data []byte) (list []ds.Playlist) {
 
     return
 }
+
+// GetFmSongs 获取每日歌曲列表
+func GetFmSongs(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromFmJson(value); err == nil {
+            list = append(list, song)
+        }
+
+    }, "data")
+
+    return
+}

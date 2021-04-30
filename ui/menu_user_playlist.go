@@ -9,23 +9,22 @@ import (
 )
 
 type UserPlaylistMenu struct {
-	menus   []MenuItem
-	uid     string
-	offset  int
-	limit   int
-	hasMore bool
+	menus     []MenuItem
+	playlists []ds.Playlist
+	offset    int
+	limit     int
+	hasMore   bool
 }
 
-func NewUserPlaylistMenu(user *ds.User) *UserPlaylistMenu {
-	if user == nil {
-		return &UserPlaylistMenu{}
-	}
-
+func NewUserPlaylistMenu() *UserPlaylistMenu {
 	return &UserPlaylistMenu{
-		uid: strconv.FormatInt(user.UserId, 10),
 		offset: 0,
 		limit: 100,
 	}
+}
+
+func (m *UserPlaylistMenu) MenuData() interface{} {
+	return m.playlists
 }
 
 func (m *UserPlaylistMenu) BeforeBackMenuHook() Hook {
@@ -49,11 +48,10 @@ func (m *UserPlaylistMenu) MenuViews() []MenuItem {
 }
 
 func (m *UserPlaylistMenu) SubMenu(model *NeteaseModel, index int) IMenu {
-	playlists, ok := model.menuData.([]ds.Playlist)
-	if !ok || len(playlists) < index {
+	if len(m.playlists) < index {
 		return nil
 	}
-	return &PlaylistDetailMenu{PlaylistId: playlists[index].Id}
+	return &PlaylistDetailMenu{PlaylistId: m.playlists[index].Id}
 }
 
 func (m *UserPlaylistMenu) ExtraView() string {
@@ -77,9 +75,13 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() Hook {
 			return false
 		}
 
+		if len(m.menus) > 0 && len(m.playlists) > 0 {
+			return true
+		}
+
 		userPlaylists := service.UserPlaylistService{
-			Uid:    m.uid,
-			Limit: strconv.Itoa(m.limit),
+			Uid:    strconv.FormatInt(model.user.UserId, 10),
+			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := userPlaylists.UserPlaylist()
@@ -87,14 +89,16 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() Hook {
 		if codeType == utils.NeedLogin {
 			NeedLoginHandle(model, enterMenu)
 			return false
+		} else if codeType != utils.Success {
+			return false
 		}
 
-		list := utils.GetPlaylists(response)
-		for _, playlist := range list {
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
+		var menus []MenuItem
+		m.playlists = utils.GetPlaylists(response)
+		for _, playlist := range m.playlists {
+			menus = append(menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
 		}
-
-		model.menuData = list
+		m.menus = menus
 
 		// 是否有更多
 		if hasMore, err := jsonparser.GetBoolean(response, "more"); err == nil {
@@ -112,8 +116,8 @@ func (m *UserPlaylistMenu) BottomOutHook() Hook {
 	return func(model *NeteaseModel) bool {
 		m.offset = m.offset + len(m.menus)
 		userPlaylists := service.UserPlaylistService{
-			Uid:    m.uid,
-			Limit: strconv.Itoa(m.limit),
+			Uid:    strconv.FormatInt(model.user.UserId, 10),
+			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := userPlaylists.UserPlaylist()
@@ -121,15 +125,16 @@ func (m *UserPlaylistMenu) BottomOutHook() Hook {
 		if codeType == utils.NeedLogin {
 			NeedLoginHandle(model, nil)
 			return false
+		} else if codeType != utils.Success {
+			return false
 		}
+
 		list := utils.GetPlaylists(response)
 		for _, playlist := range list {
 			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
 		}
 
-		if menuData, ok := model.menuData.([]ds.Playlist); ok {
-			model.menuData = append(menuData, list...)
-		}
+		m.playlists = append(m.playlists, list...)
 
 		// 是否有更多
 		if hasMore, err := jsonparser.GetBoolean(response, "more"); err == nil {

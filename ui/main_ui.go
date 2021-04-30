@@ -35,7 +35,6 @@ type mainUIModel struct {
     menuList      []MenuItem   // 菜单列表
     menuStack     *utils.Stack // 菜单栈
     selectedIndex int	       // 当前选中的菜单index
-    menuData      interface{}  // 数据
 
     showLogin bool // 显示登陆
 
@@ -48,7 +47,7 @@ func NewMainUIModel(parentModel *NeteaseModel) (m *mainUIModel) {
     m = new(mainUIModel)
     m.menuTitle = "网易云音乐"
     m.player = NewPlayer(parentModel)
-    m.menu = new(MainMenu)
+    m.menu = NewMainMenu()
     m.menuList = m.menu.MenuViews()
     m.menuStack = new(utils.Stack)
     m.menuCurPage = 1
@@ -282,9 +281,9 @@ func menuItemView(m *NeteaseModel, index int) string {
     )
 
     if index == m.selectedIndex {
-        menuTitle = fmt.Sprintf(" => %d. %s", index+1, m.menuList[index].Title)
+        menuTitle = fmt.Sprintf(" => %d. %s", index, m.menuList[index].Title)
     } else {
-        menuTitle = fmt.Sprintf("    %d. %s", index+1, m.menuList[index].Title)
+        menuTitle = fmt.Sprintf("    %d. %s", index, m.menuList[index].Title)
     }
     if len(m.menuList[index].Subtitle) != 0 {
         menuTitle += " "

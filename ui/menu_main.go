@@ -1,6 +1,39 @@
 package ui
 
-type MainMenu struct {}
+type MainMenu struct {
+    menus    []MenuItem
+    menuList []IMenu
+}
+
+func NewMainMenu() *MainMenu {
+    mainMenu := new(MainMenu)
+    mainMenu.menus = []MenuItem{
+        {Title: "每日推荐歌曲"},
+        {Title: "每日推荐歌单"},
+        {Title: "我的歌单"},
+        {Title: "私人FM"},
+        {Title: "专辑列表"},
+        {Title: "搜索"},
+        {Title: "排行榜"},
+        {Title: "精选歌单"},
+        {Title: "热门歌手"},
+        {Title: "云盘"},
+        {Title: "主播电台"},
+        {Title: "帮助"},
+    }
+    mainMenu.menuList = []IMenu{
+        NewDailyRecommendSongsMenu(),
+        NewDailyRecommendPlaylistMenu(),
+        NewUserPlaylistMenu(),
+        NewPersonalFmMenu(),
+    }
+
+    return mainMenu
+}
+
+func (m *MainMenu) MenuData() interface{} {
+    return nil
+}
 
 func (m *MainMenu) IsPlayable() bool {
     return false
@@ -15,34 +48,16 @@ func (m *MainMenu) GetMenuKey() string {
 }
 
 func (m *MainMenu) MenuViews() []MenuItem {
-    return []MenuItem{
-        {Title: "每日推荐歌曲"},
-        {Title: "每日推荐歌单"},
-        {Title: "我的歌单"},
-        {Title: "私人FM"},
-        {Title: "专辑列表"},
-        {Title: "搜索"},
-        {Title: "排行榜"},
-        {Title: "精选歌单"},
-        {Title: "热门歌手"},
-        {Title: "云盘"},
-        {Title: "主播电台"},
-        {Title: "帮助"},
-    }
+    return m.menus
 }
 
-func (m *MainMenu) SubMenu(model *NeteaseModel, index int) IMenu {
-    menuList := []IMenu{
-        &DailyRecommendSongsMenu{},
-        &DailyRecommendPlaylistsMenu{},
-        NewUserPlaylistMenu(model.user),
-    }
+func (m *MainMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 
-    if index >= len(menuList) {
+    if index >= len(m.menuList) {
         return nil
     }
 
-    return menuList[index]
+    return m.menuList[index]
 }
 
 func (m *MainMenu) ExtraView() string {
