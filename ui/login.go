@@ -19,6 +19,7 @@ type LoginModel struct {
     passwordInput textinput.Model
     submitButton  string
     tips          string
+    AfterLogin    func (m *NeteaseModel)
 }
 
 var (
@@ -113,6 +114,10 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                         // 写入本地数据库
                         table := db.NewTable()
                         _ = table.SetByKVModel(db.User{}, user)
+
+                        if m.LoginModel.AfterLogin != nil {
+                            m.LoginModel.AfterLogin(m)
+                        }
                     }
                 default:
                     m.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIRed) +
@@ -231,4 +236,10 @@ func loginView(m *NeteaseModel) string {
     builder.WriteString("\n")
 
     return builder.String()
+}
+
+// NeedLoginHandle 需要登录的处理
+func NeedLoginHandle(model *NeteaseModel, callback func (m *NeteaseModel)) {
+    model.showLogin = true
+    model.AfterLogin = callback
 }

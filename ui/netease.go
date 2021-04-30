@@ -55,15 +55,17 @@ func (m *NeteaseModel) Init() tea.Cmd {
     util.SetGlobalCookieJar(cookieJar)
 
     // DBManager初始化
-    db.DBManager = &db.LocalDBManager{}
+    db.DBManager = new(db.LocalDBManager)
 
     // 获取用户信息
-    table := db.NewTable()
-    if json, err := table.GetByKVModel(db.User{}); err == nil {
-        if user, err := ds.NewUserFromLocalJson(json); err == nil {
-            m.user = &user
+    go func() {
+        table := db.NewTable()
+        if json, err := table.GetByKVModel(db.User{}); err == nil {
+            if user, err := ds.NewUserFromLocalJson(json); err == nil {
+                m.user = &user
+            }
         }
-    }
+    }()
 
     if constants.AppShowStartup {
         return tickStartup(time.Nanosecond)

@@ -54,7 +54,7 @@ func (m *PlaylistDetailMenu) BeforeNextPageHook() Hook {
 func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			model.showLogin = true
+			NeedLoginHandle(model, enterMenu)
 			return false
 		}
 
@@ -62,7 +62,7 @@ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 		code, response := playlistDetail.PlaylistDetail()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			model.showLogin = true
+			NeedLoginHandle(model, enterMenu)
 			return false
 		}
 		list := utils.GetSongsOfPlaylist(response)

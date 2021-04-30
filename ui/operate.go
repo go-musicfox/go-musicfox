@@ -203,6 +203,7 @@ func enterMenu(m *NeteaseModel) {
         loading.start()
         if res := enterMenuHook(m); !res {
             loading.complete()
+            m.menuStack.Pop()  // 压入的重新弹出
             return
         }
         loading.complete()
@@ -238,6 +239,7 @@ func backMenu(m *NeteaseModel) {
         loading.start()
         if res := backMenuHook(m); !res {
             loading.complete()
+            m.menuStack.Push(stackItem)  // 弹出的重新压入
             return
         }
         loading.complete()

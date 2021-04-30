@@ -51,7 +51,7 @@ func (m *DailyRecommendSongsMenu) BeforeNextPageHook() Hook {
 func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			model.showLogin = true
+			NeedLoginHandle(model, enterMenu)
 			return false
 		}
 
@@ -59,7 +59,7 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 		code, response := recommendSongs.RecommendSongs()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			model.showLogin = true
+			NeedLoginHandle(model, enterMenu)
 			return false
 		}
 		list := utils.GetDailySongs(response)

@@ -6,6 +6,7 @@ import (
 	"github.com/boltdb/bolt"
 	"go-musicfox/utils"
 	"os"
+	"time"
 )
 
 type LocalDB struct {
@@ -22,7 +23,9 @@ func NewLocalDB(dbName string) (*LocalDB, error) {
 	}
 	path := fmt.Sprintf("%s/%s.db", dbDir, dbName)
 
-	boltDB, err := bolt.Open(path, 0600, nil)
+	options := bolt.DefaultOptions
+	options.Timeout = 500 * time.Millisecond
+	boltDB, err := bolt.Open(path, 0600, options)
 	if err != nil {
 		return nil, err
 	}

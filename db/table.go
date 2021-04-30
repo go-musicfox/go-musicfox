@@ -108,12 +108,12 @@ func (table *table) Set(model Model, key []byte, data interface{}) (err error) {
 }
 
 // SetByID edit one line by ID
-func (table *table) SetByID(model Model, ID uint64, data interface{}) (err error) {
+func (table *table) SetByID(model Model, ID uint64, data interface{}) error {
 	return table.Set(model, utils.IDToBin(ID), data)
 }
 
 // SetByKVModel edit one line by KVModel
-func (table *table) SetByKVModel(model KVModel, data interface{}) (err error) {
+func (table *table) SetByKVModel(model KVModel, data interface{}) error {
 	return table.Set(model, []byte(model.GetKey()), data)
 }
 
@@ -138,12 +138,12 @@ func (table *table) Delete(model Model, key []byte) (err error) {
 }
 
 // DeleteByID delete one line by ID
-func (table *table) DeleteByID(model Model, ID uint64) (err error) {
+func (table *table) DeleteByID(model Model, ID uint64) error {
 	return table.Delete(model, utils.IDToBin(ID))
 }
 
 // DeleteByKVModel delete one line by KVModel
-func (table *table) DeleteByKVModel(model KVModel) (err error) {
+func (table *table) DeleteByKVModel(model KVModel) error {
 	return table.Delete(model, []byte(model.GetKey()))
 }
 
@@ -169,12 +169,12 @@ func (table *table) Get(model Model, key []byte) (value []byte, err error) {
 }
 
 // GetByID 通过ID获取value
-func (table *table) GetByID(model Model, ID uint64) (value []byte, err error) {
+func (table *table) GetByID(model Model, ID uint64) ([]byte, error) {
 	return table.Get(model, utils.IDToBin(ID))
 }
 
 // GetByKVModel 通过KVModel获取value
-func (table *table) GetByKVModel(model KVModel) (value []byte, err error) {
+func (table *table) GetByKVModel(model KVModel) ([]byte, error) {
 	return table.Get(model, []byte(model.GetKey()))
 }
 
