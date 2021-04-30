@@ -104,6 +104,7 @@ func (m *PersonalFmMenu) BottomOutHook() Hook {
 		}
 
 		m.songs = append(m.songs, songs...)
+		model.player.playlist = m.songs
 
 		return true
 	}

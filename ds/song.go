@@ -115,7 +115,7 @@ func NewSongFromFmJson(json []byte) (Song, error) {
 	if alName, err := jsonparser.GetString(json, "album", "name"); err == nil {
 		song.Album.Name = alName
 	}
-	if alPic, err := jsonparser.GetString(json, "album", "blurPicUrl"); err == nil {
+	if alPic, err := jsonparser.GetString(json, "album", "picUrl"); err == nil {
 		song.Album.PicUrl = alPic
 	}
 
