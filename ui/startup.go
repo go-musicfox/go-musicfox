@@ -81,11 +81,19 @@ func startupView(m *NeteaseModel) string {
     }
 
     var uiBuilder strings.Builder
-    uiBuilder.WriteString(strings.Repeat("\n", top-1))
+    if top > 1 {
+        uiBuilder.WriteString(strings.Repeat("\n", top-1))
+    }
     uiBuilder.WriteString(logoView(m))
-    uiBuilder.WriteString("\n\n")
+    uiBuilder.WriteString("\n")
+    if top != 0 && bottom != 0 {
+        uiBuilder.WriteString("\n")
+    }
     uiBuilder.WriteString(tipsView(m))
-    uiBuilder.WriteString("\n\n")
+    uiBuilder.WriteString("\n")
+    if top != 0 && bottom != 0 {
+        uiBuilder.WriteString("\n")
+    }
     uiBuilder.WriteString(progressView(m))
     uiBuilder.WriteString(strings.Repeat("\n", bottom))
 
@@ -117,7 +125,7 @@ func logoView(m *NeteaseModel) string {
         logoBuilder.WriteString(line)
         logoBuilder.WriteString("\n")
     }
-    return SetFgStyle(logoBuilder.String(), primaryColor)
+    return SetFgStyle(logoBuilder.String(), GetPrimaryColor())
 }
 
 // get tips

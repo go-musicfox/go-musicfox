@@ -85,12 +85,12 @@ func (p *Player) listen() {
             p.State = Stopped
             p.pushDone()
             break
-        case <-time.After(time.Second):
+        case <-time.After(time.Millisecond*300):
             if streamer == nil {
                 break
             }
             select {
-            case p.timer <- sampleRate.D(streamer.Position()).Round(time.Second):
+            case p.timer <- sampleRate.D(streamer.Position()).Round(time.Millisecond*300):
             default:
             }
         case music := <-p.musicChan:
