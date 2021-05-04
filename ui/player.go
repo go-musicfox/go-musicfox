@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
+	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"go-musicfox/constants"
 	"go-musicfox/ds"
@@ -88,22 +89,23 @@ func (p *Player) LyricView() string {
 	// 3行歌词
 	case 3:
 		for i := 1; i <= 3; i++ {
-			lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+			lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+4))
 			if i == 2 {
-				lyricBuilder.WriteString(SetFgStyle(p.lyrics[i], termenv.ANSICyan))
+				lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSICyan))
 			} else {
-				lyricBuilder.WriteString(SetFgStyle(p.lyrics[i], termenv.ANSIBrightBlack))
+				lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSIBrightBlack))
 			}
+
 			lyricBuilder.WriteString("\n")
 		}
 	// 5行歌词
 	case 5:
 		for i := 0; i < 5; i++ {
-			lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+			lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+4))
 			if i == 2 {
-				lyricBuilder.WriteString(SetFgStyle(p.lyrics[i], termenv.ANSICyan))
+				lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSICyan))
 			} else {
-				lyricBuilder.WriteString(SetFgStyle(p.lyrics[i], termenv.ANSIBrightBlack))
+				lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSIBrightBlack))
 			}
 			lyricBuilder.WriteString("\n")
 		}
@@ -321,6 +323,7 @@ func (p *Player) lyricListener(_ int64, content string, last bool, index int) {
 }
 
 func (p *Player) updateLyric(songId int64) {
+	p.lyrics = [5]string{}
 	if p.lrcTimer != nil {
 		p.lrcTimer.Stop()
 	}

@@ -2,14 +2,20 @@ package main
 
 import (
     "fmt"
+    "github.com/google/gops/agent"
     "github.com/gookit/gcli/v2"
     "go-musicfox/commands"
     "go-musicfox/constants"
     "go-musicfox/ui"
     "go-musicfox/utils"
+    "log"
 )
 
 func main() {
+    if err := agent.Listen(agent.Options{}); err != nil {
+        log.Fatalf("agent.Listen err: %v", err)
+    }
+
     app := gcli.NewApp()
     app.Name = constants.AppName
     app.Version = constants.AppVersion

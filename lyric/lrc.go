@@ -77,7 +77,7 @@ func readLRCLine(line string, lineNo int) (fragments []LRCFragment, err error) {
 	closeIndex := strings.Index(line, "]")
 	line = line[closeIndex+1:]
 
-	var extraTms []time.Time
+	var extraTms []time.Duration
 	for {
 		extraTm, tmErr := parseLRCTime(line, "[", "]")
 		if tmErr != nil {
@@ -90,13 +90,13 @@ func readLRCLine(line string, lineNo int) (fragments []LRCFragment, err error) {
 	line = strings.TrimSpace(line)
 	if len(extraTms) > 0 {
 		fragments = append(fragments, LRCFragment{
-			StartTimeMs: getMillisecondsFromTime(tm),
+			StartTimeMs: tm.Milliseconds(),
 			Content:     line,
 		})
 
 		for _, extraTm := range extraTms {
 			fragments = append(fragments, LRCFragment{
-				StartTimeMs: getMillisecondsFromTime(extraTm),
+				StartTimeMs: extraTm.Milliseconds(),
 				Content:     line,
 			})
 		}
@@ -110,48 +110,36 @@ func readLRCLine(line string, lineNo int) (fragments []LRCFragment, err error) {
 	return
 }
 
-func parseLRCTime(line, openChar, closeChar string) (tm time.Time, err error) {
-	closeIndex := strings.Index(line, closeChar)
-	if line[0:1] != openChar || closeIndex < 0 || strings.Index(line, ":") < 0 || strings.Index(line, ".") < 0 {
+func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error) {
+
+	var left = strings.Index(line, openChar)
+	var right = strings.Index(line, closeChar)
+	if left < 0 && right < 0 {
 		err = errors.New("brackets missing")
 		return
 	}
-
-	_, err = strconv.Atoi(line[1:3])
-	if err != nil {
-		// A tag line
+	timeStr := line[left + 1:right]
+	t := strings.Split(timeStr, ":")
+	if len(t) > 1 && t[0] != "" && t[1] != "" {
+		minutes, err1 := strconv.Atoi(t[0])
+		seconds, err2 := strconv.ParseFloat(t[1], 64)
+		if err1 != nil || err2 != nil {
+			err = errors.New("format error")
+			return
+		}
+		var milliseconds = minutes * 60000 + int(math.Floor(seconds * 1000))
+		tm = time.Duration(milliseconds) * time.Millisecond
 		return
 	}
 
-	part1 := strings.Split(line[1:closeIndex], ":")
-	if len(part1) < 2 {
-		err = errors.New("brackets missing")
-		return
-	}
-
-	part2 := part1[1]
-	part3 := strings.Split(part2, ".")
-	if len(part3) < 2 {
-		err = errors.New("brackets missing")
-		return
-	}
-
-	minutes, err := strconv.Atoi(part1[0])
-	seconds, err := strconv.Atoi(part3[0])
-	milliseconds, err := strconv.ParseFloat(fmt.Sprintf("0.%s", part3[1]), 64)
-	if err != nil {
-		return
-	}
-
-	tm = time.Unix(int64(minutes*60+seconds), int64(math.Ceil(milliseconds*float64(time.Second))))
-
+	err = errors.New("brackets missing")
 	return
 }
 
-func parseContentLine(line string, tm time.Time) (fragments []LRCFragment, err error) {
+func parseContentLine(line string, tm time.Duration) (fragments []LRCFragment, err error) {
 	if !strings.Contains(line, "<") {
 		fragments = append(fragments, LRCFragment{
-			StartTimeMs: getMillisecondsFromTime(tm),
+			StartTimeMs: tm.Milliseconds(),
 			Content:     line,
 		})
 		return
@@ -172,7 +160,7 @@ func parseContentLine(line string, tm time.Time) (fragments []LRCFragment, err e
 		splitTm, tmErr := parseLRCTime(line[idx:], "<", ">")
 		if tmErr == nil {
 			fragments = append(fragments, LRCFragment{
-				StartTimeMs: getMillisecondsFromTime(previousTm),
+				StartTimeMs: previousTm.Milliseconds(),
 				Content:     strings.TrimSpace(line[startIndex:idx]),
 			})
 			startIndex = closeIndex + 1
@@ -182,13 +170,8 @@ func parseContentLine(line string, tm time.Time) (fragments []LRCFragment, err e
 	}
 
 	fragments = append(fragments, LRCFragment{
-		StartTimeMs: getMillisecondsFromTime(previousTm),
+		StartTimeMs: previousTm.Milliseconds(),
 		Content:     strings.TrimSpace(line[startIndex:]),
 	})
-	return
-}
-
-func getMillisecondsFromTime(tm time.Time) (ms int64) {
-	ms = tm.Sub(time.Unix(0, 0)).Nanoseconds() / int64(time.Millisecond)
 	return
 }
