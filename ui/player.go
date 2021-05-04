@@ -327,7 +327,7 @@ func (p *Player) updateLyric(songId int64) {
 	if p.lrcTimer != nil {
 		p.lrcTimer.Stop()
 	}
-	lrcFile, _ := lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词～"))
+	lrcFile, _ := lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词~"))
 	defer func() {
 		p.lrcTimer = lyric.NewLRCTimer(lrcFile)
 		p.lrcTimer.AddListener(p.lyricListener)
