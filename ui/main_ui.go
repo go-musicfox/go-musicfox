@@ -67,7 +67,7 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 		return m, tickMainUI(time.Nanosecond)
 
 	case tickMainUIMsg:
-		return m, nil
+		return m, tickMainUI(time.Second)
 
 	case tea.WindowSizeMsg:
 		m.doubleColumn = msg.Width >= 75
