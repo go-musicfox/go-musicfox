@@ -55,9 +55,20 @@ func NewPlayer(model *NeteaseModel) *Player {
     // done监听
     go func() {
         for {
-            <-player.Player.Done()
-            player.NextSong()
-            model.Rerender()
+            select {
+            case <-player.Player.Done():
+                player.NextSong()
+                model.Rerender()
+            case duration := <-player.TimeChan():
+                if player.lrcTimer != nil {
+                    select {
+                    case player.lrcTimer.Timer()<-duration:
+                    default:
+                    }
+                }
+
+                player.model.Rerender()
+            }
         }
     }()
 
@@ -133,6 +144,10 @@ func (p *Player) SongView() string {
 }
 
 func (p *Player) ProgressView() string {
+    if p.Timer == nil {
+        return ""
+    }
+
     width := float64(p.model.WindowWidth - 14)
 
     if progressStartColor == "" || progressEndColor == "" || len(p.progressRamp) == 0 {
@@ -155,7 +170,17 @@ func (p *Player) ProgressView() string {
     }
     emptyCells := strings.Repeat(string(constants.ProgressEmptyChar), emptySize)
 
-    return fmt.Sprintf("%s%s", fullCells, emptyCells)
+    passedDuration := int(p.Timer.Passed().Seconds())
+    allDuration := int(p.CurMusic.Duration.Seconds())
+
+    if allDuration/60 >= 100 {
+        times := SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())
+        return fmt.Sprintf("%s%s %s", fullCells, emptyCells, times)
+    } else {
+        times := SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())
+        return fmt.Sprintf("%s%s  %s ", fullCells, emptyCells, times)
+    }
+
 }
 
 // InPlayingMenu 是否处于正在播放的菜单中
@@ -361,7 +386,6 @@ func (p *Player) updateLyric(songId int64) {
     defer func() {
         p.lrcTimer = lyric.NewLRCTimer(lrcFile)
         p.lrcTimer.AddListener(p.lyricListener)
-        p.lrcTimer.SetTimer(p.TimeChan())
         p.lrcTimer.Start()
     }()
 

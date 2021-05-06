@@ -105,7 +105,6 @@ func (p *Player) listen() {
             // 关闭旧计时器
             if p.Timer != nil {
                 p.Timer.Stop()
-                p.Timer = nil
             }
             p.Progress = 0
 
@@ -257,6 +256,5 @@ func (p *Player) Resume() {
 // Close 关闭
 func (p *Player) Close() {
     p.Timer.Stop()
-    p.Timer = nil
     speaker.Clear()
 }

@@ -6,7 +6,7 @@ type Listener func(startTimeMs int64, content string, last bool, index int)
 
 type LRCTimer struct {
 	file      *LRCFile
-	timer     <-chan time.Duration
+	timer     chan time.Duration
 	stop      chan struct{}
 	listeners []Listener
 }
@@ -14,12 +14,13 @@ type LRCTimer struct {
 func NewLRCTimer(file *LRCFile) (timer *LRCTimer) {
 	timer = &LRCTimer{
 		file: file,
+		timer: make(chan time.Duration),
 	}
 	return
 }
 
-func (t *LRCTimer) SetTimer(timer <-chan time.Duration) {
-	t.timer = timer
+func (t *LRCTimer) Timer() chan<- time.Duration {
+	return t.timer
 }
 
 func (t *LRCTimer) AddListener(l Listener) {
