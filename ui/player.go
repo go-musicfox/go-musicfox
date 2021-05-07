@@ -94,9 +94,8 @@ func (p *Player) playerView(top *int) string {
 
     playerBuilder.WriteString(p.LyricView())
 
-    playerBuilder.WriteString("\n")
     playerBuilder.WriteString(p.SongView())
-    playerBuilder.WriteString("\n\n")
+    playerBuilder.WriteString("\n\n\n")
 
     playerBuilder.WriteString(p.ProgressView())
 
@@ -126,11 +125,14 @@ func (p *Player) LyricView() string {
     // 3行歌词
     case 3:
         for i := 1; i <= 3; i++ {
-            lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+4))
+            if p.model.menuStartColumn+3 > 0 {
+                lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+            }
+            lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
             if i == 2 {
-                lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSICyan))
+                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSICyan))
             } else {
-                lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSIBrightBlack))
+                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
             }
 
             lyricBuilder.WriteString("\n")
@@ -138,11 +140,14 @@ func (p *Player) LyricView() string {
     // 5行歌词
     case 5:
         for i := 0; i < 5; i++ {
-            lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+4))
+            if p.model.menuStartColumn+3 > 0 {
+                lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+            }
+            lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
             if i == 2 {
-                lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSICyan))
+                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSICyan))
             } else {
-                lyricBuilder.WriteString(SetFgStyle(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), termenv.ANSIBrightBlack))
+                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
             }
             lyricBuilder.WriteString("\n")
         }
@@ -158,8 +163,10 @@ func (p *Player) LyricView() string {
 func (p *Player) SongView() string {
     var builder strings.Builder
 
-    builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-6))
-    builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIMagenta))
+    if p.model.menuStartColumn-4 > 0 {
+        builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
+        builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIMagenta))
+    }
     if p.State == utils.Playing {
         builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", GetPrimaryColor()))
     } else {
@@ -167,7 +174,9 @@ func (p *Player) SongView() string {
     }
 
     if p.curSongIndex < len(p.playlist) {
-        builder.WriteString(SetFgStyle(p.playlist[p.curSongIndex].Name, GetPrimaryColor()))
+        // 按剩余长度截断字符串
+        truncateSong := runewidth.Truncate(p.playlist[p.curSongIndex].Name, p.model.WindowWidth-p.model.menuStartColumn-9, "") // 多减1，避免剩余1个中文字符
+        builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
         builder.WriteString(" ")
 
 
@@ -180,7 +189,9 @@ func (p *Player) SongView() string {
             artists.WriteString(v.Name)
         }
 
-        builder.WriteString(SetFgStyle(artists.String(), termenv.ANSIBrightBlack))
+        // 按剩余长度截断字符串
+        truncateArtists := runewidth.Truncate(artists.String(), p.model.WindowWidth-p.model.menuStartColumn-9-runewidth.StringWidth(p.playlist[p.curSongIndex].Name), "")
+        builder.WriteString(SetFgStyle(truncateArtists, termenv.ANSIBrightBlack))
     }
 
     return builder.String()
