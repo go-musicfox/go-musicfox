@@ -18,7 +18,7 @@ const StartupTickDuration = time.Millisecond * 15
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"
 
-const PlayerSongBr = "999000"
+const PlayerSongBr = "320000" // "999000"
 
 const MainShowTitle = true
 const MainLoadingText = " [加载中...]"

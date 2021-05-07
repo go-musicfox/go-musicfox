@@ -24,24 +24,37 @@ const (
     DurationPrev
 )
 
+// PlayMode 播放模式
+type PlayMode string
+
+const (
+    PmOrder       PlayMode = "顺序" // 顺序播放
+    PmListLoop             = "列表" // 列表循环
+    PmSingleLoop           = "单曲" // 单曲循环
+    PmRandom               = "随机" // 随机播放
+    PmIntelligent          = "智能" // 智能模式
+)
+
 type Player struct {
     model *NeteaseModel
 
-    playlist       []ds.Song
-    curSongIndex   int
-    playingMenuKey string // 正在播放的菜单Key
-    isIntelligence bool   // 智能模式（心动模式）
+    playlist       []ds.Song // 歌曲列表
+    curSongIndex   int       // 当前歌曲的下标
+    playingMenuKey string    // 正在播放的菜单Key
+    isIntelligence bool      // 智能模式（心动模式）
 
-    lrcTimer      *lyric.LRCTimer
-    lyrics        [5]string
-    showLyric     bool
-    lyricStartRow int
-    lyricLines    int
+    lrcTimer      *lyric.LRCTimer // 歌词计时器
+    lyrics        [5]string       // 歌词信息，保留5行
+    showLyric     bool            // 显示歌词
+    lyricStartRow int             // 歌词开始行
+    lyricLines    int             // 歌词显示行数，3或5
 
+    // 播放进度条
     progressLastWidth float64
     progressRamp      []string
 
     playErrCount int // 错误计数，当错误连续超过5次，停止播放
+    mode         PlayMode
 
     *utils.Player
 }
@@ -49,6 +62,7 @@ type Player struct {
 func NewPlayer(model *NeteaseModel) *Player {
     player := &Player{
         model:  model,
+        mode: PmOrder,              // 默认顺序，TODO
         Player: utils.NewPlayer(),
     }
 
@@ -62,7 +76,7 @@ func NewPlayer(model *NeteaseModel) *Player {
             case duration := <-player.TimeChan():
                 if player.lrcTimer != nil {
                     select {
-                    case player.lrcTimer.Timer()<-duration:
+                    case player.lrcTimer.Timer() <- duration:
                     default:
                     }
                 }
@@ -80,7 +94,9 @@ func (p *Player) playerView(top *int) string {
 
     playerBuilder.WriteString(p.LyricView())
 
-    playerBuilder.WriteString(strings.Repeat("\n", 3))
+    playerBuilder.WriteString("\n")
+    playerBuilder.WriteString(p.SongView())
+    playerBuilder.WriteString("\n\n")
 
     playerBuilder.WriteString(p.ProgressView())
 
@@ -140,7 +156,34 @@ func (p *Player) LyricView() string {
 }
 
 func (p *Player) SongView() string {
-    return ""
+    var builder strings.Builder
+
+    builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-6))
+    builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIMagenta))
+    if p.State == utils.Playing {
+        builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", GetPrimaryColor()))
+    } else {
+        builder.WriteString(SetFgStyle("_ _ z Z Z  ", GetPrimaryColor()))
+    }
+
+    if p.curSongIndex < len(p.playlist) {
+        builder.WriteString(SetFgStyle(p.playlist[p.curSongIndex].Name, GetPrimaryColor()))
+        builder.WriteString(" ")
+
+
+        var artists strings.Builder
+        for i, v := range p.playlist[p.curSongIndex].Artists {
+            if i != 0 {
+                artists.WriteString(",")
+            }
+
+            artists.WriteString(v.Name)
+        }
+
+        builder.WriteString(SetFgStyle(artists.String(), termenv.ANSIBrightBlack))
+    }
+
+    return builder.String()
 }
 
 func (p *Player) ProgressView() string {
