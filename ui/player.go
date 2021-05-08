@@ -35,6 +35,7 @@ const (
     PmIntelligent          = "智能" // 智能模式
 )
 
+// Player 网易云音乐播放器
 type Player struct {
     model *NeteaseModel
 
@@ -56,13 +57,13 @@ type Player struct {
     playErrCount int // 错误计数，当错误连续超过5次，停止播放
     mode         PlayMode
 
-    *utils.Player
+    *utils.Player    // 播放器
 }
 
 func NewPlayer(model *NeteaseModel) *Player {
     player := &Player{
         model:  model,
-        mode: PmOrder,              // 默认顺序，TODO
+        mode:   PmOrder, // 默认顺序，TODO
         Player: utils.NewPlayer(),
     }
 
@@ -74,6 +75,10 @@ func NewPlayer(model *NeteaseModel) *Player {
                 player.NextSong()
                 model.Rerender()
             case duration := <-player.TimeChan():
+                if duration.Seconds() - player.CurMusic.Duration.Seconds() > 10 {
+                    player.NextSong()
+                    return
+                }
                 if player.lrcTimer != nil {
                     select {
                     case player.lrcTimer.Timer() <- duration:
@@ -89,22 +94,24 @@ func NewPlayer(model *NeteaseModel) *Player {
     return player
 }
 
+// playerView 播放器UI，包含 lyricView, songView, progressView
 func (p *Player) playerView(top *int) string {
     var playerBuilder strings.Builder
 
-    playerBuilder.WriteString(p.LyricView())
+    playerBuilder.WriteString(p.lyricView())
 
-    playerBuilder.WriteString(p.SongView())
+    playerBuilder.WriteString(p.songView())
     playerBuilder.WriteString("\n\n\n")
 
-    playerBuilder.WriteString(p.ProgressView())
+    playerBuilder.WriteString(p.progressView())
 
     *top = p.model.WindowHeight
 
     return playerBuilder.String()
 }
 
-func (p *Player) LyricView() string {
+// lyricView 歌词显示UI
+func (p *Player) lyricView() string {
     endRow := p.model.WindowHeight - 4
 
     if !p.showLyric {
@@ -143,7 +150,10 @@ func (p *Player) LyricView() string {
             if p.model.menuStartColumn+3 > 0 {
                 lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
             }
-            lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
+            lyricLine := runewidth.Truncate(
+                runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4),
+                p.model.WindowWidth-p.model.menuStartColumn-4,
+                "")
             if i == 2 {
                 lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSICyan))
             } else {
@@ -160,7 +170,8 @@ func (p *Player) LyricView() string {
     return lyricBuilder.String()
 }
 
-func (p *Player) SongView() string {
+// songView 歌曲信息UI
+func (p *Player) songView() string {
     var builder strings.Builder
 
     if p.model.menuStartColumn-4 > 0 {
@@ -168,9 +179,9 @@ func (p *Player) SongView() string {
         builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIMagenta))
     }
     if p.State == utils.Playing {
-        builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", GetPrimaryColor()))
+        builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", termenv.ANSIYellow))
     } else {
-        builder.WriteString(SetFgStyle("_ _ z Z Z  ", GetPrimaryColor()))
+        builder.WriteString(SetFgStyle("_ _ z Z Z  ", termenv.ANSIRed))
     }
 
     if p.curSongIndex < len(p.playlist) {
@@ -178,7 +189,6 @@ func (p *Player) SongView() string {
         truncateSong := runewidth.Truncate(p.playlist[p.curSongIndex].Name, p.model.WindowWidth-p.model.menuStartColumn-9, "") // 多减1，避免剩余1个中文字符
         builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
         builder.WriteString(" ")
-
 
         var artists strings.Builder
         for i, v := range p.playlist[p.curSongIndex].Artists {
@@ -190,14 +200,18 @@ func (p *Player) SongView() string {
         }
 
         // 按剩余长度截断字符串
-        truncateArtists := runewidth.Truncate(artists.String(), p.model.WindowWidth-p.model.menuStartColumn-9-runewidth.StringWidth(p.playlist[p.curSongIndex].Name), "")
+        remainLen := p.model.WindowWidth-p.model.menuStartColumn-22-runewidth.StringWidth(p.playlist[p.curSongIndex].Name)
+        truncateArtists := runewidth.Truncate(
+            runewidth.FillRight(artists.String(), remainLen),
+            remainLen, "")
         builder.WriteString(SetFgStyle(truncateArtists, termenv.ANSIBrightBlack))
     }
 
     return builder.String()
 }
 
-func (p *Player) ProgressView() string {
+// progressView 进度条UI
+func (p *Player) progressView() string {
     if p.Timer == nil {
         return ""
     }
@@ -406,6 +420,7 @@ func (p *Player) Close() {
     p.Player.Close()
 }
 
+// lyricListener 歌词变更监听
 func (p *Player) lyricListener(_ int64, content string, last bool, index int) {
     curIndex := len(p.lyrics) / 2
 
@@ -431,6 +446,7 @@ func (p *Player) lyricListener(_ int64, content string, last bool, index int) {
     }
 }
 
+// updateLyric 更新歌词UI
 func (p *Player) updateLyric(songId int64) {
     p.lyrics = [5]string{}
     if p.lrcTimer != nil {

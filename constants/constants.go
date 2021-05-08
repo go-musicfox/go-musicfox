@@ -13,7 +13,7 @@ const ProgressFullChar = '#'
 const ProgressEmptyChar = ' '
 const StartupProgressOutBounce = true
 const StartupLoadingDuration = time.Second * 2
-const StartupTickDuration = time.Millisecond * 15
+const StartupTickDuration = time.Millisecond * 20
 
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"

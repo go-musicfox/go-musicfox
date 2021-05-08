@@ -111,11 +111,11 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 
 			if spaceHeight > 5 {
 				// 5行歌词
-				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 2
+				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 3
 				m.player.lyricLines = 5
 			} else {
 				// 3行歌词
-				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 1
+				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 2
 				m.player.lyricLines = 3
 			}
 
