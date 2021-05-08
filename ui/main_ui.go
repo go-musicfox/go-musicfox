@@ -373,6 +373,10 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 		m.player.PreSong()
 	case "]":
 		m.player.NextSong()
+	case "p":
+		m.player.RotatePlayMode()
+	case "P":
+		m.player.Intelligence(false)
 	}
 
 	return m, tickMainUI(time.Nanosecond)

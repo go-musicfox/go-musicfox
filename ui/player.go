@@ -12,6 +12,7 @@ import (
     "go-musicfox/lyric"
     "go-musicfox/utils"
     "math"
+    "math/rand"
     "strconv"
     "strings"
 )
@@ -28,11 +29,11 @@ const (
 type PlayMode string
 
 const (
+    PmListLoop    PlayMode = "列表" // 列表循环
     PmOrder       PlayMode = "顺序" // 顺序播放
-    PmListLoop             = "列表" // 列表循环
-    PmSingleLoop           = "单曲" // 单曲循环
-    PmRandom               = "随机" // 随机播放
-    PmIntelligent          = "智能" // 智能模式
+    PmSingleLoop  PlayMode = "单曲" // 单曲循环
+    PmRandom      PlayMode = "随机" // 随机播放
+    PmIntelligent PlayMode = "心动" // 智能模式
 )
 
 // Player 网易云音乐播放器
@@ -42,7 +43,6 @@ type Player struct {
     playlist       []ds.Song // 歌曲列表
     curSongIndex   int       // 当前歌曲的下标
     playingMenuKey string    // 正在播放的菜单Key
-    isIntelligence bool      // 智能模式（心动模式）
 
     lrcTimer      *lyric.LRCTimer // 歌词计时器
     lyrics        [5]string       // 歌词信息，保留5行
@@ -57,7 +57,7 @@ type Player struct {
     playErrCount int // 错误计数，当错误连续超过5次，停止播放
     mode         PlayMode
 
-    *utils.Player    // 播放器
+    *utils.Player // 播放器
 }
 
 func NewPlayer(model *NeteaseModel) *Player {
@@ -75,9 +75,9 @@ func NewPlayer(model *NeteaseModel) *Player {
                 player.NextSong()
                 model.Rerender()
             case duration := <-player.TimeChan():
-                if duration.Seconds() - player.CurMusic.Duration.Seconds() > 10 {
+                if duration.Seconds()-player.CurMusic.Duration.Seconds() > 10 {
                     player.NextSong()
-                    return
+                    break
                 }
                 if player.lrcTimer != nil {
                     select {
@@ -137,7 +137,7 @@ func (p *Player) lyricView() string {
             }
             lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
             if i == 2 {
-                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSICyan))
+                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
             } else {
                 lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
             }
@@ -155,7 +155,7 @@ func (p *Player) lyricView() string {
                 p.model.WindowWidth-p.model.menuStartColumn-4,
                 "")
             if i == 2 {
-                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSICyan))
+                lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
             } else {
                 lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
             }
@@ -186,7 +186,7 @@ func (p *Player) songView() string {
 
     if p.curSongIndex < len(p.playlist) {
         // 按剩余长度截断字符串
-        truncateSong := runewidth.Truncate(p.playlist[p.curSongIndex].Name, p.model.WindowWidth-p.model.menuStartColumn-9, "") // 多减1，避免剩余1个中文字符
+        truncateSong := runewidth.Truncate(p.playlist[p.curSongIndex].Name, p.model.WindowWidth-p.model.menuStartColumn-16, "") // 多减，避免剩余1个中文字符
         builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
         builder.WriteString(" ")
 
@@ -200,7 +200,7 @@ func (p *Player) songView() string {
         }
 
         // 按剩余长度截断字符串
-        remainLen := p.model.WindowWidth-p.model.menuStartColumn-22-runewidth.StringWidth(p.playlist[p.curSongIndex].Name)
+        remainLen := p.model.WindowWidth - p.model.menuStartColumn - 16 - runewidth.StringWidth(p.playlist[p.curSongIndex].Name)
         truncateArtists := runewidth.Truncate(
             runewidth.FillRight(artists.String(), remainLen),
             remainLen, "")
@@ -342,32 +342,30 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
 // NextSong 下一曲
 func (p *Player) NextSong() {
     if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
-        //if p.isIntelligence {
-        //    p.intelligence(true)
-        //}
+        if p.mode == PmIntelligent {
+           p.Intelligence(true)
+        }
         if p.model.doubleColumn && p.curSongIndex%2 == 0 {
             moveRight(p.model)
         } else {
             moveDown(p.model)
         }
     }
-    //switch (_playMode) {
-    //case PlaylistMode.LIST_LOOP:
-    //    _curSongIndex = _curSongIndex >= songs.length - 1 ? 0 : _curSongIndex + 1;
-    //    break;
-    //case PlaylistMode.SINGLE_LOOP:
-    //    break;
-    //case PlaylistMode.SHUFFLE:
-    //    _curSongIndex = Random().nextInt(songs.length - 1);
-    //    break;
-    //case PlaylistMode.ORDER:
-    //    if (_curSongIndex >= songs.length - 1) return;
-    //    _curSongIndex++;
-    //    break;
-    //}
-    p.curSongIndex++
-    if p.curSongIndex > len(p.playlist)-1 {
-        p.curSongIndex = 0
+
+    switch p.mode {
+    case PmListLoop, PmIntelligent:
+        p.curSongIndex++
+        if p.curSongIndex > len(p.playlist)-1 {
+            p.curSongIndex = 0
+        }
+    case PmSingleLoop:
+    case PmRandom:
+        p.curSongIndex = rand.Intn(len(p.playlist)-1)
+    case PmOrder:
+        if p.curSongIndex >= len(p.playlist)-1 {
+            return
+        }
+        p.curSongIndex++
     }
 
     if p.curSongIndex > len(p.playlist)-1 {
@@ -380,32 +378,30 @@ func (p *Player) NextSong() {
 // PreSong 上一曲
 func (p *Player) PreSong() {
     if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
-        //if p.isIntelligence {
-        //    p.intelligence(true)
-        //}
+        if p.mode == PmIntelligent {
+           p.Intelligence(true)
+        }
         if p.model.doubleColumn && p.curSongIndex%2 == 0 {
             moveUp(p.model)
         } else {
             moveLeft(p.model)
         }
     }
-    //switch (_playMode) {
-    //case PlaylistMode.LIST_LOOP:
-    //    _curSongIndex = _curSongIndex >= songs.length - 1 ? 0 : _curSongIndex + 1;
-    //    break;
-    //case PlaylistMode.SINGLE_LOOP:
-    //    break;
-    //case PlaylistMode.SHUFFLE:
-    //    _curSongIndex = Random().nextInt(songs.length - 1);
-    //    break;
-    //case PlaylistMode.ORDER:
-    //    if (_curSongIndex >= songs.length - 1) return;
-    //    _curSongIndex++;
-    //    break;
-    //}
-    p.curSongIndex--
-    if p.curSongIndex < 0 {
-        p.curSongIndex = len(p.playlist) - 1
+
+    switch p.mode {
+    case PmListLoop, PmIntelligent:
+        p.curSongIndex--
+        if p.curSongIndex < 0 {
+            p.curSongIndex = len(p.playlist) - 1
+        }
+    case PmSingleLoop:
+    case PmRandom:
+        p.curSongIndex = rand.Intn(len(p.playlist)-1)
+    case PmOrder:
+        if p.curSongIndex <= 0 {
+            return
+        }
+        p.curSongIndex--
     }
 
     if p.curSongIndex < 0 {
@@ -415,13 +411,30 @@ func (p *Player) PreSong() {
     _ = p.PlaySong(song, DurationPrev)
 }
 
+// RotatePlayMode 播放模式轮转
+func (p *Player) RotatePlayMode() {
+    switch p.mode {
+    case PmListLoop:
+        p.mode = PmOrder
+    case PmOrder:
+        p.mode = PmSingleLoop
+    case PmSingleLoop:
+        p.mode = PmRandom
+    case PmRandom:
+        p.mode = PmListLoop
+    default:
+        p.mode = PmListLoop
+    }
+    p.model.Rerender()
+}
+
 // Close 关闭
 func (p *Player) Close() {
     p.Player.Close()
 }
 
 // lyricListener 歌词变更监听
-func (p *Player) lyricListener(_ int64, content string, last bool, index int) {
+func (p *Player) lyricListener(_ int64, content string, _ bool, index int) {
     curIndex := len(p.lyrics) / 2
 
     // before
@@ -472,4 +485,50 @@ func (p *Player) updateLyric(songId int64) {
             lrcFile = file
         }
     }
+}
+
+// Intelligence 智能/心动模式
+func (p *Player) Intelligence(appendMode bool)  {
+    playlist, ok := p.model.menu.(*PlaylistDetailMenu)
+    if !ok {
+        return
+    }
+
+    if p.model.selectedIndex >= len(playlist.songs) {
+        return
+    }
+
+    if utils.CheckUserInfo(p.model.user) == utils.NeedLogin {
+        NeedLoginHandle(p.model, nil)
+        return
+    }
+
+    intelligenceService := service.PlaymodeIntelligenceListService{
+        SongId:       strconv.FormatInt(playlist.songs[p.model.selectedIndex].Id, 10),
+        PlaylistId:   strconv.FormatInt(playlist.PlaylistId, 10),
+        StartMusicId: strconv.FormatInt(playlist.songs[p.model.selectedIndex].Id, 10),
+    }
+    code, response := intelligenceService.PlaymodeIntelligenceList()
+    codeType := utils.CheckCode(code)
+    if codeType == utils.NeedLogin {
+        NeedLoginHandle(p.model, func(m *NeteaseModel) {
+            p.Intelligence(appendMode)
+        })
+        return
+    } else if codeType != utils.Success {
+        return
+    }
+    songs := utils.GetIntelligenceSongs(response)
+
+    if appendMode {
+        p.playlist = append(p.playlist, songs...)
+        p.curSongIndex++
+    } else {
+        p.playlist = append([]ds.Song{playlist.songs[p.model.selectedIndex]}, songs...)
+        p.curSongIndex = 0
+    }
+    p.mode = PmIntelligent
+    p.playingMenuKey = "Intelligent"
+
+    _ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)
 }

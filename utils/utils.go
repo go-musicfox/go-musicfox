@@ -203,3 +203,15 @@ func GetFmSongs(data []byte) (list []ds.Song) {
 
     return
 }
+
+// GetIntelligenceSongs 获取心动模式歌曲列表
+func GetIntelligenceSongs(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromIntelligenceJson(value); err == nil {
+            list = append(list, song)
+        }
+
+    }, "data")
+
+    return
+}
