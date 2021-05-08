@@ -4,6 +4,7 @@ import (
     "github.com/anhoder/bubbles/textinput"
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/netease-music/service"
+    "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
     "go-musicfox/constants"
     "go-musicfox/db"
@@ -208,16 +209,28 @@ func loginView(m *NeteaseModel) string {
     builder.WriteString(menuTitleView(m, &top, "用户登录 (手机号或邮箱)"))
     builder.WriteString("\n\n\n")
 
-    inputs := []string{
-        m.accountInput.View(),
-        m.passwordInput.View(),
+    inputs := []textinput.Model{
+        m.accountInput,
+        m.passwordInput,
     }
 
-    for i := 0; i < len(inputs); i++ {
+    for i, input := range inputs {
         if m.menuStartColumn > 0 {
             builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
         }
-        builder.WriteString(inputs[i])
+
+        builder.WriteString(input.View())
+
+        var valueLen int
+        if input.Value() == "" {
+            valueLen = runewidth.StringWidth(input.Placeholder)
+        } else {
+            valueLen = runewidth.StringWidth(input.Value())
+        }
+        if spaceLen := m.WindowWidth-m.menuStartColumn-valueLen-3; spaceLen > 0 {
+           builder.WriteString(strings.Repeat(" ", spaceLen))
+        }
+
         if i < len(inputs)-1 {
             builder.WriteString("\n\n")
         }
