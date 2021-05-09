@@ -6,9 +6,9 @@ import (
 )
 
 type Album struct {
-	Id     int64
-	Name   string
-	PicUrl string
+	Id     int64 `json:"id"`
+	Name   string `json:"name"`
+	PicUrl string `json:"pic_url"`
 }
 
 func NewAlbumFromJson(json []byte) (Album, error) {

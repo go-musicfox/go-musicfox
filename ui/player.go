@@ -8,6 +8,7 @@ import (
     "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
     "go-musicfox/constants"
+    "go-musicfox/db"
     "go-musicfox/ds"
     "go-musicfox/lyric"
     "go-musicfox/utils"
@@ -63,7 +64,7 @@ type Player struct {
 func NewPlayer(model *NeteaseModel) *Player {
     player := &Player{
         model:  model,
-        mode:   PmOrder, // 默认顺序，TODO
+        mode:   PmListLoop,
         Player: utils.NewPlayer(),
     }
 
@@ -176,12 +177,12 @@ func (p *Player) songView() string {
 
     if p.model.menuStartColumn-4 > 0 {
         builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
-        builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIMagenta))
+        builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIBrightMagenta))
     }
     if p.State == utils.Playing {
-        builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", termenv.ANSIYellow))
+        builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", termenv.ANSIBrightYellow))
     } else {
-        builder.WriteString(SetFgStyle("_ _ z Z Z  ", termenv.ANSIRed))
+        builder.WriteString(SetFgStyle("_ _ z Z Z  ", termenv.ANSIBrightRed))
     }
 
     if p.curSongIndex < len(p.playlist) {
@@ -336,6 +337,13 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
 
     p.playErrCount = 0
 
+    table := db.NewTable()
+    _ = table.SetByKVModel(db.PlayerSnapshot{}, db.PlayerSnapshot{
+        p.curSongIndex,
+        p.playlist,
+        p.playingMenuKey,
+    })
+
     return nil
 }
 
@@ -411,20 +419,28 @@ func (p *Player) PreSong() {
     _ = p.PlaySong(song, DurationPrev)
 }
 
-// RotatePlayMode 播放模式轮转
-func (p *Player) RotatePlayMode() {
-    switch p.mode {
-    case PmListLoop:
-        p.mode = PmOrder
-    case PmOrder:
-        p.mode = PmSingleLoop
-    case PmSingleLoop:
-        p.mode = PmRandom
-    case PmRandom:
-        p.mode = PmListLoop
-    default:
-        p.mode = PmListLoop
+// SetPlayMode 播放模式切换
+func (p *Player) SetPlayMode(playMode PlayMode) {
+    if playMode == "" {
+        switch p.mode {
+        case PmListLoop:
+            p.mode = PmOrder
+        case PmOrder:
+            p.mode = PmSingleLoop
+        case PmSingleLoop:
+            p.mode = PmRandom
+        case PmRandom:
+            p.mode = PmListLoop
+        default:
+            p.mode = PmListLoop
+        }
+    } else {
+        p.mode = playMode
     }
+
+    table := db.NewTable()
+    _ = table.SetByKVModel(db.PlayMode{}, p.mode)
+
     p.model.Rerender()
 }
 

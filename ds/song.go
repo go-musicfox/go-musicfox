@@ -1,171 +1,171 @@
 package ds
 
 import (
-	"errors"
-	"github.com/buger/jsonparser"
-	"time"
+    "errors"
+    "github.com/buger/jsonparser"
+    "time"
 )
 
 type Song struct {
-	Id       int64
-	Name     string
-	Duration time.Duration
-	Artists  []Artist
-	Album
+    Id       int64         `json:"id"`
+    Name     string        `json:"name"`
+    Duration time.Duration `json:"duration"`
+    Artists  []Artist      `json:"artists"`
+    Album    `json:"album"`
 }
 
 // NewSongFromDailySongsJson 从每日推荐歌曲获取数据
 func NewSongFromDailySongsJson(json []byte) (Song, error) {
-	var song Song
-	if len(json) == 0 {
-		return song, errors.New("json is empty")
-	}
+    var song Song
+    if len(json) == 0 {
+        return song, errors.New("json is empty")
+    }
 
-	id, err := jsonparser.GetInt(json, "id")
-	if err != nil {
-		return song, err
-	}
-	song.Id = id
+    id, err := jsonparser.GetInt(json, "id")
+    if err != nil {
+        return song, err
+    }
+    song.Id = id
 
-	if name, err := jsonparser.GetString(json, "name"); err == nil {
-		song.Name = name
-	}
-	if duration, err := jsonparser.GetInt(json, "dt"); err == nil {
-		song.Duration = time.Millisecond * time.Duration(duration)
-	}
+    if name, err := jsonparser.GetString(json, "name"); err == nil {
+        song.Name = name
+    }
+    if duration, err := jsonparser.GetInt(json, "dt"); err == nil {
+        song.Duration = time.Millisecond * time.Duration(duration)
+    }
 
-	album, err := NewAlbumFromJson(json)
-	if err == nil {
-		song.Album = album
-	}
+    album, err := NewAlbumFromJson(json)
+    if err == nil {
+        song.Album = album
+    }
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		artist, err := NewArtist(value)
+    _, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        artist, err := NewArtist(value)
 
-		if err == nil {
-			song.Artists = append(song.Artists, artist)
-		}
-	}, "ar")
+        if err == nil {
+            song.Artists = append(song.Artists, artist)
+        }
+    }, "ar")
 
-	return song, nil
+    return song, nil
 }
 
 // NewSongFromPlaylistSongsJson 从歌单获取数据
 func NewSongFromPlaylistSongsJson(json []byte) (Song, error) {
-	var song Song
-	if len(json) == 0 {
-		return song, errors.New("json is empty")
-	}
+    var song Song
+    if len(json) == 0 {
+        return song, errors.New("json is empty")
+    }
 
-	id, err := jsonparser.GetInt(json, "id")
-	if err != nil {
-		return song, err
-	}
-	song.Id = id
+    id, err := jsonparser.GetInt(json, "id")
+    if err != nil {
+        return song, err
+    }
+    song.Id = id
 
-	if name, err := jsonparser.GetString(json, "name"); err == nil {
-		song.Name = name
-	}
-	if duration, err := jsonparser.GetInt(json, "dt"); err == nil {
-		song.Duration = time.Millisecond * time.Duration(duration)
-	}
-	if alId, err := jsonparser.GetInt(json, "al", "id"); err == nil {
-		song.Album.Id = alId
-	}
-	if alName, err := jsonparser.GetString(json, "al", "name"); err == nil {
-		song.Album.Name = alName
-	}
-	if alPic, err := jsonparser.GetString(json, "al", "picUrl"); err == nil {
-		song.Album.PicUrl = alPic
-	}
+    if name, err := jsonparser.GetString(json, "name"); err == nil {
+        song.Name = name
+    }
+    if duration, err := jsonparser.GetInt(json, "dt"); err == nil {
+        song.Duration = time.Millisecond * time.Duration(duration)
+    }
+    if alId, err := jsonparser.GetInt(json, "al", "id"); err == nil {
+        song.Album.Id = alId
+    }
+    if alName, err := jsonparser.GetString(json, "al", "name"); err == nil {
+        song.Album.Name = alName
+    }
+    if alPic, err := jsonparser.GetString(json, "al", "picUrl"); err == nil {
+        song.Album.PicUrl = alPic
+    }
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		artist, err := NewArtist(value)
+    _, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        artist, err := NewArtist(value)
 
-		if err == nil {
-			song.Artists = append(song.Artists, artist)
-		}
-	}, "ar")
+        if err == nil {
+            song.Artists = append(song.Artists, artist)
+        }
+    }, "ar")
 
-	return song, nil
+    return song, nil
 }
 
 // NewSongFromFmJson 从私人FM获取数据
 func NewSongFromFmJson(json []byte) (Song, error) {
-	var song Song
-	if len(json) == 0 {
-		return song, errors.New("json is empty")
-	}
+    var song Song
+    if len(json) == 0 {
+        return song, errors.New("json is empty")
+    }
 
-	id, err := jsonparser.GetInt(json, "id")
-	if err != nil {
-		return song, err
-	}
-	song.Id = id
+    id, err := jsonparser.GetInt(json, "id")
+    if err != nil {
+        return song, err
+    }
+    song.Id = id
 
-	if name, err := jsonparser.GetString(json, "name"); err == nil {
-		song.Name = name
-	}
-	if duration, err := jsonparser.GetInt(json, "duration"); err == nil {
-		song.Duration = time.Millisecond * time.Duration(duration)
-	}
-	if alId, err := jsonparser.GetInt(json, "album", "id"); err == nil {
-		song.Album.Id = alId
-	}
-	if alName, err := jsonparser.GetString(json, "album", "name"); err == nil {
-		song.Album.Name = alName
-	}
-	if alPic, err := jsonparser.GetString(json, "album", "picUrl"); err == nil {
-		song.Album.PicUrl = alPic
-	}
+    if name, err := jsonparser.GetString(json, "name"); err == nil {
+        song.Name = name
+    }
+    if duration, err := jsonparser.GetInt(json, "duration"); err == nil {
+        song.Duration = time.Millisecond * time.Duration(duration)
+    }
+    if alId, err := jsonparser.GetInt(json, "album", "id"); err == nil {
+        song.Album.Id = alId
+    }
+    if alName, err := jsonparser.GetString(json, "album", "name"); err == nil {
+        song.Album.Name = alName
+    }
+    if alPic, err := jsonparser.GetString(json, "album", "picUrl"); err == nil {
+        song.Album.PicUrl = alPic
+    }
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		artist, err := NewArtist(value)
+    _, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        artist, err := NewArtist(value)
 
-		if err == nil {
-			song.Artists = append(song.Artists, artist)
-		}
-	}, "artists")
+        if err == nil {
+            song.Artists = append(song.Artists, artist)
+        }
+    }, "artists")
 
-	return song, nil
+    return song, nil
 }
 
 // NewSongFromIntelligenceJson 心动模式获取数据
 func NewSongFromIntelligenceJson(json []byte) (Song, error) {
-	var song Song
-	if len(json) == 0 {
-		return song, errors.New("json is empty")
-	}
+    var song Song
+    if len(json) == 0 {
+        return song, errors.New("json is empty")
+    }
 
-	id, err := jsonparser.GetInt(json, "songInfo", "id")
-	if err != nil {
-		return song, err
-	}
-	song.Id = id
+    id, err := jsonparser.GetInt(json, "songInfo", "id")
+    if err != nil {
+        return song, err
+    }
+    song.Id = id
 
-	if name, err := jsonparser.GetString(json, "songInfo", "name"); err == nil {
-		song.Name = name
-	}
-	if duration, err := jsonparser.GetInt(json, "songInfo", "dt"); err == nil {
-		song.Duration = time.Millisecond * time.Duration(duration)
-	}
-	if alId, err := jsonparser.GetInt(json, "songInfo", "al", "id"); err == nil {
-		song.Album.Id = alId
-	}
-	if alName, err := jsonparser.GetString(json, "songInfo", "al", "name"); err == nil {
-		song.Album.Name = alName
-	}
-	if alPic, err := jsonparser.GetString(json, "songInfo", "al", "picUrl"); err == nil {
-		song.Album.PicUrl = alPic
-	}
+    if name, err := jsonparser.GetString(json, "songInfo", "name"); err == nil {
+        song.Name = name
+    }
+    if duration, err := jsonparser.GetInt(json, "songInfo", "dt"); err == nil {
+        song.Duration = time.Millisecond * time.Duration(duration)
+    }
+    if alId, err := jsonparser.GetInt(json, "songInfo", "al", "id"); err == nil {
+        song.Album.Id = alId
+    }
+    if alName, err := jsonparser.GetString(json, "songInfo", "al", "name"); err == nil {
+        song.Album.Name = alName
+    }
+    if alPic, err := jsonparser.GetString(json, "songInfo", "al", "picUrl"); err == nil {
+        song.Album.PicUrl = alPic
+    }
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		artist, err := NewArtist(value)
+    _, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        artist, err := NewArtist(value)
 
-		if err == nil {
-			song.Artists = append(song.Artists, artist)
-		}
-	}, "songInfo", "ar")
+        if err == nil {
+            song.Artists = append(song.Artists, artist)
+        }
+    }, "songInfo", "ar")
 
-	return song, nil
+    return song, nil
 }

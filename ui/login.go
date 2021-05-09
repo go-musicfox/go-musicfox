@@ -103,10 +103,10 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                 codeType := utils.CheckCode(code)
                 switch codeType {
                 case utils.UnknownError:
-                    m.tips = SetFgStyle("未知错误，请稍后再试~", termenv.ANSIRed)
+                    m.tips = SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
                     return m, tickLogin(time.Nanosecond)
                 case utils.NetworkError:
-                    m.tips = SetFgStyle("网络异常，请稍后再试~", termenv.ANSIRed)
+                    m.tips = SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
                     return m, tickLogin(time.Nanosecond)
                 case utils.Success:
                     if user, err := ds.NewUserFromJson(response); err == nil {
@@ -121,7 +121,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                         }
                     }
                 default:
-                    m.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIRed) +
+                    m.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIBrightRed) +
                         SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)
                     return m, tickLogin(time.Nanosecond)
                 }
@@ -208,6 +208,7 @@ func loginView(m *NeteaseModel) string {
     // menu title
     builder.WriteString(menuTitleView(m, &top, "用户登录 (手机号或邮箱)"))
     builder.WriteString("\n\n\n")
+    top += 2
 
     inputs := []textinput.Model{
         m.accountInput,
@@ -231,22 +232,31 @@ func loginView(m *NeteaseModel) string {
            builder.WriteString(strings.Repeat(" ", spaceLen))
         }
 
+        top++
+
         if i < len(inputs)-1 {
             builder.WriteString("\n\n")
+            top++
         }
     }
 
     builder.WriteString("\n\n")
+    top++
     if m.menuStartColumn > 0 {
         builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
     }
     builder.WriteString(m.tips)
     builder.WriteString("\n\n")
+    top++
     if m.menuStartColumn > 0 {
         builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
     }
     builder.WriteString(m.submitButton)
     builder.WriteString("\n")
+
+    if m.WindowHeight > top+3 {
+        builder.WriteString(strings.Repeat("\n", m.WindowHeight-top-3))
+    }
 
     return builder.String()
 }

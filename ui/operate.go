@@ -2,9 +2,12 @@ package ui
 
 import (
 	"fmt"
+	"github.com/anhoder/netease-music/service"
+	"go-musicfox/db"
 	"go-musicfox/ds"
 	"go-musicfox/utils"
 	"math"
+	"strconv"
 )
 
 type menuStackItem struct {
@@ -298,8 +301,112 @@ func spaceKeyHandle(m *NeteaseModel) {
 		m.player.curSongIndex = selectedIndex
 		m.player.playingMenuKey = m.menu.GetMenuKey()
 		m.player.playlist = songs
-		m.player.RotatePlayMode()
+		if m.player.mode == PmIntelligent {
+			m.player.SetPlayMode("")
+		}
 		_ = m.player.PlaySong(songs[selectedIndex], DurationNext)
 	}
 
+}
+
+// likePlayingSong like/unlike playing song
+func likePlayingSong(m *NeteaseModel, isLike bool) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	if m.player.curSongIndex >= len(m.player.playlist) {
+		return
+	}
+
+	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+		NeedLoginHandle(m, func(m *NeteaseModel) {
+			likePlayingSong(m, isLike)
+		})
+		return
+	}
+
+	likeService := service.LikeService{
+		ID: strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10),
+		L: strconv.FormatBool(isLike),
+	}
+	likeService.Like()
+}
+
+// logout 登出
+func logout() {
+	table := db.NewTable()
+	_ = table.DeleteByKVModel(db.User{})
+}
+
+// likeSelectedSong like/unlike selected song
+func likeSelectedSong(m *NeteaseModel, isLike bool) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	songs, ok := m.menu.MenuData().([]ds.Song)
+	if !ok || m.selectedIndex >= len(songs) {
+		return
+	}
+
+	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+		NeedLoginHandle(m, func(m *NeteaseModel) {
+			likeSelectedSong(m, isLike)
+		})
+		return
+	}
+
+	likeService := service.LikeService{
+		ID: strconv.FormatInt(songs[m.selectedIndex].Id, 10),
+		L: strconv.FormatBool(isLike),
+	}
+	likeService.Like()
+}
+
+// trashPlayingSong 标记为不喜欢
+func trashPlayingSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	if m.player.curSongIndex >= len(m.player.playlist) {
+		return
+	}
+
+	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+		NeedLoginHandle(m, func(m *NeteaseModel) {
+			trashPlayingSong(m)
+		})
+		return
+	}
+
+	trashService := service.FmTrashService{
+		SongID: strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10),
+	}
+	trashService.FmTrash()
+}
+
+// trashSelectedSong 标记为不喜欢
+func trashSelectedSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	songs, ok := m.menu.MenuData().([]ds.Song)
+	if !ok || m.selectedIndex >= len(songs) {
+		return
+	}
+
+	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+		NeedLoginHandle(m, func(m *NeteaseModel) {
+			trashSelectedSong(m)
+		})
+		return
+	}
+
+	trashService := service.FmTrashService{
+		SongID: strconv.FormatInt(songs[m.selectedIndex].Id, 10),
+	}
+	trashService.FmTrash()
 }

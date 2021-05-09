@@ -1,8 +1,10 @@
 package ui
 
 import (
+    "encoding/json"
     tea "github.com/anhoder/bubbletea"
     "github.com/anhoder/netease-music/util"
+    "github.com/mattn/go-runewidth"
     "github.com/telanflow/cookiejar"
     "go-musicfox/constants"
     "go-musicfox/db"
@@ -43,6 +45,9 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
     // login
     m.LoginModel = NewLogin()
 
+    // 东亚
+    runewidth.EastAsianWidth = false
+
     return
 }
 
@@ -51,7 +56,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
     projectDir := utils.GetLocalDataDir()
 
     // 全局文件Jar
-    cookieJar, _ := cookiejar.NewFileJar(projectDir + "/cookie", nil)
+    cookieJar, _ := cookiejar.NewFileJar(projectDir+"/cookie", nil)
     util.SetGlobalCookieJar(cookieJar)
 
     // DBManager初始化
@@ -60,9 +65,29 @@ func (m *NeteaseModel) Init() tea.Cmd {
     // 获取用户信息
     go func() {
         table := db.NewTable()
-        if json, err := table.GetByKVModel(db.User{}); err == nil {
-            if user, err := ds.NewUserFromLocalJson(json); err == nil {
+
+        // 获取用户信息
+        if jsonStr, err := table.GetByKVModel(db.User{}); err == nil {
+            if user, err := ds.NewUserFromLocalJson(jsonStr); err == nil {
                 m.user = &user
+            }
+        }
+
+        // 获取播放模式
+        if jsonStr, err := table.GetByKVModel(db.PlayMode{}); err == nil && len(jsonStr) > 0 {
+            var playMode PlayMode
+            if err = json.Unmarshal(jsonStr, &playMode); err == nil {
+                m.player.mode = playMode
+            }
+        }
+
+        // 获取播放歌曲信息
+        if jsonStr, err := table.GetByKVModel(db.PlayerSnapshot{}); err == nil && len(jsonStr) > 0 {
+            var snapshot db.PlayerSnapshot
+            if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
+                m.player.curSongIndex = snapshot.CurSongIndex
+                m.player.playlist = snapshot.Playlist
+                m.player.playingMenuKey = snapshot.PlayingMenuKey
             }
         }
     }()
@@ -87,7 +112,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
     case tea.WindowSizeMsg:
         m.WindowHeight = msgWithType.Height
-        m.WindowWidth  = msgWithType.Width
+        m.WindowWidth = msgWithType.Width
 
     }
 
