@@ -87,6 +87,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
             if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
                 m.player.curSongIndex = snapshot.CurSongIndex
                 m.player.playlist = snapshot.Playlist
+                m.player.curSong = m.player.playlist[m.player.curSongIndex]
                 m.player.playingMenuKey = snapshot.PlayingMenuKey
             }
         }
@@ -105,7 +106,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case tea.KeyMsg:
         k := msgWithType.String()
         // 登录界面输入q不退出
-        if !m.showLogin && (k == "q" || k == "ctrl+c") {
+        if !m.showLogin && (k == "q" || k == "Q" || k == "ctrl+c") {
             m.quitting = true
             return m, tea.Quit
         }

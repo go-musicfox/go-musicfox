@@ -100,5 +100,8 @@ func New(options Options) *Timer {
 
 func (c *Timer) pushDone() {
 	c.ticker.Stop()
-	c.done <- struct{}{}
+	select {
+	case c.done <- struct{}{}:
+	default:
+	}
 }

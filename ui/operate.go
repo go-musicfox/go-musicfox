@@ -207,6 +207,14 @@ func enterMenu(m *NeteaseModel) {
 			m.menuStack.Pop() // 压入的重新弹出
 			return
 		}
+
+		// 如果位于正在播放的菜单中，更新播放列表
+		if menu.GetMenuKey() == m.player.playingMenuKey {
+			if songs, ok := menu.MenuData().([]ds.Song); ok {
+				m.player.playlist = songs
+			}
+		}
+
 		loading.complete()
 	}
 

@@ -43,6 +43,7 @@ type Player struct {
 
     playlist       []ds.Song // 歌曲列表
     curSongIndex   int       // 当前歌曲的下标
+    curSong        ds.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
     playingMenuKey string    // 正在播放的菜单Key
 
     lrcTimer      *lyric.LRCTimer // 歌词计时器
@@ -187,12 +188,12 @@ func (p *Player) songView() string {
 
     if p.curSongIndex < len(p.playlist) {
         // 按剩余长度截断字符串
-        truncateSong := runewidth.Truncate(p.playlist[p.curSongIndex].Name, p.model.WindowWidth-p.model.menuStartColumn-16, "") // 多减，避免剩余1个中文字符
+        truncateSong := runewidth.Truncate(p.curSong.Name, p.model.WindowWidth-p.model.menuStartColumn-16, "") // 多减，避免剩余1个中文字符
         builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
         builder.WriteString(" ")
 
         var artists strings.Builder
-        for i, v := range p.playlist[p.curSongIndex].Artists {
+        for i, v := range p.curSong.Artists {
             if i != 0 {
                 artists.WriteString(",")
             }
@@ -201,7 +202,7 @@ func (p *Player) songView() string {
         }
 
         // 按剩余长度截断字符串
-        remainLen := p.model.WindowWidth - p.model.menuStartColumn - 16 - runewidth.StringWidth(p.playlist[p.curSongIndex].Name)
+        remainLen := p.model.WindowWidth - p.model.menuStartColumn - 16 - runewidth.StringWidth(p.curSong.Name)
         truncateArtists := runewidth.Truncate(
             runewidth.FillRight(artists.String(), remainLen),
             remainLen, "")
@@ -264,8 +265,8 @@ func (p *Player) CompareWithCurPlaylist(playlist []ds.Song) bool {
         return false
     }
 
-    // 如果前10个一致，则认为相同
-    for i := 0; i < 10 && i < len(playlist); i++ {
+    // 如果前20个一致，则认为相同
+    for i := 0; i < 20 && i < len(playlist); i++ {
         if playlist[i].Id != p.playlist[i].Id {
             return false
         }
@@ -276,7 +277,11 @@ func (p *Player) CompareWithCurPlaylist(playlist []ds.Song) bool {
 
 // LocatePlayingSong 定位到正在播放的音乐
 func (p *Player) LocatePlayingSong() {
-    if !p.InPlayingMenu() || !p.CompareWithCurPlaylist(p.playlist) {
+    songs, ok := p.model.menu.MenuData().([]ds.Song)
+    if !ok {
+        return
+    }
+    if !p.InPlayingMenu() || !p.CompareWithCurPlaylist(songs) {
         return
     }
 
@@ -336,6 +341,7 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
     }
 
     p.playErrCount = 0
+    p.curSong = song
 
     table := db.NewTable()
     _ = table.SetByKVModel(db.PlayerSnapshot{}, db.PlayerSnapshot{
