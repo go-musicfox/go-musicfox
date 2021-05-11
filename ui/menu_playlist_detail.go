@@ -15,6 +15,12 @@ type PlaylistDetailMenu struct {
 	PlaylistId int64
 }
 
+func NewPlaylistDetailMenu(playlistId int64) *PlaylistDetailMenu {
+	return &PlaylistDetailMenu{
+		PlaylistId: playlistId,
+	}
+}
+
 func (m *PlaylistDetailMenu) MenuData() interface{} {
 	return m.songs
 }
@@ -39,7 +45,7 @@ func (m *PlaylistDetailMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *PlaylistDetailMenu) SubMenu(model *NeteaseModel, index int) IMenu {
+func (m *PlaylistDetailMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
 	return nil
 }
 
@@ -59,10 +65,6 @@ func (m *PlaylistDetailMenu) BeforeNextPageHook() Hook {
 
 func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
-		}
 
 		playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"}	// 最近S个收藏者，设为0
 		code, response := playlistDetail.PlaylistDetail()

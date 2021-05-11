@@ -43,7 +43,7 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu 
 	if len(m.playlists) < index {
 		return nil
 	}
-	return &PlaylistDetailMenu{PlaylistId: m.playlists[index].Id}
+	return NewPlaylistDetailMenu(m.playlists[index].Id)
 }
 
 func (m *DailyRecommendPlaylistsMenu) ExtraView() string {

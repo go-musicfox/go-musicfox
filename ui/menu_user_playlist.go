@@ -47,11 +47,11 @@ func (m *UserPlaylistMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *UserPlaylistMenu) SubMenu(model *NeteaseModel, index int) IMenu {
+func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	if len(m.playlists) < index {
 		return nil
 	}
-	return &PlaylistDetailMenu{PlaylistId: m.playlists[index].Id}
+	return NewPlaylistDetailMenu(m.playlists[index].Id)
 }
 
 func (m *UserPlaylistMenu) ExtraView() string {

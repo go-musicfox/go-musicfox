@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"github.com/anhoder/netease-music/service"
+	"github.com/muesli/termenv"
 	"go-musicfox/db"
 	"go-musicfox/ds"
 	"go-musicfox/utils"
@@ -110,7 +111,7 @@ func moveRight(m *NeteaseModel) {
 	if !m.doubleColumn || m.selectedIndex%2 != 0 {
 		return
 	}
-	if bottomHook := m.menu.BottomOutHook(); m.selectedIndex+1 > len(m.menuList)-1 && bottomHook != nil {
+	if bottomHook := m.menu.BottomOutHook(); m.selectedIndex >= len(m.menuList)-1 && bottomHook != nil {
 		loading := NewLoading(m)
 		loading.start()
 		if res := bottomHook(m); !res {
@@ -120,7 +121,7 @@ func moveRight(m *NeteaseModel) {
 		m.menuList = m.menu.MenuViews()
 		loading.complete()
 	}
-	if m.selectedIndex+1 > len(m.menuList)-1 {
+	if m.selectedIndex >= len(m.menuList)-1 {
 		return
 	}
 	m.selectedIndex++
@@ -226,7 +227,7 @@ func enterMenu(m *NeteaseModel) {
 
 	m.menu = menu
 	m.menuList = menuList
-	m.menuTitle = fmt.Sprintf("%s %s", newTitle.Title, newTitle.Subtitle)
+	m.menuTitle = fmt.Sprintf("%s %s", newTitle.Title, SetFgStyle(newTitle.Subtitle, termenv.ANSIBrightBlack))
 	m.selectedIndex = 0
 	m.menuCurPage = 1
 }
@@ -308,6 +309,7 @@ func spaceKeyHandle(m *NeteaseModel) {
 	} else {
 		m.player.curSongIndex = selectedIndex
 		m.player.playingMenuKey = m.menu.GetMenuKey()
+		m.player.playingMenu = m.menu
 		m.player.playlist = songs
 		if m.player.mode == PmIntelligent {
 			m.player.SetPlayMode("")

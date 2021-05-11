@@ -169,3 +169,8 @@ func NewSongFromIntelligenceJson(json []byte) (Song, error) {
 
     return song, nil
 }
+
+// NewSongFromAlbumSongsJson 从专辑获取数据
+func NewSongFromAlbumSongsJson(json []byte) (Song, error) {
+    return NewSongFromPlaylistSongsJson(json)
+}

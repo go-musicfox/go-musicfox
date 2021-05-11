@@ -180,6 +180,18 @@ func GetSongsOfPlaylist(data []byte) (list []ds.Song) {
     return
 }
 
+// GetSongsOfAlbum 获取专辑的歌曲
+func GetSongsOfAlbum(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromAlbumSongsJson(value); err == nil {
+            list = append(list, song)
+        }
+
+    }, "songs")
+
+    return
+}
+
 // GetPlaylists 获取播放列表
 func GetPlaylists(data []byte) (list []ds.Playlist) {
 
@@ -212,6 +224,19 @@ func GetIntelligenceSongs(data []byte) (list []ds.Song) {
         }
 
     }, "data")
+
+    return
+}
+
+// GetRecentAlbums 获取最新专辑列表
+func GetRecentAlbums(data []byte) (albums []ds.Album) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+
+        if album, err := ds.NewAlbumFromAlbumJson(value); err == nil {
+            albums = append(albums, album)
+        }
+
+    }, "albums")
 
     return
 }

@@ -8,7 +8,7 @@ import (
 type PlayerSnapshot struct {
     CurSongIndex   int       `json:"cur_song_index"`
     Playlist       []ds.Song `json:"playlist"`
-    PlayingMenuKey string    `json:"playing_menu_key"`
+    //PlayingMenuKey string    `json:"playing_menu_key"`
 }
 
 func (p PlayerSnapshot) GetDbName() string {

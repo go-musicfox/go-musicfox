@@ -45,6 +45,7 @@ type Player struct {
     curSongIndex   int       // 当前歌曲的下标
     curSong        ds.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
     playingMenuKey string    // 正在播放的菜单Key
+    playingMenu    IMenu
 
     lrcTimer      *lyric.LRCTimer // 歌词计时器
     lyrics        [5]string       // 歌词信息，保留5行
@@ -345,9 +346,9 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
 
     table := db.NewTable()
     _ = table.SetByKVModel(db.PlayerSnapshot{}, db.PlayerSnapshot{
-        p.curSongIndex,
-        p.playlist,
-        p.playingMenuKey,
+        CurSongIndex: p.curSongIndex,
+        Playlist:     p.playlist,
+        //p.playingMenuKey,
     })
 
     return nil
@@ -359,10 +360,17 @@ func (p *Player) NextSong() {
         if p.mode == PmIntelligent {
            p.Intelligence(true)
         }
-        if p.model.doubleColumn && p.curSongIndex%2 == 0 {
-            moveRight(p.model)
-        } else {
-            moveDown(p.model)
+
+        if p.InPlayingMenu() {
+            if p.model.doubleColumn && p.curSongIndex%2 == 0 {
+                moveRight(p.model)
+            } else {
+                moveDown(p.model)
+            }
+        } else if p.playingMenu != nil {
+            if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
+                bottomHook(p.model)
+            }
         }
     }
 
@@ -395,10 +403,17 @@ func (p *Player) PreSong() {
         if p.mode == PmIntelligent {
            p.Intelligence(true)
         }
-        if p.model.doubleColumn && p.curSongIndex%2 == 0 {
-            moveUp(p.model)
-        } else {
-            moveLeft(p.model)
+
+        if p.InPlayingMenu() {
+            if p.model.doubleColumn && p.curSongIndex%2 == 0 {
+                moveUp(p.model)
+            } else {
+                moveLeft(p.model)
+            }
+        } else if p.playingMenu != nil {
+            if topHook := p.playingMenu.TopOutHook(); topHook != nil {
+                topHook(p.model)
+            }
         }
     }
 
