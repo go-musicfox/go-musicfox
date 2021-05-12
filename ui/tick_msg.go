@@ -31,3 +31,12 @@ func tickLogin(duration time.Duration) tea.Cmd {
         return tickLoginMsg{}
     })
 }
+
+// search tick
+type tickSearchMsg struct{}
+
+func tickSearch(duration time.Duration) tea.Cmd {
+    return tea.Tick(duration, func(t time.Time) tea.Msg {
+        return tickSearchMsg{}
+    })
+}

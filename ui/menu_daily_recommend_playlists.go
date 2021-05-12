@@ -46,10 +46,6 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu 
 	return NewPlaylistDetailMenu(m.playlists[index].Id)
 }
 
-func (m *DailyRecommendPlaylistsMenu) ExtraView() string {
-	return ""
-}
-
 func (m *DailyRecommendPlaylistsMenu) BeforePrePageHook() Hook {
 	// Nothing to do
 	return nil

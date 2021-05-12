@@ -27,6 +27,7 @@ func NewMainMenu() *MainMenu {
         NewUserPlaylistMenu(),
         NewPersonalFmMenu(),
         NewAlbumListMenu(),
+        NewSearchTypeMenu(),
     }
 
     return mainMenu
@@ -59,10 +60,6 @@ func (m *MainMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
     }
 
     return m.menuList[index]
-}
-
-func (m *MainMenu) ExtraView() string {
-    return ""
 }
 
 func (m *MainMenu) BeforePrePageHook() Hook {

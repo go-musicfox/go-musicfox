@@ -50,10 +50,6 @@ func (m *AlbumListMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
     return m.menuList[index]
 }
 
-func (m *AlbumListMenu) ExtraView() string {
-    return ""
-}
-
 func (m *AlbumListMenu) BeforePrePageHook() Hook {
     // Nothing to do
     return nil

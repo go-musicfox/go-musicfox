@@ -27,7 +27,10 @@ type NeteaseModel struct {
     *mainUIModel
 
     // login
-    *LoginModel
+    loginModel *LoginModel
+
+    // search
+    searchModel *SearchModel
 }
 
 // NewNeteaseModel get netease model
@@ -43,7 +46,10 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
     m.mainUIModel = NewMainUIModel(m)
 
     // login
-    m.LoginModel = NewLogin()
+    m.loginModel = NewLogin()
+
+    // search
+    m.searchModel = NewSearch()
 
     // 东亚
     runewidth.EastAsianWidth = false
@@ -107,7 +113,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case tea.KeyMsg:
         k := msgWithType.String()
         // 登录界面输入q不退出
-        if !m.showLogin && (k == "q" || k == "Q" || k == "ctrl+c") {
+        if m.modelType == MtMain && (k == "q" || k == "Q" || k == "ctrl+c") {
             m.quitting = true
             return m, tea.Quit
         }
@@ -127,8 +133,11 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return updateStartup(msg, m)
     }
 
-    if m.showLogin {
+    switch m.modelType {
+    case MtLogin:
         return updateLogin(msg, m)
+    case MtSearch:
+        return updateSearch(msg, m)
     }
 
     return updateMainUI(msg, m)
@@ -143,8 +152,11 @@ func (m *NeteaseModel) View() string {
         return startupView(m)
     }
 
-    if m.showLogin {
+    switch m.modelType {
+    case MtLogin:
         return loginView(m)
+    case MtSearch:
+        return searchView(m)
     }
 
     return mainUIView(m)

@@ -4,7 +4,6 @@ import (
 	"github.com/anhoder/netease-music/service"
 	"go-musicfox/ds"
 	"go-musicfox/utils"
-	"strings"
 )
 
 type DailyRecommendSongsMenu struct {
@@ -44,10 +43,6 @@ func (m *DailyRecommendSongsMenu) SubMenu(*NeteaseModel, int) IMenu {
 	return nil
 }
 
-func (m *DailyRecommendSongsMenu) ExtraView() string {
-	return ""
-}
-
 func (m *DailyRecommendSongsMenu) BeforePrePageHook() Hook {
 	// Nothing to do
 	return nil
@@ -80,13 +75,7 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 			return false
 		}
 		m.songs = utils.GetDailySongs(response)
-		for _, song := range m.songs {
-			var artists []string
-			for _, artist := range song.Artists {
-				artists = append(artists, artist.Name)
-			}
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
-		}
+		m.menus = GetViewFromSongs(m.songs)
 
 		return true
 	}

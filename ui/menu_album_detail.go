@@ -6,7 +6,6 @@ import (
 	"go-musicfox/ds"
 	"go-musicfox/utils"
 	"strconv"
-	"strings"
 )
 
 type AlbumDetailMenu struct {
@@ -49,10 +48,6 @@ func (m *AlbumDetailMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
 	return nil
 }
 
-func (m *AlbumDetailMenu) ExtraView() string {
-	return ""
-}
-
 func (m *AlbumDetailMenu) BeforePrePageHook() Hook {
 	// Nothing to do
 	return nil
@@ -79,15 +74,7 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() Hook {
 		}
 
 		m.songs = utils.GetSongsOfAlbum(response)
-		var menus []MenuItem
-		for _, song := range m.songs {
-			var artists []string
-			for _, artist := range song.Artists {
-				artists = append(artists, artist.Name)
-			}
-			menus = append(menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
-		}
-		m.menus = menus
+		m.menus = GetViewFromSongs(m.songs)
 
 		return true
 	}

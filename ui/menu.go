@@ -22,9 +22,6 @@ type IMenu interface {
     // SubMenu 根据下标获取菜单Model
     SubMenu(model *NeteaseModel, index int) IMenu
 
-    // ExtraView 获取额外的View（只在getSubMenuViews返回空时才会渲染到菜单的位置）
-    ExtraView() string
-
     // BeforePrePageHook 切换上一页前的Hook
     BeforePrePageHook() Hook
 

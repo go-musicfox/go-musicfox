@@ -4,7 +4,6 @@ import (
 	"github.com/anhoder/netease-music/service"
 	"go-musicfox/ds"
 	"go-musicfox/utils"
-	"strings"
 )
 
 type PersonalFmMenu struct {
@@ -44,10 +43,6 @@ func (m *PersonalFmMenu) SubMenu(*NeteaseModel, int) IMenu {
 	return nil
 }
 
-func (m *PersonalFmMenu) ExtraView() string {
-	return ""
-}
-
 func (m *PersonalFmMenu) BeforePrePageHook() Hook {
 	// Nothing to do
 	return nil
@@ -74,13 +69,7 @@ func (m *PersonalFmMenu) BeforeEnterMenuHook() Hook {
 
 		// 响应中获取数据
 		m.songs = utils.GetFmSongs(response)
-		for _, song := range m.songs {
-			var artists []string
-			for _, artist := range song.Artists {
-				artists = append(artists, artist.Name)
-			}
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
-		}
+		m.menus = GetViewFromSongs(m.songs)
 
 		return true
 	}
@@ -95,14 +84,9 @@ func (m *PersonalFmMenu) BottomOutHook() Hook {
 			return false
 		}
 		songs := utils.GetFmSongs(response)
-		for _, song := range songs {
-			var artists []string
-			for _, artist := range song.Artists {
-				artists = append(artists, artist.Name)
-			}
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
-		}
+		menus := GetViewFromSongs(m.songs)
 
+		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)
 		model.player.playlist = m.songs
 

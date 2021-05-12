@@ -4,6 +4,8 @@ import (
     "fmt"
     "github.com/lucasb-eyer/go-colorful"
     "github.com/muesli/termenv"
+    "go-musicfox/ds"
+    "go-musicfox/utils"
     "math/rand"
     "strconv"
     "strings"
@@ -105,4 +107,53 @@ func colorFloatToHex(f float64) (s string) {
         s = "0" + s
     }
     return
+}
+
+// GetViewFromSongs 从歌曲列表获取View
+func GetViewFromSongs(songs []ds.Song) []MenuItem {
+    var menus []MenuItem
+    for _, song := range songs {
+        var artists []string
+        for _, artist := range song.Artists {
+            artists = append(artists, artist.Name)
+        }
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
+    }
+
+    return menus
+}
+
+// GetViewFromAlbums 从歌曲列表获取View
+func GetViewFromAlbums(albums []ds.Album) []MenuItem {
+    var menus []MenuItem
+    for _, album := range albums {
+        var artists []string
+        for _, artist := range album.Artists {
+            artists = append(artists, artist.Name)
+        }
+        artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(album.Name), utils.ReplaceSpecialStr(artistsStr)})
+    }
+
+    return menus
+}
+
+// GetViewFromPlaylists 从歌单列表获取View
+func GetViewFromPlaylists(playlists []ds.Playlist) []MenuItem {
+    var menus []MenuItem
+    for _, playlist := range playlists {
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
+    }
+
+    return menus
+}
+
+// GetViewFromArtists 从歌手列表获取View
+func GetViewFromArtists(artists []ds.Artist) []MenuItem {
+    var menus []MenuItem
+    for _, artist := range artists {
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(artist.Name), ""})
+    }
+
+    return menus
 }

@@ -53,10 +53,6 @@ func (m *AlbumTopAreaMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
     return NewAlbumTopMenu(areaValueMapping[index])
 }
 
-func (m *AlbumTopAreaMenu) ExtraView() string {
-    return ""
-}
-
 func (m *AlbumTopAreaMenu) BeforePrePageHook() Hook {
     // Nothing to do
     return nil

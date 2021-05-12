@@ -13,6 +13,15 @@ import (
     "unicode/utf8"
 )
 
+// ModelType 显示模型的类型
+type ModelType uint8
+
+const (
+    MtMain   ModelType = iota // 主页面
+    MtLogin                   // 登录页面
+    MtSearch                  // 搜索页面
+)
+
 type MenuItem struct {
     Title    string
     Subtitle string
@@ -36,7 +45,8 @@ type mainUIModel struct {
     menuStack     *utils.Stack // 菜单栈
     selectedIndex int          // 当前选中的菜单index
 
-    showLogin bool // 显示登陆
+    showLogin bool      // 显示登陆
+    modelType ModelType // 显示的页面类型
 
     menu   IMenu   // 菜单
     player *Player // 播放器

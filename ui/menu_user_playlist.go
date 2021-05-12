@@ -54,10 +54,6 @@ func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	return NewPlaylistDetailMenu(m.playlists[index].Id)
 }
 
-func (m *UserPlaylistMenu) ExtraView() string {
-	return ""
-}
-
 func (m *UserPlaylistMenu) BeforePrePageHook() Hook {
 	// Nothing to do
 	return nil

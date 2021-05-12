@@ -220,10 +220,6 @@ func enterMenu(m *NeteaseModel) {
 	}
 
 	menuList := menu.MenuViews()
-	if len(menuList) <= 0 {
-		m.menuStack.Pop()
-		return
-	}
 
 	m.menu = menu
 	m.menuList = menuList

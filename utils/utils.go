@@ -254,15 +254,76 @@ func GetTopAlbums(data []byte) (albums []ds.Album) {
     return
 }
 
-// GetRankAlbums 获取专辑榜单数据
-func GetRankAlbums(data []byte) (albums []ds.Album) {
+// GetArtistHotAlbums 获取歌手热门专辑列表
+func GetArtistHotAlbums(data []byte) (albums []ds.Album) {
     _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
         if album, err := ds.NewAlbumFromAlbumJson(value); err == nil {
             albums = append(albums, album)
         }
 
-    }, "monthData")
+    }, "hotAlbums")
+
+    return
+}
+
+// GetSongsOfSearchResult 获取搜索结果的歌曲
+func GetSongsOfSearchResult(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromSearchResultJson(value); err == nil {
+            list = append(list, song)
+        }
+
+    }, "result", "songs")
+
+    return
+}
+
+
+// GetAlbumsOfSearchResult 获取搜索结果的专辑
+func GetAlbumsOfSearchResult(data []byte) (list []ds.Album) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if album, err := ds.NewAlbumFromAlbumJson(value); err == nil {
+            list = append(list, album)
+        }
+
+    }, "result", "albums")
+
+    return
+}
+
+// GetPlaylistsOfSearchResult 获取搜索结果的歌单
+func GetPlaylistsOfSearchResult(data []byte) (list []ds.Playlist) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if playlist, err := ds.NewPlaylistFromJson(value); err == nil {
+            list = append(list, playlist)
+        }
+
+    }, "result", "playlists")
+
+    return
+}
+
+// GetArtistsOfSearchResult 获取搜索结果的歌手
+func GetArtistsOfSearchResult(data []byte) (list []ds.Artist) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if artist, err := ds.NewArtist(value); err == nil {
+            list = append(list, artist)
+        }
+
+    }, "result", "artists")
+
+    return
+}
+
+// GetSongsOfArtist 获取歌手的歌曲
+func GetSongsOfArtist(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromArtistSongsJson(value); err == nil {
+            list = append(list, song)
+        }
+
+    }, "songs")
 
     return
 }

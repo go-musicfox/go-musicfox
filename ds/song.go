@@ -174,3 +174,13 @@ func NewSongFromIntelligenceJson(json []byte) (Song, error) {
 func NewSongFromAlbumSongsJson(json []byte) (Song, error) {
     return NewSongFromPlaylistSongsJson(json)
 }
+
+// NewSongFromArtistSongsJson 从专辑获取数据
+func NewSongFromArtistSongsJson(json []byte) (Song, error) {
+    return NewSongFromPlaylistSongsJson(json)
+}
+
+// NewSongFromSearchResultJson 从专辑获取数据
+func NewSongFromSearchResultJson(json []byte) (Song, error) {
+    return NewSongFromFmJson(json)
+}
