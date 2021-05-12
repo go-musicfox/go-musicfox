@@ -8,11 +8,14 @@ type AlbumListMenu struct {
 func NewAlbumListMenu() *AlbumListMenu {
     albumMenu := new(AlbumListMenu)
     albumMenu.menus = []MenuItem{
+        {Title: "全部新碟"},
         {Title: "新碟上架"},
         {Title: "最新专辑"},
     }
     albumMenu.menuList = []IMenu{
-        NewRecentAlbumAreaMenu(),
+        NewAlbumNewAreaMenu(),
+        NewAlbumTopAreaMenu(),
+        NewAlbumNewestMenu(),
     }
 
     return albumMenu

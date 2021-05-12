@@ -10,49 +10,48 @@ import (
 	"strings"
 )
 
-type RecentAlbumMenu struct {
-	menus  []MenuItem
-	albums []ds.Album
-	area   string
-	offset int
-	limit  int
-	total  int
+type AlbumTopMenu struct {
+	menus   []MenuItem
+	albums  []ds.Album
+	area    string
+	offset  int
+	limit   int
+	hasMore bool
 }
 
-func NewRecentAlbumMenu(area string) *RecentAlbumMenu {
-	return &RecentAlbumMenu{
+func NewAlbumTopMenu(area string) *AlbumTopMenu {
+	return &AlbumTopMenu{
 		area:   area,
 		offset: 0,
 		limit:  50,
-		total:  -1,
 	}
 }
 
-func (m *RecentAlbumMenu) MenuData() interface{} {
+func (m *AlbumTopMenu) MenuData() interface{} {
 	return m.albums
 }
 
-func (m *RecentAlbumMenu) BeforeBackMenuHook() Hook {
+func (m *AlbumTopMenu) BeforeBackMenuHook() Hook {
 	return nil
 }
 
-func (m *RecentAlbumMenu) IsPlayable() bool {
+func (m *AlbumTopMenu) IsPlayable() bool {
 	return false
 }
 
-func (m *RecentAlbumMenu) ResetPlaylistWhenPlay() bool {
+func (m *AlbumTopMenu) ResetPlaylistWhenPlay() bool {
 	return false
 }
 
-func (m *RecentAlbumMenu) GetMenuKey() string {
-	return fmt.Sprintf("recent_album_%s", m.area)
+func (m *AlbumTopMenu) GetMenuKey() string {
+	return fmt.Sprintf("album_top_%s", m.area)
 }
 
-func (m *RecentAlbumMenu) MenuViews() []MenuItem {
+func (m *AlbumTopMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *RecentAlbumMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *AlbumTopMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	if len(m.albums) < index {
 		return nil
 	}
@@ -60,44 +59,44 @@ func (m *RecentAlbumMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	return NewAlbumDetailMenu(m.albums[index].Id)
 }
 
-func (m *RecentAlbumMenu) ExtraView() string {
+func (m *AlbumTopMenu) ExtraView() string {
 	return ""
 }
 
-func (m *RecentAlbumMenu) BeforePrePageHook() Hook {
+func (m *AlbumTopMenu) BeforePrePageHook() Hook {
 	// Nothing to do
 	return nil
 }
 
-func (m *RecentAlbumMenu) BeforeNextPageHook() Hook {
+func (m *AlbumTopMenu) BeforeNextPageHook() Hook {
 	// Nothing to do
 	return nil
 }
 
-func (m *RecentAlbumMenu) BeforeEnterMenuHook() Hook {
+func (m *AlbumTopMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 
 		if len(m.menus) > 0 && len(m.albums) > 0 {
 			return true
 		}
 
-		newAlbumService := service.AlbumNewService{
+		topAlbumService := service.TopAlbumService{
 			Area:   m.area,
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
-		code, response := newAlbumService.AlbumNew()
+		code, response := topAlbumService.TopAlbum()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
 			return false
 		}
 
-		// 总数量
-		if total, err := jsonparser.GetInt(response, "total"); err == nil {
-			m.total = int(total)
+		// 是否有更多数据
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
 		}
 
-		m.albums = utils.GetRecentAlbums(response)
+		m.albums = utils.GetTopAlbums(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -112,29 +111,29 @@ func (m *RecentAlbumMenu) BeforeEnterMenuHook() Hook {
 	}
 }
 
-func (m *RecentAlbumMenu) BottomOutHook() Hook {
-	if m.total != -1 && m.offset < m.total  {
+func (m *AlbumTopMenu) BottomOutHook() Hook {
+	if !m.hasMore {
 		return nil
 	}
 	return func(model *NeteaseModel) bool {
 		m.offset = m.offset + len(m.menus)
-		newAlbumService := service.AlbumNewService{
+		topAlbumService := service.TopAlbumService{
 			Area:   m.area,
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
-		code, response := newAlbumService.AlbumNew()
+		code, response := topAlbumService.TopAlbum()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
 			return false
 		}
 
-		// 总数量
-		if total, err := jsonparser.GetInt(response, "total"); err == nil {
-			m.total = int(total)
+		// 是否有更多数据
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
 		}
 
-		albums := utils.GetRecentAlbums(response)
+		albums := utils.GetTopAlbums(response)
 
 		for _, album := range albums {
 			var artists []string
@@ -151,7 +150,7 @@ func (m *RecentAlbumMenu) BottomOutHook() Hook {
 	}
 }
 
-func (m *RecentAlbumMenu) TopOutHook() Hook {
+func (m *AlbumTopMenu) TopOutHook() Hook {
 	// Nothing to do
 	return nil
 }

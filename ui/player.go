@@ -305,6 +305,14 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
     loading.start()
     defer loading.complete()
 
+    table := db.NewTable()
+    _ = table.SetByKVModel(db.PlayerSnapshot{}, db.PlayerSnapshot{
+        CurSongIndex: p.curSongIndex,
+        Playlist:     p.playlist,
+        //p.playingMenuKey,
+    })
+    p.curSong = song
+
     p.LocatePlayingSong()
     urlService := service.SongUrlService{}
     urlService.ID = strconv.FormatInt(song.Id, 10)
@@ -342,14 +350,6 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
     }
 
     p.playErrCount = 0
-    p.curSong = song
-
-    table := db.NewTable()
-    _ = table.SetByKVModel(db.PlayerSnapshot{}, db.PlayerSnapshot{
-        CurSongIndex: p.curSongIndex,
-        Playlist:     p.playlist,
-        //p.playingMenuKey,
-    })
 
     return nil
 }

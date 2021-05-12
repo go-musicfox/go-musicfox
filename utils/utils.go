@@ -228,8 +228,8 @@ func GetIntelligenceSongs(data []byte) (list []ds.Song) {
     return
 }
 
-// GetRecentAlbums 获取最新专辑列表
-func GetRecentAlbums(data []byte) (albums []ds.Album) {
+// GetNewAlbums 获取最新专辑列表
+func GetNewAlbums(data []byte) (albums []ds.Album) {
     _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
         if album, err := ds.NewAlbumFromAlbumJson(value); err == nil {
@@ -237,6 +237,32 @@ func GetRecentAlbums(data []byte) (albums []ds.Album) {
         }
 
     }, "albums")
+
+    return
+}
+
+// GetTopAlbums 获取专辑列表
+func GetTopAlbums(data []byte) (albums []ds.Album) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+
+        if album, err := ds.NewAlbumFromAlbumJson(value); err == nil {
+            albums = append(albums, album)
+        }
+
+    }, "monthData")
+
+    return
+}
+
+// GetRankAlbums 获取专辑榜单数据
+func GetRankAlbums(data []byte) (albums []ds.Album) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+
+        if album, err := ds.NewAlbumFromAlbumJson(value); err == nil {
+            albums = append(albums, album)
+        }
+
+    }, "monthData")
 
     return
 }
