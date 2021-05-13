@@ -20,6 +20,7 @@ func NewMainMenu() *MainMenu {
         {Title: "云盘"},
         {Title: "主播电台"},
         {Title: "帮助"},
+        {Title: "检查更新"},
     }
     mainMenu.menuList = []IMenu{
         NewDailyRecommendSongsMenu(),
@@ -34,6 +35,7 @@ func NewMainMenu() *MainMenu {
         NewCloudMenu(),
         NewRadioDjTypeMenu(),
         NewHelpMenu(),
+        NewCheckUpdateMenu(),
     }
 
     return mainMenu

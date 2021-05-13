@@ -493,11 +493,11 @@ func OpenUrl(url string) error {
         return errors.New(fmt.Sprintf("don't know how to open things on %s platform", runtime.GOOS))
     }
 
-    path, err := exec.LookPath(run)
-    if err != nil {
-        return err
+    var cmd *exec.Cmd
+    if runtime.GOOS == "windows" {
+        cmd = exec.Command("cmd", "/c", run, url)
+    } else {
+        cmd = exec.Command(run, url)
     }
-
-    cmd := exec.Command(path, url)
     return cmd.Start()
 }

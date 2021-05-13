@@ -3,6 +3,7 @@ package ui
 import (
     "encoding/json"
     tea "github.com/anhoder/bubbletea"
+    "github.com/anhoder/netease-music/service"
     "github.com/anhoder/netease-music/util"
     "github.com/mattn/go-runewidth"
     "github.com/telanflow/cookiejar"
@@ -10,6 +11,7 @@ import (
     "go-musicfox/db"
     "go-musicfox/ds"
     "go-musicfox/utils"
+    "strconv"
     "time"
 )
 
@@ -98,6 +100,25 @@ func (m *NeteaseModel) Init() tea.Cmd {
                 m.player.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
             }
         }
+
+        // 签到
+        var lastSignIn int
+        if jsonStr, err := table.GetByKVModel(db.LastSignIn{}); err == nil && len(jsonStr) > 0 {
+            _ = json.Unmarshal(jsonStr, &lastSignIn)
+        }
+        today, err := strconv.Atoi(time.Now().Format("20060102"))
+        if m.user != nil && err == nil && lastSignIn != today {
+            // 手机签到
+            signInService := service.DailySigninService{}
+            signInService.Type = "0"
+            signInService.DailySignin()
+            // PC签到
+            signInService.Type = "1"
+            signInService.DailySignin()
+
+            _ = table.SetByKVModel(db.LastSignIn{}, today)
+        }
+
     }()
 
     if constants.AppShowStartup {
