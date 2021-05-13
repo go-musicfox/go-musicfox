@@ -216,3 +216,43 @@ func NewSongFromDjRadioProgramJson(json []byte) (Song, error) {
 
     return song, nil
 }
+
+// NewSongFromCloudJson 从DjRadio节目中获取数据
+func NewSongFromCloudJson(json []byte) (Song, error) {
+    var song Song
+    if len(json) == 0 {
+        return song, errors.New("json is empty")
+    }
+
+    id, err := jsonparser.GetInt(json, "songId")
+    if err != nil {
+        return song, err
+    }
+    song.Id = id
+
+    if name, err := jsonparser.GetString(json, "songName"); err == nil {
+        song.Name = name
+    }
+    if duration, err := jsonparser.GetInt(json, "simpleSong", "dt"); err == nil {
+        song.Duration = time.Millisecond * time.Duration(duration)
+    }
+    if alId, err := jsonparser.GetInt(json, "simpleSong", "al", "id"); err == nil {
+        song.Album.Id = alId
+    }
+    if alName, err := jsonparser.GetString(json, "simpleSong", "al", "name"); err == nil {
+        song.Album.Name = alName
+    }
+    if alPic, err := jsonparser.GetString(json, "simpleSong", "al", "picUrl"); err == nil {
+        song.Album.PicUrl = alPic
+    }
+
+    _, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        artist, err := NewArtist(value)
+
+        if err == nil {
+            song.Artists = append(song.Artists, artist)
+        }
+    }, "simpleSong", "ar")
+
+    return song, nil
+}

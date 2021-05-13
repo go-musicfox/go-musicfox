@@ -28,6 +28,10 @@ func NewMainMenu() *MainMenu {
         NewPersonalFmMenu(),
         NewAlbumListMenu(),
         NewSearchTypeMenu(),
+        NewRanksMenu(),
+        NewHighQualityPlaylistsMenu(),
+        NewHotArtistsMenu(),
+        NewCloudMenu(),
     }
 
     return mainMenu

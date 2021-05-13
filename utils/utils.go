@@ -204,6 +204,18 @@ func GetPlaylists(data []byte) (list []ds.Playlist) {
     return
 }
 
+// GetPlaylistsFromHighQuality 获取精品歌单
+func GetPlaylistsFromHighQuality(data []byte) (list []ds.Playlist) {
+
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if playlist, err := ds.NewPlaylistFromJson(value); err == nil {
+            list = append(list, playlist)
+        }
+    }, "playlists")
+
+    return
+}
+
 // GetFmSongs 获取每日歌曲列表
 func GetFmSongs(data []byte) (list []ds.Song) {
     _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
@@ -316,6 +328,18 @@ func GetArtistsOfSearchResult(data []byte) (list []ds.Artist) {
     return
 }
 
+// GetArtistsOfTopArtists 获取热门歌手
+func GetArtistsOfTopArtists(data []byte) (list []ds.Artist) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if artist, err := ds.NewArtist(value); err == nil {
+            list = append(list, artist)
+        }
+
+    }, "artists")
+
+    return
+}
+
 // GetSongsOfArtist 获取歌手的歌曲
 func GetSongsOfArtist(data []byte) (list []ds.Song) {
     _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
@@ -359,6 +383,29 @@ func GetSongsOfDjRadio(data []byte) (list []ds.Song) {
            list = append(list, song)
         }
     }, "programs")
+
+    return
+}
+
+// GetRanks 获取排行榜
+func GetRanks(data []byte) (list []ds.Rank) {
+
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if rank, err := ds.NewRankFromJson(value); err == nil {
+            list = append(list, rank)
+        }
+    }, "list")
+
+    return
+}
+
+// GetSongsOfCloud 获取云盘的歌曲
+func GetSongsOfCloud(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromCloudJson(value); err == nil {
+            list = append(list, song)
+        }
+    }, "data")
 
     return
 }
