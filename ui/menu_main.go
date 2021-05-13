@@ -24,7 +24,7 @@ func NewMainMenu() *MainMenu {
     mainMenu.menuList = []IMenu{
         NewDailyRecommendSongsMenu(),
         NewDailyRecommendPlaylistMenu(),
-        NewUserPlaylistMenu(),
+        NewUserPlaylistMenu(CurUser),
         NewPersonalFmMenu(),
         NewAlbumListMenu(),
         NewSearchTypeMenu(),

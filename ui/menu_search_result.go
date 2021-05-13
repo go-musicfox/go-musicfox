@@ -43,7 +43,7 @@ func (m *SearchResultMenu) IsPlayable() bool {
         StSinger:     false,
         StPlaylist:   false,
         StUser:       false,
-        StLyric:      false,
+        StLyric:      true,
         StRadio:      false,
     }
 
@@ -85,6 +85,16 @@ func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
             return nil
         }
         return NewArtistDetailMenu(resultWithType[index].Id)
+    case []ds.User:
+        if index >= len(resultWithType) {
+            return nil
+        }
+        return NewUserPlaylistMenu(resultWithType[index].UserId)
+    case []ds.DjRadio:
+       if index >= len(resultWithType) {
+           return nil
+       }
+       return NewDjRadioDetailMenu(resultWithType[index].Id)
     }
 
     return nil
@@ -119,6 +129,10 @@ func (m *SearchResultMenu) BeforeEnterMenuHook() Hook {
             m.menus = GetViewFromPlaylists(resultWithType)
         case []ds.Artist:
             m.menus = GetViewFromArtists(resultWithType)
+        case []ds.User:
+            m.menus = GetViewFromUsers(resultWithType)
+        case []ds.DjRadio:
+            m.menus = GetViewFromDjRadios(resultWithType)
         }
 
         return true

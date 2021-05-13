@@ -157,3 +157,24 @@ func GetViewFromArtists(artists []ds.Artist) []MenuItem {
 
     return menus
 }
+
+// GetViewFromUsers 用户列表获取View
+func GetViewFromUsers(users []ds.User) []MenuItem {
+    var menus []MenuItem
+    for _, user := range users {
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(user.Nickname), ""})
+    }
+
+    return menus
+}
+
+// GetViewFromDjRadios DjRadio列表获取View
+func GetViewFromDjRadios(radios []ds.DjRadio) []MenuItem {
+    var menus []MenuItem
+    for _, radio := range radios {
+        dj := fmt.Sprintf("[%s]", radio.Dj.Nickname)
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(radio.Name), utils.ReplaceSpecialStr(dj)})
+    }
+
+    return menus
+}

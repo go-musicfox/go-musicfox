@@ -65,3 +65,28 @@ func NewUserFromJson(json []byte) (User, error) {
 
 	return user, nil
 }
+
+
+// NewUserFromSearchResultJson 从搜索结果json中获取用户信息
+func NewUserFromSearchResultJson(json []byte) (User, error) {
+	var user User
+	if len(json) == 0 {
+		return user, errors.New("json is empty")
+	}
+
+	userId, err := jsonparser.GetInt(json, "userId")
+	if err != nil {
+		return user, err
+	}
+	user.UserId = userId
+
+	if nickname, err := jsonparser.GetString(json, "nickname"); err == nil {
+		user.Nickname = nickname
+	}
+
+	if avatarUrl, err := jsonparser.GetString(json, "avatarUrl"); err == nil {
+		user.AvatarUrl = avatarUrl
+	}
+
+	return user, nil
+}

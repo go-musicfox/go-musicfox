@@ -184,3 +184,35 @@ func NewSongFromArtistSongsJson(json []byte) (Song, error) {
 func NewSongFromSearchResultJson(json []byte) (Song, error) {
     return NewSongFromFmJson(json)
 }
+
+// NewSongFromDjRadioProgramJson 从DjRadio节目中获取数据
+func NewSongFromDjRadioProgramJson(json []byte) (Song, error) {
+    var song Song
+    if len(json) == 0 {
+        return song, errors.New("json is empty")
+    }
+
+    id, err := jsonparser.GetInt(json, "mainSong", "id")
+    if err != nil {
+        return song, err
+    }
+    song.Id = id
+
+    if name, err := jsonparser.GetString(json, "mainSong", "name"); err == nil {
+        song.Name = name
+    }
+    if duration, err := jsonparser.GetInt(json, "mainSong", "duration"); err == nil {
+        song.Duration = time.Millisecond * time.Duration(duration)
+    }
+    if alId, err := jsonparser.GetInt(json, "mainSong", "album", "id"); err == nil {
+        song.Album.Id = alId
+    }
+    if alName, err := jsonparser.GetString(json, "mainSong", "album", "name"); err == nil {
+        song.Album.Name = alName
+    }
+    if alPic, err := jsonparser.GetString(json, "mainSong", "album", "picUrl"); err == nil {
+        song.Album.PicUrl = alPic
+    }
+
+    return song, nil
+}

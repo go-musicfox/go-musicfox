@@ -120,8 +120,11 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                     case StPlaylist:
                         m.searchModel.result = utils.GetPlaylistsOfSearchResult(response)
                     case StUser:
+                        m.searchModel.result = utils.GetUsersOfSearchResult(response)
                     case StLyric:
+                        m.searchModel.result = utils.GetSongsOfSearchResult(response)
                     case StRadio:
+                        m.searchModel.result = utils.GetDjRadiosOfSearchResult(response)
                     }
 
                     enterMenu(m)
