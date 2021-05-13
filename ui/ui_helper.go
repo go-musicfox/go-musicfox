@@ -172,8 +172,21 @@ func GetViewFromUsers(users []ds.User) []MenuItem {
 func GetViewFromDjRadios(radios []ds.DjRadio) []MenuItem {
     var menus []MenuItem
     for _, radio := range radios {
-        dj := fmt.Sprintf("[%s]", radio.Dj.Nickname)
+        var dj string
+        if radio.Dj.Nickname != "" {
+            dj = fmt.Sprintf("[%s]", radio.Dj.Nickname)
+        }
         menus = append(menus, MenuItem{utils.ReplaceSpecialStr(radio.Name), utils.ReplaceSpecialStr(dj)})
+    }
+
+    return menus
+}
+
+// GetViewFromDjCate 分类列表获取View
+func GetViewFromDjCate(categories []ds.DjCategory) []MenuItem {
+    var menus []MenuItem
+    for _, category := range categories {
+        menus = append(menus, MenuItem{utils.ReplaceSpecialStr(category.Name), ""})
     }
 
     return menus

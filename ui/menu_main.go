@@ -32,7 +32,7 @@ func NewMainMenu() *MainMenu {
         NewHighQualityPlaylistsMenu(),
         NewHotArtistsMenu(),
         NewCloudMenu(),
-        nil,
+        NewRadioDjTypeMenu(),
         NewHelpMenu(),
     }
 
@@ -97,4 +97,3 @@ func (m *MainMenu) TopOutHook() Hook {
     // Nothing to do
     return nil
 }
-

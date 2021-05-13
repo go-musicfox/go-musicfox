@@ -376,6 +376,42 @@ func GetDjRadiosOfSearchResult(data []byte) (list []ds.DjRadio) {
     return
 }
 
+// GetDjRadios 获取电台列表
+func GetDjRadios(data []byte) (list []ds.DjRadio) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if radio, err := ds.NewDjRadioFromJson(value); err == nil {
+            list = append(list, radio)
+        }
+
+    }, "djRadios")
+
+    return
+}
+
+// GetDjRadiosOfToday 获取今日优选电台列表
+func GetDjRadiosOfToday(data []byte) (list []ds.DjRadio) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if radio, err := ds.NewDjRadioFromJson(value); err == nil {
+            list = append(list, radio)
+        }
+
+    }, "data")
+
+    return
+}
+
+// GetDjRadiosOfTopDj 获取热门电台列表
+func GetDjRadiosOfTopDj(data []byte) (list []ds.DjRadio) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if radio, err := ds.NewDjRadioFromJson(value); err == nil {
+            list = append(list, radio)
+        }
+
+    }, "toplist")
+
+    return
+}
+
 // GetSongsOfDjRadio 获取电台节目列表的歌曲
 func GetSongsOfDjRadio(data []byte) (list []ds.Song) {
     _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
@@ -383,6 +419,28 @@ func GetSongsOfDjRadio(data []byte) (list []ds.Song) {
            list = append(list, song)
         }
     }, "programs")
+
+    return
+}
+
+// GetSongsOfDjRank 获取电台节目排行榜列表的歌曲
+func GetSongsOfDjRank(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromDjRankProgramJson(value); err == nil {
+            list = append(list, song)
+        }
+    }, "toplist")
+
+    return
+}
+
+// GetSongsOfDjHoursRank 获取电台节目24小时排行榜列表的歌曲
+func GetSongsOfDjHoursRank(data []byte) (list []ds.Song) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if song, err := ds.NewSongFromDjRankProgramJson(value); err == nil {
+            list = append(list, song)
+        }
+    }, "data", "list")
 
     return
 }
@@ -406,6 +464,18 @@ func GetSongsOfCloud(data []byte) (list []ds.Song) {
             list = append(list, song)
         }
     }, "data")
+
+    return
+}
+
+// GetDjCategory 获取电台分类
+func GetDjCategory(data []byte) (list []ds.DjCategory) {
+    _, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+        if cate, err := ds.NewDjCategoryFromJson(value); err == nil {
+            list = append(list, cate)
+        }
+
+    }, "categories")
 
     return
 }
