@@ -32,6 +32,8 @@ func NewMainMenu() *MainMenu {
         NewHighQualityPlaylistsMenu(),
         NewHotArtistsMenu(),
         NewCloudMenu(),
+        nil,
+        NewHelpMenu(),
     }
 
     return mainMenu

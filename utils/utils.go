@@ -409,3 +409,25 @@ func GetSongsOfCloud(data []byte) (list []ds.Song) {
 
     return
 }
+
+// OpenUrl 打开链接
+func OpenUrl(url string) error {
+    commands := map[string]string{
+        "windows": "start",
+        "darwin":  "open",
+        "linux":   "xdg-open",
+    }
+
+    run, ok := commands[runtime.GOOS]
+    if !ok {
+        return errors.New(fmt.Sprintf("don't know how to open things on %s platform", runtime.GOOS))
+    }
+
+    path, err := exec.LookPath(run)
+    if err != nil {
+        return err
+    }
+
+    cmd := exec.Command(path, url)
+    return cmd.Start()
+}
