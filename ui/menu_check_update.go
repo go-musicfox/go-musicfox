@@ -88,7 +88,7 @@ func (m *CheckUpdateMenu) BeforeEnterMenuHook() Hook {
         }
 
         curTagArr := strings.Split(constants.AppVersion, ".")
-        tagArr := strings.Split(tag, ".")
+        tagArr := strings.Split(strings.Trim(tag, "v"), ".")
         if len(tagArr) >= 1 && len(curTagArr) >= 1 {
             if tagArr[0] > curTagArr[0] {
                 m.hasUpdate = true

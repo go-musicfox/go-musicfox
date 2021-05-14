@@ -278,8 +278,12 @@ func menuLineView(m *NeteaseModel, line int) string {
         menuLineBuilder.WriteString(strings.Repeat(" ", m.menuStartColumn-4))
     }
     menuLineBuilder.WriteString(menuItemView(m, index))
-    if m.doubleColumn && index < len(m.menuList)-1 {
-        menuLineBuilder.WriteString(menuItemView(m, index+1))
+    if m.doubleColumn {
+        if index < len(m.menuList)-1 {
+            menuLineBuilder.WriteString(menuItemView(m, index+1))
+        } else {
+            menuLineBuilder.WriteString("    ")
+        }
     }
 
     return menuLineBuilder.String()

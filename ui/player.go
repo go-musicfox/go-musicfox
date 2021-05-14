@@ -324,6 +324,7 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
 
     url, err1 := jsonparser.GetString(response, "data", "[0]", "url")
     musicType, err2 := jsonparser.GetString(response, "data", "[0]", "type")
+    musicType = strings.ToLower(musicType)
     if err1 != nil || err2 != nil || (musicType != "mp3" && musicType != "flac") {
         p.State = utils.Stopped
         p.progressRamp = []string{}
