@@ -37,7 +37,7 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 
 #### 直接下载
 
-下载[Mac可执行文件](https://github.com/anhoder/go-musicfox/releases/download/v2.0.0/musicfox.mac)，在iTerm或Terminal中打开
+下载[Mac可执行文件](https://github.com/anhoder/go-musicfox/releases/latest/download/musicfox.mac)，在iTerm或Terminal中打开
 
 ### Linux
 
@@ -45,7 +45,7 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 
 ### Windows
 
-下载[Windows可执行文件](https://github.com/anhoder/go-musicfox/releases/download/v2.0.0/musicfox.exe)，在命令行中运行即可。
+下载[Windows可执行文件](https://github.com/anhoder/go-musicfox/releases/latest/download/musicfox.exe)，在命令行中运行即可。
 
 > **推荐使用Windows Terminal，UI及体验好很多**
 
