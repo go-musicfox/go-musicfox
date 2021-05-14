@@ -2,7 +2,7 @@
 
 **给个star✨吧**
 
-go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，为了解决某些问题，提升体验，因此采用go进行重写。*go初学者，顺便熟悉go~v~*
+go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，为了解决某些问题，提升体验，因此采用go进行重写。*go初学者，顺便熟悉go `~v~` *
 
 > UI基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
 
