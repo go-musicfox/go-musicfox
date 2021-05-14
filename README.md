@@ -23,18 +23,29 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 提供两种方式安装：
 
-* 使用brew安装: `brew tap anhoder/go-musicfox && brew install go-musicfox`
-* 直接下载[Mac可执行文件](./bin/musicfox.mac)，在iTerm或Terminal中打开
+#### 使用brew安装
+
+```sh
+brew tap anhoder/go-musicfox && brew install go-musicfox
+```
+
+如果你之前安装过musicfox，需要使用下列命令重新链接:
+
+```sh
+brew unlink musicfox && brew link --overwrite go-musicfox
+```
+
+#### 直接下载
+
+下载[Mac可执行文件](https://github.com/anhoder/go-musicfox/releases/download/v2.0.0/musicfox.mac)，在iTerm或Terminal中打开
 
 ### Linux
 
-- 直接下载[Linux可执行文件](./bin/musicfox.ubuntu)，在终端中执行。
-
-> 本人没有Linux系统，该执行文件是在WSL2(Ubuntu 2004)下打包的，不保证其他Linux系统也能正常使用
+> 暂无可用二进制文件
 
 ### Windows
 
-下载[Windows可执行文件](./bin/musicfox.exe)，在命令行中运行即可。
+下载[Windows可执行文件](https://github.com/anhoder/go-musicfox/releases/download/v2.0.0/musicfox.exe)，在命令行中运行即可。
 
 > **推荐使用Windows Terminal，UI及体验好很多**
 
