@@ -2,9 +2,9 @@
 
 **给个star✨吧**
 
-go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重置版，为了解决一些问题，采用go重写。
+go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，为了解决某些问题，提升体验，因此采用go进行重写。*go初学者，顺便熟悉go~v~*
 
-> 基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
+> UI基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/anhoder/go-musicfox) ![GitHub](https://img.shields.io/github/license/anhoder/go-musicfox) ![Last Tag](https://badgen.net/github/tag/anhoder/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/anhoder/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/anhoder/go-musicfox/total)
 
