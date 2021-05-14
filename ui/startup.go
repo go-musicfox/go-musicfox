@@ -43,9 +43,7 @@ func updateStartup(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         if m.loadedDuration >= m.TotalDuration {
             m.loaded = true
             m.isListeningKey = true
-            return m, func() tea.Msg {
-                return tea.ClearScreen()
-            }
+            return m, tea.ClearScreen
         }
         m.loadedDuration += constants.StartupTickDuration
         m.loadedPercent = float64(m.loadedDuration) / float64(m.TotalDuration)
