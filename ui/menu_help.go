@@ -12,8 +12,8 @@ type HelpMenu struct {
 func NewHelpMenu() *HelpMenu {
     menu := new(HelpMenu)
     menu.menus = []MenuItem{
-        {Title: "Enter进来给个star吧~"},
-        {Title: "谢谢♪(･ω･)ﾉ"},
+        {Title: "Enter进来给个star吧, 谢谢~v~"},
+        {Title: "r/R", Subtitle: "重新渲染UI"},
         {Title: "h/H/LEFT", Subtitle: "左"},
         {Title: "l/L/RIGHT", Subtitle: "右"},
         {Title: "j/J/DOWN", Subtitle: "下"},
@@ -60,7 +60,7 @@ func (m *HelpMenu) MenuViews() []MenuItem {
 }
 
 func (m *HelpMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
-    if index == 0 || index == 1 {
+    if index == 0 {
         _ = utils.OpenUrl(constants.AppGithubUrl)
     }
     return nil

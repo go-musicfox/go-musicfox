@@ -365,17 +365,17 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         return m, nil
     }
     switch msg.String() {
-    case "j", "down":
+    case "j", "J", "down":
         moveDown(m)
-    case "k", "up":
+    case "k", "K", "up":
         moveUp(m)
-    case "h", "left":
+    case "h", "H", "left":
         moveLeft(m)
-    case "l", "right":
+    case "l", "L", "right":
         moveRight(m)
-    case "enter":
+    case "n", "N", "enter":
         enterMenu(m)
-    case "esc":
+    case "b", "B", "esc":
         backMenu(m)
     case " ":
         spaceKeyHandle(m)
@@ -414,9 +414,11 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
     case "?":
         // trash selected song
         trashSelectedSong(m)
-    case "r":
+    case "r", "R":
         // rerender
-        m.Rerender()
+        return m, func() tea.Msg {
+            return tea.ClearScreenMsg{}
+        }
     }
 
     return m, tickMainUI(time.Nanosecond)
