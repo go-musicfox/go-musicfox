@@ -90,8 +90,9 @@ func (m *DjTodayRecommendMenu) BottomOutHook() Hook {
         }
 
         radios := utils.GetDjRadiosOfToday(response)
-        m.radios = append(m.radios, radios...)
         menus := GetViewFromDjRadios(radios)
+
+        m.radios = append(m.radios, radios...)
         m.menus = append(m.menus, menus...)
 
         return true

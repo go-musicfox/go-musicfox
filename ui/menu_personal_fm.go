@@ -84,7 +84,7 @@ func (m *PersonalFmMenu) BottomOutHook() Hook {
 			return false
 		}
 		songs := utils.GetFmSongs(response)
-		menus := GetViewFromSongs(m.songs)
+		menus := GetViewFromSongs(songs)
 
 		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)

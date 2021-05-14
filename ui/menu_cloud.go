@@ -126,8 +126,11 @@ func (m *CloudMenu) BottomOutHook() Hook {
             m.hasMore = hasMore
         }
 
-        m.songs = utils.GetSongsOfCloud(response)
-        m.menus = GetViewFromSongs(m.songs)
+        songs := utils.GetSongsOfCloud(response)
+        menus := GetViewFromSongs(songs)
+
+        m.songs = append(m.songs, songs...)
+        m.menus = append(m.menus, menus...)
 
         return true
     }
