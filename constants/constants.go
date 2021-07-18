@@ -1,7 +1,7 @@
 package constants
 
 import (
-	"time"
+    "time"
 )
 
 const AppName = "musicfox"
@@ -16,6 +16,7 @@ const ProgressEmptyChar = " "
 const StartupProgressOutBounce = true
 const StartupLoadingSeconds = 2
 const StartupTickDuration = time.Millisecond * 16
+const StartupSignIn = true
 
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"
@@ -25,7 +26,8 @@ const AppPrimaryRandom = "random"
 const PlayerSongBr = 320000 // 999000
 
 const MainShowTitle = true
-const MainLoadingText = " [加载中...]"
+const MainLoadingText = "[加载中...]"
+const MainShowLyric = true
 
 const AppHelpTemplate = `%s
 

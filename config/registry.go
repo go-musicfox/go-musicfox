@@ -13,6 +13,7 @@ type Registry struct {
     StartupProgressOutBounce bool          // 是否启动页进度条回弹效果
     StartupLoadingDuration   time.Duration // 启动页加载时长
     StartupWelcome           string        // 启动页欢迎语
+    StartupSignIn            bool          // 每天启动时自动签到
 
     ProgressFullChar  rune // 进度条已加载字符
     ProgressEmptyChar rune // 进度条未加载字符
@@ -21,6 +22,7 @@ type Registry struct {
     MainLoadingText  string // 主页面加载中提示
     MainPlayerSongBr int64  // 歌曲br设置
     MainPrimaryColor string // 主题色
+    MainShowLyric    bool   // 显示歌词
 }
 
 func NewRegistryWithDefault() *Registry {
@@ -29,6 +31,7 @@ func NewRegistryWithDefault() *Registry {
         StartupProgressOutBounce: constants.StartupProgressOutBounce,
         StartupLoadingDuration:   time.Second * constants.StartupLoadingSeconds,
         StartupWelcome:           constants.AppName,
+        StartupSignIn:            constants.StartupSignIn,
 
         ProgressFullChar:  rune(constants.ProgressFullChar[0]),
         ProgressEmptyChar: rune(constants.ProgressEmptyChar[0]),
@@ -37,6 +40,7 @@ func NewRegistryWithDefault() *Registry {
         MainLoadingText:  constants.MainLoadingText,
         MainPlayerSongBr: constants.PlayerSongBr,
         MainPrimaryColor: constants.AppPrimaryRandom,
+        MainShowLyric:    constants.MainShowLyric,
     }
 
     return registry
@@ -53,6 +57,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
     registry.StartupProgressOutBounce = ini.Bool("startup.progressOutBounce", constants.AppShowStartup)
     registry.StartupLoadingDuration = time.Second * time.Duration(ini.Int("startup.loadingSeconds", constants.StartupLoadingSeconds))
     registry.StartupWelcome = ini.String("startup.welcome", constants.AppName)
+    registry.StartupSignIn = ini.Bool("startup.signIn", constants.StartupSignIn)
 
     fullChar := ini.String("progress.fullChar", constants.ProgressFullChar)
     if len(fullChar) > 0 {
@@ -76,6 +81,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
     } else {
         registry.MainPrimaryColor = constants.AppPrimaryRandom
     }
+    registry.MainShowLyric = ini.Bool("main.showLyric", constants.MainShowLyric)
 
     return registry
 }

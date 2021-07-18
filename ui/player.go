@@ -341,7 +341,9 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
         return nil
     }
 
-    go p.updateLyric(song.Id)
+    if config.ConfigRegistry.MainShowLyric {
+        go p.updateLyric(song.Id)
+    }
 
     switch musicType {
     case "mp3":

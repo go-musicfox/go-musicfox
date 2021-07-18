@@ -102,21 +102,23 @@ func (m *NeteaseModel) Init() tea.Cmd {
         }
 
         // 签到
-        var lastSignIn int
-        if jsonStr, err := table.GetByKVModel(db.LastSignIn{}); err == nil && len(jsonStr) > 0 {
-            _ = json.Unmarshal(jsonStr, &lastSignIn)
-        }
-        today, err := strconv.Atoi(time.Now().Format("20060102"))
-        if m.user != nil && err == nil && lastSignIn != today {
-            // 手机签到
-            signInService := service.DailySigninService{}
-            signInService.Type = "0"
-            signInService.DailySignin()
-            // PC签到
-            signInService.Type = "1"
-            signInService.DailySignin()
+        if config.ConfigRegistry.StartupSignIn {
+            var lastSignIn int
+            if jsonStr, err := table.GetByKVModel(db.LastSignIn{}); err == nil && len(jsonStr) > 0 {
+                _ = json.Unmarshal(jsonStr, &lastSignIn)
+            }
+            today, err := strconv.Atoi(time.Now().Format("20060102"))
+            if m.user != nil && err == nil && lastSignIn != today {
+                // 手机签到
+                signInService := service.DailySigninService{}
+                signInService.Type = "0"
+                signInService.DailySignin()
+                // PC签到
+                signInService.Type = "1"
+                signInService.DailySignin()
 
-            _ = table.SetByKVModel(db.LastSignIn{}, today)
+                _ = table.SetByKVModel(db.LastSignIn{}, today)
+            }
         }
 
     }()
