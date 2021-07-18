@@ -5,12 +5,9 @@ import (
     "github.com/gookit/gcli/v2"
     "go-musicfox/config"
     "go-musicfox/ui"
-    "go-musicfox/utils"
 )
 
 func NewPlayerCommand() *gcli.Command {
-
-    config.ConfigRegistry = utils.LoadIniConfig()
 
     return &gcli.Command{
         Name: "netease",

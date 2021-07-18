@@ -46,11 +46,11 @@ func NewSearch() (search *SearchModel) {
     search.wordsInput = textinput.NewModel()
     search.wordsInput.Placeholder = " 输入关键词"
     search.wordsInput.Focus()
-    search.wordsInput.Prompt = focusedPrompt
+    search.wordsInput.Prompt = GetFocusedPrompt()
     search.wordsInput.TextColor = primaryColorStr
     search.wordsInput.CharLimit = 32
 
-    search.submitButton = blurredSubmitButton
+    search.submitButton = GetBlurredSubmitButton()
 
     return
 }
@@ -152,22 +152,22 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                 if i == m.searchModel.index {
                     // Set focused state
                     inputs[i].Focus()
-                    inputs[i].Prompt = focusedPrompt
+                    inputs[i].Prompt = GetFocusedPrompt()
                     inputs[i].TextColor = primaryColorStr
                     continue
                 }
                 // Remove focused state
                 inputs[i].Blur()
-                inputs[i].Prompt = blurredPrompt
+                inputs[i].Prompt = GetBlurredPrompt()
                 inputs[i].TextColor = ""
             }
 
             m.searchModel.wordsInput = inputs[0]
 
             if m.searchModel.index == len(inputs) {
-                m.searchModel.submitButton = focusedSubmitButton
+                m.searchModel.submitButton = GetFocusedSubmitButton()
             } else {
-                m.searchModel.submitButton = blurredSubmitButton
+                m.searchModel.submitButton = GetBlurredSubmitButton()
             }
 
             return m, nil

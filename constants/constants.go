@@ -5,8 +5,8 @@ import (
 )
 
 const AppName = "musicfox"
-const AppVersion = "2.0.1"
-const AppVersionInt = 20001
+const AppVersion = "2.1.0"
+const AppVersionInt = 20100
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
 const AppShowStartup = true
 const AppGithubUrl = "https://github.com/anhoder/go-musicfox"
@@ -20,6 +20,7 @@ const StartupTickDuration = time.Millisecond * 16
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"
 const AppIniFile = "go-musicfox.ini"
+const AppPrimaryRandom = "random"
 
 const PlayerSongBr = 320000 // 999000
 

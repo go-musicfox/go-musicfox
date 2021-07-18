@@ -28,7 +28,7 @@ func NewLogin() (login *LoginModel) {
     login.accountInput = textinput.NewModel()
     login.accountInput.Placeholder = " 手机号或邮箱"
     login.accountInput.Focus()
-    login.accountInput.Prompt = focusedPrompt
+    login.accountInput.Prompt = GetFocusedPrompt()
     login.accountInput.TextColor = primaryColorStr
     login.accountInput.CharLimit = 32
 
@@ -39,7 +39,7 @@ func NewLogin() (login *LoginModel) {
     login.passwordInput.EchoCharacter = '•'
     login.passwordInput.CharLimit = 32
 
-    login.submitButton = blurredSubmitButton
+    login.submitButton = GetBlurredSubmitButton()
 
     return
 }
@@ -141,13 +141,13 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
                 if i == m.loginModel.index {
                     // Set focused state
                     inputs[i].Focus()
-                    inputs[i].Prompt = focusedPrompt
+                    inputs[i].Prompt = GetFocusedPrompt()
                     inputs[i].TextColor = primaryColorStr
                     continue
                 }
                 // Remove focused state
                 inputs[i].Blur()
-                inputs[i].Prompt = blurredPrompt
+                inputs[i].Prompt = GetBlurredPrompt()
                 inputs[i].TextColor = ""
             }
 
@@ -155,9 +155,9 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
             m.loginModel.passwordInput = inputs[1]
 
             if m.loginModel.index == len(inputs) {
-                m.loginModel.submitButton = focusedSubmitButton
+                m.loginModel.submitButton = GetFocusedSubmitButton()
             } else {
-                m.loginModel.submitButton = blurredSubmitButton
+                m.loginModel.submitButton = GetBlurredSubmitButton()
             }
 
             return m, nil

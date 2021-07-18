@@ -20,6 +20,7 @@ type Registry struct {
     MainShowTitle    bool   // 主界面是否显示标题
     MainLoadingText  string // 主页面加载中提示
     MainPlayerSongBr int64  // 歌曲br设置
+    MainPrimaryColor string // 主题色
 }
 
 func NewRegistryWithDefault() *Registry {
@@ -35,6 +36,7 @@ func NewRegistryWithDefault() *Registry {
         MainShowTitle:    constants.MainShowTitle,
         MainLoadingText:  constants.MainLoadingText,
         MainPlayerSongBr: constants.PlayerSongBr,
+        MainPrimaryColor: constants.AppPrimaryRandom,
     }
 
     return registry
@@ -68,6 +70,12 @@ func NewRegistryFromIniFile(filepath string) *Registry {
     registry.MainShowTitle = ini.Bool("main.showTitle", constants.MainShowTitle)
     registry.MainLoadingText = ini.String("main.loadingText", constants.MainLoadingText)
     registry.MainPlayerSongBr = ini.Int64("main.songBr", constants.PlayerSongBr)
+    primaryColor := ini.String("main.primaryColor", constants.AppPrimaryRandom)
+    if primaryColor != "" {
+        registry.MainPrimaryColor = primaryColor
+    } else {
+        registry.MainPrimaryColor = constants.AppPrimaryRandom
+    }
 
     return registry
 }
