@@ -352,6 +352,12 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
         p.Player.Play(utils.Flac, url, song.Duration)
     }
 
+    var artistNames []string
+    for _, artist := range song.Artists {
+        artistNames = append(artistNames, artist.Name)
+    }
+    utils.Notify(fmt.Sprintf("正在播放: %s", song.Name), fmt.Sprintf("歌手: %s 专辑: %s", strings.Join(artistNames, ","), song.Album.Name))
+
     p.playErrCount = 0
 
     return nil
@@ -520,7 +526,7 @@ func (p *Player) updateLyric(songId int64) {
         return
     }
 
-    if lrc, err := jsonparser.GetString(response, "lrc", "lyric"); err == nil {
+    if lrc, err := jsonparser.GetString(response, "lrc", "lyric"); err == nil && lrc != "" {
         if file, err := lyric.ReadLRC(strings.NewReader(lrc)); err == nil {
             lrcFile = file
         }

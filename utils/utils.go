@@ -2,6 +2,7 @@ package utils
 
 import (
     "bytes"
+    "embed"
     "encoding/binary"
     "errors"
     "fmt"
@@ -15,6 +16,9 @@ import (
     "runtime"
     "strings"
 )
+
+//go:embed static
+var static embed.FS
 
 // GetLocalDataDir 获取本地数据存储目录
 func GetLocalDataDir() string {

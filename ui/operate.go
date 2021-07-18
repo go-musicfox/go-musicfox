@@ -337,12 +337,19 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		L: strconv.FormatBool(isLike),
 	}
 	likeService.Like()
+
+	if isLike {
+		utils.Notify("已添加到我喜欢的歌曲", m.player.playlist[m.player.curSongIndex].Name)
+	} else {
+		utils.Notify("已从我喜欢的歌曲移除", m.player.playlist[m.player.curSongIndex].Name)
+	}
 }
 
 // logout 登出
 func logout() {
 	table := db.NewTable()
 	_ = table.DeleteByKVModel(db.User{})
+	utils.Notify("登出成功", "已清理用户信息")
 }
 
 // likeSelectedSong like/unlike selected song
@@ -368,6 +375,12 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		L: strconv.FormatBool(isLike),
 	}
 	likeService.Like()
+
+	if isLike {
+		utils.Notify("已添加到我喜欢的歌曲", songs[m.selectedIndex].Name)
+	} else {
+		utils.Notify("已从我喜欢的歌曲移除", songs[m.selectedIndex].Name)
+	}
 }
 
 // trashPlayingSong 标记为不喜欢
@@ -391,6 +404,8 @@ func trashPlayingSong(m *NeteaseModel) {
 		SongID: strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10),
 	}
 	trashService.FmTrash()
+
+	utils.Notify("已标记为不喜欢", m.player.playlist[m.player.curSongIndex].Name)
 }
 
 // trashSelectedSong 标记为不喜欢
@@ -415,4 +430,6 @@ func trashSelectedSong(m *NeteaseModel) {
 		SongID: strconv.FormatInt(songs[m.selectedIndex].Id, 10),
 	}
 	trashService.FmTrash()
+
+	utils.Notify("已标记为不喜欢", songs[m.selectedIndex].Name)
 }

@@ -23,6 +23,7 @@ type Registry struct {
     MainPlayerSongBr int64  // 歌曲br设置
     MainPrimaryColor string // 主题色
     MainShowLyric    bool   // 显示歌词
+    MainShowNotify   bool   // 显示通知
 }
 
 func NewRegistryWithDefault() *Registry {
@@ -41,6 +42,7 @@ func NewRegistryWithDefault() *Registry {
         MainPlayerSongBr: constants.PlayerSongBr,
         MainPrimaryColor: constants.AppPrimaryRandom,
         MainShowLyric:    constants.MainShowLyric,
+        MainShowNotify:   constants.MainShowNotify,
     }
 
     return registry
@@ -82,6 +84,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
         registry.MainPrimaryColor = constants.AppPrimaryRandom
     }
     registry.MainShowLyric = ini.Bool("main.showLyric", constants.MainShowLyric)
+    registry.MainShowNotify = ini.Bool("main.showNotify", constants.MainShowNotify)
 
     return registry
 }

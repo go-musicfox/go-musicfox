@@ -118,6 +118,8 @@ func (m *NeteaseModel) Init() tea.Cmd {
                 signInService.DailySignin()
 
                 _ = table.SetByKVModel(db.LastSignIn{}, today)
+
+                utils.Notify("签到成功", "今日手机、PC端签到成功~")
             }
         }
 

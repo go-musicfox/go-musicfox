@@ -28,6 +28,7 @@ const PlayerSongBr = 320000 // 999000
 const MainShowTitle = true
 const MainLoadingText = "[加载中...]"
 const MainShowLyric = true
+const MainShowNotify = true
 
 const AppHelpTemplate = `%s
 
