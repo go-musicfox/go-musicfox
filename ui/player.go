@@ -356,7 +356,7 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
     for _, artist := range song.Artists {
         artistNames = append(artistNames, artist.Name)
     }
-    utils.Notify(fmt.Sprintf("正在播放: %s", song.Name), fmt.Sprintf("歌手: %s 专辑: %s", strings.Join(artistNames, ","), song.Album.Name))
+    utils.Notify(fmt.Sprintf("正在播放: %s", song.Name), fmt.Sprintf("歌手: %s/专辑: %s", strings.Join(artistNames, ","), song.Album.Name))
 
     p.playErrCount = 0
 
