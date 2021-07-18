@@ -10,6 +10,59 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
+## 最近更新（v2.1.0）
+
+### 增加配置文件
+
+配置文件路径为用户目录下的.go-musicfox/go-musicfox.ini，相关配置有：
+
+```ini
+# 启动页配置
+[startup]
+# 是否显示启动页
+show=true
+# 启动页进度条是否有回弹效果
+progressOutBounce=true
+# 启动页时长
+loadingSeconds=2
+# 启动页欢迎语
+welcome=musicfox
+# 启动时自动签到
+signin=true
+
+# 进度条配置
+[progress]
+# 进度条已加载字符
+fullChar=#
+# 进度条未加载字符
+emptyChar=
+
+# 主页面配置
+[main]
+# 是否显示标题
+showTitle=true
+# 加载中提示
+loadingText=[加载中...]
+# 歌曲码率，128000, 320000...，视网络情况而定
+songBr=999000
+# 主题颜色
+primaryColor=random
+# 是否显示歌词
+showLyric=true
+# 是否显示通知信息
+showNotify=true
+```
+
+### 增加通知
+
+目前触发通知的操作有：
+* 播放歌曲
+* 自动签到成功
+* 添加歌曲到喜欢
+* 从喜欢移除
+* 标记为不喜欢
+* 登出
+
 
 ## 预览
 
@@ -104,8 +157,8 @@ $ musicfox
 * [x] 喜欢/取消喜欢
 * [x] 心动模式/智能模式
 * [x] 音乐电台
-* [ ] 配置文件
-* [ ] 通知功能
+* [x] 配置文件
+* [x] 通知功能
     
 ## 伴生项目
 
