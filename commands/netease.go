@@ -3,11 +3,15 @@ package commands
 import (
     tea "github.com/anhoder/bubbletea"
     "github.com/gookit/gcli/v2"
-    "go-musicfox/constants"
+    "go-musicfox/config"
     "go-musicfox/ui"
+    "go-musicfox/utils"
 )
 
 func NewPlayerCommand() *gcli.Command {
+
+    config.ConfigRegistry = utils.LoadIniConfig()
+
     return &gcli.Command{
         Name: "netease",
         // allow color tag and {$cmd} will be replace to 'demo'
@@ -16,8 +20,8 @@ func NewPlayerCommand() *gcli.Command {
     }
 }
 
-func runPlayer(cmd *gcli.Command, args []string) error{
-    neteaseModel := ui.NewNeteaseModel(constants.StartupLoadingDuration)
+func runPlayer(cmd *gcli.Command, args []string) error {
+    neteaseModel := ui.NewNeteaseModel(config.ConfigRegistry.StartupLoadingDuration)
     program := tea.NewProgram(neteaseModel)
     neteaseModel.BindProgram(program)
     program.EnterAltScreen()

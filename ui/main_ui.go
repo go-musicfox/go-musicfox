@@ -5,6 +5,7 @@ import (
     tea "github.com/anhoder/bubbletea"
     "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
+    "go-musicfox/config"
     "go-musicfox/constants"
     "go-musicfox/utils"
     "math"
@@ -84,7 +85,7 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 
         // 菜单开始行、列
         m.menuStartRow = msg.Height / 3
-        if !constants.MainShowTitle && m.menuStartRow > 1 {
+        if !config.ConfigRegistry.MainShowTitle && m.menuStartRow > 1 {
             m.menuStartRow--
         }
         if m.doubleColumn {
@@ -97,13 +98,13 @@ func updateMainUI(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 
         // 菜单标题开始行、列
         m.menuTitleStartColumn = m.menuStartColumn
-        if constants.MainShowTitle && m.menuStartRow > 2 {
+        if config.ConfigRegistry.MainShowTitle && m.menuStartRow > 2 {
             if m.menuStartRow > 4 {
                 m.menuTitleStartRow = m.menuStartRow - 3
             } else {
                 m.menuTitleStartRow = 2
             }
-        } else if !constants.MainShowTitle && m.menuStartRow > 1 {
+        } else if !config.ConfigRegistry.MainShowTitle && m.menuStartRow > 1 {
             if m.menuStartRow > 3 {
                 m.menuTitleStartRow = m.menuStartRow - 3
             } else {
@@ -148,7 +149,7 @@ func mainUIView(m *NeteaseModel) string {
     top := 0
 
     // title
-    if constants.MainShowTitle {
+    if config.ConfigRegistry.MainShowTitle {
         builder.WriteString(titleView(m, &top))
     } else {
         top++

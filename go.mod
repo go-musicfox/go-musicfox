@@ -12,6 +12,7 @@ require (
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 	github.com/gomodule/redigo v1.8.4 // indirect
 	github.com/gookit/gcli/v2 v2.3.4
+	github.com/gookit/ini/v2 v2.0.10 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/mattn/go-runewidth v0.0.12
 	github.com/muesli/termenv v0.8.1

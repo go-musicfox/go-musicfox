@@ -6,6 +6,7 @@ import (
     "errors"
     "fmt"
     "github.com/buger/jsonparser"
+    "go-musicfox/config"
     "go-musicfox/constants"
     "go-musicfox/ds"
     "os"
@@ -500,4 +501,10 @@ func OpenUrl(url string) error {
         cmd = exec.Command(run, url)
     }
     return cmd.Start()
+}
+
+// LoadIniConfig 加载ini配置信息
+func LoadIniConfig() *config.Registry {
+    projectDir := GetLocalDataDir()
+    return config.NewRegistryFromIniFile(fmt.Sprintf("%s/%s", projectDir, constants.AppIniFile))
 }

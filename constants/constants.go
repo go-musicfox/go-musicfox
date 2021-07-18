@@ -11,16 +11,17 @@ const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
 const AppShowStartup = true
 const AppGithubUrl = "https://github.com/anhoder/go-musicfox"
 const AppCheckUpdateUrl = "https://api.github.com/repos/anhoder/go-musicfox/releases/latest"
-const ProgressFullChar = '#'
-const ProgressEmptyChar = ' '
+const ProgressFullChar = "#"
+const ProgressEmptyChar = " "
 const StartupProgressOutBounce = true
-const StartupLoadingDuration = time.Second * 2
+const StartupLoadingSeconds = 2
 const StartupTickDuration = time.Millisecond * 16
 
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"
+const AppIniFile = "go-musicfox.ini"
 
-const PlayerSongBr = "320000" // "999000"
+const PlayerSongBr = 320000 // 999000
 
 const MainShowTitle = true
 const MainLoadingText = " [加载中...]"

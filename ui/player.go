@@ -7,7 +7,7 @@ import (
     "github.com/buger/jsonparser"
     "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
-    "go-musicfox/constants"
+    "go-musicfox/config"
     "go-musicfox/db"
     "go-musicfox/ds"
     "go-musicfox/lyric"
@@ -232,14 +232,14 @@ func (p *Player) progressView() string {
     fullSize := int(math.Round(width * float64(p.Progress) / 100))
     var fullCells string
     for i := 0; i < fullSize && i < len(p.progressRamp); i++ {
-        fullCells += termenv.String(string(constants.ProgressFullChar)).Foreground(termProfile.Color(p.progressRamp[i])).String()
+        fullCells += termenv.String(string(config.ConfigRegistry.ProgressFullChar)).Foreground(termProfile.Color(p.progressRamp[i])).String()
     }
 
     emptySize := 0
     if int(width)-fullSize > 0 {
         emptySize = int(width) - fullSize
     }
-    emptyCells := strings.Repeat(string(constants.ProgressEmptyChar), emptySize)
+    emptyCells := strings.Repeat(string(config.ConfigRegistry.ProgressEmptyChar), emptySize)
 
     passedDuration := int(p.Timer.Passed().Seconds())
     allDuration := int(p.CurMusic.Duration.Seconds())
@@ -316,7 +316,7 @@ func (p *Player) PlaySong(song ds.Song, duration PlayDirection) error {
     p.LocatePlayingSong()
     urlService := service.SongUrlService{}
     urlService.ID = strconv.FormatInt(song.Id, 10)
-    urlService.Br = constants.PlayerSongBr
+    urlService.Br = strconv.FormatInt(config.ConfigRegistry.MainPlayerSongBr, 10)
     code, response := urlService.SongUrl()
     if code != 200 {
         return errors.New(string(response))

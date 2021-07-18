@@ -6,7 +6,7 @@ import (
     "github.com/anhoder/netease-music/service"
     "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
-    "go-musicfox/constants"
+    "go-musicfox/config"
     "go-musicfox/utils"
     "strconv"
     "strings"
@@ -198,7 +198,7 @@ func searchView(m *NeteaseModel) string {
     top := 0
 
     // title
-    if constants.MainShowTitle {
+    if config.ConfigRegistry.MainShowTitle {
 
         builder.WriteString(titleView(m, &top))
     } else {

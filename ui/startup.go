@@ -5,6 +5,7 @@ import (
     tea "github.com/anhoder/bubbletea"
     "github.com/fogleman/ease"
     "github.com/muesli/termenv"
+    "go-musicfox/config"
     "go-musicfox/constants"
     "go-musicfox/utils"
     "math"
@@ -47,7 +48,7 @@ func updateStartup(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         }
         m.loadedDuration += constants.StartupTickDuration
         m.loadedPercent = float64(m.loadedDuration) / float64(m.TotalDuration)
-        if constants.StartupProgressOutBounce {
+        if config.ConfigRegistry.StartupProgressOutBounce {
             m.loadedPercent = ease.OutBounce(m.loadedPercent)
         }
         return m, tickStartup(constants.StartupTickDuration)
@@ -155,14 +156,14 @@ func progressView(m *NeteaseModel) string {
     fullSize := int(math.Round(width*m.loadedPercent))
     var fullCells string
     for i := 0; i < fullSize && i < len(progressRamp); i++ {
-        fullCells += termenv.String(string(constants.ProgressFullChar)).Foreground(termProfile.Color(progressRamp[i])).String()
+        fullCells += termenv.String(string(config.ConfigRegistry.ProgressFullChar)).Foreground(termProfile.Color(progressRamp[i])).String()
     }
 
     emptySize := 0
     if int(width) - fullSize > 0 {
         emptySize = int(width) - fullSize
     }
-    emptyCells := strings.Repeat(string(constants.ProgressEmptyChar), emptySize)
+    emptyCells := strings.Repeat(string(config.ConfigRegistry.ProgressEmptyChar), emptySize)
 
     return fmt.Sprintf("%s%s", fullCells, emptyCells)
 }

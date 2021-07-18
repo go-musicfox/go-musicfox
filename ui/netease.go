@@ -7,7 +7,7 @@ import (
     "github.com/anhoder/netease-music/util"
     "github.com/mattn/go-runewidth"
     "github.com/telanflow/cookiejar"
-    "go-musicfox/constants"
+    "go-musicfox/config"
     "go-musicfox/db"
     "go-musicfox/ds"
     "go-musicfox/utils"
@@ -38,7 +38,7 @@ type NeteaseModel struct {
 // NewNeteaseModel get netease model
 func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
     m = new(NeteaseModel)
-    m.isListeningKey = !constants.AppShowStartup
+    m.isListeningKey = !config.ConfigRegistry.StartupShow
 
     // startup
     m.startupModel = NewStartup()
@@ -121,7 +121,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 
     }()
 
-    if constants.AppShowStartup {
+    if config.ConfigRegistry.StartupShow {
         return tickStartup(time.Nanosecond)
     }
 
@@ -147,7 +147,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
     // Hand off the message and model to the approprate update function for the
     // appropriate view based on the current state.
-    if constants.AppShowStartup && !m.loaded {
+    if config.ConfigRegistry.StartupShow && !m.loaded {
         if _, ok := msg.(tea.WindowSizeMsg); ok {
             updateMainUI(msg, m)
         }
@@ -169,7 +169,7 @@ func (m *NeteaseModel) View() string {
         return ""
     }
 
-    if constants.AppShowStartup && !m.loaded {
+    if config.ConfigRegistry.StartupShow && !m.loaded {
         return startupView(m)
     }
 
