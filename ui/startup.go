@@ -105,7 +105,7 @@ func logoView(m *NeteaseModel) string {
         return ""
     }
 
-    originLogo := utils.GetAlphaAscii(constants.AppName)
+    originLogo := utils.GetAlphaAscii(config.ConfigRegistry.StartupWelcome)
     var logoWidth int
     if logoArr := strings.Split(originLogo, "\n"); len(logoArr) > 1 {
         logoWidth = utf8.RuneCountInString(logoArr[1])

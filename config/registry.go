@@ -12,6 +12,7 @@ type Registry struct {
     StartupShow              bool          // 显示启动页
     StartupProgressOutBounce bool          // 是否启动页进度条回弹效果
     StartupLoadingDuration   time.Duration // 启动页加载时长
+    StartupWelcome           string        // 启动页欢迎语
 
     ProgressFullChar  rune // 进度条已加载字符
     ProgressEmptyChar rune // 进度条未加载字符
@@ -26,6 +27,7 @@ func NewRegistryWithDefault() *Registry {
         StartupShow:              constants.AppShowStartup,
         StartupProgressOutBounce: constants.StartupProgressOutBounce,
         StartupLoadingDuration:   time.Second * constants.StartupLoadingSeconds,
+        StartupWelcome:           constants.AppName,
 
         ProgressFullChar:  rune(constants.ProgressFullChar[0]),
         ProgressEmptyChar: rune(constants.ProgressEmptyChar[0]),
@@ -48,6 +50,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
     registry.StartupShow = ini.Bool("startup.show", constants.AppShowStartup)
     registry.StartupProgressOutBounce = ini.Bool("startup.progressOutBounce", constants.AppShowStartup)
     registry.StartupLoadingDuration = time.Second * time.Duration(ini.Int("startup.loadingSeconds", constants.StartupLoadingSeconds))
+    registry.StartupWelcome = ini.String("startup.welcome", constants.AppName)
 
     fullChar := ini.String("progress.fullChar", constants.ProgressFullChar)
     if len(fullChar) > 0 {
