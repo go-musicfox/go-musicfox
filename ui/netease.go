@@ -8,6 +8,7 @@ import (
     "github.com/mattn/go-runewidth"
     "github.com/telanflow/cookiejar"
     "go-musicfox/config"
+    "go-musicfox/constants"
     "go-musicfox/db"
     "go-musicfox/ds"
     "go-musicfox/utils"
@@ -119,10 +120,14 @@ func (m *NeteaseModel) Init() tea.Cmd {
 
                 _ = table.SetByKVModel(db.LastSignIn{}, today)
 
-                utils.Notify("签到成功", "今日手机、PC端签到成功~")
+                utils.Notify("签到成功", "今日手机、PC端签到成功~", constants.AppGithubUrl)
             }
         }
 
+        // 检查更新
+        if config.ConfigRegistry.StartupCheckUpdate && utils.CheckUpdate() {
+            utils.Notify("musicfox发布了新版本", "点击去看看吧~", constants.AppLatestReleases)
+        }
     }()
 
     if config.ConfigRegistry.StartupShow {

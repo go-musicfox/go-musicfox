@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anhoder/netease-music/service"
 	"github.com/muesli/termenv"
+	"go-musicfox/constants"
 	"go-musicfox/db"
 	"go-musicfox/ds"
 	"go-musicfox/utils"
@@ -339,9 +340,9 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 	likeService.Like()
 
 	if isLike {
-		utils.Notify("已添加到我喜欢的歌曲", m.player.playlist[m.player.curSongIndex].Name)
+		utils.Notify("已添加到我喜欢的歌曲", m.player.playlist[m.player.curSongIndex].Name, constants.AppGithubUrl)
 	} else {
-		utils.Notify("已从我喜欢的歌曲移除", m.player.playlist[m.player.curSongIndex].Name)
+		utils.Notify("已从我喜欢的歌曲移除", m.player.playlist[m.player.curSongIndex].Name, constants.AppGithubUrl)
 	}
 }
 
@@ -349,7 +350,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 func logout() {
 	table := db.NewTable()
 	_ = table.DeleteByKVModel(db.User{})
-	utils.Notify("登出成功", "已清理用户信息")
+	utils.Notify("登出成功", "已清理用户信息", constants.AppGithubUrl)
 }
 
 // likeSelectedSong like/unlike selected song
@@ -377,9 +378,9 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 	likeService.Like()
 
 	if isLike {
-		utils.Notify("已添加到我喜欢的歌曲", songs[m.selectedIndex].Name)
+		utils.Notify("已添加到我喜欢的歌曲", songs[m.selectedIndex].Name, constants.AppGithubUrl)
 	} else {
-		utils.Notify("已从我喜欢的歌曲移除", songs[m.selectedIndex].Name)
+		utils.Notify("已从我喜欢的歌曲移除", songs[m.selectedIndex].Name, constants.AppGithubUrl)
 	}
 }
 
@@ -405,7 +406,7 @@ func trashPlayingSong(m *NeteaseModel) {
 	}
 	trashService.FmTrash()
 
-	utils.Notify("已标记为不喜欢", m.player.playlist[m.player.curSongIndex].Name)
+	utils.Notify("已标记为不喜欢", m.player.playlist[m.player.curSongIndex].Name, constants.AppGithubUrl)
 }
 
 // trashSelectedSong 标记为不喜欢
@@ -431,5 +432,5 @@ func trashSelectedSong(m *NeteaseModel) {
 	}
 	trashService.FmTrash()
 
-	utils.Notify("已标记为不喜欢", songs[m.selectedIndex].Name)
+	utils.Notify("已标记为不喜欢", songs[m.selectedIndex].Name, constants.AppGithubUrl)
 }
