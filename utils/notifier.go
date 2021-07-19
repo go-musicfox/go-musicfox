@@ -3,12 +3,11 @@ package utils
 import (
     "github.com/anhoder/notificator"
     "go-musicfox/config"
-    "go-musicfox/constants"
     "io/ioutil"
     "os"
 )
 
-func Notify(title, text string) {
+func Notify(title, text, url string) {
     if !config.ConfigRegistry.MainShowNotify {
         return
     }
@@ -27,5 +26,5 @@ func Notify(title, text string) {
 
     }
 
-    _ = notify.Push(notificator.UrNormal, title, text, iconPath, constants.AppGithubUrl)
+    _ = notify.Push(notificator.UrNormal, title, text, iconPath, url)
 }

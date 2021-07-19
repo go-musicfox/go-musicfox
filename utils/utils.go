@@ -10,6 +10,8 @@ import (
     "go-musicfox/config"
     "go-musicfox/constants"
     "go-musicfox/ds"
+    "io/ioutil"
+    "net/http"
     "os"
     "os/exec"
     "os/user"
@@ -511,4 +513,59 @@ func OpenUrl(url string) error {
 func LoadIniConfig() *config.Registry {
     projectDir := GetLocalDataDir()
     return config.NewRegistryFromIniFile(fmt.Sprintf("%s/%s", projectDir, constants.AppIniFile))
+}
+
+func CheckUpdate() bool {
+    response, err := http.Get(constants.AppCheckUpdateUrl)
+    if err != nil {
+        return false
+    }
+    defer response.Body.Close()
+
+    jsonBytes, err := ioutil.ReadAll(response.Body)
+    if err != nil {
+        return false
+    }
+
+    tag, err := jsonparser.GetString(jsonBytes, "tag_name")
+    if err != nil {
+        return false
+    }
+
+    curTagArr := strings.Split(constants.AppVersion, ".")
+    tagArr := strings.Split(strings.Trim(tag, "v"), ".")
+    if len(tagArr) >= 1 && len(curTagArr) >= 1 {
+        if tagArr[0] > curTagArr[0] {
+            return true
+        }
+
+        if tagArr[0] < curTagArr[0] {
+            return false
+        }
+
+    }
+
+    if len(tagArr) >= 2 && len(curTagArr) >= 2 {
+        if tagArr[1] > curTagArr[1] {
+            return true
+        }
+
+        if tagArr[1] < curTagArr[1] {
+            return false
+        }
+
+    }
+
+    if len(tagArr) >= 3 && len(curTagArr) >= 3 {
+        if tagArr[2] > curTagArr[2] {
+            return true
+        }
+
+        if tagArr[2] < curTagArr[2] {
+            return false
+        }
+
+    }
+
+    return false
 }

@@ -14,6 +14,7 @@ type Registry struct {
     StartupLoadingDuration   time.Duration // 启动页加载时长
     StartupWelcome           string        // 启动页欢迎语
     StartupSignIn            bool          // 每天启动时自动签到
+    StartupCheckUpdate       bool          // 启动检查更新
 
     ProgressFullChar  rune // 进度条已加载字符
     ProgressEmptyChar rune // 进度条未加载字符
@@ -33,6 +34,7 @@ func NewRegistryWithDefault() *Registry {
         StartupLoadingDuration:   time.Second * constants.StartupLoadingSeconds,
         StartupWelcome:           constants.AppName,
         StartupSignIn:            constants.StartupSignIn,
+        StartupCheckUpdate:       constants.StartupCheckUpdate,
 
         ProgressFullChar:  rune(constants.ProgressFullChar[0]),
         ProgressEmptyChar: rune(constants.ProgressEmptyChar[0]),
@@ -60,6 +62,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
     registry.StartupLoadingDuration = time.Second * time.Duration(ini.Int("startup.loadingSeconds", constants.StartupLoadingSeconds))
     registry.StartupWelcome = ini.String("startup.welcome", constants.AppName)
     registry.StartupSignIn = ini.Bool("startup.signIn", constants.StartupSignIn)
+    registry.StartupCheckUpdate = ini.Bool("startup.checkUpdate", constants.StartupCheckUpdate)
 
     fullChar := ini.String("progress.fullChar", constants.ProgressFullChar)
     if len(fullChar) > 0 {
