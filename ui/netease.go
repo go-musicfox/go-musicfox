@@ -126,7 +126,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 
         // 检查更新
         if config.ConfigRegistry.StartupCheckUpdate && utils.CheckUpdate() {
-            utils.Notify("musicfox发布了新版本", "点击去看看吧~", constants.AppLatestReleases)
+            utils.Notify("发现了新版本", "点击去看看吧~", constants.AppLatestReleases)
         }
     }()
 
