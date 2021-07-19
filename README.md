@@ -25,7 +25,8 @@ show=true
 progressOutBounce=true
 # 启动页时长
 loadingSeconds=2
-# 启动页欢迎语
+# 启动页欢迎语，支持字母、数字、部分英文字符
+# welcome=welcome!
 welcome=musicfox
 # 启动时自动签到
 signin=true
@@ -45,7 +46,7 @@ showTitle=true
 loadingText=[加载中...]
 # 歌曲码率，128000, 320000...，视网络情况而定
 songBr=999000
-# 主题颜色
+# 主题颜色，0-256或#233445
 primaryColor=random
 # 是否显示歌词
 showLyric=true
