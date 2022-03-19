@@ -97,6 +97,11 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 
 下载Linux可执行文件: [amd64版](https://github.com/anhoder/go-musicfox/releases/download/v2.0.1/musicfox.linux_amd64), [arm64版](https://github.com/anhoder/go-musicfox/releases/download/v2.0.1/musicfox.linux_arm64)，在命令行中运行即可。
 
+ArchLinux可使用AUR安装：
+```sh
+yay -S go-musicfox-bin
+```
+
 ### Windows
 
 下载[Windows可执行文件](https://github.com/anhoder/go-musicfox/releases/latest/download/musicfox.exe)，在命令行中运行即可。
