@@ -392,10 +392,10 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         m.player.SetPlayMode("")
     case "P":
         m.player.Intelligence(false)
-    case ",":
+    case ",", "，":
         // like playing song
         likePlayingSong(m, true)
-    case ".":
+    case ".", "。":
         // unlike playing song
         likePlayingSong(m, false)
     case "w", "W":
