@@ -382,11 +382,11 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         enterMenu(m)
     case "b", "B", "esc":
         backMenu(m)
-    case " ":
+    case " ", "　":
         spaceKeyHandle(m)
-    case "[":
+    case "[", "【":
         m.player.PreSong()
-    case "]":
+    case "]", "】":
         m.player.NextSong()
     case "p":
         m.player.SetPlayMode("")
@@ -403,20 +403,20 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
         logout()
         m.quitting = true
         return m, tea.Quit
-    case "-":
+    case "-", "−", "ー": // half-width, full-width and katakana
         m.player.DownVolume()
-    case "=":
+    case "=", "＝":
         m.player.UpVolume()
-    case "/":
+    case "/", "／":
         // trash playing song
         trashPlayingSong(m)
-    case "<":
+    case "<", "〈", "＜", "《", "«": // half-width, full-width, japanese, chinese and french
         // like selected song
         likeSelectedSong(m, true)
-    case ">":
+    case ">", "〉", "＞", "》", "»":
         // unlike selected song
         likeSelectedSong(m, false)
-    case "?":
+    case "?", "？":
         // trash selected song
         trashSelectedSong(m)
     case "r", "R":
