@@ -1,6 +1,7 @@
 package utils
 
 import (
+    "fmt"
     "github.com/faiface/beep"
     "github.com/faiface/beep/effects"
     "github.com/faiface/beep/flac"
@@ -8,7 +9,9 @@ import (
     "github.com/faiface/beep/speaker"
     "github.com/faiface/beep/vorbis"
     "github.com/faiface/beep/wav"
+    "io"
     "net/http"
+    "os"
     "time"
 )
 
@@ -80,8 +83,11 @@ func (p *Player) listen() {
     done := make(chan bool)
 
     var (
-        streamer, oldStreamer beep.StreamSeekCloser
+        streamer, oldStreamer  beep.StreamSeekCloser
+        cacheRFile, cacheWFile *os.File
     )
+
+    cacheFile := fmt.Sprintf("%s/music_cache", GetLocalDataDir())
 
     for {
         select {
@@ -94,6 +100,22 @@ func (p *Player) listen() {
                 resp   *http.Response
                 format beep.Format
             )
+
+            // 打开缓存文件
+            if cacheRFile != nil {
+                _ = cacheRFile.Close()
+            }
+            if cacheWFile != nil {
+                _ = cacheWFile.Close()
+            }
+            cacheRFile, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666)
+            if err != nil {
+                panic(err)
+            }
+            cacheWFile, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+            if err != nil {
+                panic(err)
+            }
 
             speaker.Clear()
 
@@ -114,16 +136,29 @@ func (p *Player) listen() {
                 break
             }
 
+            go func(cacheWFile *os.File, read io.ReadCloser) {
+                _, _ = io.Copy(cacheWFile, read)
+            }(cacheWFile, resp.Body)
+
+            for {
+                t := make([]byte, 5)
+                _, err = io.ReadFull(cacheRFile, t)
+                if err != io.EOF {
+                    _, _ = cacheRFile.Seek(0, 0)
+                    break
+                }
+            }
+
             oldStreamer = streamer
             switch p.CurMusic.Type {
             case Mp3:
-                streamer, format, err = mp3.Decode(resp.Body)
+                streamer, format, err = mp3.Decode(cacheRFile)
             case Wav:
-                streamer, format, err = wav.Decode(resp.Body)
+                streamer, format, err = wav.Decode(cacheRFile)
             case Ogg:
-                streamer, format, err = vorbis.Decode(resp.Body)
+                streamer, format, err = vorbis.Decode(cacheRFile)
             case Flac:
-                streamer, format, err = flac.Decode(resp.Body)
+                streamer, format, err = flac.Decode(cacheRFile)
             default:
                 p.pushDone()
                 break
