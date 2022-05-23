@@ -5,8 +5,8 @@ import (
 )
 
 const AppName = "musicfox"
-const AppVersion = "2.1.0"
-const AppVersionInt = 20100
+const AppVersion = "2.2.0"
+const AppVersionInt = 20200
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
 const AppShowStartup = true
 const AppGithubUrl = "https://github.com/anhoder/go-musicfox"
