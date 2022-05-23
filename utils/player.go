@@ -101,6 +101,7 @@ func (p *Player) listen() {
                 format beep.Format
             )
 
+            // FIXME 先这样处理，暂时没想到更好的办法
             // 打开缓存文件
             if cacheRFile != nil {
                 _ = cacheRFile.Close()
