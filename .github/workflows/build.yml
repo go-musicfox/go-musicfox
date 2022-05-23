@@ -1,10 +1,9 @@
 name: Build
 
 on:
-  release:
-    types:
-      - created
   push:
+    tags:
+      - '*'
     branches:
       - master
 
@@ -13,14 +12,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout...
+        uses: actions/checkout@v3
 
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.18
-
-      - name: Build
+      - name: Building...
         uses: crazy-max/ghaction-xgo@v1.8.0
         with:
           xgo_version: latest
@@ -33,3 +28,20 @@ jobs:
           race: false
           ldflags: -s -w
           buildmode: default
+
+      - name: Show
+        run: ls -l bin
+
+#      - name: Packaging and uploading asserts...
+#        run: tar czf kubectl-karmada-${{ matrix.goos }}-${{ matrix.goarch }}.tgz kubectl-karmada LICENSE
+
+#      - name: Uploading assets...
+#        if: ${{ !env.ACT }}
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          body_path: CHANGELOG.md
+#          files: |
+#            bin/musicfox-
+#            LICENSE
