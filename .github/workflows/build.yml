@@ -30,7 +30,7 @@ jobs:
           buildmode: default
 
       - name: Show
-        run: ls -l bin
+        run: ls -l build
 
 #      - name: Packaging and uploading asserts...
 #        run: tar czf kubectl-karmada-${{ matrix.goos }}-${{ matrix.goarch }}.tgz kubectl-karmada LICENSE
