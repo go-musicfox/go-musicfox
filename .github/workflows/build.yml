@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Build
+        uses: crazy-max/ghaction-xgo@v1.8.0
+        with:
+          xgo_version: latest
+          go_version: 1.18
+          dest: build
+          prefix: musicfox
+          targets: windows/amd64,windows/arm64,linux/amd64,linux/arm64,darwin/amd64,darwin/arm64
+          v: true
+          x: true
+          race: false
+          ldflags: -s -w
+          buildmode: default
