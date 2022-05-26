@@ -1,3 +1,4 @@
 .idea/
 .Ds_Store
 bin/
+dist/
