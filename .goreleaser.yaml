@@ -1,7 +1,7 @@
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
-  - HOMEBREW_NAME="go-musicfox"
+  - HOMEBREW_NAME=go-musicfox
 builds:
   - id: go-musicfox-linux-amd64
     binary: musicfox
@@ -74,8 +74,8 @@ brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
     tap:
       owner: anhoder
-      name: "homebrew-go-musicfox"
-      token: {{secrets.HOMEBREW_TAP_TOKEN}}
+      name: homebrew-go-musicfox
+      token: ${{secrets.HOMEBREW_TAP_TOKEN}}
     url_template: "https://github.com/anhoder/go-musicfox/releases/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/anhoder/go-musicfox"
     description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
@@ -84,7 +84,7 @@ brews:
       email: anhoder@88.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     dependencies:
-      - "terminal-notifier"
+      - terminal-notifier
     install: |
       system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/anhoder/go-musicfox \033[0m"
       bin.install 'musicfox'
