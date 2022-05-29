@@ -1,54 +1,68 @@
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
-  - GOPROXY=https://goproxy.cn,direct
 builds:
-#  - id: go-musicfox-linux-amd64
-#    binary: musicfox
-#    hooks:
-#      pre:
-#        - apt-get update && apt-get install libasound2-dev -y
-#    env:
-#      - CC=x86_64-linux-gnu-gcc
-#      - CXX=x86_64-linux-gnu-g++
-#    goarch:
-#      - amd64
-#    goos:
-#      - linux
-#  - id: go-musicfox-linux-arm64
-#    binary: musicfox
-#    hooks:
-#      pre:
-#        - apt update -y && apt install -y libasound2-dev
-#    goarch:
-#      - arm64
-#    goos:
-#      - linux
-#    env:
-#      - CC=aarch64-linux-gnu-gcc
-#      - CXX=aarch64-linux-gnu-g++
-#    flags:
-#      - -trimpath
-#    ldflags:
-#      - -extldflags "-lc -lrt -lpthread --static"
-  - id: go-musicfox-windows
+  - id: go-musicfox-linux-amd64
+    binary: musicfox
+    hooks:
+      pre:
+        - apt update
+        - apt install -y libasound2-dev
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    goarch:
+      - amd64
+    goos:
+      - linux
+  - id: go-musicfox-linux-arm64
+    binary: musicfox
+    hooks:
+      pre:
+        - apt update
+        - apt install -y libasound2-dev
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+  - id: go-musicfox-windows-amd64
     binary: musicfox
     goarch:
       - amd64
-      - arm64
     goos:
       - windows
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
+  - id: go-musicfox-darwin-arm64
+    binary: musicfox
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+  - id: go-musicfox-darwin-amd64
+    binary: musicfox
+    goarch:
+      - amd64
+    goos:
+      - darwin
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
 archives:
   - id: musicfox
     builds:
-      - go-musicfox-windows
-#      - akash-darwin-arm64
-#      - akash-linux-amd64
-#      - akash-linux-arm64
-#      - akash-windows-amd64
+      - go-musicfox-linux-amd64
+      - go-musicfox-linux-arm64
+      - go-musicfox-windows-amd64
+      - go-musicfox-darwin-amd64
+      - go-musicfox-darwin-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
@@ -68,10 +82,10 @@ archives:
 #      bin.install "akash"
 
 
-#release:
-#  github:
-#    owner: ovrclk
-#    name: akash
-#  prerelease: auto
-#  mode: replace
-#  draft: false
+release:
+  github:
+    owner: anhoder
+    name: go-musicfox
+  prerelease: auto
+  mode: replace
+  draft: false
