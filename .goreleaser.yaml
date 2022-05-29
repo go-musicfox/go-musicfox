@@ -75,7 +75,7 @@ brews:
     tap:
       owner: anhoder
       name: homebrew-go-musicfox
-      token: ${{secrets.HOMEBREW_TAP_TOKEN}}
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     url_template: "https://github.com/anhoder/go-musicfox/releases/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/anhoder/go-musicfox"
     description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
