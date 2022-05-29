@@ -43,7 +43,7 @@ jobs:
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
         name: setup release environment
         run: |-
-          echo 'HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}' >> .release-env
+          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}" >> .release-env
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
         name: release publish
         run: |-
