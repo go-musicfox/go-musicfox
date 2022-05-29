@@ -16,12 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout...
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
+
+      - run: git fetch --prune --unshallow
 
       - name: Setup go...
         uses: actions/setup-go@v2
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
+
+      - name: branch name
+        id: branch_name
+        run: |
+          echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
+          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
 
       - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
 
