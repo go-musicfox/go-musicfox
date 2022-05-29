@@ -17,7 +17,9 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 ## 安装
 
 > Mac推荐使用Iterm2或Kitty 
+> 
 > Linux推荐Kitty
+> 
 > Windows推荐使用Windows Terminal，UI及体验好很多
 
 ### Mac
