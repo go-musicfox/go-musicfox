@@ -8,9 +8,96 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
-## 最近更新（v2.1.0）
+## 预览
 
-### 增加配置文件
+![欢迎界面](preview/img.png)
+![主界面1](preview/img1.png)
+![主界面2](preview/img2.png)
+
+## 安装
+
+> Mac推荐使用Iterm2或Kitty 
+> Linux推荐Kitty
+> Windows推荐使用Windows Terminal，UI及体验好很多
+
+### Mac
+
+#### 1. 使用Homebrew安装
+
+```sh
+brew install anhoder/go-musicfox/go-musicfox
+```
+
+如果你之前安装过musicfox，需要使用下列命令重新链接:
+
+```sh
+brew unlink musicfox && brew link --overwrite go-musicfox
+```
+
+#### 2. 直接下载
+
+下载Mac可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
+
+### Linux
+
+#### 1. 使用Homebrew安装
+
+```sh
+brew install anhoder/go-musicfox/go-musicfox
+```
+
+如果你之前安装过musicfox，需要使用下列命令重新链接:
+
+```sh
+brew unlink musicfox && brew link --overwrite go-musicfox
+```
+
+#### 2. ArchLinux可使用AUR安装：
+
+```sh
+yay -S go-musicfox-bin
+```
+
+#### 3. 直接下载
+
+下载Linux可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
+
+### Windows
+
+下载Windows可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
+
+## 使用
+
+```sh
+$ musicfox
+```
+
+|    按键     |       作用       |                 备注                  |
+|:---------:|:--------------:|:-----------------------------------:|
+| h/H/LEFT  |       左        |                                     |
+| l/L/RIGHT |       右        |                                     |
+|  k/K/UP   |       上        |                                     |
+| j/J/DOWN  |       下        |                                     |
+|    q/Q    |       退出       |                                     |
+|   space   |     暂停/播放      |                                     |
+|     [     |      上一曲       |                                     |
+|     ]     |      下一曲       |                                     |
+|     -     |      减小音量      |                                     |
+|     =     |      加大音量      |                                     |
+| n/N/ENTER |    进入选中的菜单     |                                     |
+|  b/B/ESC  |     返回上级菜单     |                                     |
+|    w/W    |    退出并退出登录     |                                     |
+|     p     |     切换播放方式     |                                     |
+|     P     | 心动模式(仅在歌单中时有效) |                                     |
+|    r/R    |     重新渲染UI     | Windows调整窗口大小后，没有事件触发，可以使用该方法手动重新渲染 |
+|     ,     |    喜欢当前播放歌曲    |                                     |
+|     <     |    喜欢当前选中歌曲    |                                     |
+|     .     |  当前播放歌曲移除出喜欢   |                                     |
+|     >     |  当前选中歌曲移除出喜欢   |                                     |
+|     /     |  标记当前播放歌曲为不喜欢  |                                     |
+|     ?     |  标记当前选中歌曲为不喜欢  |                                     |
+
+## 配置文件
 
 配置文件路径为用户目录下的.go-musicfox/go-musicfox.ini，相关配置有：
 
@@ -53,79 +140,6 @@ showLyric=true
 showNotify=true
 ```
 
-## 预览
-
-![欢迎界面](preview/img.png)
-![主界面1](preview/img1.png)
-![主界面2](preview/img2.png)
-
-## 安装
-
-### Mac
-
-提供两种方式安装：
-
-#### 使用brew安装
-
-```sh
-brew tap anhoder/go-musicfox && brew install go-musicfox
-```
-
-如果你之前安装过musicfox，需要使用下列命令重新链接:
-
-```sh
-brew unlink musicfox && brew link --overwrite go-musicfox
-```
-
-#### 直接下载
-
-下载[Mac可执行文件](https://github.com/anhoder/go-musicfox/releases/latest/download/musicfox.mac)，在iTerm或Terminal中打开
-
-### Linux
-
-下载Linux可执行文件: [amd64版](https://github.com/anhoder/go-musicfox/releases/download/v2.0.1/musicfox.linux_amd64), [arm64版](https://github.com/anhoder/go-musicfox/releases/download/v2.0.1/musicfox.linux_arm64)，在命令行中运行即可。
-
-ArchLinux可使用AUR安装：
-```sh
-yay -S go-musicfox-bin
-```
-
-### Windows
-
-下载[Windows可执行文件](https://github.com/anhoder/go-musicfox/releases/latest/download/musicfox.exe)，在命令行中运行即可。
-
-> **推荐使用Windows Terminal，UI及体验好很多**
-
-## 使用
-
-```sh
-$ musicfox
-```
-
-|    按键     |       作用       |                 备注                  |
-|:---------:|:--------------:|:-----------------------------------:|
-| h/H/LEFT  |       左        |                                     |
-| l/L/RIGHT |       右        |                                     |
-|  k/K/UP   |       上        |                                     |
-| j/J/DOWN  |       下        |                                     |
-|    q/Q    |       退出       |                                     |
-|   space   |     暂停/播放      |                                     |
-|     [     |      上一曲       |                                     |
-|     ]     |      下一曲       |                                     |
-|     -     |      减小音量      |                                     |
-|     =     |      加大音量      |                                     |
-| n/N/ENTER |    进入选中的菜单     |                                     |
-|  b/B/ESC  |     返回上级菜单     |                                     |
-|    w/W    |    退出并退出登录     |                                     |
-|     p     |     切换播放方式     |                                     |
-|     P     | 心动模式(仅在歌单中时有效) |                                     |
-|    r/R    |     重新渲染UI     | Windows调整窗口大小后，没有事件触发，可以使用该方法手动重新渲染 |
-|     ,     |    喜欢当前播放歌曲    |                                     |
-|     <     |    喜欢当前选中歌曲    |                                     |
-|     .     |  当前播放歌曲移除出喜欢   |                                     |
-|     >     |  当前选中歌曲移除出喜欢   |                                     |
-|     /     |  标记当前播放歌曲为不喜欢  |                                     |
-|     ?     |  标记当前选中歌曲为不喜欢  |                                     |
 
 ## TODO
 
