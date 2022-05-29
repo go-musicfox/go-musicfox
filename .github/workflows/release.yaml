@@ -28,10 +28,7 @@ jobs:
       - name: branch name
         id: branch_name
         run: |
-          echo ::set-output name=MAINNET::$(./script/mainnet-from-tag.sh ${GITHUB_REF#refs/tags/})
           echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
-
-      - run: echo "Building for MAINNET=${{ steps.branch_name.outputs.MAINNET }}"
 
       - if: github.ref == 'refs/heads/master'
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
@@ -53,5 +50,4 @@ jobs:
           sudo rm -rf dist
           make release
         env:
-          MAINNET: ${{ steps.branch_name.outputs.MAINNET }}
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}

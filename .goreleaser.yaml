@@ -15,19 +15,19 @@ builds:
       - amd64
     goos:
       - linux
-  - id: go-musicfox-linux-arm64
-    binary: musicfox
-    hooks:
-      pre:
-        - apt update
-        - apt install -y libasound2-dev
-    goarch:
-      - arm64
-    goos:
-      - linux
-    env:
-      - CC=aarch64-linux-gnu-gcc
-      - CXX=aarch64-linux-gnu-g++
+#  - id: go-musicfox-linux-arm64
+#    binary: musicfox
+#    hooks:
+#      pre:
+#        - apt update
+#        - apt install -y libasound2-dev
+#    goarch:
+#      - arm64
+#    goos:
+#      - linux
+#    env:
+#      - CC=aarch64-linux-gnu-gcc
+#      - CXX=aarch64-linux-gnu-g++
   - id: go-musicfox-windows-amd64
     binary: musicfox
     goarch:
@@ -59,7 +59,7 @@ archives:
   - id: musicfox
     builds:
       - go-musicfox-linux-amd64
-      - go-musicfox-linux-arm64
+#      - go-musicfox-linux-arm64
       - go-musicfox-windows-amd64
       - go-musicfox-darwin-amd64
       - go-musicfox-darwin-arm64
