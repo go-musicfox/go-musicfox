@@ -41,6 +41,10 @@ jobs:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
+        name: setup release environment
+        run: |-
+          echo 'HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}' >> .release-env
+      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
         name: release publish
         run: |-
           sudo rm -rf dist
