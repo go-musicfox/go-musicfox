@@ -2,3 +2,4 @@
 .Ds_Store
 bin/
 dist/
+.release-env
