@@ -117,6 +117,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
                 // PC签到
                 signInService.Type = "1"
                 signInService.DailySignin()
+                // 云贝签到
+                ybSignService := service.YunbeiSigninService{}
+                ybSignService.Signin()
 
                 _ = table.SetByKVModel(db.LastSignIn{}, today)
 

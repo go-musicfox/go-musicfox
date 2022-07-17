@@ -116,7 +116,7 @@ loadingSeconds=2
 # welcome=welcome!
 welcome=musicfox
 # 启动时自动签到
-signin=true
+signIn=true
 
 # 进度条配置
 [progress]
