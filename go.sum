@@ -6,6 +6,8 @@ github.com/anhoder/bubbletea v0.12.10 h1:odHU4bCQXz3eQAO4i/g8kU6ZZwvmLtmtjgPvEbx
 github.com/anhoder/bubbletea v0.12.10/go.mod h1:iFGcP1C7j10T7afSw3sAcW2ABRv9JP3va1g+Lt70zOE=
 github.com/anhoder/netease-music v1.1.0 h1:u6N2bLrz2NJStmYcuRUYnUNY2AjvYBTENy5/Cx57Pmg=
 github.com/anhoder/netease-music v1.1.0/go.mod h1:ZGL9tTUC07zwr4TyxIVk8Oq4JkQueQHxJeqJeorhsdo=
+github.com/anhoder/netease-music v1.1.1 h1:EMlyTRtEftvo1dbvufkaTZcFekkHt4YHHlyOzUBbIms=
+github.com/anhoder/netease-music v1.1.1/go.mod h1:ZGL9tTUC07zwr4TyxIVk8Oq4JkQueQHxJeqJeorhsdo=
 github.com/anhoder/notificator v0.0.0-20210718131253-f20ffc1442b0 h1:yOcbdEEB7siyqA4fFgM2dEa5JEUl9vHeP2Ez/X0Jz3E=
 github.com/anhoder/notificator v0.0.0-20210718131253-f20ffc1442b0/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/asmcos/requests v0.0.0-20200725080539-508ff1c69720/go.mod h1:Gth3x79qo77CpZ2G1CVOem/N08Vo4kcIRqpfvwssdDY=
