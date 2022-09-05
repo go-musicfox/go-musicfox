@@ -1,14 +1,14 @@
 package utils
 
 import (
-    "github.com/anhoder/notificator"
-    "go-musicfox/config"
-    "io/ioutil"
     "os"
+
+    "github.com/anhoder/notificator"
+    "go-musicfox/configs"
 )
 
 func Notify(title, text, url string) {
-    if !config.ConfigRegistry.MainShowNotify {
+    if !configs.ConfigRegistry.MainShowNotify {
         return
     }
 
@@ -21,8 +21,8 @@ func Notify(title, text, url string) {
     if _, err := os.Stat(iconPath); os.IsNotExist(err) {
 
         // 写入logo文件
-        logoContent, _ := static.ReadFile("static/logo.png")
-        _ = ioutil.WriteFile(iconPath, logoContent, 0644)
+        logoContent, _ := embedDir.ReadFile("static/logo.png")
+        _ = os.WriteFile(iconPath, logoContent, 0644)
 
     }
 
