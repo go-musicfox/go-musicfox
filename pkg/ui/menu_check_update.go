@@ -1,8 +1,8 @@
 package ui
 
 import (
-    "go-musicfox/constants"
-    "go-musicfox/utils"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/utils"
 )
 
 type CheckUpdateMenu struct {

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"github.com/anhoder/netease-music/service"
 	"github.com/muesli/termenv"
-	"go-musicfox/constants"
-	"go-musicfox/pkg/structs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/pkg/player"
 	db2 "go-musicfox/pkg/storage"
+	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 	"math"
 	"strconv"
@@ -285,11 +286,11 @@ func spaceKeyHandle(m *NeteaseModel) {
 		}
 
 		switch m.player.State {
-		case utils.Paused:
+		case player.Paused:
 			m.player.Resume()
-		case utils.Playing:
+		case player.Playing:
 			m.player.Paused()
-		case utils.Stopped:
+		case player.Stopped:
 			_ = m.player.PlaySong(m.player.playlist[m.player.curSongIndex], DurationNext)
 		}
 
@@ -298,9 +299,9 @@ func spaceKeyHandle(m *NeteaseModel) {
 
 	if inPlayingMenu && songs[selectedIndex].Id == m.player.playlist[m.player.curSongIndex].Id {
 		switch m.player.State {
-		case utils.Paused:
+		case player.Paused:
 			m.player.Resume()
-		case utils.Playing:
+		case player.Playing:
 			m.player.Paused()
 		}
 	} else {

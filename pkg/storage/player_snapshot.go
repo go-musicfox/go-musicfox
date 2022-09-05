@@ -1,7 +1,7 @@
 package storage
 
 import (
-    "go-musicfox/constants"
+    "go-musicfox/pkg/constants"
     "go-musicfox/pkg/structs"
 )
 

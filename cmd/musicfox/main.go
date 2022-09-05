@@ -4,8 +4,8 @@ import (
     "fmt"
     "github.com/gookit/gcli/v2"
     "go-musicfox/configs"
-    "go-musicfox/constants"
     "go-musicfox/pkg/commands"
+    "go-musicfox/pkg/constants"
     "go-musicfox/pkg/ui"
     "go-musicfox/utils"
 )

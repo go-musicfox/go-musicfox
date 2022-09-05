@@ -6,6 +6,7 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "go-musicfox/pkg/constants"
     "io"
     "net/http"
     "os"
@@ -16,7 +17,6 @@ import (
 
     "github.com/buger/jsonparser"
     "go-musicfox/configs"
-    "go-musicfox/constants"
     ds2 "go-musicfox/pkg/structs"
 )
 

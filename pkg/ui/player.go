@@ -8,10 +8,11 @@ import (
     "github.com/mattn/go-runewidth"
     "github.com/muesli/termenv"
     "go-musicfox/configs"
-    "go-musicfox/constants"
-	"go-musicfox/pkg/structs"
+    "go-musicfox/pkg/constants"
     lyric2 "go-musicfox/pkg/lyric"
+    "go-musicfox/pkg/player"
     db2 "go-musicfox/pkg/storage"
+    "go-musicfox/pkg/structs"
     "go-musicfox/utils"
     "math"
     "math/rand"
@@ -61,14 +62,14 @@ type Player struct {
     playErrCount int // 错误计数，当错误连续超过5次，停止播放
     mode PlayMode
 
-    *utils.Player // 播放器
+    *player.Player // 播放器
 }
 
 func NewPlayer(model *NeteaseModel) *Player {
     player := &Player{
         model:  model,
         mode:   PmListLoop,
-        Player: utils.NewPlayer(),
+        Player: player.NewPlayer(),
     }
 
     // done监听
@@ -182,7 +183,7 @@ func (p *Player) songView() string {
         builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
         builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIBrightMagenta))
     }
-    if p.State == utils.Playing {
+    if p.State == player.Playing {
         builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", termenv.ANSIBrightYellow))
     } else {
         builder.WriteString(SetFgStyle("_ _ z Z Z  ", termenv.ANSIBrightRed))
@@ -327,7 +328,7 @@ func (p *Player) PlaySong(song structs.Song, duration PlayDirection) error {
     musicType, err2 := jsonparser.GetString(response, "data", "[0]", "type")
     musicType = strings.ToLower(musicType)
     if err1 != nil || err2 != nil || (musicType != "mp3" && musicType != "flac") {
-        p.State = utils.Stopped
+        p.State = player.Stopped
         p.progressRamp = []string{}
         p.playErrCount++
         if p.playErrCount >= 3 {
@@ -348,9 +349,9 @@ func (p *Player) PlaySong(song structs.Song, duration PlayDirection) error {
 
     switch musicType {
     case "mp3":
-        p.Player.Play(utils.Mp3, url, song.Duration)
+        p.Player.Play(player.Mp3, url, song.Duration)
     case "flac":
-        p.Player.Play(utils.Flac, url, song.Duration)
+        p.Player.Play(player.Flac, url, song.Duration)
     }
 
     var artistNames []string

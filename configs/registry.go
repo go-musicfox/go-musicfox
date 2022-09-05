@@ -2,7 +2,7 @@ package configs
 
 import (
     "github.com/gookit/ini/v2"
-    "go-musicfox/constants"
+    "go-musicfox/pkg/constants"
     "time"
 )
 

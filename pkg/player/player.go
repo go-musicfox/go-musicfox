@@ -1,7 +1,13 @@
-package utils
+package player
 
 import (
     "fmt"
+    "go-musicfox/utils"
+    "io"
+    "net/http"
+    "os"
+    "time"
+
     "github.com/faiface/beep"
     "github.com/faiface/beep/effects"
     "github.com/faiface/beep/flac"
@@ -9,10 +15,6 @@ import (
     "github.com/faiface/beep/speaker"
     "github.com/faiface/beep/vorbis"
     "github.com/faiface/beep/wav"
-    "io"
-    "net/http"
-    "os"
-    "time"
 )
 
 // State 播放器状态
@@ -46,7 +48,7 @@ type Player struct {
     CurMusic UrlMusic
     ctrl     *beep.Ctrl
     volume   *effects.Volume
-    Timer    *Timer
+    Timer    *utils.Timer
     timeChan chan time.Duration
     done     chan struct{}
 
@@ -87,7 +89,7 @@ func (p *Player) listen() {
         cacheRFile, cacheWFile *os.File
     )
 
-    cacheFile := fmt.Sprintf("%s/music_cache", GetLocalDataDir())
+    cacheFile := fmt.Sprintf("%s/music_cache", utils.GetLocalDataDir())
 
     for {
         select {
@@ -179,7 +181,7 @@ func (p *Player) listen() {
             speaker.Play(p.volume)
 
             // 启动计时器
-            p.Timer = New(Options{
+            p.Timer = utils.New(utils.Options{
                 Duration:       24 * time.Hour,
                 TickerInternal: 200 * time.Millisecond,
                 OnRun:          func(started bool) {},

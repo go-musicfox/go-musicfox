@@ -1,6 +1,8 @@
 package storage
 
-import "go-musicfox/constants"
+import (
+	"go-musicfox/pkg/constants"
+)
 
 type User struct {}
 
