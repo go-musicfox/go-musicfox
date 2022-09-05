@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - master
+      - feature/*
     tags:
       - v*
 
@@ -30,7 +31,7 @@ jobs:
         run: |
           echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
 
-      - if: github.ref == 'refs/heads/master'
+      - if: github.ref == 'refs/heads/master' || startsWith(github.ref,'refs/heads/feature/')
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
         run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
 
