@@ -10,9 +10,9 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 ## 预览
 
-![欢迎界面](preview/img.png)
-![主界面1](preview/img1.png)
-![主界面2](preview/img2.png)
+![欢迎界面](examples/img.png)
+![主界面1](examples/img1.png)
+![主界面2](examples/img2.png)
 
 ## 安装
 
