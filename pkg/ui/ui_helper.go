@@ -5,7 +5,7 @@ import (
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/muesli/termenv"
 	"go-musicfox/configs"
-	"go-musicfox/constants"
+	"go-musicfox/pkg/constants"
 	ds2 "go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 	"math/rand"

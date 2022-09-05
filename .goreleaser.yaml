@@ -4,6 +4,7 @@ env:
   - HOMEBREW_NAME=go-musicfox
 builds:
   - id: go-musicfox-linux-amd64
+    main: ./cmd/musicfox
     binary: musicfox
     hooks:
       pre:
@@ -16,6 +17,8 @@ builds:
       - amd64
     goos:
       - linux
+    ldflags:
+      - -s -w -X constants.AppVersion={{.Version}}
 #  - id: go-musicfox-linux-arm64
 #    binary: musicfox
 #    hooks:
@@ -30,29 +33,38 @@ builds:
 #      - CC=aarch64-linux-gnu-gcc
 #      - CXX=aarch64-linux-gnu-g++
   - id: go-musicfox-windows-amd64
+    main: ./cmd/musicfox
     binary: musicfox
     goarch:
       - amd64
     goos:
       - windows
+    ldflags:
+      - -s -w -X constants.AppVersion={{.Version}}
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
   - id: go-musicfox-darwin-arm64
+    main: ./cmd/musicfox
     binary: musicfox
     goarch:
       - arm64
     goos:
       - darwin
+    ldflags:
+      - -s -w -X constants.AppVersion={{.Version}}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
   - id: go-musicfox-darwin-amd64
+    main: ./cmd/musicfox
     binary: musicfox
     goarch:
       - amd64
     goos:
       - darwin
+    ldflags:
+      - -s -w -X constants.AppVersion={{.Version}}
     env:
       - CC=o64-clang
       - CXX=o64-clang++

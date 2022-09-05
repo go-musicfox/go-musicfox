@@ -1,17 +1,17 @@
 package ui
 
 import (
-    "fmt"
-    tea "github.com/anhoder/bubbletea"
-    "github.com/mattn/go-runewidth"
-    "github.com/muesli/termenv"
+	"fmt"
+	tea "github.com/anhoder/bubbletea"
+	"github.com/mattn/go-runewidth"
+	"github.com/muesli/termenv"
 	"go-musicfox/configs"
-    "go-musicfox/constants"
-    "go-musicfox/utils"
-    "math"
-    "strings"
-    "time"
-    "unicode/utf8"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/utils"
+	"math"
+	"strings"
+	"time"
+	"unicode/utf8"
 )
 
 // ModelType 显示模型的类型
