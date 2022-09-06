@@ -78,6 +78,10 @@ func NewPlayer() *Player {
         player.listen()
     }()
 
+    if nowPlayingCenter != nil && remoteCommandCenter != nil {
+        registerCommands(player)
+    }
+
     return player
 }
 
@@ -100,6 +104,10 @@ func (p *Player) listen() {
     for {
         select {
         case <-done:
+            if nowPlayingCenter != nil {
+                nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
+                nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+            }
             p.State = Stopped
             p.pushDone()
             break
@@ -205,6 +213,11 @@ func (p *Player) listen() {
             })
             go p.Timer.Run()
 
+            if nowPlayingCenter != nil {
+                nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
+                nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+            }
+
             // 关闭旧Streamer，避免协程泄漏
             if oldStreamer != nil {
                 _ = oldStreamer.Close()
@@ -217,6 +230,10 @@ func (p *Player) listen() {
 
 // Play 播放音乐
 func (p *Player) Play(songType SongType, url string, duration time.Duration) {
+    if nowPlayingCenter != nil {
+        nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePaused)
+    }
+
     music := UrlMusic{
         url,
         songType,
@@ -277,6 +294,11 @@ func (p *Player) Paused() {
         return
     }
 
+    if nowPlayingCenter != nil {
+        nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePaused)
+        nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+    }
+
     speaker.Lock()
     p.ctrl.Paused = true
     speaker.Unlock()
@@ -295,10 +317,22 @@ func (p *Player) Resume() {
     speaker.Unlock()
     p.State = Playing
     go p.Timer.Run()
+
+    if nowPlayingCenter != nil {
+        nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+        nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
+    }
 }
 
 // Close 关闭
 func (p *Player) Close() {
+    if nowPlayingCenter != nil {
+        nowPlayingCenter.Release()
+    }
+    if remoteCommandCenter != nil {
+        remoteCommandCenter.Release()
+    }
+
     p.Timer.Stop()
     speaker.Clear()
 }
