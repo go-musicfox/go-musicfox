@@ -15,6 +15,7 @@ import (
     "github.com/faiface/beep/speaker"
     "github.com/faiface/beep/vorbis"
     "github.com/faiface/beep/wav"
+    "github.com/progrium/macdriver/mediaplayer"
 )
 
 // State 播放器状态
@@ -34,6 +35,11 @@ const (
     Wav
     Ogg
     Flac
+)
+
+var (
+    nowPlayingCenter *mediaplayer.MPNowPlayingInfoCenter
+    remoteCommandCenter *mediaplayer.MPRemoteCommandCenter
 )
 
 type UrlMusic struct {

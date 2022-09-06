@@ -61,7 +61,6 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 }
 
 func (m *NeteaseModel) Init() tea.Cmd {
-
     projectDir := utils.GetLocalDataDir()
 
     // 全局文件Jar
@@ -150,11 +149,9 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.quitting = true
             return m, tea.Quit
         }
-
     case tea.WindowSizeMsg:
         m.WindowHeight = msgWithType.Height
         m.WindowWidth = msgWithType.Width
-
     }
 
     // Hand off the message and model to the approprate update function for the
