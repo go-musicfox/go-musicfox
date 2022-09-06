@@ -14,6 +14,7 @@ func Notify(title, text, url string) {
 
     notify := notificator.New(notificator.Options{
         AppName: "musicfox",
+        OSXSender: "com.netease.163music",
     })
 
     localDir := GetLocalDataDir()

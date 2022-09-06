@@ -10,6 +10,8 @@ github.com/anhoder/netease-music v1.1.1 h1:EMlyTRtEftvo1dbvufkaTZcFekkHt4YHHlyOz
 github.com/anhoder/netease-music v1.1.1/go.mod h1:ZGL9tTUC07zwr4TyxIVk8Oq4JkQueQHxJeqJeorhsdo=
 github.com/anhoder/notificator v0.0.0-20210718131253-f20ffc1442b0 h1:yOcbdEEB7siyqA4fFgM2dEa5JEUl9vHeP2Ez/X0Jz3E=
 github.com/anhoder/notificator v0.0.0-20210718131253-f20ffc1442b0/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
+github.com/anhoder/notificator v0.0.0-20220906123738-8410351970b5 h1:VdlnKM8XJvuwfmay1uOSio3PT80s17tzRUeazROpsmo=
+github.com/anhoder/notificator v0.0.0-20220906123738-8410351970b5/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/asmcos/requests v0.0.0-20200725080539-508ff1c69720/go.mod h1:Gth3x79qo77CpZ2G1CVOem/N08Vo4kcIRqpfvwssdDY=
 github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946 h1:1B8lZnGJOS3E7LumjuY6lb2NzXy8vBY6N2ag/IK6JdI=
 github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946/go.mod h1:2W5PB6UTVRBypeouEebhwOJrDZOfJvPwMP1mtD8ZXM4=
