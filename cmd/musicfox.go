@@ -2,8 +2,8 @@ package main
 
 import (
     "fmt"
+
     "github.com/gookit/gcli/v2"
-    "go-musicfox/configs"
     "go-musicfox/pkg/commands"
     "go-musicfox/pkg/constants"
     "go-musicfox/pkg/ui"
@@ -17,7 +17,7 @@ func main() {
     app.Description = constants.AppDescription
 
     // 加载config
-    configs.ConfigRegistry = utils.LoadIniConfig()
+    utils.LoadIniConfig()
 
     logo := utils.GetAlphaAscii(app.Name)
     randomColor := ui.GetPrimaryColor()
