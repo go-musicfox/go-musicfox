@@ -32,6 +32,7 @@ const MainShowTitle = true
 const MainLoadingText = "[加载中...]"
 const MainShowLyric = true
 const MainShowNotify = true
+const MainNotifySender = "com.netease.163music"
 
 const AppHelpTemplate = `%s
 
