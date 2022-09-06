@@ -66,7 +66,7 @@ type Player struct {
 }
 
 func NewPlayer(model *NeteaseModel) *Player {
-    player := &Player{
+    p := &Player{
         model:  model,
         mode:   PmListLoop,
         Player: player.NewPlayer(),
@@ -76,27 +76,27 @@ func NewPlayer(model *NeteaseModel) *Player {
     go func() {
         for {
             select {
-            case <-player.Player.Done():
-                player.NextSong()
+            case <-p.Player.Done():
+                p.NextSong()
                 model.Rerender()
-            case duration := <-player.TimeChan():
-                if duration.Seconds()-player.CurMusic.Duration.Seconds() > 10 {
-                    player.NextSong()
+            case duration := <-p.TimeChan():
+                if duration.Seconds()-p.CurMusic.Duration.Seconds() > 10 {
+                    p.NextSong()
                     break
                 }
-                if player.lrcTimer != nil {
+                if p.lrcTimer != nil {
                     select {
-                    case player.lrcTimer.Timer() <- duration:
+                    case p.lrcTimer.Timer() <- duration:
                     default:
                     }
                 }
 
-                player.model.Rerender()
+                p.model.Rerender()
             }
         }
     }()
 
-    return player
+    return p
 }
 
 // playerView 播放器UI，包含 lyricView, songView, progressView
