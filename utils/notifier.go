@@ -22,7 +22,7 @@ func Notify(title, text, url string) {
     if _, err := os.Stat(iconPath); os.IsNotExist(err) {
 
         // 写入logo文件
-        logoContent, _ := embedDir.ReadFile("static/logo.png")
+        logoContent, _ := embedDir.ReadFile("embed/logo.png")
         _ = os.WriteFile(iconPath, logoContent, 0644)
 
     }

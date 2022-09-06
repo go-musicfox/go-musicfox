@@ -1,9 +1,10 @@
 package configs
 
 import (
+    "time"
+
     "github.com/gookit/ini/v2"
     "go-musicfox/pkg/constants"
-    "time"
 )
 
 var ConfigRegistry *Registry
