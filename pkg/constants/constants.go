@@ -1,11 +1,11 @@
 package constants
 
 import (
-    "time"
+	"time"
 )
 
 // AppVersion Inject by -ldflags
-var AppVersion = "2.2.1"
+var AppVersion = "v2.2.1"
 
 const AppName = "musicfox"
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
