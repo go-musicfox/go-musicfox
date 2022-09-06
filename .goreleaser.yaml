@@ -96,7 +96,8 @@ brews:
       email: anhoder@88.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     dependencies:
-      - terminal-notifier
+      - name: terminal-notifier
+        type: optional
     install: |
       system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/anhoder/go-musicfox \033[0m"
       bin.install 'musicfox'
