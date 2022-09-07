@@ -1,3 +1,4 @@
+//go:build darwin
 // +build darwin
 
 package player
@@ -22,8 +23,8 @@ func init() {
 }
 
 func registerCommands(player *Player) {
-	remoteCommandCenter.SkipBackwardCommand().SetPreferredIntervals_(core.NSArray_WithObjects(core.NSNumber_numberWithFloat_(15.0)))
-	remoteCommandCenter.SkipForwardCommand().SetPreferredIntervals_(core.NSArray_WithObjects(core.NSNumber_numberWithFloat_(15.0)))
+	remoteCommandCenter.SkipBackwardCommand().SetPreferredIntervals_(core.NSArray_arrayWithObject_(core.NSNumber_numberWithFloat_(15.0)))
+	remoteCommandCenter.SkipForwardCommand().SetPreferredIntervals_(core.NSArray_arrayWithObject_(core.NSNumber_numberWithFloat_(15.0)))
 
 	handler := NewRemoteCommandHandler(player)
 	cls := objc.NewClass("RemoteCommandHandler", "NSObject")
@@ -83,9 +84,18 @@ func NewRemoteCommandHandler(player *Player) *remoteCommandHandler {
 func nowPlayingInfo(player *Player) core.NSDictionary {
 	total := player.CurMusic.Duration.Seconds()
 	ur := player.Timer.Passed().Seconds()
-	values := core.NSArray_WithObjects(core.NSNumber_numberWithInt_(int32(total)), core.NSNumber_numberWithInt_(int32(ur)), core.NSNumber_numberWithFloat_(1.0))
+
+	values, keys := core.NSArray_array(), core.NSArray_array()
+	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(total)))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyPlaybackDuration))
+
+	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(ur)))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyElapsedPlaybackTime))
+
 	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(1.0))
-	keys := core.NSArray_WithObjects(core.String(mediaplayer.MPMediaItemPropertyPlaybackDuration), core.String(mediaplayer.MPNowPlayingInfoPropertyElapsedPlaybackTime), core.String(mediaplayer.MPNowPlayingInfoPropertyPlaybackRate))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyPlaybackRate))
+
+	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(1.0))
 	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyDefaultPlaybackRate))
 	return core.NSDictionary_dictionaryWithObjects_forKeys_(values, keys)
 }
