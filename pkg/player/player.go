@@ -2,6 +2,7 @@ package player
 
 import (
 	"fmt"
+	"go-musicfox/pkg/player/state"
 	"go-musicfox/utils"
 	"io"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
-	"github.com/progrium/macdriver/mediaplayer"
 )
 
 // State 播放器状态
@@ -37,10 +37,6 @@ const (
 	Flac
 )
 
-var (
-	centers *centerPackage
-)
-
 type UrlMusic struct {
 	Url      string
 	Type     SongType
@@ -57,7 +53,8 @@ type Player struct {
 	timeChan chan time.Duration
 	done     chan struct{}
 
-	musicChan chan UrlMusic
+	musicChan    chan UrlMusic
+	stateHandler *state.Handler
 }
 
 func NewPlayer() *Player {
@@ -77,9 +74,7 @@ func NewPlayer() *Player {
 		player.listen()
 	}()
 
-	if centers != nil {
-		registerCommands(player)
-	}
+	player.stateHandler = state.NewHandler(player)
 
 	return player
 }
@@ -103,10 +98,12 @@ func (p *Player) listen() {
 	for {
 		select {
 		case <-done:
-			if centers != nil {
-				centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
-				centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
-			}
+			p.stateHandler.SetPlaybackState(state.Stopped)
+			p.stateHandler.SetPlayingInfo(state.PlayingInfo{
+				TotalDuration:  p.CurMusic.Duration,
+				PassedDuration: p.Timer.Passed(),
+				Rate:           1.0,
+			})
 			p.State = Stopped
 			p.pushDone()
 			break
@@ -211,10 +208,12 @@ func (p *Player) listen() {
 				},
 			})
 
-			if centers != nil {
-				centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
-				centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
-			}
+			p.stateHandler.SetPlaybackState(state.Stopped)
+			p.stateHandler.SetPlayingInfo(state.PlayingInfo{
+				TotalDuration:  p.CurMusic.Duration,
+				PassedDuration: p.Timer.Passed(),
+				Rate:           1.0,
+			})
 
 			go p.Timer.Run()
 
@@ -230,9 +229,7 @@ func (p *Player) listen() {
 
 // Play 播放音乐
 func (p *Player) Play(songType SongType, url string, duration time.Duration) {
-	if centers != nil {
-		centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
-	}
+	p.stateHandler.SetPlaybackState(state.Stopped)
 
 	music := UrlMusic{
 		url,
@@ -294,10 +291,12 @@ func (p *Player) Paused() {
 		return
 	}
 
-	if centers != nil {
-		centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePaused)
-		centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
-	}
+	p.stateHandler.SetPlaybackState(state.Stopped)
+	p.stateHandler.SetPlayingInfo(state.PlayingInfo{
+		TotalDuration:  p.CurMusic.Duration,
+		PassedDuration: p.Timer.Passed(),
+		Rate:           1.0,
+	})
 
 	speaker.Lock()
 	p.ctrl.Paused = true
@@ -318,20 +317,17 @@ func (p *Player) Resume() {
 	p.State = Playing
 	go p.Timer.Run()
 
-	if centers != nil {
-		centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
-		centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
-	}
+	p.stateHandler.SetPlaybackState(state.Stopped)
+	p.stateHandler.SetPlayingInfo(state.PlayingInfo{
+		TotalDuration:  p.CurMusic.Duration,
+		PassedDuration: p.Timer.Passed(),
+		Rate:           1.0,
+	})
 }
 
 // Close 关闭
 func (p *Player) Close() {
-	if centers != nil {
-		centers.nowPlayingCenter.Release()
-	}
-	if centers != nil {
-		centers.remoteCommandCenter.Release()
-	}
+	p.stateHandler.Release()
 
 	p.Timer.Stop()
 	speaker.Clear()
