@@ -38,8 +38,7 @@ const (
 )
 
 var (
-	nowPlayingCenter    *mediaplayer.MPNowPlayingInfoCenter
-	remoteCommandCenter *mediaplayer.MPRemoteCommandCenter
+	centers *centerPackage
 )
 
 type UrlMusic struct {
@@ -78,7 +77,7 @@ func NewPlayer() *Player {
 		player.listen()
 	}()
 
-	if nowPlayingCenter != nil && remoteCommandCenter != nil {
+	if centers != nil {
 		registerCommands(player)
 	}
 
@@ -104,9 +103,9 @@ func (p *Player) listen() {
 	for {
 		select {
 		case <-done:
-			if nowPlayingCenter != nil {
-				nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
-				nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+			if centers != nil {
+				centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
+				centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
 			}
 			p.State = Stopped
 			p.pushDone()
@@ -212,9 +211,9 @@ func (p *Player) listen() {
 				},
 			})
 
-			if nowPlayingCenter != nil {
-				nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
-				nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+			if centers != nil {
+				centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
+				centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
 			}
 
 			go p.Timer.Run()
@@ -231,8 +230,8 @@ func (p *Player) listen() {
 
 // Play 播放音乐
 func (p *Player) Play(songType SongType, url string, duration time.Duration) {
-	if nowPlayingCenter != nil {
-		nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
+	if centers != nil {
+		centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
 	}
 
 	music := UrlMusic{
@@ -295,9 +294,9 @@ func (p *Player) Paused() {
 		return
 	}
 
-	if nowPlayingCenter != nil {
-		nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePaused)
-		nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+	if centers != nil {
+		centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePaused)
+		centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
 	}
 
 	speaker.Lock()
@@ -319,19 +318,19 @@ func (p *Player) Resume() {
 	p.State = Playing
 	go p.Timer.Run()
 
-	if nowPlayingCenter != nil {
-		nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
-		nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
+	if centers != nil {
+		centers.nowPlayingCenter.SetNowPlayingInfo_(nowPlayingInfo(p))
+		centers.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStatePlaying)
 	}
 }
 
 // Close 关闭
 func (p *Player) Close() {
-	if nowPlayingCenter != nil {
-		nowPlayingCenter.Release()
+	if centers != nil {
+		centers.nowPlayingCenter.Release()
 	}
-	if remoteCommandCenter != nil {
-		remoteCommandCenter.Release()
+	if centers != nil {
+		centers.remoteCommandCenter.Release()
 	}
 
 	p.Timer.Stop()
