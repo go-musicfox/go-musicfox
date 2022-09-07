@@ -31,8 +31,6 @@ require (
 	github.com/muesli/termenv v0.11.0
 	github.com/progrium/macdriver v0.2.0
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
-	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
-	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
 )
 
-replace github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.1-0.20220904071342-0daab703a37c
+replace github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.1
