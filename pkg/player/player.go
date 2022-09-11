@@ -10,6 +10,8 @@ type Player interface {
 	Paused()
 	Resume()
 	Stop()
+	Toggle()
+	Seek(duration time.Duration)
 	PassedTime() time.Duration
 	TimeChan() <-chan time.Duration
 	State() State

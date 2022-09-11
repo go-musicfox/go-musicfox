@@ -33,4 +33,4 @@ require (
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 )
 
-replace github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.3
+replace github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.4

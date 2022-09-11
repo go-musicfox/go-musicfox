@@ -30,6 +30,11 @@ func (t *Timer) Passed() time.Duration {
 	return t.passed
 }
 
+// SetPassed update passed.
+func (t *Timer) SetPassed(passed time.Duration) {
+	t.passed = passed
+}
+
 // Remaining returns how much time is left to end.
 func (t *Timer) Remaining() time.Duration {
 	return t.options.Duration - t.Passed()

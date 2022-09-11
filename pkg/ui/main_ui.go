@@ -385,7 +385,7 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	case " ", "　":
 		spaceKeyHandle(m)
 	case "[", "【":
-		m.player.PreSong()
+		m.player.PreviousSong()
 	case "]", "】":
 		m.player.NextSong()
 	case "p":

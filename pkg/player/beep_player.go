@@ -21,6 +21,9 @@ type player struct {
 	curMusic UrlMusic
 	timer    *utils.Timer
 
+	curStreamer beep.StreamSeekCloser
+	curFormat   beep.Format
+
 	state     State
 	ctrl      *beep.Ctrl
 	volume    *effects.Volume
@@ -59,11 +62,9 @@ func (p *player) listen() {
 	done := make(chan bool)
 
 	var (
-		streamer   beep.StreamSeekCloser
 		cacheRFile *os.File
 		cacheWFile *os.File
 		resp       *http.Response
-		format     beep.Format
 		err        error
 		ctx        context.Context
 		cancel     context.CancelFunc
@@ -98,8 +99,8 @@ func (p *player) listen() {
 				if cacheWFile != nil {
 					_ = cacheWFile.Close()
 				}
-				if streamer != nil {
-					_ = streamer.Close()
+				if p.curStreamer != nil {
+					_ = p.curStreamer.Close()
 				}
 			}
 
@@ -137,13 +138,13 @@ func (p *player) listen() {
 
 			switch p.curMusic.Type {
 			case Mp3:
-				streamer, format, err = mp3.Decode(cacheRFile)
+				p.curStreamer, p.curFormat, err = mp3.Decode(cacheRFile)
 			case Wav:
-				streamer, format, err = wav.Decode(cacheRFile)
+				p.curStreamer, p.curFormat, err = wav.Decode(cacheRFile)
 			case Ogg:
-				streamer, format, err = vorbis.Decode(cacheRFile)
+				p.curStreamer, p.curFormat, err = vorbis.Decode(cacheRFile)
 			case Flac:
-				streamer, format, err = flac.Decode(cacheRFile)
+				p.curStreamer, p.curFormat, err = flac.Decode(cacheRFile)
 			default:
 				p.setState(Stopped)
 				break
@@ -153,13 +154,11 @@ func (p *player) listen() {
 				break
 			}
 
-			sampleRate := format.SampleRate
-			if err = speaker.Init(sampleRate, sampleRate.N(time.Millisecond*200)); err != nil {
+			if err = speaker.Init(p.curFormat.SampleRate, p.curFormat.SampleRate.N(time.Millisecond*200)); err != nil {
 				panic(err)
 			}
 
-			newStreamer := beep.Resample(3, format.SampleRate, sampleRate, streamer)
-			p.ctrl.Streamer = beep.Seq(newStreamer, beep.Callback(func() {
+			p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() {
 				done <- true
 			}))
 			p.volume.Streamer = p.ctrl
@@ -169,7 +168,7 @@ func (p *player) listen() {
 
 			// 启动计时器
 			p.timer = utils.NewTimer(utils.Options{
-				Duration:       24 * time.Hour,
+				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
 				OnRun:          func(started bool) {},
 				OnPaused:       func() {},
@@ -234,6 +233,20 @@ func (p *player) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
+func (p *player) Seek(duration time.Duration) {
+	// 还有问题，暂时不实现
+	//if p.curStreamer != nil {
+	//	err := p.curStreamer.Seek(p.curStreamer.Position())
+	//	fmt.Println(err)
+	//	if err != nil {
+	//		utils.DefaultLogger().Printf("seek error: %+v", err)
+	//	}
+	//}
+	//if p.timer != nil {
+	//	p.timer.SetPassed(duration)
+	//}
+}
+
 // UpVolume 调大音量
 func (p *player) UpVolume() {
 	if p.volume.Volume > 0 {
@@ -285,6 +298,16 @@ func (p *player) Stop() {
 	p.timer.Pause()
 	p.setState(Stopped)
 	speaker.Unlock()
+}
+
+// Toggle 切换状态
+func (p *player) Toggle() {
+	switch p.State() {
+	case Paused:
+		p.Resume()
+	case Playing:
+		p.Paused()
+	}
 }
 
 // Close 关闭
