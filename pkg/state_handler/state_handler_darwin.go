@@ -8,6 +8,7 @@ import (
 	"github.com/progrium/macdriver/mediaplayer"
 	"github.com/progrium/macdriver/objc"
 	"go-musicfox/pkg/player"
+	"time"
 )
 
 var stateMap = map[player.State]core.NSUInteger{
@@ -24,7 +25,7 @@ type Handler struct {
 	commandHandler      *remoteCommandHandler
 }
 
-func NewHandler(p player.Player) *Handler {
+func NewHandler(p Controller) *Handler {
 	playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
 	commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
 	commandHandler := &remoteCommandHandler{
@@ -121,90 +122,89 @@ func (s *Handler) Release() {
 }
 
 type remoteCommandHandler struct {
-	player player.Player
+	player Controller
 }
 
-func (r *remoteCommandHandler) handlePlayCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handlePlayCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	r.player.Resume()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handlePauseCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handlePauseCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	r.player.Paused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleStopCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleStopCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	r.player.Paused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleTogglePlayPauseCommand(_ objc.Object) core.NSInteger {
-	switch r.player.State() {
-	case player.Paused:
-		r.player.Resume()
-	case player.Playing:
-		r.player.Resume()
-	}
+func (r *remoteCommandHandler) handleTogglePlayPauseCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
+	r.player.Toggle()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleNextTrackCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleNextTrackCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
+	r.player.NextSong()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handlePreviousTrackCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handlePreviousTrackCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
+	r.player.PreviousSong()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangeRepeatModeCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleChangeRepeatModeCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangeShuffleModeCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleChangeShuffleModeCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangePlaybackRateCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleChangePlaybackRateCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSeekBackwardCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleSeekBackwardCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSeekForwardCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleSeekForwardCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSkipForwardCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleSkipForwardCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSkipBackwardCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleSkipBackwardCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangePlaybackPositionCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleChangePlaybackPositionCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
+	event := mediaplayer.MPChangePlaybackPositionCommandEvent_fromRef(eventObj)
+	r.player.Seek(time.Duration(event.PositionTime()) * time.Second)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleLikeCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleLikeCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleDisLikeCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleDisLikeCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleBookmarkCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleBookmarkCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleEnableLanguageOptionCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleEnableLanguageOptionCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(_ objc.Object) core.NSInteger {
+func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }

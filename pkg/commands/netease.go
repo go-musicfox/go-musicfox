@@ -1,13 +1,15 @@
 package commands
 
 import (
+	"net/http"
+	_ "net/http/pprof"
+	"strconv"
+
 	tea "github.com/anhoder/bubbletea"
 	"github.com/gookit/gcli/v2"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/ui"
 	"go-musicfox/utils"
-	"net/http"
-	"strconv"
 )
 
 func NewPlayerCommand() *gcli.Command {

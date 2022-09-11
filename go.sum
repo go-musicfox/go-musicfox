@@ -24,6 +24,8 @@ github.com/anhoder/bubbletea v0.12.10 h1:odHU4bCQXz3eQAO4i/g8kU6ZZwvmLtmtjgPvEbx
 github.com/anhoder/bubbletea v0.12.10/go.mod h1:iFGcP1C7j10T7afSw3sAcW2ABRv9JP3va1g+Lt70zOE=
 github.com/anhoder/macdriver v0.2.3 h1:+ztjm34h60hboKgiZZ1PmYWBwVPpXbl0G7NGrAjZ4fE=
 github.com/anhoder/macdriver v0.2.3/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
+github.com/anhoder/macdriver v0.2.4 h1:RjOz2vSG9zI3Y+v0FN6rDkEZAnjvvzTZYvyJKWerCT0=
+github.com/anhoder/macdriver v0.2.4/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
 github.com/anhoder/netease-music v1.1.1 h1:EMlyTRtEftvo1dbvufkaTZcFekkHt4YHHlyOzUBbIms=
 github.com/anhoder/netease-music v1.1.1/go.mod h1:ZGL9tTUC07zwr4TyxIVk8Oq4JkQueQHxJeqJeorhsdo=
 github.com/anhoder/notificator v0.0.0-20220906123738-8410351970b5 h1:VdlnKM8XJvuwfmay1uOSio3PT80s17tzRUeazROpsmo=

@@ -75,7 +75,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 		Player: player.NewPlayer(),
 	}
 
-	p.stateHandler = state_handler.NewHandler(p.Player)
+	p.stateHandler = state_handler.NewHandler(p)
 
 	// done监听
 	go func() {
@@ -349,7 +349,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		}
 		switch direction {
 		case DurationPrev:
-			p.PreSong()
+			p.PreviousSong()
 		case DurationNext:
 			p.NextSong()
 		}
@@ -421,8 +421,8 @@ func (p *Player) NextSong() {
 	_ = p.PlaySong(song, DurationNext)
 }
 
-// PreSong 上一曲
-func (p *Player) PreSong() {
+// PreviousSong 上一曲
+func (p *Player) PreviousSong() {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == PmIntelligent {
 			p.Intelligence(true)
