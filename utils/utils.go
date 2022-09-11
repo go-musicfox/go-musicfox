@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"go-musicfox/pkg/constants"
 	"io"
 	"net/http"
 	"os"
@@ -16,7 +15,8 @@ import (
 	"strings"
 
 	"github.com/buger/jsonparser"
-	"go-musicfox/configs"
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
 )
 
 //go:embed embed

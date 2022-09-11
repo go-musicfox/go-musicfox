@@ -1,19 +1,21 @@
 //go:build !darwin
 // +build !darwin
 
-package state
+package state_handler
+
+import "go-musicfox/pkg/player"
 
 type Handler struct {
 }
 
-func NewHandler(_ Player) *Handler {
+func NewHandler(_ player.Player) *Handler {
 	return &Handler{}
 }
 
 func (s *Handler) registerCommands() {
 }
 
-func (s *Handler) SetPlaybackState(_ uint8) {
+func (s *Handler) SetPlaybackState(_ player.State) {
 }
 
 func (s *Handler) SetPlayingInfo(_ PlayingInfo) {

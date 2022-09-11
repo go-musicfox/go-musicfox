@@ -1,21 +1,21 @@
 //go:build darwin
 // +build darwin
 
-package state
+package state_handler
 
 import (
-	"fmt"
 	"github.com/progrium/macdriver/core"
 	"github.com/progrium/macdriver/mediaplayer"
 	"github.com/progrium/macdriver/objc"
+	"go-musicfox/pkg/player"
 )
 
-var stateMap = map[uint8]core.NSUInteger{
-	Unknown:     mediaplayer.MPNowPlayingPlaybackStateUnknown,
-	Playing:     mediaplayer.MPNowPlayingPlaybackStatePlaying,
-	Paused:      mediaplayer.MPNowPlayingPlaybackStatePaused,
-	Stopped:     mediaplayer.MPNowPlayingPlaybackStateStopped,
-	Interrupted: mediaplayer.MPNowPlayingPlaybackStateInterrupted,
+var stateMap = map[player.State]core.NSUInteger{
+	player.Unknown:     mediaplayer.MPNowPlayingPlaybackStateUnknown,
+	player.Playing:     mediaplayer.MPNowPlayingPlaybackStatePlaying,
+	player.Paused:      mediaplayer.MPNowPlayingPlaybackStatePaused,
+	player.Stopped:     mediaplayer.MPNowPlayingPlaybackStateStopped,
+	player.Interrupted: mediaplayer.MPNowPlayingPlaybackStateInterrupted,
 }
 
 type Handler struct {
@@ -24,11 +24,11 @@ type Handler struct {
 	commandHandler      *remoteCommandHandler
 }
 
-func NewHandler(player Player) *Handler {
+func NewHandler(p player.Player) *Handler {
 	playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
 	commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
 	commandHandler := &remoteCommandHandler{
-		player: player,
+		player: p,
 	}
 
 	handler := &Handler{
@@ -37,6 +37,7 @@ func NewHandler(player Player) *Handler {
 		commandHandler:      commandHandler,
 	}
 	handler.registerCommands()
+	handler.SetPlaybackState(player.Stopped)
 	return handler
 }
 
@@ -73,22 +74,22 @@ func (s *Handler) registerCommands() {
 	s.remoteCommandCenter.TogglePlayPauseCommand().AddTarget_action_(h, objc.Sel("handleTogglePlayPauseCommand:"))
 	s.remoteCommandCenter.NextTrackCommand().AddTarget_action_(h, objc.Sel("handleNextTrackCommand:"))
 	s.remoteCommandCenter.PreviousTrackCommand().AddTarget_action_(h, objc.Sel("handlePreviousTrackCommand:"))
-	s.remoteCommandCenter.ChangeRepeatModeCommand().AddTarget_action_(h, objc.Sel("handleChangeRepeatModeCommand:"))
-	s.remoteCommandCenter.ChangeShuffleModeCommand().AddTarget_action_(h, objc.Sel("handleChangeShuffleModeCommand:"))
-	s.remoteCommandCenter.ChangePlaybackRateCommand().AddTarget_action_(h, objc.Sel("handleChangePlaybackRateCommand:"))
-	s.remoteCommandCenter.SeekBackwardCommand().AddTarget_action_(h, objc.Sel("handleSeekBackwardCommand:"))
-	s.remoteCommandCenter.SeekForwardCommand().AddTarget_action_(h, objc.Sel("handleSeekForwardCommand:"))
-	s.remoteCommandCenter.SkipForwardCommand().AddTarget_action_(h, objc.Sel("handleSkipForwardCommand:"))
-	s.remoteCommandCenter.SkipBackwardCommand().AddTarget_action_(h, objc.Sel("handleSkipBackwardCommand:"))
 	s.remoteCommandCenter.ChangePlaybackPositionCommand().AddTarget_action_(h, objc.Sel("handleChangePlaybackPositionCommand:"))
-	s.remoteCommandCenter.LikeCommand().AddTarget_action_(h, objc.Sel("handleLikeCommand:"))
-	s.remoteCommandCenter.DislikeCommand().AddTarget_action_(h, objc.Sel("handleDisLikeCommand:"))
-	s.remoteCommandCenter.BookmarkCommand().AddTarget_action_(h, objc.Sel("handleBookmarkCommand:"))
-	s.remoteCommandCenter.EnableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleEnableLanguageOptionCommand:"))
-	s.remoteCommandCenter.DisableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleDisableLanguageOptionCommand:"))
+	//s.remoteCommandCenter.ChangeRepeatModeCommand().AddTarget_action_(h, objc.Sel("handleChangeRepeatModeCommand:"))
+	//s.remoteCommandCenter.ChangeShuffleModeCommand().AddTarget_action_(h, objc.Sel("handleChangeShuffleModeCommand:"))
+	//s.remoteCommandCenter.ChangePlaybackRateCommand().AddTarget_action_(h, objc.Sel("handleChangePlaybackRateCommand:"))
+	//s.remoteCommandCenter.SeekBackwardCommand().AddTarget_action_(h, objc.Sel("handleSeekBackwardCommand:"))
+	//s.remoteCommandCenter.SeekForwardCommand().AddTarget_action_(h, objc.Sel("handleSeekForwardCommand:"))
+	//s.remoteCommandCenter.SkipForwardCommand().AddTarget_action_(h, objc.Sel("handleSkipForwardCommand:"))
+	//s.remoteCommandCenter.SkipBackwardCommand().AddTarget_action_(h, objc.Sel("handleSkipBackwardCommand:"))
+	//s.remoteCommandCenter.LikeCommand().AddTarget_action_(h, objc.Sel("handleLikeCommand:"))
+	//s.remoteCommandCenter.DislikeCommand().AddTarget_action_(h, objc.Sel("handleDisLikeCommand:"))
+	//s.remoteCommandCenter.BookmarkCommand().AddTarget_action_(h, objc.Sel("handleBookmarkCommand:"))
+	//s.remoteCommandCenter.EnableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleEnableLanguageOptionCommand:"))
+	//s.remoteCommandCenter.DisableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleDisableLanguageOptionCommand:"))
 }
 
-func (s *Handler) SetPlaybackState(state uint8) {
+func (s *Handler) SetPlaybackState(state player.State) {
 	s.nowPlayingCenter.SetPlaybackState_(stateMap[state])
 }
 
@@ -120,7 +121,7 @@ func (s *Handler) Release() {
 }
 
 type remoteCommandHandler struct {
-	player Player
+	player player.Player
 }
 
 func (r *remoteCommandHandler) handlePlayCommand(_ objc.Object) core.NSInteger {
@@ -134,85 +135,76 @@ func (r *remoteCommandHandler) handlePauseCommand(_ objc.Object) core.NSInteger 
 }
 
 func (r *remoteCommandHandler) handleStopCommand(_ objc.Object) core.NSInteger {
+	r.player.Paused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleTogglePlayPauseCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleTogglePlayPauseCommand(_ objc.Object) core.NSInteger {
+	switch r.player.State() {
+	case player.Paused:
+		r.player.Resume()
+	case player.Playing:
+		r.player.Resume()
+	}
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleNextTrackCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleNextTrackCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handlePreviousTrackCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handlePreviousTrackCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangeRepeatModeCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleChangeRepeatModeCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangeShuffleModeCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleChangeShuffleModeCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangePlaybackRateCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleChangePlaybackRateCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSeekBackwardCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleSeekBackwardCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSeekForwardCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleSeekForwardCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSkipForwardCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleSkipForwardCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleSkipBackwardCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleSkipBackwardCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleChangePlaybackPositionCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleChangePlaybackPositionCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleLikeCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleLikeCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleDisLikeCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleDisLikeCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleBookmarkCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleBookmarkCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleEnableLanguageOptionCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleEnableLanguageOptionCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
-func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(event objc.Object) core.NSInteger {
-	fmt.Printf("playing: %#v\n", event)
+func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(_ objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }

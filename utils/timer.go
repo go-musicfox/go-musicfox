@@ -26,82 +26,81 @@ type Timer struct {
 }
 
 // Passed returns how much done is already passed.
-func (c Timer) Passed() time.Duration {
-	return c.passed
+func (t *Timer) Passed() time.Duration {
+	return t.passed
 }
 
 // Remaining returns how much time is left to end.
-func (c Timer) Remaining() time.Duration {
-	return c.options.Duration - c.Passed()
+func (t *Timer) Remaining() time.Duration {
+	return t.options.Duration - t.Passed()
 }
 
-func (t Timer) timeFromLastTick() time.Duration {
+func (t *Timer) timeFromLastTick() time.Duration {
 	return time.Now().Sub(t.lastTick)
 }
 
 // Run starts just created timer and resumes paused.
-func (c *Timer) Run() {
+func (t *Timer) Run() {
 	//c.active = true
-	c.ticker = time.NewTicker(c.options.TickerInternal)
-	c.lastTick = time.Now()
-	if !c.started {
-		c.started = true
-		c.options.OnRun(true)
+	t.ticker = time.NewTicker(t.options.TickerInternal)
+	t.lastTick = time.Now()
+	if !t.started {
+		t.started = true
+		t.options.OnRun(true)
 	} else {
-		c.options.OnRun(false)
+		t.options.OnRun(false)
 	}
-	c.options.OnTick()
-	c.done = make(chan struct{})
-
+	t.options.OnTick()
+	t.done = make(chan struct{})
 
 	for {
 		select {
-		case tickAt := <-c.ticker.C:
-			c.passed += tickAt.Sub(c.lastTick)
-			c.lastTick = time.Now()
-			c.options.OnTick()
-			if c.Remaining() <= 0 {
-				c.pushDone()
-				c.options.OnDone(false)
-			} else if c.Remaining() <= c.options.TickerInternal {
-				c.pushDone()
-				time.Sleep(c.Remaining())
-				c.passed = c.options.Duration
-				c.options.OnTick()
-				c.options.OnDone(false)
+		case tickAt := <-t.ticker.C:
+			t.passed += tickAt.Sub(t.lastTick)
+			t.lastTick = time.Now()
+			t.options.OnTick()
+			if t.Remaining() <= 0 {
+				t.pushDone()
+				t.options.OnDone(false)
+			} else if t.Remaining() <= t.options.TickerInternal {
+				t.pushDone()
+				time.Sleep(t.Remaining())
+				t.passed = t.options.Duration
+				t.options.OnTick()
+				t.options.OnDone(false)
 
 			}
-		case <-c.done:
+		case <-t.done:
 			return
 		}
 	}
 }
 
 // Pause temporarily pauses active timer.
-func (c *Timer) Pause() {
-	c.pushDone()
-	c.passed += time.Now().Sub(c.lastTick)
-	c.lastTick = time.Now()
-	c.options.OnPaused()
+func (t *Timer) Pause() {
+	t.pushDone()
+	t.passed += time.Now().Sub(t.lastTick)
+	t.lastTick = time.Now()
+	t.options.OnPaused()
 }
 
 // Stop finishes the timer.
-func (c *Timer) Stop() {
-	c.pushDone()
-	c.options.OnDone(true)
+func (t *Timer) Stop() {
+	t.pushDone()
+	t.options.OnDone(true)
 }
 
-// New creates instance of timer.
-func New(options Options) *Timer {
+// NewTimer creates instance of timer.
+func NewTimer(options Options) *Timer {
 	return &Timer{
 		options: options,
 	}
 }
 
-func (c *Timer) pushDone() {
-	c.ticker.Stop()
+func (t *Timer) pushDone() {
+	t.ticker.Stop()
 	select {
-	case c.done <- struct{}{}:
+	case t.done <- struct{}{}:
 	default:
 	}
 }
