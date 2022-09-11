@@ -1,0 +1,26 @@
+*.log
+*.swp
+.idea
+*.patch
+### Go template
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+/alone
+/cliapp
+.DS_Store
+# shell script
+/*.bash
+/*.sh
+/*.zsh
+/*.pid
+go.sum
