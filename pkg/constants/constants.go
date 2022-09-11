@@ -4,8 +4,10 @@ import (
 	"time"
 )
 
-// AppVersion Inject by -ldflags
-var AppVersion = "v2.2.1"
+var (
+	// AppVersion Inject by -ldflags
+	AppVersion = "v2.2.1"
+)
 
 const AppName = "musicfox"
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
@@ -33,6 +35,7 @@ const MainLoadingText = "[加载中...]"
 const MainShowLyric = true
 const MainShowNotify = true
 const MainNotifySender = "com.netease.163music"
+const MainPProfPort = 9876
 
 const AppHelpTemplate = `%s
 

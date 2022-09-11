@@ -285,7 +285,7 @@ func spaceKeyHandle(m *NeteaseModel) {
 			return
 		}
 
-		switch m.player.State {
+		switch m.player.State() {
 		case player.Paused:
 			m.player.Resume()
 		case player.Playing:
@@ -298,7 +298,7 @@ func spaceKeyHandle(m *NeteaseModel) {
 	}
 
 	if inPlayingMenu && songs[selectedIndex].Id == m.player.playlist[m.player.curSongIndex].Id {
-		switch m.player.State {
+		switch m.player.State() {
 		case player.Paused:
 			m.player.Resume()
 		case player.Playing:
@@ -336,7 +336,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 
 	likeService := service.LikeService{
 		ID: strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10),
-		L: strconv.FormatBool(isLike),
+		L:  strconv.FormatBool(isLike),
 	}
 	likeService.Like()
 
@@ -374,7 +374,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 
 	likeService := service.LikeService{
 		ID: strconv.FormatInt(songs[m.selectedIndex].Id, 10),
-		L: strconv.FormatBool(isLike),
+		L:  strconv.FormatBool(isLike),
 	}
 	likeService.Like()
 
