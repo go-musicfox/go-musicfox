@@ -7,7 +7,7 @@ type Controller interface {
 	Resume()
 	Stop()
 	Toggle()
-	NextSong()
-	PreviousSong()
+	Next()
+	Previous()
 	Seek(duration time.Duration)
 }

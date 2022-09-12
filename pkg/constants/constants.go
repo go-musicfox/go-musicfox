@@ -36,6 +36,7 @@ const MainShowLyric = true
 const MainShowNotify = true
 const MainNotifySender = "com.netease.163music"
 const MainPProfPort = 9876
+const MainAltScreen = true
 
 const AppHelpTemplate = `%s
 

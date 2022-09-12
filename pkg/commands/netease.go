@@ -32,7 +32,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	neteaseModel := ui.NewNeteaseModel(configs.ConfigRegistry.StartupLoadingDuration)
 	program := tea.NewProgram(neteaseModel)
 	neteaseModel.BindProgram(program)
-	program.EnterAltScreen()
-	defer program.ExitAltScreen()
+	if configs.ConfigRegistry.MainAltScreen {
+		program.EnterAltScreen()
+		defer program.ExitAltScreen()
+	}
 	return program.Start()
 }

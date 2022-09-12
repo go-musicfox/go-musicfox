@@ -41,6 +41,15 @@ const (
 	PmIntelligent PlayMode = "心动" // 智能模式
 )
 
+type CtrlType string
+
+const (
+	CtrlResume   CtrlType = "Resume"
+	CtrlPaused   CtrlType = "Paused"
+	CtrlPrevious CtrlType = "Previous"
+	CtrlNext     CtrlType = "next"
+)
+
 // Player 网易云音乐播放器
 type Player struct {
 	model *NeteaseModel
@@ -64,6 +73,7 @@ type Player struct {
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
 	mode         PlayMode
 	stateHandler *state_handler.Handler
+	ctrl         chan CtrlType
 
 	player.Player // 播放器
 }
@@ -72,6 +82,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 	p := &Player{
 		model:  model,
 		mode:   PmListLoop,
+		ctrl:   make(chan CtrlType),
 		Player: player.NewPlayer(),
 	}
 
@@ -83,6 +94,17 @@ func NewPlayer(model *NeteaseModel) *Player {
 
 		for {
 			select {
+			case ctrlType := <-p.ctrl:
+				switch ctrlType {
+				case CtrlPaused:
+					p.Paused()
+				case CtrlResume:
+					p.Resume()
+				case CtrlPrevious:
+					p.PreviousSong()
+				case CtrlNext:
+					p.NextSong()
+				}
 			case s := <-p.Player.StateChan():
 				p.stateHandler.SetPlaybackState(s)
 				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
@@ -593,4 +615,14 @@ func (p *Player) Intelligence(appendMode bool) {
 	p.playingMenuKey = "Intelligent"
 
 	_ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)
+}
+
+func (p *Player) Next() {
+	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
+	p.ctrl <- CtrlNext
+}
+
+func (p *Player) Previous() {
+	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
+	p.ctrl <- CtrlPrevious
 }
