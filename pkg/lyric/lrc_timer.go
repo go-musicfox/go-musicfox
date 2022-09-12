@@ -11,12 +11,11 @@ type LRCTimer struct {
 	listeners []Listener
 }
 
-func NewLRCTimer(file *LRCFile) (timer *LRCTimer) {
-	timer = &LRCTimer{
-		file: file,
+func NewLRCTimer(file *LRCFile) *LRCTimer {
+	return &LRCTimer{
+		file:  file,
 		timer: make(chan time.Duration),
 	}
-	return
 }
 
 func (t *LRCTimer) Timer() chan<- time.Duration {
@@ -40,7 +39,7 @@ func (t *LRCTimer) Start() {
 	for {
 		select {
 		case duration := <-t.timer:
-			if duration < time.Duration(fragments[currentIdx].StartTimeMs) * time.Millisecond {
+			if duration < time.Duration(fragments[currentIdx].StartTimeMs)*time.Millisecond {
 				continue
 			}
 
@@ -56,7 +55,7 @@ func (t *LRCTimer) Start() {
 
 			currentIdx++
 			current = fragments[currentIdx]
-		case <- t.stop:
+		case <-t.stop:
 			return
 		}
 

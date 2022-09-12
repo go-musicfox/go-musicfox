@@ -28,6 +28,7 @@ type Registry struct {
 	MainShowNotify   bool   // 显示通知
 	MainNotifySender string // 通知应用图标
 	MainPProfPort    int    // pprof端口
+	MainAltScreen    bool   // AltScreen显示模式
 }
 
 func NewRegistryWithDefault() *Registry {
@@ -50,6 +51,7 @@ func NewRegistryWithDefault() *Registry {
 		MainShowNotify:   constants.MainShowNotify,
 		MainNotifySender: constants.MainNotifySender,
 		MainPProfPort:    constants.MainPProfPort,
+		MainAltScreen:    constants.MainAltScreen,
 	}
 
 	return registry
@@ -95,6 +97,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainShowNotify = ini.Bool("main.showNotify", constants.MainShowNotify)
 	registry.MainNotifySender = ini.String("main.notifySender", constants.MainNotifySender)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
+	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
 
 	return registry
 }

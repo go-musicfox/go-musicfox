@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/faiface/beep"
@@ -24,6 +25,7 @@ type player struct {
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
 
+	mutex     sync.RWMutex
 	state     State
 	ctrl      *beep.Ctrl
 	volume    *effects.Volume
@@ -167,6 +169,7 @@ func (p *player) listen() {
 			p.setState(Playing)
 
 			// 启动计时器
+			p.mutex.Lock()
 			p.timer = utils.NewTimer(utils.Options{
 				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
@@ -180,6 +183,7 @@ func (p *player) listen() {
 					}
 				},
 			})
+			p.mutex.Unlock()
 
 			go p.timer.Run()
 		}
@@ -204,7 +208,9 @@ func (p *player) CurMusic() UrlMusic {
 }
 
 func (p *player) setState(state State) {
+	p.mutex.Lock()
 	p.state = state
+	p.mutex.Unlock()
 	select {
 	case p.stateChan <- state:
 	default:
@@ -213,6 +219,8 @@ func (p *player) setState(state State) {
 
 // State 当前状态
 func (p *player) State() State {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 	return p.state
 }
 
@@ -222,6 +230,8 @@ func (p *player) StateChan() <-chan State {
 }
 
 func (p *player) PassedTime() time.Duration {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 	if p.timer == nil {
 		return 0
 	}

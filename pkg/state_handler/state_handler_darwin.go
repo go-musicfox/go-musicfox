@@ -146,12 +146,12 @@ func (r *remoteCommandHandler) handleTogglePlayPauseCommand(self objc.Object, ev
 }
 
 func (r *remoteCommandHandler) handleNextTrackCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.NextSong()
+	r.player.Next()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePreviousTrackCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.PreviousSong()
+	r.player.Previous()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
