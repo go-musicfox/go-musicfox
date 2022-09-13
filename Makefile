@@ -1,5 +1,5 @@
 PACKAGE_NAME          := go-musicfox
-GOLANG_CROSS_VERSION  ?= v1.18.2
+GOLANG_CROSS_VERSION  ?= v1.19.0
 
 SYSROOT_DIR     ?= sysroots
 SYSROOT_ARCHIVE ?= sysroots.tar.bz2
