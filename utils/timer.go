@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"sync"
 	"time"
 )
 
@@ -21,7 +20,6 @@ type Timer struct {
 	options  Options
 	ticker   *time.Ticker
 	started  bool
-	mutex    sync.RWMutex
 	passed   time.Duration
 	lastTick time.Time
 	done     chan struct{}
@@ -29,16 +27,12 @@ type Timer struct {
 
 // Passed returns how much done is already passed.
 func (t *Timer) Passed() time.Duration {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
 	return t.passed
 }
 
 // SetPassed update passed.
 func (t *Timer) SetPassed(passed time.Duration) {
-	t.mutex.Lock()
 	t.passed = passed
-	t.mutex.Unlock()
 }
 
 // Remaining returns how much time is left to end.
@@ -67,9 +61,7 @@ func (t *Timer) Run() {
 	for {
 		select {
 		case tickAt := <-t.ticker.C:
-			t.mutex.Lock()
 			t.passed += tickAt.Sub(t.lastTick)
-			t.mutex.Unlock()
 			t.lastTick = time.Now()
 			t.options.OnTick()
 			if t.Remaining() <= 0 {
@@ -78,9 +70,7 @@ func (t *Timer) Run() {
 			} else if t.Remaining() <= t.options.TickerInternal {
 				t.pushDone()
 				time.Sleep(t.Remaining())
-				t.mutex.Lock()
 				t.passed = t.options.Duration
-				t.mutex.Unlock()
 				t.options.OnTick()
 				t.options.OnDone(false)
 
@@ -94,9 +84,7 @@ func (t *Timer) Run() {
 // Pause temporarily pauses active timer.
 func (t *Timer) Pause() {
 	t.pushDone()
-	t.mutex.Lock()
 	t.passed += time.Now().Sub(t.lastTick)
-	t.mutex.Unlock()
 	t.lastTick = time.Now()
 	t.options.OnPaused()
 }
@@ -115,7 +103,9 @@ func NewTimer(options Options) *Timer {
 }
 
 func (t *Timer) pushDone() {
-	t.ticker.Stop()
+	if t.ticker != nil {
+		t.ticker.Stop()
+	}
 	select {
 	case t.done <- struct{}{}:
 	default:

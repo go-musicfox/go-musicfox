@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/faiface/beep"
@@ -25,7 +24,6 @@ type player struct {
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
 
-	mutex     sync.RWMutex
 	state     State
 	ctrl      *beep.Ctrl
 	volume    *effects.Volume
@@ -77,7 +75,7 @@ func (p *player) listen() {
 	for {
 		select {
 		case <-done:
-			p.setState(Stopped)
+			p.Stop()
 			break
 		case p.curMusic = <-p.musicChan:
 			// 重置
@@ -120,7 +118,7 @@ func (p *player) listen() {
 
 			resp, err = http.Get(p.curMusic.Url)
 			if err != nil {
-				p.setState(Stopped)
+				p.Stop()
 				break
 			}
 
@@ -148,11 +146,11 @@ func (p *player) listen() {
 			case Flac:
 				p.curStreamer, p.curFormat, err = flac.Decode(cacheRFile)
 			default:
-				p.setState(Stopped)
+				p.Stop()
 				break
 			}
 			if err != nil {
-				p.setState(Stopped)
+				p.Stop()
 				break
 			}
 
@@ -164,12 +162,9 @@ func (p *player) listen() {
 				done <- true
 			}))
 			p.volume.Streamer = p.ctrl
-			p.ctrl.Paused = false
 			speaker.Play(p.volume)
-			p.setState(Playing)
 
-			// 启动计时器
-			p.mutex.Lock()
+			// 计时器
 			p.timer = utils.NewTimer(utils.Options{
 				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
@@ -183,9 +178,8 @@ func (p *player) listen() {
 					}
 				},
 			})
-			p.mutex.Unlock()
 
-			go p.timer.Run()
+			p.Resume()
 		}
 	}
 }
@@ -208,9 +202,7 @@ func (p *player) CurMusic() UrlMusic {
 }
 
 func (p *player) setState(state State) {
-	p.mutex.Lock()
 	p.state = state
-	p.mutex.Unlock()
 	select {
 	case p.stateChan <- state:
 	default:
@@ -219,8 +211,6 @@ func (p *player) setState(state State) {
 
 // State 当前状态
 func (p *player) State() State {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 	return p.state
 }
 
@@ -230,8 +220,6 @@ func (p *player) StateChan() <-chan State {
 }
 
 func (p *player) PassedTime() time.Duration {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -286,28 +274,37 @@ func (p *player) DownVolume() {
 // Paused 暂停播放
 func (p *player) Paused() {
 	speaker.Lock()
+	defer speaker.Unlock()
+	if p.state == Paused || p.state == Stopped {
+		return
+	}
 	p.ctrl.Paused = true
 	p.timer.Pause()
 	p.setState(Paused)
-	speaker.Unlock()
 }
 
 // Resume 继续播放
 func (p *player) Resume() {
 	speaker.Lock()
+	defer speaker.Unlock()
+	if p.state == Playing {
+		return
+	}
 	p.ctrl.Paused = false
 	go p.timer.Run()
 	p.setState(Playing)
-	speaker.Unlock()
 }
 
 // Stop 停止
 func (p *player) Stop() {
 	speaker.Lock()
+	defer speaker.Unlock()
+	if p.state == Stopped {
+		return
+	}
 	p.ctrl.Paused = true
 	p.timer.Pause()
 	p.setState(Stopped)
-	speaker.Unlock()
 }
 
 // Toggle 切换状态

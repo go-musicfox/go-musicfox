@@ -26,7 +26,7 @@ const StartupCheckUpdate = true
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"
 const AppIniFile = "go-musicfox.ini"
-const AppPrimaryRandom = "random"
+const AppPrimaryRandom = "#f90022"
 
 const PlayerSongBr = 320000 // 999000
 
@@ -36,7 +36,7 @@ const MainShowLyric = true
 const MainShowNotify = true
 const MainNotifySender = "com.netease.163music"
 const MainPProfPort = 9876
-const MainAltScreen = true
+const MainAltScreen = false
 
 const AppHelpTemplate = `%s
 
