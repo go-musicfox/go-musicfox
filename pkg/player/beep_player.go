@@ -78,6 +78,7 @@ func (p *player) listen() {
 			p.Stop()
 			break
 		case p.curMusic = <-p.musicChan:
+			p.Paused()
 			// 重置
 			{
 				speaker.Clear()
