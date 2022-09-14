@@ -106,10 +106,10 @@ func NewPlayer(model *NeteaseModel) *Player {
 					p.NextSong()
 				}
 			case s := <-p.Player.StateChan():
-				p.stateHandler.SetPlaybackState(s)
 				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
 					TotalDuration:  p.CurMusic().Duration,
 					PassedDuration: p.PassedTime(),
+					State:          s,
 				})
 				if s == player.Stopped {
 					p.NextSong()

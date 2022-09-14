@@ -38,7 +38,7 @@ func NewHandler(p Controller) *Handler {
 		commandHandler:      commandHandler,
 	}
 	handler.registerCommands()
-	handler.SetPlaybackState(player.Stopped)
+	handler.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
 	return handler
 }
 
@@ -90,14 +90,9 @@ func (s *Handler) registerCommands() {
 	//s.remoteCommandCenter.DisableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleDisableLanguageOptionCommand:"))
 }
 
-func (s *Handler) SetPlaybackState(state player.State) {
-	s.nowPlayingCenter.SetPlaybackState_(stateMap[state])
-}
-
 func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 	total := info.TotalDuration.Seconds()
 	ur := info.PassedDuration.Seconds()
-	rate := info.Rate
 
 	values, keys := core.NSArray_array(), core.NSArray_array()
 	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(total)))
@@ -106,14 +101,12 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(ur)))
 	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyElapsedPlaybackTime))
 
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(rate))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyPlaybackRate))
-
 	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(1.0))
 	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyDefaultPlaybackRate))
 	dict := core.NSDictionary_dictionaryWithObjects_forKeys_(values, keys)
 
 	s.nowPlayingCenter.SetNowPlayingInfo_(dict)
+	s.nowPlayingCenter.SetPlaybackState_(stateMap[info.State])
 }
 
 func (s *Handler) Release() {
