@@ -88,47 +88,54 @@ func NewPlayer(model *NeteaseModel) *Player {
 
 	p.stateHandler = state_handler.NewHandler(p)
 
+	// remote control
+	go func() {
+		defer utils.Recover(false)
+		for ctrlType := range p.ctrl {
+			switch ctrlType {
+			case CtrlPaused:
+				p.Paused()
+			case CtrlResume:
+				p.Resume()
+			case CtrlPrevious:
+				p.PreviousSong()
+			case CtrlNext:
+				p.NextSong()
+			}
+		}
+	}()
+
+	// 状态监听
+	go func() {
+		defer utils.Recover(false)
+		for s := range p.Player.StateChan() {
+			p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
+				TotalDuration:  p.CurMusic().Duration,
+				PassedDuration: p.PassedTime(),
+				State:          s,
+			})
+			if s == player.Stopped {
+				p.NextSong()
+			}
+			model.Rerender()
+		}
+	}()
+
 	// done监听
 	go func() {
 		defer utils.Recover(false)
-
-		for {
-			select {
-			case ctrlType := <-p.ctrl:
-				switch ctrlType {
-				case CtrlPaused:
-					p.Paused()
-				case CtrlResume:
-					p.Resume()
-				case CtrlPrevious:
-					p.PreviousSong()
-				case CtrlNext:
-					p.NextSong()
-				}
-			case s := <-p.Player.StateChan():
-				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-					TotalDuration:  p.CurMusic().Duration,
-					PassedDuration: p.PassedTime(),
-					State:          s,
-				})
-				if s == player.Stopped {
-					p.NextSong()
-				}
-				model.Rerender()
-			case duration := <-p.TimeChan():
-				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
-					p.NextSong()
-					break
-				}
-				if p.lrcTimer != nil {
-					select {
-					case p.lrcTimer.Timer() <- duration:
-					default:
-					}
-				}
-
-				p.model.Rerender()
+		for duration := range p.TimeChan() {
+			if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
+				p.NextSong()
+				break
 			}
+			if p.lrcTimer != nil {
+				select {
+				case p.lrcTimer.Timer() <- duration:
+				default:
+				}
+			}
+			p.model.Rerender()
 		}
 	}()
 
