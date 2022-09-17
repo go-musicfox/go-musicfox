@@ -10,10 +10,11 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/effects"
 	"github.com/faiface/beep/flac"
-	"github.com/faiface/beep/mp3"
+	"github.com/faiface/beep/minimp3"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
+	minimp3pkg "github.com/tosone/minimp3"
 	"go-musicfox/utils"
 )
 
@@ -129,17 +130,18 @@ func (p *player) listen() {
 			}(ctx, cacheWFile, resp.Body)
 
 			for {
-				t := make([]byte, 5)
+				t := make([]byte, 256)
 				_, err = io.ReadFull(cacheRFile, t)
+				_, _ = cacheRFile.Seek(0, 0)
 				if err != io.EOF {
-					_, _ = cacheRFile.Seek(0, 0)
 					break
 				}
 			}
 
 			switch p.curMusic.Type {
 			case Mp3:
-				p.curStreamer, p.curFormat, err = mp3.Decode(cacheRFile)
+				minimp3pkg.BufferSize = 1024 * 60
+				p.curStreamer, p.curFormat, err = minimp3.Decode(cacheRFile)
 			case Wav:
 				p.curStreamer, p.curFormat, err = wav.Decode(cacheRFile)
 			case Ogg:
@@ -274,11 +276,11 @@ func (p *player) DownVolume() {
 
 // Paused 暂停播放
 func (p *player) Paused() {
-	speaker.Lock()
-	defer speaker.Unlock()
-	if p.state == Paused || p.state == Stopped {
+	if p.state != Playing {
 		return
 	}
+	speaker.Lock()
+	defer speaker.Unlock()
 	p.ctrl.Paused = true
 	p.timer.Pause()
 	p.setState(Paused)
@@ -286,11 +288,11 @@ func (p *player) Paused() {
 
 // Resume 继续播放
 func (p *player) Resume() {
-	speaker.Lock()
-	defer speaker.Unlock()
 	if p.state == Playing {
 		return
 	}
+	speaker.Lock()
+	defer speaker.Unlock()
 	p.ctrl.Paused = false
 	go p.timer.Run()
 	p.setState(Playing)
@@ -298,11 +300,11 @@ func (p *player) Resume() {
 
 // Stop 停止
 func (p *player) Stop() {
-	speaker.Lock()
-	defer speaker.Unlock()
 	if p.state == Stopped {
 		return
 	}
+	speaker.Lock()
+	defer speaker.Unlock()
 	p.ctrl.Paused = true
 	p.timer.Pause()
 	p.setState(Stopped)
@@ -311,7 +313,7 @@ func (p *player) Stop() {
 // Toggle 切换状态
 func (p *player) Toggle() {
 	switch p.State() {
-	case Paused:
+	case Paused, Stopped:
 		p.Resume()
 	case Playing:
 		p.Paused()

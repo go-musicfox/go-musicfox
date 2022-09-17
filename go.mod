@@ -19,7 +19,6 @@ require (
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/goutil v0.5.2 // indirect
 	github.com/gookit/ini/v2 v2.1.0
-	github.com/hajimehoshi/go-mp3 v0.3.3 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
 	github.com/jfreymuth/oggvorbis v1.0.3 // indirect
@@ -31,6 +30,11 @@ require (
 	github.com/muesli/termenv v0.11.0
 	github.com/progrium/macdriver v0.2.0
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
+	github.com/tosone/minimp3 v1.0.1
 )
 
-replace github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.4
+replace (
+	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.1
+	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.4
+	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.2
+)
