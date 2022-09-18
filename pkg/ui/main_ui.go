@@ -53,6 +53,10 @@ type mainUIModel struct {
 	player *Player // 播放器
 }
 
+func (m *mainUIModel) Close() {
+	m.player.Close()
+}
+
 func NewMainUIModel(parentModel *NeteaseModel) (m *mainUIModel) {
 	m = new(mainUIModel)
 	m.menuTitle = "网易云音乐"

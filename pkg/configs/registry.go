@@ -29,6 +29,12 @@ type Registry struct {
 	MainNotifySender string // 通知应用图标
 	MainPProfPort    int    // pprof端口
 	MainAltScreen    bool   // AltScreen显示模式
+
+	PlayerEngine     string // 播放引擎
+	PlayerBin        string // mpd路径
+	PlayerConfigFile string // mpd配置文件
+	PlayerMpdNetwork string // mpd网络类型: tcp、unix
+	PlayerMpdAddr    string // mpd地址
 }
 
 func NewRegistryWithDefault() *Registry {
@@ -46,12 +52,13 @@ func NewRegistryWithDefault() *Registry {
 		MainShowTitle:    constants.MainShowTitle,
 		MainLoadingText:  constants.MainLoadingText,
 		MainPlayerSongBr: constants.PlayerSongBr,
-		MainPrimaryColor: constants.AppPrimaryRandom,
+		MainPrimaryColor: constants.AppPrimaryColor,
 		MainShowLyric:    constants.MainShowLyric,
 		MainShowNotify:   constants.MainShowNotify,
 		MainNotifySender: constants.MainNotifySender,
 		MainPProfPort:    constants.MainPProfPort,
 		MainAltScreen:    constants.MainAltScreen,
+		PlayerEngine:     constants.PlayerEngine,
 	}
 
 	return registry
@@ -87,17 +94,22 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainShowTitle = ini.Bool("main.showTitle", constants.MainShowTitle)
 	registry.MainLoadingText = ini.String("main.loadingText", constants.MainLoadingText)
 	registry.MainPlayerSongBr = ini.Int64("main.songBr", constants.PlayerSongBr)
-	primaryColor := ini.String("main.primaryColor", constants.AppPrimaryRandom)
+	primaryColor := ini.String("main.primaryColor", constants.AppPrimaryColor)
 	if primaryColor != "" {
 		registry.MainPrimaryColor = primaryColor
 	} else {
-		registry.MainPrimaryColor = constants.AppPrimaryRandom
+		registry.MainPrimaryColor = constants.AppPrimaryColor
 	}
 	registry.MainShowLyric = ini.Bool("main.showLyric", constants.MainShowLyric)
 	registry.MainShowNotify = ini.Bool("main.showNotify", constants.MainShowNotify)
 	registry.MainNotifySender = ini.String("main.notifySender", constants.MainNotifySender)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
+	registry.PlayerEngine = ini.String("player.engine", constants.PlayerEngine)
+	registry.PlayerBin = ini.String("player.mpdBin", "")
+	registry.PlayerConfigFile = ini.String("player.mpdConfigFile", "")
+	registry.PlayerMpdNetwork = ini.String("player.mpdNetwork", "")
+	registry.PlayerMpdAddr = ini.String("player.mpdAddr", "")
 
 	return registry
 }

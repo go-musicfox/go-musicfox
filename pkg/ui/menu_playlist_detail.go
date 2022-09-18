@@ -9,7 +9,7 @@ import (
 )
 
 type PlaylistDetailMenu struct {
-	menus 	   []MenuItem
+	menus      []MenuItem
 	songs      []structs.Song
 	PlaylistId int64
 }
@@ -61,7 +61,7 @@ func (m *PlaylistDetailMenu) BeforeNextPageHook() Hook {
 func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 
-		playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"}	// 最近S个收藏者，设为0
+		playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"} // 最近S个收藏者，设为0
 		code, response := playlistDetail.PlaylistDetail()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
@@ -86,4 +86,3 @@ func (m *PlaylistDetailMenu) TopOutHook() Hook {
 	// Nothing to do
 	return nil
 }
-

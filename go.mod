@@ -13,6 +13,7 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/faiface/beep v1.1.0
+	github.com/fhs/gompd/v2 v2.2.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 	github.com/forgoer/openssl v1.2.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
@@ -28,6 +29,7 @@ require (
 	github.com/mewkiz/pkg v0.0.0-20211102230744-16a6ce8f1b77 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/termenv v0.11.0
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/progrium/macdriver v0.2.0
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.1

@@ -1,6 +1,8 @@
 package player
 
 import (
+	"go-musicfox/pkg/configs"
+	"os/exec"
 	"time"
 )
 
@@ -19,4 +21,25 @@ type Player interface {
 	UpVolume()
 	DownVolume()
 	Close()
+}
+
+func NewPlayerFromConfig() Player {
+	registry := configs.ConfigRegistry
+	var player Player
+	switch registry.PlayerEngine {
+	case "beep":
+		player = NewBeepPlayer()
+	case "mpd":
+		if registry.PlayerMpdNetwork == "" || registry.PlayerMpdAddr == "" ||
+			registry.PlayerBin == "" {
+			panic("缺少MPD配置")
+		}
+		cmd := exec.Command(registry.PlayerBin, "--version")
+		if err := cmd.Run(); err != nil {
+			panic(err)
+		}
+		player = NewMpdPlayer(registry.PlayerBin, registry.PlayerConfigFile, registry.PlayerMpdNetwork, registry.PlayerMpdAddr)
+	}
+
+	return player
 }
