@@ -125,13 +125,22 @@ func (m *NeteaseModel) Init() tea.Cmd {
 
 				_ = table.SetByKVModel(storage.LastSignIn{}, today)
 
-				utils.Notify("签到成功", "今日手机、PC端签到成功~", constants.AppGithubUrl)
+				utils.Notify(utils.NotifyContent{
+					Title: "签到成功",
+					Text:  "今日手机、PC端签到成功",
+					Url:   constants.AppGithubUrl,
+				})
 			}
 		}
 
 		// 检查更新
 		if configs.ConfigRegistry.StartupCheckUpdate && utils.CheckUpdate() {
-			utils.Notify("发现新版本", "点击去看看吧~", constants.AppLatestReleases)
+			utils.Notify(utils.NotifyContent{
+				Title:  "发现新版本",
+				Text:   "点击去看看呗",
+				Url:    constants.AppLatestReleases,
+				Sender: "default",
+			})
 		}
 	}()
 
@@ -150,6 +159,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 登录界面输入q不退出
 		if m.modelType == MtMain && (k == "q" || k == "Q" || k == "ctrl+c") {
 			m.quitting = true
+			m.Close()
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
@@ -203,4 +213,8 @@ func (m *NeteaseModel) Rerender() {
 	if m.program != nil {
 		m.program.Rerender(m.View())
 	}
+}
+
+func (m *NeteaseModel) Close() {
+	m.mainUIModel.Close()
 }

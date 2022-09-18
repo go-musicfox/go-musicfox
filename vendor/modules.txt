@@ -35,6 +35,9 @@ github.com/faiface/beep/minimp3
 github.com/faiface/beep/speaker
 github.com/faiface/beep/vorbis
 github.com/faiface/beep/wav
+# github.com/fhs/gompd/v2 v2.2.0
+## explicit
+github.com/fhs/gompd/v2/mpd
 # github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 ## explicit
 github.com/fogleman/ease
@@ -117,6 +120,7 @@ github.com/modern-go/reflect2
 ## explicit
 github.com/muesli/termenv
 # github.com/pkg/errors v0.9.1
+## explicit
 github.com/pkg/errors
 # github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.4
 ## explicit

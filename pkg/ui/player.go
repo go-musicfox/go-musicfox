@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
@@ -43,11 +44,17 @@ const (
 
 type CtrlType string
 
+type CtrlSignal struct {
+	Type     CtrlType
+	Duration time.Duration
+}
+
 const (
 	CtrlResume   CtrlType = "Resume"
 	CtrlPaused   CtrlType = "Paused"
 	CtrlPrevious CtrlType = "Previous"
 	CtrlNext     CtrlType = "next"
+	CtrlSeek     CtrlType = "seek"
 )
 
 // Player 网易云音乐播放器
@@ -73,7 +80,7 @@ type Player struct {
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
 	mode         PlayMode
 	stateHandler *state_handler.Handler
-	ctrl         chan CtrlType
+	ctrl         chan CtrlSignal
 
 	player.Player // 播放器
 }
@@ -82,8 +89,8 @@ func NewPlayer(model *NeteaseModel) *Player {
 	p := &Player{
 		model:  model,
 		mode:   PmListLoop,
-		ctrl:   make(chan CtrlType),
-		Player: player.NewPlayer(),
+		ctrl:   make(chan CtrlSignal),
+		Player: player.NewPlayerFromConfig(),
 	}
 
 	p.stateHandler = state_handler.NewHandler(p)
@@ -91,8 +98,8 @@ func NewPlayer(model *NeteaseModel) *Player {
 	// remote control
 	go func() {
 		defer utils.Recover(false)
-		for ctrlType := range p.ctrl {
-			switch ctrlType {
+		for signal := range p.ctrl {
+			switch signal.Type {
 			case CtrlPaused:
 				p.Paused()
 			case CtrlResume:
@@ -101,6 +108,9 @@ func NewPlayer(model *NeteaseModel) *Player {
 				p.PreviousSong()
 			case CtrlNext:
 				p.NextSong()
+			case CtrlSeek:
+				p.Player.Seek(signal.Duration)
+				p.lrcTimer.Rewind()
 			}
 		}
 	}()
@@ -400,7 +410,12 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	for _, artist := range song.Artists {
 		artistNames = append(artistNames, artist.Name)
 	}
-	utils.Notify(fmt.Sprintf("正在播放: %s", song.Name), fmt.Sprintf("歌手: %s 专辑: %s", strings.Join(artistNames, ","), song.Album.Name), constants.AppGithubUrl)
+	utils.Notify(utils.NotifyContent{
+		Title: "正在播放: " + song.Name,
+		Text:  fmt.Sprintf("歌手: %s 专辑: %s", strings.Join(artistNames, ","), song.Album.Name),
+		Url:   constants.AppGithubUrl,
+		Icon:  song.PicUrl,
+	})
 
 	p.playErrCount = 0
 
@@ -626,10 +641,17 @@ func (p *Player) Intelligence(appendMode bool) {
 
 func (p *Player) Next() {
 	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
-	p.ctrl <- CtrlNext
+	p.ctrl <- CtrlSignal{Type: CtrlNext}
 }
 
 func (p *Player) Previous() {
 	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
-	p.ctrl <- CtrlPrevious
+	p.ctrl <- CtrlSignal{Type: CtrlPrevious}
+}
+
+func (p *Player) Seek(duration time.Duration) {
+	p.ctrl <- CtrlSignal{
+		Type:     CtrlSeek,
+		Duration: duration,
+	}
 }

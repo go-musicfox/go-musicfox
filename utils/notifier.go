@@ -1,31 +1,44 @@
 package utils
 
 import (
+	"go-musicfox/pkg/constants"
 	"os"
 
 	"github.com/anhoder/notificator"
 	"go-musicfox/pkg/configs"
 )
 
-func Notify(title, text, url string) {
+type NotifyContent struct {
+	Title  string
+	Text   string
+	Url    string
+	Icon   string
+	Sender string
+}
+
+func Notify(content NotifyContent) {
 	if !configs.ConfigRegistry.MainShowNotify {
 		return
 	}
 
-	notify := notificator.New(notificator.Options{
-		AppName:   "musicfox",
-		OSXSender: configs.ConfigRegistry.MainNotifySender,
-	})
-
-	localDir := GetLocalDataDir()
-	iconPath := localDir + "/logo.png"
-	if _, err := os.Stat(iconPath); os.IsNotExist(err) {
-
-		// 写入logo文件
-		logoContent, _ := embedDir.ReadFile("embed/logo.png")
-		_ = os.WriteFile(iconPath, logoContent, 0644)
-
+	if content.Sender == "" {
+		content.Sender = configs.ConfigRegistry.MainNotifySender
 	}
 
-	_ = notify.Push(notificator.UrNormal, title, text, iconPath, url)
+	notify := notificator.New(notificator.Options{
+		AppName:   constants.AppName,
+		OSXSender: content.Sender,
+	})
+
+	if content.Icon == "" {
+		localDir := GetLocalDataDir()
+		content.Icon = localDir + "/logo.png"
+		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
+			// 写入logo文件
+			logoContent, _ := embedDir.ReadFile("embed/logo.png")
+			_ = os.WriteFile(content.Icon, logoContent, 0644)
+		}
+	}
+
+	_ = notify.Push(notificator.UrNormal, content.Title, content.Text, content.Icon, content.Url)
 }

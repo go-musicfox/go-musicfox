@@ -25,6 +25,12 @@ type Handler struct {
 	commandHandler      *remoteCommandHandler
 }
 
+const (
+	MediaTypeNone = iota
+	MediaTypeAudio
+	MediaTypeVedio
+)
+
 func NewHandler(p Controller) *Handler {
 	playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
 	commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
@@ -103,6 +109,19 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 
 	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(1.0))
 	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyDefaultPlaybackRate))
+
+	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(float32(ur / total)))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyPlaybackProgress))
+
+	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(MediaTypeAudio))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyMediaType))
+
+	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(mediaplayer.MPMediaTypeMusic))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyMediaType))
+
+	values = values.ArrayByAddingObject_(core.String("测试"))
+	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyTitle))
+
 	dict := core.NSDictionary_dictionaryWithObjects_forKeys_(values, keys)
 
 	s.nowPlayingCenter.SetNowPlayingInfo_(dict)

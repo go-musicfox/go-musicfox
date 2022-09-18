@@ -7,7 +7,11 @@ import (
 
 var logger *log.Logger
 
-func DefaultLogger() *log.Logger {
+func SetLogger(l *log.Logger) {
+	logger = l
+}
+
+func Logger() *log.Logger {
 	if logger != nil {
 		return logger
 	}

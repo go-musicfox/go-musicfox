@@ -18,7 +18,7 @@ import (
 	"go-musicfox/utils"
 )
 
-type player struct {
+type beepPlayer struct {
 	curMusic UrlMusic
 	timer    *utils.Timer
 
@@ -30,12 +30,13 @@ type player struct {
 	volume    *effects.Volume
 	timeChan  chan time.Duration
 	stateChan chan State
-
 	musicChan chan UrlMusic
+
+	close chan struct{}
 }
 
-func NewPlayer() Player {
-	p := &player{
+func NewBeepPlayer() Player {
+	p := &beepPlayer{
 		state: Stopped,
 
 		timeChan:  make(chan time.Duration),
@@ -48,18 +49,18 @@ func NewPlayer() Player {
 			Base:   2,
 			Silent: false,
 		},
+		close: make(chan struct{}),
 	}
 
 	go func() {
 		defer utils.Recover(false)
 		p.listen()
 	}()
-
 	return p
 }
 
 // listen 开始监听
-func (p *player) listen() {
+func (p *beepPlayer) listen() {
 	done := make(chan bool)
 
 	var (
@@ -72,12 +73,15 @@ func (p *player) listen() {
 	)
 
 	cacheFile := utils.GetLocalDataDir() + "/music_cache"
-
 	for {
 		select {
+		case <-p.close:
+			if cancel != nil {
+				cancel()
+			}
+			return
 		case <-done:
 			p.Stop()
-			break
 		case p.curMusic = <-p.musicChan:
 			p.Paused()
 			// 重置
@@ -181,18 +185,17 @@ func (p *player) listen() {
 					}
 				},
 			})
-
 			p.Resume()
 		}
 	}
 }
 
 // Play 播放音乐
-func (p *player) Play(songType SongType, url string, duration time.Duration) {
+func (p *beepPlayer) Play(songType SongType, url string, duration time.Duration) {
 	music := UrlMusic{
-		url,
-		songType,
-		duration,
+		Url:      url,
+		Type:     songType,
+		Duration: duration,
 	}
 	select {
 	case p.musicChan <- music:
@@ -200,11 +203,11 @@ func (p *player) Play(songType SongType, url string, duration time.Duration) {
 	}
 }
 
-func (p *player) CurMusic() UrlMusic {
+func (p *beepPlayer) CurMusic() UrlMusic {
 	return p.curMusic
 }
 
-func (p *player) setState(state State) {
+func (p *beepPlayer) setState(state State) {
 	p.state = state
 	select {
 	case p.stateChan <- state:
@@ -213,16 +216,16 @@ func (p *player) setState(state State) {
 }
 
 // State 当前状态
-func (p *player) State() State {
+func (p *beepPlayer) State() State {
 	return p.state
 }
 
 // StateChan 状态发生变更
-func (p *player) StateChan() <-chan State {
+func (p *beepPlayer) StateChan() <-chan State {
 	return p.stateChan
 }
 
-func (p *player) PassedTime() time.Duration {
+func (p *beepPlayer) PassedTime() time.Duration {
 	if p.timer == nil {
 		return 0
 	}
@@ -230,17 +233,17 @@ func (p *player) PassedTime() time.Duration {
 }
 
 // TimeChan 获取定时器
-func (p *player) TimeChan() <-chan time.Duration {
+func (p *beepPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *player) Seek(duration time.Duration) {
+func (p *beepPlayer) Seek(duration time.Duration) {
 	// 还有问题，暂时不实现
 	//if p.curStreamer != nil {
 	//	err := p.curStreamer.Seek(p.curStreamer.Position())
 	//	fmt.Println(err)
 	//	if err != nil {
-	//		utils.DefaultLogger().Printf("seek error: %+v", err)
+	//		utils.Logger().Printf("seek error: %+v", err)
 	//	}
 	//}
 	//if p.timer != nil {
@@ -249,7 +252,7 @@ func (p *player) Seek(duration time.Duration) {
 }
 
 // UpVolume 调大音量
-func (p *player) UpVolume() {
+func (p *beepPlayer) UpVolume() {
 	if p.volume.Volume > 0 {
 		return
 	}
@@ -261,7 +264,7 @@ func (p *player) UpVolume() {
 }
 
 // DownVolume 调小音量
-func (p *player) DownVolume() {
+func (p *beepPlayer) DownVolume() {
 	if p.volume.Volume <= -5 {
 		speaker.Lock()
 		p.volume.Silent = true
@@ -275,7 +278,7 @@ func (p *player) DownVolume() {
 }
 
 // Paused 暂停播放
-func (p *player) Paused() {
+func (p *beepPlayer) Paused() {
 	if p.state != Playing {
 		return
 	}
@@ -287,7 +290,7 @@ func (p *player) Paused() {
 }
 
 // Resume 继续播放
-func (p *player) Resume() {
+func (p *beepPlayer) Resume() {
 	if p.state == Playing {
 		return
 	}
@@ -299,7 +302,7 @@ func (p *player) Resume() {
 }
 
 // Stop 停止
-func (p *player) Stop() {
+func (p *beepPlayer) Stop() {
 	if p.state == Stopped {
 		return
 	}
@@ -311,7 +314,7 @@ func (p *player) Stop() {
 }
 
 // Toggle 切换状态
-func (p *player) Toggle() {
+func (p *beepPlayer) Toggle() {
 	switch p.State() {
 	case Paused, Stopped:
 		p.Resume()
@@ -321,7 +324,8 @@ func (p *player) Toggle() {
 }
 
 // Close 关闭
-func (p *player) Close() {
+func (p *beepPlayer) Close() {
 	p.timer.Stop()
 	speaker.Clear()
+	p.close <- struct{}{}
 }

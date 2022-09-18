@@ -341,9 +341,17 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 	likeService.Like()
 
 	if isLike {
-		utils.Notify("已添加到我喜欢的歌曲", m.player.playlist[m.player.curSongIndex].Name, constants.AppGithubUrl)
+		utils.Notify(utils.NotifyContent{
+			Title: "已添加到我喜欢的歌曲",
+			Text:  m.player.playlist[m.player.curSongIndex].Name,
+			Url:   constants.AppGithubUrl,
+		})
 	} else {
-		utils.Notify("已从我喜欢的歌曲移除", m.player.playlist[m.player.curSongIndex].Name, constants.AppGithubUrl)
+		utils.Notify(utils.NotifyContent{
+			Title: "已从我喜欢的歌曲移除",
+			Text:  m.player.playlist[m.player.curSongIndex].Name,
+			Url:   constants.AppGithubUrl,
+		})
 	}
 }
 
@@ -351,7 +359,11 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 func logout() {
 	table := db2.NewTable()
 	_ = table.DeleteByKVModel(db2.User{})
-	utils.Notify("登出成功", "已清理用户信息", constants.AppGithubUrl)
+	utils.Notify(utils.NotifyContent{
+		Title: "登出成功",
+		Text:  "已清理用户信息",
+		Url:   constants.AppGithubUrl,
+	})
 }
 
 // likeSelectedSong like/unlike selected song
@@ -379,9 +391,17 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 	likeService.Like()
 
 	if isLike {
-		utils.Notify("已添加到我喜欢的歌曲", songs[m.selectedIndex].Name, constants.AppGithubUrl)
+		utils.Notify(utils.NotifyContent{
+			Title: "已添加到我喜欢的歌曲",
+			Text:  songs[m.selectedIndex].Name,
+			Url:   constants.AppGithubUrl,
+		})
 	} else {
-		utils.Notify("已从我喜欢的歌曲移除", songs[m.selectedIndex].Name, constants.AppGithubUrl)
+		utils.Notify(utils.NotifyContent{
+			Title: "已从我喜欢的歌曲移除",
+			Text:  songs[m.selectedIndex].Name,
+			Url:   constants.AppGithubUrl,
+		})
 	}
 }
 
@@ -407,7 +427,11 @@ func trashPlayingSong(m *NeteaseModel) {
 	}
 	trashService.FmTrash()
 
-	utils.Notify("已标记为不喜欢", m.player.playlist[m.player.curSongIndex].Name, constants.AppGithubUrl)
+	utils.Notify(utils.NotifyContent{
+		Title: "已标记为不喜欢",
+		Text:  m.player.playlist[m.player.curSongIndex].Name,
+		Url:   constants.AppGithubUrl,
+	})
 }
 
 // trashSelectedSong 标记为不喜欢
@@ -433,5 +457,9 @@ func trashSelectedSong(m *NeteaseModel) {
 	}
 	trashService.FmTrash()
 
-	utils.Notify("已标记为不喜欢", songs[m.selectedIndex].Name, constants.AppGithubUrl)
+	utils.Notify(utils.NotifyContent{
+		Title: "已标记为不喜欢",
+		Text:  songs[m.selectedIndex].Name,
+		Url:   constants.AppGithubUrl,
+	})
 }
