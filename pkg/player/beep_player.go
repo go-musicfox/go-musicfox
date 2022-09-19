@@ -191,12 +191,7 @@ func (p *beepPlayer) listen() {
 }
 
 // Play 播放音乐
-func (p *beepPlayer) Play(songType SongType, url string, duration time.Duration) {
-	music := UrlMusic{
-		Url:      url,
-		Type:     songType,
-		Duration: duration,
-	}
+func (p *beepPlayer) Play(music UrlMusic) {
 	select {
 	case p.musicChan <- music:
 	default:
@@ -325,7 +320,9 @@ func (p *beepPlayer) Toggle() {
 
 // Close 关闭
 func (p *beepPlayer) Close() {
-	p.timer.Stop()
+	if p.timer != nil {
+		p.timer.Stop()
+	}
 	speaker.Clear()
 	p.close <- struct{}{}
 }

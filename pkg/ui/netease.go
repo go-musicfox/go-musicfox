@@ -28,7 +28,7 @@ type NeteaseModel struct {
 	*startupModel
 
 	// main ui
-	*mainUIModel
+	*MainUIModel
 
 	// login
 	loginModel *LoginModel
@@ -47,7 +47,7 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 	m.TotalDuration = loadingDuration
 
 	// main menu
-	m.mainUIModel = NewMainUIModel(m)
+	m.MainUIModel = NewMainUIModel(m)
 
 	// login
 	m.loginModel = NewLogin()
@@ -216,5 +216,5 @@ func (m *NeteaseModel) Rerender() {
 }
 
 func (m *NeteaseModel) Close() {
-	m.mainUIModel.Close()
+	m.MainUIModel.Close()
 }

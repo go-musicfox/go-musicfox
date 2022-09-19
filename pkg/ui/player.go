@@ -87,14 +87,14 @@ type Player struct {
 
 func NewPlayer(model *NeteaseModel) *Player {
 	p := &Player{
-		model:  model,
-		mode:   PmListLoop,
-		ctrl:   make(chan CtrlSignal),
-		Player: player.NewPlayerFromConfig(),
+		model: model,
+		mode:  PmListLoop,
+		ctrl:  make(chan CtrlSignal),
 	}
 
 	p.stateHandler = state_handler.NewHandler(p)
 
+	p.Player = player.NewPlayerFromConfig()
 	// remote control
 	go func() {
 		defer utils.Recover(false)
@@ -119,13 +119,19 @@ func NewPlayer(model *NeteaseModel) *Player {
 	go func() {
 		defer utils.Recover(false)
 		for s := range p.Player.StateChan() {
+			music := p.CurMusic()
 			p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-				TotalDuration:  p.CurMusic().Duration,
+				TotalDuration:  music.Duration,
 				PassedDuration: p.PassedTime(),
 				State:          s,
+				PicUrl:         music.PicUrl,
+				Name:           music.Name,
+				Album:          music.Album.Name,
+				Artist:         music.ArtistName(),
+				AlbumArtist:    music.Album.ArtistName(),
 			})
 			if s == player.Stopped {
-				p.NextSong()
+				p.Next()
 			}
 			model.Rerender()
 		}
@@ -399,20 +405,15 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		go p.updateLyric(song.Id)
 	}
 
-	switch musicType {
-	case "mp3":
-		p.Player.Play(player.Mp3, url, song.Duration)
-	case "flac":
-		p.Player.Play(player.Flac, url, song.Duration)
-	}
+	p.Player.Play(player.UrlMusic{
+		Url:  url,
+		Song: song,
+		Type: player.SongTypeMapping[musicType],
+	})
 
-	var artistNames []string
-	for _, artist := range song.Artists {
-		artistNames = append(artistNames, artist.Name)
-	}
 	utils.Notify(utils.NotifyContent{
 		Title: "正在播放: " + song.Name,
-		Text:  fmt.Sprintf("歌手: %s 专辑: %s", strings.Join(artistNames, ","), song.Album.Name),
+		Text:  fmt.Sprintf("歌手: %s 专辑: %s", song.ArtistName(), song.Album.Name),
 		Url:   constants.AppGithubUrl,
 		Icon:  song.PicUrl,
 	})

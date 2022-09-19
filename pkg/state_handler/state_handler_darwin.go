@@ -32,19 +32,22 @@ const (
 )
 
 func NewHandler(p Controller) *Handler {
-	playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
-	commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
-	commandHandler := &remoteCommandHandler{
-		player: p,
-	}
+	var handler *Handler
+	objc.Autorelease(func() {
+		playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
+		commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
+		commandHandler := &remoteCommandHandler{
+			player: p,
+		}
 
-	handler := &Handler{
-		nowPlayingCenter:    &playingCenter,
-		remoteCommandCenter: &commandCenter,
-		commandHandler:      commandHandler,
-	}
-	handler.registerCommands()
-	handler.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
+		handler = &Handler{
+			nowPlayingCenter:    &playingCenter,
+			remoteCommandCenter: &commandCenter,
+			commandHandler:      commandHandler,
+		}
+		handler.registerCommands()
+		handler.nowPlayingCenter.SetPlaybackState_(mediaplayer.MPNowPlayingPlaybackStateStopped)
+	})
 	return handler
 }
 
@@ -97,35 +100,49 @@ func (s *Handler) registerCommands() {
 }
 
 func (s *Handler) SetPlayingInfo(info PlayingInfo) {
-	total := info.TotalDuration.Seconds()
-	ur := info.PassedDuration.Seconds()
+	objc.Autorelease(func() {
+		total := info.TotalDuration.Seconds()
+		ur := info.PassedDuration.Seconds()
 
-	values, keys := core.NSArray_array(), core.NSArray_array()
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(total)))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyPlaybackDuration))
+		values, keys := core.NSArray_array(), core.NSArray_array()
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(total)))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyPlaybackDuration))
 
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(ur)))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyElapsedPlaybackTime))
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(ur)))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyElapsedPlaybackTime))
 
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(1.0))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyDefaultPlaybackRate))
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(1.0))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyDefaultPlaybackRate))
 
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(float32(ur / total)))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyPlaybackProgress))
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithFloat_(float32(ur / total)))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyPlaybackProgress))
 
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(MediaTypeAudio))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyMediaType))
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(MediaTypeAudio))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyMediaType))
 
-	values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(mediaplayer.MPMediaTypeMusic))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyMediaType))
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(mediaplayer.MPMediaTypeMusic))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyMediaType))
 
-	values = values.ArrayByAddingObject_(core.String("测试"))
-	keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyTitle))
+		values = values.ArrayByAddingObject_(core.String(info.Name))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyTitle))
 
-	dict := core.NSDictionary_dictionaryWithObjects_forKeys_(values, keys)
+		values = values.ArrayByAddingObject_(core.String(info.Album))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyAlbumTitle))
 
-	s.nowPlayingCenter.SetNowPlayingInfo_(dict)
-	s.nowPlayingCenter.SetPlaybackState_(stateMap[info.State])
+		values = values.ArrayByAddingObject_(core.String(info.Artist))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyArtist))
+
+		values = values.ArrayByAddingObject_(core.String(info.AlbumArtist))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyAlbumArtist))
+
+		values = values.ArrayByAddingObject_(mediaplayer.ArtworkFromUrl(core.NSURL_URLWithString_(core.String(info.PicUrl))))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyArtwork))
+
+		dict := core.NSDictionary_dictionaryWithObjects_forKeys_(values, keys)
+
+		s.nowPlayingCenter.SetNowPlayingInfo_(dict)
+		s.nowPlayingCenter.SetPlaybackState_(stateMap[info.State])
+	})
 }
 
 func (s *Handler) Release() {
@@ -138,32 +155,44 @@ type remoteCommandHandler struct {
 }
 
 func (r *remoteCommandHandler) handlePlayCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.Resume()
+	objc.Autorelease(func() {
+		r.player.Resume()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePauseCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.Paused()
+	objc.Autorelease(func() {
+		r.player.Paused()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleStopCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.Paused()
+	objc.Autorelease(func() {
+		r.player.Paused()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleTogglePlayPauseCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.Toggle()
+	objc.Autorelease(func() {
+		r.player.Toggle()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleNextTrackCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.Next()
+	objc.Autorelease(func() {
+		r.player.Next()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePreviousTrackCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
-	r.player.Previous()
+	objc.Autorelease(func() {
+		r.player.Previous()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 

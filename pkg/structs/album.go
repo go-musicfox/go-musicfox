@@ -3,6 +3,7 @@ package structs
 import (
 	"errors"
 	"github.com/buger/jsonparser"
+	"strings"
 )
 
 type Album struct {
@@ -10,6 +11,14 @@ type Album struct {
 	Name    string   `json:"name"`
 	PicUrl  string   `json:"pic_url"`
 	Artists []Artist `json:"artists"`
+}
+
+func (a Album) ArtistName() string {
+	var artistNames []string
+	for _, artist := range a.Artists {
+		artistNames = append(artistNames, artist.Name)
+	}
+	return strings.Join(artistNames, ",")
 }
 
 // NewAlbumFromJson 获取歌曲列表的专辑信息
