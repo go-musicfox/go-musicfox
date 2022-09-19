@@ -206,7 +206,7 @@ func (p *beepPlayer) setState(state State) {
 	p.state = state
 	select {
 	case p.stateChan <- state:
-	default:
+	case <-time.After(time.Second * 2):
 	}
 }
 
