@@ -3,6 +3,7 @@ package structs
 import (
 	"errors"
 	"github.com/buger/jsonparser"
+	"strings"
 	"time"
 )
 
@@ -12,6 +13,14 @@ type Song struct {
 	Duration time.Duration `json:"duration"`
 	Artists  []Artist      `json:"artists"`
 	Album    `json:"album"`
+}
+
+func (s Song) ArtistName() string {
+	var artistNames []string
+	for _, artist := range s.Artists {
+		artistNames = append(artistNames, artist.Name)
+	}
+	return strings.Join(artistNames, ",")
 }
 
 // NewSongFromDailySongsJson 从每日推荐歌曲获取数据

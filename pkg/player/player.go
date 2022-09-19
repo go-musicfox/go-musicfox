@@ -7,7 +7,7 @@ import (
 )
 
 type Player interface {
-	Play(songType SongType, url string, duration time.Duration)
+	Play(music UrlMusic)
 	CurMusic() UrlMusic
 	Paused()
 	Resume()

@@ -1,6 +1,6 @@
 package player
 
-import "time"
+import "go-musicfox/pkg/structs"
 
 // SongType 歌曲类型
 type SongType uint8
@@ -12,8 +12,15 @@ const (
 	Flac
 )
 
+var SongTypeMapping = map[string]SongType{
+	"mp3":  Mp3,
+	"wav":  Wav,
+	"ogg":  Ogg,
+	"flac": Flac,
+}
+
 type UrlMusic struct {
-	Url      string
-	Type     SongType
-	Duration time.Duration
+	Url  string
+	Type SongType
+	structs.Song
 }

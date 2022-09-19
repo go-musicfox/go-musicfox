@@ -3,7 +3,30 @@
 
 package mediaplayer
 
-import "github.com/progrium/macdriver/core"
+/*
+#cgo CFLAGS: -x objective-c
+#cgo LDFLAGS: -lobjc -framework Foundation -framework CoreFoundation -framework MediaPlayer -framework AppKit
+#include <dispatch/dispatch.h>
+#include <Foundation/Foundation.h>
+#include <AppKit/AppKit.h>
+#include <MediaPlayer/MediaPlayer.h>
+
+void* MPArtworkFromUrl(void* id) {
+	NSImage *image = [[NSImage alloc] init];
+	NSURL *url = (NSURL*)id;
+    image = [image initWithContentsOfURL:url];
+    MPMediaItemArtwork *artwork = [MPMediaItemArtwork alloc];
+    artwork = [artwork initWithBoundsSize:image.size requestHandler:^NSImage * _Nonnull(CGSize size) {
+        return image;
+    }];
+	return artwork;
+}
+*/
+import "C"
+import (
+	"github.com/progrium/macdriver/core"
+	"github.com/progrium/macdriver/objc"
+)
 
 type MPNowPlayingInfoCenter struct {
 	gen_MPNowPlayingInfoCenter
@@ -111,3 +134,10 @@ const (
 	MPMediaItemPropertyPlaybackStoreID         = "playbackStoreID"
 	MPMediaItemPropertyIsPreorder              = "preorder"
 )
+
+func ArtworkFromUrl(url core.NSURL) objc.Object {
+	ret := C.MPArtworkFromUrl(
+		objc.RefPointer(url),
+	)
+	return objc.Object_fromPointer(ret)
+}

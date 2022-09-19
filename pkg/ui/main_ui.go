@@ -28,7 +28,7 @@ type MenuItem struct {
 	Subtitle string
 }
 
-type mainUIModel struct {
+type MainUIModel struct {
 	doubleColumn bool // 是否双列显示
 
 	menuTitle            string // 菜单标题
@@ -53,12 +53,12 @@ type mainUIModel struct {
 	player *Player // 播放器
 }
 
-func (m *mainUIModel) Close() {
+func (m *MainUIModel) Close() {
 	m.player.Close()
 }
 
-func NewMainUIModel(parentModel *NeteaseModel) (m *mainUIModel) {
-	m = new(mainUIModel)
+func NewMainUIModel(parentModel *NeteaseModel) (m *MainUIModel) {
+	m = new(MainUIModel)
 	m.menuTitle = "网易云音乐"
 	m.player = NewPlayer(parentModel)
 	m.menu = NewMainMenu()

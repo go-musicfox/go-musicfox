@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go-musicfox/utils"
 	"os/exec"
-	"strconv"
 	"sync"
 	"time"
 
@@ -42,7 +41,7 @@ type mpdPlayer struct {
 	timer          *utils.Timer
 	latestPlayTime time.Time //避免切歌时产生的stop信号造成影响
 
-	volume    int
+	//volume    int
 	state     State
 	timeChan  chan time.Duration
 	stateChan chan State
@@ -79,6 +78,7 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 		network:    network,
 		address:    address,
 		watcher:    watcher,
+		state:      Stopped,
 		timeChan:   make(chan time.Duration),
 		stateChan:  make(chan State),
 		musicChan:  make(chan UrlMusic),
@@ -117,8 +117,15 @@ func (p *mpdPlayer) SyncMpdStatus() {
 	status, err := p.client().Status()
 	mpdErrorHandler(err, true)
 
-	p.volume, _ = strconv.Atoi(status["volume"])
-	p.setState(stateMapping[status["state"]])
+	if state := stateMapping[status["state"]]; state != Stopped || time.Now().Sub(p.latestPlayTime) >= time.Second*2 {
+		switch state {
+		case Playing:
+			p.Resume()
+		case Paused, Stopped:
+			p.Paused()
+		}
+	}
+	//p.volume, _ = strconv.Atoi(status["volume"])
 	duration, _ := time.ParseDuration(status["elapsed"] + "s")
 
 	if p.timer != nil {
@@ -185,12 +192,7 @@ func (p *mpdPlayer) watch() {
 		case <-p.close:
 			return
 		case subSystem := <-p.watcher.Event:
-			if subSystem == "mixer" {
-				p.SyncMpdStatus()
-				return
-			}
-			//避免切歌时产生的stop信号造成影响
-			if subSystem == "player" && time.Now().Sub(p.latestPlayTime) >= time.Second*2 {
+			if subSystem == "player" {
 				p.SyncMpdStatus()
 			}
 		}
@@ -205,12 +207,7 @@ func (p *mpdPlayer) setState(state State) {
 	}
 }
 
-func (p *mpdPlayer) Play(songType SongType, url string, duration time.Duration) {
-	music := UrlMusic{
-		Url:      url,
-		Type:     songType,
-		Duration: duration,
-	}
+func (p *mpdPlayer) Play(music UrlMusic) {
 	select {
 	case p.musicChan <- music:
 	default:
@@ -294,35 +291,36 @@ func (p *mpdPlayer) StateChan() <-chan State {
 }
 
 func (p *mpdPlayer) UpVolume() {
-	p.l.Lock()
-	defer p.l.Unlock()
-	if p.volume+5 >= 100 {
-		p.volume = 100
-	} else {
-		p.volume += 5
-	}
-	_ = p.client().SetVolume(p.volume)
+	//p.l.Lock()
+	//defer p.l.Unlock()
+	//if p.volume+5 >= 100 {
+	//	p.volume = 100
+	//} else {
+	//	p.volume += 5
+	//}
+	//_ = p.client().SetVolume(p.volume)
 }
 
 func (p *mpdPlayer) DownVolume() {
-	p.l.Lock()
-	defer p.l.Unlock()
-	if p.volume-5 <= 0 {
-		p.volume = 0
-	} else {
-		p.volume -= 5
-	}
-	_ = p.client().SetVolume(p.volume)
+	//p.l.Lock()
+	//defer p.l.Unlock()
+	//if p.volume-5 <= 0 {
+	//	p.volume = 0
+	//} else {
+	//	p.volume -= 5
+	//}
+	//_ = p.client().SetVolume(p.volume)
 }
 
 func (p *mpdPlayer) Close() {
 	if p.timer != nil {
 		p.timer.Stop()
 	}
-	p.close <- struct{}{}
 
 	err := p.watcher.Close()
 	mpdErrorHandler(err, true)
+
+	p.close <- struct{}{}
 
 	err = p.client().Stop()
 	mpdErrorHandler(err, true)
