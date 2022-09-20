@@ -133,7 +133,6 @@ func NewPlayer(model *NeteaseModel) *Player {
 	go func() {
 		defer utils.Recover(false)
 		for s := range p.Player.StateChan() {
-			utils.Logger().Printf("3 %d", s)
 			music := p.CurMusic()
 			go func(s player.State) {
 				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{

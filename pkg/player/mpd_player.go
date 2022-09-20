@@ -2,13 +2,13 @@ package player
 
 import (
 	"fmt"
-	"go-musicfox/utils"
 	"os/exec"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/fhs/gompd/v2/mpd"
+	"go-musicfox/utils"
 )
 
 var stateMapping = map[string]State{

@@ -37,6 +37,6 @@ require (
 
 replace (
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.1
-	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.6
+	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.7
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.3
 )

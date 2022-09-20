@@ -122,8 +122,9 @@ github.com/muesli/termenv
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.6
+# github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.7
 ## explicit
+github.com/progrium/macdriver/avcore
 github.com/progrium/macdriver/cocoa
 github.com/progrium/macdriver/core
 github.com/progrium/macdriver/mediaplayer

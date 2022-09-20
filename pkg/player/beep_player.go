@@ -133,13 +133,14 @@ func (p *beepPlayer) listen() {
 				_, _ = utils.Copy(ctx, cacheWFile, read)
 			}(ctx, cacheWFile, resp.Body)
 
-			for {
+			for i := 0; i < 50; i++ {
 				t := make([]byte, 256)
 				_, err = io.ReadFull(cacheRFile, t)
 				_, _ = cacheRFile.Seek(0, 0)
 				if err != io.EOF {
 					break
 				}
+				<-time.After(time.Millisecond * 100)
 			}
 
 			switch p.curMusic.Type {

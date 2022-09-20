@@ -1,9 +1,10 @@
 package player
 
 import (
-	"go-musicfox/pkg/configs"
 	"os/exec"
 	"time"
+
+	"go-musicfox/pkg/configs"
 )
 
 type Player interface {
@@ -24,6 +25,7 @@ type Player interface {
 }
 
 func NewPlayerFromConfig() Player {
+	return NewOsxPlayer()
 	registry := configs.ConfigRegistry
 	var player Player
 	switch registry.PlayerEngine {
