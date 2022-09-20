@@ -125,10 +125,12 @@ func (dec *Decoder) Started() (channel chan bool) {
 			select {
 			case <-dec.context.Done():
 				channel <- false
+				return
 			default:
 			}
 			if len(dec.decodedData) != 0 {
 				channel <- true
+				return
 			} else {
 				<-time.After(time.Millisecond * 100)
 			}

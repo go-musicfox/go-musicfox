@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type Timer struct {
 	passed   time.Duration
 	lastTick time.Time
 	done     chan struct{}
+	l        sync.Mutex
 }
 
 // Passed returns how much done is already passed.
@@ -32,6 +34,8 @@ func (t *Timer) Passed() time.Duration {
 
 // SetPassed update passed.
 func (t *Timer) SetPassed(passed time.Duration) {
+	t.l.Lock()
+	defer t.l.Unlock()
 	t.passed = passed
 }
 
@@ -46,15 +50,24 @@ func (t *Timer) timeFromLastTick() time.Duration {
 
 // Run starts just created timer and resumes paused.
 func (t *Timer) Run() {
+	if t.started && t.ticker != nil {
+		t.options.OnRun(t.started)
+		return
+	}
+	t.l.Lock()
+	if t.started && t.ticker != nil {
+		t.l.Unlock()
+		t.options.OnRun(t.started)
+		return
+	}
+
 	//c.active = true
 	t.ticker = time.NewTicker(t.options.TickerInternal)
 	t.lastTick = time.Now()
-	if !t.started {
-		t.started = true
-		t.options.OnRun(true)
-	} else {
-		t.options.OnRun(false)
-	}
+	t.started = true
+	t.l.Unlock()
+
+	t.options.OnRun(true)
 	t.options.OnTick()
 	t.done = make(chan struct{})
 
@@ -83,6 +96,9 @@ func (t *Timer) Run() {
 
 // Pause temporarily pauses active timer.
 func (t *Timer) Pause() {
+	t.l.Lock()
+	defer t.l.Unlock()
+
 	t.pushDone()
 	t.passed += time.Now().Sub(t.lastTick)
 	t.lastTick = time.Now()
@@ -91,6 +107,9 @@ func (t *Timer) Pause() {
 
 // Stop finishes the timer.
 func (t *Timer) Stop() {
+	t.l.Lock()
+	defer t.l.Unlock()
+
 	t.pushDone()
 	t.options.OnDone(true)
 }
@@ -105,6 +124,7 @@ func NewTimer(options Options) *Timer {
 func (t *Timer) pushDone() {
 	if t.ticker != nil {
 		t.ticker.Stop()
+		t.ticker = nil
 	}
 	select {
 	case t.done <- struct{}{}:
