@@ -264,8 +264,10 @@ func (p *mpdPlayer) Seek(duration time.Duration) {
 	p.l.Lock()
 	defer p.l.Unlock()
 	err := p.client().SeekCur(duration, false)
-	mpdErrorHandler(err, false)
-	p.timer.SetPassed(duration)
+	mpdErrorHandler(err, true)
+	if err == nil {
+		p.timer.SetPassed(duration)
+	}
 }
 
 func (p *mpdPlayer) PassedTime() time.Duration {
