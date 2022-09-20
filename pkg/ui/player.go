@@ -55,6 +55,7 @@ const (
 	CtrlPrevious CtrlType = "Previous"
 	CtrlNext     CtrlType = "next"
 	CtrlSeek     CtrlType = "seek"
+	CtrlRerender CtrlType = "rerender"
 )
 
 // Player 网易云音乐播放器
@@ -111,6 +112,19 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case CtrlSeek:
 				p.Player.Seek(signal.Duration)
 				p.lrcTimer.Rewind()
+				music := p.CurMusic()
+				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
+					TotalDuration:  music.Duration,
+					PassedDuration: p.PassedTime(),
+					State:          p.State(),
+					PicUrl:         music.PicUrl,
+					Name:           music.Name,
+					Album:          music.Album.Name,
+					Artist:         music.ArtistName(),
+					AlbumArtist:    music.Album.ArtistName(),
+				})
+			case CtrlRerender:
+				p.model.Rerender()
 			}
 		}
 	}()
@@ -119,21 +133,25 @@ func NewPlayer(model *NeteaseModel) *Player {
 	go func() {
 		defer utils.Recover(false)
 		for s := range p.Player.StateChan() {
+			utils.Logger().Printf("3 %d", s)
 			music := p.CurMusic()
-			p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-				TotalDuration:  music.Duration,
-				PassedDuration: p.PassedTime(),
-				State:          s,
-				PicUrl:         music.PicUrl,
-				Name:           music.Name,
-				Album:          music.Album.Name,
-				Artist:         music.ArtistName(),
-				AlbumArtist:    music.Album.ArtistName(),
-			})
+			go func(s player.State) {
+				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
+					TotalDuration:  music.Duration,
+					PassedDuration: p.PassedTime(),
+					State:          s,
+					PicUrl:         music.PicUrl,
+					Name:           music.Name,
+					Album:          music.Album.Name,
+					Artist:         music.ArtistName(),
+					AlbumArtist:    music.Album.ArtistName(),
+				})
+			}(s)
 			if s == player.Stopped {
 				p.Next()
+			} else {
+				p.Rerender()
 			}
-			model.Rerender()
 		}
 	}()
 
@@ -413,7 +431,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	utils.Notify(utils.NotifyContent{
 		Title: "正在播放: " + song.Name,
-		Text:  fmt.Sprintf("歌手: %s 专辑: %s", song.ArtistName(), song.Album.Name),
+		Text:  fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
 		Url:   constants.AppGithubUrl,
 		Icon:  song.PicUrl,
 	})
@@ -648,6 +666,10 @@ func (p *Player) Next() {
 func (p *Player) Previous() {
 	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
 	p.ctrl <- CtrlSignal{Type: CtrlPrevious}
+}
+
+func (p *Player) Rerender() {
+	p.ctrl <- CtrlSignal{Type: CtrlRerender}
 }
 
 func (p *Player) Seek(duration time.Duration) {

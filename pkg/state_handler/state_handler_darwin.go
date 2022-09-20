@@ -8,6 +8,7 @@ import (
 	"github.com/progrium/macdriver/mediaplayer"
 	"github.com/progrium/macdriver/objc"
 	"go-musicfox/pkg/player"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,9 @@ type Handler struct {
 	nowPlayingCenter    *mediaplayer.MPNowPlayingInfoCenter
 	remoteCommandCenter *mediaplayer.MPRemoteCommandCenter
 	commandHandler      *remoteCommandHandler
+	curArtwork          objc.Object
+	curArtworkUrl       string
+	l                   sync.Mutex
 }
 
 const (
@@ -135,7 +139,16 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 		values = values.ArrayByAddingObject_(core.String(info.AlbumArtist))
 		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyAlbumArtist))
 
-		values = values.ArrayByAddingObject_(mediaplayer.ArtworkFromUrl(core.NSURL_URLWithString_(core.String(info.PicUrl))))
+		s.l.Lock()
+		if s.curArtworkUrl != info.PicUrl {
+			s.curArtworkUrl = info.PicUrl
+			if s.curArtwork != nil {
+				s.curArtwork.Release()
+			}
+			s.curArtwork = mediaplayer.ArtworkFromUrl(core.NSURL_URLWithString_(core.String(info.PicUrl)))
+		}
+		s.l.Unlock()
+		values = values.ArrayByAddingObject_(s.curArtwork)
 		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyArtwork))
 
 		dict := core.NSDictionary_dictionaryWithObjects_forKeys_(values, keys)

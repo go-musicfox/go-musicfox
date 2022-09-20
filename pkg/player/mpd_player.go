@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-musicfox/utils"
 	"os/exec"
+	"strconv"
 	"sync"
 	"time"
 
@@ -41,7 +42,7 @@ type mpdPlayer struct {
 	timer          *utils.Timer
 	latestPlayTime time.Time //避免切歌时产生的stop信号造成影响
 
-	//volume    int
+	volume    int
 	state     State
 	timeChan  chan time.Duration
 	stateChan chan State
@@ -63,7 +64,7 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 	client, err := mpd.Dial(network, address)
 	mpdErrorHandler(err, false)
 
-	err = client.Stop()
+	err = client.Clear()
 	mpdErrorHandler(err, true)
 
 	err = client.Single(true)
@@ -120,12 +121,23 @@ func (p *mpdPlayer) SyncMpdStatus() {
 	if state := stateMapping[status["state"]]; state != Stopped || time.Now().Sub(p.latestPlayTime) >= time.Second*2 {
 		switch state {
 		case Playing:
-			p.Resume()
-		case Paused, Stopped:
-			p.Paused()
+			if p.timer != nil {
+				go p.timer.Run()
+			}
+			p.setState(Playing)
+		case Paused:
+			if p.timer != nil {
+				p.timer.Pause()
+			}
+			p.setState(Paused)
+		case Stopped:
+			if p.timer != nil {
+				p.timer.Stop()
+			}
+			p.setState(Stopped)
 		}
 	}
-	//p.volume, _ = strconv.Atoi(status["volume"])
+	p.volume, _ = strconv.Atoi(status["volume"])
 	duration, _ := time.ParseDuration(status["elapsed"] + "s")
 
 	if p.timer != nil {
@@ -192,7 +204,7 @@ func (p *mpdPlayer) watch() {
 		case <-p.close:
 			return
 		case subSystem := <-p.watcher.Event:
-			if subSystem == "player" {
+			if subSystem == "player" || subSystem == "mixer" {
 				p.SyncMpdStatus()
 			}
 		}
@@ -221,37 +233,22 @@ func (p *mpdPlayer) CurMusic() UrlMusic {
 func (p *mpdPlayer) Paused() {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if p.state != Playing {
-		return
-	}
 	err := p.client().Pause(true)
 	mpdErrorHandler(err, false)
-	p.timer.Pause()
-	p.setState(Paused)
 }
 
 func (p *mpdPlayer) Resume() {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if p.state == Playing {
-		return
-	}
 	err := p.client().Pause(false)
 	mpdErrorHandler(err, false)
-	go p.timer.Run()
-	p.setState(Playing)
 }
 
 func (p *mpdPlayer) Stop() {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if p.state == Stopped {
-		return
-	}
 	err := p.client().Pause(true)
 	mpdErrorHandler(err, false)
-	p.timer.Pause()
-	p.setState(Stopped)
 }
 
 func (p *mpdPlayer) Toggle() {
@@ -291,25 +288,25 @@ func (p *mpdPlayer) StateChan() <-chan State {
 }
 
 func (p *mpdPlayer) UpVolume() {
-	//p.l.Lock()
-	//defer p.l.Unlock()
-	//if p.volume+5 >= 100 {
-	//	p.volume = 100
-	//} else {
-	//	p.volume += 5
-	//}
-	//_ = p.client().SetVolume(p.volume)
+	p.l.Lock()
+	defer p.l.Unlock()
+	if p.volume+5 >= 100 {
+		p.volume = 100
+	} else {
+		p.volume += 5
+	}
+	_ = p.client().SetVolume(p.volume)
 }
 
 func (p *mpdPlayer) DownVolume() {
-	//p.l.Lock()
-	//defer p.l.Unlock()
-	//if p.volume-5 <= 0 {
-	//	p.volume = 0
-	//} else {
-	//	p.volume -= 5
-	//}
-	//_ = p.client().SetVolume(p.volume)
+	p.l.Lock()
+	defer p.l.Unlock()
+	if p.volume-5 <= 0 {
+		p.volume = 0
+	} else {
+		p.volume -= 5
+	}
+	_ = p.client().SetVolume(p.volume)
 }
 
 func (p *mpdPlayer) Close() {
