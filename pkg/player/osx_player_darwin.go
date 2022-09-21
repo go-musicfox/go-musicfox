@@ -231,6 +231,14 @@ func (p *osxPlayer) DownVolume() {
 	p.player.SetVolume_(float32(p.volume) / 100.0)
 }
 
+func (p *osxPlayer) Volume() int {
+	return p.volume
+}
+
+func (p *osxPlayer) SetVolume(volume int) {
+	p.volume = volume
+}
+
 func (p *osxPlayer) Close() {
 	if p.timer != nil {
 		p.timer.Stop()

@@ -58,5 +58,12 @@ func (p *osxPlayer) UpVolume() {
 func (p *osxPlayer) DownVolume() {
 }
 
+func (p *osxPlayer) Volume() int {
+	return 0
+}
+
+func (p *osxPlayer) SetVolume(volume int) {
+}
+
 func (p *osxPlayer) Close() {
 }

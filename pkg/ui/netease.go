@@ -92,6 +92,14 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			}
 		}
 
+		// 获取音量
+		if jsonStr, err := table.GetByKVModel(storage.Volume{}); err == nil && len(jsonStr) > 0 {
+			var volume int
+			if err = json.Unmarshal(jsonStr, &volume); err == nil {
+				m.player.SetVolume(volume)
+			}
+		}
+
 		// 获取播放歌曲信息
 		if jsonStr, err := table.GetByKVModel(storage.PlayerSnapshot{}); err == nil && len(jsonStr) > 0 {
 			var snapshot storage.PlayerSnapshot

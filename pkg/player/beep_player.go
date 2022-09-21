@@ -249,13 +249,13 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 
 // UpVolume 调大音量
 func (p *beepPlayer) UpVolume() {
-	if p.volume.Volume > 0 {
+	if p.volume.Volume >= 0 {
 		return
 	}
 
 	speaker.Lock()
 	p.volume.Silent = false
-	p.volume.Volume += 0.5
+	p.volume.Volume += 0.25
 	speaker.Unlock()
 }
 
@@ -269,8 +269,22 @@ func (p *beepPlayer) DownVolume() {
 	}
 
 	speaker.Lock()
-	p.volume.Volume -= 0.5
+	p.volume.Volume -= 0.25
 	speaker.Unlock()
+}
+
+func (p *beepPlayer) Volume() int {
+	speaker.Lock()
+	defer speaker.Unlock()
+
+	return int((p.volume.Volume + 5) * 100 / 5) // 转为0~100存储
+}
+
+func (p *beepPlayer) SetVolume(volume int) {
+	speaker.Lock()
+	defer speaker.Unlock()
+
+	p.volume.Volume = float64(volume)*5/100 - 5
 }
 
 // Paused 暂停播放

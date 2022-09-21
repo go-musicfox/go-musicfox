@@ -378,6 +378,9 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
+	// PicUrl处理下
+	song.PicUrl += "?param=177y177"
+
 	loading := NewLoading(p.model)
 	loading.start()
 	defer loading.complete()
@@ -386,7 +389,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	_ = table.SetByKVModel(storage.PlayerSnapshot{}, storage.PlayerSnapshot{
 		CurSongIndex: p.curSongIndex,
 		Playlist:     p.playlist,
-		//p.playingMenuKey,
 	})
 	p.curSong = song
 
@@ -457,6 +459,8 @@ func (p *Player) NextSong() {
 			if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
 				bottomHook(p.model)
 			}
+		} else {
+			return
 		}
 	}
 
@@ -676,4 +680,18 @@ func (p *Player) Seek(duration time.Duration) {
 		Type:     CtrlSeek,
 		Duration: duration,
 	}
+}
+
+func (p *Player) UpVolume() {
+	p.Player.UpVolume()
+
+	table := storage.NewTable()
+	_ = table.SetByKVModel(storage.Volume{}, p.Player.Volume())
+}
+
+func (p *Player) DownVolume() {
+	p.Player.DownVolume()
+
+	table := storage.NewTable()
+	_ = table.SetByKVModel(storage.Volume{}, p.Player.Volume())
 }

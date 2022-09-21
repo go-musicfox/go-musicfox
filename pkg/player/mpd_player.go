@@ -96,7 +96,7 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 		p.watch()
 	}()
 
-	p.SyncMpdStatus()
+	p.SyncMpdStatus("")
 	return p
 }
 
@@ -114,11 +114,12 @@ func (p *mpdPlayer) client() *mpd.Client {
 	return _client
 }
 
-func (p *mpdPlayer) SyncMpdStatus() {
+func (p *mpdPlayer) SyncMpdStatus(subsystem string) {
 	status, err := p.client().Status()
 	mpdErrorHandler(err, true)
 
-	if state := stateMapping[status["state"]]; state != Stopped || time.Now().Sub(p.latestPlayTime) >= time.Second*2 {
+	state := stateMapping[status["state"]]
+	if subsystem == "player" && (state != Stopped || time.Now().Sub(p.latestPlayTime) >= time.Second*2) {
 		switch state {
 		case Playing:
 			if p.timer != nil {
@@ -203,9 +204,9 @@ func (p *mpdPlayer) watch() {
 		select {
 		case <-p.close:
 			return
-		case subSystem := <-p.watcher.Event:
-			if subSystem == "player" || subSystem == "mixer" {
-				p.SyncMpdStatus()
+		case subsystem := <-p.watcher.Event:
+			if subsystem == "player" || subsystem == "mixer" {
+				p.SyncMpdStatus(subsystem)
 			}
 		}
 	}
@@ -309,6 +310,15 @@ func (p *mpdPlayer) DownVolume() {
 		p.volume -= 5
 	}
 	_ = p.client().SetVolume(p.volume)
+}
+
+func (p *mpdPlayer) Volume() int {
+	return p.volume
+}
+
+func (p *mpdPlayer) SetVolume(volume int) {
+	p.volume = volume
+	_ = p.client().SetVolume(volume)
 }
 
 func (p *mpdPlayer) Close() {
