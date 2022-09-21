@@ -44,11 +44,13 @@ func NewOsxPlayer() Player {
 
 	clsName := "AVPlayerHandler"
 	handlerCls := objc.NewClass(clsName, "NSObject")
-	handlerCls.AddMethod("handle:", func(_ objc.Object, ns objc.Object) {
-		//_ = core.NSNotification_fromRef(ns)
-		//_ = mediaplayer.NSNotif(ns)
-		//utils.Logger().Println(n)
-		p.Stop()
+	handlerCls.AddMethod("handleFinish:", func(_ objc.Object, ns objc.Object) {
+		// 这里会出现两次通知
+		url := avcore.AVPlayerItem_fromRef(ns.Get("object")).Asset().Get("URL")
+		curUrl := p.player.CurrentItem().Asset().Get("URL")
+		if url == curUrl {
+			p.Stop()
+		}
 	})
 	objc.RegisterClass(handlerCls)
 	p.handler = objc.Get(clsName).Alloc().Init()
@@ -56,6 +58,7 @@ func NewOsxPlayer() Player {
 	avPlayer := avcore.AVPlayer_alloc().Init_asAVPlayer()
 	p.player = &avPlayer
 	p.player.SetActionAtItemEnd_(2) // do nothing => https://developer.apple.com/documentation/avfoundation/avplayeractionatitemend/avplayeractionatitemendnone?language=objc
+	p.volume = int(p.player.Volume() * 100)
 
 	go func() {
 		defer utils.Recover(false)
@@ -84,7 +87,7 @@ func (p *osxPlayer) listen() {
 			p.player.ReplaceCurrentItemWithPlayerItem_(item)
 
 			core.NSNotificationCenter_defaultCenter().
-				AddObserver_selector_name_object_(p.handler, objc.Sel("handle:"), core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem())
+				AddObserver_selector_name_object_(p.handler, objc.Sel("handleFinish:"), core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem())
 
 			// 计时器
 			p.timer = utils.NewTimer(utils.Options{

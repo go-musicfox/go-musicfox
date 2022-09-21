@@ -4,7 +4,7 @@
 package cocoa
 
 /*
-#cgo CFLAGS: -x objective-c
+#cgo CFLAGS: -x objective-c -Wno-everything
 #cgo LDFLAGS: -lobjc -framework Foundation -framework CoreFoundation -framework WebKit -framework AppKit
 #include <dispatch/dispatch.h>
 #include <Foundation/Foundation.h>

@@ -4,7 +4,7 @@
 package cocoa
 
 /*
-#cgo CFLAGS: -x objective-c
+#cgo CFLAGS: -x objective-c -Wno-everything
 
 void monitorReentry(void *e);
 
