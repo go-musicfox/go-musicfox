@@ -43,7 +43,7 @@ func NewPlayerFromConfig() Player {
 		}
 		player = NewMpdPlayer(registry.PlayerBin, registry.PlayerConfigFile, registry.PlayerMpdNetwork, registry.PlayerMpdAddr)
 	case "osx":
-		player = NewBeepPlayer()
+		player = NewOsxPlayer()
 	default:
 		panic("unknown player engine")
 	}

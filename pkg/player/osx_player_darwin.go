@@ -236,7 +236,16 @@ func (p *osxPlayer) Volume() int {
 }
 
 func (p *osxPlayer) SetVolume(volume int) {
+	if volume > 100 {
+		volume = 100
+	}
+	if volume < 0 {
+		volume = 0
+	}
+	p.l.Lock()
+	defer p.l.Unlock()
 	p.volume = volume
+	p.player.SetVolume_(float32(p.volume) / 100.0)
 }
 
 func (p *osxPlayer) Close() {
