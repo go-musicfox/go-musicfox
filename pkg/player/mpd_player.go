@@ -317,6 +317,15 @@ func (p *mpdPlayer) Volume() int {
 }
 
 func (p *mpdPlayer) SetVolume(volume int) {
+	if volume > 100 {
+		volume = 100
+	}
+	if volume < 0 {
+		volume = 0
+	}
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	p.volume = volume
 	_ = p.client().SetVolume(volume)
 }

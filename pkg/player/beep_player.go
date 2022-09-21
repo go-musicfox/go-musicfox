@@ -281,6 +281,13 @@ func (p *beepPlayer) Volume() int {
 }
 
 func (p *beepPlayer) SetVolume(volume int) {
+	if volume > 100 {
+		volume = 100
+	}
+	if volume < 0 {
+		volume = 0
+	}
+
 	speaker.Lock()
 	defer speaker.Unlock()
 
