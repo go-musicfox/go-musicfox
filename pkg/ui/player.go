@@ -134,18 +134,16 @@ func NewPlayer(model *NeteaseModel) *Player {
 		defer utils.Recover(false)
 		for s := range p.Player.StateChan() {
 			music := p.CurMusic()
-			go func(s player.State) {
-				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-					TotalDuration:  music.Duration,
-					PassedDuration: p.PassedTime(),
-					State:          s,
-					PicUrl:         music.PicUrl,
-					Name:           music.Name,
-					Album:          music.Album.Name,
-					Artist:         music.ArtistName(),
-					AlbumArtist:    music.Album.ArtistName(),
-				})
-			}(s)
+			p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
+				TotalDuration:  music.Duration,
+				PassedDuration: p.PassedTime(),
+				State:          s,
+				PicUrl:         music.PicUrl,
+				Name:           music.Name,
+				Album:          music.Album.Name,
+				Artist:         music.ArtistName(),
+				AlbumArtist:    music.Album.ArtistName(),
+			})
 			if s == player.Stopped {
 				p.Next()
 			} else {
@@ -378,8 +376,8 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
-	// PicUrl处理下
-	song.PicUrl += "?param=177y177"
+	// PicUrl模糊处理下，不然占网络
+	song.PicUrl += "?param=60y60"
 
 	loading := NewLoading(p.model)
 	loading.start()
