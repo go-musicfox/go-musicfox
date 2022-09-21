@@ -25,7 +25,6 @@ type Player interface {
 }
 
 func NewPlayerFromConfig() Player {
-	return NewOsxPlayer()
 	registry := configs.ConfigRegistry
 	var player Player
 	switch registry.PlayerEngine {
@@ -41,6 +40,10 @@ func NewPlayerFromConfig() Player {
 			panic(err)
 		}
 		player = NewMpdPlayer(registry.PlayerBin, registry.PlayerConfigFile, registry.PlayerMpdNetwork, registry.PlayerMpdAddr)
+	case "osx":
+		player = NewBeepPlayer()
+	default:
+		panic("unknown player engine")
 	}
 
 	return player
