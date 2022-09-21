@@ -4,7 +4,7 @@
 package core
 
 /*
-#cgo CFLAGS: -x objective-c
+#cgo CFLAGS: -x objective-c -Wno-everything
 
 void dispatch(void *f);
 

@@ -32,6 +32,8 @@ github.com/anhoder/macdriver v0.2.6 h1:9qw+/fbSrF1JNlP9MAyWLK5P+Q5n702DObzvMSzkr
 github.com/anhoder/macdriver v0.2.6/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
 github.com/anhoder/macdriver v0.2.7 h1:qiYzD+f+A9HEaXq6OyfUis9tmtDE7XvywK4jiNyG1aM=
 github.com/anhoder/macdriver v0.2.7/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
+github.com/anhoder/macdriver v0.2.8 h1:gzEasOMWN9f33kSVbegkTgL3iQimQUyqgFUxwjXnXZo=
+github.com/anhoder/macdriver v0.2.8/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
 github.com/anhoder/minimp3 v1.0.2 h1:JJ6kkJI+aq6PlqHq0RH9ALcec+0eOtUctR3prp3N3Wg=
 github.com/anhoder/minimp3 v1.0.2/go.mod h1:WFso0UvZL1fPit45V6RQPKxbehLI4XZaJyLs2/TJHoU=
 github.com/anhoder/minimp3 v1.0.3 h1:BZFR8W2ji65cMYOLgvmZx2HKABlHg0BgA3oomHWf604=

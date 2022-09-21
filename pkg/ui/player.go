@@ -428,7 +428,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		Type: player.SongTypeMapping[musicType],
 	})
 
-	utils.Notify(utils.NotifyContent{
+	go utils.Notify(utils.NotifyContent{
 		Title: "正在播放: " + song.Name,
 		Text:  fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
 		Url:   constants.AppGithubUrl,
