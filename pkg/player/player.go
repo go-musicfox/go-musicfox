@@ -21,6 +21,8 @@ type Player interface {
 	StateChan() <-chan State
 	UpVolume()
 	DownVolume()
+	SetVolume(volume int)
+	Volume() int
 	Close()
 }
 
