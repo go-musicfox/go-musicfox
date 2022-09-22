@@ -2,11 +2,12 @@
 package minimp3
 
 import (
-	"github.com/tosone/minimp3"
 	"io"
+	"time"
 
 	"github.com/faiface/beep"
 	"github.com/pkg/errors"
+	"github.com/tosone/minimp3"
 )
 
 func Decode(rc io.ReadCloser) (s beep.StreamSeekCloser, format beep.Format, err error) {
@@ -19,7 +20,11 @@ func Decode(rc io.ReadCloser) (s beep.StreamSeekCloser, format beep.Format, err 
 	if err != nil {
 		return nil, beep.Format{}, err
 	}
-	<-d.Started()
+	select {
+	case <-d.Started():
+	case <-time.After(time.Second * 2):
+		return nil, beep.Format{}, errors.New("decode timeout")
+	}
 	format = beep.Format{
 		SampleRate:  beep.SampleRate(d.SampleRate),
 		NumChannels: d.Channels,

@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"go-musicfox/pkg/state_handler"
 	"math"
 	"math/rand"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/lyric"
 	"go-musicfox/pkg/player"
+	"go-musicfox/pkg/state_handler"
 	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
@@ -162,7 +162,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 			}
 			if p.lrcTimer != nil {
 				select {
-				case p.lrcTimer.Timer() <- duration:
+				case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.ConfigRegistry.MainLyricOffset):
 				default:
 				}
 			}
@@ -457,8 +457,6 @@ func (p *Player) NextSong() {
 			if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
 				bottomHook(p.model)
 			}
-		} else {
-			return
 		}
 	}
 
@@ -470,7 +468,14 @@ func (p *Player) NextSong() {
 		}
 	case PmSingleLoop:
 	case PmRandom:
-		p.curSongIndex = rand.Intn(len(p.playlist) - 1)
+		if len(p.playlist)-1 < 0 {
+			return
+		}
+		if len(p.playlist) == 0 {
+			p.curSongIndex = 0
+		} else {
+			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
+		}
 	case PmOrder:
 		if p.curSongIndex >= len(p.playlist)-1 {
 			return
@@ -513,7 +518,14 @@ func (p *Player) PreviousSong() {
 		}
 	case PmSingleLoop:
 	case PmRandom:
-		p.curSongIndex = rand.Intn(len(p.playlist) - 1)
+		if len(p.playlist)-1 < 0 {
+			return
+		}
+		if len(p.playlist) == 0 {
+			p.curSongIndex = 0
+		} else {
+			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
+		}
 	case PmOrder:
 		if p.curSongIndex <= 0 {
 			return
@@ -683,13 +695,17 @@ func (p *Player) Seek(duration time.Duration) {
 func (p *Player) UpVolume() {
 	p.Player.UpVolume()
 
-	table := storage.NewTable()
-	_ = table.SetByKVModel(storage.Volume{}, p.Player.Volume())
+	if v, ok := p.Player.(storage.VolumeStorable); ok {
+		table := storage.NewTable()
+		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
+	}
 }
 
 func (p *Player) DownVolume() {
 	p.Player.DownVolume()
 
-	table := storage.NewTable()
-	_ = table.SetByKVModel(storage.Volume{}, p.Player.Volume())
+	if v, ok := p.Player.(storage.VolumeStorable); ok {
+		table := storage.NewTable()
+		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
+	}
 }

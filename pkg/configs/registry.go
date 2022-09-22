@@ -25,6 +25,7 @@ type Registry struct {
 	MainPlayerSongBr int64  // 歌曲br设置
 	MainPrimaryColor string // 主题色
 	MainShowLyric    bool   // 显示歌词
+	MainLyricOffset  int    // 偏移:ms
 	MainShowNotify   bool   // 显示通知
 	MainNotifySender string // 通知应用图标
 	MainPProfPort    int    // pprof端口
@@ -101,6 +102,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 		registry.MainPrimaryColor = constants.AppPrimaryColor
 	}
 	registry.MainShowLyric = ini.Bool("main.showLyric", constants.MainShowLyric)
+	registry.MainLyricOffset = ini.Int("main.lyricOffset", 0)
 	registry.MainShowNotify = ini.Bool("main.showNotify", constants.MainShowNotify)
 	registry.MainNotifySender = ini.String("main.notifySender", constants.MainNotifySender)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)

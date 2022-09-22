@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/faiface/beep"
@@ -19,6 +20,8 @@ import (
 )
 
 type beepPlayer struct {
+	l sync.Mutex
+
 	curMusic UrlMusic
 	timer    *utils.Timer
 
@@ -84,6 +87,9 @@ func (p *beepPlayer) listen() {
 			p.Stop()
 		case p.curMusic = <-p.musicChan:
 			p.Paused()
+			if p.timer != nil {
+				p.timer.SetPassed(0)
+			}
 			// 重置
 			{
 				speaker.Clear()
@@ -252,31 +258,26 @@ func (p *beepPlayer) UpVolume() {
 	if p.volume.Volume >= 0 {
 		return
 	}
+	p.l.Lock()
+	defer p.l.Unlock()
 
-	speaker.Lock()
 	p.volume.Silent = false
 	p.volume.Volume += 0.25
-	speaker.Unlock()
 }
 
 // DownVolume 调小音量
 func (p *beepPlayer) DownVolume() {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.volume.Volume <= -5 {
-		speaker.Lock()
 		p.volume.Silent = true
-		speaker.Unlock()
 		return
 	}
 
-	speaker.Lock()
 	p.volume.Volume -= 0.25
-	speaker.Unlock()
 }
 
 func (p *beepPlayer) Volume() int {
-	speaker.Lock()
-	defer speaker.Unlock()
-
 	return int((p.volume.Volume + 5) * 100 / 5) // 转为0~100存储
 }
 
@@ -288,9 +289,8 @@ func (p *beepPlayer) SetVolume(volume int) {
 		volume = 0
 	}
 
-	speaker.Lock()
-	defer speaker.Unlock()
-
+	p.l.Lock()
+	defer p.l.Unlock()
 	p.volume.Volume = float64(volume)*5/100 - 5
 }
 
@@ -299,8 +299,8 @@ func (p *beepPlayer) Paused() {
 	if p.state != Playing {
 		return
 	}
-	speaker.Lock()
-	defer speaker.Unlock()
+	p.l.Lock()
+	defer p.l.Unlock()
 	p.ctrl.Paused = true
 	p.timer.Pause()
 	p.setState(Paused)
@@ -311,8 +311,8 @@ func (p *beepPlayer) Resume() {
 	if p.state == Playing {
 		return
 	}
-	speaker.Lock()
-	defer speaker.Unlock()
+	p.l.Lock()
+	defer p.l.Unlock()
 	p.ctrl.Paused = false
 	go p.timer.Run()
 	p.setState(Playing)
@@ -323,8 +323,8 @@ func (p *beepPlayer) Stop() {
 	if p.state == Stopped {
 		return
 	}
-	speaker.Lock()
-	defer speaker.Unlock()
+	p.l.Lock()
+	defer p.l.Unlock()
 	p.ctrl.Paused = true
 	p.timer.Pause()
 	p.setState(Stopped)
