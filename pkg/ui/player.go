@@ -377,7 +377,9 @@ func (p *Player) LocatePlayingSong() {
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	// PicUrl模糊处理下，不然占网络
-	song.PicUrl += "?param=60y60"
+	if song.PicUrl != "" {
+		song.PicUrl += "?param=60y60"
+	}
 
 	loading := NewLoading(p.model)
 	loading.start()
