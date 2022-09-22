@@ -383,9 +383,15 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	case "l", "L", "right":
 		moveRight(m)
 	case "n", "N", "enter":
-		enterMenu(m)
+		enterMenu(m, nil, nil)
 	case "b", "B", "esc":
 		backMenu(m)
+	case "u", "U":
+		var subTitle string
+		if !m.player.playlistUpdateAt.IsZero() {
+			subTitle = m.player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
+		}
+		enterMenu(m, NewCurPlaylist(m.player.playlist), &MenuItem{Title: "当前播放列表", Subtitle: subTitle})
 	case " ", "　":
 		spaceKeyHandle(m)
 	case "[", "【":

@@ -62,11 +62,12 @@ const (
 type Player struct {
 	model *NeteaseModel
 
-	playlist       []structs.Song // 歌曲列表
-	curSongIndex   int            // 当前歌曲的下标
-	curSong        structs.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
-	playingMenuKey string         // 正在播放的菜单Key
-	playingMenu    IMenu
+	playlist         []structs.Song // 歌曲列表
+	playlistUpdateAt time.Time      // 播放列表更新时间
+	curSongIndex     int            // 当前歌曲的下标
+	curSong          structs.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
+	playingMenuKey   string         // 正在播放的菜单Key
+	playingMenu      IMenu
 
 	lrcTimer      *lyric.LRCTimer // 歌词计时器
 	lyrics        [5]string       // 歌词信息，保留5行
@@ -331,7 +332,7 @@ func (p *Player) progressView() string {
 
 // InPlayingMenu 是否处于正在播放的菜单中
 func (p *Player) InPlayingMenu() bool {
-	return p.model.menu.GetMenuKey() == p.playingMenuKey
+	return p.model.menu.GetMenuKey() == p.playingMenuKey || p.model.menu.GetMenuKey() == CurPlaylistKey
 }
 
 // CompareWithCurPlaylist 与当前播放列表对比，是否一致
@@ -387,8 +388,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayerSnapshot{}, storage.PlayerSnapshot{
-		CurSongIndex: p.curSongIndex,
-		Playlist:     p.playlist,
+		CurSongIndex:     p.curSongIndex,
+		Playlist:         p.playlist,
+		PlaylistUpdateAt: p.playlistUpdateAt,
 	})
 	p.curSong = song
 
@@ -651,7 +653,7 @@ func (p *Player) Intelligence(appendMode bool) {
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := utils.CheckCode(code)
 	if codeType == utils.NeedLogin {
-		NeedLoginHandle(p.model, func(m *NeteaseModel) {
+		NeedLoginHandle(p.model, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 			p.Intelligence(appendMode)
 		})
 		return
@@ -662,9 +664,11 @@ func (p *Player) Intelligence(appendMode bool) {
 
 	if appendMode {
 		p.playlist = append(p.playlist, songs...)
+		p.playlistUpdateAt = time.Now()
 		p.curSongIndex++
 	} else {
 		p.playlist = append([]structs.Song{playlist.songs[p.model.selectedIndex]}, songs...)
+		p.playlistUpdateAt = time.Now()
 		p.curSongIndex = 0
 	}
 	p.mode = PmIntelligent
