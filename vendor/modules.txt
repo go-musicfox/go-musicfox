@@ -26,7 +26,7 @@ github.com/buger/jsonparser
 # github.com/containerd/console v1.0.3
 ## explicit
 github.com/containerd/console
-# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.1
+# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.2
 ## explicit
 github.com/faiface/beep
 github.com/faiface/beep/effects

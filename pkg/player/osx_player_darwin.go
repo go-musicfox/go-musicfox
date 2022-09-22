@@ -22,7 +22,6 @@ type osxPlayer struct {
 	curMusic  UrlMusic
 	curSongId int
 	timer     *utils.Timer
-	//latestPlayTime time.Time //避免切歌时产生的stop信号造成影响
 
 	volume    int
 	state     State
@@ -55,11 +54,6 @@ func NewOsxPlayer() Player {
 	objc.RegisterClass(handlerCls)
 	p.handler = objc.Get(clsName).Alloc().Init()
 
-	avPlayer := avcore.AVPlayer_alloc().Init_asAVPlayer()
-	p.player = &avPlayer
-	p.player.SetActionAtItemEnd_(2) // do nothing => https://developer.apple.com/documentation/avfoundation/avplayeractionatitemend/avplayeractionatitemendnone?language=objc
-	p.volume = int(p.player.Volume() * 100)
-
 	go func() {
 		defer utils.Recover(false)
 		p.listen()
@@ -75,40 +69,50 @@ func (p *osxPlayer) listen() {
 		case <-p.close:
 			return
 		case p.curMusic = <-p.musicChan:
-			p.Paused()
-			// 重置
-			{
+			objc.Autorelease(func() {
+				p.Paused()
 				if p.timer != nil {
-					p.timer.Stop()
+					p.timer.SetPassed(0)
 				}
-			}
-
-			item := avcore.AVPlayerItem_playerItemWithURL_(core.NSURL_URLWithString_(core.String(p.curMusic.Url)))
-			p.player.ReplaceCurrentItemWithPlayerItem_(item)
-
-			core.NSNotificationCenter_defaultCenter().
-				AddObserver_selector_name_object_(p.handler, objc.Sel("handleFinish:"), core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem())
-
-			// 计时器
-			p.timer = utils.NewTimer(utils.Options{
-				Duration:       8760 * time.Hour,
-				TickerInternal: 500 * time.Millisecond,
-				OnRun:          func(started bool) {},
-				OnPaused:       func() {},
-				OnDone:         func(stopped bool) {},
-				OnTick: func() {
-					t := p.player.CurrentTime()
-					var d time.Duration
-					if t.Timescale > 0 {
-						d = time.Second * time.Duration(t.Value/int64(t.Timescale))
+				// 重置
+				{
+					if p.timer != nil {
+						p.timer.Stop()
+						p.timer = nil
 					}
-					select {
-					case p.timeChan <- d:
-					default:
+					if p.player != nil {
+						//p.player.ReplaceCurrentItemWithPlayerItem_(nil)
+						p.player.Release()
 					}
-				},
+				}
+
+				// 有内存释放问题，所以每次都重新创建Player
+				avPlayer := avcore.AVPlayer_alloc().Init_asAVPlayer()
+				item := avcore.AVPlayerItem_playerItemWithURL_(core.NSURL_URLWithString_(core.String(p.curMusic.Url)))
+				p.player = &avPlayer
+				p.player.InitWithPlayerItem__asAVPlayer(item)
+				p.player.SetActionAtItemEnd_(2) // do nothing => https://developer.apple.com/documentation/avfoundation/avplayeractionatitemend/avplayeractionatitemendnone?language=objc
+				p.player.SetVolume_(float32(p.volume) / 100.0)
+
+				core.NSNotificationCenter_defaultCenter().
+					AddObserver_selector_name_object_(p.handler, objc.Sel("handleFinish:"), core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem())
+
+				// 计时器
+				p.timer = utils.NewTimer(utils.Options{
+					Duration:       8760 * time.Hour,
+					TickerInternal: 500 * time.Millisecond,
+					OnRun:          func(started bool) {},
+					OnPaused:       func() {},
+					OnDone:         func(stopped bool) {},
+					OnTick: func() {
+						select {
+						case p.timeChan <- p.timer.Passed():
+						default:
+						}
+					},
+				})
+				p.Resume()
 			})
-			p.Resume()
 		}
 	}
 }
@@ -245,7 +249,9 @@ func (p *osxPlayer) SetVolume(volume int) {
 	p.l.Lock()
 	defer p.l.Unlock()
 	p.volume = volume
-	p.player.SetVolume_(float32(p.volume) / 100.0)
+	if p.player != nil {
+		p.player.SetVolume_(float32(p.volume) / 100.0)
+	}
 }
 
 func (p *osxPlayer) Close() {
@@ -254,5 +260,8 @@ func (p *osxPlayer) Close() {
 	}
 
 	p.close <- struct{}{}
-	p.player.Release()
+	p.handler.Release()
+	if p.player != nil {
+		p.player.Release()
+	}
 }

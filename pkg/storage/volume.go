@@ -4,6 +4,11 @@ import (
 	"go-musicfox/pkg/constants"
 )
 
+type VolumeStorable interface {
+	Volume() int
+	SetVolume(volume int)
+}
+
 type Volume struct{}
 
 func (v Volume) GetDbName() string {

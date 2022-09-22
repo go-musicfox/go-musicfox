@@ -161,8 +161,11 @@ func (p *mpdPlayer) listen() {
 		case <-p.close:
 			return
 		case p.curMusic = <-p.musicChan:
-			p.latestPlayTime = time.Now()
 			p.Paused()
+			if p.timer != nil {
+				p.timer.SetPassed(0)
+			}
+			p.latestPlayTime = time.Now()
 			// 重置
 			{
 				if p.timer != nil {

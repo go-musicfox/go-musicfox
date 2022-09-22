@@ -96,7 +96,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.Volume{}); err == nil && len(jsonStr) > 0 {
 			var volume int
 			if err = json.Unmarshal(jsonStr, &volume); err == nil {
-				m.player.SetVolume(volume)
+				v, ok := m.player.Player.(storage.VolumeStorable)
+				if ok {
+					v.SetVolume(volume)
+				}
 			}
 		}
 
