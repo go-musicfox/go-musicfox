@@ -109,6 +109,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
 				m.player.curSongIndex = snapshot.CurSongIndex
 				m.player.playlist = snapshot.Playlist
+				m.player.playlistUpdateAt = snapshot.PlaylistUpdateAt
 				m.player.curSong = m.player.playlist[m.player.curSongIndex]
 				//m.player.playingMenuKey = snapshot.PlayingMenuKey
 				m.player.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题

@@ -11,6 +11,7 @@ import (
 	"go-musicfox/utils"
 	"math"
 	"strconv"
+	"time"
 )
 
 type menuStackItem struct {
@@ -176,17 +177,23 @@ func nextPage(m *NeteaseModel) {
 }
 
 // 进入菜单
-func enterMenu(m *NeteaseModel) {
+func enterMenu(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 	m.isListeningKey = false
 	defer func() {
 		m.isListeningKey = true
 	}()
 
-	if m.selectedIndex >= len(m.menuList) {
+	if (newMenu == nil || newTitle == nil) && m.selectedIndex >= len(m.menuList) {
 		return
 	}
 
-	newTitle := m.menuList[m.selectedIndex]
+	if newMenu == nil {
+		newMenu = m.menu.SubMenu(m, m.selectedIndex)
+	}
+	if newTitle == nil {
+		newTitle = &m.menuList[m.selectedIndex]
+	}
+
 	stackItem := &menuStackItem{
 		menuList:      m.menuList,
 		selectedIndex: m.selectedIndex,
@@ -196,13 +203,12 @@ func enterMenu(m *NeteaseModel) {
 	}
 	m.menuStack.Push(stackItem)
 
-	menu := m.menu.SubMenu(m, m.selectedIndex)
-	if menu == nil {
+	if newMenu == nil {
 		m.menuStack.Pop()
 		return
 	}
 
-	if enterMenuHook := menu.BeforeEnterMenuHook(); enterMenuHook != nil {
+	if enterMenuHook := newMenu.BeforeEnterMenuHook(); enterMenuHook != nil {
 		loading := NewLoading(m)
 		loading.start()
 		if res := enterMenuHook(m); !res {
@@ -212,18 +218,19 @@ func enterMenu(m *NeteaseModel) {
 		}
 
 		// 如果位于正在播放的菜单中，更新播放列表
-		if menu.GetMenuKey() == m.player.playingMenuKey {
-			if songs, ok := menu.MenuData().([]structs.Song); ok {
+		if newMenu.GetMenuKey() == m.player.playingMenuKey {
+			if songs, ok := newMenu.MenuData().([]structs.Song); ok {
 				m.player.playlist = songs
+				m.player.playlistUpdateAt = time.Now()
 			}
 		}
 
 		loading.complete()
 	}
 
-	menuList := menu.MenuViews()
+	menuList := newMenu.MenuViews()
 
-	m.menu = menu
+	m.menu = newMenu
 	m.menuList = menuList
 	m.menuTitle = fmt.Sprintf("%s %s", newTitle.Title, SetFgStyle(newTitle.Subtitle, termenv.ANSIBrightBlack))
 	m.selectedIndex = 0
@@ -309,6 +316,7 @@ func spaceKeyHandle(m *NeteaseModel) {
 		m.player.playingMenuKey = m.menu.GetMenuKey()
 		m.player.playingMenu = m.menu
 		m.player.playlist = songs
+		m.player.playlistUpdateAt = time.Now()
 		if m.player.mode == PmIntelligent {
 			m.player.SetPlayMode("")
 		}
@@ -328,7 +336,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 			likePlayingSong(m, isLike)
 		})
 		return
@@ -378,7 +386,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 			likeSelectedSong(m, isLike)
 		})
 		return
@@ -416,7 +424,7 @@ func trashPlayingSong(m *NeteaseModel) {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 			trashPlayingSong(m)
 		})
 		return
@@ -446,7 +454,7 @@ func trashSelectedSong(m *NeteaseModel) {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 			trashSelectedSong(m)
 		})
 		return

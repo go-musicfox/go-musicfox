@@ -127,7 +127,7 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 						m.searchModel.result = utils.GetDjRadiosOfSearchResult(response)
 					}
 
-					enterMenu(m)
+					enterMenu(m, nil, nil)
 				}
 
 				m.modelType = MtMain

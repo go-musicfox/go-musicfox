@@ -4,6 +4,7 @@ import (
 	"github.com/anhoder/netease-music/service"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
+	"time"
 )
 
 type PersonalFmMenu struct {
@@ -89,6 +90,7 @@ func (m *PersonalFmMenu) BottomOutHook() Hook {
 		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)
 		model.player.playlist = m.songs
+		model.player.playlistUpdateAt = time.Now()
 
 		return true
 	}
@@ -98,4 +100,3 @@ func (m *PersonalFmMenu) TopOutHook() Hook {
 	// Nothing to do
 	return nil
 }
-

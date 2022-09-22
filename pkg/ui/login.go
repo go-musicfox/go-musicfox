@@ -20,7 +20,7 @@ type LoginModel struct {
 	passwordInput textinput.Model
 	submitButton  string
 	tips          string
-	AfterLogin    func(m *NeteaseModel)
+	AfterLogin    func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem)
 }
 
 func NewLogin() (login *LoginModel) {
@@ -110,7 +110,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 						_ = table.SetByKVModel(db2.User{}, user)
 
 						if m.loginModel.AfterLogin != nil {
-							m.loginModel.AfterLogin(m)
+							m.loginModel.AfterLogin(m, nil, nil)
 						}
 					}
 				default:
@@ -255,7 +255,7 @@ func loginView(m *NeteaseModel) string {
 }
 
 // NeedLoginHandle 需要登录的处理
-func NeedLoginHandle(model *NeteaseModel, callback func(m *NeteaseModel)) {
+func NeedLoginHandle(model *NeteaseModel, callback func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem)) {
 	model.modelType = MtLogin
 	model.loginModel.AfterLogin = callback
 }
