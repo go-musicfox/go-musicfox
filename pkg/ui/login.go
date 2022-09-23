@@ -54,7 +54,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		case "esc":
-			m.modelType = MtMain
+			m.pageType = PtMain
 			m.loginModel.tips = ""
 			return m, tickMainUI(time.Nanosecond)
 
@@ -119,7 +119,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 					return m, tickLogin(time.Nanosecond)
 				}
 
-				m.modelType = MtMain
+				m.pageType = PtMain
 				m.loginModel.tips = ""
 				return m, tickMainUI(time.Nanosecond)
 			}
@@ -256,6 +256,6 @@ func loginView(m *NeteaseModel) string {
 
 // NeedLoginHandle 需要登录的处理
 func NeedLoginHandle(model *NeteaseModel, callback func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem)) {
-	model.modelType = MtLogin
+	model.pageType = PtLogin
 	model.loginModel.AfterLogin = callback
 }

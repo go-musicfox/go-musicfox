@@ -169,7 +169,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		k := msgWithType.String()
 		// 登录界面输入q不退出
-		if m.modelType == MtMain && (k == "q" || k == "Q" || k == "ctrl+c") {
+		if m.pageType == PtMain && (k == "q" || k == "Q" || k == "ctrl+c") {
 			m.quitting = true
 			m.Close()
 			return m, tea.Quit
@@ -188,10 +188,10 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateStartup(msg, m)
 	}
 
-	switch m.modelType {
-	case MtLogin:
+	switch m.pageType {
+	case PtLogin:
 		return updateLogin(msg, m)
-	case MtSearch:
+	case PtSearch:
 		return updateSearch(msg, m)
 	}
 
@@ -207,10 +207,10 @@ func (m *NeteaseModel) View() string {
 		return startupView(m)
 	}
 
-	switch m.modelType {
-	case MtLogin:
+	switch m.pageType {
+	case PtLogin:
 		return loginView(m)
-	case MtSearch:
+	case PtSearch:
 		return searchView(m)
 	}
 

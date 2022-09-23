@@ -14,13 +14,13 @@ import (
 	"unicode/utf8"
 )
 
-// ModelType 显示模型的类型
-type ModelType uint8
+// PageType 显示模型的类型
+type PageType uint8
 
 const (
-	MtMain   ModelType = iota // 主页面
-	MtLogin                   // 登录页面
-	MtSearch                  // 搜索页面
+	PtMain   PageType = iota // 主页面
+	PtLogin                  // 登录页面
+	PtSearch                 // 搜索页面
 )
 
 type MenuItem struct {
@@ -46,8 +46,8 @@ type MainUIModel struct {
 	menuStack     *utils.Stack // 菜单栈
 	selectedIndex int          // 当前选中的菜单index
 
-	showLogin bool      // 显示登陆
-	modelType ModelType // 显示的页面类型
+	showLogin bool     // 显示登陆
+	pageType  PageType // 显示的页面类型
 
 	menu   IMenu   // 菜单
 	player *Player // 播放器
@@ -386,7 +386,7 @@ func keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 		enterMenu(m, nil, nil)
 	case "b", "B", "esc":
 		backMenu(m)
-	case "u", "U":
+	case "c", "C":
 		var subTitle string
 		if !m.player.playlistUpdateAt.IsZero() {
 			subTitle = m.player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
