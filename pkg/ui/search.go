@@ -65,7 +65,7 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		case "esc":
-			m.modelType = MtMain
+			m.pageType = PtMain
 			m.searchModel.Reset()
 			return m, tickMainUI(time.Nanosecond)
 
@@ -130,7 +130,7 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 					enterMenu(m, nil, nil)
 				}
 
-				m.modelType = MtMain
+				m.pageType = PtMain
 				m.searchModel.Reset()
 				return m, tickMainUI(time.Nanosecond)
 			}
@@ -267,6 +267,6 @@ func searchView(m *NeteaseModel) string {
 
 // SearchHandle 搜索
 func SearchHandle(model *NeteaseModel, searchType SearchType) {
-	model.modelType = MtSearch
+	model.pageType = PtSearch
 	model.searchModel.searchType = searchType
 }
