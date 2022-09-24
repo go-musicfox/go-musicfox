@@ -39,6 +39,7 @@ func NewOsxPlayer() Player {
 		stateChan: make(chan State),
 		musicChan: make(chan UrlMusic),
 		close:     make(chan struct{}),
+		volume:    100,
 	}
 
 	clsName := "AVPlayerHandler"
