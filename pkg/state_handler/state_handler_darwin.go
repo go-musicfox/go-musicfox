@@ -4,6 +4,7 @@
 package state_handler
 
 import (
+	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/core"
 	"github.com/progrium/macdriver/mediaplayer"
 	"github.com/progrium/macdriver/objc"
@@ -79,6 +80,8 @@ func (s *Handler) registerCommands() {
 	cls.AddMethod("handleBookmarkCommand:", s.commandHandler.handleBookmarkCommand)
 	cls.AddMethod("handleEnableLanguageOptionCommand:", s.commandHandler.handleEnableLanguageOptionCommand)
 	cls.AddMethod("handleDisableLanguageOptionCommand:", s.commandHandler.handleDisableLanguageOptionCommand)
+	cls.AddMethod("handleWillSleepOrPowerOff:", s.commandHandler.handleWillSleepOrPowerOff)
+	cls.AddMethod("handleDidWake:", s.commandHandler.handleDidWake)
 
 	objc.RegisterClass(cls)
 	h := objc.Get("RemoteCommandHandler").Alloc().Init()
@@ -101,6 +104,11 @@ func (s *Handler) registerCommands() {
 	//s.remoteCommandCenter.BookmarkCommand().AddTarget_action_(h, objc.Sel("handleBookmarkCommand:"))
 	//s.remoteCommandCenter.EnableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleEnableLanguageOptionCommand:"))
 	//s.remoteCommandCenter.DisableLanguageOptionCommand().AddTarget_action_(h, objc.Sel("handleDisableLanguageOptionCommand:"))
+
+	workspaceNC := cocoa.NSWorkspace_sharedWorkspace().NotificationCenter()
+	workspaceNC.AddObserver_selector_name_object_(h, objc.Sel("handleWillSleepOrPowerOff:"), core.String("NSWorkspaceWillSleepNotification"), nil)
+	workspaceNC.AddObserver_selector_name_object_(h, objc.Sel("handleWillSleepOrPowerOff:"), core.String("NSWorkspaceWillPowerOffNotification"), nil)
+	workspaceNC.AddObserver_selector_name_object_(h, objc.Sel("handleDidWake:"), core.String("NSWorkspaceDidWakeNotification"), nil)
 }
 
 func (s *Handler) SetPlayingInfo(info PlayingInfo) {
@@ -263,4 +271,12 @@ func (r *remoteCommandHandler) handleEnableLanguageOptionCommand(self objc.Objec
 
 func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(self objc.Object, eventObj objc.Object) core.NSInteger {
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
+}
+
+func (r *remoteCommandHandler) handleWillSleepOrPowerOff(self objc.Object, ns objc.Object) {
+	r.player.Paused()
+}
+
+func (r *remoteCommandHandler) handleDidWake(self objc.Object, ns objc.Object) {
+	// 暂时不做任何处理
 }
