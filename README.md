@@ -12,7 +12,7 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
-## v3.0
+## v3.0.0
 
 * go-mp3 => minimp3 降低cpu占用
 * 播放引擎: 
