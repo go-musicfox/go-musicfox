@@ -85,7 +85,8 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.User{}); err == nil {
 			if user, err := structs.NewUserFromLocalJson(jsonStr); err == nil {
 				m.user = &user
-				m.refreshMenuTitle() // 刷新界面用户名
+				//m.refreshMenuTitle() // 刷新界面用户名
+				m.menu.FormatMenuItem(m.menuTitle)
 			}
 		}
 
