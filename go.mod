@@ -38,8 +38,8 @@ require (
 )
 
 replace (
-	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.2
+	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.4
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
-	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.3
+	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
 )

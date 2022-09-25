@@ -11,3 +11,5 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/tosone/minimp3 v1.0.1
 )
+
+replace github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5

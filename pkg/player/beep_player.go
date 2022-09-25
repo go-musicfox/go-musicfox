@@ -153,7 +153,7 @@ func (p *beepPlayer) listen() {
 
 			switch p.curMusic.Type {
 			case Mp3:
-				minimp3pkg.BufferSize = 1024 * 60
+				minimp3pkg.BufferSize = 1024 * 50
 				p.curStreamer, p.curFormat, err = minimp3.Decode(cacheRFile)
 			case Wav:
 				p.curStreamer, p.curFormat, err = wav.Decode(cacheRFile)
