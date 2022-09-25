@@ -100,13 +100,21 @@ brew install anhoder/go-musicfox/go-musicfox
 brew unlink musicfox && brew link --overwrite go-musicfox
 ```
 
-#### 2. ArchLinux可使用AUR安装：
+#### 2. Arch Linux可使用AUR安装：
 
 ```sh
 yay -S go-musicfox-bin
 ```
 
-#### 3. 直接下载
+#### 3. Gentoo Linux可使用gentoo-zh overlay安装：
+
+```
+eselect repository enable gentoo-zh
+emerge --sync
+emerge -a media-sound/go-musicfox-bin
+```
+
+#### 4. 直接下载
 
 下载Linux可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
 
