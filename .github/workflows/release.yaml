@@ -31,6 +31,10 @@ jobs:
         run: |
           echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
 
+      - name: setup release environment
+        run: |-
+          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}\nLASTFM_KEY=${{secrets.LASTFM_KEY}}\nLASTFM_SECRET=${{secrets.LASTFM_SECRET}}" >> .release-env
+
       - if: github.ref == 'refs/heads/master' || startsWith(github.ref,'refs/heads/feature/')
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
         run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
@@ -41,10 +45,6 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
 
-      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
-        name: setup release environment
-        run: |-
-          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}\nLASTFM_KEY=${{secrets.LASTFM_KEY}}\nLASTFM_SECRET=${{secrets.LASTFM_SECRET}}" >> .release-env
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
         name: release publish
         run: |-
