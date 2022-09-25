@@ -4,7 +4,7 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 **有兴趣或有问题可以加QQ群835522896**
 
-![image](https://user-images.githubusercontent.com/27605589/192147769-024dd2ed-3178-441e-9e61-7af8803d1af7.png)
+![image](https://user-images.githubusercontent.com/27605589/192147893-790c49c0-6add-417d-a721-9b2eb40a66af.png)
 
 > UI基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
 
