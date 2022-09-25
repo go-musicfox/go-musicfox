@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/anhoder/bubbles v0.7.8
-	github.com/anhoder/bubbletea v0.12.11
+	github.com/anhoder/bubbletea v0.12.12
 	github.com/anhoder/netease-music v1.1.1
 	github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
 	github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946 // indirect
