@@ -56,14 +56,13 @@ func NewSearch() (search *SearchModel) {
 }
 
 // update search
-func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+func (s *SearchModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tickSearchMsg:
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
-
 		case "esc":
 			m.pageType = PtMain
 			m.searchModel.Reset()
@@ -71,7 +70,6 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 
 		// Cycle between inputs
 		case "tab", "shift+tab", "enter", "up", "down":
-
 			if m.searchModel.searchType == StNull {
 				return m, nil
 			}
@@ -126,7 +124,6 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 					case StRadio:
 						m.searchModel.result = utils.GetDjRadiosOfSearchResult(response)
 					}
-
 					enterMenu(m, nil, nil)
 				}
 
@@ -175,10 +172,10 @@ func updateSearch(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle character input and blinks
-	return updateSearchInputs(msg, m)
+	return s.updateSearchInputs(msg, m)
 }
 
-func updateSearchInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+func (s *SearchModel) updateSearchInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -190,8 +187,7 @@ func updateSearchInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func searchView(m *NeteaseModel) string {
-
+func (s *SearchModel) view(m *NeteaseModel) string {
 	var builder strings.Builder
 
 	// 距离顶部的行数
@@ -200,18 +196,19 @@ func searchView(m *NeteaseModel) string {
 	// title
 	if configs.ConfigRegistry.MainShowTitle {
 
-		builder.WriteString(titleView(m, &top))
+		builder.WriteString(m.titleView(m, &top))
 	} else {
 		top++
 	}
 
 	// menu title
 	menuViews := m.menu.MenuViews()
-	var menuTitle string
+	var menuTitle = &MenuItem{Title: "搜索"}
 	if m.selectedIndex < len(menuViews) {
-		menuTitle = menuViews[m.selectedIndex].Title
+		typeMenu := menuViews[m.selectedIndex]
+		menuTitle.Subtitle = typeMenu.Title
 	}
-	builder.WriteString(menuTitleView(m, &top, menuTitle))
+	builder.WriteString(m.menuTitleView(m, &top, menuTitle))
 	builder.WriteString("\n\n\n")
 	top += 2
 
@@ -266,7 +263,7 @@ func searchView(m *NeteaseModel) string {
 }
 
 // SearchHandle 搜索
-func SearchHandle(model *NeteaseModel, searchType SearchType) {
+func (s *SearchModel) SearchHandle(model *NeteaseModel, searchType SearchType) {
 	model.pageType = PtSearch
 	model.searchModel.searchType = searchType
 }

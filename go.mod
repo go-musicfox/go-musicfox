@@ -6,7 +6,7 @@ require (
 	github.com/anhoder/bubbles v0.7.8
 	github.com/anhoder/bubbletea v0.12.10
 	github.com/anhoder/netease-music v1.1.1
-	github.com/anhoder/notificator v0.0.0-20220906123738-8410351970b5
+	github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
 	github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/boltdb/bolt v1.3.1
@@ -31,6 +31,8 @@ require (
 	github.com/muesli/termenv v0.11.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/progrium/macdriver v0.2.0
+	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
+	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.1
 )
@@ -38,5 +40,6 @@ require (
 replace (
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
+	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.3
 )

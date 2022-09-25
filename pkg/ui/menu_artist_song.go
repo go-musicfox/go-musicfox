@@ -9,8 +9,9 @@ import (
 )
 
 type ArtistSongMenu struct {
-	menus 	   []MenuItem
-	songs      []structs.Song
+	DefaultMenu
+	menus    []MenuItem
+	songs    []structs.Song
 	artistId int64
 }
 
@@ -24,16 +25,8 @@ func (m *ArtistSongMenu) MenuData() interface{} {
 	return m.songs
 }
 
-func (m *ArtistSongMenu) BeforeBackMenuHook() Hook {
-	return nil
-}
-
 func (m *ArtistSongMenu) IsPlayable() bool {
 	return true
-}
-
-func (m *ArtistSongMenu) ResetPlaylistWhenPlay() bool {
-	return false
 }
 
 func (m *ArtistSongMenu) GetMenuKey() string {
@@ -42,20 +35,6 @@ func (m *ArtistSongMenu) GetMenuKey() string {
 
 func (m *ArtistSongMenu) MenuViews() []MenuItem {
 	return m.menus
-}
-
-func (m *ArtistSongMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
-	return nil
-}
-
-func (m *ArtistSongMenu) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *ArtistSongMenu) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
 }
 
 func (m *ArtistSongMenu) BeforeEnterMenuHook() Hook {
@@ -73,14 +52,3 @@ func (m *ArtistSongMenu) BeforeEnterMenuHook() Hook {
 		return true
 	}
 }
-
-func (m *ArtistSongMenu) BottomOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *ArtistSongMenu) TopOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-

@@ -7,7 +7,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
-	db2 "go-musicfox/pkg/storage"
+	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 	"strings"
@@ -106,8 +106,8 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 						m.user = &user
 
 						// 写入本地数据库
-						table := db2.NewTable()
-						_ = table.SetByKVModel(db2.User{}, user)
+						table := storage.NewTable()
+						_ = table.SetByKVModel(storage.User{}, user)
 
 						if m.loginModel.AfterLogin != nil {
 							m.loginModel.AfterLogin(m, nil, nil)
@@ -192,14 +192,13 @@ func loginView(m *NeteaseModel) string {
 
 	// title
 	if configs.ConfigRegistry.MainShowTitle {
-
-		builder.WriteString(titleView(m, &top))
+		builder.WriteString(m.titleView(m, &top))
 	} else {
 		top++
 	}
 
 	// menu title
-	builder.WriteString(menuTitleView(m, &top, "用户登录 (手机号或邮箱)"))
+	builder.WriteString(m.menuTitleView(m, &top, &MenuItem{Title: "用户登录", Subtitle: "手机号或邮箱"}))
 	builder.WriteString("\n\n\n")
 	top += 2
 

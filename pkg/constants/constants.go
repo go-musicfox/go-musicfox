@@ -6,7 +6,9 @@ import (
 
 var (
 	// AppVersion Inject by -ldflags
-	AppVersion = "v2.2.1"
+	AppVersion   = "v2.2.1"
+	LastfmKey    = ""
+	LastfmSecret = ""
 )
 
 const AppName = "musicfox"
@@ -15,6 +17,7 @@ const AppShowStartup = true
 const AppGithubUrl = "https://github.com/anhoder/go-musicfox"
 const AppLatestReleases = "https://github.com/anhoder/go-musicfox/releases/latest"
 const AppCheckUpdateUrl = "https://api.github.com/repos/anhoder/go-musicfox/releases/latest"
+const LastfmAuthUrl = "https://www.last.fm/api/auth/?api_key=%s&token=%s"
 const ProgressFullChar = "#"
 const ProgressEmptyChar = " "
 const StartupProgressOutBounce = true

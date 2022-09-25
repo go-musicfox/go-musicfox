@@ -23,7 +23,7 @@ func NewLoading(m *NeteaseModel) *Loading {
 func (loading *Loading) start() {
 	termenv.MoveCursor(loading.model.menuTitleStartRow, 0)
 
-	loading.curLen = utf8.RuneCountInString(loading.model.menuTitle) + utf8.RuneCountInString(" "+configs.ConfigRegistry.MainLoadingText)
+	loading.curLen = utf8.RuneCountInString(loading.model.menuTitle.OriginString()) + utf8.RuneCountInString(" "+configs.ConfigRegistry.MainLoadingText)
 
 	var repeatSpace string
 	if loading.model.menuTitleStartColumn > 0 {
@@ -31,7 +31,7 @@ func (loading *Loading) start() {
 	}
 	fmt.Printf("%s%s%s",
 		repeatSpace,
-		SetFgStyle(loading.model.menuTitle, termenv.ANSIBrightGreen),
+		SetFgStyle(loading.model.menuTitle.String(), termenv.ANSIBrightGreen),
 		SetFgStyle(" "+configs.ConfigRegistry.MainLoadingText, termenv.ANSIBrightBlack))
 
 	termenv.MoveCursor(0, 0)
@@ -41,7 +41,7 @@ func (loading *Loading) start() {
 func (loading *Loading) complete() {
 	termenv.MoveCursor(loading.model.menuTitleStartRow, 0)
 
-	spaceLen := loading.curLen - utf8.RuneCountInString(loading.model.menuTitle)
+	spaceLen := loading.curLen - utf8.RuneCountInString(loading.model.menuTitle.OriginString())
 	if spaceLen < 0 {
 		spaceLen = 0
 	}
@@ -53,7 +53,7 @@ func (loading *Loading) complete() {
 
 	fmt.Printf("%s%s%s",
 		repeatSpace,
-		SetFgStyle(loading.model.menuTitle, termenv.ANSIBrightGreen),
+		SetFgStyle(loading.model.menuTitle.String(), termenv.ANSIBrightGreen),
 		strings.Repeat("　", spaceLen))
 
 	termenv.MoveCursor(0, 0)

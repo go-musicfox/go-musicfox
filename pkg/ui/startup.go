@@ -21,7 +21,7 @@ var (
 	progressEndColor   string
 )
 
-type startupModel struct {
+type StartupModel struct {
 	TotalDuration  time.Duration
 	loadedDuration time.Duration
 	loadedPercent  float64
@@ -29,27 +29,26 @@ type startupModel struct {
 	quitting       bool
 }
 
-func NewStartup() (m *startupModel) {
-	m = new(startupModel)
+func NewStartup() (m *StartupModel) {
+	m = new(StartupModel)
 	m.TotalDuration = time.Second * 2 // 默认
-
 	return
 }
 
 // startup func
-func updateStartup(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+func (s *StartupModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 
 	case tickStartupMsg:
-		if m.loadedDuration >= m.TotalDuration {
-			m.loaded = true
+		if s.loadedDuration >= s.TotalDuration {
+			s.loaded = true
 			m.isListeningKey = true
 			return m, tea.ClearScreen
 		}
-		m.loadedDuration += constants.StartupTickDuration
-		m.loadedPercent = float64(m.loadedDuration) / float64(m.TotalDuration)
+		s.loadedDuration += constants.StartupTickDuration
+		s.loadedPercent = float64(s.loadedDuration) / float64(s.TotalDuration)
 		if configs.ConfigRegistry.StartupProgressOutBounce {
-			m.loadedPercent = ease.OutBounce(m.loadedPercent)
+			s.loadedPercent = ease.OutBounce(s.loadedPercent)
 		}
 		return m, tickStartup(constants.StartupTickDuration)
 
@@ -61,7 +60,7 @@ func updateStartup(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 }
 
 // startup view
-func startupView(m *NeteaseModel) string {
+func (s *StartupModel) view(m *NeteaseModel) string {
 
 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
@@ -83,24 +82,24 @@ func startupView(m *NeteaseModel) string {
 	if top > 1 {
 		uiBuilder.WriteString(strings.Repeat("\n", top-1))
 	}
-	uiBuilder.WriteString(logoView(m))
+	uiBuilder.WriteString(s.logoView(m))
 	uiBuilder.WriteString("\n")
 	if top != 0 && bottom != 0 {
 		uiBuilder.WriteString("\n")
 	}
-	uiBuilder.WriteString(tipsView(m))
+	uiBuilder.WriteString(s.tipsView(m))
 	uiBuilder.WriteString("\n")
 	if top != 0 && bottom != 0 {
 		uiBuilder.WriteString("\n")
 	}
-	uiBuilder.WriteString(progressView(m))
+	uiBuilder.WriteString(s.progressView(m))
 	uiBuilder.WriteString(strings.Repeat("\n", bottom))
 
 	return uiBuilder.String()
 }
 
 // get logo
-func logoView(m *NeteaseModel) string {
+func (s *StartupModel) logoView(m *NeteaseModel) string {
 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
 	}
@@ -128,7 +127,7 @@ func logoView(m *NeteaseModel) string {
 }
 
 // get tips
-func tipsView(m *NeteaseModel) string {
+func (s *StartupModel) tipsView(m *NeteaseModel) string {
 	example := "Enter after 11.1 seconds..."
 	var left int
 	if m.WindowWidth-len(example) > 0 {
@@ -136,13 +135,13 @@ func tipsView(m *NeteaseModel) string {
 	}
 	tips := fmt.Sprintf("%sEnter after %.1f seconds...",
 		strings.Repeat(" ", left),
-		float64(m.TotalDuration-m.loadedDuration)/float64(time.Second))
+		float64(s.TotalDuration-s.loadedDuration)/float64(time.Second))
 
 	return SetFgStyle(tips, termenv.ANSIBrightBlack)
 }
 
 // get progress
-func progressView(m *NeteaseModel) string {
+func (s *StartupModel) progressView(m *NeteaseModel) string {
 	width := float64(m.WindowWidth)
 
 	if progressStartColor == "" || progressEndColor == "" {
@@ -153,7 +152,7 @@ func progressView(m *NeteaseModel) string {
 		progressLastWidth = width
 	}
 
-	fullSize := int(math.Round(width * m.loadedPercent))
+	fullSize := int(math.Round(width * s.loadedPercent))
 	var fullCells string
 	for i := 0; i < fullSize && i < len(progressRamp); i++ {
 		fullCells += termenv.String(string(configs.ConfigRegistry.ProgressFullChar)).Foreground(termProfile.Color(progressRamp[i])).String()

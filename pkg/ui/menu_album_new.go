@@ -11,6 +11,7 @@ import (
 )
 
 type AlbumNewMenu struct {
+	DefaultMenu
 	menus  []MenuItem
 	albums []structs.Album
 	area   string
@@ -32,18 +33,6 @@ func (m *AlbumNewMenu) MenuData() interface{} {
 	return m.albums
 }
 
-func (m *AlbumNewMenu) BeforeBackMenuHook() Hook {
-	return nil
-}
-
-func (m *AlbumNewMenu) IsPlayable() bool {
-	return false
-}
-
-func (m *AlbumNewMenu) ResetPlaylistWhenPlay() bool {
-	return false
-}
-
 func (m *AlbumNewMenu) GetMenuKey() string {
 	return fmt.Sprintf("album_new_%s", m.area)
 }
@@ -58,16 +47,6 @@ func (m *AlbumNewMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	}
 
 	return NewAlbumDetailMenu(m.albums[index].Id)
-}
-
-func (m *AlbumNewMenu) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *AlbumNewMenu) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
 }
 
 func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
@@ -101,7 +80,7 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(album.Name), utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
 		return true
@@ -109,7 +88,7 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
 }
 
 func (m *AlbumNewMenu) BottomOutHook() Hook {
-	if m.total != -1 && m.offset < m.total  {
+	if m.total != -1 && m.offset < m.total {
 		return nil
 	}
 	return func(model *NeteaseModel) bool {
@@ -138,16 +117,11 @@ func (m *AlbumNewMenu) BottomOutHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(album.Name), utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
 		m.albums = append(m.albums, albums...)
 
 		return true
 	}
-}
-
-func (m *AlbumNewMenu) TopOutHook() Hook {
-	// Nothing to do
-	return nil
 }

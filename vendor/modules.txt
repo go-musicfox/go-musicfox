@@ -8,7 +8,7 @@ github.com/anhoder/bubbletea
 ## explicit
 github.com/anhoder/netease-music/service
 github.com/anhoder/netease-music/util
-# github.com/anhoder/notificator v0.0.0-20220906123738-8410351970b5
+# github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
 ## explicit
 github.com/anhoder/notificator
 # github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946
@@ -132,6 +132,12 @@ github.com/progrium/macdriver/misc/variadic
 github.com/progrium/macdriver/objc
 # github.com/rivo/uniseg v0.2.0
 github.com/rivo/uniseg
+# github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/anhoder/lastfm-go v0.0.2
+## explicit
+github.com/shkh/lastfm-go
+# github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
+## explicit
+github.com/skratchdot/open-golang/open
 # github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 ## explicit
 github.com/telanflow/cookiejar
@@ -172,3 +178,4 @@ golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
 golang.org/x/term
+# github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2

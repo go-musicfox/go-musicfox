@@ -154,6 +154,10 @@ func CheckMacOSVersion() bool {
 
 	// semantic versioning of macOS
 
+	if len(version) < 2 {
+		return false
+	}
+
 	major, _ := strconv.Atoi(version[0])
 	minor, _ := strconv.Atoi(version[1])
 

@@ -7,6 +7,7 @@ import (
 )
 
 type DailyRecommendSongsMenu struct {
+	DefaultMenu
 	menus []MenuItem
 	songs []structs.Song
 }
@@ -19,16 +20,8 @@ func (m *DailyRecommendSongsMenu) MenuData() interface{} {
 	return m.songs
 }
 
-func (m *DailyRecommendSongsMenu) BeforeBackMenuHook() Hook {
-	return nil
-}
-
 func (m *DailyRecommendSongsMenu) IsPlayable() bool {
 	return true
-}
-
-func (m *DailyRecommendSongsMenu) ResetPlaylistWhenPlay() bool {
-	return false
 }
 
 func (m *DailyRecommendSongsMenu) GetMenuKey() string {
@@ -37,20 +30,6 @@ func (m *DailyRecommendSongsMenu) GetMenuKey() string {
 
 func (m *DailyRecommendSongsMenu) MenuViews() []MenuItem {
 	return m.menus
-}
-
-func (m *DailyRecommendSongsMenu) SubMenu(*NeteaseModel, int) IMenu {
-	return nil
-}
-
-func (m *DailyRecommendSongsMenu) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *DailyRecommendSongsMenu) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
 }
 
 func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
@@ -80,14 +59,3 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 		return true
 	}
 }
-
-func (m *DailyRecommendSongsMenu) BottomOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *DailyRecommendSongsMenu) TopOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-

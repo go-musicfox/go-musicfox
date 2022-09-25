@@ -44,7 +44,7 @@ jobs:
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
         name: setup release environment
         run: |-
-          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}" >> .release-env
+          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}\nLASTFM_KEY=${{secrets.LASTFM_KEY}}\nLASTFM_SECRET=${{secrets.LASTFM_SECRET}}" >> .release-env
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
         name: release publish
         run: |-

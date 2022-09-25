@@ -128,7 +128,7 @@ func GetViewFromSongs(songs []ds2.Song) []MenuItem {
 		for _, artist := range song.Artists {
 			artists = append(artists, artist.Name)
 		}
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(song.Name), utils.ReplaceSpecialStr(strings.Join(artists, ","))})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(song.Name), Subtitle: utils.ReplaceSpecialStr(strings.Join(artists, ","))})
 	}
 
 	return menus
@@ -143,7 +143,7 @@ func GetViewFromAlbums(albums []ds2.Album) []MenuItem {
 			artists = append(artists, artist.Name)
 		}
 		artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(album.Name), utils.ReplaceSpecialStr(artistsStr)})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 	}
 
 	return menus
@@ -153,7 +153,7 @@ func GetViewFromAlbums(albums []ds2.Album) []MenuItem {
 func GetViewFromPlaylists(playlists []ds2.Playlist) []MenuItem {
 	var menus []MenuItem
 	for _, playlist := range playlists {
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 	}
 
 	return menus
@@ -163,7 +163,7 @@ func GetViewFromPlaylists(playlists []ds2.Playlist) []MenuItem {
 func GetViewFromArtists(artists []ds2.Artist) []MenuItem {
 	var menus []MenuItem
 	for _, artist := range artists {
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(artist.Name), ""})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
 	}
 
 	return menus
@@ -173,7 +173,7 @@ func GetViewFromArtists(artists []ds2.Artist) []MenuItem {
 func GetViewFromUsers(users []ds2.User) []MenuItem {
 	var menus []MenuItem
 	for _, user := range users {
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(user.Nickname), ""})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(user.Nickname)})
 	}
 
 	return menus
@@ -187,7 +187,7 @@ func GetViewFromDjRadios(radios []ds2.DjRadio) []MenuItem {
 		if radio.Dj.Nickname != "" {
 			dj = fmt.Sprintf("[%s]", radio.Dj.Nickname)
 		}
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(radio.Name), utils.ReplaceSpecialStr(dj)})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(radio.Name), Subtitle: utils.ReplaceSpecialStr(dj)})
 	}
 
 	return menus
@@ -197,7 +197,7 @@ func GetViewFromDjRadios(radios []ds2.DjRadio) []MenuItem {
 func GetViewFromDjCate(categories []ds2.DjCategory) []MenuItem {
 	var menus []MenuItem
 	for _, category := range categories {
-		menus = append(menus, MenuItem{utils.ReplaceSpecialStr(category.Name), ""})
+		menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(category.Name)})
 	}
 
 	return menus

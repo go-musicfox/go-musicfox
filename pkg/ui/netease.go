@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"go-musicfox/pkg/lastfm"
 	"strconv"
 	"time"
 
@@ -23,9 +24,11 @@ type NeteaseModel struct {
 	isListeningKey bool
 	program        *tea.Program
 	user           *structs.User
+	lastfm         *lastfm.Client
+	lastfmUser     *storage.LastfmUser
 
 	// startup
-	*startupModel
+	startup *StartupModel
 
 	// main ui
 	*MainUIModel
@@ -41,10 +44,11 @@ type NeteaseModel struct {
 func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 	m = new(NeteaseModel)
 	m.isListeningKey = !configs.ConfigRegistry.StartupShow
+	m.lastfm = lastfm.NewClient()
 
 	// startup
-	m.startupModel = NewStartup()
-	m.TotalDuration = loadingDuration
+	m.startup = NewStartup()
+	m.startup.TotalDuration = loadingDuration
 
 	// main menu
 	m.MainUIModel = NewMainUIModel(m)
@@ -81,6 +85,17 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.User{}); err == nil {
 			if user, err := structs.NewUserFromLocalJson(jsonStr); err == nil {
 				m.user = &user
+				m.refreshMenuTitle() // 刷新界面用户名
+			}
+		}
+
+		// 获取lastfm用户信息
+		var lastfmUser storage.LastfmUser
+		if jsonStr, err := table.GetByKVModel(&lastfmUser); err == nil {
+			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
+				m.lastfmUser = &lastfmUser
+				m.lastfm.SetSession(lastfmUser.SessionKey)
+				m.refreshMenuList()
 			}
 		}
 
@@ -107,14 +122,15 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.PlayerSnapshot{}); err == nil && len(jsonStr) > 0 {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
-				m.player.curSongIndex = snapshot.CurSongIndex
-				m.player.playlist = snapshot.Playlist
-				m.player.playlistUpdateAt = snapshot.PlaylistUpdateAt
-				m.player.curSong = m.player.playlist[m.player.curSongIndex]
-				//m.player.playingMenuKey = snapshot.PlayingMenuKey
-				m.player.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
+				player := m.player
+				player.curSongIndex = snapshot.CurSongIndex
+				player.playlist = snapshot.Playlist
+				player.playlistUpdateAt = snapshot.PlaylistUpdateAt
+				player.curSong = player.playlist[player.curSongIndex]
+				player.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
 		}
+		m.Rerender()
 
 		// 签到
 		if configs.ConfigRegistry.StartupSignIn {
@@ -170,7 +186,7 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		k := msgWithType.String()
 		// 登录界面输入q不退出
 		if m.pageType == PtMain && (k == "q" || k == "Q" || k == "ctrl+c") {
-			m.quitting = true
+			m.startup.quitting = true
 			m.Close()
 			return m, tea.Quit
 		}
@@ -181,40 +197,40 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Hand off the message and model to the approprate update function for the
 	// appropriate view based on the current state.
-	if configs.ConfigRegistry.StartupShow && !m.loaded {
+	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
 		if _, ok := msg.(tea.WindowSizeMsg); ok {
-			updateMainUI(msg, m)
+			m.MainUIModel.update(msg, m)
 		}
-		return updateStartup(msg, m)
+		return m.startup.update(msg, m)
 	}
 
 	switch m.pageType {
 	case PtLogin:
 		return updateLogin(msg, m)
 	case PtSearch:
-		return updateSearch(msg, m)
+		return m.searchModel.update(msg, m)
 	}
 
-	return updateMainUI(msg, m)
+	return m.MainUIModel.update(msg, m)
 }
 
 func (m *NeteaseModel) View() string {
-	if m.quitting || m.WindowWidth <= 0 || m.WindowHeight <= 0 {
+	if m.startup.quitting || m.WindowWidth <= 0 || m.WindowHeight <= 0 {
 		return ""
 	}
 
-	if configs.ConfigRegistry.StartupShow && !m.loaded {
-		return startupView(m)
+	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
+		return m.startup.view(m)
 	}
 
 	switch m.pageType {
 	case PtLogin:
 		return loginView(m)
 	case PtSearch:
-		return searchView(m)
+		return m.searchModel.view(m)
 	}
 
-	return mainUIView(m)
+	return m.MainUIModel.view(m)
 }
 
 func (m *NeteaseModel) BindProgram(program *tea.Program) {

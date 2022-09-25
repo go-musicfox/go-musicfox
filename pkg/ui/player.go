@@ -58,6 +58,13 @@ const (
 	CtrlRerender CtrlType = "rerender"
 )
 
+type ReportPhase uint8
+
+const (
+	ReportPhaseStart ReportPhase = iota
+	ReportPhaseComplete
+)
+
 // Player 网易云音乐播放器
 type Player struct {
 	model *NeteaseModel
@@ -146,6 +153,8 @@ func NewPlayer(model *NeteaseModel) *Player {
 				AlbumArtist:    music.Album.ArtistName(),
 			})
 			if s == player.Stopped {
+				// 上报lastfm
+				p.report(ReportPhaseComplete)
 				p.Next()
 			} else {
 				p.Rerender()
@@ -153,11 +162,13 @@ func NewPlayer(model *NeteaseModel) *Player {
 		}
 	}()
 
-	// done监听
+	// 时间监听
 	go func() {
 		defer utils.Recover(false)
 		for duration := range p.TimeChan() {
 			if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
+				// 上报
+				p.report(ReportPhaseComplete)
 				p.NextSong()
 				break
 			}
@@ -431,6 +442,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
+
+	// 上报
+	p.report(ReportPhaseStart)
 
 	go utils.Notify(utils.NotifyContent{
 		Title: "正在播放: " + song.Name,
@@ -713,5 +727,33 @@ func (p *Player) DownVolume() {
 	if v, ok := p.Player.(storage.VolumeStorable); ok {
 		table := storage.NewTable()
 		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
+	}
+}
+
+func (p *Player) report(phase ReportPhase) {
+	switch phase {
+	case ReportPhaseStart:
+		go func(song structs.Song) {
+			_ = p.model.lastfm.UpdateNowPlaying(map[string]interface{}{
+				"artist":   song.ArtistName(),
+				"track":    song.Name,
+				"album":    song.Album.Name,
+				"duration": song.Duration,
+			})
+		}(p.curSong)
+	case ReportPhaseComplete:
+		duration := p.curSong.Duration.Seconds()
+		passedTime := p.PassedTime().Seconds()
+		if duration <= passedTime || passedTime >= duration/2 {
+			go func(song structs.Song, passed time.Duration) {
+				_ = p.model.lastfm.Scrobble(map[string]interface{}{
+					"artist":    song.ArtistName(),
+					"track":     song.Name,
+					"album":     song.Album.Name,
+					"timestamp": time.Now().Unix(),
+					"duration":  song.Duration.Seconds(),
+				})
+			}(p.curSong, p.PassedTime())
+		}
 	}
 }

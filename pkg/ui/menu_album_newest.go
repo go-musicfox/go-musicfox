@@ -9,6 +9,7 @@ import (
 )
 
 type AlbumNewestMenu struct {
+	DefaultMenu
 	menus  []MenuItem
 	albums []structs.Album
 }
@@ -19,18 +20,6 @@ func NewAlbumNewestMenu() *AlbumNewestMenu {
 
 func (m *AlbumNewestMenu) MenuData() interface{} {
 	return m.albums
-}
-
-func (m *AlbumNewestMenu) BeforeBackMenuHook() Hook {
-	return nil
-}
-
-func (m *AlbumNewestMenu) IsPlayable() bool {
-	return false
-}
-
-func (m *AlbumNewestMenu) ResetPlaylistWhenPlay() bool {
-	return false
 }
 
 func (m *AlbumNewestMenu) GetMenuKey() string {
@@ -47,16 +36,6 @@ func (m *AlbumNewestMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	}
 
 	return NewAlbumDetailMenu(m.albums[index].Id)
-}
-
-func (m *AlbumNewestMenu) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *AlbumNewestMenu) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
 }
 
 func (m *AlbumNewestMenu) BeforeEnterMenuHook() Hook {
@@ -81,19 +60,9 @@ func (m *AlbumNewestMenu) BeforeEnterMenuHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(album.Name), utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
 		return true
 	}
-}
-
-func (m *AlbumNewestMenu) BottomOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *AlbumNewestMenu) TopOutHook() Hook {
-	// Nothing to do
-	return nil
 }

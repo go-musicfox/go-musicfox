@@ -8,16 +8,13 @@ import (
 )
 
 type PersonalFmMenu struct {
+	DefaultMenu
 	menus []MenuItem
 	songs []structs.Song
 }
 
 func NewPersonalFmMenu() *PersonalFmMenu {
 	return new(PersonalFmMenu)
-}
-
-func (m *PersonalFmMenu) BeforeBackMenuHook() Hook {
-	return nil
 }
 
 func (m *PersonalFmMenu) IsPlayable() bool {
@@ -38,20 +35,6 @@ func (m *PersonalFmMenu) MenuViews() []MenuItem {
 
 func (m *PersonalFmMenu) MenuData() interface{} {
 	return m.songs
-}
-
-func (m *PersonalFmMenu) SubMenu(*NeteaseModel, int) IMenu {
-	return nil
-}
-
-func (m *PersonalFmMenu) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *PersonalFmMenu) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
 }
 
 func (m *PersonalFmMenu) BeforeEnterMenuHook() Hook {
@@ -94,9 +77,4 @@ func (m *PersonalFmMenu) BottomOutHook() Hook {
 
 		return true
 	}
-}
-
-func (m *PersonalFmMenu) TopOutHook() Hook {
-	// Nothing to do
-	return nil
 }

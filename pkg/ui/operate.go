@@ -1,12 +1,10 @@
 package ui
 
 import (
-	"fmt"
 	"github.com/anhoder/netease-music/service"
-	"github.com/muesli/termenv"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/player"
-	db2 "go-musicfox/pkg/storage"
+	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 	"math"
@@ -18,7 +16,7 @@ type menuStackItem struct {
 	menuList      []MenuItem
 	selectedIndex int
 	menuCurPage   int
-	menuTitle     string
+	menuTitle     *MenuItem
 	menu          IMenu
 }
 
@@ -228,11 +226,15 @@ func enterMenu(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 		loading.complete()
 	}
 
+	if newMenu != nil {
+		newMenu.FormatMenuItem(newTitle)
+	}
+
 	menuList := newMenu.MenuViews()
 
 	m.menu = newMenu
 	m.menuList = menuList
-	m.menuTitle = fmt.Sprintf("%s %s", newTitle.Title, SetFgStyle(newTitle.Subtitle, termenv.ANSIBrightBlack))
+	m.menuTitle = newTitle
 	m.selectedIndex = 0
 	m.menuCurPage = 1
 }
@@ -259,6 +261,7 @@ func backMenu(m *NeteaseModel) {
 		}
 		loading.complete()
 	}
+	m.menu.FormatMenuItem(m.menuTitle) // 重新格式化
 
 	stackMenu, ok := stackItem.(*menuStackItem)
 	if !ok {
@@ -268,6 +271,7 @@ func backMenu(m *NeteaseModel) {
 	m.menuList = stackMenu.menuList
 	m.menu = stackMenu.menu
 	m.menuTitle = stackMenu.menuTitle
+	m.menu.FormatMenuItem(m.menuTitle)
 	m.selectedIndex = stackMenu.selectedIndex
 	m.menuCurPage = stackMenu.menuCurPage
 }
@@ -322,7 +326,6 @@ func spaceKeyHandle(m *NeteaseModel) {
 		}
 		_ = m.player.PlaySong(songs[selectedIndex], DurationNext)
 	}
-
 }
 
 // likePlayingSong like/unlike playing song
@@ -365,8 +368,8 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 
 // logout 登出
 func logout() {
-	table := db2.NewTable()
-	_ = table.DeleteByKVModel(db2.User{})
+	table := storage.NewTable()
+	_ = table.DeleteByKVModel(storage.User{})
 	utils.Notify(utils.NotifyContent{
 		Title: "登出成功",
 		Text:  "已清理用户信息",
