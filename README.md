@@ -1,6 +1,6 @@
 # go-musicfox
 
-go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，为了解决某些问题，提升体验，因此采用go进行重写。Star下⭐️
+go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，为了解决某些问题，提升体验，因此采用go进行重写。求个Star⭐️~
 
 > UI基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
 
@@ -8,11 +8,38 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
+## v3.0.0变更
+
+* go-mp3 => minimp3 降低cpu占用
+* 播放引擎: 
+  * beep（已有）
+  * 新增mpd，需要安装配置mpd
+  * 新增osx，使用Mac系统原生播放器，Mac系统下可用（推荐）
+* 保存音量
+* 上报lastfm
+* Mac优化：
+  * 接入MPNowPlayinginfoCenter，在菜单显示播放信息
+  * 接入MPRemoteCommandCenter，支持菜单栏控制播放、暂停等，可响应系统中断，例如蓝牙断开
+  * 接入NSWorkspace，响应睡眠通知，睡眠前自动暂停
+* 支持当前播放列表
+* 其他优化...
+
 ## 预览
 
-![欢迎界面](examples/img.png)
-![主界面1](examples/img1.png)
-![主界面2](examples/img2.png)
+1. 启动
+![启动界面](previews/boot.png)
+2. 主界面
+![主界面](previews/main.png)
+3. 通知
+![通知](previews/notify.png)
+4. 登录
+![登录界面](previews/login.png)
+5. 搜索
+![搜索界面](previews/search.png)
+6. lastfm授权
+![lastfm](previews/lastfm.png)
+7. Mac NowPlaying
+![NowPlaying](previews/nowplaying.png)
 
 ## 安装
 
@@ -92,6 +119,7 @@ $ musicfox
 |     p     |     切换播放方式     |                                     |
 |     P     | 心动模式(仅在歌单中时有效) |                                     |
 |    r/R    |     重新渲染UI     | Windows调整窗口大小后，没有事件触发，可以使用该方法手动重新渲染 |
+|    c/C    |     当前播放列表     |                                     |
 |     ,     |    喜欢当前播放歌曲    |                                     |
 |     <     |    喜欢当前选中歌曲    |                                     |
 |     .     |  当前播放歌曲移除出喜欢   |                                     |
@@ -112,11 +140,10 @@ show=true
 progressOutBounce=true
 # 启动页时长
 loadingSeconds=2
-# 启动页欢迎语，支持字母、数字、部分英文字符
-# welcome=welcome!
+# 启动页欢迎语
 welcome=musicfox
 # 启动时自动签到
-signIn=true
+signin=true
 
 # 进度条配置
 [progress]
@@ -134,12 +161,33 @@ loadingText=[加载中...]
 # 歌曲码率，128000, 320000...，视网络情况而定
 songBr=320000
 # 主题颜色
-# primaryColor=random # 随机
-primaryColor=#f90022 # 经典网易云音乐红
+# 随机
+# primaryColor=random
+# 经典网易云音乐红
+primaryColor="#f90022"
 # 是否显示歌词
 showLyric=true
+# 歌词偏移 ms
+lyricOffset=0
 # 是否显示通知信息
 showNotify=true
+# 通知icon，仅MacOS下terminal-notifier可用
+notifySender=com.netease.163music
+# 开启pprof, --pprof时会开启
+pprofPort=9876
+# altScreen显示模式
+altScreen=true
+
+[player]
+# 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用，推荐)
+engine=beep
+# mpd配置
+mpdBin=/usr/local/bin/mpd
+# !!!注意!!! 一定要在配置文件中设置pid_file，否则在退出时不会kill掉mpd进程
+mpdConfigFile=/Users/anhoder/.mpd/mpd.conf
+mpdNetwork=unix
+mpdAddr=
+
 ```
 
 
@@ -169,9 +217,9 @@ showNotify=true
 * [x] 音乐电台
 * [x] 配置文件
 * [x] 通知功能
-* [ ] 歌单内搜索
-* [ ] 听歌统计(网易云、last.fm)
-* [ ] 播放列表
+* [x] 歌单内搜索
+* [x] 听歌统计(网易云、last.fm)
+* [x] 播放列表
     
 ## 伴生项目
 
