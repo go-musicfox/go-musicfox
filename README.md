@@ -2,6 +2,8 @@
 
 go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，为了解决某些问题，提升体验，因此采用go进行重写。求个Star⭐️~
 
+**有兴趣或有问题可以加QQ群835522896**
+
 > UI基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/anhoder/go-musicfox) ![GitHub](https://img.shields.io/github/license/anhoder/go-musicfox) ![Last Tag](https://badgen.net/github/tag/anhoder/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/anhoder/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/anhoder/go-musicfox/total)
@@ -22,23 +24,38 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
   * 接入MPRemoteCommandCenter，支持菜单栏控制播放、暂停等，可响应系统中断，例如蓝牙断开
   * 接入NSWorkspace，响应睡眠通知，睡眠前自动暂停
 * 支持当前播放列表
+* Windows窗口大小变更优化
+* 增加环境变量配置go-musicfox目录: `MUSICFOX_ROOT`
 * 其他优化...
 
 ## 预览
 
-1. 启动
+### 1. 启动
+
 ![启动界面](previews/boot.png)
-2. 主界面
+
+### 2. 主界面
+
 ![主界面](previews/main.png)
-3. 通知
+
+### 3. 通知
+
 ![通知](previews/notify.png)
-4. 登录
+
+### 4. 登录
+
 ![登录界面](previews/login.png)
-5. 搜索
+
+### 5. 搜索
+
 ![搜索界面](previews/search.png)
-6. lastfm授权
+
+### 6. lastfm授权
+
 ![lastfm](previews/lastfm.png)
-7. Mac NowPlaying
+
+### 7. Mac NowPlaying
+
 ![NowPlaying](previews/nowplaying.png)
 
 ## 安装
