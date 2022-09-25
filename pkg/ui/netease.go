@@ -85,10 +85,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.User{}); err == nil {
 			if user, err := structs.NewUserFromLocalJson(jsonStr); err == nil {
 				m.user = &user
-				//m.refreshMenuTitle() // 刷新界面用户名
-				m.menu.FormatMenuItem(m.menuTitle)
 			}
 		}
+		m.refreshMenuTitle() // 刷新界面用户名
 
 		// 获取lastfm用户信息
 		var lastfmUser storage.LastfmUser
@@ -96,9 +95,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
 				m.lastfmUser = &lastfmUser
 				m.lastfm.SetSession(lastfmUser.SessionKey)
-				m.refreshMenuList()
 			}
 		}
+		m.refreshMenuList()
 
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
