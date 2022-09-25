@@ -7,6 +7,7 @@ import (
 )
 
 type DailyRecommendPlaylistsMenu struct {
+	DefaultMenu
 	menus     []MenuItem
 	playlists []structs.Playlist
 }
@@ -17,18 +18,6 @@ func NewDailyRecommendPlaylistMenu() *DailyRecommendPlaylistsMenu {
 
 func (m *DailyRecommendPlaylistsMenu) MenuData() interface{} {
 	return m.playlists
-}
-
-func (m *DailyRecommendPlaylistsMenu) BeforeBackMenuHook() Hook {
-	return nil
-}
-
-func (m *DailyRecommendPlaylistsMenu) IsPlayable() bool {
-	return false
-}
-
-func (m *DailyRecommendPlaylistsMenu) ResetPlaylistWhenPlay() bool {
-	return false
 }
 
 func (m *DailyRecommendPlaylistsMenu) GetMenuKey() string {
@@ -44,16 +33,6 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu 
 		return nil
 	}
 	return NewPlaylistDetailMenu(m.playlists[index].Id)
-}
-
-func (m *DailyRecommendPlaylistsMenu) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *DailyRecommendPlaylistsMenu) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
 }
 
 func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
@@ -79,20 +58,9 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
 		}
 		m.playlists = utils.GetDailyPlaylists(response)
 		for _, playlist := range m.playlists {
-			m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
+			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 		}
 
 		return true
 	}
 }
-
-func (m *DailyRecommendPlaylistsMenu) BottomOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *DailyRecommendPlaylistsMenu) TopOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-

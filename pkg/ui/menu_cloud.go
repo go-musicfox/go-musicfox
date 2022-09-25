@@ -9,134 +9,108 @@ import (
 )
 
 type CloudMenu struct {
-    menus   []MenuItem
-    songs   []structs.Song
-    limit   int
-    offset  int
-    hasMore bool
+	DefaultMenu
+	menus   []MenuItem
+	songs   []structs.Song
+	limit   int
+	offset  int
+	hasMore bool
 }
 
 func NewCloudMenu() *CloudMenu {
-    return &CloudMenu{
-        limit:  100,
-        offset: 0,
-    }
+	return &CloudMenu{
+		limit:  100,
+		offset: 0,
+	}
 }
 
 func (m *CloudMenu) MenuData() interface{} {
-    return m.songs
-}
-
-func (m *CloudMenu) BeforeBackMenuHook() Hook {
-    return nil
+	return m.songs
 }
 
 func (m *CloudMenu) IsPlayable() bool {
-    return true
-}
-
-func (m *CloudMenu) ResetPlaylistWhenPlay() bool {
-    return false
+	return true
 }
 
 func (m *CloudMenu) GetMenuKey() string {
-    return "could"
+	return "could"
 }
 
 func (m *CloudMenu) MenuViews() []MenuItem {
-    return m.menus
-}
-
-func (m *CloudMenu) SubMenu(*NeteaseModel, int) IMenu {
-    return nil
-}
-
-func (m *CloudMenu) BeforePrePageHook() Hook {
-    // Nothing to do
-    return nil
-}
-
-func (m *CloudMenu) BeforeNextPageHook() Hook {
-    // Nothing to do
-    return nil
+	return m.menus
 }
 
 func (m *CloudMenu) BeforeEnterMenuHook() Hook {
-    return func(model *NeteaseModel) bool {
-        if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-            NeedLoginHandle(model, enterMenu)
-            return false
-        }
+	return func(model *NeteaseModel) bool {
+		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+			NeedLoginHandle(model, enterMenu)
+			return false
+		}
 
-        // 不重复请求
-        if len(m.menus) > 0 && len(m.songs) > 0 {
-            return true
-        }
+		// 不重复请求
+		if len(m.menus) > 0 && len(m.songs) > 0 {
+			return true
+		}
 
-        cloudService := service.UserCloudService{
-            Offset: strconv.Itoa(m.offset),
-            Limit:  strconv.Itoa(m.limit),
-        }
-        code, response := cloudService.UserCloud()
-        codeType := utils.CheckCode(code)
-        if codeType == utils.NeedLogin {
-            NeedLoginHandle(model, enterMenu)
-            return false
-        } else if codeType != utils.Success {
-            return false
-        }
+		cloudService := service.UserCloudService{
+			Offset: strconv.Itoa(m.offset),
+			Limit:  strconv.Itoa(m.limit),
+		}
+		code, response := cloudService.UserCloud()
+		codeType := utils.CheckCode(code)
+		if codeType == utils.NeedLogin {
+			NeedLoginHandle(model, enterMenu)
+			return false
+		} else if codeType != utils.Success {
+			return false
+		}
 
-        if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
-            m.hasMore = hasMore
-        }
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
+		}
 
-        m.songs = utils.GetSongsOfCloud(response)
-        m.menus = GetViewFromSongs(m.songs)
+		m.songs = utils.GetSongsOfCloud(response)
+		m.menus = GetViewFromSongs(m.songs)
 
-        return true
-    }
+		return true
+	}
 }
 
 func (m *CloudMenu) BottomOutHook() Hook {
-    if !m.hasMore {
-        return nil
-    }
-    return func(model *NeteaseModel) bool {
-        m.offset += m.limit
+	if !m.hasMore {
+		return nil
+	}
+	return func(model *NeteaseModel) bool {
+		m.offset += m.limit
 
-        // 不重复请求
-        if len(m.menus) > 0 && len(m.songs) > 0 {
-            return true
-        }
+		// 不重复请求
+		if len(m.menus) > 0 && len(m.songs) > 0 {
+			return true
+		}
 
-        cloudService := service.UserCloudService{
-            Offset: strconv.Itoa(m.offset),
-            Limit:  strconv.Itoa(m.limit),
-        }
-        code, response := cloudService.UserCloud()
-        codeType := utils.CheckCode(code)
-        if codeType == utils.NeedLogin {
-            NeedLoginHandle(model, enterMenu)
-            return false
-        } else if codeType != utils.Success {
-            return false
-        }
+		cloudService := service.UserCloudService{
+			Offset: strconv.Itoa(m.offset),
+			Limit:  strconv.Itoa(m.limit),
+		}
+		code, response := cloudService.UserCloud()
+		codeType := utils.CheckCode(code)
+		if codeType == utils.NeedLogin {
+			NeedLoginHandle(model, enterMenu)
+			return false
+		} else if codeType != utils.Success {
+			return false
+		}
 
-        if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
-            m.hasMore = hasMore
-        }
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
+		}
 
-        songs := utils.GetSongsOfCloud(response)
-        menus := GetViewFromSongs(songs)
+		songs := utils.GetSongsOfCloud(response)
+		menus := GetViewFromSongs(songs)
 
-        m.songs = append(m.songs, songs...)
-        m.menus = append(m.menus, menus...)
+		m.songs = append(m.songs, songs...)
+		m.menus = append(m.menus, menus...)
 
-        return true
-    }
-}
-
-func (m *CloudMenu) TopOutHook() Hook {
-    // Nothing to do
-    return nil
+		return true
+	}
 }

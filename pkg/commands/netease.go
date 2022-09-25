@@ -4,6 +4,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
+	"time"
 
 	tea "github.com/anhoder/bubbletea"
 	"github.com/gookit/gcli/v2"
@@ -29,6 +30,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		}()
 	}
 
+	http.DefaultClient.Timeout = time.Second * 5
 	neteaseModel := ui.NewNeteaseModel(configs.ConfigRegistry.StartupLoadingDuration)
 	program := tea.NewProgram(neteaseModel)
 	neteaseModel.BindProgram(program)

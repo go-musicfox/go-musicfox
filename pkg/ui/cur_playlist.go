@@ -7,6 +7,7 @@ import (
 const CurPlaylistKey = "cur_playlist"
 
 type CurPlaylist struct {
+	DefaultMenu
 	menus []MenuItem
 	songs []structs.Song
 }
@@ -22,16 +23,8 @@ func (m *CurPlaylist) MenuData() interface{} {
 	return m.songs
 }
 
-func (m *CurPlaylist) BeforeBackMenuHook() Hook {
-	return nil
-}
-
 func (m *CurPlaylist) IsPlayable() bool {
 	return true
-}
-
-func (m *CurPlaylist) ResetPlaylistWhenPlay() bool {
-	return false
 }
 
 func (m *CurPlaylist) GetMenuKey() string {
@@ -40,33 +33,4 @@ func (m *CurPlaylist) GetMenuKey() string {
 
 func (m *CurPlaylist) MenuViews() []MenuItem {
 	return m.menus
-}
-
-func (m *CurPlaylist) SubMenu(_ *NeteaseModel, _ int) IMenu {
-	return nil
-}
-
-func (m *CurPlaylist) BeforePrePageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *CurPlaylist) BeforeNextPageHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *CurPlaylist) BeforeEnterMenuHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *CurPlaylist) BottomOutHook() Hook {
-	// Nothing to do
-	return nil
-}
-
-func (m *CurPlaylist) TopOutHook() Hook {
-	// Nothing to do
-	return nil
 }

@@ -28,12 +28,13 @@ type beepPlayer struct {
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
 
-	state     State
-	ctrl      *beep.Ctrl
-	volume    *effects.Volume
-	timeChan  chan time.Duration
-	stateChan chan State
-	musicChan chan UrlMusic
+	state      State
+	ctrl       *beep.Ctrl
+	volume     *effects.Volume
+	timeChan   chan time.Duration
+	stateChan  chan State
+	musicChan  chan UrlMusic
+	httpClient *http.Client
 
 	close chan struct{}
 }
@@ -52,7 +53,8 @@ func NewBeepPlayer() Player {
 			Base:   2,
 			Silent: false,
 		},
-		close: make(chan struct{}),
+		httpClient: &http.Client{},
+		close:      make(chan struct{}),
 	}
 
 	go func() {
@@ -128,7 +130,7 @@ func (p *beepPlayer) listen() {
 				panic(err)
 			}
 
-			resp, err = http.Get(p.curMusic.Url)
+			resp, err = p.httpClient.Get(p.curMusic.Url)
 			if err != nil {
 				p.Stop()
 				break

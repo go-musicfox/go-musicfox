@@ -7,86 +7,54 @@ import (
 )
 
 type HighQualityPlaylistsMenu struct {
-    menus     []MenuItem
-    playlists []structs.Playlist
+	DefaultMenu
+	menus     []MenuItem
+	playlists []structs.Playlist
 }
 
 func NewHighQualityPlaylistsMenu() *HighQualityPlaylistsMenu {
-    return new(HighQualityPlaylistsMenu)
+	return new(HighQualityPlaylistsMenu)
 }
 
 func (m *HighQualityPlaylistsMenu) MenuData() interface{} {
-    return m.playlists
-}
-
-func (m *HighQualityPlaylistsMenu) BeforeBackMenuHook() Hook {
-    return nil
-}
-
-func (m *HighQualityPlaylistsMenu) IsPlayable() bool {
-    return false
-}
-
-func (m *HighQualityPlaylistsMenu) ResetPlaylistWhenPlay() bool {
-    return false
+	return m.playlists
 }
 
 func (m *HighQualityPlaylistsMenu) GetMenuKey() string {
-    return "high_quality_playlists"
+	return "high_quality_playlists"
 }
 
 func (m *HighQualityPlaylistsMenu) MenuViews() []MenuItem {
-    return m.menus
+	return m.menus
 }
 
 func (m *HighQualityPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
-    if index >= len(m.playlists) {
-        return nil
-    }
-    return NewPlaylistDetailMenu(m.playlists[index].Id)
-}
-
-func (m *HighQualityPlaylistsMenu) BeforePrePageHook() Hook {
-    // Nothing to do
-    return nil
-}
-
-func (m *HighQualityPlaylistsMenu) BeforeNextPageHook() Hook {
-    // Nothing to do
-    return nil
+	if index >= len(m.playlists) {
+		return nil
+	}
+	return NewPlaylistDetailMenu(m.playlists[index].Id)
 }
 
 func (m *HighQualityPlaylistsMenu) BeforeEnterMenuHook() Hook {
-    return func(model *NeteaseModel) bool {
-        // 不重复请求
-        if len(m.menus) > 0 && len(m.playlists) > 0 {
-            return true
-        }
+	return func(model *NeteaseModel) bool {
+		// 不重复请求
+		if len(m.menus) > 0 && len(m.playlists) > 0 {
+			return true
+		}
 
-        highQualityPlaylists := service.TopPlaylistHighqualityService{
-            Limit: "80",
-        }
-        code, response := highQualityPlaylists.TopPlaylistHighquality()
-        codeType := utils.CheckCode(code)
-        if codeType != utils.Success {
-            return false
-        }
-        m.playlists = utils.GetPlaylistsFromHighQuality(response)
-        for _, playlist := range m.playlists {
-            m.menus = append(m.menus, MenuItem{utils.ReplaceSpecialStr(playlist.Name), ""})
-        }
+		highQualityPlaylists := service.TopPlaylistHighqualityService{
+			Limit: "80",
+		}
+		code, response := highQualityPlaylists.TopPlaylistHighquality()
+		codeType := utils.CheckCode(code)
+		if codeType != utils.Success {
+			return false
+		}
+		m.playlists = utils.GetPlaylistsFromHighQuality(response)
+		for _, playlist := range m.playlists {
+			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+		}
 
-        return true
-    }
+		return true
+	}
 }
-
-func (m *HighQualityPlaylistsMenu) BottomOutHook() Hook {
-    // Nothing to do
-    return nil
-}
-
-func (m *HighQualityPlaylistsMenu) TopOutHook() Hook {
-    // Nothing to do
-    return nil
-}
-
