@@ -141,15 +141,20 @@ func (dec *Decoder) Started() (channel chan bool) {
 
 // Read read the raw stream
 func (dec *Decoder) Read(data []byte) (n int, err error) {
-	dec.decoderLocker.Lock()
-	defer dec.decoderLocker.Unlock()
 	for len(dec.decodedData) == 0 {
+		select {
+		case <-dec.context.Done():
+			return 0, io.EOF
+		default:
+		}
 		if dec.err == io.EOF {
 			err = io.EOF
 			return
 		}
 		<-time.After(WaitForDataDuration)
 	}
+	dec.decoderLocker.Lock()
+	defer dec.decoderLocker.Unlock()
 	n = copy(data, dec.decodedData[:])
 	dec.decodedData = dec.decodedData[n:]
 	return

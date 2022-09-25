@@ -26,7 +26,7 @@ github.com/buger/jsonparser
 # github.com/containerd/console v1.0.3
 ## explicit
 github.com/containerd/console
-# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.2
+# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.4
 ## explicit
 github.com/faiface/beep
 github.com/faiface/beep/effects
@@ -141,7 +141,7 @@ github.com/skratchdot/open-golang/open
 # github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 ## explicit
 github.com/telanflow/cookiejar
-# github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.3
+# github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
 ## explicit
 github.com/tosone/minimp3
 # github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
