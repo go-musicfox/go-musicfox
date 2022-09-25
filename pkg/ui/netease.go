@@ -2,20 +2,21 @@ package ui
 
 import (
 	"encoding/json"
-	"go-musicfox/pkg/lastfm"
 	"strconv"
 	"time"
+
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/pkg/lastfm"
+	"go-musicfox/pkg/storage"
+	"go-musicfox/pkg/structs"
+	"go-musicfox/utils"
 
 	tea "github.com/anhoder/bubbletea"
 	"github.com/anhoder/netease-music/service"
 	"github.com/anhoder/netease-music/util"
 	"github.com/mattn/go-runewidth"
 	"github.com/telanflow/cookiejar"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/pkg/storage"
-	"go-musicfox/pkg/structs"
-	"go-musicfox/utils"
 )
 
 type NeteaseModel struct {
@@ -60,7 +61,7 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 	m.searchModel = NewSearch()
 
 	// 东亚
-	runewidth.EastAsianWidth = false
+	runewidth.EastAsianWidth = true
 
 	return
 }
