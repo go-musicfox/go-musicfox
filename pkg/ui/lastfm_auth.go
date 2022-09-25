@@ -38,7 +38,9 @@ func (m *LastfmAuth) BeforeBackMenuHook() Hook {
 func (m *LastfmAuth) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		m.token, m.url, m.err = model.lastfm.GetAuthUrlWithToken()
-		_ = open.Start(m.url)
+		if m.url != "" {
+			_ = open.Start(m.url)
+		}
 		utils.Logger().Println("[lastfm] auth url: " + m.url)
 		return true
 	}
