@@ -186,7 +186,6 @@ func (p *osxPlayer) Seek(duration time.Duration) {
 	if scale == 0 {
 		return
 	}
-
 	p.player.SeekToTime_(core.CMTime{
 		Value:     int64(scale) * int64(duration.Seconds()),
 		Timescale: scale,
@@ -261,8 +260,10 @@ func (p *osxPlayer) Close() {
 	}
 
 	p.close <- struct{}{}
-	p.handler.Release()
-	if p.player != nil {
-		p.player.Release()
-	}
+	objc.Autorelease(func() {
+		p.handler.Release()
+		if p.player != nil {
+			p.player.Release()
+		}
+	})
 }

@@ -241,7 +241,7 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *beepPlayer) Seek(duration time.Duration) {
+func (p *beepPlayer) Seek(_ time.Duration) {
 	// 还有问题，暂时不实现
 	//if p.curStreamer != nil {
 	//	err := p.curStreamer.Seek(p.curStreamer.Position())
