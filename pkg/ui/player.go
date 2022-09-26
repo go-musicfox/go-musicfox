@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -67,7 +68,8 @@ const (
 
 // Player 网易云音乐播放器
 type Player struct {
-	model *NeteaseModel
+	model  *NeteaseModel
+	cancel context.CancelFunc
 
 	playlist         []structs.Song // 歌曲列表
 	playlistUpdateAt time.Time      // 播放列表更新时间
@@ -100,6 +102,8 @@ func NewPlayer(model *NeteaseModel) *Player {
 		mode:  PmListLoop,
 		ctrl:  make(chan CtrlSignal),
 	}
+	var ctx context.Context
+	ctx, p.cancel = context.WithCancel(context.Background())
 
 	p.stateHandler = state_handler.NewHandler(p)
 
@@ -107,32 +111,38 @@ func NewPlayer(model *NeteaseModel) *Player {
 	// remote control
 	go func() {
 		defer utils.Recover(false)
-		for signal := range p.ctrl {
-			switch signal.Type {
-			case CtrlPaused:
-				p.Paused()
-			case CtrlResume:
-				p.Resume()
-			case CtrlPrevious:
-				p.PreviousSong()
-			case CtrlNext:
-				p.NextSong()
-			case CtrlSeek:
-				p.Player.Seek(signal.Duration)
-				p.lrcTimer.Rewind()
-				music := p.CurMusic()
-				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-					TotalDuration:  music.Duration,
-					PassedDuration: p.PassedTime(),
-					State:          p.State(),
-					PicUrl:         music.PicUrl,
-					Name:           music.Name,
-					Album:          music.Album.Name,
-					Artist:         music.ArtistName(),
-					AlbumArtist:    music.Album.ArtistName(),
-				})
-			case CtrlRerender:
-				p.model.Rerender()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case signal := <-p.ctrl:
+				switch signal.Type {
+				case CtrlPaused:
+					p.Paused()
+				case CtrlResume:
+					p.Resume()
+				case CtrlPrevious:
+					p.PreviousSong()
+				case CtrlNext:
+					p.NextSong()
+				case CtrlSeek:
+					p.Player.Seek(signal.Duration)
+					p.lrcTimer.Rewind()
+					music := p.CurMusic()
+					p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
+						TotalDuration:  music.Duration,
+						PassedDuration: p.PassedTime(),
+						State:          p.State(),
+						PicUrl:         music.PicUrl,
+						Name:           music.Name,
+						Album:          music.Album.Name,
+						Artist:         music.ArtistName(),
+						AlbumArtist:    music.Album.ArtistName(),
+					})
+				case CtrlRerender:
+					p.model.Rerender()
+				}
+
 			}
 		}
 	}()
@@ -140,24 +150,29 @@ func NewPlayer(model *NeteaseModel) *Player {
 	// 状态监听
 	go func() {
 		defer utils.Recover(false)
-		for s := range p.Player.StateChan() {
-			music := p.CurMusic()
-			p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-				TotalDuration:  music.Duration,
-				PassedDuration: p.PassedTime(),
-				State:          s,
-				PicUrl:         music.PicUrl,
-				Name:           music.Name,
-				Album:          music.Album.Name,
-				Artist:         music.ArtistName(),
-				AlbumArtist:    music.Album.ArtistName(),
-			})
-			if s == player.Stopped {
-				// 上报lastfm
-				p.report(ReportPhaseComplete)
-				p.Next()
-			} else {
-				p.Rerender()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case s := <-p.Player.StateChan():
+				music := p.CurMusic()
+				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
+					TotalDuration:  music.Duration,
+					PassedDuration: p.PassedTime(),
+					State:          s,
+					PicUrl:         music.PicUrl,
+					Name:           music.Name,
+					Album:          music.Album.Name,
+					Artist:         music.ArtistName(),
+					AlbumArtist:    music.Album.ArtistName(),
+				})
+				if s == player.Stopped {
+					// 上报lastfm
+					p.report(ReportPhaseComplete)
+					p.Next()
+				} else {
+					p.Rerender()
+				}
 			}
 		}
 	}()
@@ -165,20 +180,24 @@ func NewPlayer(model *NeteaseModel) *Player {
 	// 时间监听
 	go func() {
 		defer utils.Recover(false)
-		for duration := range p.TimeChan() {
-			if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
-				// 上报
-				p.report(ReportPhaseComplete)
-				p.NextSong()
-				break
-			}
-			if p.lrcTimer != nil {
-				select {
-				case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.ConfigRegistry.MainLyricOffset):
-				default:
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case duration := <-p.TimeChan():
+				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
+					// 上报
+					p.report(ReportPhaseComplete)
+					p.NextSong()
 				}
+				if p.lrcTimer != nil {
+					select {
+					case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.ConfigRegistry.MainLyricOffset):
+					default:
+					}
+				}
+				p.model.Rerender()
 			}
-			p.model.Rerender()
 		}
 	}()
 
@@ -585,6 +604,7 @@ func (p *Player) SetPlayMode(playMode PlayMode) {
 
 // Close 关闭
 func (p *Player) Close() {
+	p.cancel()
 	p.stateHandler.Release()
 	p.Player.Close()
 }

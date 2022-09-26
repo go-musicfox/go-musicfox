@@ -5,6 +5,7 @@ package entry
 
 import (
 	"github.com/progrium/macdriver/cocoa"
+	"github.com/progrium/macdriver/objc"
 	"go-musicfox/utils"
 )
 
@@ -13,7 +14,9 @@ func AppEntry() {
 
 	go func() {
 		defer utils.Recover(false)
-		runCLI()
+		objc.Autorelease(func() {
+			runCLI()
+		})
 	}()
 
 	app := cocoa.NSApp()
