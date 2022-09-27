@@ -247,6 +247,7 @@ mpdAddr=
 * [x] 歌单内搜索
 * [x] 听歌统计(网易云、last.fm)
 * [x] 播放列表
+* [ ] MPRIS支持，类似：https://github.com/natsukagami/mpd-mpris
     
 ## 伴生项目
 
