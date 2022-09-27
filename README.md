@@ -244,6 +244,7 @@ mpdAddr=
 * [x] 听歌统计(网易云、last.fm)
 * [x] 播放列表
 * [ ] MPRIS支持，类似：https://github.com/natsukagami/mpd-mpris
+* [ ] 支持UnblockNeteaseMusic => https://github.com/cnsilvan/UnblockNeteaseMusic
     
 ## 伴生项目
 
