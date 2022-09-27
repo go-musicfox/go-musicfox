@@ -71,7 +71,7 @@ github.com/gookit/goutil/sysutil/process
 ## explicit; go 1.15
 github.com/gookit/ini/v2
 github.com/gookit/ini/v2/parser
-# github.com/hajimehoshi/oto v1.0.1
+# github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 ## explicit; go 1.13
 github.com/hajimehoshi/oto
 github.com/hajimehoshi/oto/internal/mux

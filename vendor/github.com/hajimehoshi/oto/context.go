@@ -99,7 +99,15 @@ func (c *Context) NewPlayer() *Player {
 // Close closes the Context and its Players and frees any resources associated with it. The Context is no longer
 // usable after calling Close.
 func (c *Context) Close() error {
+	if theContext == nil {
+		return nil
+	}
+
 	contextM.Lock()
+	if theContext == nil {
+		contextM.Unlock()
+		return nil
+	}
 	theContext = nil
 	contextM.Unlock()
 
