@@ -2,16 +2,18 @@ package ui
 
 import (
 	"fmt"
-	tea "github.com/anhoder/bubbletea"
-	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/utils"
 	"math"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/utils"
+
+	tea "github.com/anhoder/bubbletea"
+	"github.com/mattn/go-runewidth"
+	"github.com/muesli/termenv"
 )
 
 // PageType 显示模型的类型
@@ -422,6 +424,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 			subTitle = m.player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
 		}
 		enterMenu(m, NewCurPlaylist(m.player.playlist), &MenuItem{Title: "当前播放列表", Subtitle: subTitle})
+		m.player.LocatePlayingSong()
 	case " ", "　":
 		spaceKeyHandle(m)
 	case "[", "【":
