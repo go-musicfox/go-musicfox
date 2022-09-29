@@ -4,13 +4,14 @@
 package player
 
 import (
-	"github.com/progrium/macdriver/core"
-	"github.com/progrium/macdriver/objc"
 	"sync"
 	"time"
 
-	"github.com/progrium/macdriver/avcore"
 	"go-musicfox/utils"
+
+	"github.com/progrium/macdriver/avcore"
+	"github.com/progrium/macdriver/core"
+	"github.com/progrium/macdriver/objc"
 )
 
 type osxPlayer struct {
@@ -19,9 +20,8 @@ type osxPlayer struct {
 	player  *avcore.AVPlayer
 	handler objc.Object
 
-	curMusic  UrlMusic
-	curSongId int
-	timer     *utils.Timer
+	curMusic UrlMusic
+	timer    *utils.Timer
 
 	volume    int
 	state     State
@@ -186,11 +186,11 @@ func (p *osxPlayer) Seek(duration time.Duration) {
 	if scale == 0 {
 		return
 	}
-	p.player.SeekToTime_(core.CMTime{
-		Value:     int64(scale) * int64(duration.Seconds()),
+	p.player.SeekToTime_toleranceBefore_toleranceAfter_(core.CMTime{
+		Value:     int64(float64(scale) * duration.Seconds()),
 		Timescale: scale,
 		Flags:     1,
-	})
+	}, core.CMTime{Timescale: 1, Flags: 1}, core.CMTime{Timescale: 1, Flags: 1})
 	p.timer.SetPassed(duration)
 }
 
