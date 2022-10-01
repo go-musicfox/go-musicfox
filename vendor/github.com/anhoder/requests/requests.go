@@ -53,6 +53,7 @@ type Header map[string]string
 type Params map[string]string
 type Datas map[string]string // for post form
 type Files map[string]string // name ,filename
+type DryRun bool
 
 // {username,password}
 type Auth []string
@@ -104,6 +105,7 @@ func (req *Request) Get(origurl string, args ...interface{}) (resp *Response, er
 	//Client.Do can copy cookie from client.Jar to req.Header
 	delete(req.httpreq.Header, "Cookie")
 
+	var dryRun DryRun
 	for _, arg := range args {
 		switch a := arg.(type) {
 		// arg is Header , set to request header
@@ -119,6 +121,8 @@ func (req *Request) Get(origurl string, args ...interface{}) (resp *Response, er
 		case Auth:
 			// a{username,password}
 			req.httpreq.SetBasicAuth(a[0], a[1])
+		case DryRun:
+			dryRun = a
 		}
 	}
 
@@ -135,6 +139,9 @@ func (req *Request) Get(origurl string, args ...interface{}) (resp *Response, er
 
 	req.RequestDebug()
 
+	if dryRun {
+		return nil, nil
+	}
 	res, err := req.Client.Do(req.httpreq)
 
 	if err != nil {
@@ -142,12 +149,11 @@ func (req *Request) Get(origurl string, args ...interface{}) (resp *Response, er
 		return nil, err
 	}
 
-
 	resp = &Response{}
 	resp.R = res
 	resp.req = req
 
-    resp.Content()
+	resp.Content()
 	defer res.Body.Close()
 
 	resp.ResponseDebug()
@@ -232,9 +238,8 @@ func (req *Request) SetTimeout(n time.Duration) {
 	req.Client.Timeout = time.Duration(n * time.Second)
 }
 
-
-func (req *Request) Close( ) {
-    req.httpreq.Close = true
+func (req *Request) Close() {
+	req.httpreq.Close = true
 }
 
 func (req *Request) Proxy(proxyurl string) {
@@ -250,6 +255,10 @@ func (req *Request) Proxy(proxyurl string) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
+}
+
+func (req *Request) HttpRequest() *http.Request {
+	return req.httpreq
 }
 
 /**************/
@@ -274,9 +283,9 @@ func (resp *Response) Content() []byte {
 
 	var err error
 
-    if len(resp.content) > 0{
-        return resp.content
-    }
+	if len(resp.content) > 0 {
+		return resp.content
+	}
 
 	var Body = resp.R.Body
 	if resp.R.Header.Get("Content-Encoding") == "gzip" && resp.req.Header.Get("Accept-Encoding") != "" {
@@ -337,6 +346,10 @@ func (resp *Response) Cookies() (cookies []*http.Cookie) {
 
 }
 
+func (resp *Response) SetRequest(req *Request) {
+	resp.req = req
+}
+
 /**************post*************************/
 // call req.Post ,only for easy
 func Post(origurl string, args ...interface{}) (resp *Response, err error) {
@@ -367,6 +380,7 @@ func (req *Request) PostJson(origurl string, args ...interface{}) (resp *Respons
 	//Client.Do can copy cookie from client.Jar to req.Header
 	delete(req.httpreq.Header, "Cookie")
 
+	var dryRun DryRun
 	for _, arg := range args {
 		switch a := arg.(type) {
 		// arg is Header , set to request header
@@ -380,6 +394,8 @@ func (req *Request) PostJson(origurl string, args ...interface{}) (resp *Respons
 		case Auth:
 			// a{username,password}
 			req.httpreq.SetBasicAuth(a[0], a[1])
+		case DryRun:
+			dryRun = a
 		default:
 			b := new(bytes.Buffer)
 			err = json.NewEncoder(b).Encode(a)
@@ -401,6 +417,10 @@ func (req *Request) PostJson(origurl string, args ...interface{}) (resp *Respons
 
 	req.RequestDebug()
 
+	if dryRun {
+		return nil, nil
+	}
+
 	res, err := req.Client.Do(req.httpreq)
 
 	// clear post  request information
@@ -413,13 +433,12 @@ func (req *Request) PostJson(origurl string, args ...interface{}) (resp *Respons
 		return nil, err
 	}
 
-
 	resp = &Response{}
 	resp.R = res
 	resp.req = req
 
-    resp.Content()
-    defer res.Body.Close()
+	resp.Content()
+	defer res.Body.Close()
 	resp.ResponseDebug()
 	return resp, nil
 }
@@ -428,7 +447,7 @@ func (req *Request) Post(origurl string, args ...interface{}) (resp *Response, e
 
 	req.httpreq.Method = "POST"
 
-    //set default
+	//set default
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// set params ?a=b&b=c
@@ -441,6 +460,7 @@ func (req *Request) Post(origurl string, args ...interface{}) (resp *Response, e
 	//Client.Do can copy cookie from client.Jar to req.Header
 	delete(req.httpreq.Header, "Cookie")
 
+	var dryRun DryRun
 	for _, arg := range args {
 		switch a := arg.(type) {
 		// arg is Header , set to request header
@@ -461,6 +481,8 @@ func (req *Request) Post(origurl string, args ...interface{}) (resp *Response, e
 		case Auth:
 			// a{username,password}
 			req.httpreq.SetBasicAuth(a[0], a[1])
+		case DryRun:
+			dryRun = a
 		}
 	}
 
@@ -484,6 +506,9 @@ func (req *Request) Post(origurl string, args ...interface{}) (resp *Response, e
 
 	req.RequestDebug()
 
+	if dryRun {
+		return nil, nil
+	}
 	res, err := req.Client.Do(req.httpreq)
 
 	// clear post param
@@ -496,13 +521,12 @@ func (req *Request) Post(origurl string, args ...interface{}) (resp *Response, e
 		return nil, err
 	}
 
-
 	resp = &Response{}
 	resp.R = res
 	resp.req = req
 
-    resp.Content()
-    defer res.Body.Close()
+	resp.Content()
+	defer res.Body.Close()
 
 	resp.ResponseDebug()
 	return resp, nil

@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/anhoder/netease-music/util"
 	"net/http"
+
+	"github.com/anhoder/netease-music/util"
 )
 
 type SongUrlService struct {
@@ -21,9 +22,10 @@ func (service *SongUrlService) SongUrl() (float64, []byte) {
 	data := make(map[string]string)
 	data["ids"] = "[" + service.ID + "]"
 	if service.Br == "" {
-		service.Br = "999000"
+		service.Br = "320000"
 	}
 	data["br"] = service.Br
+
 	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/api/song/enhance/player/url`, data, options)
 
 	return code, reBody

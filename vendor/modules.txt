@@ -4,16 +4,18 @@ github.com/anhoder/bubbles/textinput
 # github.com/anhoder/bubbletea v0.12.12
 ## explicit; go 1.13
 github.com/anhoder/bubbletea
-# github.com/anhoder/netease-music v1.1.1
+# github.com/anhoder/netease-music v1.2.5
 ## explicit; go 1.12
 github.com/anhoder/netease-music/service
 github.com/anhoder/netease-music/util
 # github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
 ## explicit; go 1.16
 github.com/anhoder/notificator
+# github.com/anhoder/requests v0.1.1
+## explicit; go 1.13
+github.com/anhoder/requests
 # github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946
 ## explicit; go 1.13
-github.com/asmcos/requests
 # github.com/atotto/clipboard v0.1.4
 ## explicit
 github.com/atotto/clipboard
@@ -23,6 +25,24 @@ github.com/boltdb/bolt
 # github.com/buger/jsonparser v1.1.1
 ## explicit; go 1.13
 github.com/buger/jsonparser
+# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb
+## explicit; go 1.16
+github.com/cnsilvan/UnblockNeteaseMusic/cache
+github.com/cnsilvan/UnblockNeteaseMusic/common
+github.com/cnsilvan/UnblockNeteaseMusic/config
+github.com/cnsilvan/UnblockNeteaseMusic/cookiestxt
+github.com/cnsilvan/UnblockNeteaseMusic/network
+github.com/cnsilvan/UnblockNeteaseMusic/pool
+github.com/cnsilvan/UnblockNeteaseMusic/processor
+github.com/cnsilvan/UnblockNeteaseMusic/processor/crypto
+github.com/cnsilvan/UnblockNeteaseMusic/provider
+github.com/cnsilvan/UnblockNeteaseMusic/provider/base
+github.com/cnsilvan/UnblockNeteaseMusic/provider/kugou
+github.com/cnsilvan/UnblockNeteaseMusic/provider/kuwo
+github.com/cnsilvan/UnblockNeteaseMusic/provider/migu
+github.com/cnsilvan/UnblockNeteaseMusic/provider/qq
+github.com/cnsilvan/UnblockNeteaseMusic/utils
+github.com/cnsilvan/UnblockNeteaseMusic/version
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
@@ -193,4 +213,9 @@ golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
 ## explicit; go 1.11
 golang.org/x/term
+# golang.org/x/text v0.3.7
+## explicit; go 1.17
+golang.org/x/text/transform
+golang.org/x/text/unicode/norm
+golang.org/x/text/width
 # github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2

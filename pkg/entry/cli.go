@@ -2,14 +2,19 @@ package entry
 
 import (
 	"fmt"
+	neteaseutil "github.com/anhoder/netease-music/util"
 	"github.com/gookit/gcli/v2"
 	"go-musicfox/pkg/commands"
+	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/ui"
 	"go-musicfox/utils"
+	"log"
 )
 
 func runCLI() {
+	log.SetOutput(utils.LogWriter())
+
 	app := gcli.NewApp()
 	app.Name = constants.AppName
 	app.Version = constants.AppVersion
@@ -27,6 +32,13 @@ func runCLI() {
 
 	gcli.AppHelpTemplate = fmt.Sprintf(constants.AppHelpTemplate, logoColorful)
 	app.Logo.Text = logoColorful
+
+	// 更新netease配置
+	neteaseutil.UNMSwitch = configs.ConfigRegistry.UNMSwitch
+	neteaseutil.Sources = configs.ConfigRegistry.UNMSources
+	neteaseutil.SearchLimit = configs.ConfigRegistry.UNMSearchLimit
+	neteaseutil.EnableLocalVip = configs.ConfigRegistry.UNMEnableLocalVip
+	neteaseutil.UnlockSoundEffects = configs.ConfigRegistry.UNMUnlockSoundEffects
 
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)

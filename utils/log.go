@@ -1,11 +1,15 @@
 package utils
 
 import (
+	"io"
 	"log"
 	"os"
 )
 
-var logger *log.Logger
+var (
+	logger    *log.Logger
+	logWriter io.Writer
+)
 
 func SetLogger(l *log.Logger) {
 	logger = l
@@ -17,11 +21,19 @@ func Logger() *log.Logger {
 	}
 
 	dir := GetLocalDataDir()
-	logFile, err := os.OpenFile(dir+"/musicfox.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	var err error
+	logWriter, err = os.OpenFile(dir+"/musicfox.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
 		return log.Default()
 	}
 
-	logger = log.New(logFile, "", log.LstdFlags)
+	logger = log.New(logWriter, "", log.LstdFlags)
 	return logger
+}
+
+func LogWriter() io.Writer {
+	if logWriter == nil {
+		Logger()
+	}
+	return logWriter
 }

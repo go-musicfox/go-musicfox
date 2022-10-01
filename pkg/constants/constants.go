@@ -41,8 +41,11 @@ const MainShowNotify = true
 const MainNotifySender = "com.netease.163music"
 const MainPProfPort = 9876
 const MainAltScreen = true
+const UNMDefaultSources = "kuwo"
 
-const PlayerEngine = "beep" // beep、mpd
+const BeepPlayer = "beep" // beep
+const MpdPlayer = "mpd"   // mpd
+const OsxPlayer = "osx"   // osx
 
 const AppHelpTemplate = `%s
 

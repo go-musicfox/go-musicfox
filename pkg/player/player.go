@@ -1,6 +1,7 @@
 package player
 
 import (
+	"go-musicfox/pkg/constants"
 	"os/exec"
 	"time"
 
@@ -28,9 +29,9 @@ func NewPlayerFromConfig() Player {
 	registry := configs.ConfigRegistry
 	var player Player
 	switch registry.PlayerEngine {
-	case "beep":
+	case constants.BeepPlayer:
 		player = NewBeepPlayer()
-	case "mpd":
+	case constants.MpdPlayer:
 		if registry.PlayerMpdNetwork == "" || registry.PlayerMpdAddr == "" ||
 			registry.PlayerBin == "" {
 			panic("缺少MPD配置")
@@ -40,7 +41,7 @@ func NewPlayerFromConfig() Player {
 			panic(err)
 		}
 		player = NewMpdPlayer(registry.PlayerBin, registry.PlayerConfigFile, registry.PlayerMpdNetwork, registry.PlayerMpdAddr)
-	case "osx":
+	case constants.OsxPlayer:
 		player = NewOsxPlayer()
 	default:
 		panic("unknown player engine")
