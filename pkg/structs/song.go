@@ -115,16 +115,16 @@ func NewSongFromFmJson(json []byte) (Song, error) {
 	if name, err := jsonparser.GetString(json, "name"); err == nil {
 		song.Name = name
 	}
-	if duration, err := jsonparser.GetInt(json, "duration"); err == nil {
+	if duration, err := jsonparser.GetInt(json, "dt"); err == nil {
 		song.Duration = time.Millisecond * time.Duration(duration)
 	}
-	if alId, err := jsonparser.GetInt(json, "album", "id"); err == nil {
+	if alId, err := jsonparser.GetInt(json, "al", "id"); err == nil {
 		song.Album.Id = alId
 	}
-	if alName, err := jsonparser.GetString(json, "album", "name"); err == nil {
+	if alName, err := jsonparser.GetString(json, "al", "name"); err == nil {
 		song.Album.Name = alName
 	}
-	if alPic, err := jsonparser.GetString(json, "album", "picUrl"); err == nil {
+	if alPic, err := jsonparser.GetString(json, "al", "picUrl"); err == nil {
 		song.Album.PicUrl = alPic
 	}
 
@@ -134,7 +134,7 @@ func NewSongFromFmJson(json []byte) (Song, error) {
 		if err == nil {
 			song.Artists = append(song.Artists, artist)
 		}
-	}, "artists")
+	}, "ar")
 
 	return song, nil
 }

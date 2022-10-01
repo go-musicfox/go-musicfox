@@ -14,9 +14,8 @@ type SearchService struct {
 func (service *SearchService) Search() (float64, []byte) {
 
 	options := &util.Options{
-		Crypto:  "weapi",
+		Crypto: "weapi",
 	}
-	data := make(map[string]string)
 
 	if service.Type == "" {
 		service.Type = "1"
@@ -27,12 +26,21 @@ func (service *SearchService) Search() (float64, []byte) {
 	if service.Offset == "" {
 		service.Offset = "0"
 	}
+	data := make(map[string]string)
 	data["limit"] = service.Limit
 	data["offset"] = service.Offset
+
+	if service.Type == "2000" {
+		data["keyword"] = service.S
+		data["scene"] = "normal"
+		code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/api/search/voice/get`, data, options)
+		return code, reBody
+	}
+
 	data["type"] = service.Type
 	data["s"] = service.S
 
-	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/weapi/search/get`, data, options)
+	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/api/cloudsearch/pc`, data, options)
 
 	return code, reBody
 }

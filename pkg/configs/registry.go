@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/gookit/ini/v2"
@@ -31,6 +32,13 @@ type Registry struct {
 	MainPProfPort    int    // pprof端口
 	MainAltScreen    bool   // AltScreen显示模式
 
+	UNMSwitch             bool     // UNM开关
+	UNMSources            []string // UNM资源
+	UNMSearchLimit        int      // UNM其他平台搜索限制
+	UNMEnableLocalVip     bool     // UNM修改响应，解除会员限制
+	UNMUnlockSoundEffects bool     // UNM修改响应，解除音质限制
+	UNMQQCookieFile       string   // UNM QQ音乐cookie文件
+
 	PlayerEngine     string // 播放引擎
 	PlayerBin        string // mpd路径
 	PlayerConfigFile string // mpd配置文件
@@ -59,7 +67,15 @@ func NewRegistryWithDefault() *Registry {
 		MainNotifySender: constants.MainNotifySender,
 		MainPProfPort:    constants.MainPProfPort,
 		MainAltScreen:    constants.MainAltScreen,
-		PlayerEngine:     constants.PlayerEngine,
+		PlayerEngine:     constants.BeepPlayer,
+
+		UNMSources:            []string{constants.UNMDefaultSources},
+		UNMEnableLocalVip:     true,
+		UNMUnlockSoundEffects: true,
+	}
+
+	if runtime.GOOS == "darwin" {
+		registry.PlayerEngine = constants.OsxPlayer
 	}
 
 	return registry
@@ -107,11 +123,24 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainNotifySender = ini.String("main.notifySender", constants.MainNotifySender)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
-	registry.PlayerEngine = ini.String("player.engine", constants.PlayerEngine)
+
+	defaultPlayer := constants.BeepPlayer
+	if runtime.GOOS == "darwin" {
+		defaultPlayer = constants.OsxPlayer
+	}
+	registry.PlayerEngine = ini.String("player.engine", defaultPlayer)
 	registry.PlayerBin = ini.String("player.mpdBin", "")
 	registry.PlayerConfigFile = ini.String("player.mpdConfigFile", "")
 	registry.PlayerMpdNetwork = ini.String("player.mpdNetwork", "")
 	registry.PlayerMpdAddr = ini.String("player.mpdAddr", "")
+
+	// UNM
+	registry.UNMSwitch = ini.Bool("unm.switch", false)
+	registry.UNMSources = ini.Strings("unm.sources", "kuwo")
+	registry.UNMSearchLimit = ini.Int("unm.searchLimit", 0)
+	registry.UNMEnableLocalVip = ini.Bool("unm.enableLocalVip", true)
+	registry.UNMUnlockSoundEffects = ini.Bool("unm.unlockSoundEffects", true)
+	registry.UNMQQCookieFile = ini.String("unm.qqCookieFile", "")
 
 	return registry
 }

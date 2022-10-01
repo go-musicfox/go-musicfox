@@ -202,8 +202,10 @@ pprofPort=9876
 altScreen=true
 
 [player]
-# 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用，推荐)
-engine=beep
+# 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
+# 不填Mac默认使用osx，其他系统默认使用beep（推荐的配置）
+#engine=beep
+
 # mpd配置
 mpdBin=/usr/local/bin/mpd
 # !!!注意!!! 一定要在配置文件中设置pid_file，否则在退出时不会kill掉mpd进程
@@ -211,6 +213,19 @@ mpdConfigFile=/Users/anhoder/.mpd/mpd.conf
 mpdNetwork=unix
 mpdAddr=
 
+[unm]
+# UNM开关
+switch=false
+# UNM源: kuwo,kugou,migu,qq
+sources=kuwo
+# UNM搜索其他平台限制 0-3
+searchLimit=0
+# 解除会员限制
+enableLocalVip=true
+# 解除音质限制
+unlockSoundEffects=true
+# QQ音乐cookie文件
+qqCookieFile=
 ```
 
 
@@ -243,8 +258,7 @@ mpdAddr=
 * [x] 歌单内搜索
 * [x] 听歌统计(网易云、last.fm)
 * [x] 播放列表
-* [ ] MPRIS支持，类似：https://github.com/natsukagami/mpd-mpris
-* [ ] 支持UnblockNeteaseMusic => https://github.com/cnsilvan/UnblockNeteaseMusic
+* [x] 支持UnblockNeteaseMusic
     
 ## 伴生项目
 

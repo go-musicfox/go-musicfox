@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/anhoder/bubbles v0.7.8
 	github.com/anhoder/bubbletea v0.12.12
-	github.com/anhoder/netease-music v1.1.1
+	github.com/anhoder/netease-music v1.2.5
 	github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
 	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
@@ -26,8 +26,10 @@ require (
 )
 
 require (
+	github.com/anhoder/requests v0.1.1 // indirect
 	github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
+	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/forgoer/openssl v1.2.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
@@ -53,12 +55,13 @@ require (
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
 	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
+	golang.org/x/text v0.3.7 // indirect
 )
 
 replace (
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.4
+	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
-	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 )
