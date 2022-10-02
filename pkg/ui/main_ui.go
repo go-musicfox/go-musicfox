@@ -100,7 +100,7 @@ func (main *MainUIModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cm
 	case tickMainUIMsg:
 		return m, nil
 	case tea.WindowSizeMsg:
-		m.doubleColumn = msg.Width >= 75
+		m.doubleColumn = msg.Width >= 75 && configs.ConfigRegistry.MainDoubleColumn
 
 		// 菜单开始行、列
 		m.menuStartRow = msg.Height / 3

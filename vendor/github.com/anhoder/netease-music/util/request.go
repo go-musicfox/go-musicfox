@@ -159,17 +159,20 @@ func CreateRequest(method string, url string, data map[string]string, options *O
 			return 520, []byte("Request Blocked:" + url), nil
 		}
 
-		response, err := processor.Request(request, url)
+		if method == "POST" {
+			var form requests.Datas = data
+			resp, err = req.Post(url, form)
+		} else {
+			resp, err = req.Get(url)
+		}
 		if err != nil {
 			return 520, []byte("Request Error:" + url), nil
 		}
+		response := resp.R
 		defer response.Body.Close()
 
 		processor.RequestAfter(request, response, netease)
-
-		resp = &requests.Response{}
-		resp.SetRequest(req)
-		resp.R = response
+		resp.ReloadContent()
 	}
 
 	cookies := resp.Cookies()

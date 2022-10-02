@@ -4,13 +4,14 @@
 package state_handler
 
 import (
+	"sync"
+	"time"
+
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/core"
 	"github.com/progrium/macdriver/mediaplayer"
 	"github.com/progrium/macdriver/objc"
 	"go-musicfox/pkg/player"
-	"sync"
-	"time"
 )
 
 var stateMap = map[player.State]core.NSUInteger{
