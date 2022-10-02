@@ -84,6 +84,7 @@ func readLRCLine(line string, lineNo int) (fragments []LRCFragment, err error) {
 			break
 		}
 		extraTms = append(extraTms, extraTm)
+		closeIndex = strings.Index(line, "]")
 		line = line[closeIndex+1:]
 	}
 
@@ -118,7 +119,7 @@ func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error
 		err = errors.New("brackets missing")
 		return
 	}
-	timeStr := line[left + 1:right]
+	timeStr := line[left+1 : right]
 	t := strings.Split(timeStr, ":")
 	if len(t) > 1 && t[0] != "" && t[1] != "" {
 		minutes, err1 := strconv.Atoi(t[0])
@@ -127,7 +128,7 @@ func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error
 			err = errors.New("format error")
 			return
 		}
-		var milliseconds = minutes * 60000 + int(math.Floor(seconds * 1000))
+		var milliseconds = minutes*60000 + int(math.Floor(seconds*1000))
 		tm = time.Duration(milliseconds) * time.Millisecond
 		return
 	}

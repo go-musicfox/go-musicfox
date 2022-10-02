@@ -19,9 +19,9 @@ import (
 	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
@@ -143,9 +143,8 @@ func (req *Request) Get(origurl string, args ...interface{}) (resp *Response, er
 		return nil, nil
 	}
 	res, err := req.Client.Do(req.httpreq)
-
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil, err
 	}
 
@@ -195,18 +194,18 @@ func (req *Request) RequestDebug() {
 		return
 	}
 
-	fmt.Println("===========Go RequestDebug ============")
+	log.Println("===========Go RequestDebug ============")
 
 	message, err := httputil.DumpRequestOut(req.httpreq, false)
 	if err != nil {
 		return
 	}
-	fmt.Println(string(message))
+	log.Println(string(message))
 
 	if len(req.Client.Jar.Cookies(req.httpreq.URL)) > 0 {
-		fmt.Println("Cookies:")
+		log.Println("Cookies:")
 		for _, cookie := range req.Client.Jar.Cookies(req.httpreq.URL) {
-			fmt.Println(cookie)
+			log.Println(cookie)
 		}
 	}
 }
@@ -247,7 +246,7 @@ func (req *Request) Proxy(proxyurl string) {
 	urli := url.URL{}
 	urlproxy, err := urli.Parse(proxyurl)
 	if err != nil {
-		fmt.Println("Set proxy failed")
+		log.Println("Set proxy failed")
 		return
 	}
 	req.Client.Transport = &http.Transport{
@@ -268,14 +267,14 @@ func (resp *Response) ResponseDebug() {
 		return
 	}
 
-	fmt.Println("===========Go ResponseDebug ============")
+	log.Println("===========Go ResponseDebug ============")
 
 	message, err := httputil.DumpResponse(resp.R, false)
 	if err != nil {
 		return
 	}
 
-	fmt.Println(string(message))
+	log.Println(string(message))
 
 }
 
@@ -289,7 +288,7 @@ func (resp *Response) Content() []byte {
 
 	var Body = resp.R.Body
 	if resp.R.Header.Get("Content-Encoding") == "gzip" && resp.req.Header.Get("Accept-Encoding") != "" {
-		// fmt.Println("gzip")
+		// log.Println("gzip")
 		reader, err := gzip.NewReader(Body)
 		if err != nil {
 			return nil
@@ -297,12 +296,22 @@ func (resp *Response) Content() []byte {
 		Body = reader
 	}
 
-	resp.content, err = ioutil.ReadAll(Body)
+	defer Body.Close()
+	data, err := ioutil.ReadAll(Body)
 	if err != nil {
+		log.Println(err)
 		return nil
 	}
 
+	resp.R.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+	resp.content = data
+
 	return resp.content
+}
+
+func (resp *Response) ReloadContent() []byte {
+	resp.content = nil
+	return resp.Content()
 }
 
 func (resp *Response) Text() string {
@@ -429,7 +438,7 @@ func (req *Request) PostJson(origurl string, args ...interface{}) (resp *Respons
 	req.httpreq.ContentLength = 0
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil, err
 	}
 
@@ -517,7 +526,7 @@ func (req *Request) Post(origurl string, args ...interface{}) (resp *Response, e
 	req.httpreq.ContentLength = 0
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil, err
 	}
 
@@ -559,7 +568,7 @@ func (req *Request) buildFilesAndForms(files []map[string]string, datas []map[st
 		for k, v := range file {
 			part, err := w.CreateFormFile(k, v)
 			if err != nil {
-				fmt.Printf("Upload %s failed!", v)
+				log.Printf("Upload %s failed!", v)
 				panic(err)
 			}
 			file := openFile(v)

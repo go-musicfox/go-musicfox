@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/anhoder/bubbles v0.7.8
 	github.com/anhoder/bubbletea v0.12.12
-	github.com/anhoder/netease-music v1.2.5
+	github.com/anhoder/netease-music v1.2.6
 	github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
 	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
@@ -26,8 +26,7 @@ require (
 )
 
 require (
-	github.com/anhoder/requests v0.1.1 // indirect
-	github.com/asmcos/requests v0.0.0-20210319030608-c839e8ae4946 // indirect
+	github.com/anhoder/requests v0.1.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb // indirect
 	github.com/containerd/console v1.0.3 // indirect

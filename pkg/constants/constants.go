@@ -31,6 +31,7 @@ const AppDBName = "musicfox"
 const AppIniFile = "go-musicfox.ini"
 const AppPrimaryRandom = "random"
 const AppPrimaryColor = "#f90022"
+const AppHttpTimeout = time.Second * 5
 
 const PlayerSongBr = 320000 // 999000
 

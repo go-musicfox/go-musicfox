@@ -2,6 +2,7 @@ package configs
 
 import (
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/gookit/ini/v2"
@@ -31,6 +32,7 @@ type Registry struct {
 	MainNotifySender string // 通知应用图标
 	MainPProfPort    int    // pprof端口
 	MainAltScreen    bool   // AltScreen显示模式
+	MainDoubleColumn bool   // 是否双列显示
 
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
@@ -123,6 +125,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainNotifySender = ini.String("main.notifySender", constants.MainNotifySender)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
+	registry.MainDoubleColumn = ini.Bool("main.doubleColumn", true)
 
 	defaultPlayer := constants.BeepPlayer
 	if runtime.GOOS == "darwin" {
@@ -136,7 +139,16 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 
 	// UNM
 	registry.UNMSwitch = ini.Bool("unm.switch", false)
-	registry.UNMSources = ini.Strings("unm.sources", "kuwo")
+
+	sourceStr := ini.String("unm.sources", "kuwo")
+	if sourceStr != "" {
+		var sources []string
+		for _, source := range strings.Split(sourceStr, ",") {
+			sources = append(sources, strings.TrimSpace(source))
+		}
+		registry.UNMSources = sources
+	}
+
 	registry.UNMSearchLimit = ini.Int("unm.searchLimit", 0)
 	registry.UNMEnableLocalVip = ini.Bool("unm.enableLocalVip", true)
 	registry.UNMUnlockSoundEffects = ini.Bool("unm.unlockSoundEffects", true)

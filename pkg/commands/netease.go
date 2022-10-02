@@ -4,11 +4,11 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
-	"time"
 
 	tea "github.com/anhoder/bubbletea"
 	"github.com/gookit/gcli/v2"
 	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/ui"
 	"go-musicfox/utils"
 )
@@ -30,7 +30,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		}()
 	}
 
-	http.DefaultClient.Timeout = time.Second * 5
+	http.DefaultClient.Timeout = constants.AppHttpTimeout
 	neteaseModel := ui.NewNeteaseModel(configs.ConfigRegistry.StartupLoadingDuration)
 	program := tea.NewProgram(neteaseModel)
 	neteaseModel.BindProgram(program)

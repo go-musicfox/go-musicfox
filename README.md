@@ -19,7 +19,7 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 * 上报lastfm
 * Mac优化：
   * 接入MPNowPlayinginfoCenter，在菜单显示播放信息
-  * 接入MPRemoteCommandCenter，支持菜单栏控制播放、暂停等，可响应系统中断，例如蓝牙断开
+  * 接入MPRemoteCommandCenter，支持菜单栏、Airpods等控制播放、暂停等，可响应系统中断，例如蓝牙断开
   * 接入NSWorkspace，响应睡眠通知，睡眠前自动暂停
 * 支持当前播放列表
 * Windows窗口大小变更优化
@@ -28,35 +28,41 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 
 ## 预览
 
-### 1. 启动
+#### 1. 启动
 
 ![启动界面](previews/boot.png)
 
-### 2. 主界面
+#### 2. 主界面
 
 ![主界面](previews/main.png)
 
-### 3. 通知
+#### 3. 通知
 
 ![通知](previews/notify.png)
 
-### 4. 登录
+#### 4. 登录
 
 ![登录界面](previews/login.png)
 
-### 5. 搜索
+#### 5. 搜索
 
 ![搜索界面](previews/search.png)
 
-### 6. lastfm授权
+#### 6. lastfm授权
 
 ![lastfm](previews/lastfm.png)
 
-### 7. Mac NowPlaying
+#### 7. Mac NowPlaying
 
 ![NowPlaying](previews/nowplaying.png)
 
+#### 8. UnblockNeteaseMusic
+
+![UNM](previews/unm.png)
+
 ## 安装
+
+** 请务必使用等宽字体，或将配置doubleColumn设为false，否则双列显示很乱 **
 
 > Mac推荐使用Iterm2或Kitty 
 > 
@@ -200,6 +206,8 @@ notifySender=com.netease.163music
 pprofPort=9876
 # altScreen显示模式
 altScreen=true
+# 双列显示，开启务必使用等宽字体
+doubleColumn=true
 
 [player]
 # 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
