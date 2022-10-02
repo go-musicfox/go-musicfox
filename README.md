@@ -24,6 +24,8 @@ go-musicfox是 [musicfox](https://github.com/anhoder/musicfox) 的重写版，�
 * 支持当前播放列表
 * Windows窗口大小变更优化
 * 增加环境变量配置go-musicfox目录: `MUSICFOX_ROOT`
+* UnblockNeteaseMusic
+* 增加单双列显示配置
 * 其他优化...
 
 ## 预览
