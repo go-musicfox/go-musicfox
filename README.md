@@ -211,7 +211,7 @@ doubleColumn=true
 
 [player]
 # 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
-# 不填Mac默认使用osx，其他系统默认使用beep（推荐的配置）
+# 不填Mac默认使用osx，其他系统默认使用beep
 #engine=beep
 
 # mpd配置
