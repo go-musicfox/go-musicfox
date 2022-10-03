@@ -26,6 +26,10 @@ func NewUserFromLocalJson(json []byte) (User, error) {
 	}
 	user.UserId = userId
 
+	if playlistId, err := jsonparser.GetInt(json, "my_like_playlist_id"); err == nil {
+		user.MyLikePlaylistID = playlistId
+	}
+
 	if nickname, err := jsonparser.GetString(json, "nickname"); err == nil {
 		user.Nickname = nickname
 	}
