@@ -126,7 +126,9 @@ func NewPlayer(model *NeteaseModel) *Player {
 					p.NextSong()
 				case CtrlSeek:
 					p.Player.Seek(signal.Duration)
-					p.lrcTimer.Rewind()
+					if p.lrcTimer != nil {
+						p.lrcTimer.Rewind()
+					}
 					music := p.CurMusic()
 					p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
 						TotalDuration:  music.Duration,

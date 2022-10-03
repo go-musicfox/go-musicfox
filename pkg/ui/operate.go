@@ -3,6 +3,7 @@ package ui
 import (
 	"log"
 	"math"
+	"os"
 	"strconv"
 	"time"
 
@@ -413,6 +414,7 @@ func logout() {
 		Text:  "已清理用户信息",
 		Url:   constants.AppGithubUrl,
 	})
+	_ = os.Remove(utils.GetLocalDataDir() + "/cookie")
 }
 
 // likeSelectedSong like/unlike selected song
