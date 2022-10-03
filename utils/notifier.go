@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"go-musicfox/pkg/constants"
 	"os"
+
+	"go-musicfox/pkg/constants"
 
 	"github.com/anhoder/notificator"
 	"go-musicfox/pkg/configs"
@@ -21,7 +22,9 @@ func Notify(content NotifyContent) {
 		return
 	}
 
-	if content.Sender == "" {
+	if content.Url != "" {
+		content.Sender = ""
+	} else if content.Sender == "" {
 		content.Sender = configs.ConfigRegistry.MainNotifySender
 	}
 

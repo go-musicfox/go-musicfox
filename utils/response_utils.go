@@ -1,9 +1,10 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/buger/jsonparser"
 	"go-musicfox/pkg/structs"
-	"strings"
 )
 
 type ResCode uint8

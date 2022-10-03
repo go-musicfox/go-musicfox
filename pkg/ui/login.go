@@ -1,17 +1,21 @@
 package ui
 
 import (
+	"log"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/anhoder/bubbles/textinput"
 	tea "github.com/anhoder/bubbletea"
 	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"strings"
-	"time"
 )
 
 type LoginModel struct {
@@ -104,6 +108,18 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 				case utils.Success:
 					if user, err := structs.NewUserFromJson(response); err == nil {
 						m.user = &user
+
+						// 获取我喜欢的歌单
+						userPlaylists := service.UserPlaylistService{
+							Uid:    strconv.FormatInt(m.user.UserId, 10),
+							Limit:  strconv.Itoa(1),
+							Offset: strconv.Itoa(0),
+						}
+						_, response = userPlaylists.UserPlaylist()
+						m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
+						if err != nil {
+							log.Printf("获取歌单ID失败: %+v\n", err)
+						}
 
 						// 写入本地数据库
 						table := storage.NewTable()

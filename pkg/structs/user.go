@@ -2,14 +2,16 @@ package structs
 
 import (
 	"errors"
+
 	"github.com/buger/jsonparser"
 )
 
 type User struct {
-	UserId    int64  `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarUrl string `json:"avatar_url"`
-	AccountId int64  `json:"account_id"`
+	UserId           int64  `json:"user_id"`
+	MyLikePlaylistID int64  `json:"my_like_playlist_id"`
+	Nickname         string `json:"nickname"`
+	AvatarUrl        string `json:"avatar_url"`
+	AccountId        int64  `json:"account_id"`
 }
 
 func NewUserFromLocalJson(json []byte) (User, error) {
@@ -65,7 +67,6 @@ func NewUserFromJson(json []byte) (User, error) {
 
 	return user, nil
 }
-
 
 // NewUserFromSearchResultJson 从搜索结果json中获取用户信息
 func NewUserFromSearchResultJson(json []byte) (User, error) {

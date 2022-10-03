@@ -4,11 +4,11 @@ github.com/anhoder/bubbles/textinput
 # github.com/anhoder/bubbletea v0.12.12
 ## explicit; go 1.13
 github.com/anhoder/bubbletea
-# github.com/anhoder/netease-music v1.2.6
+# github.com/anhoder/netease-music v1.2.7
 ## explicit; go 1.12
 github.com/anhoder/netease-music/service
 github.com/anhoder/netease-music/util
-# github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0
+# github.com/anhoder/notificator v0.0.4
 ## explicit; go 1.16
 github.com/anhoder/notificator
 # github.com/anhoder/requests v0.1.2

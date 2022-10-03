@@ -57,7 +57,7 @@ func (o osxNotificator) push(title string, text string, iconPath string, redirec
 	// else, fall back to osascript. (Mavericks and later.)
 	if CheckTermNotif() {
 		if redirectUrl != "" {
-			return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-open", redirectUrl, "-sender", o.Sender)
+			return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-open", redirectUrl)
 		}
 		return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-sender", o.Sender)
 	} else if CheckMacOSVersion() {
@@ -80,7 +80,7 @@ func (o osxNotificator) pushCritical(title string, text string, iconPath string,
 	if CheckTermNotif() {
 		// timeout set to 30 seconds, to show the importance of the notification
 		if redirectUrl != "" {
-			return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-timeout", "30", "-open", redirectUrl, "-sender", o.Sender)
+			return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-timeout", "30", "-open", redirectUrl)
 		}
 
 		return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-timeout", "30", "-sender", o.Sender)
