@@ -1,15 +1,18 @@
 package ui
 
 import (
+	"log"
+	"math"
+	"strconv"
+	"time"
+
 	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/player"
 	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"math"
-	"strconv"
-	"time"
 )
 
 type menuStackItem struct {
@@ -345,11 +348,45 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		return
 	}
 
-	likeService := service.LikeService{
-		ID: strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10),
-		L:  strconv.FormatBool(isLike),
+	// 防止出现空，兜底
+	if m.user.MyLikePlaylistID == 0 {
+		userPlaylists := service.UserPlaylistService{
+			Uid:    strconv.FormatInt(m.user.UserId, 10),
+			Limit:  strconv.Itoa(1),
+			Offset: strconv.Itoa(0),
+		}
+		code, response := userPlaylists.UserPlaylist()
+		codeType := utils.CheckCode(code)
+		if codeType == utils.NeedLogin {
+			NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+				likePlayingSong(m, isLike)
+			})
+			return
+		} else if codeType != utils.Success {
+			return
+		}
+		var err error
+		m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
+		if err != nil {
+			log.Printf("获取歌单ID失败: %+v\n", err)
+			return
+		}
+
+		// 写入本地数据库
+		table := storage.NewTable()
+		_ = table.SetByKVModel(storage.User{}, m.user)
 	}
-	likeService.Like()
+
+	op := "add"
+	if !isLike {
+		op = "del"
+	}
+	likeService := service.PlaylistTracksService{
+		TrackIds: []string{strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10)},
+		Op:       op,
+		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
+	}
+	likeService.PlaylistTracks()
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{
@@ -396,11 +433,45 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		return
 	}
 
-	likeService := service.LikeService{
-		ID: strconv.FormatInt(songs[m.selectedIndex].Id, 10),
-		L:  strconv.FormatBool(isLike),
+	// 防止出现空，兜底
+	if m.user.MyLikePlaylistID == 0 {
+		userPlaylists := service.UserPlaylistService{
+			Uid:    strconv.FormatInt(m.user.UserId, 10),
+			Limit:  strconv.Itoa(1),
+			Offset: strconv.Itoa(0),
+		}
+		code, response := userPlaylists.UserPlaylist()
+		codeType := utils.CheckCode(code)
+		if codeType == utils.NeedLogin {
+			NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+				likeSelectedSong(m, isLike)
+			})
+			return
+		} else if codeType != utils.Success {
+			return
+		}
+		var err error
+		m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
+		if err != nil {
+			log.Printf("获取歌单ID失败: %+v\n", err)
+			return
+		}
+
+		// 写入本地数据库
+		table := storage.NewTable()
+		_ = table.SetByKVModel(storage.User{}, m.user)
 	}
-	likeService.Like()
+
+	op := "add"
+	if !isLike {
+		op = "del"
+	}
+	likeService := service.PlaylistTracksService{
+		TrackIds: []string{strconv.FormatInt(songs[m.selectedIndex].Id, 10)},
+		Op:       op,
+		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
+	}
+	likeService.PlaylistTracks()
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{

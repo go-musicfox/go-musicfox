@@ -162,13 +162,16 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			}
 		}
 
+		// 刷新登录状态
+		refreshLoginService := service.LoginRefreshService{}
+		refreshLoginService.LoginRefresh()
+
 		// 检查更新
 		if configs.ConfigRegistry.StartupCheckUpdate && utils.CheckUpdate() {
 			utils.Notify(utils.NotifyContent{
-				Title:  "发现新版本",
-				Text:   "点击去看看呗",
-				Url:    constants.AppLatestReleases,
-				Sender: "default",
+				Title: "发现新版本",
+				Text:  "点击去看看呗",
+				Url:   constants.AppLatestReleases,
 			})
 		}
 	}()

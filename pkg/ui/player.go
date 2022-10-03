@@ -15,7 +15,6 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/lyric"
 	"go-musicfox/pkg/player"
 	"go-musicfox/pkg/state_handler"
@@ -468,7 +467,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	go utils.Notify(utils.NotifyContent{
 		Title: "正在播放: " + song.Name,
 		Text:  fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
-		Url:   constants.AppGithubUrl,
 		Icon:  song.PicUrl,
 	})
 
