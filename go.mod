@@ -65,4 +65,5 @@ replace (
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
+	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
 )
