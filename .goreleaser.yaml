@@ -9,7 +9,7 @@ builds:
     hooks:
       pre:
         - apt update
-        - apt install -y libasound2-dev libflac-dev
+        - apt install -y libasound2-dev libflac-dev gobjc
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -24,7 +24,7 @@ builds:
 #    hooks:
 #      pre:
 #        - apt update
-#        - apt install -y libasound2-dev
+#        - apt install -y libasound2-dev libflac-dev gobjc
 #    goarch:
 #      - arm64
 #    goos:
