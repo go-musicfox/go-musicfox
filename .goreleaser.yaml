@@ -38,7 +38,7 @@ builds:
     hooks:
       pre:
         - apt update
-        - apt install -y mingw-w64-x86_64-flac
+        - apt install -y mingw-w64-flac
     goarch:
       - amd64
     goos:
