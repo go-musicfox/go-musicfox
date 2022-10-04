@@ -1,5 +1,7 @@
 # Beep [![GoDoc](https://godoc.org/github.com/faiface/beep?status.svg)](https://godoc.org/github.com/faiface/beep) [![Go Report Card](https://goreportcard.com/badge/github.com/faiface/beep)](https://goreportcard.com/report/github.com/faiface/beep) [![Discord Chat](https://img.shields.io/discord/699679031603494954)](https://discord.gg/q2DK4MP)
 
+**Add minimp3 decoder.**
+
 A little package that brings sound to any Go application. Suitable for playback and audio-processing.
 
 ```
