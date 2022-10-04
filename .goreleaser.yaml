@@ -37,8 +37,9 @@ builds:
     binary: musicfox
     hooks:
       pre:
+        - add-apt-repository ppa:tobydox/mingw-w64
         - apt update
-        - apt install -y mingw-w64-flac
+        - apt install -y flac-mingw-w64
     goarch:
       - amd64
     goos:
