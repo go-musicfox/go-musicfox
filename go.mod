@@ -29,6 +29,7 @@ require (
 	github.com/anhoder/requests v0.1.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb // indirect
+	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/forgoer/openssl v1.2.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
@@ -58,9 +59,10 @@ require (
 )
 
 replace (
-	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.4
+	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.6
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
+	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
 )

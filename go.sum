@@ -19,11 +19,17 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/anhoder/beep v1.1.4 h1:cpEyTAuJUkbFimTVTJMlXe3JF74ZgbpU9KakEJQgf6U=
 github.com/anhoder/beep v1.1.4/go.mod h1:UwbTHTyxTcmXX1j+17pFPMUswH13XGlLmW/D8gujAUc=
+github.com/anhoder/beep v1.1.5 h1:jZrMta6FbfOjpWOPIdG8qawNL99w0n2PEDD5FaikgNs=
+github.com/anhoder/beep v1.1.5/go.mod h1:VtKLMbzj/VuumeUdJcIL1yp1g7Fc78phJJKwdWN4M88=
+github.com/anhoder/beep v1.1.6 h1:qW27wcZYHvUatt7XJcWXMiQRuk6kpY2fxA2stKtkNBs=
+github.com/anhoder/beep v1.1.6/go.mod h1:8e3orUVqvuTw5tIw0WS3iWNDLNDOBs2mvLuLgMUqIiE=
 github.com/anhoder/bubbles v0.7.8 h1:qr68Y2apS1HUdWboxmJq+WbXJWrcpP7QNkimMZ0NP4o=
 github.com/anhoder/bubbles v0.7.8/go.mod h1:TIbWUkJn7FL3JAGNpRx9BVJ7NPjGok7Ex0Nq3isfcAo=
 github.com/anhoder/bubbletea v0.12.6/go.mod h1:LB9GWT1WBmW8zWn4TbaIPsbKAkDouFhDAODhBNujZpM=
 github.com/anhoder/bubbletea v0.12.12 h1:bs8p7MrL4lIQgxRTdyFtgyXfJHSQe+rA/R12zhhAl3s=
 github.com/anhoder/bubbletea v0.12.12/go.mod h1:iFGcP1C7j10T7afSw3sAcW2ABRv9JP3va1g+Lt70zOE=
+github.com/anhoder/goflac v0.1.0 h1:pJYotoqIc934K5jGUu5Y0RZ++rR8zCVkNzb2I2nQe58=
+github.com/anhoder/goflac v0.1.0/go.mod h1:1vVUG/CQcKJDaI6f9N8qJY/YlnNnAChS/hZb8NvaeqE=
 github.com/anhoder/lastfm-go v0.0.2 h1:yqaRzclR83RIecowZX4ffH3kzbEzX+wSeOztAx2nAg4=
 github.com/anhoder/lastfm-go v0.0.2/go.mod h1:QAs3ciul8v40zzwgDPDVq12CSACAIZUHXSSeBJLCdQE=
 github.com/anhoder/macdriver v0.2.9 h1:NwN3v/T6hN99gCEIQ7X4orFRYQ1mkZTX9l00gK+2lvs=
@@ -69,6 +75,9 @@ github.com/chromedp/sysutil v1.0.0/go.mod h1:kgWmDdq8fTzXYcKIBqIYvRRTnYb9aNS9moA
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb h1:PLudkgcKSVBDZaf5LvimgHlL7Gr7lVH1azQhbgjgz8k=
 github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb/go.mod h1:vgmy2+JMTiAC7ZjCigR0u+m/sFwf31PPzFEKd84K0xw=
+github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d h1:utj98F6D5jVv2tHYMsYzM6Z5sG71/W12Ivkd/SnFiN0=
+github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d/go.mod h1:swNVb00X8NOH/qeHuqnqiyfecAnWlThLX+NbH8r6yHw=
+github.com/cocoonlife/testify v0.0.0-20160218172820-792cc1faeb64/go.mod h1:LoCAz53rbPcqs8Da2BjB/yDy4gxMtiSQmqnYI/DGH+U=
 github.com/containerd/console v1.0.1/go.mod h1:XUsP6YE/mKtz6bxc+I8UiKKTP04qjQL4qcS3XoQ5xkw=
 github.com/containerd/console v1.0.3 h1:lIr7SlA5PxZyMV30bDW0MGbiOPXwc63yRuCP0ARubLw=
 github.com/containerd/console v1.0.3/go.mod h1:7LqA/THxQ86k76b8c/EMSiaJ3h1eZkMkXar0TQ1gf3U=
