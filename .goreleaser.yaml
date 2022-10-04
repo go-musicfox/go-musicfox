@@ -24,7 +24,7 @@ builds:
 #    hooks:
 #      pre:
 #        - apt update
-#        - apt install -y libasound2-dev libflac-dev gobjc
+#        - apt install -y libasound2-dev libflac-dev gobjc++-mingw-w64 gobjc
 #    goarch:
 #      - arm64
 #    goos:
