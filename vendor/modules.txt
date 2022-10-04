@@ -23,7 +23,7 @@ github.com/boltdb/bolt
 # github.com/buger/jsonparser v1.1.1
 ## explicit; go 1.13
 github.com/buger/jsonparser
-# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb
+# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
 ## explicit; go 1.16
 github.com/cnsilvan/UnblockNeteaseMusic/cache
 github.com/cnsilvan/UnblockNeteaseMusic/common
