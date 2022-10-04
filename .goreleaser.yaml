@@ -9,7 +9,7 @@ builds:
     hooks:
       pre:
         - apt update
-        - apt install -y libasound2-dev libflac-dev gobjc++-mingw-w64 gobjc
+        - apt install -y libasound2-dev libflac-dev
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -35,11 +35,6 @@ builds:
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
-    hooks:
-      pre:
-        - add-apt-repository ppa:tobydox/mingw-w64
-        - apt update
-        - apt install -y flac-mingw-w64
     goarch:
       - amd64
     goos:
