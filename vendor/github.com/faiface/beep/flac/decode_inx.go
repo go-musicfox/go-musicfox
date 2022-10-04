@@ -1,4 +1,7 @@
-package flac_c
+//go:build darwin || linux || unix
+// +build darwin linux unix
+
+package flac
 
 import (
 	"fmt"
