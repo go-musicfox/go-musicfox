@@ -35,7 +35,7 @@ builds:
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
-        hooks:
+    hooks:
       pre:
         - apt update
         - apt install -y mingw-w64-x86_64-flac
