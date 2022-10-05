@@ -1,4 +1,6 @@
-package flac_c
+// github action不好构建暂时只支持linux
+
+package flac
 
 import (
 	"fmt"

@@ -47,11 +47,11 @@ github.com/cocoonlife/goflac
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.6
+# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.8
 ## explicit; go 1.14
 github.com/faiface/beep
 github.com/faiface/beep/effects
-github.com/faiface/beep/flac_c
+github.com/faiface/beep/flac
 github.com/faiface/beep/minimp3
 github.com/faiface/beep/speaker
 github.com/faiface/beep/vorbis
@@ -98,6 +98,7 @@ github.com/hajimehoshi/oto
 github.com/hajimehoshi/oto/internal/mux
 # github.com/icza/bitio v1.1.0
 ## explicit; go 1.13
+github.com/icza/bitio
 # github.com/jfreymuth/oggvorbis v1.0.3
 ## explicit; go 1.15
 github.com/jfreymuth/oggvorbis
@@ -118,8 +119,19 @@ github.com/mattn/go-isatty
 github.com/mattn/go-runewidth
 # github.com/mewkiz/flac v1.0.7
 ## explicit; go 1.14
+github.com/mewkiz/flac
+github.com/mewkiz/flac/frame
+github.com/mewkiz/flac/internal/bits
+github.com/mewkiz/flac/internal/hashutil
+github.com/mewkiz/flac/internal/hashutil/crc16
+github.com/mewkiz/flac/internal/hashutil/crc8
+github.com/mewkiz/flac/internal/ioutilx
+github.com/mewkiz/flac/internal/utf8
+github.com/mewkiz/flac/meta
 # github.com/mewkiz/pkg v0.0.0-20211102230744-16a6ce8f1b77
 ## explicit; go 1.12
+github.com/mewkiz/pkg/errutil
+github.com/mewkiz/pkg/term
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir
