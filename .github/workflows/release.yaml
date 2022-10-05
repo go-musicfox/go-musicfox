@@ -36,6 +36,8 @@ jobs:
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           brew install flac go
+          brew unlink go@1.17
+          brew link --overwrite go
 
       - name: build
         id: build
@@ -43,42 +45,42 @@ jobs:
           go build -ldflags '-s -w -X go-musicfox/pkg/constants.AppVersion=2.2.1 -X go-musicfox/pkg/constants.LastfmKey=${{secrets.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret=${{secrets.LASTFM_SECRET}}' cmd/musicfox.go
           
 
-  goreleaser:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout...
-        uses: actions/checkout@v2
-
-      - run: git fetch --prune --unshallow
-
-      - name: Setup go...
-        uses: actions/setup-go@v2
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
-
-      - name: branch name
-        id: branch_name
-        run: |
-          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
-
-      - name: setup release environment
-        run: |-
-          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}\nLASTFM_KEY=${{secrets.LASTFM_KEY}}\nLASTFM_SECRET=${{secrets.LASTFM_SECRET}}" >> .release-env
-
-      - if: github.ref == 'refs/heads/master' || startsWith(github.ref,'refs/heads/feature/')
-        name: release dry-run GORELEASER_SKIP_VALIDATE=true
-        run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
-
-      - if: startsWith(github.ref,'refs/tags/v')
-        name: release dry-run
-        run: make release-dry-run
-        env:
-          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
-
-      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
-        name: release publish
-        run: |-
-          sudo rm -rf dist
-          make release
-        env:
-          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
+#  goreleaser:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout...
+#        uses: actions/checkout@v2
+#
+#      - run: git fetch --prune --unshallow
+#
+#      - name: Setup go...
+#        uses: actions/setup-go@v2
+#        with:
+#          go-version: "${{ env.GOLANG_VERSION }}"
+#
+#      - name: branch name
+#        id: branch_name
+#        run: |
+#          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
+#
+#      - name: setup release environment
+#        run: |-
+#          echo -e "HOMEBREW_TAP_TOKEN=${{secrets.HOMEBREW_TAP_TOKEN}}\nGITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}\nLASTFM_KEY=${{secrets.LASTFM_KEY}}\nLASTFM_SECRET=${{secrets.LASTFM_SECRET}}" >> .release-env
+#
+#      - if: github.ref == 'refs/heads/master' || startsWith(github.ref,'refs/heads/feature/')
+#        name: release dry-run GORELEASER_SKIP_VALIDATE=true
+#        run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
+#
+#      - if: startsWith(github.ref,'refs/tags/v')
+#        name: release dry-run
+#        run: make release-dry-run
+#        env:
+#          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
+#
+#      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'anhoder/go-musicfox'
+#        name: release publish
+#        run: |-
+#          sudo rm -rf dist
+#          make release
+#        env:
+#          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
