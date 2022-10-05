@@ -294,8 +294,8 @@ func spaceKeyHandle(m *NeteaseModel) {
 		}
 	}
 
-	selectedIndex := m.selectedIndex
-	if !m.menu.IsPlayable() || len(songs) == 0 || m.selectedIndex > len(songs)-1 {
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !m.menu.IsPlayable() || len(songs) == 0 || selectedIndex > len(songs)-1 {
 		if m.player.curSongIndex > len(m.player.playlist)-1 {
 			return
 		}
@@ -424,7 +424,8 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 	defer loading.complete()
 
 	songs, ok := m.menu.MenuData().([]structs.Song)
-	if !ok || m.selectedIndex >= len(songs) {
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(songs) {
 		return
 	}
 
@@ -469,7 +470,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		op = "del"
 	}
 	likeService := service.PlaylistTracksService{
-		TrackIds: []string{strconv.FormatInt(songs[m.selectedIndex].Id, 10)},
+		TrackIds: []string{strconv.FormatInt(songs[selectedIndex].Id, 10)},
 		Op:       op,
 		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
 	}
@@ -478,13 +479,13 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 	if isLike {
 		utils.Notify(utils.NotifyContent{
 			Title: "已添加到我喜欢的歌曲",
-			Text:  songs[m.selectedIndex].Name,
+			Text:  songs[selectedIndex].Name,
 			Url:   constants.AppGithubUrl,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title: "已从我喜欢的歌曲移除",
-			Text:  songs[m.selectedIndex].Name,
+			Text:  songs[selectedIndex].Name,
 			Url:   constants.AppGithubUrl,
 		})
 	}
@@ -526,7 +527,8 @@ func trashSelectedSong(m *NeteaseModel) {
 	defer loading.complete()
 
 	songs, ok := m.menu.MenuData().([]structs.Song)
-	if !ok || m.selectedIndex >= len(songs) {
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(songs) {
 		return
 	}
 
@@ -538,13 +540,21 @@ func trashSelectedSong(m *NeteaseModel) {
 	}
 
 	trashService := service.FmTrashService{
-		SongID: strconv.FormatInt(songs[m.selectedIndex].Id, 10),
+		SongID: strconv.FormatInt(songs[selectedIndex].Id, 10),
 	}
 	trashService.FmTrash()
 
 	utils.Notify(utils.NotifyContent{
 		Title: "已标记为不喜欢",
-		Text:  songs[m.selectedIndex].Name,
+		Text:  songs[selectedIndex].Name,
 		Url:   constants.AppGithubUrl,
 	})
+}
+
+// 搜索当前菜单
+func searchMenuHandle(m *NeteaseModel) {
+	m.inSearching = false
+	enterMenu(m, NewSearchMenu(m.menu, m.searchInput.Value()), &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
+	m.searchInput.Blur()
+	m.searchInput.Reset()
 }

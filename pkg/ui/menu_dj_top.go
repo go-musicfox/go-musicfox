@@ -26,6 +26,10 @@ func NewDjHotMenu(hotType DjHotType) *DjHotMenu {
 	}
 }
 
+func (m *DjHotMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjHotMenu) GetMenuKey() string {
 	return "dj_hot"
 }

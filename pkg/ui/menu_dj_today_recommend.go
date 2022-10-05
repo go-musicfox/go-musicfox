@@ -16,6 +16,10 @@ func NewDjTodayRecommendMenu() *DjTodayRecommendMenu {
 	return &DjTodayRecommendMenu{}
 }
 
+func (m *DjTodayRecommendMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjTodayRecommendMenu) GetMenuKey() string {
 	return "dj_today_recommend"
 }

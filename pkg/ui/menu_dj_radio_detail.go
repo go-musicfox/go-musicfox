@@ -25,6 +25,10 @@ func NewDjRadioDetailMenu(djRadioId int64) *DjRadioDetailMenu {
 	}
 }
 
+func (m *DjRadioDetailMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjRadioDetailMenu) MenuData() interface{} {
 	return m.songs
 }

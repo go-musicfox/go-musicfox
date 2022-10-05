@@ -16,6 +16,10 @@ func NewHighQualityPlaylistsMenu() *HighQualityPlaylistsMenu {
 	return new(HighQualityPlaylistsMenu)
 }
 
+func (m *HighQualityPlaylistsMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *HighQualityPlaylistsMenu) MenuData() interface{} {
 	return m.playlists
 }

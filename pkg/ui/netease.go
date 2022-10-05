@@ -188,8 +188,8 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgWithType := msg.(type) {
 	case tea.KeyMsg:
 		k := msgWithType.String()
-		// 登录界面输入q不退出
-		if m.pageType == PtMain && (k == "q" || k == "Q" || k == "ctrl+c") {
+		// 账号登录或搜索页输入q不退出
+		if m.pageType == PtMain && !m.inSearching && (k == "q" || k == "Q" || k == "ctrl+c") {
 			m.startup.quitting = true
 			m.Close()
 			return m, tea.Quit

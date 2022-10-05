@@ -23,6 +23,10 @@ func NewSearchResultMenu(searchType SearchType) *SearchResultMenu {
 	}
 }
 
+func (m *SearchResultMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *SearchResultMenu) MenuData() interface{} {
 	return m.result
 }

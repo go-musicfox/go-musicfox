@@ -29,6 +29,10 @@ func NewUserPlaylistMenu(userId int64) *UserPlaylistMenu {
 	}
 }
 
+func (m *UserPlaylistMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *UserPlaylistMenu) MenuData() interface{} {
 	return m.playlists
 }

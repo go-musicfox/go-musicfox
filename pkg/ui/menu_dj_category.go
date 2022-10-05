@@ -16,6 +16,10 @@ func NewDjCategoryMenu() *DjCategoryMenu {
 	return &DjCategoryMenu{}
 }
 
+func (m *DjCategoryMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjCategoryMenu) GetMenuKey() string {
 	return "dj_category"
 }

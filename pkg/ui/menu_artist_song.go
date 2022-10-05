@@ -21,6 +21,10 @@ func NewArtistSongMenu(artistId int64) *ArtistSongMenu {
 	}
 }
 
+func (m *ArtistSongMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *ArtistSongMenu) MenuData() interface{} {
 	return m.songs
 }

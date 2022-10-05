@@ -16,6 +16,10 @@ func NewDjRecommendMenu() *DjRecommendMenu {
 	return &DjRecommendMenu{}
 }
 
+func (m *DjRecommendMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjRecommendMenu) GetMenuKey() string {
 	return "dj_recommend"
 }
