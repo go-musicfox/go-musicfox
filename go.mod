@@ -59,7 +59,7 @@ require (
 )
 
 replace (
-	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.7
+	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.6
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2

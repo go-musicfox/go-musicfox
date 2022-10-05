@@ -10,7 +10,7 @@ import (
 
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/effects"
-	"github.com/faiface/beep/flac"
+	"github.com/faiface/beep/flac_c"
 	"github.com/faiface/beep/minimp3"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/vorbis"
@@ -160,7 +160,7 @@ func (p *beepPlayer) listen() {
 			case Ogg:
 				p.curStreamer, p.curFormat, err = vorbis.Decode(cacheRFile)
 			case Flac:
-				p.curStreamer, p.curFormat, err = flac.Decode(cacheRFile)
+				p.curStreamer, p.curFormat, err = flac_c.Decode(cacheRFile)
 			default:
 				p.Stop()
 				break
