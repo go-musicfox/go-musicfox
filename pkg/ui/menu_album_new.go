@@ -29,6 +29,10 @@ func NewAlbumNewMenu(area string) *AlbumNewMenu {
 	}
 }
 
+func (m *AlbumNewMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *AlbumNewMenu) MenuData() interface{} {
 	return m.albums
 }

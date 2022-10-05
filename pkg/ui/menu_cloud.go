@@ -24,6 +24,10 @@ func NewCloudMenu() *CloudMenu {
 	}
 }
 
+func (m *CloudMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *CloudMenu) MenuData() interface{} {
 	return m.songs
 }

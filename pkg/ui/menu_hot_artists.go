@@ -16,6 +16,10 @@ func NewHotArtistsMenu() *HotArtistsMenu {
 	return new(HotArtistsMenu)
 }
 
+func (m *HotArtistsMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *HotArtistsMenu) MenuData() interface{} {
 	return m.artists
 }

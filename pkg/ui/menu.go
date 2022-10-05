@@ -7,6 +7,15 @@ type IMenu interface {
 	// IsPlayable 当前菜单是否可播放？
 	IsPlayable() bool
 
+	// IsSearchable 当前菜单是否可搜索
+	IsSearchable() bool
+
+	// IsLocatable 当前菜单是否支持播放自动定位
+	IsLocatable() bool
+
+	// RealDataIndex 索引转换
+	RealDataIndex(index int) int
+
 	// ResetPlaylistWhenPlay 空格播放时，是否重置播放列表？
 	ResetPlaylistWhenPlay() bool
 
@@ -54,6 +63,18 @@ type DefaultMenu struct {
 
 func (e *DefaultMenu) IsPlayable() bool {
 	return false
+}
+
+func (e *DefaultMenu) IsSearchable() bool {
+	return false
+}
+
+func (e *DefaultMenu) IsLocatable() bool {
+	return true
+}
+
+func (e *DefaultMenu) RealDataIndex(index int) int {
+	return index
 }
 
 func (e *DefaultMenu) ResetPlaylistWhenPlay() bool {

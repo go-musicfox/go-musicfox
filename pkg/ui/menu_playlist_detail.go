@@ -21,6 +21,10 @@ func NewPlaylistDetailMenu(playlistId int64) *PlaylistDetailMenu {
 	}
 }
 
+func (m *PlaylistDetailMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *PlaylistDetailMenu) MenuData() interface{} {
 	return m.songs
 }

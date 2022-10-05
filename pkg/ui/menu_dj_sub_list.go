@@ -25,6 +25,10 @@ func NewDjSubListMenu() *DjSubListMenu {
 	}
 }
 
+func (m *DjSubListMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjSubListMenu) GetMenuKey() string {
 	return "dj_sub"
 }

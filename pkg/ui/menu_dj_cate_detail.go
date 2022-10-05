@@ -21,6 +21,10 @@ func NewDjCategoryDetailMenu(categoryId int64) *DjCategoryDetailMenu {
 	}
 }
 
+func (m *DjCategoryDetailMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjCategoryDetailMenu) GetMenuKey() string {
 	return fmt.Sprintf("dj_category_detail_%d", m.categoryId)
 }

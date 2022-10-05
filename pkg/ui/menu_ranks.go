@@ -17,6 +17,10 @@ func NewRanksMenu() *RanksMenu {
 	return new(RanksMenu)
 }
 
+func (m *RanksMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *RanksMenu) GetMenuKey() string {
 	return "ranks"
 }

@@ -16,6 +16,10 @@ func NewDailyRecommendPlaylistMenu() *DailyRecommendPlaylistsMenu {
 	return new(DailyRecommendPlaylistsMenu)
 }
 
+func (m *DailyRecommendPlaylistsMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DailyRecommendPlaylistsMenu) MenuData() interface{} {
 	return m.playlists
 }

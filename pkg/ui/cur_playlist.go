@@ -19,6 +19,10 @@ func NewCurPlaylist(songs []structs.Song) *CurPlaylist {
 	}
 }
 
+func (m *CurPlaylist) IsSearchable() bool {
+	return true
+}
+
 func (m *CurPlaylist) MenuData() interface{} {
 	return m.songs
 }

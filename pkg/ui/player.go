@@ -212,7 +212,7 @@ func (p *Player) playerView(top *int) string {
 	playerBuilder.WriteString(p.lyricView())
 
 	playerBuilder.WriteString(p.songView())
-	playerBuilder.WriteString("\n\n\n")
+	playerBuilder.WriteString("\n\n")
 
 	playerBuilder.WriteString(p.progressView())
 
@@ -385,6 +385,10 @@ func (p *Player) CompareWithCurPlaylist(playlist []structs.Song) bool {
 
 // LocatePlayingSong 定位到正在播放的音乐
 func (p *Player) LocatePlayingSong() {
+	if !p.model.menu.IsLocatable() {
+		return
+	}
+
 	songs, ok := p.model.menu.MenuData().([]structs.Song)
 	if !ok {
 		return
@@ -670,7 +674,8 @@ func (p *Player) Intelligence(appendMode bool) {
 		return
 	}
 
-	if p.model.selectedIndex >= len(playlist.songs) {
+	selectedIndex := p.model.menu.RealDataIndex(p.model.selectedIndex)
+	if selectedIndex >= len(playlist.songs) {
 		return
 	}
 
@@ -680,9 +685,9 @@ func (p *Player) Intelligence(appendMode bool) {
 	}
 
 	intelligenceService := service.PlaymodeIntelligenceListService{
-		SongId:       strconv.FormatInt(playlist.songs[p.model.selectedIndex].Id, 10),
+		SongId:       strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
 		PlaylistId:   strconv.FormatInt(playlist.PlaylistId, 10),
-		StartMusicId: strconv.FormatInt(playlist.songs[p.model.selectedIndex].Id, 10),
+		StartMusicId: strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
 	}
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := utils.CheckCode(code)
@@ -701,7 +706,7 @@ func (p *Player) Intelligence(appendMode bool) {
 		p.playlistUpdateAt = time.Now()
 		p.curSongIndex++
 	} else {
-		p.playlist = append([]structs.Song{playlist.songs[p.model.selectedIndex]}, songs...)
+		p.playlist = append([]structs.Song{playlist.songs[selectedIndex]}, songs...)
 		p.playlistUpdateAt = time.Now()
 		p.curSongIndex = 0
 	}

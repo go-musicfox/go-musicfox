@@ -16,6 +16,10 @@ func NewDjProgramRankMenu() *DjProgramRankMenu {
 	return &DjProgramRankMenu{}
 }
 
+func (m *DjProgramRankMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *DjProgramRankMenu) MenuData() interface{} {
 	return m.songs
 }

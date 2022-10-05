@@ -17,6 +17,10 @@ func NewPersonalFmMenu() *PersonalFmMenu {
 	return new(PersonalFmMenu)
 }
 
+func (m *PersonalFmMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *PersonalFmMenu) IsPlayable() bool {
 	return true
 }

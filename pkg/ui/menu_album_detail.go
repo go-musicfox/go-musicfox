@@ -21,6 +21,10 @@ func NewAlbumDetailMenu(albumId int64) *AlbumDetailMenu {
 	}
 }
 
+func (m *AlbumDetailMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *AlbumDetailMenu) MenuData() interface{} {
 	return m.songs
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/anhoder/bubbles/textinput"
 	"math"
 	"strings"
 	"time"
@@ -56,8 +57,10 @@ type MainUIModel struct {
 	menuStack     *utils.Stack // 菜单栈
 	selectedIndex int          // 当前选中的菜单index
 
-	showLogin bool     // 显示登陆
-	pageType  PageType // 显示的页面类型
+	inSearching bool            // 搜索菜单
+	searchInput textinput.Model // 搜索输入框
+
+	pageType PageType // 显示的页面类型
 
 	menu   IMenu   // 菜单
 	player *Player // 播放器
@@ -78,6 +81,12 @@ func NewMainUIModel(parentModel *NeteaseModel) (m *MainUIModel) {
 	m.menuCurPage = 1
 	m.menuPageSize = 10
 	m.selectedIndex = 0
+
+	m.searchInput = textinput.NewModel()
+	m.searchInput.Placeholder = " 搜索"
+	m.searchInput.Prompt = GetFocusedPrompt()
+	m.searchInput.TextColor = primaryColorStr
+	m.searchInput.CharLimit = 32
 
 	return
 }
@@ -178,6 +187,9 @@ func (main *MainUIModel) view(m *NeteaseModel) string {
 
 	// menu list
 	builder.WriteString(main.menuListView(m, &top))
+
+	// search input
+	builder.WriteString(main.searchInputView(m, &top))
 
 	// player view
 	builder.WriteString(m.player.playerView(&top))
@@ -335,7 +347,9 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 		menuName        string
 	)
 
-	if index == m.selectedIndex {
+	isSelected := !m.inSearching && index == m.selectedIndex
+
+	if isSelected {
 		menuTitle = fmt.Sprintf(" => %d. %s", index, m.menuList[index].Title)
 	} else {
 		menuTitle = fmt.Sprintf("    %d. %s", index, m.menuList[index].Title)
@@ -365,7 +379,7 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 	if menuTitleLen > itemMaxLen {
 		tmp = runewidth.Truncate(menuTitle, itemMaxLen, "")
 		tmp = runewidth.FillRight(tmp, itemMaxLen) // fix: 切割中文后缺少字符导致未对齐
-		if index == m.selectedIndex {
+		if isSelected {
 			menuName = SetFgStyle(tmp, GetPrimaryColor())
 		} else {
 			menuName = SetNormalStyle(tmp)
@@ -373,14 +387,14 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 	} else if menuTitleLen+menuSubtitleLen > itemMaxLen {
 		tmp = runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, "")
 		tmp = runewidth.FillRight(tmp, itemMaxLen-menuTitleLen)
-		if index == m.selectedIndex {
+		if isSelected {
 			menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, GetPrimaryColor()), SetFgStyle(tmp, termenv.ANSIBrightBlack))
 		} else {
 			menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(tmp, termenv.ANSIBrightBlack))
 		}
 	} else {
 		tmp = runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen)
-		if index == m.selectedIndex {
+		if isSelected {
 			menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, GetPrimaryColor()), SetFgStyle(tmp, termenv.ANSIBrightBlack))
 		} else {
 			menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(tmp, termenv.ANSIBrightBlack))
@@ -390,6 +404,52 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 	menuItemBuilder.WriteString(menuName)
 
 	return menuItemBuilder.String(), itemMaxLen
+}
+
+// 菜单搜索
+func (main *MainUIModel) searchInputView(m *NeteaseModel, top *int) string {
+	if !main.inSearching {
+		*top++
+		return "\n"
+	}
+
+	var builder strings.Builder
+	builder.WriteString("\n")
+	*top++
+
+	inputs := []textinput.Model{
+		m.searchInput,
+	}
+
+	var startColumn int
+	if m.menuStartColumn > 2 {
+		startColumn = m.menuStartColumn - 2
+	}
+	for i, input := range inputs {
+		if startColumn > 0 {
+			builder.WriteString(strings.Repeat(" ", startColumn))
+		}
+
+		builder.WriteString(input.View())
+
+		var valueLen int
+		if input.Value() == "" {
+			valueLen = runewidth.StringWidth(input.Placeholder)
+		} else {
+			valueLen = runewidth.StringWidth(input.Value())
+		}
+		if spaceLen := m.WindowWidth - startColumn - valueLen - 3; spaceLen > 0 {
+			builder.WriteString(strings.Repeat(" ", spaceLen))
+		}
+
+		*top++
+
+		if i < len(inputs)-1 {
+			builder.WriteString("\n\n")
+			*top++
+		}
+	}
+	return builder.String()
 }
 
 // 获取当前页的菜单
@@ -405,6 +465,29 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	if !m.isListeningKey {
 		return m, nil
 	}
+
+	if m.inSearching {
+		switch msg.String() {
+		case "esc":
+			m.inSearching = false
+			m.searchInput.Blur()
+			m.searchInput.Reset()
+			return m, func() tea.Msg {
+				return tea.ClearScreenMsg{}
+			}
+		case "enter":
+			searchMenuHandle(m)
+			return m, func() tea.Msg {
+				return tea.ClearScreenMsg{}
+			}
+		}
+
+		var cmd tea.Cmd
+		m.searchInput, cmd = m.searchInput.Update(msg)
+
+		return m, tea.Batch(cmd)
+	}
+
 	switch msg.String() {
 	case "j", "J", "down":
 		moveDown(m)
@@ -450,18 +533,24 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		m.player.DownVolume()
 	case "=", "＝":
 		m.player.UpVolume()
-	case "/", "／":
+	case "t":
 		// trash playing song
 		trashPlayingSong(m)
+	case "T":
+		// trash selected song
+		trashSelectedSong(m)
 	case "<", "〈", "＜", "《", "«": // half-width, full-width, japanese, chinese and french
 		// like selected song
 		likeSelectedSong(m, true)
 	case ">", "〉", "＞", "》", "»":
 		// unlike selected song
 		likeSelectedSong(m, false)
-	case "?", "？":
-		// trash selected song
-		trashSelectedSong(m)
+	case "/", "／", "、":
+		// 搜索菜单
+		if m.menu.IsSearchable() {
+			m.inSearching = true
+			m.searchInput.Focus()
+		}
 	case "r", "R":
 		// rerender
 		return m, func() tea.Msg {

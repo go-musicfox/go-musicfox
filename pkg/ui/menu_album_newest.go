@@ -18,6 +18,10 @@ func NewAlbumNewestMenu() *AlbumNewestMenu {
 	return new(AlbumNewestMenu)
 }
 
+func (m *AlbumNewestMenu) IsSearchable() bool {
+	return true
+}
+
 func (m *AlbumNewestMenu) MenuData() interface{} {
 	return m.albums
 }
