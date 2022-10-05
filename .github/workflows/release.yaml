@@ -35,7 +35,7 @@ jobs:
         id: homebrew
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          brew install flac go 2>&1 > /dev/null 
+          brew install flac go -q
           brew unlink go@1.17
           brew link --overwrite go
 
