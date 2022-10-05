@@ -13,6 +13,36 @@ on:
       - v*
 
 jobs:
+  musicfox-darwin:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout...
+        uses: actions/checkout@v2
+
+      - run: git fetch --prune --unshallow
+
+      - name: Setup go...
+        uses: actions/setup-go@v2
+        with:
+          go-version: "${{ env.GOLANG_VERSION }}"
+
+      - name: branch name
+        id: branch_name
+        run: |
+          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
+
+      - name: homebrew
+        id: homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+          brew install flac
+
+      - name: build
+        id: build
+        run: |
+          go build -ldflags '-s -w -X go-musicfox/pkg/constants.AppVersion=2.2.1 -X go-musicfox/pkg/constants.LastfmKey=${{secrets.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret=${{secrets.LASTFM_SECRET}}' cmd/musicfox.go
+          
+
   goreleaser:
     runs-on: ubuntu-latest
     steps:
