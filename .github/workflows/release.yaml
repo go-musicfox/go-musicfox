@@ -35,7 +35,7 @@ jobs:
         id: homebrew
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          brew install flac
+          brew install flac go
 
       - name: build
         id: build
