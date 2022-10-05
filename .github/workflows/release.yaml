@@ -35,14 +35,12 @@ jobs:
         id: homebrew
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          brew install flac go -q
-          brew unlink go@1.17
-          brew link --overwrite go
+          brew install flac go@1.19 -q
 
       - name: build
         id: build
         run: |
-          go build -ldflags '-s -w -X go-musicfox/pkg/constants.AppVersion=2.2.1 -X go-musicfox/pkg/constants.LastfmKey=${{secrets.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret=${{secrets.LASTFM_SECRET}}' cmd/musicfox.go
+          /usr/local/opt/go@1.19/bin/go build -ldflags '-s -w -X go-musicfox/pkg/constants.AppVersion=2.2.1 -X go-musicfox/pkg/constants.LastfmKey=${{secrets.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret=${{secrets.LASTFM_SECRET}}' cmd/musicfox.go
           
 
 #  goreleaser:
