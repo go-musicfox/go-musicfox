@@ -38,7 +38,13 @@ type SearchModel struct {
 func (s *SearchModel) Reset() {
 	s.tips = ""
 	s.wordsInput.SetValue("")
+	s.wordsInput.Reset()
+	s.index = 0
 	s.wordsInput.Focus()
+	s.wordsInput.Prompt = GetFocusedPrompt()
+	s.wordsInput.TextColor = primaryColorStr
+	s.wordsInput.CharLimit = 32
+	s.submitButton = GetBlurredSubmitButton()
 }
 
 func NewSearch() (search *SearchModel) {
