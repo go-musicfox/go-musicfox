@@ -113,7 +113,7 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 #### 2. Arch Linux可使用AUR安装：
 
 ```sh
-yay -S go-musicfox-bin
+paru -S go-musicfox
 ```
 
 #### 3. Gentoo Linux可使用gentoo-zh overlay安装：
@@ -121,7 +121,7 @@ yay -S go-musicfox-bin
 ```
 eselect repository enable gentoo-zh
 emerge --sync
-emerge -a media-sound/go-musicfox-bin
+emerge -a media-sound/go-musicfox
 ```
 
 #### 4. 直接下载
