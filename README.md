@@ -142,7 +142,7 @@ emerge -a media-sound/go-musicfox
 (Linux编译前需要安装flac)
 
 > go build cmd/musicfox.go
-`
+```
 
 
 
