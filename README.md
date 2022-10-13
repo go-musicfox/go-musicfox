@@ -132,6 +132,21 @@ emerge -a media-sound/go-musicfox
 
 下载Windows可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
 
+### 手动编译
+
+```sh
+> git clone https://github.com/anhoder/go-musicfox
+
+> go mod download
+
+(Linux编译前需要安装flac)
+
+> go build cmd/musicfox.go
+`
+
+
+
+
 ## 使用
 
 ```sh
