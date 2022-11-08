@@ -2,6 +2,7 @@ package utils
 
 import (
 	"os"
+	"runtime"
 
 	"go-musicfox/pkg/constants"
 
@@ -33,7 +34,7 @@ func Notify(content NotifyContent) {
 		OSXSender: content.Sender,
 	})
 
-	if content.Icon == "" {
+	if content.Icon == "" || runtime.GOOS != "darwin" {
 		localDir := GetLocalDataDir()
 		content.Icon = localDir + "/logo.png"
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
