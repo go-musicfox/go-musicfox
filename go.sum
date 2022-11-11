@@ -52,6 +52,8 @@ github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0 h1:hECgtOHYziH
 github.com/anhoder/notificator v0.0.0-20220925052435-104a303811f0/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/anhoder/notificator v0.0.4 h1:KRZmmCGKR1fFGockyCTHNWXqYDStFbMSkUUyqb3zFNE=
 github.com/anhoder/notificator v0.0.4/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
+github.com/anhoder/notificator v0.0.5 h1:CyPvxAqaDtN330eKbX9ltvIr4Y/PloLLc8wALqyhqb4=
+github.com/anhoder/notificator v0.0.5/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/anhoder/oto v1.0.2 h1:hj5f0NSC5VCcTOFgDpzsECfnP+oUwFlMcL0nZz27c/o=
 github.com/anhoder/oto v1.0.2/go.mod h1:wovJ8WWMfFKvP587mhHgot/MBr4DnNy9m6EepeVGnos=
 github.com/anhoder/requests v0.1.1 h1:EG3PNaPVjcVZC3bfvbWyQptheZ4QKy22ZdGfkQvXpjs=

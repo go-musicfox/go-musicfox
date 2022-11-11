@@ -93,15 +93,17 @@ func (o osxNotificator) pushCritical(title string, text string, iconPath string,
 
 }
 
-type linuxNotificator struct{}
+type linuxNotificator struct {
+	AppName string
+}
 
 func (l linuxNotificator) push(title string, text string, iconPath string, redirectUrl string) *exec.Cmd {
-	return exec.Command("notify-send", "-i", iconPath, title, text)
+	return exec.Command("notify-send", "-a", l.AppName, "-i", iconPath, title, text)
 }
 
 // Causes the notification to stick around until clicked.
 func (l linuxNotificator) pushCritical(title string, text string, iconPath string, redirectUrl string) *exec.Cmd {
-	return exec.Command("notify-send", "-i", iconPath, title, text, "-u", "critical")
+	return exec.Command("notify-send", "-a", l.AppName, "-i", iconPath, title, text, "-u", "critical")
 }
 
 type windowsNotificator struct{}
@@ -124,7 +126,7 @@ func New(o Options) *Notificator {
 	case "darwin":
 		Notifier = osxNotificator{AppName: o.AppName, Sender: o.OSXSender}
 	case "linux":
-		Notifier = linuxNotificator{}
+		Notifier = linuxNotificator{AppName: o.AppName}
 	case "windows":
 		Notifier = windowsNotificator{}
 

@@ -6,7 +6,7 @@ require (
 	github.com/anhoder/bubbles v0.7.8
 	github.com/anhoder/bubbletea v0.12.12
 	github.com/anhoder/netease-music v1.2.7
-	github.com/anhoder/notificator v0.0.4
+	github.com/anhoder/notificator v0.0.5
 	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
 	github.com/faiface/beep v1.1.0

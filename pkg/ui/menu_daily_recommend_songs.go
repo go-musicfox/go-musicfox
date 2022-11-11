@@ -43,11 +43,6 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 			return false
 		}
 
-		// 不重复请求
-		if len(m.menus) > 0 && len(m.songs) > 0 {
-			return true
-		}
-
 		recommendSongs := service.RecommendSongsService{}
 		code, response := recommendSongs.RecommendSongs()
 		codeType := utils.CheckCode(code)
