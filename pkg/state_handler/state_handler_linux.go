@@ -268,6 +268,9 @@ func (s *Handler) IntrospectNode() *introspect.Node {
 }
 
 func (s *Handler) SetPlayingInfo(info PlayingInfo) {
+	if s.props == nil {
+		return
+	}
 	// Playback Status
 	go func() {
 		playbackStatus, err := PlaybackStatusFromPlayer(info.State)
@@ -288,6 +291,9 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 }
 
 func (s *Handler) setProp(iface, name string, value dbus.Variant) {
+	if s.props == nil {
+		return
+	}
 	if err := s.props.Set(iface, name, value); err != nil {
 		log.Printf("Setting %s %s failed: %+v\n", iface, name, errors.WithStack(err))
 	}
