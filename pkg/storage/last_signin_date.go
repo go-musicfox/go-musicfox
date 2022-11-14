@@ -4,7 +4,7 @@ import (
 	"go-musicfox/pkg/constants"
 )
 
-type LastSignIn struct {}
+type LastSignIn struct{}
 
 func (p LastSignIn) GetDbName() string {
 	return constants.AppDBName

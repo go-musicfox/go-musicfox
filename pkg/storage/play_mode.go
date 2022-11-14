@@ -4,7 +4,7 @@ import (
 	"go-musicfox/pkg/constants"
 )
 
-type PlayMode struct {}
+type PlayMode struct{}
 
 func (p PlayMode) GetDbName() string {
 	return constants.AppDBName
@@ -15,5 +15,5 @@ func (p PlayMode) GetTableName() string {
 }
 
 func (p PlayMode) GetKey() string {
-	return "play_mode"
+	return "play_mode_int"
 }

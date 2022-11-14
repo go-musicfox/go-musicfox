@@ -10,7 +10,7 @@ import (
 
 type IteratorCallback func(k, v []byte) error
 
-type table struct {}
+type table struct{}
 
 // NewTable 创建table
 func NewTable() *table {
@@ -173,4 +173,3 @@ func checkBucket(bucket *bolt.Bucket, bucketName string) error {
 	}
 	return nil
 }
-

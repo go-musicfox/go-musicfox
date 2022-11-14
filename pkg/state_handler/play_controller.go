@@ -10,4 +10,6 @@ type Controller interface {
 	Next()
 	Previous()
 	Seek(duration time.Duration)
+	SetVolumeByExternalCtrl(volume int)
+	PlayingInfo() PlayingInfo
 }

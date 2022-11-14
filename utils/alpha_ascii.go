@@ -1,12 +1,12 @@
 package utils
 
 import (
-    "strings"
+	"strings"
 )
 
 var alphaAscii = map[rune]string{
-    // blank
-    ' ': `
+	// blank
+	' ': `
         
         
         
@@ -15,7 +15,7 @@ var alphaAscii = map[rune]string{
         
         
 `,
-    'A': `
+	'A': `
  █████╗ 
 ██╔══██╗
 ███████║
@@ -24,7 +24,7 @@ var alphaAscii = map[rune]string{
 ╚═╝  ╚═╝
         
 `,
-    'B': `
+	'B': `
 ██████╗ 
 ██╔══██╗
 ██████╔╝
@@ -33,7 +33,7 @@ var alphaAscii = map[rune]string{
 ╚═════╝ 
         
 `,
-    'C': `
+	'C': `
  ██████╗
 ██╔════╝
 ██║     
@@ -42,7 +42,7 @@ var alphaAscii = map[rune]string{
  ╚═════╝
         
 `,
-    'D': `
+	'D': `
 ██████╗ 
 ██╔══██╗
 ██║  ██║
@@ -51,7 +51,7 @@ var alphaAscii = map[rune]string{
 ╚═════╝ 
         
 `,
-    'E': `
+	'E': `
 ███████╗
 ██╔════╝
 █████╗  
@@ -60,7 +60,7 @@ var alphaAscii = map[rune]string{
 ╚══════╝
         
 `,
-    'F': `
+	'F': `
 ███████╗
 ██╔════╝
 █████╗  
@@ -69,7 +69,7 @@ var alphaAscii = map[rune]string{
 ╚═╝     
         
 `,
-    'G': `
+	'G': `
  ██████╗ 
 ██╔════╝ 
 ██║  ███╗
@@ -78,7 +78,7 @@ var alphaAscii = map[rune]string{
  ╚═════╝ 
          
 `,
-    'H': `
+	'H': `
 ██╗  ██╗
 ██║  ██║
 ███████║
@@ -87,7 +87,7 @@ var alphaAscii = map[rune]string{
 ╚═╝  ╚═╝
         
 `,
-    'I': `
+	'I': `
 ██╗
 ██║
 ██║
@@ -96,7 +96,7 @@ var alphaAscii = map[rune]string{
 ╚═╝
    
 `,
-    'J': `
+	'J': `
 ██╗     
 ██║     
 ██║     
@@ -105,7 +105,7 @@ var alphaAscii = map[rune]string{
  ╚════╝ 
         
 `,
-    'K': `
+	'K': `
 ██╗  ██╗
 ██║ ██╔╝
 █████╔╝ 
@@ -114,7 +114,7 @@ var alphaAscii = map[rune]string{
 ╚═╝  ╚═╝
         
 `,
-    'L': `
+	'L': `
 ██╗     
 ██║     
 ██║     
@@ -123,7 +123,7 @@ var alphaAscii = map[rune]string{
 ╚══════╝
         
 `,
-    'M': `
+	'M': `
 ███╗   ███╗
 ████╗ ████║
 ██╔████╔██║
@@ -132,7 +132,7 @@ var alphaAscii = map[rune]string{
 ╚═╝     ╚═╝
            
 `,
-    'N': `
+	'N': `
 ███╗   ██╗
 ████╗  ██║
 ██╔██╗ ██║
@@ -141,7 +141,7 @@ var alphaAscii = map[rune]string{
 ╚═╝  ╚═══╝
           
 `,
-    'O': `
+	'O': `
  ██████╗ 
 ██╔═══██╗
 ██║   ██║
@@ -150,7 +150,7 @@ var alphaAscii = map[rune]string{
  ╚═════╝ 
          
 `,
-    'P': `
+	'P': `
 ██████╗ 
 ██╔══██╗
 ██████╔╝
@@ -159,7 +159,7 @@ var alphaAscii = map[rune]string{
 ╚═╝     
         
 `,
-    'Q': `
+	'Q': `
  ██████╗ 
 ██╔═══██╗
 ██║   ██║
@@ -168,7 +168,7 @@ var alphaAscii = map[rune]string{
  ╚══▀▀═╝ 
          
 `,
-    'R': `
+	'R': `
 ██████╗ 
 ██╔══██╗
 ██████╔╝
@@ -177,7 +177,7 @@ var alphaAscii = map[rune]string{
 ╚═╝  ╚═╝
         
 `,
-    'S': `
+	'S': `
 ███████╗
 ██╔════╝
 ███████╗
@@ -186,7 +186,7 @@ var alphaAscii = map[rune]string{
 ╚══════╝
         
 `,
-    'T': `
+	'T': `
 ████████╗
 ╚══██╔══╝
    ██║   
@@ -195,7 +195,7 @@ var alphaAscii = map[rune]string{
    ╚═╝   
          
 `,
-    'U': `
+	'U': `
 ██╗   ██╗
 ██║   ██║
 ██║   ██║
@@ -204,7 +204,7 @@ var alphaAscii = map[rune]string{
  ╚═════╝ 
          
 `,
-    'V': `
+	'V': `
 ██╗   ██╗
 ██║   ██║
 ██║   ██║
@@ -213,7 +213,7 @@ var alphaAscii = map[rune]string{
   ╚═══╝  
          
 `,
-    'W': `
+	'W': `
 ██╗    ██╗
 ██║    ██║
 ██║ █╗ ██║
@@ -222,7 +222,7 @@ var alphaAscii = map[rune]string{
  ╚══╝╚══╝ 
           
 `,
-    'X': `
+	'X': `
 ██╗  ██╗
 ╚██╗██╔╝
  ╚███╔╝ 
@@ -231,7 +231,7 @@ var alphaAscii = map[rune]string{
 ╚═╝  ╚═╝
         
 `,
-    'Y': `
+	'Y': `
 ██╗   ██╗
 ╚██╗ ██╔╝
  ╚████╔╝ 
@@ -240,7 +240,7 @@ var alphaAscii = map[rune]string{
    ╚═╝   
          
 `,
-    'Z': `
+	'Z': `
 ███████╗
 ╚══███╔╝
   ███╔╝ 
@@ -249,7 +249,7 @@ var alphaAscii = map[rune]string{
 ╚══════╝
         
 `,
-    '0': `
+	'0': `
  ██████╗ 
 ██╔═████╗
 ██║██╔██║
@@ -258,7 +258,7 @@ var alphaAscii = map[rune]string{
  ╚═════╝ 
          
 `,
-    '1': `
+	'1': `
  ██╗
 ███║
 ╚██║
@@ -267,7 +267,7 @@ var alphaAscii = map[rune]string{
  ╚═╝
     
 `,
-    '2': `
+	'2': `
 ██████╗ 
 ╚════██╗
  █████╔╝
@@ -276,7 +276,7 @@ var alphaAscii = map[rune]string{
 ╚══════╝
         
 `,
-    '3': `
+	'3': `
 ██████╗ 
 ╚════██╗
  █████╔╝
@@ -285,7 +285,7 @@ var alphaAscii = map[rune]string{
 ╚═════╝ 
         
 `,
-    '4': `
+	'4': `
 ██╗  ██╗
 ██║  ██║
 ███████║
@@ -294,7 +294,7 @@ var alphaAscii = map[rune]string{
      ╚═╝
         
 `,
-    '5': `
+	'5': `
 ███████╗
 ██╔════╝
 ███████╗
@@ -303,7 +303,7 @@ var alphaAscii = map[rune]string{
 ╚══════╝
         
 `,
-    '6': `
+	'6': `
  ██████╗ 
 ██╔════╝ 
 ███████╗ 
@@ -312,7 +312,7 @@ var alphaAscii = map[rune]string{
  ╚═════╝ 
          
 `,
-    '7': `
+	'7': `
 ███████╗
 ╚════██║
     ██╔╝
@@ -321,7 +321,7 @@ var alphaAscii = map[rune]string{
    ╚═╝  
         
 `,
-    '8': `
+	'8': `
  █████╗ 
 ██╔══██╗
 ╚█████╔╝
@@ -330,7 +330,7 @@ var alphaAscii = map[rune]string{
  ╚════╝ 
         
 `,
-    '9': `
+	'9': `
  █████╗ 
 ██╔══██╗
 ╚██████║
@@ -339,7 +339,7 @@ var alphaAscii = map[rune]string{
  ╚════╝ 
         
 `,
-    '!': `
+	'!': `
 ██╗
 ██║
 ██║
@@ -348,7 +348,7 @@ var alphaAscii = map[rune]string{
 ╚═╝
    
 `,
-    '@': `
+	'@': `
  ██████╗ 
 ██╔═══██╗
 ██║██╗██║
@@ -357,7 +357,7 @@ var alphaAscii = map[rune]string{
  ╚╝╚═══╝ 
          
 `,
-    '#': `
+	'#': `
  ██╗ ██╗ 
 ████████╗
 ╚██╔═██╔╝
@@ -366,7 +366,7 @@ var alphaAscii = map[rune]string{
  ╚═╝ ╚═╝ 
          
 `,
-    '$': `
+	'$': `
 ▄▄███▄▄ 
 ██╔════╝
 ███████╗
@@ -375,7 +375,7 @@ var alphaAscii = map[rune]string{
 ╚═▀▀▀══╝
         
 `,
-    '%': `
+	'%': `
 ██╗ ██╗
 ╚═╝██╔╝
   ██╔╝ 
@@ -384,7 +384,7 @@ var alphaAscii = map[rune]string{
 ╚═╝ ╚═╝
        
 `,
-    '^': `
+	'^': `
  ███╗ 
 ██╔██╗
 ╚═╝╚═╝
@@ -393,7 +393,7 @@ var alphaAscii = map[rune]string{
       
       
 `,
-    '&': `
+	'&': `
    ██╗   
    ██║   
 ████████╗
@@ -402,7 +402,7 @@ var alphaAscii = map[rune]string{
 ╚═════╝  
          
 `,
-    '*': `
+	'*': `
 ▄ ██╗▄
  ████╗
 ▀╚██╔▀
@@ -411,7 +411,7 @@ var alphaAscii = map[rune]string{
       
       
 `,
-    '(': `
+	'(': `
  ██╗
 ██╔╝
 ██║ 
@@ -420,7 +420,7 @@ var alphaAscii = map[rune]string{
  ╚═╝
     
 `,
-    ')': `
+	')': `
 ██╗ 
 ╚██╗
  ██║
@@ -429,7 +429,7 @@ var alphaAscii = map[rune]string{
 ╚═╝ 
     
 `,
-    '-': `
+	'-': `
       
 █████╗
 ╚════╝
@@ -438,7 +438,7 @@ var alphaAscii = map[rune]string{
       
       
 `,
-    '_': `
+	'_': `
         
         
         
@@ -447,7 +447,7 @@ var alphaAscii = map[rune]string{
         
         
 `,
-    '[': `
+	'[': `
 ███╗
 ██╔╝
 ██║
@@ -456,7 +456,7 @@ var alphaAscii = map[rune]string{
 ╚══╝
     
 `,
-    ']': `
+	']': `
 ███╗
 ╚██║
  ██║
@@ -465,7 +465,7 @@ var alphaAscii = map[rune]string{
 ╚══╝
     
 `,
-    ';': `
+	';': `
 ██╗
 ╚═╝
 ▄█╗
@@ -474,7 +474,7 @@ var alphaAscii = map[rune]string{
    
    
 `,
-    ':': `
+	':': `
 ██╗
 ╚═╝
 ██╗
@@ -483,7 +483,7 @@ var alphaAscii = map[rune]string{
    
    
 `,
-    ',': `
+	',': `
    
    
    
@@ -492,7 +492,7 @@ var alphaAscii = map[rune]string{
    
    
 `,
-    '.': `
+	'.': `
    
    
    
@@ -501,7 +501,7 @@ var alphaAscii = map[rune]string{
    
    
 `,
-    '<': `
+	'<': `
   ██╗
  ██╔╝
 ██╔╝ 
@@ -510,7 +510,7 @@ var alphaAscii = map[rune]string{
   ╚═╝
      
 `,
-    '>': `
+	'>': `
 ██╗  
 ╚██╗ 
  ╚██╗
@@ -519,7 +519,7 @@ var alphaAscii = map[rune]string{
 ╚═╝
 
 `,
-    '?': `
+	'?': `
 ██████╗ 
 ╚════██╗
   ▄███╔╝
@@ -528,7 +528,7 @@ var alphaAscii = map[rune]string{
   ╚═╝   
         
 `,
-    '/': `
+	'/': `
     ██╗
    ██╔╝
   ██╔╝ 
@@ -544,28 +544,28 @@ const AsciiHeight = 7
 // GetAlphaAscii get ascii string
 func GetAlphaAscii(str string) string {
 
-    upperStr := strings.ToUpper(str)
+	upperStr := strings.ToUpper(str)
 
-    var format [][]string
-    for _, alpha := range upperStr {
-        if ascii, exists := alphaAscii[alpha]; exists {
-            format = append(format, strings.Split(ascii, "\n"))
-        }
-    }
+	var format [][]string
+	for _, alpha := range upperStr {
+		if ascii, exists := alphaAscii[alpha]; exists {
+			format = append(format, strings.Split(ascii, "\n"))
+		}
+	}
 
-    var lines []string
-    for i := 0; i < AsciiHeight; i++ {
-        var line strings.Builder
-        for _, item := range format {
-            if i > len(item) {
-                continue
-            }
-            line.WriteString(" ")
-            line.WriteString(item[i])
-        }
-        lines = append(lines, line.String())
-        line.Reset()
-    }
+	var lines []string
+	for i := 0; i < AsciiHeight; i++ {
+		var line strings.Builder
+		for _, item := range format {
+			if i > len(item) {
+				continue
+			}
+			line.WriteString(" ")
+			line.WriteString(item[i])
+		}
+		lines = append(lines, line.String())
+		line.Reset()
+	}
 
-    return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n")
 }

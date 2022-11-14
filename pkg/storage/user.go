@@ -4,7 +4,7 @@ import (
 	"go-musicfox/pkg/constants"
 )
 
-type User struct {}
+type User struct{}
 
 func (u User) GetDbName() string {
 	return constants.AppDBName

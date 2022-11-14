@@ -1,7 +1,7 @@
 package storage
 
 type Model interface {
-	GetDbName()    string
+	GetDbName() string
 	GetTableName() string
 }
 
