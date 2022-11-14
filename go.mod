@@ -12,6 +12,7 @@ require (
 	github.com/faiface/beep v1.1.0
 	github.com/fhs/gompd/v2 v2.2.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.1.0
 	github.com/lucasb-eyer/go-colorful v1.2.0
@@ -59,11 +60,11 @@ require (
 )
 
 replace (
+	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
+	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.8
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
-	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
-	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
 )

@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/anhoder/bubbles/textinput"
 	"math"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/anhoder/bubbles/textinput"
 
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
@@ -515,7 +516,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "]", "】":
 		m.player.NextSong()
 	case "p":
-		m.player.SetPlayMode("")
+		m.player.SetPlayMode(0)
 	case "P":
 		m.player.Intelligence(false)
 	case ",", "，":

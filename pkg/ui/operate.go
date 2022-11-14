@@ -325,8 +325,8 @@ func spaceKeyHandle(m *NeteaseModel) {
 		m.player.playingMenu = m.menu
 		m.player.playlist = songs
 		m.player.playlistUpdateAt = time.Now()
-		if m.player.mode == PmIntelligent {
-			m.player.SetPlayMode("")
+		if m.player.mode == player.PmIntelligent {
+			m.player.SetPlayMode(0)
 		}
 		_ = m.player.PlaySong(songs[selectedIndex], DurationNext)
 	}

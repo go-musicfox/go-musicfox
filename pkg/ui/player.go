@@ -31,17 +31,6 @@ const (
 	DurationPrev
 )
 
-// PlayMode 播放模式
-type PlayMode string
-
-const (
-	PmListLoop    PlayMode = "列表" // 列表循环
-	PmOrder       PlayMode = "顺序" // 顺序播放
-	PmSingleLoop  PlayMode = "单曲" // 单曲循环
-	PmRandom      PlayMode = "随机" // 随机播放
-	PmIntelligent PlayMode = "心动" // 智能模式
-)
-
 type CtrlType string
 
 type CtrlSignal struct {
@@ -53,9 +42,9 @@ const (
 	CtrlResume   CtrlType = "Resume"
 	CtrlPaused   CtrlType = "Paused"
 	CtrlPrevious CtrlType = "Previous"
-	CtrlNext     CtrlType = "next"
-	CtrlSeek     CtrlType = "seek"
-	CtrlRerender CtrlType = "rerender"
+	CtrlNext     CtrlType = "Next"
+	CtrlSeek     CtrlType = "Seek"
+	CtrlRerender CtrlType = "Rerender"
 )
 
 type ReportPhase uint8
@@ -88,7 +77,7 @@ type Player struct {
 	progressRamp      []string
 
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
-	mode         PlayMode
+	mode         player.Mode
 	stateHandler *state_handler.Handler
 	ctrl         chan CtrlSignal
 
@@ -98,15 +87,15 @@ type Player struct {
 func NewPlayer(model *NeteaseModel) *Player {
 	p := &Player{
 		model: model,
-		mode:  PmListLoop,
+		mode:  player.PmListLoop,
 		ctrl:  make(chan CtrlSignal),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
 
+	p.Player = player.NewPlayerFromConfig()
 	p.stateHandler = state_handler.NewHandler(p)
 
-	p.Player = player.NewPlayerFromConfig()
 	// remote control
 	go func() {
 		defer utils.Recover(false)
@@ -129,17 +118,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 					if p.lrcTimer != nil {
 						p.lrcTimer.Rewind()
 					}
-					music := p.CurMusic()
-					p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-						TotalDuration:  music.Duration,
-						PassedDuration: p.PassedTime(),
-						State:          p.State(),
-						PicUrl:         music.PicUrl,
-						Name:           music.Name,
-						Album:          music.Album.Name,
-						Artist:         music.ArtistName(),
-						AlbumArtist:    music.Album.ArtistName(),
-					})
+					p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 				case CtrlRerender:
 					p.model.Rerender()
 				}
@@ -156,17 +135,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case <-ctx.Done():
 				return
 			case s := <-p.Player.StateChan():
-				music := p.CurMusic()
-				p.stateHandler.SetPlayingInfo(state_handler.PlayingInfo{
-					TotalDuration:  music.Duration,
-					PassedDuration: p.PassedTime(),
-					State:          s,
-					PicUrl:         music.PicUrl,
-					Name:           music.Name,
-					Album:          music.Album.Name,
-					Artist:         music.ArtistName(),
-					AlbumArtist:    music.Album.ArtistName(),
-				})
+				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 				if s == player.Stopped {
 					// 上报lastfm
 					p.report(ReportPhaseComplete)
@@ -287,7 +256,7 @@ func (p *Player) songView() string {
 
 	if p.model.menuStartColumn-4 > 0 {
 		builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
-		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", p.mode), termenv.ANSIBrightMagenta))
+		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
 	}
 	if p.State() == player.Playing {
 		builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", termenv.ANSIBrightYellow))
@@ -484,7 +453,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 // NextSong 下一曲
 func (p *Player) NextSong() {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
-		if p.mode == PmIntelligent {
+		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
 		}
 
@@ -502,13 +471,13 @@ func (p *Player) NextSong() {
 	}
 
 	switch p.mode {
-	case PmListLoop, PmIntelligent:
+	case player.PmListLoop, player.PmIntelligent:
 		p.curSongIndex++
 		if p.curSongIndex > len(p.playlist)-1 {
 			p.curSongIndex = 0
 		}
-	case PmSingleLoop:
-	case PmRandom:
+	case player.PmSingleLoop:
+	case player.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
 		}
@@ -517,7 +486,7 @@ func (p *Player) NextSong() {
 		} else {
 			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
 		}
-	case PmOrder:
+	case player.PmOrder:
 		if p.curSongIndex >= len(p.playlist)-1 {
 			return
 		}
@@ -534,7 +503,7 @@ func (p *Player) NextSong() {
 // PreviousSong 上一曲
 func (p *Player) PreviousSong() {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
-		if p.mode == PmIntelligent {
+		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
 		}
 
@@ -552,13 +521,13 @@ func (p *Player) PreviousSong() {
 	}
 
 	switch p.mode {
-	case PmListLoop, PmIntelligent:
+	case player.PmListLoop, player.PmIntelligent:
 		p.curSongIndex--
 		if p.curSongIndex < 0 {
 			p.curSongIndex = len(p.playlist) - 1
 		}
-	case PmSingleLoop:
-	case PmRandom:
+	case player.PmSingleLoop:
+	case player.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
 		}
@@ -567,7 +536,7 @@ func (p *Player) PreviousSong() {
 		} else {
 			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
 		}
-	case PmOrder:
+	case player.PmOrder:
 		if p.curSongIndex <= 0 {
 			return
 		}
@@ -582,22 +551,18 @@ func (p *Player) PreviousSong() {
 }
 
 // SetPlayMode 播放模式切换
-func (p *Player) SetPlayMode(playMode PlayMode) {
-	if playMode == "" {
-		switch p.mode {
-		case PmListLoop:
-			p.mode = PmOrder
-		case PmOrder:
-			p.mode = PmSingleLoop
-		case PmSingleLoop:
-			p.mode = PmRandom
-		case PmRandom:
-			p.mode = PmListLoop
-		default:
-			p.mode = PmListLoop
-		}
-	} else {
+func (p *Player) SetPlayMode(playMode player.Mode) {
+	if playMode > 0 {
 		p.mode = playMode
+	} else {
+		switch p.mode {
+		case player.PmListLoop, player.PmOrder, player.PmSingleLoop:
+			p.mode++
+		case player.PmRandom:
+			p.mode = player.PmListLoop
+		default:
+			p.mode = player.PmListLoop
+		}
 	}
 
 	table := storage.NewTable()
@@ -609,7 +574,9 @@ func (p *Player) SetPlayMode(playMode PlayMode) {
 // Close 关闭
 func (p *Player) Close() {
 	p.cancel()
-	p.stateHandler.Release()
+	if p.stateHandler != nil {
+		p.stateHandler.Release()
+	}
 	p.Player.Close()
 }
 
@@ -710,7 +677,7 @@ func (p *Player) Intelligence(appendMode bool) {
 		p.playlistUpdateAt = time.Now()
 		p.curSongIndex = 0
 	}
-	p.mode = PmIntelligent
+	p.mode = player.PmIntelligent
 	p.playingMenuKey = "Intelligent"
 
 	_ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)
@@ -744,6 +711,8 @@ func (p *Player) UpVolume() {
 		table := storage.NewTable()
 		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
 	}
+
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
 func (p *Player) DownVolume() {
@@ -752,6 +721,35 @@ func (p *Player) DownVolume() {
 	if v, ok := p.Player.(storage.VolumeStorable); ok {
 		table := storage.NewTable()
 		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
+	}
+
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+}
+
+func (p *Player) SetVolume(volume int) {
+	p.Player.SetVolume(volume)
+
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+}
+
+func (p *Player) SetVolumeByExternalCtrl(volume int) {
+	// 不更新playingInfo
+	p.Player.SetVolume(volume)
+}
+
+func (p *Player) PlayingInfo() state_handler.PlayingInfo {
+	music := p.curSong
+	return state_handler.PlayingInfo{
+		TotalDuration:  music.Duration,
+		PassedDuration: p.PassedTime(),
+		State:          p.State(),
+		Volume:         p.Volume(),
+		TrackID:        music.Id,
+		PicUrl:         music.PicUrl,
+		Name:           music.Name,
+		Album:          music.Album.Name,
+		Artist:         music.ArtistName(),
+		AlbumArtist:    music.Album.ArtistName(),
 	}
 }
 

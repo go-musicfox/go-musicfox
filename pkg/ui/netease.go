@@ -8,6 +8,7 @@ import (
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/lastfm"
+	"go-musicfox/pkg/player"
 	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
@@ -102,7 +103,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
-			var playMode PlayMode
+			var playMode player.Mode
 			if err = json.Unmarshal(jsonStr, &playMode); err == nil {
 				m.player.mode = playMode
 			}
@@ -123,12 +124,12 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.PlayerSnapshot{}); err == nil && len(jsonStr) > 0 {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
-				player := m.player
-				player.curSongIndex = snapshot.CurSongIndex
-				player.playlist = snapshot.Playlist
-				player.playlistUpdateAt = snapshot.PlaylistUpdateAt
-				player.curSong = player.playlist[player.curSongIndex]
-				player.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
+				p := m.player
+				p.curSongIndex = snapshot.CurSongIndex
+				p.playlist = snapshot.Playlist
+				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
+				p.curSong = p.playlist[p.curSongIndex]
+				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
 		}
 		m.Rerender()
