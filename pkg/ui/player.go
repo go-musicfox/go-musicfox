@@ -399,9 +399,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	p.curSong = song
 
 	p.LocatePlayingSong()
-	urlService := service.SongUrlService{}
+	urlService := service.SongUrlV1Service{}
 	urlService.ID = strconv.FormatInt(song.Id, 10)
-	urlService.Br = strconv.FormatInt(configs.ConfigRegistry.MainPlayerSongBr, 10)
+	urlService.Level = configs.ConfigRegistry.MainPlayerSongLevel
 	code, response := urlService.SongUrl()
 	if code != 200 {
 		return errors.New(string(response))
