@@ -212,8 +212,8 @@ emptyChar=
 showTitle=true
 # 加载中提示
 loadingText=[加载中...]
-# 歌曲码率，128000, 320000...，视网络情况而定
-songBr=320000
+# 歌曲音质，standard,higher,exhigh,lossless,hires
+songLevel=hires
 # 主题颜色
 # 随机
 # primaryColor=random
