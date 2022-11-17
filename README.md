@@ -213,7 +213,7 @@ showTitle=true
 # 加载中提示
 loadingText=[加载中...]
 # 歌曲音质，standard,higher,exhigh,lossless,hires
-songLevel=hires
+songLevel=higher
 # 主题颜色
 # 随机
 # primaryColor=random
