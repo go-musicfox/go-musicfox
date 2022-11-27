@@ -503,12 +503,14 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "b", "B", "esc":
 		backMenu(m)
 	case "c", "C":
-		var subTitle string
-		if !m.player.playlistUpdateAt.IsZero() {
-			subTitle = m.player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
+		if _, ok := m.menu.(*CurPlaylist); !ok {
+			var subTitle string
+			if !m.player.playlistUpdateAt.IsZero() {
+				subTitle = m.player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
+			}
+			enterMenu(m, NewCurPlaylist(m.player.playlist), &MenuItem{Title: "当前播放列表", Subtitle: subTitle})
+			m.player.LocatePlayingSong()
 		}
-		enterMenu(m, NewCurPlaylist(m.player.playlist), &MenuItem{Title: "当前播放列表", Subtitle: subTitle})
-		m.player.LocatePlayingSong()
 	case " ", "　":
 		spaceKeyHandle(m)
 	case "[", "【":
