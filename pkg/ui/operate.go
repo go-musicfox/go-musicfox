@@ -558,3 +558,40 @@ func searchMenuHandle(m *NeteaseModel) {
 	m.searchInput.Blur()
 	m.searchInput.Reset()
 }
+
+// 下载当前音乐
+func downloadSelectedSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	songs, ok := m.menu.MenuData().([]structs.Song)
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(songs) {
+		return
+	}
+
+	utils.Notify(utils.NotifyContent{
+		Title: "正在下载，请稍候...",
+		Text:  songs[selectedIndex].Name,
+		Url:   constants.AppGithubUrl,
+	})
+	utils.DownloadMusic(songs[selectedIndex])
+}
+
+func downloadPlayingSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	if m.player.curSongIndex >= len(m.player.playlist) {
+		return
+	}
+
+	utils.Notify(utils.NotifyContent{
+		Title: "正在下载，请稍候...",
+		Text:  m.player.playlist[m.player.curSongIndex].Name,
+		Url:   constants.AppGithubUrl,
+	})
+	utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+}

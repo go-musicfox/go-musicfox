@@ -7,16 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
 	"runtime"
+	"strconv"
 	"strings"
 
+	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
+	"go-musicfox/pkg/structs"
 )
 
 //go:embed embed
@@ -189,4 +193,54 @@ func CheckUpdate() bool {
 	}
 
 	return false
+}
+
+// DownloadMusic 下载音乐
+func DownloadMusic(song structs.Song) {
+	urlService := service.SongUrlV1Service{}
+	urlService.ID = strconv.FormatInt(song.Id, 10)
+	urlService.Level = configs.ConfigRegistry.MainPlayerSongLevel
+	code, response := urlService.SongUrl()
+	if code != 200 {
+		return
+	}
+
+	errHandler := func(errs ...error) {
+		log.Printf("下载歌曲失败, err: %+v", errs)
+	}
+
+	url, err := jsonparser.GetString(response, "data", "[0]", "url")
+	musicType, err2 := jsonparser.GetString(response, "data", "[0]", "type")
+	musicType = strings.ToLower(musicType)
+	if err != nil || err2 != nil {
+		errHandler(err, err2)
+		return
+	}
+
+	go func(utl string) {
+		resp, err := http.Get(url)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		downloadDir := GetLocalDataDir() + "/download"
+		if _, err = os.Stat(downloadDir); os.IsNotExist(err) {
+			_ = os.Mkdir(downloadDir, os.ModePerm)
+		}
+
+		f, err := os.OpenFile(fmt.Sprintf("%s/%s-%s.%s", downloadDir, song.Name, song.ArtistName(), musicType), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		_, _ = io.Copy(f, resp.Body)
+
+		Notify(NotifyContent{
+			Title: "下载完成",
+			Text:  song.Name,
+			Url:   constants.AppGithubUrl,
+		})
+	}(url)
 }

@@ -8,14 +8,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/anhoder/bubbles/textinput"
-
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/utils"
-
 	tea "github.com/anhoder/bubbletea"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/utils"
 )
 
 // PageType 显示模型的类型
@@ -536,6 +534,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		m.player.DownVolume()
 	case "=", "＝":
 		m.player.UpVolume()
+	case "d":
+		downloadPlayingSong(m)
+	case "D":
+		downloadSelectedSong(m)
 	case "t":
 		// trash playing song
 		trashPlayingSong(m)
