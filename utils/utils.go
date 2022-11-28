@@ -235,10 +235,16 @@ func DownloadMusic(song structs.Song) {
 			return
 		}
 
+		Notify(NotifyContent{
+			Title: "👇🏻正在下载，请稍候...",
+			Text:  song.Name,
+			Url:   constants.AppGithubUrl,
+		})
+
 		_, _ = io.Copy(f, resp.Body)
 
 		Notify(NotifyContent{
-			Title: "下载完成",
+			Title: "👇🏻下载完成",
 			Text:  song.Name,
 			Url:   constants.AppGithubUrl,
 		})

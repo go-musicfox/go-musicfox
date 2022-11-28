@@ -571,11 +571,6 @@ func downloadSelectedSong(m *NeteaseModel) {
 		return
 	}
 
-	utils.Notify(utils.NotifyContent{
-		Title: "正在下载，请稍候...",
-		Text:  songs[selectedIndex].Name,
-		Url:   constants.AppGithubUrl,
-	})
 	utils.DownloadMusic(songs[selectedIndex])
 }
 
@@ -588,10 +583,5 @@ func downloadPlayingSong(m *NeteaseModel) {
 		return
 	}
 
-	utils.Notify(utils.NotifyContent{
-		Title: "正在下载，请稍候...",
-		Text:  m.player.playlist[m.player.curSongIndex].Name,
-		Url:   constants.AppGithubUrl,
-	})
 	utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
 }

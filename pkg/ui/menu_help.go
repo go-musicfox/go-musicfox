@@ -35,6 +35,8 @@ func NewHelpMenu() *HelpMenu {
 		{Title: ">", Subtitle: "取消喜欢选中歌曲"},
 		{Title: "t", Subtitle: "标记播放中歌曲为不喜欢"},
 		{Title: "T", Subtitle: "标记选中歌曲为不喜欢"},
+		{Title: "d", Subtitle: "下载播放中音乐"},
+		{Title: "D", Subtitle: "下载当前选中音乐"},
 		{Title: "c/C", Subtitle: "当前播放列表"},
 		{Title: "/", Subtitle: "搜索当前列表"},
 	}
