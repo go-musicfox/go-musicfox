@@ -23,6 +23,7 @@ type Options struct {
 	Cookies []*http.Cookie
 	Token   string
 	Url     string
+	SkipUNM bool
 }
 
 func chooseUserAgent(ua string) string {
@@ -137,20 +138,21 @@ func CreateRequest(method string, url string, data map[string]string, options *O
 		url = reg.ReplaceAllString(url, "/eapi/")
 	}
 	var (
-		err  error
-		resp *requests.Response
+		err     error
+		resp    *requests.Response
+		UNMFlag = UNMSwitch && !options.SkipUNM
 	)
 	if method == "POST" {
 		var form requests.Datas = data
-		resp, err = req.Post(url, requests.DryRun(UNMSwitch), form)
+		resp, err = req.Post(url, requests.DryRun(UNMFlag), form)
 	} else {
-		resp, err = req.Get(url, requests.DryRun(UNMSwitch))
+		resp, err = req.Get(url, requests.DryRun(UNMFlag))
 	}
 	if err != nil {
 		return 520, []byte(err.Error()), nil
 	}
 
-	if UNMSwitch {
+	if UNMFlag {
 		ConfigInit()
 
 		request := req.HttpRequest()
