@@ -7,8 +7,9 @@ import (
 )
 
 type SongUrlService struct {
-	ID string `json:"id" form:"id"`
-	Br string `json:"br" form:"br"`
+	ID      string `json:"id" form:"id"`
+	Br      string `json:"br" form:"br"`
+	SkipUNM bool
 }
 
 func (service *SongUrlService) SongUrl() (float64, []byte) {
@@ -18,6 +19,7 @@ func (service *SongUrlService) SongUrl() (float64, []byte) {
 	options := &util.Options{
 		Crypto:  "linuxapi",
 		Cookies: []*http.Cookie{cookiesOS},
+		SkipUNM: service.SkipUNM,
 	}
 	data := make(map[string]string)
 	data["ids"] = "[" + service.ID + "]"

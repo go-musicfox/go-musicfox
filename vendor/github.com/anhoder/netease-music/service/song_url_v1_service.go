@@ -29,6 +29,7 @@ type SongUrlV1Service struct {
 	ID         string           `json:"id" form:"id"`
 	Level      SongQualityLevel `json:"level" form:"level"` // standard,higher,exhigh,lossless,hires
 	EncodeType string           `json:"encodeType" form:"encodeType"`
+	SkipUNM    bool
 }
 
 func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
@@ -39,6 +40,7 @@ func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
 		Crypto:  "eapi",
 		Cookies: []*http.Cookie{cookiesOS},
 		Url:     "/api/song/enhance/player/url/v1",
+		SkipUNM: service.SkipUNM,
 	}
 	data := make(map[string]string)
 	data["ids"] = "[" + service.ID + "]"

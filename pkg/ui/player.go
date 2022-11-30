@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -399,18 +398,8 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	p.curSong = song
 
 	p.LocatePlayingSong()
-	urlService := service.SongUrlV1Service{}
-	urlService.ID = strconv.FormatInt(song.Id, 10)
-	urlService.Level = configs.ConfigRegistry.MainPlayerSongLevel
-	code, response := urlService.SongUrl()
-	if code != 200 {
-		return errors.New(string(response))
-	}
-
-	url, err1 := jsonparser.GetString(response, "data", "[0]", "url")
-	musicType, err2 := jsonparser.GetString(response, "data", "[0]", "type")
-	musicType = strings.ToLower(musicType)
-	if err1 != nil || err2 != nil || (musicType != "mp3" && musicType != "flac") {
+	url, musicType, err := utils.GetSongUrl(song.Id)
+	if err != nil {
 		p.Paused()
 		p.progressRamp = []string{}
 		p.playErrCount++

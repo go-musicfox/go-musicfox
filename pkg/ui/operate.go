@@ -219,14 +219,6 @@ func enterMenu(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
 			return
 		}
 
-		// 如果位于正在播放的菜单中，更新播放列表
-		if newMenu.GetMenuKey() == m.player.playingMenuKey {
-			if songs, ok := newMenu.MenuData().([]structs.Song); ok {
-				m.player.playlist = songs
-				m.player.playlistUpdateAt = time.Now()
-			}
-		}
-
 		loading.complete()
 	}
 
@@ -286,12 +278,8 @@ func spaceKeyHandle(m *NeteaseModel) {
 		songs         []structs.Song
 		inPlayingMenu = m.player.InPlayingMenu()
 	)
-	if inPlayingMenu && !m.menu.ResetPlaylistWhenPlay() {
-		songs = m.player.playlist
-	} else {
-		if data, ok := m.menu.MenuData().([]structs.Song); ok {
-			songs = data
-		}
+	if data, ok := m.menu.MenuData().([]structs.Song); ok {
+		songs = data
 	}
 
 	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)

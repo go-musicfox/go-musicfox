@@ -197,27 +197,17 @@ func CheckUpdate() bool {
 
 // DownloadMusic 下载音乐
 func DownloadMusic(song structs.Song) {
-	urlService := service.SongUrlV1Service{}
-	urlService.ID = strconv.FormatInt(song.Id, 10)
-	urlService.Level = configs.ConfigRegistry.MainPlayerSongLevel
-	code, response := urlService.SongUrl()
-	if code != 200 {
-		return
-	}
-
 	errHandler := func(errs ...error) {
 		log.Printf("下载歌曲失败, err: %+v", errs)
 	}
 
-	url, err := jsonparser.GetString(response, "data", "[0]", "url")
-	musicType, err2 := jsonparser.GetString(response, "data", "[0]", "type")
-	musicType = strings.ToLower(musicType)
-	if err != nil || err2 != nil {
-		errHandler(err, err2)
+	url, musicType, err := GetSongUrl(song.Id)
+	if err != nil {
+		errHandler(err)
 		return
 	}
 
-	go func(utl string) {
+	go func(utl string, musicType string) {
 		resp, err := http.Get(url)
 		if err != nil {
 			errHandler(err)
@@ -248,5 +238,54 @@ func DownloadMusic(song structs.Song) {
 			Text:  song.Name,
 			Url:   constants.AppGithubUrl,
 		})
-	}(url)
+	}(url, musicType)
+}
+
+var brMap = map[service.SongQualityLevel]string{
+	service.Standard: "128000",
+	service.Higher:   "192000",
+	service.Exhigh:   "320000",
+	service.Lossless: "999000",
+	service.Hires:    "999000",
+}
+
+func GetSongUrl(songId int64) (url, musicType string, err error) {
+	urlService := service.SongUrlV1Service{
+		ID:      strconv.FormatInt(songId, 10),
+		Level:   configs.ConfigRegistry.MainPlayerSongLevel,
+		SkipUNM: true,
+	}
+	code, response := urlService.SongUrl()
+	if code != 200 {
+		return "", "", errors.New(string(response))
+	}
+
+	var (
+		err1, err2    error
+		freeTrialInfo jsonparser.ValueType
+	)
+	url, err1 = jsonparser.GetString(response, "data", "[0]", "url")
+	_, freeTrialInfo, _, err2 = jsonparser.Get(response, "data", "[0]", "freeTrialInfo")
+	if err1 != nil || err2 != nil || url == "" || (freeTrialInfo != jsonparser.NotExist && freeTrialInfo != jsonparser.Null) {
+		br, ok := brMap[urlService.Level]
+		if !ok {
+			br = "320000"
+		}
+		s := service.SongUrlService{
+			ID: strconv.FormatInt(songId, 10),
+			Br: br,
+		}
+		code, response = s.SongUrl()
+		if code != 200 {
+			return "", "", errors.New(string(response))
+		}
+	}
+
+	url, _ = jsonparser.GetString(response, "data", "[0]", "url")
+	musicType, _ = jsonparser.GetString(response, "data", "[0]", "type")
+	if musicType = strings.ToLower(musicType); musicType == "" {
+		musicType = "mp3"
+	}
+
+	return url, musicType, nil
 }
