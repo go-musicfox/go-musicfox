@@ -26,7 +26,7 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 * 支持当前播放列表
 * Windows窗口大小变更优化
 * 增加环境变量配置go-musicfox目录: `MUSICFOX_ROOT`
-* UnblockNeteaseMusic
+* UnblockNeteaseMusic(默认关闭，需要在配置文件中开启)
 * 增加单双列显示配置
 * 支持MPRIS
 * 其他优化...
