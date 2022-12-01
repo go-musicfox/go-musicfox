@@ -19,7 +19,7 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 * 保存音量
 * 上报lastfm
 * Mac优化：
-  * 接入MPNowPlayinginfoCenter，在菜单显示播放信息
+  * 接入MPNowPlayinginfoCenter，在菜单栏显示播放信息
   * 接入MPRemoteCommandCenter，支持菜单栏、Airpods等控制播放、暂停等，可响应系统中断，例如蓝牙断开
   * 接入NSWorkspace，响应睡眠通知，睡眠前自动暂停
   * LyricsX菜单栏、桌面歌词显示
