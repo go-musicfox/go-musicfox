@@ -399,7 +399,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	p.LocatePlayingSong()
 	url, musicType, err := utils.GetSongUrl(song.Id)
-	if err != nil {
+	if url == "" || err != nil {
 		p.Paused()
 		p.progressRamp = []string{}
 		p.playErrCount++
