@@ -43,6 +43,7 @@ func runCLI() {
 
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)
+	app.Add(commands.NewConfigCommand())
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()
