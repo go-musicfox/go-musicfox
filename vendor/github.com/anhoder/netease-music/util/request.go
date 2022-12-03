@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"encoding/hex"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -62,7 +63,13 @@ func SetGlobalCookieJar(jar http.CookieJar) {
 	cookieJar = jar
 }
 
-func CreateRequest(method string, url string, data map[string]string, options *Options) (float64, []byte, []*http.Cookie) {
+func CreateRequest(method, url string, data map[string]string, options *Options) (resCode float64, resResp []byte, resCookies []*http.Cookie) {
+	defer func() {
+		if resCode != 200 {
+			log.Printf("url: %s, method: %s, reqData: %#v, reqOptions: %+v, resCode: %f, resResp: %s, resCookies: %#v", url, method, data, options, resCode, resResp, resCookies)
+		}
+	}()
+
 	req := requests.Requests()
 	if cookieJar != nil {
 		req.Client.Jar = cookieJar
@@ -149,7 +156,8 @@ func CreateRequest(method string, url string, data map[string]string, options *O
 		resp, err = req.Get(url, requests.DryRun(UNMFlag))
 	}
 	if err != nil {
-		return 520, []byte(err.Error()), nil
+		resCode, resResp, resCookies = 520, []byte(err.Error()), nil
+		return
 	}
 
 	if UNMFlag {
@@ -158,7 +166,8 @@ func CreateRequest(method string, url string, data map[string]string, options *O
 		request := req.HttpRequest()
 		netease := processor.RequestBefore(request)
 		if netease == nil {
-			return 520, []byte("Request Blocked:" + url), nil
+			resCode, resResp, resCookies = 520, []byte("Request Blocked:"+url), nil
+			return
 		}
 
 		if method == "POST" {
@@ -168,7 +177,8 @@ func CreateRequest(method string, url string, data map[string]string, options *O
 			resp, err = req.Get(url)
 		}
 		if err != nil {
-			return 520, []byte("Request Error:" + url), nil
+			resCode, resResp, resCookies = 520, []byte("Request Error:"+url), nil
+			return
 		}
 		response := resp.R
 		defer response.Body.Close()
@@ -177,24 +187,22 @@ func CreateRequest(method string, url string, data map[string]string, options *O
 		resp.ReloadContent()
 	}
 
-	cookies := resp.Cookies()
+	resCookies = resp.Cookies()
 
-	body := resp.Content()
+	resResp = resp.Content()
 	//fmt.Println(string(body))
-	b := bytes.NewReader(body)
+	b := bytes.NewReader(resResp)
 	var out bytes.Buffer
 	r, err := zlib.NewReader(b)
 	// 数据被压缩 进行解码
 	if err == nil {
 		_, _ = io.Copy(&out, r)
-		body = out.Bytes()
+		resResp = out.Bytes()
 	}
 
-	var code float64
-	code, err = jsonparser.GetFloat(body, "code")
+	resCode, err = jsonparser.GetFloat(resResp, "code")
 	if err != nil {
-		code = 200
+		resCode = 200
 	}
-
-	return code, body, cookies
+	return
 }
