@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -234,7 +236,7 @@ func DownloadMusic(song structs.Song) {
 		_, _ = io.Copy(f, resp.Body)
 
 		Notify(NotifyContent{
-			Title: "👇🏻下载完成",
+			Title: "✅下载完成",
 			Text:  song.Name,
 			Url:   constants.AppGithubUrl,
 		})
@@ -288,4 +290,56 @@ func GetSongUrl(songId int64) (url, musicType string, err error) {
 	}
 
 	return url, musicType, nil
+}
+
+func CopyFileFromEmbed(src, dst string) error {
+	var (
+		err   error
+		srcfd fs.File
+		dstfd *os.File
+	)
+
+	if srcfd, err = embedDir.Open(src); err != nil {
+		return err
+	}
+	defer srcfd.Close()
+
+	if dstfd, err = os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0766); err != nil {
+		return err
+	}
+	defer dstfd.Close()
+
+	if _, err = io.Copy(dstfd, srcfd); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CopyDirFromEmbed(src, dst string) error {
+	var (
+		err error
+		fds []fs.DirEntry
+	)
+
+	if err = os.MkdirAll(dst, 0766); err != nil {
+		return err
+	}
+	if fds, err = embedDir.ReadDir(src); err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcfp := path.Join(src, fd.Name())
+		dstfp := path.Join(dst, fd.Name())
+
+		if fd.IsDir() {
+			if err = CopyDirFromEmbed(srcfp, dstfp); err != nil {
+				return err
+			}
+		} else {
+			if err = CopyFileFromEmbed(srcfp, dstfp); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
