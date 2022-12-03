@@ -90,9 +90,19 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 					}
 					code, response = loginService.LoginEmail()
 				} else {
+					var (
+						phone       = m.loginModel.accountInput.Value()
+						countryCode = "86"
+					)
+					if strings.HasPrefix(phone, "+") && strings.ContainsRune(phone, ' ') {
+						if items := strings.Split(phone, " "); len(items) == 2 {
+							countryCode, phone = strings.TrimLeft(items[0], "+"), items[1]
+						}
+					}
 					loginService := service.LoginCellphoneService{
-						Phone:    m.loginModel.accountInput.Value(),
-						Password: m.loginModel.passwordInput.Value(),
+						Phone:       phone,
+						Password:    m.loginModel.passwordInput.Value(),
+						Countrycode: countryCode,
 					}
 					code, response = loginService.LoginCellphone()
 				}
