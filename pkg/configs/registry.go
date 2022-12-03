@@ -72,6 +72,7 @@ func NewRegistryWithDefault() *Registry {
 		MainAltScreen:       constants.MainAltScreen,
 		PlayerEngine:        constants.BeepPlayer,
 
+		UNMSwitch:             true,
 		UNMSources:            []string{constants.UNMDefaultSources},
 		UNMEnableLocalVip:     true,
 		UNMUnlockSoundEffects: true,
@@ -142,7 +143,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.PlayerMpdAddr = ini.String("player.mpdAddr", "")
 
 	// UNM
-	registry.UNMSwitch = ini.Bool("unm.switch", false)
+	registry.UNMSwitch = ini.Bool("unm.switch", true)
 
 	sourceStr := ini.String("unm.sources", "kuwo")
 	if sourceStr != "" {
