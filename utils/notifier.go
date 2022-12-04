@@ -35,13 +35,17 @@ func (o osxNotificator) getNotifierCmd() string {
 	return notifierPath + "/Contents/MacOS/musicfox-notifier"
 }
 
-func (o osxNotificator) push(title string, text string, iconPath string, redirectUrl string) *exec.Cmd {
+func (o osxNotificator) push(title, text, iconPath, redirectUrl, groupId string) *exec.Cmd {
 	cmdPath := o.getNotifierCmd()
 	if _, err := os.Stat(cmdPath); err == nil {
+		var args = []string{"-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath}
 		if redirectUrl != "" {
-			return exec.Command(cmdPath, "-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-open", redirectUrl)
+			args = append(args, "-open", redirectUrl)
 		}
-		return exec.Command(cmdPath, "-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath)
+		if groupId != "" {
+			args = append(args, "-group", groupId)
+		}
+		return exec.Command(cmdPath, args...)
 	} else if notificator.CheckMacOSVersion() {
 		title = strings.Replace(title, `"`, `\"`, -1)
 		text = strings.Replace(text, `"`, `\"`, -1)
@@ -53,14 +57,17 @@ func (o osxNotificator) push(title string, text string, iconPath string, redirec
 	return exec.Command("growlnotify", "-n", o.appName, "--image", iconPath, "-m", title, "--url", redirectUrl)
 }
 
-func (o osxNotificator) pushCritical(title string, text string, iconPath string, redirectUrl string) *exec.Cmd {
+func (o osxNotificator) pushCritical(title, text, iconPath, redirectUrl, groupId string) *exec.Cmd {
 	cmdPath := o.getNotifierCmd()
 	if _, err := os.Stat(cmdPath); err == nil {
+		var args = []string{"-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath}
 		if redirectUrl != "" {
-			return exec.Command(cmdPath, "-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-timeout", "30", "-open", redirectUrl)
+			args = append(args, "-open", redirectUrl)
 		}
-
-		return exec.Command(cmdPath, "-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-timeout", "30")
+		if groupId != "" {
+			args = append(args, "-group", groupId)
+		}
+		return exec.Command(cmdPath, args...)
 	} else if notificator.CheckMacOSVersion() {
 		notification := fmt.Sprintf("display notification \"%s\" with title \"%s\" subtitle \"%s\"", text, o.appName, title)
 		return exec.Command("osascript", "-e", notification)
@@ -84,26 +91,27 @@ func NewNotificator(o notificator.Options) *Notificator {
 	return n
 }
 
-func (n Notificator) Push(urgency string, title string, text string, iconPath string, redirectUrl string) error {
+func (n Notificator) Push(urgency, title, text, iconPath, redirectUrl, groupId string) error {
 	if runtime.GOOS == "darwin" {
 		icon := n.osx.defaultIcon
 		if iconPath != "" {
 			icon = iconPath
 		}
 		if urgency == notificator.UrCritical {
-			return n.osx.pushCritical(title, text, icon, redirectUrl).Run()
+			return n.osx.pushCritical(title, text, icon, redirectUrl, groupId).Run()
 		}
-		return n.osx.push(title, text, icon, redirectUrl).Run()
+		return n.osx.push(title, text, icon, redirectUrl, groupId).Run()
 	}
 
 	return n.Notificator.Push(urgency, title, text, iconPath, redirectUrl)
 }
 
 type NotifyContent struct {
-	Title string
-	Text  string
-	Url   string
-	Icon  string
+	Title   string
+	Text    string
+	Url     string
+	Icon    string
+	GroupId string
 }
 
 func Notify(content NotifyContent) {
@@ -129,5 +137,5 @@ func Notify(content NotifyContent) {
 		}
 	}
 
-	_ = notify.Push(notificator.UrNormal, content.Title, content.Text, content.Icon, content.Url)
+	_ = notify.Push(notificator.UrNormal, content.Title, content.Text, content.Icon, content.Url, content.GroupId)
 }

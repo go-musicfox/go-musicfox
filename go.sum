@@ -34,16 +34,6 @@ github.com/anhoder/macdriver v0.2.9 h1:NwN3v/T6hN99gCEIQ7X4orFRYQ1mkZTX9l00gK+2l
 github.com/anhoder/macdriver v0.2.9/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
 github.com/anhoder/minimp3 v1.0.5 h1:79eCzn5InmzCN1QbFnquZXgMQ+5GYbrQgBPxaZ2Wssc=
 github.com/anhoder/minimp3 v1.0.5/go.mod h1:WFso0UvZL1fPit45V6RQPKxbehLI4XZaJyLs2/TJHoU=
-github.com/anhoder/netease-music v1.2.7 h1:uja8FemRD9xmbqc0fXGCo5Mj4SMxDZtIDQh+bAlZfjg=
-github.com/anhoder/netease-music v1.2.7/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
-github.com/anhoder/netease-music v1.2.8 h1:qUK+QNEf2nUCp2YZ/E/zAcvew7azyWoghAGPgDOa/DI=
-github.com/anhoder/netease-music v1.2.8/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
-github.com/anhoder/netease-music v1.2.9 h1:W9P3TXehHzsezBNaXV/c3DzxDGxrCMa3U5VmFJD6e1M=
-github.com/anhoder/netease-music v1.2.9/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
-github.com/anhoder/netease-music v1.2.10 h1:MX6rIqvxBMytWE8icU0WcKw9F0nX/d4WU1uxlc2mguc=
-github.com/anhoder/netease-music v1.2.10/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
-github.com/anhoder/netease-music v1.2.11 h1:a8cHJC1JicDv+gNaiP+dhkxuqsMOHXWKCazH2hnWMAE=
-github.com/anhoder/netease-music v1.2.11/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
 github.com/anhoder/netease-music v1.2.12 h1:Jc3/Hg/dMefkYqNtfY4LsdBwlJXI366Ir6vPN/KC0g4=
 github.com/anhoder/netease-music v1.2.12/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
 github.com/anhoder/notificator v0.0.5 h1:CyPvxAqaDtN330eKbX9ltvIr4Y/PloLLc8wALqyhqb4=
@@ -98,6 +88,8 @@ github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776/go.mod h1:9wvnDu3YOf
 github.com/forgoer/openssl v0.0.0-20200331032942-ad9f8d57d8b1/go.mod h1:NMVFOzYeLVR7UiGTxsa+A21nrERTZ3Rv2JHDPcJpDyI=
 github.com/forgoer/openssl v1.2.1 h1:Qvgk8K+pKayd3QG/f7fB2LJm1ObYNA2iqYraipxm8jQ=
 github.com/forgoer/openssl v1.2.1/go.mod h1:NMVFOzYeLVR7UiGTxsa+A21nrERTZ3Rv2JHDPcJpDyI=
+github.com/frolovo22/tag v0.0.2 h1:gFv5P5nqE7purEipbKT7X/OjP286nx5gA30mjt/4SgA=
+github.com/frolovo22/tag v0.0.2/go.mod h1:Bt1H06v6RQFTrplGixhtUXVzHA/RpmhGEVxC7wqWGIw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/gdamore/encoding v1.0.0/go.mod h1:alR0ol34c49FCSBLjhosxzcPHQbf2trDkoo5dl+VrEg=

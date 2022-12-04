@@ -139,7 +139,11 @@ func OpenUrl(url string) error {
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
 	projectDir := GetLocalDataDir()
-	configs.ConfigRegistry = configs.NewRegistryFromIniFile(projectDir + "/" + constants.AppIniFile)
+	configFile := projectDir + "/" + constants.AppIniFile
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
+	}
+	configs.ConfigRegistry = configs.NewRegistryFromIniFile(configFile)
 }
 
 // CheckUpdate 检查更新
@@ -215,6 +219,7 @@ func DownloadMusic(song structs.Song) {
 			errHandler(err)
 			return
 		}
+		defer resp.Body.Close()
 
 		downloadDir := configs.ConfigRegistry.MainDownloadDir
 		if downloadDir == "" {
@@ -224,24 +229,28 @@ func DownloadMusic(song structs.Song) {
 			_ = os.MkdirAll(downloadDir, os.ModePerm)
 		}
 
-		f, err := os.OpenFile(fmt.Sprintf("%s/%s-%s.%s", downloadDir, song.Name, song.ArtistName(), musicType), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		fileName := fmt.Sprintf("%s/%s-%s.%s", downloadDir, song.Name, song.ArtistName(), musicType)
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 		if err != nil {
 			errHandler(err)
 			return
 		}
+		defer f.Close()
 
 		Notify(NotifyContent{
-			Title: "👇🏻正在下载，请稍候...",
-			Text:  song.Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "👇🏻正在下载，请稍候...",
+			Text:    song.Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 
 		_, _ = io.Copy(f, resp.Body)
 
 		Notify(NotifyContent{
-			Title: "✅下载完成",
-			Text:  song.Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "✅下载完成",
+			Text:    song.Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 	}(url, musicType)
 }
