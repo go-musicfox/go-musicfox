@@ -384,24 +384,27 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 			msg = "加入或移出歌单失败"
 		}
 		utils.Notify(utils.NotifyContent{
-			Title: msg,
-			Text:  m.player.playlist[m.player.curSongIndex].Name,
-			Url:   constants.AppGithubUrl,
+			Title:   msg,
+			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 		return
 	}
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{
-			Title: "已添加到我喜欢的歌曲",
-			Text:  m.player.playlist[m.player.curSongIndex].Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "已添加到我喜欢的歌曲",
+			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
-			Title: "已从我喜欢的歌曲移除",
-			Text:  m.player.playlist[m.player.curSongIndex].Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "已从我喜欢的歌曲移除",
+			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 	}
 }
@@ -412,9 +415,10 @@ func logout() {
 	_ = table.DeleteByKVModel(storage.User{})
 	(&storage.LastfmUser{}).Clear()
 	utils.Notify(utils.NotifyContent{
-		Title: "登出成功",
-		Text:  "已清理用户信息",
-		Url:   constants.AppGithubUrl,
+		Title:   "登出成功",
+		Text:    "已清理用户信息",
+		Url:     constants.AppGithubUrl,
+		GroupId: constants.GroupID,
 	})
 	_ = os.Remove(utils.GetLocalDataDir() + "/cookie")
 }
@@ -485,24 +489,27 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 			msg = "加入或移出歌单失败"
 		}
 		utils.Notify(utils.NotifyContent{
-			Title: msg,
-			Text:  m.player.playlist[m.player.curSongIndex].Name,
-			Url:   constants.AppGithubUrl,
+			Title:   msg,
+			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 		return
 	}
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{
-			Title: "已添加到我喜欢的歌曲",
-			Text:  songs[selectedIndex].Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "已添加到我喜欢的歌曲",
+			Text:    songs[selectedIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
-			Title: "已从我喜欢的歌曲移除",
-			Text:  songs[selectedIndex].Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "已从我喜欢的歌曲移除",
+			Text:    songs[selectedIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 	}
 }
@@ -530,9 +537,10 @@ func trashPlayingSong(m *NeteaseModel) {
 	trashService.FmTrash()
 
 	utils.Notify(utils.NotifyContent{
-		Title: "已标记为不喜欢",
-		Text:  m.player.playlist[m.player.curSongIndex].Name,
-		Url:   constants.AppGithubUrl,
+		Title:   "已标记为不喜欢",
+		Text:    m.player.playlist[m.player.curSongIndex].Name,
+		Url:     constants.AppGithubUrl,
+		GroupId: constants.GroupID,
 	})
 }
 
@@ -561,9 +569,10 @@ func trashSelectedSong(m *NeteaseModel) {
 	trashService.FmTrash()
 
 	utils.Notify(utils.NotifyContent{
-		Title: "已标记为不喜欢",
-		Text:  songs[selectedIndex].Name,
-		Url:   constants.AppGithubUrl,
+		Title:   "已标记为不喜欢",
+		Text:    songs[selectedIndex].Name,
+		Url:     constants.AppGithubUrl,
+		GroupId: constants.GroupID,
 	})
 }
 

@@ -430,10 +430,11 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	p.report(ReportPhaseStart)
 
 	go utils.Notify(utils.NotifyContent{
-		Title: "正在播放: " + song.Name,
-		Text:  fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
-		Icon:  song.PicUrl,
-		Url:   constants.AppGithubUrl,
+		Title:   "正在播放: " + song.Name,
+		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
+		Icon:    song.PicUrl,
+		Url:     constants.AppGithubUrl,
+		GroupId: constants.GroupID,
 	})
 
 	p.playErrCount = 0
