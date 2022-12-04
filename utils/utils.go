@@ -43,7 +43,7 @@ func GetLocalDataDir() string {
 	}
 
 	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
-		_ = os.Mkdir(projectDir, os.ModePerm)
+		_ = os.MkdirAll(projectDir, os.ModePerm)
 	}
 	return projectDir
 }
@@ -216,9 +216,12 @@ func DownloadMusic(song structs.Song) {
 			return
 		}
 
-		downloadDir := GetLocalDataDir() + "/download"
+		downloadDir := configs.ConfigRegistry.MainDownloadDir
+		if downloadDir == "" {
+			downloadDir = GetLocalDataDir() + "/download"
+		}
 		if _, err = os.Stat(downloadDir); os.IsNotExist(err) {
-			_ = os.Mkdir(downloadDir, os.ModePerm)
+			_ = os.MkdirAll(downloadDir, os.ModePerm)
 		}
 
 		f, err := os.OpenFile(fmt.Sprintf("%s/%s-%s.%s", downloadDir, song.Name, song.ArtistName(), musicType), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)

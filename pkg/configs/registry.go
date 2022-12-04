@@ -30,10 +30,10 @@ type Registry struct {
 	MainShowLyric       bool                     // 显示歌词
 	MainLyricOffset     int                      // 偏移:ms
 	MainShowNotify      bool                     // 显示通知
-	MainNotifySender    string                   // 通知应用图标
 	MainPProfPort       int                      // pprof端口
 	MainAltScreen       bool                     // AltScreen显示模式
 	MainDoubleColumn    bool                     // 是否双列显示
+	MainDownloadDir     string                   // 指定下载目录
 
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
@@ -67,7 +67,6 @@ func NewRegistryWithDefault() *Registry {
 		MainPrimaryColor:    constants.AppPrimaryColor,
 		MainShowLyric:       constants.MainShowLyric,
 		MainShowNotify:      constants.MainShowNotify,
-		MainNotifySender:    constants.MainNotifySender,
 		MainPProfPort:       constants.MainPProfPort,
 		MainAltScreen:       constants.MainAltScreen,
 		PlayerEngine:        constants.BeepPlayer,
@@ -127,10 +126,10 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainShowLyric = ini.Bool("main.showLyric", constants.MainShowLyric)
 	registry.MainLyricOffset = ini.Int("main.lyricOffset", 0)
 	registry.MainShowNotify = ini.Bool("main.showNotify", constants.MainShowNotify)
-	registry.MainNotifySender = ini.String("main.notifySender", constants.MainNotifySender)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
 	registry.MainDoubleColumn = ini.Bool("main.doubleColumn", true)
+	registry.MainDownloadDir = ini.String("main.downloadDir", "")
 
 	defaultPlayer := constants.BeepPlayer
 	if runtime.GOOS == "darwin" {

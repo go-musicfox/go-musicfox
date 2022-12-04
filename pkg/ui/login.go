@@ -50,13 +50,21 @@ func NewLogin() (login *LoginModel) {
 
 // update main ui
 func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+	inputs := []textinput.Model{
+		m.loginModel.accountInput,
+		m.loginModel.passwordInput,
+	}
 
 	switch msg := msg.(type) {
 	case tickLoginMsg:
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
-
+		case "b":
+			if m.loginModel.index != len(inputs) {
+				break
+			}
+			fallthrough
 		case "esc":
 			m.pageType = PtMain
 			m.loginModel.tips = ""
@@ -64,12 +72,6 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 
 		// Cycle between inputs
 		case "tab", "shift+tab", "enter", "up", "down":
-
-			inputs := []textinput.Model{
-				m.loginModel.accountInput,
-				m.loginModel.passwordInput,
-			}
-
 			s := msg.String()
 
 			// Did the user press enter while the submit button was focused?
