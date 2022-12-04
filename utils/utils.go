@@ -213,7 +213,7 @@ func DownloadMusic(song structs.Song) {
 		return
 	}
 
-	go func(utl string, musicType string) {
+	go func(url string, musicType string) {
 		resp, err := http.Get(url)
 		if err != nil {
 			errHandler(err)
@@ -229,13 +229,13 @@ func DownloadMusic(song structs.Song) {
 			_ = os.MkdirAll(downloadDir, os.ModePerm)
 		}
 
-		fileName := fmt.Sprintf("%s/%s-%s.%s", downloadDir, song.Name, song.ArtistName(), musicType)
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		fileName := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+		f, err := os.CreateTemp("", fileName)
 		if err != nil {
 			errHandler(err)
 			return
 		}
-		defer f.Close()
+		defer os.Remove(f.Name())
 
 		Notify(NotifyContent{
 			Title:   "👇🏻正在下载，请稍候...",
@@ -245,6 +245,27 @@ func DownloadMusic(song structs.Song) {
 		})
 
 		_, _ = io.Copy(f, resp.Body)
+
+		//if metadata, err := songtag.Read(f); err == nil {
+		//	defer metadata.Close()
+		//	_ = metadata.SetAlbum(song.Album.Name)
+		//	_ = metadata.SetArtist(song.ArtistName())
+		//	_ = metadata.SetAlbumArtist(song.Album.ArtistName())
+		//	_ = metadata.SetTitle(song.Name)
+		//	_ = metadata.SetAuthor("musicfox")
+		//	_ = metadata.SetEncodedBy("UTF-8")
+		//	if song.PicUrl != "" {
+		//		song.PicUrl += "?param=500y500"
+		//		if imgResp, err := http.Get(song.PicUrl); err == nil {
+		//			img, _, _ := image.Decode(imgResp.Body)
+		//			if img != nil {
+		//				_ = metadata.SetPicture(img)
+		//			}
+		//			_ = imgResp.Body.Close()
+		//		}
+		//	}
+		//	_ = metadata.SaveFile(downloadDir + "/" + fileName)
+		//}
 
 		Notify(NotifyContent{
 			Title:   "✅下载完成",

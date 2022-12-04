@@ -88,8 +88,6 @@ github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776/go.mod h1:9wvnDu3YOf
 github.com/forgoer/openssl v0.0.0-20200331032942-ad9f8d57d8b1/go.mod h1:NMVFOzYeLVR7UiGTxsa+A21nrERTZ3Rv2JHDPcJpDyI=
 github.com/forgoer/openssl v1.2.1 h1:Qvgk8K+pKayd3QG/f7fB2LJm1ObYNA2iqYraipxm8jQ=
 github.com/forgoer/openssl v1.2.1/go.mod h1:NMVFOzYeLVR7UiGTxsa+A21nrERTZ3Rv2JHDPcJpDyI=
-github.com/frolovo22/tag v0.0.2 h1:gFv5P5nqE7purEipbKT7X/OjP286nx5gA30mjt/4SgA=
-github.com/frolovo22/tag v0.0.2/go.mod h1:Bt1H06v6RQFTrplGixhtUXVzHA/RpmhGEVxC7wqWGIw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/gdamore/encoding v1.0.0/go.mod h1:alR0ol34c49FCSBLjhosxzcPHQbf2trDkoo5dl+VrEg=
