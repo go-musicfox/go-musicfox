@@ -12,7 +12,6 @@ require (
 	github.com/faiface/beep v1.1.0
 	github.com/fhs/gompd/v2 v2.2.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
-	github.com/frolovo22/tag v0.0.2
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.1.0
