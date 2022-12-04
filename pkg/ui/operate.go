@@ -375,7 +375,21 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		Op:       op,
 		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
 	}
-	likeService.PlaylistTracks()
+	if code, resp := likeService.PlaylistTracks(); code != 200 {
+		var msg string
+		if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
+			msg, _ = jsonparser.GetString(resp, "data", "message")
+		}
+		if msg == "" {
+			msg = "加入或移出歌单失败"
+		}
+		utils.Notify(utils.NotifyContent{
+			Title: msg,
+			Text:  m.player.playlist[m.player.curSongIndex].Name,
+			Url:   constants.AppGithubUrl,
+		})
+		return
+	}
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{
@@ -462,7 +476,21 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		Op:       op,
 		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
 	}
-	likeService.PlaylistTracks()
+	if code, resp := likeService.PlaylistTracks(); code != 200 {
+		var msg string
+		if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
+			msg, _ = jsonparser.GetString(resp, "data", "message")
+		}
+		if msg == "" {
+			msg = "加入或移出歌单失败"
+		}
+		utils.Notify(utils.NotifyContent{
+			Title: msg,
+			Text:  m.player.playlist[m.player.curSongIndex].Name,
+			Url:   constants.AppGithubUrl,
+		})
+		return
+	}
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{

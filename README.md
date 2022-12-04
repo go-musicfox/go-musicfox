@@ -230,14 +230,14 @@ showLyric=true
 lyricOffset=0
 # 是否显示通知信息
 showNotify=true
-# 通知icon，仅MacOS下terminal-notifier可用
-notifySender=com.netease.163music
 # 开启pprof, --pprof时会开启
 pprofPort=9876
 # altScreen显示模式
 altScreen=true
 # 双列显示，开启务必使用等宽字体
 doubleColumn=true
+# 下载目录，默认为$HOME/.go-musicfox/download
+downloadDir=
 
 [player]
 # 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
