@@ -7,6 +7,7 @@ import (
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/objc"
 	"go-musicfox/utils"
+	"os"
 )
 
 func AppEntry() {
@@ -17,6 +18,7 @@ func AppEntry() {
 		objc.Autorelease(func() {
 			runCLI()
 		})
+		os.Exit(0)
 	}()
 
 	app := cocoa.NSApp()
