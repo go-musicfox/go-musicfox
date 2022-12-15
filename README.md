@@ -115,6 +115,7 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 
 ```sh
 paru -S go-musicfox
+paru -S go-musicfox-bin
 ```
 
 #### 3. Gentoo Linux可使用gentoo-zh overlay安装：
