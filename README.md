@@ -114,7 +114,9 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 #### 2. Arch Linux可使用AUR安装：
 
 ```sh
+#编译
 paru -S go-musicfox
+#二进制包
 paru -S go-musicfox-bin
 ```
 
