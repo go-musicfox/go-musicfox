@@ -8,6 +8,10 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
+<p><img src="previews/logo.png" alt="logo" width="512"/></p>
+
+([The icon](https://github.com/anhoder/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
+
 ## v3.0.0
 
 * go-mp3 => minimp3 降低CPU占用
@@ -26,7 +30,7 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 * 支持当前播放列表
 * Windows窗口大小变更优化
 * 增加环境变量配置go-musicfox目录: `MUSICFOX_ROOT`
-* UnblockNeteaseMusic(默认关闭，需要在配置文件中开启)
+* UnblockNeteaseMusic
 * 增加单双列显示配置
 * 支持MPRIS
 * 其他优化...
@@ -230,19 +234,21 @@ showLyric=true
 lyricOffset=0
 # 是否显示通知信息
 showNotify=true
-# 通知icon，仅MacOS下terminal-notifier可用
-notifySender=com.netease.163music
 # 开启pprof, --pprof时会开启
 pprofPort=9876
 # altScreen显示模式
 altScreen=true
 # 双列显示，开启务必使用等宽字体
 doubleColumn=true
+# 下载目录，默认为$HOME/.go-musicfox/download
+downloadDir=
 
 [player]
 # 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
 # 不填Mac默认使用osx，其他系统默认使用beep
 #engine=beep
+# beep使用的mp3解码器，可选：go-mp3, minimp3
+beepMp3Decoder=go-mp3
 
 # mpd配置
 mpdBin=/usr/local/bin/mpd
@@ -253,7 +259,7 @@ mpdAddr=
 
 [unm]
 # UNM开关
-switch=false
+switch=true
 # UNM源: kuwo,kugou,migu,qq
 sources=kuwo
 # UNM搜索其他平台限制 0-3

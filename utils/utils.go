@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -41,7 +43,7 @@ func GetLocalDataDir() string {
 	}
 
 	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
-		_ = os.Mkdir(projectDir, os.ModePerm)
+		_ = os.MkdirAll(projectDir, os.ModePerm)
 	}
 	return projectDir
 }
@@ -137,7 +139,11 @@ func OpenUrl(url string) error {
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
 	projectDir := GetLocalDataDir()
-	configs.ConfigRegistry = configs.NewRegistryFromIniFile(projectDir + "/" + constants.AppIniFile)
+	configFile := projectDir + "/" + constants.AppIniFile
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
+	}
+	configs.ConfigRegistry = configs.NewRegistryFromIniFile(configFile)
 }
 
 // CheckUpdate 检查更新
@@ -207,36 +213,66 @@ func DownloadMusic(song structs.Song) {
 		return
 	}
 
-	go func(utl string, musicType string) {
+	go func(url string, musicType string) {
 		resp, err := http.Get(url)
 		if err != nil {
 			errHandler(err)
 			return
 		}
+		defer resp.Body.Close()
 
-		downloadDir := GetLocalDataDir() + "/download"
+		downloadDir := configs.ConfigRegistry.MainDownloadDir
+		if downloadDir == "" {
+			downloadDir = GetLocalDataDir() + "/download"
+		}
 		if _, err = os.Stat(downloadDir); os.IsNotExist(err) {
-			_ = os.Mkdir(downloadDir, os.ModePerm)
+			_ = os.MkdirAll(downloadDir, os.ModePerm)
 		}
 
-		f, err := os.OpenFile(fmt.Sprintf("%s/%s-%s.%s", downloadDir, song.Name, song.ArtistName(), musicType), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		fileName := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+		//f, err := os.CreateTemp("", fileName)
+		f, err := os.OpenFile(downloadDir+"/"+fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 		if err != nil {
 			errHandler(err)
 			return
 		}
+		//defer os.Remove(f.Name())
 
 		Notify(NotifyContent{
-			Title: "👇🏻正在下载，请稍候...",
-			Text:  song.Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "👇🏻正在下载，请稍候...",
+			Text:    song.Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 
 		_, _ = io.Copy(f, resp.Body)
 
+		//if metadata, err := songtag.Read(f); err == nil {
+		//	defer metadata.Close()
+		//	_ = metadata.SetAlbum(song.Album.Name)
+		//	_ = metadata.SetArtist(song.ArtistName())
+		//	_ = metadata.SetAlbumArtist(song.Album.ArtistName())
+		//	_ = metadata.SetTitle(song.Name)
+		//	_ = metadata.SetAuthor("musicfox")
+		//	_ = metadata.SetEncodedBy("UTF-8")
+		//	if song.PicUrl != "" {
+		//		song.PicUrl += "?param=500y500"
+		//		if imgResp, err := http.Get(song.PicUrl); err == nil {
+		//			img, _, _ := image.Decode(imgResp.Body)
+		//			if img != nil {
+		//				_ = metadata.SetPicture(img)
+		//			}
+		//			_ = imgResp.Body.Close()
+		//		}
+		//	}
+		//	_ = metadata.SaveFile(downloadDir + "/" + fileName)
+		//}
+
 		Notify(NotifyContent{
-			Title: "👇🏻下载完成",
-			Text:  song.Name,
-			Url:   constants.AppGithubUrl,
+			Title:   "✅下载完成",
+			Text:    song.Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
 		})
 	}(url, musicType)
 }
@@ -288,4 +324,56 @@ func GetSongUrl(songId int64) (url, musicType string, err error) {
 	}
 
 	return url, musicType, nil
+}
+
+func CopyFileFromEmbed(src, dst string) error {
+	var (
+		err   error
+		srcfd fs.File
+		dstfd *os.File
+	)
+
+	if srcfd, err = embedDir.Open(src); err != nil {
+		return err
+	}
+	defer srcfd.Close()
+
+	if dstfd, err = os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0766); err != nil {
+		return err
+	}
+	defer dstfd.Close()
+
+	if _, err = io.Copy(dstfd, srcfd); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CopyDirFromEmbed(src, dst string) error {
+	var (
+		err error
+		fds []fs.DirEntry
+	)
+
+	if err = os.MkdirAll(dst, 0766); err != nil {
+		return err
+	}
+	if fds, err = embedDir.ReadDir(src); err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcfp := path.Join(src, fd.Name())
+		dstfp := path.Join(dst, fd.Name())
+
+		if fd.IsDir() {
+			if err = CopyDirFromEmbed(srcfp, dstfp); err != nil {
+				return err
+			}
+		} else {
+			if err = CopyFileFromEmbed(srcfp, dstfp); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

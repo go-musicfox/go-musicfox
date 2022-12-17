@@ -12,6 +12,7 @@ var (
 )
 
 const AppName = "musicfox"
+const GroupID = "com.anhoder.musicfox"
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
 const AppShowStartup = true
 const AppGithubUrl = "https://github.com/anhoder/go-musicfox"
@@ -37,7 +38,6 @@ const MainShowTitle = true
 const MainLoadingText = "[加载中...]"
 const MainShowLyric = true
 const MainShowNotify = true
-const MainNotifySender = "com.netease.163music"
 const MainPProfPort = 9876
 const MainAltScreen = true
 const UNMDefaultSources = "kuwo"
@@ -45,6 +45,9 @@ const UNMDefaultSources = "kuwo"
 const BeepPlayer = "beep" // beep
 const MpdPlayer = "mpd"   // mpd
 const OsxPlayer = "osx"   // osx
+
+const BeepGoMp3Decoder = "go-mp3"
+const BeepMiniMp3Decoder = "minimp3"
 
 const AppHelpTemplate = `%s
 

@@ -156,9 +156,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				_ = table.SetByKVModel(storage.LastSignIn{}, today)
 
 				utils.Notify(utils.NotifyContent{
-					Title: "签到成功",
-					Text:  "今日手机、PC端签到成功",
-					Url:   constants.AppGithubUrl,
+					Title:   "签到成功",
+					Text:    "今日手机、PC端签到成功",
+					Url:     constants.AppGithubUrl,
+					GroupId: constants.GroupID,
 				})
 			}
 		}
