@@ -8,7 +8,9 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
-![logo](previews/logo.png)
+<p><img src="previews/logo.png" alt="logo" width="512"/></p>
+
+([The icon](https://github.com/anhoder/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
 
 ## v3.0.0
 
