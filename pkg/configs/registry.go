@@ -42,11 +42,12 @@ type Registry struct {
 	UNMUnlockSoundEffects bool     // UNM修改响应，解除音质限制
 	UNMQQCookieFile       string   // UNM QQ音乐cookie文件
 
-	PlayerEngine     string // 播放引擎
-	PlayerBin        string // mpd路径
-	PlayerConfigFile string // mpd配置文件
-	PlayerMpdNetwork string // mpd网络类型: tcp、unix
-	PlayerMpdAddr    string // mpd地址
+	PlayerEngine         string // 播放引擎
+	PlayerBeepMp3Decoder string // beep mp3解码器
+	PlayerMpdBin         string // mpd路径
+	PlayerMpdConfigFile  string // mpd配置文件
+	PlayerMpdNetwork     string // mpd网络类型: tcp、unix
+	PlayerMpdAddr        string // mpd地址
 }
 
 func NewRegistryWithDefault() *Registry {
@@ -61,15 +62,16 @@ func NewRegistryWithDefault() *Registry {
 		ProgressFullChar:  rune(constants.ProgressFullChar[0]),
 		ProgressEmptyChar: rune(constants.ProgressEmptyChar[0]),
 
-		MainShowTitle:       constants.MainShowTitle,
-		MainLoadingText:     constants.MainLoadingText,
-		MainPlayerSongLevel: service.Higher,
-		MainPrimaryColor:    constants.AppPrimaryColor,
-		MainShowLyric:       constants.MainShowLyric,
-		MainShowNotify:      constants.MainShowNotify,
-		MainPProfPort:       constants.MainPProfPort,
-		MainAltScreen:       constants.MainAltScreen,
-		PlayerEngine:        constants.BeepPlayer,
+		MainShowTitle:        constants.MainShowTitle,
+		MainLoadingText:      constants.MainLoadingText,
+		MainPlayerSongLevel:  service.Higher,
+		MainPrimaryColor:     constants.AppPrimaryColor,
+		MainShowLyric:        constants.MainShowLyric,
+		MainShowNotify:       constants.MainShowNotify,
+		MainPProfPort:        constants.MainPProfPort,
+		MainAltScreen:        constants.MainAltScreen,
+		PlayerEngine:         constants.BeepPlayer,
+		PlayerBeepMp3Decoder: constants.BeepGoMp3Decoder,
 
 		UNMSwitch:             true,
 		UNMSources:            []string{constants.UNMDefaultSources},
@@ -136,8 +138,9 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 		defaultPlayer = constants.OsxPlayer
 	}
 	registry.PlayerEngine = ini.String("player.engine", defaultPlayer)
-	registry.PlayerBin = ini.String("player.mpdBin", "")
-	registry.PlayerConfigFile = ini.String("player.mpdConfigFile", "")
+	registry.PlayerBeepMp3Decoder = ini.String("player.beepMp3Decoder", constants.BeepGoMp3Decoder)
+	registry.PlayerMpdBin = ini.String("player.mpdBin", "")
+	registry.PlayerMpdConfigFile = ini.String("player.mpdConfigFile", "")
 	registry.PlayerMpdNetwork = ini.String("player.mpdNetwork", "")
 	registry.PlayerMpdAddr = ini.String("player.mpdAddr", "")
 

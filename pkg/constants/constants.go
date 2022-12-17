@@ -46,6 +46,9 @@ const BeepPlayer = "beep" // beep
 const MpdPlayer = "mpd"   // mpd
 const OsxPlayer = "osx"   // osx
 
+const BeepGoMp3Decoder = "go-mp3"
+const BeepMiniMp3Decoder = "minimp3"
+
 const AppHelpTemplate = `%s
 
 {{.Description}} (Version: <info>{{.Version}}</>)

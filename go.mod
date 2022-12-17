@@ -36,6 +36,7 @@ require (
 	github.com/gomodule/redigo v1.8.8 // indirect
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/gookit/goutil v0.5.2 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
 	github.com/jfreymuth/oggvorbis v1.0.3 // indirect

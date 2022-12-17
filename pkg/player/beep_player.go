@@ -2,6 +2,9 @@ package player
 
 import (
 	"context"
+	"github.com/faiface/beep/mp3"
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
 	"io"
 	"net/http"
 	"os"
@@ -153,8 +156,13 @@ func (p *beepPlayer) listen() {
 
 			switch p.curMusic.Type {
 			case Mp3:
-				minimp3pkg.BufferSize = 1024 * 50
-				p.curStreamer, p.curFormat, err = minimp3.Decode(cacheRFile)
+				switch configs.ConfigRegistry.PlayerBeepMp3Decoder {
+				case constants.BeepMiniMp3Decoder:
+					minimp3pkg.BufferSize = 1024 * 50
+					p.curStreamer, p.curFormat, err = minimp3.Decode(cacheRFile)
+				default:
+					p.curStreamer, p.curFormat, err = mp3.Decode(cacheRFile)
+				}
 			case Wav:
 				p.curStreamer, p.curFormat, err = wav.Decode(cacheRFile)
 			case Ogg:

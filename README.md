@@ -8,6 +8,8 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 ![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
 
+![logo](previews/logo.png)
+
 ## v3.0.0
 
 * go-mp3 => minimp3 降低CPU占用
@@ -243,6 +245,8 @@ downloadDir=
 # 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
 # 不填Mac默认使用osx，其他系统默认使用beep
 #engine=beep
+# beep使用的mp3解码器，可选：go-mp3, minimp3
+beepMp3Decoder=go-mp3
 
 # mpd配置
 mpdBin=/usr/local/bin/mpd
