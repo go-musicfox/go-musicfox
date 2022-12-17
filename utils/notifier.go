@@ -123,7 +123,7 @@ func Notify(content NotifyContent) {
 		AppName: constants.AppName,
 	})
 
-	if content.Icon == "" || runtime.GOOS != "darwin" {
+	if runtime.GOOS != "darwin" {
 		localDir := GetLocalDataDir()
 		content.Icon = localDir + "/logo.png"
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {

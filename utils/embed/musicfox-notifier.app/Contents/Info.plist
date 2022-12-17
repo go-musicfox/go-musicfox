@@ -11,7 +11,7 @@
 	<key>CFBundleIconFile</key>
 	<string>Musicfox</string>
 	<key>CFBundleIdentifier</key>
-	<string>fr.julienxx.oss.musicfox-notifier</string>
+	<string>com.anhoder.musicfox-notifier</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

@@ -53,6 +53,7 @@ github.com/faiface/beep
 github.com/faiface/beep/effects
 github.com/faiface/beep/flac
 github.com/faiface/beep/minimp3
+github.com/faiface/beep/mp3
 github.com/faiface/beep/speaker
 github.com/faiface/beep/vorbis
 github.com/faiface/beep/wav
@@ -97,6 +98,17 @@ github.com/gookit/goutil/sysutil/process
 ## explicit; go 1.15
 github.com/gookit/ini/v2
 github.com/gookit/ini/v2/parser
+# github.com/hajimehoshi/go-mp3 v0.3.0
+## explicit; go 1.14
+github.com/hajimehoshi/go-mp3
+github.com/hajimehoshi/go-mp3/internal/bits
+github.com/hajimehoshi/go-mp3/internal/consts
+github.com/hajimehoshi/go-mp3/internal/frame
+github.com/hajimehoshi/go-mp3/internal/frameheader
+github.com/hajimehoshi/go-mp3/internal/huffman
+github.com/hajimehoshi/go-mp3/internal/imdct
+github.com/hajimehoshi/go-mp3/internal/maindata
+github.com/hajimehoshi/go-mp3/internal/sideinfo
 # github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 ## explicit; go 1.13
 github.com/hajimehoshi/oto

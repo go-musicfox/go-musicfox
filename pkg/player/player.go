@@ -36,14 +36,14 @@ func NewPlayerFromConfig() Player {
 		player = NewBeepPlayer()
 	case constants.MpdPlayer:
 		if registry.PlayerMpdNetwork == "" || registry.PlayerMpdAddr == "" ||
-			registry.PlayerBin == "" {
+			registry.PlayerMpdBin == "" {
 			panic("缺少MPD配置")
 		}
-		cmd := exec.Command(registry.PlayerBin, "--version")
+		cmd := exec.Command(registry.PlayerMpdBin, "--version")
 		if err := cmd.Run(); err != nil {
 			panic(err)
 		}
-		player = NewMpdPlayer(registry.PlayerBin, registry.PlayerConfigFile, registry.PlayerMpdNetwork, registry.PlayerMpdAddr)
+		player = NewMpdPlayer(registry.PlayerMpdBin, registry.PlayerMpdConfigFile, registry.PlayerMpdNetwork, registry.PlayerMpdAddr)
 	case constants.OsxPlayer:
 		player = NewOsxPlayer()
 	default:

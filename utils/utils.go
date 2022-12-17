@@ -231,7 +231,7 @@ func DownloadMusic(song structs.Song) {
 
 		fileName := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
 		//f, err := os.CreateTemp("", fileName)
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		f, err := os.OpenFile(downloadDir+"/"+fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 		if err != nil {
 			errHandler(err)
 			return
