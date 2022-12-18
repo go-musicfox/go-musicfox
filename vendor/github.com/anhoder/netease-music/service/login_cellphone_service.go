@@ -3,8 +3,9 @@ package service
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/anhoder/netease-music/util"
 	"net/http"
+
+	"github.com/anhoder/netease-music/util"
 )
 
 type LoginCellphoneService struct {

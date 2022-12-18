@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/anhoder/bubbles v0.7.8
 	github.com/anhoder/bubbletea v0.12.12
-	github.com/anhoder/netease-music v1.2.12
+	github.com/anhoder/netease-music v1.3.0
 	github.com/anhoder/notificator v0.0.5
 	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
@@ -34,6 +34,7 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/forgoer/openssl v1.2.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/gookit/goutil v0.5.2 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
