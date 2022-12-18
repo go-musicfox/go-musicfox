@@ -227,7 +227,7 @@ songLevel=higher
 # 随机
 # primaryColor=random
 # 经典网易云音乐红
-primaryColor="#f90022"
+primaryColor="#ea403f"
 # 是否显示歌词
 showLyric=true
 # 歌词偏移 ms
