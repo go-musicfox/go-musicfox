@@ -165,8 +165,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		}
 
 		// 刷新登录状态
-		refreshLoginService := service.LoginRefreshService{}
-		refreshLoginService.LoginRefresh()
+		if m.user != nil {
+			refreshLoginService := service.LoginRefreshService{}
+			refreshLoginService.LoginRefresh()
+		}
 
 		// 检查更新
 		if configs.ConfigRegistry.StartupCheckUpdate && utils.CheckUpdate() {
