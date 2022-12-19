@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"os"
 	"strconv"
 	"time"
 
@@ -134,6 +135,32 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		}
 		m.Rerender()
 
+		// 获取扩展信息
+		{
+			var (
+				extInfo    storage.ExtInfo
+				needUpdate = true
+			)
+			jsonStr, _ := table.GetByKVModel(extInfo)
+			if len(jsonStr) != 0 {
+				if err := json.Unmarshal(jsonStr, &extInfo); err == nil && utils.CompareVersion(extInfo.StorageVersion, constants.AppVersion, true) {
+					needUpdate = false
+				}
+			}
+			if needUpdate {
+				localDir := utils.GetLocalDataDir()
+
+				// 删除旧notifier
+				_ = os.RemoveAll(localDir + "/musicfox-notifier.app")
+
+				// 删除旧logo
+				_ = os.Remove(localDir + "/logo.png")
+
+				extInfo.StorageVersion = constants.AppVersion
+				_ = table.SetByKVModel(extInfo, extInfo)
+			}
+		}
+
 		// 签到
 		if configs.ConfigRegistry.StartupSignIn {
 			var lastSignIn int
@@ -174,7 +201,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if configs.ConfigRegistry.StartupCheckUpdate && utils.CheckUpdate() {
 			utils.Notify(utils.NotifyContent{
 				Title: "发现新版本",
-				Text:  "点击去看看呗",
+				Text:  "去看看呗",
 				Url:   constants.AppLatestReleases,
 			})
 		}
