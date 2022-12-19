@@ -166,38 +166,47 @@ func CheckUpdate() bool {
 		return false
 	}
 
-	curTagArr := strings.Split(strings.Trim(constants.AppVersion, "v"), ".")
-	tagArr := strings.Split(strings.Trim(tag, "v"), ".")
-	if len(tagArr) >= 1 && len(curTagArr) >= 1 {
-		if tagArr[0] > curTagArr[0] {
+	return CompareVersion(tag, constants.AppVersion, false)
+}
+
+func CompareVersion(v1, v2 string, equal bool) bool {
+	v1 = strings.Trim(v1, "v")
+	v2 = strings.Trim(v2, "v")
+	if equal && v1 == v2 {
+		return true
+	}
+	if v1 != "" && v2 == "" {
+		return true
+	}
+
+	v1Arr := strings.Split(v1, ".")
+	v2Arr := strings.Split(v2, ".")
+	if len(v1Arr) >= 1 && len(v2Arr) >= 1 {
+		if v1Arr[0] > v2Arr[0] {
 			return true
 		}
-
-		if tagArr[0] < curTagArr[0] {
+		if v1Arr[0] < v2Arr[0] {
 			return false
 		}
 	}
 
-	if len(tagArr) >= 2 && len(curTagArr) >= 2 {
-		if tagArr[1] > curTagArr[1] {
+	if len(v1Arr) >= 2 && len(v2Arr) >= 2 {
+		if v1Arr[1] > v2Arr[1] {
 			return true
 		}
-
-		if tagArr[1] < curTagArr[1] {
+		if v1Arr[1] < v2Arr[1] {
 			return false
 		}
 	}
 
-	if len(tagArr) >= 3 && len(curTagArr) >= 3 {
-		if tagArr[2] > curTagArr[2] {
+	if len(v1Arr) >= 3 && len(v2Arr) >= 3 {
+		if v1Arr[2] > v2Arr[2] {
 			return true
 		}
-
-		if tagArr[2] < curTagArr[2] {
+		if v1Arr[2] < v2Arr[2] {
 			return false
 		}
 	}
-
 	return false
 }
 
