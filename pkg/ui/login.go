@@ -1,12 +1,13 @@
 package ui
 
 import (
-	"github.com/pkg/errors"
-	"github.com/skratchdot/open-golang/open"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 
 	"github.com/anhoder/bubbles/textinput"
 	tea "github.com/anhoder/bubbletea"
@@ -82,13 +83,13 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 			} else {
 				m.loginModel.qrLoginButton = GetBlurredButton(m.loginModel.qrButtonTextByStep())
 			}
-			return m, tickMainUI(time.Nanosecond)
+
 		case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 			s := msg.String()
 
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
-			if s == "enter" {
+			if s == "enter" && m.loginModel.index >= submitIndex {
 				switch m.loginModel.index {
 				case submitIndex:
 					// 提交
