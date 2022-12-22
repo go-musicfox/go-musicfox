@@ -159,9 +159,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 						if err != nil {
 							return errHandler(err)
 						}
-						if err = open.Start(path); err != nil {
-							return errHandler(err)
-						}
+						_ = open.Start(path)
 						m.loginModel.tips = SetFgStyle("请扫描二维码(MUSICFOX_ROOT/qrcode.png)登录后，点击「继续」", termenv.ANSIBrightRed)
 						m.loginModel.qrLoginStep++
 						m.loginModel.qrLoginButton = GetFocusedButton(m.loginModel.qrButtonTextByStep())
