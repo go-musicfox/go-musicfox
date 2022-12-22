@@ -20,7 +20,7 @@ type LoginCellphoneService struct {
 func (service *LoginCellphoneService) LoginCellphone() (float64, []byte) {
 
 	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
-	appVersion := &http.Cookie{Name: "appver", Value: "2.9.7"}
+	appVersion := &http.Cookie{Name: "appver", Value: "2.10.6"}
 
 	options := &util.Options{
 		Crypto:  "weapi",

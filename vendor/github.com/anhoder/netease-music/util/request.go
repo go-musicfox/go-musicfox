@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
-	urlpkg "net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	"github.com/anhoder/requests"
 	"github.com/buger/jsonparser"
 	"github.com/cnsilvan/UnblockNeteaseMusic/processor"
-	"github.com/google/uuid"
 )
 
 type Options struct {
@@ -150,25 +148,25 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 	}
 
 	// _ntes_nuid cookie
-	if parsedURL, _ := urlpkg.Parse(url); parsedURL != nil {
-		cookies := cookieJar.Cookies(parsedURL)
-		var existNtesUid bool
-		for _, cookie := range cookies {
-			if cookie.Name == "_ntes_nuid" {
-				existNtesUid = true
-				break
-			}
-		}
-		if !existNtesUid {
-			uid := uuid.New()
-			cookieJar.SetCookies(parsedURL, []*http.Cookie{{
-				Name:    "_ntes_nuid",
-				Value:   strings.ReplaceAll(uid.String(), "-", ""),
-				Domain:  ".163.com",
-				Expires: time.Now().Add(time.Hour * 24 * 7),
-			}})
-		}
-	}
+	//if parsedURL, _ := urlpkg.Parse(url); parsedURL != nil {
+	//	cookies := cookieJar.Cookies(parsedURL)
+	//	var existNtesUid bool
+	//	for _, cookie := range cookies {
+	//		if cookie.Name == "_ntes_nuid" {
+	//			existNtesUid = true
+	//			break
+	//		}
+	//	}
+	//	if !existNtesUid {
+	//		uid := uuid.New()
+	//		cookieJar.SetCookies(parsedURL, []*http.Cookie{{
+	//			Name:    "_ntes_nuid",
+	//			Value:   strings.ReplaceAll(uid.String(), "-", ""),
+	//			Domain:  ".163.com",
+	//			Expires: time.Now().Add(time.Hour * 24 * 7),
+	//		}})
+	//	}
+	//}
 
 	var (
 		err     error

@@ -4,7 +4,7 @@ github.com/anhoder/bubbles/textinput
 # github.com/anhoder/bubbletea v0.12.12
 ## explicit; go 1.13
 github.com/anhoder/bubbletea
-# github.com/anhoder/netease-music v1.3.0
+# github.com/anhoder/netease-music v1.3.1
 ## explicit; go 1.12
 github.com/anhoder/netease-music/service
 github.com/anhoder/netease-music/util
@@ -76,7 +76,6 @@ github.com/godbus/dbus/v5/prop
 github.com/gomodule/redigo/redis
 # github.com/google/uuid v1.3.0
 ## explicit
-github.com/google/uuid
 # github.com/gookit/color v1.5.0
 ## explicit; go 1.13
 github.com/gookit/color

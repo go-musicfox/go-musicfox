@@ -38,6 +38,8 @@ github.com/anhoder/netease-music v1.2.12 h1:Jc3/Hg/dMefkYqNtfY4LsdBwlJXI366Ir6vP
 github.com/anhoder/netease-music v1.2.12/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
 github.com/anhoder/netease-music v1.3.0 h1:H9gnrI9ye7pLGsWtEssjdzPzOrlFmCjQ2+JdYSIKP80=
 github.com/anhoder/netease-music v1.3.0/go.mod h1:2t4cKOkqqp/yWrckWOAeF04d8o4+l89a1mK7u4hNDDY=
+github.com/anhoder/netease-music v1.3.1 h1:3k2PA0wWWTYTpZCO+Ld8JrmCHJuW9e1m9XYu/uSL7W0=
+github.com/anhoder/netease-music v1.3.1/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
 github.com/anhoder/notificator v0.0.5 h1:CyPvxAqaDtN330eKbX9ltvIr4Y/PloLLc8wALqyhqb4=
 github.com/anhoder/notificator v0.0.5/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/anhoder/oto v1.0.2 h1:hj5f0NSC5VCcTOFgDpzsECfnP+oUwFlMcL0nZz27c/o=
