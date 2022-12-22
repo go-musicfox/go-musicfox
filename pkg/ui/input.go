@@ -33,13 +33,19 @@ func GetBlurredPrompt() string {
 	return blurredPrompt
 }
 
+func GetFocusedButton(text string) string {
+	return fmt.Sprintf("[ %s ]", termenv.String(text).Foreground(GetPrimaryColor()).String())
+}
+
+func GetBlurredButton(text string) string {
+	return fmt.Sprintf("[ %s ]", termenv.String(text).Foreground(termenv.ANSIBrightBlack).String())
+}
+
 func GetFocusedSubmitButton() string {
 	if focusedSubmitButton != "" {
 		return focusedSubmitButton
 	}
-
-	focusedSubmitButton = fmt.Sprintf("[ %s ]", termenv.String("确认").Foreground(GetPrimaryColor()).String())
-
+	focusedSubmitButton = GetFocusedButton("确认")
 	return focusedSubmitButton
 }
 
@@ -47,8 +53,6 @@ func GetBlurredSubmitButton() string {
 	if blurredSubmitButton != "" {
 		return blurredSubmitButton
 	}
-
-	blurredSubmitButton = fmt.Sprintf("[ %s ]", termenv.String("确认").Foreground(termenv.ANSIBrightBlack).String())
-
+	blurredSubmitButton = GetBlurredButton("确认")
 	return blurredSubmitButton
 }

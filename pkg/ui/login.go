@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 	"log"
 	"strconv"
 	"strings"
@@ -23,6 +25,9 @@ type LoginModel struct {
 	accountInput  textinput.Model
 	passwordInput textinput.Model
 	submitButton  string
+	qrLoginButton string
+	qrLoginStep   int
+	qrLoginUniKey string
 	tips          string
 	AfterLogin    func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem)
 }
@@ -44,6 +49,7 @@ func NewLogin() (login *LoginModel) {
 	login.passwordInput.CharLimit = 32
 
 	login.submitButton = GetBlurredSubmitButton()
+	login.qrLoginButton = GetBlurredButton(login.qrButtonTextByStep())
 
 	return
 }
@@ -54,6 +60,8 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 		m.loginModel.accountInput,
 		m.loginModel.passwordInput,
 	}
+	submitIndex := len(inputs)
+	qrLoginIndex := submitIndex + 1
 
 	switch msg := msg.(type) {
 	case tickLoginMsg:
@@ -61,90 +69,120 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "b":
-			if m.loginModel.index != len(inputs) {
+			if m.loginModel.index != submitIndex && m.loginModel.index != qrLoginIndex {
 				break
 			}
 			fallthrough
 		case "esc":
 			m.pageType = PtMain
 			m.loginModel.tips = ""
+			m.loginModel.qrLoginStep = 0
+			if m.loginModel.index == qrLoginIndex {
+				m.loginModel.qrLoginButton = GetFocusedButton(m.loginModel.qrButtonTextByStep())
+			} else {
+				m.loginModel.qrLoginButton = GetBlurredButton(m.loginModel.qrButtonTextByStep())
+			}
 			return m, tickMainUI(time.Nanosecond)
-
-		// Cycle between inputs
-		case "tab", "shift+tab", "enter", "up", "down":
+		case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 			s := msg.String()
 
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
-			if s == "enter" && m.loginModel.index == len(inputs) {
-				if len(m.loginModel.accountInput.Value()) <= 0 || len(m.loginModel.passwordInput.Value()) <= 0 {
-					m.loginModel.tips = SetFgStyle("请输入账号或密码", termenv.ANSIBrightRed)
-					return m, nil
-				}
-				var (
-					code     float64
-					response []byte
-				)
-				if strings.ContainsRune(m.loginModel.accountInput.Value(), '@') {
-					loginService := service.LoginEmailService{
-						Email:    m.loginModel.accountInput.Value(),
-						Password: m.loginModel.passwordInput.Value(),
+			if s == "enter" {
+				switch m.loginModel.index {
+				case submitIndex:
+					// 提交
+					if len(m.loginModel.accountInput.Value()) <= 0 || len(m.loginModel.passwordInput.Value()) <= 0 {
+						m.loginModel.tips = SetFgStyle("请输入账号或密码", termenv.ANSIBrightRed)
+						return m, nil
 					}
-					code, response = loginService.LoginEmail()
-				} else {
 					var (
-						phone       = m.loginModel.accountInput.Value()
-						countryCode = "86"
+						code     float64
+						response []byte
 					)
-					if strings.HasPrefix(phone, "+") && strings.ContainsRune(phone, ' ') {
-						if items := strings.Split(phone, " "); len(items) == 2 {
-							countryCode, phone = strings.TrimLeft(items[0], "+"), items[1]
+					if strings.ContainsRune(m.loginModel.accountInput.Value(), '@') {
+						loginService := service.LoginEmailService{
+							Email:    m.loginModel.accountInput.Value(),
+							Password: m.loginModel.passwordInput.Value(),
 						}
-					}
-					loginService := service.LoginCellphoneService{
-						Phone:       phone,
-						Password:    m.loginModel.passwordInput.Value(),
-						Countrycode: countryCode,
-					}
-					code, response = loginService.LoginCellphone()
-				}
-
-				codeType := utils.CheckCode(code)
-				switch codeType {
-				case utils.UnknownError:
-					m.loginModel.tips = SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
-					return m, tickLogin(time.Nanosecond)
-				case utils.NetworkError:
-					m.loginModel.tips = SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
-					return m, tickLogin(time.Nanosecond)
-				case utils.Success:
-					if user, err := structs.NewUserFromJson(response); err == nil {
-						m.user = &user
-
-						// 获取我喜欢的歌单
-						userPlaylists := service.UserPlaylistService{
-							Uid:    strconv.FormatInt(m.user.UserId, 10),
-							Limit:  strconv.Itoa(1),
-							Offset: strconv.Itoa(0),
+						code, response = loginService.LoginEmail()
+					} else {
+						var (
+							phone       = m.loginModel.accountInput.Value()
+							countryCode = "86"
+						)
+						if strings.HasPrefix(phone, "+") && strings.ContainsRune(phone, ' ') {
+							if items := strings.Split(phone, " "); len(items) == 2 {
+								countryCode, phone = strings.TrimLeft(items[0], "+"), items[1]
+							}
 						}
-						_, response = userPlaylists.UserPlaylist()
-						m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
+						loginService := service.LoginCellphoneService{
+							Phone:       phone,
+							Password:    m.loginModel.passwordInput.Value(),
+							Countrycode: countryCode,
+						}
+						code, response = loginService.LoginCellphone()
+					}
+
+					codeType := utils.CheckCode(code)
+					switch codeType {
+					case utils.UnknownError:
+						m.loginModel.tips = SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
+						return m, tickLogin(time.Nanosecond)
+					case utils.NetworkError:
+						m.loginModel.tips = SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
+						return m, tickLogin(time.Nanosecond)
+					case utils.Success:
+						m.loginModel.loginSuccessHandle(m, response)
+					default:
+						m.loginModel.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIBrightRed) +
+							SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)
+						return m, tickLogin(time.Nanosecond)
+					}
+				case qrLoginIndex:
+					// 扫码登录
+					qrService := service.LoginQRService{}
+					if m.loginModel.qrLoginStep == 0 {
+						code, resp, url := qrService.GetKey()
+						errHandler := func(err error) (tea.Model, tea.Cmd) {
+							m.loginModel.tips = SetFgStyle("生成二维码失败，请稍候再试", termenv.ANSIBrightRed)
+							if err != nil {
+								utils.Logger().Printf("生成二维码失败, +v%", err)
+							}
+							return m, nil
+						}
+						if code != 200 || url == "" {
+							return errHandler(errors.Errorf("code: %f, resp: %s", code, string(resp)))
+						}
+						path, err := utils.GenQRCode("qrcode.png", url)
 						if err != nil {
-							log.Printf("获取歌单ID失败: %+v\n", err)
+							return errHandler(err)
 						}
-
-						// 写入本地数据库
-						table := storage.NewTable()
-						_ = table.SetByKVModel(storage.User{}, user)
-
-						if m.loginModel.AfterLogin != nil {
-							m.loginModel.AfterLogin(m, nil, nil)
+						if err = open.Start(path); err != nil {
+							return errHandler(err)
 						}
+						m.loginModel.tips = SetFgStyle("请扫描二维码(MUSICFOX_ROOT/qrcode.png)登录后，点击「继续」", termenv.ANSIBrightRed)
+						m.loginModel.qrLoginStep++
+						m.loginModel.qrLoginButton = GetFocusedButton(m.loginModel.qrButtonTextByStep())
+						m.loginModel.qrLoginUniKey = qrService.UniKey
+						return m, nil
 					}
-				default:
-					m.loginModel.tips = SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIBrightRed) +
-						SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)
-					return m, tickLogin(time.Nanosecond)
+					qrService.UniKey = m.loginModel.qrLoginUniKey
+					errHandler := func(err error) (tea.Model, tea.Cmd) {
+						m.loginModel.tips = SetFgStyle("校验二维码失败，请稍候再试", termenv.ANSIBrightRed)
+						if err != nil {
+							utils.Logger().Printf("生成二维码失败 +v%", err)
+						}
+						return m, nil
+					}
+					if code, resp := qrService.CheckQR(); code != 803 {
+						return errHandler(errors.Errorf("checkQR code: %f, resp: %s", code, string(resp)))
+					}
+					if code, resp := (&service.UserAccountService{}).AccountInfo(); code != 200 {
+						return errHandler(errors.Errorf("accountInfo code: %f, resp: %s", code, string(resp)))
+					} else {
+						m.loginModel.loginSuccessHandle(m, resp)
+					}
 				}
 
 				m.pageType = PtMain
@@ -152,40 +190,55 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 				return m, tickMainUI(time.Nanosecond)
 			}
 
-			// Cycle indexes
-			if s == "up" || s == "shift+tab" {
+			// 当focus在button上时，左右按键的特殊处理
+			if s == "left" || s == "right" {
+				if m.loginModel.index < submitIndex {
+					return updateLoginInputs(msg, m)
+				}
+				if s == "left" && m.loginModel.index == qrLoginIndex {
+					m.loginModel.index--
+				} else if s == "right" && m.loginModel.index == submitIndex {
+					m.loginModel.index++
+				}
+			} else if s == "up" || s == "shift+tab" {
 				m.loginModel.index--
 			} else {
 				m.loginModel.index++
 			}
 
-			if m.loginModel.index > len(inputs) {
+			if m.loginModel.index > qrLoginIndex {
 				m.loginModel.index = 0
 			} else if m.loginModel.index < 0 {
-				m.loginModel.index = len(inputs)
+				m.loginModel.index = qrLoginIndex
 			}
 
 			for i := 0; i <= len(inputs)-1; i++ {
-				if i == m.loginModel.index {
-					// Set focused state
-					inputs[i].Focus()
-					inputs[i].Prompt = GetFocusedPrompt()
-					inputs[i].TextColor = primaryColorStr
+				if i != m.loginModel.index {
+					// Remove focused state
+					inputs[i].Blur()
+					inputs[i].Prompt = GetBlurredPrompt()
+					inputs[i].TextColor = ""
 					continue
 				}
-				// Remove focused state
-				inputs[i].Blur()
-				inputs[i].Prompt = GetBlurredPrompt()
-				inputs[i].TextColor = ""
+				// Set focused state
+				inputs[i].Focus()
+				inputs[i].Prompt = GetFocusedPrompt()
+				inputs[i].TextColor = primaryColorStr
 			}
 
 			m.loginModel.accountInput = inputs[0]
 			m.loginModel.passwordInput = inputs[1]
 
-			if m.loginModel.index == len(inputs) {
+			if m.loginModel.index == submitIndex {
 				m.loginModel.submitButton = GetFocusedSubmitButton()
 			} else {
 				m.loginModel.submitButton = GetBlurredSubmitButton()
+			}
+
+			if m.loginModel.index == qrLoginIndex {
+				m.loginModel.qrLoginButton = GetFocusedButton(m.loginModel.qrButtonTextByStep())
+			} else {
+				m.loginModel.qrLoginButton = GetBlurredButton(m.loginModel.qrButtonTextByStep())
 			}
 
 			return m, nil
@@ -272,6 +325,8 @@ func loginView(m *NeteaseModel) string {
 		builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
 	}
 	builder.WriteString(m.loginModel.submitButton)
+	builder.WriteString("    ")
+	builder.WriteString(m.loginModel.qrLoginButton)
 	builder.WriteString("\n")
 
 	if m.WindowHeight > top+3 {
@@ -279,6 +334,43 @@ func loginView(m *NeteaseModel) string {
 	}
 
 	return builder.String()
+}
+
+func (m *LoginModel) qrButtonTextByStep() string {
+	switch m.qrLoginStep {
+	case 1:
+		return "已扫码登录，继续"
+	case 0:
+		fallthrough
+	default:
+		return "扫码登录"
+	}
+}
+
+func (m *LoginModel) loginSuccessHandle(nm *NeteaseModel, userInfo []byte) {
+	if user, err := structs.NewUserFromJson(userInfo); err == nil {
+		nm.user = &user
+
+		// 获取我喜欢的歌单
+		userPlaylists := service.UserPlaylistService{
+			Uid:    strconv.FormatInt(nm.user.UserId, 10),
+			Limit:  strconv.Itoa(1),
+			Offset: strconv.Itoa(0),
+		}
+		_, response := userPlaylists.UserPlaylist()
+		nm.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
+		if err != nil {
+			log.Printf("获取歌单ID失败: %+v\n", err)
+		}
+
+		// 写入本地数据库
+		table := storage.NewTable()
+		_ = table.SetByKVModel(storage.User{}, user)
+
+		if m.AfterLogin != nil {
+			m.AfterLogin(nm, nil, nil)
+		}
+	}
 }
 
 // NeedLoginHandle 需要登录的处理
