@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/anhoder/bubbles v0.7.8
 	github.com/anhoder/bubbletea v0.12.12
-	github.com/anhoder/netease-music v1.3.1
+	github.com/anhoder/netease-music v1.3.2
 	github.com/anhoder/notificator v0.0.5
 	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
@@ -21,6 +21,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/progrium/macdriver v0.2.0
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.1
@@ -34,7 +35,6 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/forgoer/openssl v1.2.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/gookit/goutil v0.5.2 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect

@@ -4,7 +4,7 @@ github.com/anhoder/bubbles/textinput
 # github.com/anhoder/bubbletea v0.12.12
 ## explicit; go 1.13
 github.com/anhoder/bubbletea
-# github.com/anhoder/netease-music v1.3.1
+# github.com/anhoder/netease-music v1.3.2
 ## explicit; go 1.12
 github.com/anhoder/netease-music/service
 github.com/anhoder/netease-music/util
@@ -74,8 +74,6 @@ github.com/godbus/dbus/v5/prop
 # github.com/gomodule/redigo v1.8.8
 ## explicit; go 1.16
 github.com/gomodule/redigo/redis
-# github.com/google/uuid v1.3.0
-## explicit
 # github.com/gookit/color v1.5.0
 ## explicit; go 1.13
 github.com/gookit/color
@@ -183,6 +181,11 @@ github.com/rivo/uniseg
 # github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/anhoder/lastfm-go v0.0.2
 ## explicit; go 1.19
 github.com/shkh/lastfm-go
+# github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+## explicit; go 1.13
+github.com/skip2/go-qrcode
+github.com/skip2/go-qrcode/bitset
+github.com/skip2/go-qrcode/reedsolomon
 # github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 ## explicit
 github.com/skratchdot/open-golang/open

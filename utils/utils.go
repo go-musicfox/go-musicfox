@@ -20,6 +20,7 @@ import (
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
+	"github.com/skip2/go-qrcode"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/structs"
@@ -112,28 +113,6 @@ func BinToID(bin []byte) uint64 {
 	ID := binary.BigEndian.Uint64(bin)
 
 	return ID
-}
-
-// OpenUrl 打开链接
-func OpenUrl(url string) error {
-	commands := map[string]string{
-		"windows": "start",
-		"darwin":  "open",
-		"linux":   "xdg-open",
-	}
-
-	run, ok := commands[runtime.GOOS]
-	if !ok {
-		return errors.New(fmt.Sprintf("don't know how to open things on %s platform", runtime.GOOS))
-	}
-
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", run, url)
-	} else {
-		cmd = exec.Command(run, url)
-	}
-	return cmd.Start()
 }
 
 // LoadIniConfig 加载ini配置信息
@@ -385,4 +364,13 @@ func CopyDirFromEmbed(src, dst string) error {
 		}
 	}
 	return nil
+}
+
+func GenQRCode(filename, content string) (string, error) {
+	localDir := GetLocalDataDir()
+	filepath := localDir + "/" + filename
+	if err := qrcode.WriteFile(content, qrcode.Medium, 256, filepath); err != nil {
+		return "", err
+	}
+	return filepath, nil
 }
