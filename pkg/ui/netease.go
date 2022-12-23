@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -72,7 +73,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 	projectDir := utils.GetLocalDataDir()
 
 	// 全局文件Jar
-	cookieJar, _ := cookiejar.NewFileJar(projectDir+"/cookie", nil)
+	cookieJar, _ := cookiejar.NewFileJar(path.Join(projectDir, "cookie"), nil)
 	util.SetGlobalCookieJar(cookieJar)
 
 	// DBManager初始化
@@ -151,10 +152,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				localDir := utils.GetLocalDataDir()
 
 				// 删除旧notifier
-				_ = os.RemoveAll(localDir + "/musicfox-notifier.app")
+				_ = os.RemoveAll(path.Join(localDir, "musicfox-notifier.app"))
 
 				// 删除旧logo
-				_ = os.Remove(localDir + "/logo.png")
+				_ = os.Remove(path.Join(localDir, "logo.png"))
 
 				extInfo.StorageVersion = constants.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)

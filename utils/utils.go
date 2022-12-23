@@ -40,7 +40,7 @@ func GetLocalDataDir() string {
 		if nil != err {
 			panic("未获取到用户Home目录: " + err.Error())
 		}
-		projectDir = homeDir + "/" + constants.AppLocalDataDir
+		projectDir = path.Join(homeDir, constants.AppLocalDataDir)
 	}
 
 	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
@@ -118,7 +118,7 @@ func BinToID(bin []byte) uint64 {
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
 	projectDir := GetLocalDataDir()
-	configFile := projectDir + "/" + constants.AppIniFile
+	configFile := path.Join(projectDir, constants.AppIniFile)
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
 	}
@@ -211,7 +211,7 @@ func DownloadMusic(song structs.Song) {
 
 		downloadDir := configs.ConfigRegistry.MainDownloadDir
 		if downloadDir == "" {
-			downloadDir = GetLocalDataDir() + "/download"
+			downloadDir = path.Join(GetLocalDataDir(), "download")
 		}
 		if _, err = os.Stat(downloadDir); os.IsNotExist(err) {
 			_ = os.MkdirAll(downloadDir, os.ModePerm)
@@ -219,7 +219,7 @@ func DownloadMusic(song structs.Song) {
 
 		fileName := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
 		//f, err := os.CreateTemp("", fileName)
-		f, err := os.OpenFile(downloadDir+"/"+fileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		f, err := os.OpenFile(path.Join(downloadDir, fileName), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 		if err != nil {
 			errHandler(err)
 			return
@@ -368,7 +368,7 @@ func CopyDirFromEmbed(src, dst string) error {
 
 func GenQRCode(filename, content string) (string, error) {
 	localDir := GetLocalDataDir()
-	filepath := localDir + "/" + filename
+	filepath := path.Join(localDir, filename)
 	if err := qrcode.WriteFile(content, qrcode.Medium, 256, filepath); err != nil {
 		return "", err
 	}

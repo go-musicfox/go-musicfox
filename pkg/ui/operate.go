@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -445,7 +446,7 @@ func logout() {
 		Url:     constants.AppGithubUrl,
 		GroupId: constants.GroupID,
 	})
-	_ = os.Remove(utils.GetLocalDataDir() + "/cookie")
+	_ = os.Remove(path.Join(utils.GetLocalDataDir(), "cookie"))
 }
 
 // likeSelectedSong like/unlike selected song
