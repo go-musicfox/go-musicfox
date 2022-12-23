@@ -2,14 +2,18 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
+
+	"github.com/anhoder/netease-music/service"
+	"go-musicfox/pkg/constants"
 	ds2 "go-musicfox/pkg/structs"
+	"go-musicfox/utils"
 )
 
 type SearchResultMenu struct {
 	DefaultMenu
 	menus      []MenuItem
 	offset     int
-	limit      int
 	searchType SearchType
 	keyword    string
 	result     interface{}
@@ -18,7 +22,6 @@ type SearchResultMenu struct {
 func NewSearchResultMenu(searchType SearchType) *SearchResultMenu {
 	return &SearchResultMenu{
 		offset:     0,
-		limit:      100,
 		searchType: searchType,
 	}
 }
@@ -101,6 +104,33 @@ func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	return nil
 }
 
+func (m *SearchResultMenu) BottomOutHook() Hook {
+	return func(model *NeteaseModel) bool {
+		var (
+			code     float64
+			response []byte
+		)
+		m.offset += constants.SearchPageSize
+		searchService := service.SearchService{
+			S:      m.keyword,
+			Type:   strconv.Itoa(int(m.searchType)),
+			Limit:  strconv.Itoa(constants.SearchPageSize),
+			Offset: strconv.Itoa(m.offset),
+		}
+		code, response = searchService.Search()
+
+		codeType := utils.CheckCode(code)
+		if codeType != utils.Success {
+			m.offset -= constants.SearchPageSize
+			return false
+		}
+
+		m.appendResult(response)
+		m.convertMenus()
+		return true
+	}
+}
+
 func (m *SearchResultMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		if model.searchModel.wordsInput.Value() == "" {
@@ -110,22 +140,61 @@ func (m *SearchResultMenu) BeforeEnterMenuHook() Hook {
 		}
 
 		m.result = model.searchModel.result
-
-		switch resultWithType := m.result.(type) {
-		case []ds2.Song:
-			m.menus = GetViewFromSongs(resultWithType)
-		case []ds2.Album:
-			m.menus = GetViewFromAlbums(resultWithType)
-		case []ds2.Playlist:
-			m.menus = GetViewFromPlaylists(resultWithType)
-		case []ds2.Artist:
-			m.menus = GetViewFromArtists(resultWithType)
-		case []ds2.User:
-			m.menus = GetViewFromUsers(resultWithType)
-		case []ds2.DjRadio:
-			m.menus = GetViewFromDjRadios(resultWithType)
-		}
-
+		m.searchType = model.searchModel.searchType
+		m.keyword = model.searchModel.wordsInput.Value()
+		m.convertMenus()
 		return true
+	}
+}
+
+func (m *SearchResultMenu) appendResult(response []byte) {
+	switch m.searchType {
+	case StSingleSong, StLyric:
+		appendSongs := utils.GetSongsOfSearchResult(response)
+		songs, _ := m.result.([]ds2.Song)
+		songs = append(songs, appendSongs...)
+		m.result = songs
+	case StAlbum:
+		appendAlbums := utils.GetAlbumsOfSearchResult(response)
+		albums, _ := m.result.([]ds2.Album)
+		albums = append(albums, appendAlbums...)
+		m.result = albums
+	case StSinger:
+		appendArtists := utils.GetArtistsOfSearchResult(response)
+		artists, _ := m.result.([]ds2.Artist)
+		artists = append(artists, appendArtists...)
+		m.result = artists
+	case StPlaylist:
+		appendPlaylists := utils.GetPlaylistsOfSearchResult(response)
+		playlists, _ := m.result.([]ds2.Playlist)
+		playlists = append(playlists, appendPlaylists...)
+		m.result = playlists
+	case StUser:
+		appendUsers := utils.GetUsersOfSearchResult(response)
+		users, _ := m.result.([]ds2.User)
+		users = append(users, appendUsers...)
+		m.result = users
+	case StRadio:
+		appendDjRadios := utils.GetDjRadiosOfSearchResult(response)
+		djRadios, _ := m.result.([]ds2.DjRadio)
+		djRadios = append(djRadios, appendDjRadios...)
+		m.result = djRadios
+	}
+}
+
+func (m *SearchResultMenu) convertMenus() {
+	switch resultWithType := m.result.(type) {
+	case []ds2.Song:
+		m.menus = GetViewFromSongs(resultWithType)
+	case []ds2.Album:
+		m.menus = GetViewFromAlbums(resultWithType)
+	case []ds2.Playlist:
+		m.menus = GetViewFromPlaylists(resultWithType)
+	case []ds2.Artist:
+		m.menus = GetViewFromArtists(resultWithType)
+	case []ds2.User:
+		m.menus = GetViewFromUsers(resultWithType)
+	case []ds2.DjRadio:
+		m.menus = GetViewFromDjRadios(resultWithType)
 	}
 }

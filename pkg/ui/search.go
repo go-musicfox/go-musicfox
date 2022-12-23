@@ -1,16 +1,18 @@
 package ui
 
 import (
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/anhoder/bubbles/textinput"
 	tea "github.com/anhoder/bubbletea"
 	"github.com/anhoder/netease-music/service"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
 	"go-musicfox/utils"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type SearchType uint32
@@ -98,8 +100,9 @@ func (s *SearchModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) 
 					response []byte
 				)
 				searchService := service.SearchService{
-					S:    m.searchModel.wordsInput.Value(),
-					Type: strconv.Itoa(int(m.searchModel.searchType)),
+					S:     m.searchModel.wordsInput.Value(),
+					Type:  strconv.Itoa(int(m.searchModel.searchType)),
+					Limit: strconv.Itoa(constants.SearchPageSize),
 				}
 				code, response = searchService.Search()
 
