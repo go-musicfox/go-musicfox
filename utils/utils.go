@@ -19,7 +19,9 @@ import (
 	"strings"
 
 	"github.com/anhoder/netease-music/service"
+	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"
+	songtag "github.com/frolovo22/tag"
 	"github.com/skip2/go-qrcode"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
@@ -202,13 +204,6 @@ func DownloadMusic(song structs.Song) {
 	}
 
 	go func(url string, musicType string) {
-		resp, err := http.Get(url)
-		if err != nil {
-			errHandler(err)
-			return
-		}
-		defer resp.Body.Close()
-
 		downloadDir := configs.ConfigRegistry.MainDownloadDir
 		if downloadDir == "" {
 			downloadDir = path.Join(GetLocalDataDir(), "download")
@@ -218,13 +213,30 @@ func DownloadMusic(song structs.Song) {
 		}
 
 		fileName := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
-		//f, err := os.CreateTemp("", fileName)
-		f, err := os.OpenFile(path.Join(downloadDir, fileName), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		targetFilename := path.Join(downloadDir, fileName)
+		if _, err := os.Stat(targetFilename); err == nil {
+			Notify(NotifyContent{
+				Title:   "🙅🏻‍文件已存在",
+				Text:    song.Name,
+				Url:     constants.AppGithubUrl,
+				GroupId: constants.GroupID,
+			})
+			return
+		}
+
+		resp, err := http.Get(url)
 		if err != nil {
 			errHandler(err)
 			return
 		}
-		//defer os.Remove(f.Name())
+		defer resp.Body.Close()
+
+		f, err := os.CreateTemp("", fileName)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		defer os.Remove(f.Name())
 
 		Notify(NotifyContent{
 			Title:   "👇🏻正在下载，请稍候...",
@@ -235,26 +247,47 @@ func DownloadMusic(song structs.Song) {
 
 		_, _ = io.Copy(f, resp.Body)
 
-		//if metadata, err := songtag.Read(f); err == nil {
-		//	defer metadata.Close()
-		//	_ = metadata.SetAlbum(song.Album.Name)
-		//	_ = metadata.SetArtist(song.ArtistName())
-		//	_ = metadata.SetAlbumArtist(song.Album.ArtistName())
-		//	_ = metadata.SetTitle(song.Name)
-		//	_ = metadata.SetAuthor("musicfox")
-		//	_ = metadata.SetEncodedBy("UTF-8")
-		//	if song.PicUrl != "" {
-		//		song.PicUrl += "?param=500y500"
-		//		if imgResp, err := http.Get(song.PicUrl); err == nil {
-		//			img, _, _ := image.Decode(imgResp.Body)
-		//			if img != nil {
-		//				_ = metadata.SetPicture(img)
-		//			}
-		//			_ = imgResp.Body.Close()
-		//		}
-		//	}
-		//	_ = metadata.SaveFile(downloadDir + "/" + fileName)
-		//}
+		version := songtag.CheckVersion(f)
+		switch version {
+		case songtag.VersionID3v22, songtag.VersionID3v23, songtag.VersionID3v24:
+			tag, err := id3v2.ParseReader(f, id3v2.Options{Parse: true})
+			if err != nil {
+				_ = os.Rename(f.Name(), targetFilename)
+				break
+			}
+			defer tag.Close()
+			tag.SetDefaultEncoding(id3v2.EncodingUTF8)
+			if imgResp, err := http.Get(song.PicUrl); err == nil {
+				defer imgResp.Body.Close()
+				if data, err := io.ReadAll(imgResp.Body); err == nil {
+					tag.AddAttachedPicture(id3v2.PictureFrame{
+						Encoding:    id3v2.EncodingUTF8,
+						MimeType:    "image/jpg",
+						PictureType: id3v2.PTOther,
+						Picture:     data,
+					})
+				}
+			}
+			tag.SetTitle(song.Name)
+			tag.SetAlbum(song.Album.Name)
+			tag.SetArtist(song.ArtistName())
+			_ = tag.Save()
+			_ = os.Rename(f.Name(), targetFilename)
+		default:
+			metadata, err := songtag.Read(f)
+			if err != nil {
+				_ = os.Rename(f.Name(), targetFilename)
+				break
+			}
+			defer metadata.Close()
+			_ = metadata.SetAlbum(song.Album.Name)
+			_ = metadata.SetArtist(song.ArtistName())
+			_ = metadata.SetAlbumArtist(song.Album.ArtistName())
+			_ = metadata.SetTitle(song.Name)
+			_ = metadata.SetAuthor("musicfox")
+			_ = metadata.SetEncodedBy("UTF-8")
+			_ = metadata.SaveFile(targetFilename)
+		}
 
 		Notify(NotifyContent{
 			Title:   "✅下载完成",
