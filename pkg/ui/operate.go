@@ -144,8 +144,14 @@ func moveTop(m *NeteaseModel) {
 
 // 下移到底部
 func moveBottom(m *NeteaseModel) {
-	if m.doubleColumn {
+	if m.doubleColumn && len(m.menuList)%2 == 0 {
 		m.selectedIndex = len(m.menuList) + (m.selectedIndex%2 - 2)
+	} else if m.doubleColumn {
+		if m.selectedIndex%2 == 0 {
+			m.selectedIndex = len(m.menuList) - 1
+		} else {
+			m.selectedIndex = len(m.menuList) - 2
+		}
 	} else {
 		m.selectedIndex = len(m.menuList) - 1
 	}
