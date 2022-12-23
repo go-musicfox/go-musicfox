@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
+	urlpkg "net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -71,6 +72,9 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		}
 	}()
 
+	if u, err := urlpkg.Parse(url); err == nil {
+		options.Cookies = append(options.Cookies, cookieJar.Cookies(u)...)
+	}
 	req := requests.Requests()
 	if cookieJar == nil {
 		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
@@ -146,27 +150,6 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		reg, _ := regexp.Compile(`/\w*api/`)
 		url = reg.ReplaceAllString(url, "/eapi/")
 	}
-
-	// _ntes_nuid cookie
-	//if parsedURL, _ := urlpkg.Parse(url); parsedURL != nil {
-	//	cookies := cookieJar.Cookies(parsedURL)
-	//	var existNtesUid bool
-	//	for _, cookie := range cookies {
-	//		if cookie.Name == "_ntes_nuid" {
-	//			existNtesUid = true
-	//			break
-	//		}
-	//	}
-	//	if !existNtesUid {
-	//		uid := uuid.New()
-	//		cookieJar.SetCookies(parsedURL, []*http.Cookie{{
-	//			Name:    "_ntes_nuid",
-	//			Value:   strings.ReplaceAll(uid.String(), "-", ""),
-	//			Domain:  ".163.com",
-	//			Expires: time.Now().Add(time.Hour * 24 * 7),
-	//		}})
-	//	}
-	//}
 
 	var (
 		err     error
