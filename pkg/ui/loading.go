@@ -2,10 +2,11 @@ package ui
 
 import (
 	"fmt"
-	"github.com/muesli/termenv"
-	"go-musicfox/pkg/configs"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/muesli/termenv"
+	"go-musicfox/pkg/configs"
 )
 
 type Loading struct {
