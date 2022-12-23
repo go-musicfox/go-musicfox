@@ -69,9 +69,15 @@ github.com/fogleman/ease
 # github.com/forgoer/openssl v1.2.1
 ## explicit; go 1.12
 github.com/forgoer/openssl
-# github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.0
+# github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
 ## explicit; go 1.17
 github.com/frolovo22/tag
+# github.com/go-flac/flacpicture v0.2.0
+## explicit
+github.com/go-flac/flacpicture
+# github.com/go-flac/go-flac v0.3.1
+## explicit; go 1.12
+github.com/go-flac/go-flac
 # github.com/godbus/dbus/v5 v5.1.0
 ## explicit; go 1.12
 github.com/godbus/dbus/v5

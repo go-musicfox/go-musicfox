@@ -46,6 +46,10 @@ github.com/anhoder/requests v0.1.2 h1:b7wQ8rP0+nUfN5SQ0hEOadu/QAPKgZ1CKT0Pv1PgSu
 github.com/anhoder/requests v0.1.2/go.mod h1:UrloMIBM7US/JeZwpZBjc3NnCfIeh2HYj9kMbKaffQw=
 github.com/anhoder/tag v1.0.0 h1:nI1hK1FJhvioy6VqoCKs1LS7GCi6jJSLP3c6ajZsoCI=
 github.com/anhoder/tag v1.0.0/go.mod h1:7wN+2uw04tUAgZIgORCR9Pb7lBcJpqhZz/7yWERl5xY=
+github.com/anhoder/tag v1.0.1 h1:VvzSlEZZ5uJPc9Kyem3x/QiQ9qMRQHvBmMjnOi7SQzw=
+github.com/anhoder/tag v1.0.1/go.mod h1:Ywby7Ky0rK5j1mv30tIMb0Tskcn6fgC1dppRfDXjuwM=
+github.com/anhoder/tag v1.0.2 h1:ugXqsTbzj8M42FsKJtkrspbOuhoZILmfUMhYLmXcsUM=
+github.com/anhoder/tag v1.0.2/go.mod h1:Ywby7Ky0rK5j1mv30tIMb0Tskcn6fgC1dppRfDXjuwM=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
@@ -84,6 +88,7 @@ github.com/d4l3k/messagediff v1.2.2-0.20190829033028-7e0a312ae40b/go.mod h1:Oozb
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/ddliu/go-httpclient v0.5.1/go.mod h1:8QVbjq00YK2f2MQyiKuWMdaKOFRcoD9VuubkNCNOuZo=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
@@ -102,6 +107,10 @@ github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeME
 github.com/go-audio/audio v1.0.0/go.mod h1:6uAu0+H2lHkwdGsAY+j2wHPNPpPoeg5AaEFh9FlA+Zs=
 github.com/go-audio/riff v1.0.0/go.mod h1:l3cQwc85y79NQFCRB7TiPoNiaijp6q8Z0Uv38rVG498=
 github.com/go-audio/wav v1.0.0/go.mod h1:3yoReyQOsiARkvPl3ERCi8JFjihzG6WhjYpZCf5zAWE=
+github.com/go-flac/flacpicture v0.2.0 h1:rS/ZOR/ZxlEwMf3yOPFcTAmGyoV6rDtcYdd+6CwWQAw=
+github.com/go-flac/flacpicture v0.2.0/go.mod h1:M4a1J0v6B5NHsck4GA1yZg0vFQzETVPd3kuj6Ow+q9o=
+github.com/go-flac/go-flac v0.3.1 h1:BWA7HdO67S4ZLWSVHCxsDHuedFFu5RiV/wmuhvO6Hxo=
+github.com/go-flac/go-flac v0.3.1/go.mod h1:jG9IumOfAXr+7J40x0AiQIbJzXf9Y7+Zs/2CNWe4LMk=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=

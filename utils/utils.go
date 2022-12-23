@@ -22,6 +22,7 @@ import (
 	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"
 	songtag "github.com/frolovo22/tag"
+	"github.com/go-flac/flacpicture"
 	"github.com/skip2/go-qrcode"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
@@ -218,7 +219,7 @@ func DownloadMusic(song structs.Song) {
 			Notify(NotifyContent{
 				Title:   "🙅🏻‍文件已存在",
 				Text:    song.Name,
-				Url:     constants.AppGithubUrl,
+				Url:     FileUrl(downloadDir),
 				GroupId: constants.GroupID,
 			})
 			return
@@ -241,7 +242,7 @@ func DownloadMusic(song structs.Song) {
 		Notify(NotifyContent{
 			Title:   "👇🏻正在下载，请稍候...",
 			Text:    song.Name,
-			Url:     constants.AppGithubUrl,
+			Url:     FileUrl(downloadDir),
 			GroupId: constants.GroupID,
 		})
 
@@ -257,7 +258,7 @@ func DownloadMusic(song structs.Song) {
 			}
 			defer tag.Close()
 			tag.SetDefaultEncoding(id3v2.EncodingUTF8)
-			if imgResp, err := http.Get(song.PicUrl); err == nil {
+			if imgResp, err := http.Get(song.PicUrl + "?param=1024y1024"); err == nil {
 				defer imgResp.Body.Close()
 				if data, err := io.ReadAll(imgResp.Body); err == nil {
 					tag.AddAttachedPicture(id3v2.PictureFrame{
@@ -284,15 +285,22 @@ func DownloadMusic(song structs.Song) {
 			_ = metadata.SetArtist(song.ArtistName())
 			_ = metadata.SetAlbumArtist(song.Album.ArtistName())
 			_ = metadata.SetTitle(song.Name)
-			_ = metadata.SetAuthor("musicfox")
-			_ = metadata.SetEncodedBy("UTF-8")
+			if flac, ok := metadata.(*songtag.FLAC); ok && song.PicUrl != "" {
+				if imgResp, err := http.Get(song.PicUrl + "?param=1024y1024"); err == nil {
+					defer imgResp.Body.Close()
+					if data, err := io.ReadAll(imgResp.Body); err == nil {
+						img, _ := flacpicture.NewFromImageData(flacpicture.PictureTypeFrontCover, "cover", data, "image/jpeg")
+						_ = flac.SetFlacPicture(img)
+					}
+				}
+			}
 			_ = metadata.SaveFile(targetFilename)
 		}
 
 		Notify(NotifyContent{
 			Title:   "✅下载完成",
 			Text:    song.Name,
-			Url:     constants.AppGithubUrl,
+			Url:     FileUrl(downloadDir),
 			GroupId: constants.GroupID,
 		})
 	}(url, musicType)
@@ -406,4 +414,16 @@ func GenQRCode(filename, content string) (string, error) {
 		return "", err
 	}
 	return filepath, nil
+}
+
+func WebUrlOfPlaylist(playlistId int64) string {
+	return "https://music.163.com/#/my/m/music/playlist?id=" + strconv.FormatInt(playlistId, 10)
+}
+
+func WebUrlOfSong(songId int64) string {
+	return "https://music.163.com/#/song?id=" + strconv.FormatInt(songId, 10)
+}
+
+func FileUrl(filepath string) string {
+	return "file://" + filepath
 }
