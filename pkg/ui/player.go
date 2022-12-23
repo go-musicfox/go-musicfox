@@ -3,12 +3,13 @@ package ui
 import (
 	"context"
 	"fmt"
-	"go-musicfox/pkg/constants"
 	"math"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
+
+	"go-musicfox/pkg/constants"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
@@ -433,7 +434,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
 		Icon:    song.PicUrl,
-		Url:     constants.AppGithubUrl,
+		Url:     utils.WebUrlOfSong(song.Id),
 		GroupId: constants.GroupID,
 	})
 

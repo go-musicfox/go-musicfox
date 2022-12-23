@@ -422,14 +422,14 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已添加到我喜欢的歌曲",
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
-			Url:     constants.AppGithubUrl,
+			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: constants.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
-			Url:     constants.AppGithubUrl,
+			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: constants.GroupID,
 		})
 	}
@@ -527,14 +527,14 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已添加到我喜欢的歌曲",
 			Text:    songs[selectedIndex].Name,
-			Url:     constants.AppGithubUrl,
+			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: constants.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
 			Text:    songs[selectedIndex].Name,
-			Url:     constants.AppGithubUrl,
+			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: constants.GroupID,
 		})
 	}

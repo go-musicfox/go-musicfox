@@ -14,6 +14,7 @@ require (
 	github.com/fhs/gompd/v2 v2.2.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 	github.com/frolovo22/tag v0.0.2
+	github.com/go-flac/flacpicture v0.2.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.1.0
@@ -36,6 +37,7 @@ require (
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/forgoer/openssl v1.2.1 // indirect
+	github.com/go-flac/go-flac v0.3.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/gookit/goutil v0.5.2 // indirect
@@ -67,7 +69,7 @@ replace (
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.8
-	github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.0
+	github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
