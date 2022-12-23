@@ -18,6 +18,8 @@ func NewHelpMenu() *HelpMenu {
 		{Title: "h/H/LEFT", Subtitle: "左"},
 		{Title: "l/L/RIGHT", Subtitle: "右"},
 		{Title: "j/J/DOWN", Subtitle: "下"},
+		{Title: "g", Subtitle: "上移到顶部"},
+		{Title: "G", Subtitle: "下移到底部"},
 		{Title: "q/Q", Subtitle: "退出"},
 		{Title: "SPACE", Subtitle: "播放/暂停"},
 		{Title: "[", Subtitle: "上一首"},
