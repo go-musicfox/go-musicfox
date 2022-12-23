@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"github.com/anhoder/netease-music/service"
+	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 	"strconv"
@@ -47,9 +48,17 @@ func (m *PlaylistDetailMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
 
 func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
-
-		playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"} // 最近S个收藏者，设为0
-		code, response := playlistDetail.PlaylistDetail()
+		var (
+			code     float64
+			response []byte
+		)
+		if !configs.ConfigRegistry.MainShowAllSongsOfPlaylist {
+			playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"} // 最近S个收藏者，设为0
+			code, response = playlistDetail.PlaylistDetail()
+		} else {
+			allTrack := service.PlaylistTrackAllService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"} // 最近S个收藏者，设为0
+			code, response = allTrack.AllTracks()
+		}
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
 			NeedLoginHandle(model, enterMenu)

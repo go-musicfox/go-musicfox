@@ -23,17 +23,18 @@ type Registry struct {
 	ProgressFullChar  rune // 进度条已加载字符
 	ProgressEmptyChar rune // 进度条未加载字符
 
-	MainShowTitle       bool                     // 主界面是否显示标题
-	MainLoadingText     string                   // 主页面加载中提示
-	MainPlayerSongLevel service.SongQualityLevel // 歌曲音质级别
-	MainPrimaryColor    string                   // 主题色
-	MainShowLyric       bool                     // 显示歌词
-	MainLyricOffset     int                      // 偏移:ms
-	MainShowNotify      bool                     // 显示通知
-	MainPProfPort       int                      // pprof端口
-	MainAltScreen       bool                     // AltScreen显示模式
-	MainDoubleColumn    bool                     // 是否双列显示
-	MainDownloadDir     string                   // 指定下载目录
+	MainShowTitle              bool                     // 主界面是否显示标题
+	MainLoadingText            string                   // 主页面加载中提示
+	MainPlayerSongLevel        service.SongQualityLevel // 歌曲音质级别
+	MainPrimaryColor           string                   // 主题色
+	MainShowLyric              bool                     // 显示歌词
+	MainLyricOffset            int                      // 偏移:ms
+	MainShowNotify             bool                     // 显示通知
+	MainPProfPort              int                      // pprof端口
+	MainAltScreen              bool                     // AltScreen显示模式
+	MainDoubleColumn           bool                     // 是否双列显示
+	MainDownloadDir            string                   // 指定下载目录
+	MainShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
 
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
@@ -132,6 +133,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
 	registry.MainDoubleColumn = ini.Bool("main.doubleColumn", true)
 	registry.MainDownloadDir = ini.String("main.downloadDir", "")
+	registry.MainShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)
 
 	defaultPlayer := constants.BeepPlayer
 	if runtime.GOOS == "darwin" {
