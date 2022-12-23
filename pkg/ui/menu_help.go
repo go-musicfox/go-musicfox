@@ -14,20 +14,20 @@ func NewHelpMenu() *HelpMenu {
 	menu := new(HelpMenu)
 	menu.menus = []MenuItem{
 		{Title: "进来给个star⭐️呗~"},
-		{Title: "r/R", Subtitle: "重新渲染UI"},
+		{Title: "SPACE", Subtitle: "播放/暂停"},
 		{Title: "h/H/LEFT", Subtitle: "左"},
 		{Title: "l/L/RIGHT", Subtitle: "右"},
+		{Title: "k/K/UP", Subtitle: "上"},
 		{Title: "j/J/DOWN", Subtitle: "下"},
 		{Title: "g", Subtitle: "上移到顶部"},
 		{Title: "G", Subtitle: "下移到底部"},
-		{Title: "q/Q", Subtitle: "退出"},
-		{Title: "SPACE", Subtitle: "播放/暂停"},
 		{Title: "[", Subtitle: "上一首"},
 		{Title: "]", Subtitle: "下一首"},
 		{Title: "-", Subtitle: "减小音量"},
 		{Title: "=", Subtitle: "加大音量"},
 		{Title: "n/N/ENTER", Subtitle: "进入"},
 		{Title: "b/B/ESC", Subtitle: "返回"},
+		{Title: "q/Q", Subtitle: "退出"},
 		{Title: "w/W", Subtitle: "注销并退出"},
 		{Title: "p", Subtitle: "切换播放模式"},
 		{Title: "P", Subtitle: "心动模式"},
@@ -41,6 +41,7 @@ func NewHelpMenu() *HelpMenu {
 		{Title: "D", Subtitle: "下载当前选中音乐"},
 		{Title: "c/C", Subtitle: "当前播放列表"},
 		{Title: "/", Subtitle: "搜索当前列表"},
+		{Title: "r/R", Subtitle: "重新渲染UI"},
 	}
 
 	return menu
