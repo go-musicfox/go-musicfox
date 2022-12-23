@@ -132,6 +132,26 @@ func moveRight(m *NeteaseModel) {
 	m.selectedIndex++
 }
 
+// 上移到顶部
+func moveTop(m *NeteaseModel) {
+	if m.doubleColumn {
+		m.selectedIndex = m.selectedIndex % 2
+	} else {
+		m.selectedIndex = 0
+	}
+	m.menuCurPage = 1
+}
+
+// 下移到底部
+func moveBottom(m *NeteaseModel) {
+	if m.doubleColumn {
+		m.selectedIndex = len(m.menuList) + (m.selectedIndex%2 - 2)
+	} else {
+		m.selectedIndex = len(m.menuList) - 1
+	}
+	m.menuCurPage = int(math.Ceil(float64(len(m.menuList)) / float64(m.menuPageSize)))
+}
+
 // 切换到上一页
 func prePage(m *NeteaseModel) {
 	m.isListeningKey = false

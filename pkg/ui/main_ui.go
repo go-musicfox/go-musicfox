@@ -496,6 +496,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		moveLeft(m)
 	case "l", "L", "right":
 		moveRight(m)
+	case "g":
+		moveTop(m)
+	case "G":
+		moveBottom(m)
 	case "n", "N", "enter":
 		enterMenu(m, nil, nil)
 	case "b", "B", "esc":
