@@ -144,12 +144,17 @@ func moveTop(m *NeteaseModel) {
 
 // 下移到底部
 func moveBottom(m *NeteaseModel) {
-	if m.doubleColumn {
+	if m.doubleColumn && len(m.menuList)%2 == 0 {
 		m.selectedIndex = len(m.menuList) + (m.selectedIndex%2 - 2)
+	} else if m.doubleColumn && m.selectedIndex%2 != 0 {
+		m.selectedIndex = len(m.menuList) - 2
 	} else {
 		m.selectedIndex = len(m.menuList) - 1
 	}
 	m.menuCurPage = int(math.Ceil(float64(len(m.menuList)) / float64(m.menuPageSize)))
+	if m.doubleColumn && m.selectedIndex%2 != 0 && len(m.menuList)%m.menuPageSize == 1 {
+		m.menuCurPage -= 1
+	}
 }
 
 // 切换到上一页
