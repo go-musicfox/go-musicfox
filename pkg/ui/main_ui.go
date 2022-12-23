@@ -31,10 +31,16 @@ type MenuItem struct {
 }
 
 func (item *MenuItem) OriginString() string {
+	if item.Subtitle == "" {
+		return item.Title
+	}
 	return item.Title + " " + item.Subtitle
 }
 
 func (item *MenuItem) String() string {
+	if item.Subtitle == "" {
+		return item.Title
+	}
 	return item.Title + " " + SetFgStyle(item.Subtitle, termenv.ANSIBrightBlack)
 }
 
