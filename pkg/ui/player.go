@@ -259,15 +259,17 @@ func (p *Player) songView() string {
 		builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
 		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
 	}
+	builder.WriteString(SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	if p.State() == player.Playing {
-		builder.WriteString(SetFgStyle("♫  ♪ ♫  ♪  ", termenv.ANSIBrightYellow))
+		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪  ", termenv.ANSIBrightYellow))
 	} else {
-		builder.WriteString(SetFgStyle("_ _ z Z Z  ", termenv.ANSIBrightRed))
+		builder.WriteString(SetFgStyle("_ z Z Z  ", termenv.ANSIYellow))
 	}
 
 	if p.curSongIndex < len(p.playlist) {
+		prefixLen := 22
 		// 按剩余长度截断字符串
-		truncateSong := runewidth.Truncate(p.curSong.Name, p.model.WindowWidth-p.model.menuStartColumn-16, "") // 多减，避免剩余1个中文字符
+		truncateSong := runewidth.Truncate(p.curSong.Name, p.model.WindowWidth-p.model.menuStartColumn-prefixLen, "") // 多减，避免剩余1个中文字符
 		builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
 		builder.WriteString(" ")
 
@@ -281,7 +283,7 @@ func (p *Player) songView() string {
 		}
 
 		// 按剩余长度截断字符串
-		remainLen := p.model.WindowWidth - p.model.menuStartColumn - 16 - runewidth.StringWidth(p.curSong.Name)
+		remainLen := p.model.WindowWidth - p.model.menuStartColumn - prefixLen - runewidth.StringWidth(p.curSong.Name)
 		truncateArtists := runewidth.Truncate(
 			runewidth.FillRight(artists.String(), remainLen),
 			remainLen, "")
@@ -319,7 +321,7 @@ func (p *Player) progressView() string {
 	if int(width)-fullSize > 0 {
 		emptySize = int(width) - fullSize
 	}
-	emptyCells := strings.Repeat(string(configs.ConfigRegistry.ProgressEmptyChar), emptySize)
+	emptyCells := SetFgStyle(strings.Repeat(string(configs.ConfigRegistry.ProgressEmptyChar), emptySize), termenv.ANSIBrightBlack)
 
 	if allDuration/60 >= 100 {
 		times := SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())

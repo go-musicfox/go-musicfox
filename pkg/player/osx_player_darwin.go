@@ -221,7 +221,9 @@ func (p *osxPlayer) UpVolume() {
 	} else {
 		p.volume += 5
 	}
-	p.player.SetVolume_(float32(p.volume) / 100.0)
+	if p.player != nil {
+		p.player.SetVolume_(float32(p.volume) / 100.0)
+	}
 }
 
 func (p *osxPlayer) DownVolume() {
@@ -232,7 +234,9 @@ func (p *osxPlayer) DownVolume() {
 	} else {
 		p.volume -= 5
 	}
-	p.player.SetVolume_(float32(p.volume) / 100.0)
+	if p.player != nil {
+		p.player.SetVolume_(float32(p.volume) / 100.0)
+	}
 }
 
 func (p *osxPlayer) Volume() int {

@@ -2,16 +2,17 @@ package ui
 
 import (
 	"fmt"
+	"math"
+	"strings"
+	"time"
+	"unicode/utf8"
+
 	tea "github.com/anhoder/bubbletea"
 	"github.com/fogleman/ease"
 	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/utils"
-	"math"
-	"strings"
-	"time"
-	"unicode/utf8"
 )
 
 var (
@@ -162,7 +163,7 @@ func (s *StartupModel) progressView(m *NeteaseModel) string {
 	if int(width)-fullSize > 0 {
 		emptySize = int(width) - fullSize
 	}
-	emptyCells := strings.Repeat(string(configs.ConfigRegistry.ProgressEmptyChar), emptySize)
+	emptyCells := SetFgStyle(strings.Repeat(string(configs.ConfigRegistry.ProgressEmptyChar), emptySize), termenv.ANSIBrightBlack)
 
 	return fmt.Sprintf("%s%s", fullCells, emptyCells)
 }
