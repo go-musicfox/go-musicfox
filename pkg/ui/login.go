@@ -148,7 +148,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 						errHandler := func(err error) (tea.Model, tea.Cmd) {
 							m.loginModel.tips = SetFgStyle("生成二维码失败，请稍候再试", termenv.ANSIBrightRed)
 							if err != nil {
-								utils.Logger().Printf("生成二维码失败, +v%", err)
+								utils.Logger().Printf("生成二维码失败, %+v", err)
 							}
 							return m, nil
 						}
@@ -170,7 +170,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 					errHandler := func(err error) (tea.Model, tea.Cmd) {
 						m.loginModel.tips = SetFgStyle("校验二维码失败，请稍候再试", termenv.ANSIBrightRed)
 						if err != nil {
-							utils.Logger().Printf("生成二维码失败 +v%", err)
+							utils.Logger().Printf("生成二维码失败 %+v", err)
 						}
 						return m, nil
 					}
