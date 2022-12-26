@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/anhoder/netease-music/service"
 	"go-musicfox/pkg/constants"
 	ds2 "go-musicfox/pkg/structs"
 	"go-musicfox/utils"
+
+	"github.com/anhoder/netease-music/service"
 )
 
 type SearchResultMenu struct {

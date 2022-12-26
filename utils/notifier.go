@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"os"
 	"os/exec"
@@ -10,10 +9,11 @@ import (
 	"runtime"
 	"strings"
 
+	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 
 	"github.com/anhoder/notificator"
-	"go-musicfox/pkg/configs"
+	"github.com/pkg/errors"
 )
 
 type osxNotificator struct {

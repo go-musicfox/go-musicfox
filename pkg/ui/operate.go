@@ -8,13 +8,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anhoder/netease-music/service"
-	"github.com/buger/jsonparser"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/player"
 	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
+
+	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
 )
 
 type menuStackItem struct {

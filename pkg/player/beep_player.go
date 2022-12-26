@@ -2,9 +2,6 @@ package player
 
 import (
 	"context"
-	"github.com/faiface/beep/mp3"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
 	"io"
 	"net/http"
 	"os"
@@ -12,15 +9,19 @@ import (
 	"sync"
 	"time"
 
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/utils"
+
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/effects"
 	"github.com/faiface/beep/flac"
 	"github.com/faiface/beep/minimp3"
+	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
 	minimp3pkg "github.com/tosone/minimp3"
-	"go-musicfox/utils"
 )
 
 type beepPlayer struct {

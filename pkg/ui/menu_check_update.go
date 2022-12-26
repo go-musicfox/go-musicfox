@@ -1,9 +1,10 @@
 package ui
 
 import (
-	"github.com/skratchdot/open-golang/open"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/utils"
+
+	"github.com/skratchdot/open-golang/open"
 )
 
 type CheckUpdateMenu struct {

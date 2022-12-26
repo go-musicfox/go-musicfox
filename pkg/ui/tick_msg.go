@@ -1,8 +1,9 @@
 package ui
 
 import (
-	tea "github.com/anhoder/bubbletea"
 	"time"
+
+	tea "github.com/anhoder/bubbletea"
 )
 
 // startup tick

@@ -2,11 +2,13 @@ package ui
 
 import (
 	"fmt"
-	"github.com/anhoder/netease-music/service"
-	"github.com/buger/jsonparser"
+	"strconv"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"strconv"
+
+	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
 )
 
 const CurUser int64 = 0

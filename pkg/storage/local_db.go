@@ -3,10 +3,11 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"github.com/boltdb/bolt"
 	"go-musicfox/utils"
 	"os"
 	"time"
+
+	"github.com/boltdb/bolt"
 )
 
 type LocalDB struct {

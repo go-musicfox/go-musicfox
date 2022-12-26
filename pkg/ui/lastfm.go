@@ -2,8 +2,10 @@ package ui
 
 import (
 	"fmt"
-	"github.com/skratchdot/open-golang/open"
+
 	"go-musicfox/pkg/storage"
+
+	"github.com/skratchdot/open-golang/open"
 )
 
 type Lastfm struct {

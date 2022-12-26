@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fhs/gompd/v2/mpd"
 	"go-musicfox/utils"
+
+	"github.com/fhs/gompd/v2/mpd"
 )
 
 var stateMapping = map[string]State{

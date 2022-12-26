@@ -1,10 +1,12 @@
 package ui
 
 import (
-	"github.com/anhoder/netease-music/service"
+	"time"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"time"
+
+	"github.com/anhoder/netease-music/service"
 )
 
 type PersonalFmMenu struct {

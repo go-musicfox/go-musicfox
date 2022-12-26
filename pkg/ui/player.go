@@ -9,19 +9,19 @@ import (
 	"strings"
 	"time"
 
-	"go-musicfox/pkg/constants"
-
-	"github.com/anhoder/netease-music/service"
-	"github.com/buger/jsonparser"
-	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/lyric"
 	"go-musicfox/pkg/player"
 	"go-musicfox/pkg/state_handler"
 	"go-musicfox/pkg/storage"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
+
+	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
+	"github.com/mattn/go-runewidth"
+	"github.com/muesli/termenv"
 )
 
 // PlayDirection 下首歌的方向

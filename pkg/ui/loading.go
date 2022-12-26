@@ -5,8 +5,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
+
+	"github.com/muesli/termenv"
 )
 
 type Loading struct {

@@ -2,10 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/anhoder/netease-music/service"
+	"strings"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"strings"
+
+	"github.com/anhoder/netease-music/service"
 )
 
 type AlbumNewestMenu struct {

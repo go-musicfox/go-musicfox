@@ -2,9 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/gookit/gcli/v2"
+
 	"go-musicfox/pkg/constants"
 	"go-musicfox/utils"
+
+	"github.com/gookit/gcli/v2"
 )
 
 func NewConfigCommand() *gcli.Command {
