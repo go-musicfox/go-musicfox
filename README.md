@@ -12,29 +12,6 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 ([The icon](https://github.com/anhoder/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
 
-## v3.0.0
-
-* go-mp3 => minimp3 降低CPU占用
-* flac => C版flac解析（依赖flac），降低CPU占用
-* 播放引擎: 
-  * beep（已有）
-  * 新增mpd，需要安装配置mpd
-  * 新增osx，使用Mac系统原生播放器，Mac系统下可用（推荐）
-* 保存音量
-* 上报lastfm
-* Mac优化：
-  * 接入MPNowPlayinginfoCenter，在菜单栏显示播放信息
-  * 接入MPRemoteCommandCenter，支持菜单栏、Airpods等控制播放、暂停等，可响应系统中断，例如蓝牙断开
-  * 接入NSWorkspace，响应睡眠通知，睡眠前自动暂停
-  * LyricsX菜单栏、桌面歌词显示
-* 支持当前播放列表
-* Windows窗口大小变更优化
-* 增加环境变量配置go-musicfox目录: `MUSICFOX_ROOT`
-* UnblockNeteaseMusic
-* 增加单双列显示配置
-* 支持MPRIS
-* 其他优化...
-
 ## 预览
 
 #### 1. 启动
