@@ -1,9 +1,10 @@
 package ui
 
 import (
-	"github.com/anhoder/netease-music/service"
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
+
+	"github.com/anhoder/netease-music/service"
 )
 
 type DjTodayRecommendMenu struct {

@@ -4,9 +4,8 @@ import (
 	"os/exec"
 	"time"
 
-	"go-musicfox/pkg/constants"
-
 	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
 )
 
 type Player interface {

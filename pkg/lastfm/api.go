@@ -3,10 +3,11 @@ package lastfm
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-	"github.com/shkh/lastfm-go"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/utils"
+
+	"github.com/pkg/errors"
+	lastfm_go "github.com/shkh/lastfm-go"
 )
 
 type AuthInvalid struct {

@@ -7,11 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"go-musicfox/pkg/player"
+
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/core"
 	"github.com/progrium/macdriver/mediaplayer"
 	"github.com/progrium/macdriver/objc"
-	"go-musicfox/pkg/player"
 )
 
 var stateMap = map[player.State]core.NSUInteger{

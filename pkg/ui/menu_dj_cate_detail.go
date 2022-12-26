@@ -2,10 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/anhoder/netease-music/service"
+	"strconv"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"strconv"
+
+	"github.com/anhoder/netease-music/service"
 )
 
 type DjCategoryDetailMenu struct {

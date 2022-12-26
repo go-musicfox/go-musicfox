@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/skratchdot/open-golang/open"
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/storage"
+	"go-musicfox/pkg/structs"
+	"go-musicfox/utils"
 
 	"github.com/anhoder/bubbles/textinput"
 	tea "github.com/anhoder/bubbletea"
@@ -15,10 +17,8 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/storage"
-	"go-musicfox/pkg/structs"
-	"go-musicfox/utils"
+	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 )
 
 type LoginModel struct {

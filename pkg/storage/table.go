@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/boltdb/bolt"
+
 	"go-musicfox/utils"
+
+	"github.com/boltdb/bolt"
 )
 
 type IteratorCallback func(k, v []byte) error

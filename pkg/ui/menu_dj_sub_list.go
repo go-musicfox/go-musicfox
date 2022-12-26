@@ -1,11 +1,13 @@
 package ui
 
 import (
-	"github.com/anhoder/netease-music/service"
-	"github.com/buger/jsonparser"
+	"strconv"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
-	"strconv"
+
+	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
 )
 
 type DjSubListMenu struct {

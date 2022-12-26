@@ -1,8 +1,9 @@
 package ui
 
 import (
-	"github.com/skratchdot/open-golang/open"
 	"go-musicfox/pkg/constants"
+
+	"github.com/skratchdot/open-golang/open"
 )
 
 type HelpMenu struct {

@@ -18,15 +18,16 @@ import (
 	"strconv"
 	"strings"
 
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/pkg/structs"
+
 	"github.com/anhoder/netease-music/service"
 	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"
 	songtag "github.com/frolovo22/tag"
 	"github.com/go-flac/flacpicture"
 	"github.com/skip2/go-qrcode"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/pkg/structs"
 )
 
 //go:embed embed

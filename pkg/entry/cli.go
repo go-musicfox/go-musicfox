@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log"
 
-	neteaseutil "github.com/anhoder/netease-music/util"
-	"github.com/gookit/gcli/v2"
 	"go-musicfox/pkg/commands"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/ui"
 	"go-musicfox/utils"
+
+	neteaseutil "github.com/anhoder/netease-music/util"
+	"github.com/gookit/gcli/v2"
 )
 
 func runCLI() {

@@ -2,8 +2,9 @@ package structs
 
 import (
 	"errors"
-	"github.com/buger/jsonparser"
 	"strings"
+
+	"github.com/buger/jsonparser"
 )
 
 type Album struct {

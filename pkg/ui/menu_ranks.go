@@ -2,9 +2,11 @@ package ui
 
 import (
 	"fmt"
-	"github.com/anhoder/netease-music/service"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
+
+	"github.com/anhoder/netease-music/service"
 )
 
 type RanksMenu struct {

@@ -2,16 +2,18 @@ package ui
 
 import (
 	"fmt"
-	"github.com/lucasb-eyer/go-colorful"
-	"github.com/muesli/termenv"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	ds2 "go-musicfox/pkg/structs"
-	"go-musicfox/utils"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
+
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	ds2 "go-musicfox/pkg/structs"
+	"go-musicfox/utils"
+
+	"github.com/lucasb-eyer/go-colorful"
+	"github.com/muesli/termenv"
 )
 
 var (

@@ -2,6 +2,7 @@ package structs
 
 import (
 	"errors"
+
 	"github.com/buger/jsonparser"
 )
 

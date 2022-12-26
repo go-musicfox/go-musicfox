@@ -7,13 +7,14 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"go-musicfox/pkg/configs"
+	"go-musicfox/pkg/constants"
+	"go-musicfox/utils"
+
 	"github.com/anhoder/bubbles/textinput"
 	tea "github.com/anhoder/bubbletea"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/utils"
 )
 
 // PageType 显示模型的类型

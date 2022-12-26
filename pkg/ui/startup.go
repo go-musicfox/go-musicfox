@@ -7,12 +7,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	tea "github.com/anhoder/bubbletea"
-	"github.com/fogleman/ease"
-	"github.com/muesli/termenv"
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
 	"go-musicfox/utils"
+
+	tea "github.com/anhoder/bubbletea"
+	"github.com/fogleman/ease"
+	"github.com/muesli/termenv"
 )
 
 var (

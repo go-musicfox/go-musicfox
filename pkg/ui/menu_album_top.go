@@ -2,12 +2,14 @@ package ui
 
 import (
 	"fmt"
-	"github.com/anhoder/netease-music/service"
-	"github.com/buger/jsonparser"
-	"go-musicfox/pkg/structs"
-	"go-musicfox/utils"
 	"strconv"
 	"strings"
+
+	"go-musicfox/pkg/structs"
+	"go-musicfox/utils"
+
+	"github.com/anhoder/netease-music/service"
+	"github.com/buger/jsonparser"
 )
 
 type AlbumTopMenu struct {

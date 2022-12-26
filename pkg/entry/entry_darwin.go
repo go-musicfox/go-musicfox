@@ -4,10 +4,12 @@
 package entry
 
 import (
+	"os"
+
+	"go-musicfox/utils"
+
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/objc"
-	"go-musicfox/utils"
-	"os"
 )
 
 func AppEntry() {
