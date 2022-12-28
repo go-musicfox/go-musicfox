@@ -53,6 +53,7 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 ## 安装
 
 **请务必使用等宽字体，或将配置doubleColumn设为false，否则双列显示很乱**
+**Mac原生Terminal及Windows的cmd不做兼容处理**
 
 > Mac推荐使用Iterm2或Kitty 
 > 
