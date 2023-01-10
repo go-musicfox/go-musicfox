@@ -266,7 +266,9 @@ func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(_ objc.Object,
 }
 
 func (r *remoteCommandHandler) handleWillSleepOrPowerOff(_ objc.Object, _ objc.Object) {
-	r.player.Paused()
+	objc.Autorelease(func() {
+		r.player.Paused()
+	})
 }
 
 func (r *remoteCommandHandler) handleDidWake(_ objc.Object, _ objc.Object) {
