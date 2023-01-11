@@ -182,32 +182,44 @@ type remoteCommandHandler struct {
 }
 
 func (r *remoteCommandHandler) handlePlayCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	r.player.Resume()
+	objc.Autorelease(func() {
+		r.player.Resume()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePauseCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	r.player.Paused()
+	objc.Autorelease(func() {
+		r.player.Paused()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleStopCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	r.player.Paused()
+	objc.Autorelease(func() {
+		r.player.Paused()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleTogglePlayPauseCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	r.player.Toggle()
+	objc.Autorelease(func() {
+		r.player.Toggle()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleNextTrackCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	r.player.Next()
+	objc.Autorelease(func() {
+		r.player.Next()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePreviousTrackCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	r.player.Previous()
+	objc.Autorelease(func() {
+		r.player.Previous()
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -240,8 +252,10 @@ func (r *remoteCommandHandler) handleSkipBackwardCommand(_ objc.Object, _ objc.O
 }
 
 func (r *remoteCommandHandler) handleChangePlaybackPositionCommand(_ objc.Object, eventObj objc.Object) core.NSInteger {
-	event := mediaplayer.MPChangePlaybackPositionCommandEvent_fromRef(eventObj)
-	r.player.Seek(time.Duration(event.PositionTime()) * time.Second)
+	objc.Autorelease(func() {
+		event := mediaplayer.MPChangePlaybackPositionCommandEvent_fromRef(eventObj)
+		r.player.Seek(time.Duration(event.PositionTime()) * time.Second)
+	})
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
