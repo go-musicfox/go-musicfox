@@ -279,14 +279,17 @@ func (p *beepPlayer) UpVolume() {
 
 // DownVolume 调小音量
 func (p *beepPlayer) DownVolume() {
-	p.l.Lock()
-	defer p.l.Unlock()
 	if p.volume.Volume <= -5 {
-		p.volume.Silent = true
 		return
 	}
 
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	p.volume.Volume -= 0.25
+	if p.volume.Volume <= -5 {
+		p.volume.Silent = true
+	}
 }
 
 func (p *beepPlayer) Volume() int {
