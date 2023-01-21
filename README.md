@@ -112,7 +112,11 @@ emerge --sync
 emerge -a media-sound/go-musicfox
 ```
 
-#### 4. 直接下载
+#### 4. NixOS可使用NUR安装：
+
+NUR路径为[nur.repos.aleksana.go-musicfox](https://github.com/nix-community/nur-combined/blob/master/repos/aleksana/pkgs/go-musicfox/default.nix#L35)。关于如何使用NUR，请参阅[NUR#how-to-use](https://github.com/nix-community/NUR#how-to-use)。
+
+#### 5. 直接下载
 
 下载Linux可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
 
