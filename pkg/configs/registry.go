@@ -54,24 +54,24 @@ type Registry struct {
 
 func NewRegistryWithDefault() *Registry {
 	registry := &Registry{
-		StartupShow:              constants.AppShowStartup,
-		StartupProgressOutBounce: constants.StartupProgressOutBounce,
+		StartupShow:              true,
+		StartupProgressOutBounce: true,
 		StartupLoadingDuration:   time.Second * constants.StartupLoadingSeconds,
 		StartupWelcome:           constants.AppName,
-		StartupSignIn:            constants.StartupSignIn,
-		StartupCheckUpdate:       constants.StartupCheckUpdate,
+		StartupSignIn:            true,
+		StartupCheckUpdate:       true,
 
 		ProgressFullChar:  rune(constants.ProgressFullChar[0]),
 		ProgressEmptyChar: rune(constants.ProgressEmptyChar[0]),
 
-		MainShowTitle:        constants.MainShowTitle,
+		MainShowTitle:        true,
 		MainLoadingText:      constants.MainLoadingText,
 		MainPlayerSongLevel:  service.Higher,
 		MainPrimaryColor:     constants.AppPrimaryColor,
-		MainShowLyric:        constants.MainShowLyric,
-		MainShowNotify:       constants.MainShowNotify,
+		MainShowLyric:        true,
+		MainShowNotify:       true,
 		MainPProfPort:        constants.MainPProfPort,
-		MainAltScreen:        constants.MainAltScreen,
+		MainAltScreen:        true,
 		PlayerEngine:         constants.BeepPlayer,
 		PlayerBeepMp3Decoder: constants.BeepGoMp3Decoder,
 
@@ -95,12 +95,12 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 		return registry
 	}
 
-	registry.StartupShow = ini.Bool("startup.show", constants.AppShowStartup)
-	registry.StartupProgressOutBounce = ini.Bool("startup.progressOutBounce", constants.AppShowStartup)
+	registry.StartupShow = ini.Bool("startup.show", true)
+	registry.StartupProgressOutBounce = ini.Bool("startup.progressOutBounce", true)
 	registry.StartupLoadingDuration = time.Second * time.Duration(ini.Int("startup.loadingSeconds", constants.StartupLoadingSeconds))
 	registry.StartupWelcome = ini.String("startup.welcome", constants.AppName)
-	registry.StartupSignIn = ini.Bool("startup.signIn", constants.StartupSignIn)
-	registry.StartupCheckUpdate = ini.Bool("startup.checkUpdate", constants.StartupCheckUpdate)
+	registry.StartupSignIn = ini.Bool("startup.signIn", true)
+	registry.StartupCheckUpdate = ini.Bool("startup.checkUpdate", true)
 
 	fullChar := ini.String("progress.fullChar", constants.ProgressFullChar)
 	if len(fullChar) > 0 {
@@ -115,7 +115,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 		registry.ProgressEmptyChar = rune(constants.ProgressEmptyChar[0])
 	}
 
-	registry.MainShowTitle = ini.Bool("main.showTitle", constants.MainShowTitle)
+	registry.MainShowTitle = ini.Bool("main.showTitle", true)
 	registry.MainLoadingText = ini.String("main.loadingText", constants.MainLoadingText)
 	songLevel := service.SongQualityLevel(ini.String("main.songLevel", string(service.Higher)))
 	if songLevel.IsValid() {
@@ -127,11 +127,11 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	} else {
 		registry.MainPrimaryColor = constants.AppPrimaryColor
 	}
-	registry.MainShowLyric = ini.Bool("main.showLyric", constants.MainShowLyric)
+	registry.MainShowLyric = ini.Bool("main.showLyric", true)
 	registry.MainLyricOffset = ini.Int("main.lyricOffset", 0)
-	registry.MainShowNotify = ini.Bool("main.showNotify", constants.MainShowNotify)
+	registry.MainShowNotify = ini.Bool("main.showNotify", true)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
-	registry.MainAltScreen = ini.Bool("main.altScreen", constants.MainAltScreen)
+	registry.MainAltScreen = ini.Bool("main.altScreen", true)
 	registry.MainDoubleColumn = ini.Bool("main.doubleColumn", true)
 	registry.MainDownloadDir = ini.String("main.downloadDir", "")
 	registry.MainShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)

@@ -14,18 +14,14 @@ var (
 const AppName = "musicfox"
 const GroupID = "com.anhoder.musicfox"
 const AppDescription = "<cyan>Musicfox - 命令行版网易云音乐</>"
-const AppShowStartup = true
 const AppGithubUrl = "https://github.com/anhoder/go-musicfox"
 const AppLatestReleases = "https://github.com/anhoder/go-musicfox/releases/latest"
 const AppCheckUpdateUrl = "https://api.github.com/repos/anhoder/go-musicfox/releases/latest"
 const LastfmAuthUrl = "https://www.last.fm/api/auth/?api_key=%s&token=%s"
 const ProgressFullChar = "#"
 const ProgressEmptyChar = " "
-const StartupProgressOutBounce = true
 const StartupLoadingSeconds = 2
 const StartupTickDuration = time.Millisecond * 16
-const StartupSignIn = true
-const StartupCheckUpdate = true
 
 const AppLocalDataDir = ".go-musicfox"
 const AppDBName = "musicfox"
@@ -34,12 +30,8 @@ const AppPrimaryRandom = "random"
 const AppPrimaryColor = "#f90022"
 const AppHttpTimeout = time.Second * 5
 
-const MainShowTitle = true
 const MainLoadingText = "[加载中...]"
-const MainShowLyric = true
-const MainShowNotify = true
 const MainPProfPort = 9876
-const MainAltScreen = true
 const UNMDefaultSources = "kuwo"
 
 const BeepPlayer = "beep" // beep
