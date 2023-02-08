@@ -106,8 +106,13 @@ func (p *osxPlayer) listen() {
 					OnPaused:       func() {},
 					OnDone:         func(stopped bool) {},
 					OnTick: func() {
+						var curTime time.Duration
+						objc.Autorelease(func() {
+							t := p.player.CurrentTime()
+							curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
+						})
 						select {
-						case p.timeChan <- p.timer.Passed():
+						case p.timeChan <- curTime:
 						default:
 						}
 					},
@@ -186,11 +191,11 @@ func (p *osxPlayer) Seek(duration time.Duration) {
 	if scale == 0 {
 		return
 	}
-	p.player.SeekToTime_toleranceBefore_toleranceAfter_(core.CMTime{
+	p.player.SeekToTime_(core.CMTime{
 		Value:     int64(float64(scale) * duration.Seconds()),
 		Timescale: scale,
 		Flags:     1,
-	}, core.CMTime{Timescale: 1, Flags: 1}, core.CMTime{Timescale: 1, Flags: 1})
+	})
 	p.timer.SetPassed(duration)
 }
 
