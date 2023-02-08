@@ -402,9 +402,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	p.curSong = song
 
 	p.LocatePlayingSong()
+	p.Paused()
 	url, musicType, err := utils.GetSongUrl(song.Id)
 	if url == "" || err != nil {
-		p.Paused()
 		p.progressRamp = []string{}
 		p.playErrCount++
 		if p.playErrCount >= 3 {
