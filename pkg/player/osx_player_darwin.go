@@ -113,6 +113,7 @@ func (p *osxPlayer) listen() {
 						})
 						select {
 						case p.timeChan <- curTime:
+						// case p.timeChan <- p.timer.Passed():
 						default:
 						}
 					},
