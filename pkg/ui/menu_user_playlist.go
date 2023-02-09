@@ -47,6 +47,10 @@ func (m *UserPlaylistMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
+func (m *UserPlaylistMenu) GetPlaylists() []structs.Playlist {
+	return m.playlists
+}
+
 func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	if len(m.playlists) < index {
 		return nil

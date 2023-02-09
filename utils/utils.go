@@ -425,6 +425,10 @@ func WebUrlOfSong(songId int64) string {
 	return "https://music.163.com/#/song?id=" + strconv.FormatInt(songId, 10)
 }
 
+func WebUrlOfArtist(artistId int64) string {
+	return "https://music.163.com/#/artist?id=" + strconv.FormatInt(artistId, 10)
+}
+
 func FileUrl(filepath string) string {
 	return "file://" + filepath
 }

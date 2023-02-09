@@ -8,11 +8,11 @@ type ArtistDetailMenu struct {
 	artistId int64
 }
 
-func NewArtistDetailMenu(artistId int64) *ArtistDetailMenu {
+func NewArtistDetailMenu(artistId int64, artistName string) *ArtistDetailMenu {
 	artistMenu := new(ArtistDetailMenu)
 	artistMenu.menus = []MenuItem{
-		{Title: "热门歌曲"},
-		{Title: "热门专辑"},
+		{Title: "热门歌曲", Subtitle: artistName},
+		{Title: "热门专辑", Subtitle: artistName},
 	}
 	artistMenu.artistId = artistId
 

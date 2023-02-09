@@ -40,6 +40,10 @@ func (m *HighQualityPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	return NewPlaylistDetailMenu(m.playlists[index].Id)
 }
 
+func (m *HighQualityPlaylistsMenu) GetPlaylists() []structs.Playlist {
+	return m.playlists
+}
+
 func (m *HighQualityPlaylistsMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		// 不重复请求
