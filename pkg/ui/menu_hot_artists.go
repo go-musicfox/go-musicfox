@@ -37,7 +37,7 @@ func (m *HotArtistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	if index >= len(m.artists) {
 		return nil
 	}
-	return NewArtistDetailMenu(m.artists[index].Id)
+	return NewArtistDetailMenu(m.artists[index].Id, m.artists[index].Name)
 }
 
 func (m *HotArtistsMenu) BeforeEnterMenuHook() Hook {

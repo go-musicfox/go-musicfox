@@ -1,5 +1,7 @@
 package ui
 
+import "go-musicfox/pkg/structs"
+
 type Hook func(m *NeteaseModel) bool
 
 // IMenu menu interface
@@ -56,6 +58,10 @@ type IMenu interface {
 // IDjMenu dj menu interface
 type IDjMenu interface {
 	IMenu
+}
+
+type PlaylistsMenu interface {
+	GetPlaylists() []structs.Playlist
 }
 
 type DefaultMenu struct {

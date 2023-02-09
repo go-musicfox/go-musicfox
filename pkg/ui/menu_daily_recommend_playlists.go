@@ -33,6 +33,10 @@ func (m *DailyRecommendPlaylistsMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
+func (m *DailyRecommendPlaylistsMenu) GetPlaylists() []structs.Playlist {
+	return m.playlists
+}
+
 func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 	if index >= len(m.playlists) {
 		return nil

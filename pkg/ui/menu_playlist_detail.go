@@ -15,12 +15,12 @@ type PlaylistDetailMenu struct {
 	DefaultMenu
 	menus      []MenuItem
 	songs      []structs.Song
-	PlaylistId int64
+	playlistId int64
 }
 
 func NewPlaylistDetailMenu(playlistId int64) *PlaylistDetailMenu {
 	return &PlaylistDetailMenu{
-		PlaylistId: playlistId,
+		playlistId: playlistId,
 	}
 }
 
@@ -37,7 +37,7 @@ func (m *PlaylistDetailMenu) IsPlayable() bool {
 }
 
 func (m *PlaylistDetailMenu) GetMenuKey() string {
-	return fmt.Sprintf("playlist_detail_%d", m.PlaylistId)
+	return fmt.Sprintf("playlist_detail_%d", m.playlistId)
 }
 
 func (m *PlaylistDetailMenu) MenuViews() []MenuItem {
@@ -55,10 +55,10 @@ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 			response []byte
 		)
 		if !configs.ConfigRegistry.MainShowAllSongsOfPlaylist {
-			playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"} // 最近S个收藏者，设为0
+			playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(m.playlistId, 10), S: "0"} // 最近S个收藏者，设为0
 			code, response = playlistDetail.PlaylistDetail()
 		} else {
-			allTrack := service.PlaylistTrackAllService{Id: strconv.FormatInt(m.PlaylistId, 10), S: "0"} // 最近S个收藏者，设为0
+			allTrack := service.PlaylistTrackAllService{Id: strconv.FormatInt(m.playlistId, 10), S: "0"} // 最近S个收藏者，设为0
 			code, response = allTrack.AllTracks()
 		}
 		codeType := utils.CheckCode(code)

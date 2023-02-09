@@ -89,7 +89,7 @@ func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewArtistDetailMenu(resultWithType[index].Id)
+		return NewArtistDetailMenu(resultWithType[index].Id, resultWithType[index].Name)
 	case []ds2.User:
 		if index >= len(resultWithType) {
 			return nil

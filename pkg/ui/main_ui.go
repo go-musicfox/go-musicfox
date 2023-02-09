@@ -567,6 +567,33 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 			m.inSearching = true
 			m.searchInput.Focus()
 		}
+	case "?", "？":
+		// 帮助
+		enterMenu(m, NewHelpMenu(), &MenuItem{Title: "帮助"})
+	case "a":
+		// 当前歌曲所属专辑
+		albumOfPlayingSong(m)
+	case "A":
+		// 选中歌曲所属专辑
+		albumOfSelectedSong(m)
+	case "s":
+		// 当前歌曲所属歌手
+		artistOfPlayingSong(m)
+	case "S":
+		// 选中歌曲所属歌手
+		artistOfSelectedSong(m)
+	case "o":
+		// 网页打开当前歌曲
+		openPlayingSongInWeb(m)
+	case "O":
+		// 网页打开选中项
+		openSelectedItemInWeb(m)
+	case ";", ":", "：", "；":
+		// 收藏选中歌单
+		collectSelectedPlaylist(m, true)
+	case "'", "\"":
+		// 取消收藏选中歌单
+		collectSelectedPlaylist(m, false)
 	case "r", "R":
 		// rerender
 		return m, func() tea.Msg {

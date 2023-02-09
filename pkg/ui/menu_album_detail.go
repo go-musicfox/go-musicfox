@@ -14,12 +14,12 @@ type AlbumDetailMenu struct {
 	DefaultMenu
 	menus   []MenuItem
 	songs   []structs.Song
-	AlbumId int64
+	albumId int64
 }
 
 func NewAlbumDetailMenu(albumId int64) *AlbumDetailMenu {
 	return &AlbumDetailMenu{
-		AlbumId: albumId,
+		albumId: albumId,
 	}
 }
 
@@ -36,7 +36,7 @@ func (m *AlbumDetailMenu) IsPlayable() bool {
 }
 
 func (m *AlbumDetailMenu) GetMenuKey() string {
-	return fmt.Sprintf("album_detail_%d", m.AlbumId)
+	return fmt.Sprintf("album_detail_%d", m.albumId)
 }
 
 func (m *AlbumDetailMenu) MenuViews() []MenuItem {
@@ -47,7 +47,7 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 
 		albumService := service.AlbumService{
-			ID: strconv.FormatInt(m.AlbumId, 10),
+			ID: strconv.FormatInt(m.albumId, 10),
 		}
 		code, response := albumService.Album()
 		codeType := utils.CheckCode(code)

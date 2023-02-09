@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/skratchdot/open-golang/open"
 	"log"
 	"math"
 	"os"
@@ -636,4 +637,178 @@ func downloadPlayingSong(m *NeteaseModel) {
 	}
 
 	utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+}
+
+func albumOfPlayingSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	if m.player.curSongIndex >= len(m.player.playlist) {
+		return
+	}
+
+	curSong := m.player.playlist[m.player.curSongIndex]
+	// 避免重复进入
+	if detail, ok := m.menu.(*AlbumDetailMenu); ok && detail.albumId == curSong.Album.Id {
+		return
+	}
+
+	enterMenu(m, NewAlbumDetailMenu(curSong.Album.Id), &MenuItem{Title: curSong.Album.Name, Subtitle: "「" + curSong.Name + "」所属专辑"})
+}
+
+func albumOfSelectedSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	songs, ok := m.menu.MenuData().([]structs.Song)
+	if !ok || m.selectedIndex >= len(songs) {
+		return
+	}
+
+	song := songs[m.selectedIndex]
+	// 避免重复进入
+	if detail, ok := m.menu.(*AlbumDetailMenu); ok && detail.albumId == song.Album.Id {
+		return
+	}
+
+	enterMenu(m, NewAlbumDetailMenu(song.Album.Id), &MenuItem{Title: song.Album.Name, Subtitle: "「" + song.Name + "」所属专辑"})
+}
+
+func artistOfPlayingSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	if m.player.curSongIndex >= len(m.player.playlist) {
+		return
+	}
+	curSong := m.player.playlist[m.player.curSongIndex]
+	artistCount := len(curSong.Artists)
+	if artistCount <= 0 {
+		return
+	}
+	if artistCount == 1 {
+		// 避免重复进入
+		if detail, ok := m.menu.(*ArtistDetailMenu); ok && detail.artistId == curSong.Artists[0].Id {
+			return
+		}
+		enterMenu(m, NewArtistDetailMenu(curSong.Artists[0].Id, curSong.Artists[0].Name), &MenuItem{Title: curSong.Artists[0].Name, Subtitle: "「" + curSong.Name + "」所属歌手"})
+		return
+	}
+	// 避免重复进入
+	if artists, ok := m.menu.(*ArtistsOfSongMenu); ok && artists.song.Id == curSong.Id {
+		return
+	}
+	enterMenu(m, NewArtistsOfSongMenu(curSong), &MenuItem{Title: "「" + curSong.Name + "」所属歌手"})
+}
+
+func artistOfSelectedSong(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	songs, ok := m.menu.MenuData().([]structs.Song)
+	if !ok || m.selectedIndex >= len(songs) {
+		return
+	}
+	song := songs[m.selectedIndex]
+	artistCount := len(song.Artists)
+	if artistCount <= 0 {
+		return
+	}
+	if artistCount == 1 {
+		// 避免重复进入
+		if detail, ok := m.menu.(*ArtistDetailMenu); ok && detail.artistId == song.Artists[0].Id {
+			return
+		}
+		enterMenu(m, NewArtistDetailMenu(song.Artists[0].Id, song.Artists[0].Name), &MenuItem{Title: song.Artists[0].Name, Subtitle: "「" + song.Name + "」所属歌手"})
+		return
+	}
+	// 避免重复进入
+	if artists, ok := m.menu.(*ArtistsOfSongMenu); ok && artists.song.Id == song.Id {
+		return
+	}
+	enterMenu(m, NewArtistsOfSongMenu(song), &MenuItem{Title: "「" + song.Name + "」所属歌手"})
+}
+
+func openPlayingSongInWeb(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	if m.player.curSongIndex >= len(m.player.playlist) {
+		return
+	}
+	curSong := m.player.playlist[m.player.curSongIndex]
+
+	_ = open.Start(utils.WebUrlOfSong(curSong.Id))
+}
+
+func openSelectedItemInWeb(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	// 打开歌曲
+	if songs, ok := m.menu.MenuData().([]structs.Song); ok && m.selectedIndex < len(songs) {
+		_ = open.Start(utils.WebUrlOfSong(songs[m.selectedIndex].Id))
+		return
+	}
+
+	// 打开歌单
+	if pm, ok := m.menu.(PlaylistsMenu); ok && m.selectedIndex < len(pm.GetPlaylists()) {
+		_ = open.Start(utils.WebUrlOfPlaylist(pm.GetPlaylists()[m.selectedIndex].Id))
+		return
+	}
+}
+
+func collectSelectedPlaylist(m *NeteaseModel, isCollect bool) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	playlists, ok := m.menu.MenuData().([]structs.Playlist)
+	if !ok || m.selectedIndex >= len(playlists) {
+		return
+	}
+
+	var t = "1"
+	if !isCollect {
+		t = "0"
+	}
+	s := service.PlaylistSubscribeService{ID: strconv.FormatInt(playlists[m.selectedIndex].Id, 10), T: t}
+	if code, resp := s.PlaylistSubscribe(); code != 200 {
+		var msg string
+		if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
+			msg, _ = jsonparser.GetString(resp, "data", "message")
+		}
+		if msg == "" {
+			msg = "收藏歌单或移除歌单失败"
+		}
+		utils.Notify(utils.NotifyContent{
+			Title:   msg,
+			Text:    playlists[m.selectedIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
+		})
+		return
+	}
+
+	if isCollect {
+		utils.Notify(utils.NotifyContent{
+			Title:   "已收藏歌单",
+			Text:    playlists[m.selectedIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
+		})
+	} else {
+		utils.Notify(utils.NotifyContent{
+			Title:   "已移除收藏歌单",
+			Text:    playlists[m.selectedIndex].Name,
+			Url:     constants.AppGithubUrl,
+			GroupId: constants.GroupID,
+		})
+	}
 }

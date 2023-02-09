@@ -648,7 +648,7 @@ func (p *Player) Intelligence(appendMode bool) {
 
 	intelligenceService := service.PlaymodeIntelligenceListService{
 		SongId:       strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
-		PlaylistId:   strconv.FormatInt(playlist.PlaylistId, 10),
+		PlaylistId:   strconv.FormatInt(playlist.playlistId, 10),
 		StartMusicId: strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
 	}
 	code, response := intelligenceService.PlaymodeIntelligenceList()
