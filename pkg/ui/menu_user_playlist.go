@@ -72,10 +72,6 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() Hook {
 			userId = model.user.UserId
 		}
 
-		if len(m.menus) > 0 && len(m.playlists) > 0 {
-			return true
-		}
-
 		userPlaylists := service.UserPlaylistService{
 			Uid:    strconv.FormatInt(userId, 10),
 			Limit:  strconv.Itoa(m.limit),
