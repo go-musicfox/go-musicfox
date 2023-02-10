@@ -26,6 +26,8 @@ github.com/anhoder/bubbles v0.7.8/go.mod h1:TIbWUkJn7FL3JAGNpRx9BVJ7NPjGok7Ex0Nq
 github.com/anhoder/bubbletea v0.12.6/go.mod h1:LB9GWT1WBmW8zWn4TbaIPsbKAkDouFhDAODhBNujZpM=
 github.com/anhoder/bubbletea v0.12.12 h1:bs8p7MrL4lIQgxRTdyFtgyXfJHSQe+rA/R12zhhAl3s=
 github.com/anhoder/bubbletea v0.12.12/go.mod h1:iFGcP1C7j10T7afSw3sAcW2ABRv9JP3va1g+Lt70zOE=
+github.com/anhoder/bubbletea v0.13.0 h1:ZDYHUaN/Vu4QnRmNMcQHjtZAE61j0Hbb5+MGuTbK9pg=
+github.com/anhoder/bubbletea v0.13.0/go.mod h1:iFGcP1C7j10T7afSw3sAcW2ABRv9JP3va1g+Lt70zOE=
 github.com/anhoder/goflac v0.1.0 h1:pJYotoqIc934K5jGUu5Y0RZ++rR8zCVkNzb2I2nQe58=
 github.com/anhoder/goflac v0.1.0/go.mod h1:1vVUG/CQcKJDaI6f9N8qJY/YlnNnAChS/hZb8NvaeqE=
 github.com/anhoder/lastfm-go v0.0.2 h1:yqaRzclR83RIecowZX4ffH3kzbEzX+wSeOztAx2nAg4=

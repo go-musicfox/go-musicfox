@@ -21,7 +21,7 @@ import (
 	"syscall"
 
 	"github.com/containerd/console"
-	isatty "github.com/mattn/go-isatty"
+	"github.com/mattn/go-isatty"
 	te "github.com/muesli/termenv"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -69,7 +69,7 @@ func Batch(cmds ...Cmd) Cmd {
 //
 // Example usage:
 //
-//     p := NewProgram(model, WithInput(someInput), WithOutput(someOutput))
+//	p := NewProgram(model, WithInput(someInput), WithOutput(someOutput))
 type ProgramOption func(*Program)
 
 // WithOutput sets the output which, by default, is stdout. In most cases you
@@ -368,10 +368,11 @@ func (p *Program) Start() error {
 						msgs <- WindowSizeMsg{w, h}
 					}
 				}()
-				p.renderer.lastRender = strings.Repeat("\n", p.renderer.height-1)
+				if p.renderer.height > 1 {
+					p.renderer.lastRender = strings.Repeat("\n", p.renderer.height-1)
+				}
 				fmt.Print(p.renderer.lastRender)
 			}
-
 
 			// Process batch commands
 			if batchedCmds, ok := msg.(batchMsg); ok {
@@ -453,6 +454,6 @@ func (p *Program) DisableMouseAllMotion() {
 }
 
 // Rerender use last render ui to refresh.
-func (p *Program) Rerender(view string)  {
+func (p *Program) Rerender(view string) {
 	p.renderer.flush(view)
 }

@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/anhoder/bubbles v0.7.8
-	github.com/anhoder/bubbletea v0.12.12
+	github.com/anhoder/bubbletea v0.13.0
 	github.com/anhoder/netease-music v1.3.4
 	github.com/anhoder/notificator v0.0.5
 	github.com/bogem/id3v2/v2 v2.1.3
