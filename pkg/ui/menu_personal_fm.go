@@ -39,10 +39,6 @@ func (m *PersonalFmMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *PersonalFmMenu) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *PersonalFmMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		// 已有数据
@@ -83,4 +79,8 @@ func (m *PersonalFmMenu) BottomOutHook() Hook {
 
 		return true
 	}
+}
+
+func (m *PersonalFmMenu) Songs() []structs.Song {
+	return m.songs
 }

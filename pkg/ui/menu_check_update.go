@@ -32,7 +32,7 @@ func (m *CheckUpdateMenu) MenuViews() []MenuItem {
 	}
 }
 
-func (m *CheckUpdateMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
+func (m *CheckUpdateMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
 	if m.hasUpdate {
 		_ = open.Start(constants.AppGithubUrl)
 	}

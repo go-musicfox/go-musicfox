@@ -31,7 +31,7 @@ func (m *RanksMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *RanksMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *RanksMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.ranks) {
 		return nil
 	}

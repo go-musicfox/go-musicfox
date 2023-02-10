@@ -27,7 +27,7 @@ func (m *LastfmRes) MenuViews() []MenuItem {
 	}
 }
 
-func (m *LastfmRes) SubMenu(model *NeteaseModel, _ int) IMenu {
+func (m *LastfmRes) SubMenu(model *NeteaseModel, _ int) Menu {
 	level := m.backLevel // 避免后续被更新
 	for i := 0; i < level; i++ {
 		backMenu(model)

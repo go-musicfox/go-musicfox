@@ -3,7 +3,7 @@ package ui
 type AlbumListMenu struct {
 	DefaultMenu
 	menus    []MenuItem
-	menuList []IMenu
+	menuList []Menu
 }
 
 func NewAlbumListMenu() *AlbumListMenu {
@@ -13,7 +13,7 @@ func NewAlbumListMenu() *AlbumListMenu {
 		{Title: "新碟上架"},
 		{Title: "最新专辑"},
 	}
-	albumMenu.menuList = []IMenu{
+	albumMenu.menuList = []Menu{
 		NewAlbumNewAreaMenu(),
 		NewAlbumTopAreaMenu(),
 		NewAlbumNewestMenu(),
@@ -30,7 +30,7 @@ func (m *AlbumListMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *AlbumListMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *AlbumListMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.menuList) {
 		return nil
 	}

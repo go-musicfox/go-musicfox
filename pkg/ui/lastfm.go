@@ -37,7 +37,7 @@ func (m *Lastfm) MenuViews() []MenuItem {
 	}
 }
 
-func (m *Lastfm) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *Lastfm) SubMenu(_ *NeteaseModel, index int) Menu {
 	if m.model.lastfmUser == nil || m.model.lastfmUser.SessionKey == "" {
 		return m.auth
 	}

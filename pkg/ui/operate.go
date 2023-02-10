@@ -1,13 +1,14 @@
 package ui
 
 import (
-	"github.com/skratchdot/open-golang/open"
 	"log"
 	"math"
 	"os"
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/skratchdot/open-golang/open"
 
 	"go-musicfox/pkg/constants"
 	"go-musicfox/pkg/player"
@@ -24,7 +25,7 @@ type menuStackItem struct {
 	selectedIndex int
 	menuCurPage   int
 	menuTitle     *MenuItem
-	menu          IMenu
+	menu          Menu
 }
 
 // 上移
@@ -207,7 +208,7 @@ func nextPage(m *NeteaseModel) {
 }
 
 // 进入菜单
-func enterMenu(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+func enterMenu(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 	m.isListeningKey = false
 	defer func() {
 		m.isListeningKey = true
@@ -306,8 +307,8 @@ func spaceKeyHandle(m *NeteaseModel) {
 		songs         []structs.Song
 		inPlayingMenu = m.player.InPlayingMenu()
 	)
-	if data, ok := m.menu.MenuData().([]structs.Song); ok {
-		songs = data
+	if menu, ok := m.menu.(SongsMenu); ok {
+		songs = menu.Songs()
 	}
 
 	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
@@ -359,7 +360,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 			likePlayingSong(m, isLike)
 		})
 		return
@@ -375,7 +376,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+			NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 				likePlayingSong(m, isLike)
 			})
 			return
@@ -457,14 +458,15 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 	loading.start()
 	defer loading.complete()
 
-	songs, ok := m.menu.MenuData().([]structs.Song)
+	menu, ok := m.menu.(SongsMenu)
 	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
-	if !ok || selectedIndex >= len(songs) {
+	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
+	songs := menu.Songs()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 			likeSelectedSong(m, isLike)
 		})
 		return
@@ -480,7 +482,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+			NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 				likeSelectedSong(m, isLike)
 			})
 			return
@@ -518,7 +520,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
 		}
 		utils.Notify(utils.NotifyContent{
 			Title:   msg,
-			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Text:    songs[selectedIndex].Name,
 			Url:     constants.AppGithubUrl,
 			GroupId: constants.GroupID,
 		})
@@ -553,7 +555,7 @@ func trashPlayingSong(m *NeteaseModel) {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 			trashPlayingSong(m)
 		})
 		return
@@ -578,14 +580,15 @@ func trashSelectedSong(m *NeteaseModel) {
 	loading.start()
 	defer loading.complete()
 
-	songs, ok := m.menu.MenuData().([]structs.Song)
+	menu, ok := m.menu.(SongsMenu)
 	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
-	if !ok || selectedIndex >= len(songs) {
+	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
+	songs := menu.Songs()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 			trashSelectedSong(m)
 		})
 		return
@@ -618,12 +621,12 @@ func downloadSelectedSong(m *NeteaseModel) {
 	loading.start()
 	defer loading.complete()
 
-	songs, ok := m.menu.MenuData().([]structs.Song)
+	menu, ok := m.menu.(SongsMenu)
 	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
-	if !ok || selectedIndex >= len(songs) {
+	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
-
+	songs := menu.Songs()
 	utils.DownloadMusic(songs[selectedIndex])
 }
 
@@ -662,18 +665,19 @@ func albumOfSelectedSong(m *NeteaseModel) {
 	loading.start()
 	defer loading.complete()
 
-	songs, ok := m.menu.MenuData().([]structs.Song)
-	if !ok || m.selectedIndex >= len(songs) {
+	menu, ok := m.menu.(SongsMenu)
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
+	songs := menu.Songs()
 
-	song := songs[m.selectedIndex]
 	// 避免重复进入
-	if detail, ok := m.menu.(*AlbumDetailMenu); ok && detail.albumId == song.Album.Id {
+	if detail, ok := m.menu.(*AlbumDetailMenu); ok && detail.albumId == songs[selectedIndex].Album.Id {
 		return
 	}
 
-	enterMenu(m, NewAlbumDetailMenu(song.Album.Id), &MenuItem{Title: song.Album.Name, Subtitle: "「" + song.Name + "」所属专辑"})
+	enterMenu(m, NewAlbumDetailMenu(songs[selectedIndex].Album.Id), &MenuItem{Title: songs[selectedIndex].Album.Name, Subtitle: "「" + songs[selectedIndex].Name + "」所属专辑"})
 }
 
 func artistOfPlayingSong(m *NeteaseModel) {
@@ -709,11 +713,13 @@ func artistOfSelectedSong(m *NeteaseModel) {
 	loading.start()
 	defer loading.complete()
 
-	songs, ok := m.menu.MenuData().([]structs.Song)
-	if !ok || m.selectedIndex >= len(songs) {
+	menu, ok := m.menu.(SongsMenu)
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
-	song := songs[m.selectedIndex]
+	songs := menu.Songs()
+	song := songs[selectedIndex]
 	artistCount := len(song.Artists)
 	if artistCount <= 0 {
 		return
@@ -751,15 +757,29 @@ func openSelectedItemInWeb(m *NeteaseModel) {
 	loading.start()
 	defer loading.complete()
 
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+
 	// 打开歌曲
-	if songs, ok := m.menu.MenuData().([]structs.Song); ok && m.selectedIndex < len(songs) {
-		_ = open.Start(utils.WebUrlOfSong(songs[m.selectedIndex].Id))
+	if songMenu, ok := m.menu.(SongsMenu); ok && selectedIndex < len(songMenu.Songs()) {
+		_ = open.Start(utils.WebUrlOfSong(songMenu.Songs()[selectedIndex].Id))
 		return
 	}
 
 	// 打开歌单
-	if pm, ok := m.menu.(PlaylistsMenu); ok && m.selectedIndex < len(pm.GetPlaylists()) {
-		_ = open.Start(utils.WebUrlOfPlaylist(pm.GetPlaylists()[m.selectedIndex].Id))
+	if playlistMenu, ok := m.menu.(PlaylistsMenu); ok && selectedIndex < len(playlistMenu.Playlists()) {
+		_ = open.Start(utils.WebUrlOfPlaylist(playlistMenu.Playlists()[selectedIndex].Id))
+		return
+	}
+
+	// 打开专辑
+	if albumMenu, ok := m.menu.(AlbumsMenu); ok && selectedIndex < len(albumMenu.Albums()) {
+		_ = open.Start(utils.WebUrlOfAlbum(albumMenu.Albums()[selectedIndex].Id))
+		return
+	}
+
+	// 打开歌手
+	if artistMenu, ok := m.menu.(ArtistsMenu); ok && selectedIndex < len(artistMenu.Artists()) {
+		_ = open.Start(utils.WebUrlOfArtist(artistMenu.Artists()[selectedIndex].Id))
 		return
 	}
 }
@@ -769,10 +789,11 @@ func collectSelectedPlaylist(m *NeteaseModel, isCollect bool) {
 	loading.start()
 	defer loading.complete()
 
-	playlists, ok := m.menu.MenuData().([]structs.Playlist)
-	if !ok || m.selectedIndex >= len(playlists) {
+	menu, ok := m.menu.(PlaylistsMenu)
+	if !ok || m.selectedIndex >= len(menu.Playlists()) {
 		return
 	}
+	playlists := menu.Playlists()
 
 	var t = "1"
 	if !isCollect {

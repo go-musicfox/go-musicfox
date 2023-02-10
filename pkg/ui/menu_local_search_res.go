@@ -2,6 +2,8 @@ package ui
 
 import (
 	"strings"
+
+	ds2 "go-musicfox/pkg/structs"
 )
 
 type searchRes struct {
@@ -10,13 +12,13 @@ type searchRes struct {
 }
 
 type LocalSearchMenu struct {
-	IMenu
+	Menu
 	resItems []searchRes
 }
 
-func NewSearchMenu(originMenu IMenu, search string) *LocalSearchMenu {
+func NewSearchMenu(originMenu Menu, search string) *LocalSearchMenu {
 	menu := &LocalSearchMenu{
-		IMenu: originMenu,
+		Menu: originMenu,
 	}
 
 	for i, item := range originMenu.MenuViews() {
@@ -42,12 +44,12 @@ func (m *LocalSearchMenu) MenuViews() []MenuItem {
 	return items
 }
 
-func (m *LocalSearchMenu) SubMenu(model *NeteaseModel, index int) IMenu {
+func (m *LocalSearchMenu) SubMenu(model *NeteaseModel, index int) Menu {
 	if index > len(m.resItems)-1 {
 		return nil
 	}
 
-	return m.IMenu.SubMenu(model, m.resItems[index].index)
+	return m.Menu.SubMenu(model, m.resItems[index].index)
 }
 
 func (m *LocalSearchMenu) RealDataIndex(index int) int {
@@ -63,5 +65,33 @@ func (m *LocalSearchMenu) BottomOutHook() Hook {
 }
 
 func (m *LocalSearchMenu) TopOutHook() Hook {
+	return nil
+}
+
+func (m *LocalSearchMenu) Songs() []ds2.Song {
+	if menu, ok := m.Menu.(SongsMenu); ok {
+		return menu.Songs()
+	}
+	return nil
+}
+
+func (m *LocalSearchMenu) Playlists() []ds2.Playlist {
+	if menu, ok := m.Menu.(PlaylistsMenu); ok {
+		return menu.Playlists()
+	}
+	return nil
+}
+
+func (m *LocalSearchMenu) Albums() []ds2.Album {
+	if menu, ok := m.Menu.(AlbumsMenu); ok {
+		return menu.Albums()
+	}
+	return nil
+}
+
+func (m *LocalSearchMenu) Artists() []ds2.Artist {
+	if menu, ok := m.Menu.(ArtistsMenu); ok {
+		return menu.Artists()
+	}
 	return nil
 }

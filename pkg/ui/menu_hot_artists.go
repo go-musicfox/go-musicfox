@@ -21,10 +21,6 @@ func (m *HotArtistsMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *HotArtistsMenu) MenuData() interface{} {
-	return m.artists
-}
-
 func (m *HotArtistsMenu) GetMenuKey() string {
 	return "hot_artists"
 }
@@ -33,7 +29,7 @@ func (m *HotArtistsMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *HotArtistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *HotArtistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.artists) {
 		return nil
 	}
@@ -62,4 +58,8 @@ func (m *HotArtistsMenu) BeforeEnterMenuHook() Hook {
 
 		return true
 	}
+}
+
+func (m *HotArtistsMenu) Artists() []structs.Artist {
+	return m.artists
 }

@@ -68,7 +68,7 @@ type MainUIModel struct {
 
 	pageType PageType // 显示的页面类型
 
-	menu   IMenu   // 菜单
+	menu   Menu    // 菜单
 	player *Player // 播放器
 }
 

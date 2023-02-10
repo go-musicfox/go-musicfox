@@ -21,10 +21,6 @@ func (m *DjProgramRankMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *DjProgramRankMenu) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *DjProgramRankMenu) IsPlayable() bool {
 	return true
 }
@@ -53,4 +49,8 @@ func (m *DjProgramRankMenu) BeforeEnterMenuHook() Hook {
 
 		return true
 	}
+}
+
+func (m *DjProgramRankMenu) Songs() []structs.Song {
+	return m.songs
 }

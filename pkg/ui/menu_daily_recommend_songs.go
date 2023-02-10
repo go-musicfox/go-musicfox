@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 
@@ -9,8 +11,9 @@ import (
 
 type DailyRecommendSongsMenu struct {
 	DefaultMenu
-	menus []MenuItem
-	songs []structs.Song
+	menus     []MenuItem
+	songs     []structs.Song
+	fetchTime time.Time
 }
 
 func NewDailyRecommendSongsMenu() *DailyRecommendSongsMenu {
@@ -19,10 +22,6 @@ func NewDailyRecommendSongsMenu() *DailyRecommendSongsMenu {
 
 func (m *DailyRecommendSongsMenu) IsSearchable() bool {
 	return true
-}
-
-func (m *DailyRecommendSongsMenu) MenuData() interface{} {
-	return m.songs
 }
 
 func (m *DailyRecommendSongsMenu) IsPlayable() bool {
@@ -44,6 +43,10 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 			return false
 		}
 
+		now := time.Now()
+		if len(m.menus) > 0 && len(m.songs) > 0 && utils.IsSameDate(m.fetchTime, now) {
+			return true
+		}
 		recommendSongs := service.RecommendSongsService{}
 		code, response := recommendSongs.RecommendSongs()
 		codeType := utils.CheckCode(code)
@@ -55,7 +58,12 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
 		}
 		m.songs = utils.GetDailySongs(response)
 		m.menus = GetViewFromSongs(m.songs)
+		m.fetchTime = now
 
 		return true
 	}
+}
+
+func (m *DailyRecommendSongsMenu) Songs() []structs.Song {
+	return m.songs
 }

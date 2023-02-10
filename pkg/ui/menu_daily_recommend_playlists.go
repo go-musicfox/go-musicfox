@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 
@@ -11,6 +13,7 @@ type DailyRecommendPlaylistsMenu struct {
 	DefaultMenu
 	menus     []MenuItem
 	playlists []structs.Playlist
+	fetchTime time.Time
 }
 
 func NewDailyRecommendPlaylistMenu() *DailyRecommendPlaylistsMenu {
@@ -21,10 +24,6 @@ func (m *DailyRecommendPlaylistsMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *DailyRecommendPlaylistsMenu) MenuData() interface{} {
-	return m.playlists
-}
-
 func (m *DailyRecommendPlaylistsMenu) GetMenuKey() string {
 	return "daily_playlists"
 }
@@ -33,11 +32,7 @@ func (m *DailyRecommendPlaylistsMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *DailyRecommendPlaylistsMenu) GetPlaylists() []structs.Playlist {
-	return m.playlists
-}
-
-func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.playlists) {
 		return nil
 	}
@@ -52,7 +47,8 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
 		}
 
 		// 不重复请求
-		if len(m.menus) > 0 && len(m.playlists) > 0 {
+		now := time.Now()
+		if len(m.menus) > 0 && len(m.playlists) > 0 && utils.IsSameDate(m.fetchTime, now) {
 			return true
 		}
 
@@ -69,7 +65,12 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
 		for _, playlist := range m.playlists {
 			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 		}
+		m.fetchTime = now
 
 		return true
 	}
+}
+
+func (m *DailyRecommendPlaylistsMenu) Playlists() []structs.Playlist {
+	return m.playlists
 }

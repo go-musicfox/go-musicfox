@@ -26,7 +26,7 @@ func (m *AlbumNewAreaMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *AlbumNewAreaMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *AlbumNewAreaMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	areaValueMapping := []string{
 		"ALL",
 		"ZH",

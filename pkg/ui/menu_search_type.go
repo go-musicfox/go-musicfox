@@ -28,7 +28,7 @@ func (m *SearchTypeMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *SearchTypeMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *SearchTypeMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 
 	typeArr := []SearchType{
 		StSingleSong,

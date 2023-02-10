@@ -34,10 +34,6 @@ func (m *AlbumTopMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *AlbumTopMenu) MenuData() interface{} {
-	return m.albums
-}
-
 func (m *AlbumTopMenu) GetMenuKey() string {
 	return fmt.Sprintf("album_top_%s", m.area)
 }
@@ -46,7 +42,7 @@ func (m *AlbumTopMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *AlbumTopMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *AlbumTopMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if len(m.albums) < index {
 		return nil
 	}
@@ -129,4 +125,8 @@ func (m *AlbumTopMenu) BottomOutHook() Hook {
 
 		return true
 	}
+}
+
+func (m *AlbumTopMenu) Albums() []structs.Album {
+	return m.albums
 }

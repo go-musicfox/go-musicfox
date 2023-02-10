@@ -175,6 +175,15 @@ $ musicfox
 |     d     |    下载当前播放歌曲    |                             |
 |     D     |    下载当前选中歌曲    |                             |
 |     /     |     搜索当前列表     |                             |
+|     ?     |      帮助信息      |                             |
+|     a     |   播放中歌曲的所属专辑   |                             |
+|     A     |   选中歌曲的所属专辑    |                             |
+|     s     |   播放中歌曲的所属歌手   |                             |
+|     S     |   选中歌曲的所属歌手    |                             |
+|     o     |   网页打开播放中歌曲    |                             |
+|     O     | 网页打开选中歌曲/专辑... |                             |
+|    ;/:    |     收藏选中歌单     |                             |
+|    '/"    |    取消收藏选中歌单    |                             |
 
 ## 配置文件
 
@@ -260,39 +269,7 @@ unlockSoundEffects=true
 qqCookieFile=
 ```
 
-
-## TODO
-
-* [x] 我的歌单
-* [x] 每日推荐歌曲
-* [x] 每日推荐歌单
-* [x] 私人FM
-* [x] 歌词显示
-* [x] 欢迎界面
-* [x] 搜索
-    * [x] 按歌曲
-    * [x] 按歌手
-    * [x] 按歌词
-    * [x] 按歌单
-    * [x] 按专辑
-    * [x] 按用户
-* [x] 排行榜
-* [x] 精选歌单
-* [x] 最新专辑
-* [x] 热门歌手
-* [x] 云盘
-* [x] 播放方式切换
-* [x] 喜欢/取消喜欢
-* [x] 心动模式/智能模式
-* [x] 音乐电台
-* [x] 配置文件
-* [x] 通知功能
-* [x] 歌单内搜索
-* [x] 听歌统计(网易云、last.fm)
-* [x] 播放列表
-* [x] 支持UnblockNeteaseMusic
-    
-## 伴生项目
+## 相关项目
 
 1. [anhoder/bubbletea](https://github.com/anhoder/bubbletea): 基于 [bubbletea](https://github.com/charmbracelet/bubbletea) 进行部分定制 
 2. [anhoder/bubbles](https://github.com/anhoder/bubbles): 基于 [bubbles](https://github.com/charmbracelet/bubbles) 进行部分定制

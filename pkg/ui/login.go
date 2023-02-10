@@ -30,7 +30,7 @@ type LoginModel struct {
 	qrLoginStep   int
 	qrLoginUniKey string
 	tips          string
-	AfterLogin    func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem)
+	AfterLogin    func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem)
 }
 
 func NewLogin() (login *LoginModel) {
@@ -373,7 +373,7 @@ func (m *LoginModel) loginSuccessHandle(nm *NeteaseModel, userInfo []byte) {
 }
 
 // NeedLoginHandle 需要登录的处理
-func NeedLoginHandle(model *NeteaseModel, callback func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem)) {
+func NeedLoginHandle(model *NeteaseModel, callback func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem)) {
 	model.pageType = PtLogin
 	model.loginModel.AfterLogin = callback
 }
