@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"go-musicfox/pkg/structs"
 	"go-musicfox/utils"
 
@@ -9,8 +11,9 @@ import (
 
 type DjTodayRecommendMenu struct {
 	DefaultMenu
-	menus  []MenuItem
-	radios []structs.DjRadio
+	menus     []MenuItem
+	radios    []structs.DjRadio
+	fetchTime time.Time
 }
 
 func NewDjTodayRecommendMenu() *DjTodayRecommendMenu {
@@ -29,7 +32,7 @@ func (m *DjTodayRecommendMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *DjTodayRecommendMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *DjTodayRecommendMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.radios) {
 		return nil
 	}
@@ -41,7 +44,8 @@ func (m *DjTodayRecommendMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 
 		// 不重复请求
-		if len(m.menus) > 0 && len(m.radios) > 0 {
+		now := time.Now()
+		if len(m.menus) > 0 && len(m.radios) > 0 && utils.IsSameDate(m.fetchTime, now) {
 			return true
 		}
 
@@ -54,6 +58,7 @@ func (m *DjTodayRecommendMenu) BeforeEnterMenuHook() Hook {
 
 		m.radios = utils.GetDjRadiosOfToday(response)
 		m.menus = GetViewFromDjRadios(m.radios)
+		m.fetchTime = now
 
 		return true
 	}

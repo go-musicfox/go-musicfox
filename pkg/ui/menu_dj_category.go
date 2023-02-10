@@ -29,7 +29,7 @@ func (m *DjCategoryMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *DjCategoryMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *DjCategoryMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.categories) {
 		return nil
 	}

@@ -47,7 +47,7 @@ func (m *LastfmAuth) BeforeEnterMenuHook() Hook {
 	}
 }
 
-func (m *LastfmAuth) SubMenu(model *NeteaseModel, _ int) IMenu {
+func (m *LastfmAuth) SubMenu(model *NeteaseModel, _ int) Menu {
 	var err error
 
 	loading := NewLoading(model)

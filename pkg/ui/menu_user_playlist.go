@@ -35,10 +35,6 @@ func (m *UserPlaylistMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *UserPlaylistMenu) MenuData() interface{} {
-	return m.playlists
-}
-
 func (m *UserPlaylistMenu) GetMenuKey() string {
 	return fmt.Sprintf("user_playlist_%d", m.userId)
 }
@@ -47,11 +43,11 @@ func (m *UserPlaylistMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *UserPlaylistMenu) GetPlaylists() []structs.Playlist {
+func (m *UserPlaylistMenu) Playlists() []structs.Playlist {
 	return m.playlists
 }
 
-func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if len(m.playlists) < index {
 		return nil
 	}

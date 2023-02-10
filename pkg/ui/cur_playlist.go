@@ -23,10 +23,6 @@ func (m *CurPlaylist) IsSearchable() bool {
 	return true
 }
 
-func (m *CurPlaylist) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *CurPlaylist) IsPlayable() bool {
 	return true
 }

@@ -27,7 +27,7 @@ func (m *ArtistDetailMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *ArtistDetailMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *ArtistDetailMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	switch index {
 	case 0:
 		return NewArtistSongMenu(m.artistId)

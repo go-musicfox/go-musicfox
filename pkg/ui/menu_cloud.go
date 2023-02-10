@@ -30,10 +30,6 @@ func (m *CloudMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *CloudMenu) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *CloudMenu) IsPlayable() bool {
 	return true
 }
@@ -119,4 +115,8 @@ func (m *CloudMenu) BottomOutHook() Hook {
 
 		return true
 	}
+}
+
+func (m *CloudMenu) Songs() []structs.Song {
+	return m.songs
 }

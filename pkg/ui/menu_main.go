@@ -3,7 +3,7 @@ package ui
 type MainMenu struct {
 	DefaultMenu
 	menus    []MenuItem
-	menuList []IMenu
+	menuList []Menu
 	model    *NeteaseModel
 }
 
@@ -26,7 +26,7 @@ func NewMainMenu(m *NeteaseModel) *MainMenu {
 		{Title: "帮助"},
 		{Title: "检查更新"},
 	}
-	mainMenu.menuList = []IMenu{
+	mainMenu.menuList = []Menu{
 		NewDailyRecommendSongsMenu(),
 		NewDailyRecommendPlaylistMenu(),
 		NewUserPlaylistMenu(CurUser),
@@ -67,7 +67,7 @@ func (m *MainMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *MainMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *MainMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.menuList) {
 		return nil
 	}

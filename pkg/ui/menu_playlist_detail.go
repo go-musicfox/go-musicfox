@@ -28,10 +28,6 @@ func (m *PlaylistDetailMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *PlaylistDetailMenu) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *PlaylistDetailMenu) IsPlayable() bool {
 	return true
 }
@@ -44,7 +40,7 @@ func (m *PlaylistDetailMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *PlaylistDetailMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
+func (m *PlaylistDetailMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
 	return nil
 }
 
@@ -73,4 +69,8 @@ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
 
 		return true
 	}
+}
+
+func (m *PlaylistDetailMenu) Songs() []structs.Song {
+	return m.songs
 }

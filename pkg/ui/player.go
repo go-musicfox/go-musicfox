@@ -65,7 +65,7 @@ type Player struct {
 	curSongIndex     int            // 当前歌曲的下标
 	curSong          structs.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
 	playingMenuKey   string         // 正在播放的菜单Key
-	playingMenu      IMenu
+	playingMenu      Menu
 
 	lrcTimer      *lyric.LRCTimer // 歌词计时器
 	lyrics        [5]string       // 歌词信息，保留5行
@@ -361,11 +361,11 @@ func (p *Player) LocatePlayingSong() {
 		return
 	}
 
-	songs, ok := p.model.menu.MenuData().([]structs.Song)
+	menu, ok := p.model.menu.(SongsMenu)
 	if !ok {
 		return
 	}
-	if !p.InPlayingMenu() || !p.CompareWithCurPlaylist(songs) {
+	if !p.InPlayingMenu() || !p.CompareWithCurPlaylist(menu.Songs()) {
 		return
 	}
 
@@ -654,7 +654,7 @@ func (p *Player) Intelligence(appendMode bool) {
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := utils.CheckCode(code)
 	if codeType == utils.NeedLogin {
-		NeedLoginHandle(p.model, func(m *NeteaseModel, newMenu IMenu, newTitle *MenuItem) {
+		NeedLoginHandle(p.model, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 			p.Intelligence(appendMode)
 		})
 		return

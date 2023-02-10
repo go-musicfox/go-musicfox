@@ -24,10 +24,6 @@ func (m *AlbumNewestMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *AlbumNewestMenu) MenuData() interface{} {
-	return m.albums
-}
-
 func (m *AlbumNewestMenu) GetMenuKey() string {
 	return "album_new_hot"
 }
@@ -36,7 +32,7 @@ func (m *AlbumNewestMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *AlbumNewestMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *AlbumNewestMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if len(m.albums) < index {
 		return nil
 	}
@@ -71,4 +67,8 @@ func (m *AlbumNewestMenu) BeforeEnterMenuHook() Hook {
 
 		return true
 	}
+}
+
+func (m *AlbumNewestMenu) Albums() []structs.Album {
+	return m.albums
 }

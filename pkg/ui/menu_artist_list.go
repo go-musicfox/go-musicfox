@@ -5,7 +5,7 @@ import "go-musicfox/pkg/structs"
 type ArtistsOfSongMenu struct {
 	DefaultMenu
 	menus    []MenuItem
-	menuList []IMenu
+	menuList []Menu
 	song     structs.Song
 }
 
@@ -30,7 +30,11 @@ func (m *ArtistsOfSongMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *ArtistsOfSongMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *ArtistsOfSongMenu) Artists() []structs.Artist {
+	return m.song.Artists
+}
+
+func (m *ArtistsOfSongMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.menuList) {
 		return nil
 	}

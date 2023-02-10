@@ -39,7 +39,7 @@ func (m *DjHotMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *DjHotMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *DjHotMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.radios) {
 		return nil
 	}

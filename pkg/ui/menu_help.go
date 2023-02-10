@@ -41,8 +41,17 @@ func NewHelpMenu() *HelpMenu {
 		{Title: "d", Subtitle: "下载播放中音乐"},
 		{Title: "D", Subtitle: "下载当前选中音乐"},
 		{Title: "c/C", Subtitle: "当前播放列表"},
-		{Title: "/", Subtitle: "搜索当前列表"},
 		{Title: "r/R", Subtitle: "重新渲染UI"},
+		{Title: "/", Subtitle: "搜索当前列表"},
+		{Title: "?", Subtitle: "帮助信息"},
+		{Title: "a", Subtitle: "播放中歌曲的所属专辑"},
+		{Title: "A", Subtitle: "选中歌曲的所属专辑"},
+		{Title: "s", Subtitle: "播放中歌曲的所属歌手"},
+		{Title: "S", Subtitle: "选中歌曲的所属歌手"},
+		{Title: "o", Subtitle: "网页打开播放中歌曲"},
+		{Title: "O", Subtitle: "网页打开选中歌曲/专辑..."},
+		{Title: ";/:", Subtitle: "收藏选中歌单"},
+		{Title: "'/\"", Subtitle: "取消收藏选中歌单"},
 	}
 
 	return menu
@@ -56,7 +65,7 @@ func (m *HelpMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *HelpMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *HelpMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index == 0 {
 		_ = open.Start(constants.AppGithubUrl)
 	}

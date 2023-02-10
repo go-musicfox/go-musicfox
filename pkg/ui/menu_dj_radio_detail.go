@@ -32,10 +32,6 @@ func (m *DjRadioDetailMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *DjRadioDetailMenu) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *DjRadioDetailMenu) IsPlayable() bool {
 	return true
 }
@@ -94,4 +90,8 @@ func (m *DjRadioDetailMenu) BottomOutHook() Hook {
 
 		return true
 	}
+}
+
+func (m *DjRadioDetailMenu) Songs() []structs.Song {
+	return m.songs
 }

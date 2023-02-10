@@ -3,7 +3,7 @@ package ui
 type RadioDjTypeMenu struct {
 	DefaultMenu
 	menus    []MenuItem
-	menuList []IMenu
+	menuList []Menu
 }
 
 func NewRadioDjTypeMenu() *RadioDjTypeMenu {
@@ -18,7 +18,7 @@ func NewRadioDjTypeMenu() *RadioDjTypeMenu {
 		{Title: "节目榜单"},
 		{Title: "24小时节目榜"},
 	}
-	menu.menuList = []IMenu{
+	menu.menuList = []Menu{
 		NewDjSubListMenu(),
 		NewDjRecommendMenu(),
 		NewDjTodayRecommendMenu(),
@@ -40,7 +40,7 @@ func (m *RadioDjTypeMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *RadioDjTypeMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *RadioDjTypeMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	if index >= len(m.menuList) {
 		return nil
 	}

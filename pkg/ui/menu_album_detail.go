@@ -27,10 +27,6 @@ func (m *AlbumDetailMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *AlbumDetailMenu) MenuData() interface{} {
-	return m.songs
-}
-
 func (m *AlbumDetailMenu) IsPlayable() bool {
 	return true
 }
@@ -63,4 +59,8 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() Hook {
 
 		return true
 	}
+}
+
+func (m *AlbumDetailMenu) Songs() []structs.Song {
+	return m.songs
 }

@@ -4,8 +4,8 @@ import "go-musicfox/pkg/structs"
 
 type Hook func(m *NeteaseModel) bool
 
-// IMenu menu interface
-type IMenu interface {
+// Menu menu interface
+type Menu interface {
 	// IsPlayable 当前菜单是否可播放？
 	IsPlayable() bool
 
@@ -30,11 +30,8 @@ type IMenu interface {
 	// FormatMenuItem 进入前的格式化
 	FormatMenuItem(item *MenuItem)
 
-	// MenuData 获取当前菜单的数据
-	MenuData() interface{}
-
 	// SubMenu 根据下标获取菜单Model
-	SubMenu(model *NeteaseModel, index int) IMenu
+	SubMenu(model *NeteaseModel, index int) Menu
 
 	// BeforePrePageHook 切换上一页前的Hook
 	BeforePrePageHook() Hook
@@ -55,13 +52,25 @@ type IMenu interface {
 	TopOutHook() Hook
 }
 
-// IDjMenu dj menu interface
-type IDjMenu interface {
-	IMenu
+// DjMenu dj menu interface
+type DjMenu interface {
+	Menu
+}
+
+type SongsMenu interface {
+	Songs() []structs.Song
 }
 
 type PlaylistsMenu interface {
-	GetPlaylists() []structs.Playlist
+	Playlists() []structs.Playlist
+}
+
+type AlbumsMenu interface {
+	Albums() []structs.Album
+}
+
+type ArtistsMenu interface {
+	Artists() []structs.Artist
 }
 
 type DefaultMenu struct {
@@ -98,11 +107,7 @@ func (e *DefaultMenu) MenuViews() []MenuItem {
 func (e *DefaultMenu) FormatMenuItem(_ *MenuItem) {
 }
 
-func (e *DefaultMenu) MenuData() interface{} {
-	return nil
-}
-
-func (e *DefaultMenu) SubMenu(_ *NeteaseModel, _ int) IMenu {
+func (e *DefaultMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
 	return nil
 }
 

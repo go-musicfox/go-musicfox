@@ -31,10 +31,6 @@ func (m *SearchResultMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *SearchResultMenu) MenuData() interface{} {
-	return m.result
-}
-
 func (m *SearchResultMenu) BeforeBackMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
 		if model.searchModel.wordsInput.Value() != "" {
@@ -71,7 +67,7 @@ func (m *SearchResultMenu) MenuViews() []MenuItem {
 	return m.menus
 }
 
-func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) IMenu {
+func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 	switch resultWithType := m.result.(type) {
 	case []ds2.Song:
 		return nil
@@ -198,4 +194,32 @@ func (m *SearchResultMenu) convertMenus() {
 	case []ds2.DjRadio:
 		m.menus = GetViewFromDjRadios(resultWithType)
 	}
+}
+
+func (m *SearchResultMenu) Songs() []ds2.Song {
+	if songs, ok := m.result.([]ds2.Song); ok {
+		return songs
+	}
+	return nil
+}
+
+func (m *SearchResultMenu) Playlists() []ds2.Playlist {
+	if playlists, ok := m.result.([]ds2.Playlist); ok {
+		return playlists
+	}
+	return nil
+}
+
+func (m *SearchResultMenu) Albums() []ds2.Album {
+	if albums, ok := m.result.([]ds2.Album); ok {
+		return albums
+	}
+	return nil
+}
+
+func (m *SearchResultMenu) Artists() []ds2.Artist {
+	if artists, ok := m.result.([]ds2.Artist); ok {
+		return artists
+	}
+	return nil
 }

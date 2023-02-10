@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"go-musicfox/pkg/configs"
 	"go-musicfox/pkg/constants"
@@ -429,6 +430,16 @@ func WebUrlOfArtist(artistId int64) string {
 	return "https://music.163.com/#/artist?id=" + strconv.FormatInt(artistId, 10)
 }
 
+func WebUrlOfAlbum(artistId int64) string {
+	return "https://music.163.com/#/album?id=" + strconv.FormatInt(artistId, 10)
+}
+
 func FileUrl(filepath string) string {
 	return "file://" + filepath
+}
+
+func IsSameDate(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }
