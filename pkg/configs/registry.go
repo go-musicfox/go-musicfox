@@ -30,6 +30,7 @@ type Registry struct {
 	MainPrimaryColor           string                   // 主题色
 	MainShowLyric              bool                     // 显示歌词
 	MainLyricOffset            int                      // 偏移:ms
+	MainShowLyricTrans         bool                     // 显示歌词翻译
 	MainShowNotify             bool                     // 显示通知
 	MainPProfPort              int                      // pprof端口
 	MainAltScreen              bool                     // AltScreen显示模式
@@ -69,6 +70,7 @@ func NewRegistryWithDefault() *Registry {
 		MainPlayerSongLevel:  service.Higher,
 		MainPrimaryColor:     constants.AppPrimaryColor,
 		MainShowLyric:        true,
+		MainShowLyricTrans:   true,
 		MainShowNotify:       true,
 		MainPProfPort:        constants.MainPProfPort,
 		MainAltScreen:        true,
@@ -129,6 +131,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	}
 	registry.MainShowLyric = ini.Bool("main.showLyric", true)
 	registry.MainLyricOffset = ini.Int("main.lyricOffset", 0)
+	registry.MainShowLyricTrans = ini.Bool("main.showLyricTrans", true)
 	registry.MainShowNotify = ini.Bool("main.showNotify", true)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", true)

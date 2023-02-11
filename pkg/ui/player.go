@@ -261,9 +261,9 @@ func (p *Player) songView() string {
 	}
 	builder.WriteString(SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	if p.State() == player.Playing {
-		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪  ", termenv.ANSIBrightYellow))
+		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
 	} else {
-		builder.WriteString(SetFgStyle("_ z Z Z  ", termenv.ANSIYellow))
+		builder.WriteString(SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
 	}
 
 	if p.curSongIndex < len(p.playlist) {
@@ -576,27 +576,32 @@ func (p *Player) Close() {
 }
 
 // lyricListener 歌词变更监听
-func (p *Player) lyricListener(_ int64, content string, _ bool, index int) {
+func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, index int) {
 	curIndex := len(p.lyrics) / 2
 
 	// before
 	for i := 0; i < curIndex; i++ {
-		if f := p.lrcTimer.GetLRCFragment(index - curIndex + i); f != nil {
+		if f, tf := p.lrcTimer.GetLRCFragment(index - curIndex + i); f != nil {
 			p.lyrics[i] = f.Content
-		} else {
-			p.lyrics[i] = ""
+			if tf != nil && tf.Content != "" {
+				p.lyrics[i] += " [" + tf.Content + "]"
+			}
 		}
 	}
 
 	// cur
 	p.lyrics[curIndex] = content
+	if transContent != "" {
+		p.lyrics[curIndex] += " [" + transContent + "]"
+	}
 
 	// after
 	for i := 0; i < len(p.lyrics)-curIndex; i++ {
-		if f := p.lrcTimer.GetLRCFragment(index + i); f != nil {
+		if f, tf := p.lrcTimer.GetLRCFragment(index + i); f != nil {
 			p.lyrics[curIndex+i] = f.Content
-		} else {
-			p.lyrics[curIndex+i] = ""
+			if tf != nil && tf.Content != "" {
+				p.lyrics[curIndex+i] += " [" + tf.Content + "]"
+			}
 		}
 	}
 }
@@ -608,8 +613,9 @@ func (p *Player) updateLyric(songId int64) {
 		p.lrcTimer.Stop()
 	}
 	lrcFile, _ := lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词~"))
+	tranLRCFile, _ := lyric.ReadTranslateLRC(strings.NewReader("[00:00.00]"))
 	defer func() {
-		p.lrcTimer = lyric.NewLRCTimer(lrcFile)
+		p.lrcTimer = lyric.NewLRCTimer(lrcFile, tranLRCFile)
 		p.lrcTimer.AddListener(p.lyricListener)
 		p.lrcTimer.Start()
 	}()
@@ -625,6 +631,13 @@ func (p *Player) updateLyric(songId int64) {
 	if lrc, err := jsonparser.GetString(response, "lrc", "lyric"); err == nil && lrc != "" {
 		if file, err := lyric.ReadLRC(strings.NewReader(lrc)); err == nil {
 			lrcFile = file
+		}
+	}
+	if configs.ConfigRegistry.MainShowLyricTrans {
+		if lrc, err := jsonparser.GetString(response, "tlyric", "lyric"); err == nil && lrc != "" {
+			if file, err := lyric.ReadTranslateLRC(strings.NewReader(lrc)); err == nil {
+				tranLRCFile = file
+			}
 		}
 	}
 }
