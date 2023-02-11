@@ -20,6 +20,14 @@ type LRCFile struct {
 	fragments []LRCFragment
 }
 
+type TranslateLRCFile struct {
+	fragments map[int64]string
+}
+
+func (tf *TranslateLRCFile) FindByTimeMs(timeMs int64) string {
+	return tf.fragments[timeMs]
+}
+
 type LRCFragment struct {
 	StartTimeMs int64
 	Content     string
@@ -58,6 +66,18 @@ func ReadLRC(reader io.Reader) (lrcFile *LRCFile, err error) {
 
 	lrcFile = &LRCFile{
 		fragments: fragments,
+	}
+	return
+}
+
+func ReadTranslateLRC(reader io.Reader) (f *TranslateLRCFile, err error) {
+	lrcFile, e := ReadLRC(reader)
+	if e != nil {
+		return nil, e
+	}
+	f = &TranslateLRCFile{fragments: map[int64]string{}}
+	for _, fragment := range lrcFile.fragments {
+		f.fragments[fragment.StartTimeMs] = fragment.Content
 	}
 	return
 }

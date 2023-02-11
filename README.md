@@ -136,9 +136,6 @@ NUR路径为[nur.repos.aleksana.go-musicfox](https://github.com/nix-community/nu
 > go build cmd/musicfox.go
 ```
 
-
-
-
 ## 使用
 
 ```sh
@@ -227,6 +224,8 @@ primaryColor="#ea403f"
 showLyric=true
 # 歌词偏移 ms
 lyricOffset=0
+# 显示歌词翻译
+showLyricTrans=true
 # 是否显示通知信息
 showNotify=true
 # 开启pprof, --pprof时会开启

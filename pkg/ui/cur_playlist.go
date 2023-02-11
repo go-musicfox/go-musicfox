@@ -34,3 +34,7 @@ func (m *CurPlaylist) GetMenuKey() string {
 func (m *CurPlaylist) MenuViews() []MenuItem {
 	return m.menus
 }
+
+func (m *CurPlaylist) Songs() []structs.Song {
+	return m.songs
+}

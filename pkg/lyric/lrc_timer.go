@@ -5,10 +5,11 @@ import (
 	"time"
 )
 
-type Listener func(startTimeMs int64, content string, last bool, index int)
+type Listener func(startTimeMs int64, content string, transContent string, last bool, index int)
 
 type LRCTimer struct {
 	file      *LRCFile
+	transFile *TranslateLRCFile
 	timer     chan time.Duration
 	stop      chan struct{}
 	listeners []Listener
@@ -17,10 +18,11 @@ type LRCTimer struct {
 	indexL   sync.Mutex
 }
 
-func NewLRCTimer(file *LRCFile) *LRCTimer {
+func NewLRCTimer(file *LRCFile, transFile *TranslateLRCFile) *LRCTimer {
 	return &LRCTimer{
-		file:  file,
-		timer: make(chan time.Duration),
+		file:      file,
+		transFile: transFile,
+		timer:     make(chan time.Duration),
 	}
 }
 
@@ -56,10 +58,11 @@ func (t *LRCTimer) Start() {
 				t.indexL.Unlock()
 			}
 
+			transContent := t.transFile.FindByTimeMs(current.StartTimeMs)
 			last := t.curIndex >= len(fragments)-1
 
 			for _, l := range t.listeners {
-				go l(current.StartTimeMs, current.Content, last, t.curIndex)
+				go l(current.StartTimeMs, current.Content, transContent, last, t.curIndex)
 			}
 
 			if last {
@@ -92,12 +95,14 @@ func (t *LRCTimer) Rewind() {
 	t.curIndex = 0
 }
 
-func (t *LRCTimer) GetLRCFragment(index int) *LRCFragment {
+func (t *LRCTimer) GetLRCFragment(index int) (*LRCFragment, *LRCFragment) {
 	if nil == t.file || index >= len(t.file.fragments) || index < 0 {
-		return nil
+		return nil, nil
 	}
+	f := &t.file.fragments[index]
+	transLyric := t.transFile.FindByTimeMs(f.StartTimeMs)
 
-	return &t.file.fragments[index]
+	return f, &LRCFragment{StartTimeMs: f.StartTimeMs, Content: transLyric}
 }
 
 func (t *LRCTimer) IsEmpty() bool {
