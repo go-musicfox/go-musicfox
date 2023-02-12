@@ -586,6 +586,8 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 			if tf != nil && tf.Content != "" {
 				p.lyrics[i] += " [" + tf.Content + "]"
 			}
+		} else {
+			p.lyrics[i] = ""
 		}
 	}
 
@@ -593,6 +595,8 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 	p.lyrics[curIndex] = content
 	if transContent != "" {
 		p.lyrics[curIndex] += " [" + transContent + "]"
+	} else {
+		p.lyrics[curIndex] = ""
 	}
 
 	// after
@@ -602,6 +606,8 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 			if tf != nil && tf.Content != "" {
 				p.lyrics[curIndex+i] += " [" + tf.Content + "]"
 			}
+		} else {
+			p.lyrics[curIndex+i] = ""
 		}
 	}
 }
