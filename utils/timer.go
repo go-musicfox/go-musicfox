@@ -72,6 +72,9 @@ func (t *Timer) Run() {
 	t.done = make(chan struct{})
 
 	for {
+		if t.ticker == nil {
+			return
+		}
 		select {
 		case tickAt := <-t.ticker.C:
 			t.passed += tickAt.Sub(t.lastTick)

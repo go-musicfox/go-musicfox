@@ -21,7 +21,7 @@ const (
 // CheckCode 验证响应码
 func CheckCode(code float64) ResCode {
 	switch code {
-	case 301, 302:
+	case 301, 302, 20001:
 		return NeedLogin
 	case 520:
 		return NetworkError
