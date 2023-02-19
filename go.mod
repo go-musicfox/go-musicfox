@@ -56,13 +56,13 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
-	golang.org/x/image v0.0.0-20190802002840-cff245a6509b // indirect
+	golang.org/x/image v0.5.0 // indirect
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
 	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
-	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/text v0.7.0 // indirect
 )
 
 replace (
