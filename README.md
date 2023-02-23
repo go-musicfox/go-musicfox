@@ -286,5 +286,6 @@ qqCookieFile=
 * [gcli](https://github.com/gookit/gcli)
 * ...
 
-[![Stargazers over time](https://starchart.cc/anhoder/go-musicfox.svg)](https://starchart.cc/anhoder/go-musicfox)
+[![Star History Chart](https://api.star-history.com/svg?repos=anhoder/go-musicfox&type=Date)](https://star-history.com/#anhoder/go-musicfox&Date)
+
 
