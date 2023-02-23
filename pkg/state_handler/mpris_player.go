@@ -183,6 +183,7 @@ func MapFromPlayingInfo(info PlayingInfo) MetadataMap {
 	m := &MetadataMap{
 		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/mpd/Tracks/%d", info.TrackID)),
 		"mpris:length":  info.TotalDuration / time.Microsecond,
+		"mpris:artUrl":  info.PicUrl,
 	}
 
 	m.nonEmptyString("xesam:album", info.Album)
