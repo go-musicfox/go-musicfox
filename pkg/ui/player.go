@@ -384,10 +384,6 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
-	// PicUrl模糊处理下，不然占网络
-	if song.PicUrl != "" {
-		song.PicUrl += "?param=60y60"
-	}
 
 	loading := NewLoading(p.model)
 	loading.start()
@@ -435,7 +431,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	go utils.Notify(utils.NotifyContent{
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
-		Icon:    song.PicUrl,
+		Icon:    utils.AddResizeParamForPicUrl(song.PicUrl, 60),
 		Url:     utils.WebUrlOfSong(song.Id),
 		GroupId: constants.GroupID,
 	})
