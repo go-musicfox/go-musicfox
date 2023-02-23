@@ -12,6 +12,7 @@ import (
 	"github.com/godbus/dbus/v5/prop"
 	"github.com/pkg/errors"
 	"go-musicfox/pkg/player"
+	"go-musicfox/utils"
 )
 
 // Player is a DBus object satisfying the `org.mpris.MediaPlayer2.Player` interface.
@@ -183,7 +184,7 @@ func MapFromPlayingInfo(info PlayingInfo) MetadataMap {
 	m := &MetadataMap{
 		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/mpd/Tracks/%d", info.TrackID)),
 		"mpris:length":  info.TotalDuration / time.Microsecond,
-		"mpris:artUrl":  info.PicUrl,
+		"mpris:artUrl":  utils.AddResizeParamForPicUrl(info.PicUrl, 1024),
 	}
 
 	m.nonEmptyString("xesam:album", info.Album)

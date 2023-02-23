@@ -260,7 +260,7 @@ func DownloadMusic(song structs.Song) {
 			}
 			defer tag.Close()
 			tag.SetDefaultEncoding(id3v2.EncodingUTF8)
-			if imgResp, err := http.Get(song.PicUrl + "?param=1024y1024"); err == nil {
+			if imgResp, err := http.Get(AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
 				defer imgResp.Body.Close()
 				if data, err := io.ReadAll(imgResp.Body); err == nil {
 					tag.AddAttachedPicture(id3v2.PictureFrame{
@@ -288,7 +288,7 @@ func DownloadMusic(song structs.Song) {
 			_ = metadata.SetAlbumArtist(song.Album.ArtistName())
 			_ = metadata.SetTitle(song.Name)
 			if flac, ok := metadata.(*songtag.FLAC); ok && song.PicUrl != "" {
-				if imgResp, err := http.Get(song.PicUrl + "?param=1024y1024"); err == nil {
+				if imgResp, err := http.Get(AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
 					defer imgResp.Body.Close()
 					if data, err := io.ReadAll(imgResp.Body); err == nil {
 						img, _ := flacpicture.NewFromImageData(flacpicture.PictureTypeFrontCover, "cover", data, "image/jpeg")
@@ -442,4 +442,11 @@ func IsSameDate(t1, t2 time.Time) bool {
 	y1, m1, d1 := t1.Date()
 	y2, m2, d2 := t2.Date()
 	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+func AddResizeParamForPicUrl(picurl string, size int64) string {
+	if picurl == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s?param=%dy%d", picurl, size, size)
 }
