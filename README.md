@@ -116,7 +116,11 @@ emerge -a media-sound/go-musicfox
 
 NUR路径为[nur.repos.aleksana.go-musicfox](https://github.com/nix-community/nur-combined/blob/master/repos/aleksana/pkgs/go-musicfox/default.nix#L35)。关于如何使用NUR，请参阅[NUR#how-to-use](https://github.com/nix-community/NUR#how-to-use)。
 
-#### 5. 直接下载
+#### 5. Void Linux可使用 void-packages-zh 安装：
+
+具体安装请看[这里](https://github.com/voidlinux-zh-association/void-packages-zh#readme)。
+
+#### 6. 直接下载
 
 下载Linux可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
 
