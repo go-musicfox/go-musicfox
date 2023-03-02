@@ -4,13 +4,13 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 > UI基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) ，做了一些定制
 
-![GitHub repo size](https://img.shields.io/github/repo-size/anhoder/go-musicfox) ![GitHub](https://img.shields.io/github/license/anhoder/go-musicfox) ![Last Tag](https://badgen.net/github/tag/anhoder/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/anhoder/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/anhoder/go-musicfox/total)
+![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total)
 
-![GitHub stars](https://img.shields.io/github/stars/anhoder/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/anhoder/go-musicfox?style=social)
+![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
 
 <p><img src="previews/logo.png" alt="logo" width="512"/></p>
 
-([The icon](https://github.com/anhoder/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
+([The icon](https://github.com/go-musicfox/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
 
 ## 预览
 
@@ -79,7 +79,7 @@ brew unlink musicfox && brew link --overwrite go-musicfox
 
 #### 2. 直接下载
 
-下载Mac可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
+下载Mac可执行文件: https://github.com/go-musicfox/go-musicfox/releases/latest
 
 ### Linux
 
@@ -122,16 +122,16 @@ NUR路径为[nur.repos.aleksana.go-musicfox](https://github.com/nix-community/nu
 
 #### 6. 直接下载
 
-下载Linux可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
+下载Linux可执行文件: https://github.com/go-musicfox/go-musicfox/releases/latest
 
 ### Windows
 
-下载Windows可执行文件: https://github.com/anhoder/go-musicfox/releases/latest
+下载Windows可执行文件: https://github.com/go-musicfox/go-musicfox/releases/latest
 
 ### 手动编译
 
 ```sh
-> git clone https://github.com/anhoder/go-musicfox
+> git clone https://github.com/go-musicfox/go-musicfox
 
 > go mod download
 
@@ -280,7 +280,7 @@ qqCookieFile=
 
 ## 感谢
 
-感谢以下项目及其贡献者们（不限于）：
+感谢以下项目及其贡献者们（但不限于）：
 
 * [bubbletea](https://github.com/charmbracelet/bubbletea)
 * [beep](https://github.com/faiface/beep)
@@ -290,6 +290,7 @@ qqCookieFile=
 * [gcli](https://github.com/gookit/gcli)
 * ...
 
-[![Star History Chart](https://api.star-history.com/svg?repos=anhoder/go-musicfox&type=Date)](https://star-history.com/#anhoder/go-musicfox&Date)
+感谢[JetBrains Open Source](https://www.jetbrains.com/zh-cn/opensource/?from=archery)为项目提供免费的 IDE 授权    
+[<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" width="200"/>](https://www.jetbrains.com/opensource/)
 
-
+[![Star History Chart](https://api.star-history.com/svg?repos=go-musicfox/go-musicfox&type=Date)](https://star-history.com/#go-musicfox/go-musicfox&Date)
