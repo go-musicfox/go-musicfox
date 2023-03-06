@@ -85,7 +85,10 @@ func (t *LRCTimer) IsStarted() bool {
 }
 
 func (t *LRCTimer) Stop() {
-	t.stop <- struct{}{}
+	select {
+	case t.stop <- struct{}{}:
+	default:
+	}
 	t.timer = nil
 }
 
