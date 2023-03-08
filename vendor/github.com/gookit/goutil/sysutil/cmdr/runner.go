@@ -5,6 +5,7 @@ import (
 
 	"github.com/gookit/color"
 	"github.com/gookit/goutil/arrutil"
+	"github.com/gookit/goutil/cliutil/cmdline"
 	"github.com/gookit/goutil/errorx"
 	"github.com/gookit/goutil/maputil"
 	"github.com/gookit/goutil/mathutil"
@@ -24,6 +25,7 @@ type Task struct {
 	PrevCond  func(prev *Task) bool
 }
 
+// NewTask instance
 func NewTask(cmd *Cmd) *Task {
 	return &Task{
 		Cmd: cmd,
@@ -92,6 +94,8 @@ type Runner struct {
 
 	// DryRun dry run all commands
 	DryRun bool
+	// OutToStd stdout and stderr
+	OutToStd bool
 	// IgnoreErr continue on error
 	IgnoreErr bool
 	// BeforeRun hooks on each task. return false to skip current task.
@@ -148,26 +152,32 @@ func (r *Runner) AddCmd(cmds ...*Cmd) *Runner {
 
 // GitCmd quick a git command task
 func (r *Runner) GitCmd(subCmd string, args ...string) *Runner {
-	r.AddTask(&Task{
+	return r.AddTask(&Task{
 		Cmd: NewGitCmd(subCmd, args...),
 	})
-	return r
 }
 
 // CmdWithArgs a command task
 func (r *Runner) CmdWithArgs(cmdName string, args ...string) *Runner {
-	r.AddTask(&Task{
+	return r.AddTask(&Task{
 		Cmd: NewCmd(cmdName, args...),
 	})
-	return r
 }
 
 // CmdWithAnys a command task
 func (r *Runner) CmdWithAnys(cmdName string, args ...any) *Runner {
-	r.AddTask(&Task{
+	return r.AddTask(&Task{
 		Cmd: NewCmd(cmdName, arrutil.SliceToStrings(args)...),
 	})
-	return r
+}
+
+// AddCmdline as a command task
+func (r *Runner) AddCmdline(line string) *Runner {
+	bin, args := cmdline.NewParser(line).BinAndArgs()
+
+	return r.AddTask(&Task{
+		Cmd: NewCmd(bin, args...),
+	})
 }
 
 // Run all tasks
@@ -183,13 +193,14 @@ func (r *Runner) Run() error {
 		}
 
 		if r.DryRun {
-			color.Infof("DRY-RUN: task #%d execute completed\n", i+1)
+			color.Infof("DRY-RUN: task#%d execute completed\n\n", i+1)
 			continue
 		}
 
 		if !r.RunTask(task) {
 			break
 		}
+		fmt.Println() // with newline.
 	}
 
 	if len(r.Errs) == 0 {
@@ -200,6 +211,10 @@ func (r *Runner) Run() error {
 
 // RunTask command
 func (r *Runner) RunTask(task *Task) (goon bool) {
+	if r.OutToStd && !task.Cmd.HasStdout() {
+		task.Cmd.ToOSStdoutStderr()
+	}
+
 	// do running
 	if err := task.Run(); err != nil {
 		r.Errs[task.ID] = err

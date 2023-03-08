@@ -35,6 +35,11 @@ func (v *Value) Val() any {
 	return v.V
 }
 
+// Val get
+// func (v *Value) ValOr[T any](defVal T) T {
+// 	return v.V
+// }
+
 // Int value get
 func (v *Value) Int() int {
 	if v.V == nil {

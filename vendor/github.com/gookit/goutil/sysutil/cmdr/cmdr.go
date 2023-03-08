@@ -1,7 +1,16 @@
 // Package cmdr Provide for quick build and run a cmd, batch run multi cmd tasks
 package cmdr
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/gookit/color"
+)
+
+// PrintCmdline on before exec
+func PrintCmdline(c *Cmd) {
+	color.Yellowln(">", c.Cmdline())
+}
 
 // OutputLines split output to lines
 func OutputLines(output string) []string {

@@ -104,15 +104,25 @@ func RandomOne[T any](arr []T) T {
 }
 
 // Unique value in the given slice data.
-func Unique[T ~string | comdef.XintOrFloat](arr []T) []T {
-	valMap := make(map[T]struct{}, len(arr))
-	uniArr := make([]T, 0, len(arr))
+func Unique[T ~string | comdef.XintOrFloat](list []T) []T {
+	valMap := make(map[T]struct{}, len(list))
+	uniArr := make([]T, 0, len(list))
 
-	for _, t := range arr {
+	for _, t := range list {
 		if _, ok := valMap[t]; !ok {
 			valMap[t] = struct{}{}
 			uniArr = append(uniArr, t)
 		}
 	}
 	return uniArr
+}
+
+// IndexOf value in given slice.
+func IndexOf[T ~string | comdef.XintOrFloat](val T, list []T) int {
+	for i, v := range list {
+		if v == val {
+			return i
+		}
+	}
+	return -1
 }

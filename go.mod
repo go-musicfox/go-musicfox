@@ -40,7 +40,7 @@ require (
 	github.com/go-flac/go-flac v0.3.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
 	github.com/gookit/color v1.5.2 // indirect
-	github.com/gookit/goutil v0.6.0 // indirect
+	github.com/gookit/goutil v0.6.6 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
@@ -54,15 +54,15 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
-	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
-	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
-	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
+	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/exp/shiny v0.0.0-20230307190834-24139beb5833 // indirect
 	golang.org/x/image v0.5.0 // indirect
-	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
+	golang.org/x/mobile v0.0.0-20201217150744-e6ae53a27f4f // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
-	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 )
 
 replace (
@@ -70,6 +70,7 @@ replace (
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.8
 	github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
+	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
 	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.2.9
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2

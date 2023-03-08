@@ -111,6 +111,15 @@ func (m SMap) Values() []string {
 	return ss
 }
 
+// ToKVPairs slice convert. eg: {k1:v1,k2:v2} => {k1,v1,k2,v2}
+func (m SMap) ToKVPairs() []string {
+	pairs := make([]string, 0, len(m)*2)
+	for k, v := range m {
+		pairs = append(pairs, k, v)
+	}
+	return pairs
+}
+
 // String data to string
 func (m SMap) String() string {
 	return ToString2(m)

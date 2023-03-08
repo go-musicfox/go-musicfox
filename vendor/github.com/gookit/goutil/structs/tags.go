@@ -204,6 +204,14 @@ func ParseTagValueDefault(field, tagVal string) (mp maputil.SMap, err error) {
 	return
 }
 
+// ParseTagValueQuick quick parse tag value string by sep(;)
+func ParseTagValueQuick(tagVal string, defines []string) maputil.SMap {
+	parseFn := ParseTagValueDefine(";", defines)
+
+	mp, _ := parseFn("", tagVal)
+	return mp
+}
+
 // ParseTagValueDefine parse tag value string by given defines.
 //
 // Examples:
@@ -235,7 +243,11 @@ func ParseTagValueDefine(sep string, defines []string) TagValFunc {
 
 // ParseTagValueNamed parse k-v tag value string. it's like INI format contents.
 //
-// eg: "name=int0;shorts=i;required=true;desc=int option message"
+// Examples:
+//
+//	eg: "name=val0;shorts=i;required=true;desc=a message"
+//	=>
+//	{name: val0, shorts: i, required: true, desc: a message}
 func ParseTagValueNamed(field, tagVal string, keys ...string) (mp maputil.SMap, err error) {
 	ss := strutil.Split(tagVal, ";")
 	ln := len(ss)
@@ -250,8 +262,7 @@ func ParseTagValueNamed(field, tagVal string, keys ...string) (mp maputil.SMap, 
 			return
 		}
 
-		kvNodes := strings.SplitN(s, "=", 2)
-		key, val := kvNodes[0], strings.TrimSpace(kvNodes[1])
+		key, val := strutil.TrimCut(s, "=")
 		if len(keys) > 0 && !arrutil.StringsHas(keys, key) {
 			err = fmt.Errorf("parse tag error on field '%s': invalid key name '%s'", field, key)
 			return

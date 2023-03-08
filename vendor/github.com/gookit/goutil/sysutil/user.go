@@ -46,11 +46,9 @@ var homeDir string
 
 // UserHomeDir is alias of os.UserHomeDir, but ignore error
 func UserHomeDir() string {
-	if homeDir != "" {
-		return homeDir
+	if homeDir == "" {
+		homeDir, _ = os.UserHomeDir()
 	}
-
-	homeDir, _ = os.UserHomeDir()
 	return homeDir
 }
 

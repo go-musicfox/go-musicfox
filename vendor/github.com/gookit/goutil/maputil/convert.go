@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/gookit/goutil/arrutil"
 	"github.com/gookit/goutil/reflects"
 	"github.com/gookit/goutil/strutil"
 )
@@ -15,7 +16,6 @@ func KeyToLower(src map[string]string) map[string]string {
 		k = strings.ToLower(k)
 		newMp[k] = v
 	}
-
 	return newMp
 }
 
@@ -29,8 +29,13 @@ func ToStringMap(src map[string]any) map[string]string {
 	return newMp
 }
 
-// HttpQueryString convert map[string]any data to http query string.
-func HttpQueryString(data map[string]any) string {
+// CombineToSMap combine two string-slice to SMap(map[string]string)
+func CombineToSMap(keys, values []string) SMap {
+	return arrutil.CombineToSMap(keys, values)
+}
+
+// HTTPQueryString convert map[string]any data to http query string.
+func HTTPQueryString(data map[string]any) string {
 	ss := make([]string, 0, len(data))
 	for k, v := range data {
 		ss = append(ss, k+"="+strutil.QuietString(v))

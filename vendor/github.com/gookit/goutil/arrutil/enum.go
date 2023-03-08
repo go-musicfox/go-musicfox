@@ -42,10 +42,23 @@ func (ss Strings) Join(sep string) string {
 
 // Has given element
 func (ss Strings) Has(sub string) bool {
+	return ss.Contains(sub)
+}
+
+// Contains given element
+func (ss Strings) Contains(sub string) bool {
 	for _, s := range ss {
 		if s == sub {
 			return true
 		}
 	}
 	return false
+}
+
+// First element value.
+func (ss Strings) First() string {
+	if len(ss) > 0 {
+		return ss[0]
+	}
+	return ""
 }

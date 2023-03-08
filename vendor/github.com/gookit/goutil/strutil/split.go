@@ -14,9 +14,19 @@ func Cut(s, sep string) (before string, after string, found bool) {
 	return s, "", false
 }
 
+// QuietCut always returns two substring.
+func QuietCut(s, sep string) (before string, after string) {
+	before, after, _ = Cut(s, sep)
+	return
+}
+
 // MustCut always returns two substring.
 func MustCut(s, sep string) (before string, after string) {
-	before, after, _ = Cut(s, sep)
+	var ok bool
+	before, after, ok = Cut(s, sep)
+	if !ok {
+		panic("cannot split input string to two nodes")
+	}
 	return
 }
 
@@ -25,6 +35,9 @@ func TrimCut(s, sep string) (string, string) {
 	before, after, _ := Cut(s, sep)
 	return strings.TrimSpace(before), strings.TrimSpace(after)
 }
+
+// SplitKV split string to key and value.
+func SplitKV(s, sep string) (string, string) { return TrimCut(s, sep) }
 
 // SplitValid string to slice. will trim each item and filter empty string node.
 func SplitValid(s, sep string) (ss []string) { return Split(s, sep) }
@@ -113,14 +126,34 @@ func Substr(s string, pos, length int) string {
 	return string(runes[pos:stopIdx])
 }
 
-// SplitInlineComment for a text string.
-func SplitInlineComment(val string) (string, string) {
-	if pos := strings.IndexByte(val, '#'); pos > -1 {
-		return strings.TrimRight(val[0:pos], " "), val[pos:]
+// SplitInlineComment for an inline text string.
+func SplitInlineComment(val string, strict ...bool) (string, string) {
+	// strict check: must with space
+	if len(strict) > 0 && strict[0] {
+		if pos := strings.Index(val, " #"); pos > -1 {
+			return strings.TrimRight(val[0:pos], " "), val[pos+1:]
+		}
+
+		if pos := strings.Index(val, " //"); pos > -1 {
+			return strings.TrimRight(val[0:pos], " "), val[pos+1:]
+		}
+	} else {
+		if pos := strings.IndexByte(val, '#'); pos > -1 {
+			return strings.TrimRight(val[0:pos], " "), val[pos:]
+		}
+
+		if pos := strings.Index(val, "//"); pos > -1 {
+			return strings.TrimRight(val[0:pos], " "), val[pos:]
+		}
 	}
 
-	if pos := strings.Index(val, "//"); pos > -1 {
-		return strings.TrimRight(val[0:pos], " "), val[pos:]
-	}
 	return val, ""
+}
+
+// FirstLine from command output
+func FirstLine(output string) string {
+	if i := strings.IndexByte(output, '\n'); i >= 0 {
+		return output[0:i]
+	}
+	return output
 }

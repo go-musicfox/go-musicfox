@@ -38,12 +38,19 @@ func BaseTypeVal(v reflect.Value) (value any, err error) {
 
 // ValueByType create reflect.Value by give reflect.Type
 func ValueByType(val any, typ reflect.Type) (rv reflect.Value, err error) {
-	if typ.Kind() <= reflect.Float64 {
+	// handle kind: string, bool, intX, uintX, floatX
+	if typ.Kind() == reflect.String || typ.Kind() <= reflect.Float64 {
 		return ValueByKind(val, typ.Kind())
 	}
 
-	// check type. like map, slice
 	newRv := reflect.ValueOf(val)
+
+	// try auto convert slice type
+	if IsArrayOrSlice(newRv.Kind()) && IsArrayOrSlice(typ.Kind()) {
+		return ConvSlice(newRv, typ.Elem())
+	}
+
+	// check type. like map
 	if newRv.Type() == typ {
 		return newRv, nil
 	}
@@ -121,6 +128,30 @@ func ValueByKind(val any, kind reflect.Kind) (rv reflect.Value, err error) {
 		err = comdef.ErrConvType
 	}
 	return
+}
+
+// ConvSlice make new type slice from old slice
+func ConvSlice(oldSlRv reflect.Value, newElemTyp reflect.Type) (rv reflect.Value, err error) {
+	if !IsArrayOrSlice(oldSlRv.Kind()) {
+		panic("only allow array or slice type value")
+	}
+
+	// do not need convert type
+	if oldSlRv.Type().Elem() == newElemTyp {
+		return oldSlRv, nil
+	}
+
+	newSlTyp := reflect.SliceOf(newElemTyp)
+	newSlRv := reflect.MakeSlice(newSlTyp, 0, 0)
+	for i := 0; i < oldSlRv.Len(); i++ {
+		newElemV, err := ValueByKind(oldSlRv.Index(i).Interface(), newElemTyp.Kind())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+
+		newSlRv = reflect.Append(newSlRv, newElemV)
+	}
+	return newSlRv, nil
 }
 
 // String convert

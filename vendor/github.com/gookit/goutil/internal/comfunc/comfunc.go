@@ -1,6 +1,7 @@
 package comfunc
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -65,7 +66,6 @@ func ParseEnvVar(val string, getFn func(string) string) (newVal string) {
 		if len(ss) == 2 {
 			name, def = strings.TrimSpace(ss[0]), strings.TrimSpace(ss[1])
 		} else {
-			def = eVar // use raw value
 			name = strings.TrimSpace(ss[0])
 		}
 
@@ -76,4 +76,27 @@ func ParseEnvVar(val string, getFn func(string) string) (newVal string) {
 		}
 		return eVal
 	})
+}
+
+// FormatTplAndArgs message
+func FormatTplAndArgs(fmtAndArgs []any) string {
+	if len(fmtAndArgs) == 0 || fmtAndArgs == nil {
+		return ""
+	}
+
+	ln := len(fmtAndArgs)
+	first := fmtAndArgs[0]
+
+	if ln == 1 {
+		if msgAsStr, ok := first.(string); ok {
+			return msgAsStr
+		}
+		return fmt.Sprintf("%+v", first)
+	}
+
+	// is template string.
+	if tplStr, ok := first.(string); ok {
+		return fmt.Sprintf(tplStr, fmtAndArgs[1:]...)
+	}
+	return fmt.Sprint(fmtAndArgs...)
 }

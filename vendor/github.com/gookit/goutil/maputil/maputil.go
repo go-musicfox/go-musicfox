@@ -16,6 +16,26 @@ const (
 	KeySepChar = '.'
 )
 
+// SimpleMerge simple merge two data map by string key.
+// will merge the src to dst map
+func SimpleMerge(src, dst map[string]any) map[string]any {
+	if len(src) == 0 {
+		return dst
+	}
+
+	if dst == nil {
+		return src
+	}
+
+	for key, val := range src {
+		dst[key] = val
+	}
+	return dst
+}
+
+// func DeepMerge(src, dst map[string]any, deep int) map[string]any {
+// }
+
 // MergeSMap simple merge two string map. merge src to dst map
 func MergeSMap(src, dst map[string]string, ignoreCase bool) map[string]string {
 	return MergeStringMap(src, dst, ignoreCase)

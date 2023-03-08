@@ -3,6 +3,7 @@ package goutil
 import (
 	"context"
 
+	"github.com/gookit/goutil/structs"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -43,4 +44,39 @@ func (g *ErrGroup) Add(handlers ...func() error) {
 	for _, handler := range handlers {
 		g.Go(handler)
 	}
+}
+
+// RunFn func
+type RunFn func(ctx *structs.Data) error
+
+// QuickRun struct
+type QuickRun struct {
+	ctx *structs.Data
+	// err error
+	fns []RunFn
+}
+
+// NewQuickRun instance
+func NewQuickRun() *QuickRun {
+	return &QuickRun{
+		ctx: structs.NewData(),
+	}
+}
+
+// Add func for run
+func (p *QuickRun) Add(fns ...RunFn) *QuickRun {
+	p.fns = append(p.fns, fns...)
+	return p
+}
+
+// Run all func
+func (p *QuickRun) Run() error {
+	for i, fn := range p.fns {
+		p.ctx.Set("index", i)
+
+		if err := fn(p.ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -2,7 +2,10 @@ package structs
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+
+	"github.com/gookit/goutil/maputil"
 )
 
 // ToMap quickly convert structs to map by reflect
@@ -23,6 +26,15 @@ func MustToMap(st any, optFns ...MapOptFunc) map[string]any {
 // TryToMap simple convert structs to map by reflect
 func TryToMap(st any, optFns ...MapOptFunc) (map[string]any, error) {
 	return StructToMap(st, optFns...)
+}
+
+// ToString format
+func ToString(st any, optFns ...MapOptFunc) string {
+	mp, err := StructToMap(st, optFns...)
+	if err == nil {
+		return maputil.ToString(mp)
+	}
+	return fmt.Sprint(st)
 }
 
 const defaultFieldTag = "json"

@@ -12,7 +12,7 @@ import (
 const (
 	OneKByte = 1024
 	OneMByte = 1024 * 1024
-	OneGByte = 1024 * 1024
+	OneGByte = 1024 * 1024 * 1024
 )
 
 // DataSize format bytes number friendly.
@@ -53,7 +53,7 @@ func ParseByte(sizeStr string) uint64 {
 		// last second char is k,m,g
 		lastSec := sizeStr[lastPos-1]
 		if lastSec > 'A' {
-			lastPos -= 1
+			lastPos--
 		}
 	}
 

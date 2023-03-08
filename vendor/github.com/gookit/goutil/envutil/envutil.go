@@ -1,3 +1,4 @@
+// Package envutil provide some commonly ENV util functions.
 package envutil
 
 import (
@@ -41,9 +42,27 @@ func ParseValue(val string) (newVal string) {
 	return comfunc.ParseEnvVar(val, ValueGetter)
 }
 
-// SetEnvs to os
-func SetEnvs(mp map[string]string) {
+// SetEnvMap set multi ENV(string-map) to os
+func SetEnvMap(mp map[string]string) {
 	for key, value := range mp {
 		_ = os.Setenv(key, value)
+	}
+}
+
+// SetEnvs set multi k-v ENV pairs to os
+func SetEnvs(kvPairs ...string) {
+	if len(kvPairs)%2 == 1 {
+		panic("envutil.SetEnvs: odd argument count")
+	}
+
+	for i := 0; i < len(kvPairs); i += 2 {
+		_ = os.Setenv(kvPairs[i], kvPairs[i+1])
+	}
+}
+
+// UnsetEnvs from os
+func UnsetEnvs(keys ...string) {
+	for _, key := range keys {
+		_ = os.Unsetenv(key)
 	}
 }

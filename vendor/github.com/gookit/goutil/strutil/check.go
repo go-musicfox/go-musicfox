@@ -1,6 +1,7 @@
 package strutil
 
 import (
+	"path"
 	"regexp"
 	"strings"
 	"unicode"
@@ -10,22 +11,13 @@ import (
 // Equal check, alias of strings.EqualFold
 var Equal = strings.EqualFold
 
-// NoCaseEq check two strings is equals and case-insensitivity
-func NoCaseEq(s, t string) bool {
-	return strings.EqualFold(s, t)
-}
-
 // IsNumChar returns true if the given character is a numeric, otherwise false.
-func IsNumChar(c byte) bool {
-	return c >= '0' && c <= '9'
-}
+func IsNumChar(c byte) bool { return c >= '0' && c <= '9' }
 
 var numReg = regexp.MustCompile(`^\d+$`)
 
 // IsNumeric returns true if the given string is a numeric, otherwise false.
-func IsNumeric(s string) bool {
-	return numReg.MatchString(s)
-}
+func IsNumeric(s string) bool { return numReg.MatchString(s) }
 
 // IsAlphabet char
 func IsAlphabet(char uint8) bool {
@@ -47,16 +39,31 @@ func IsAlphaNum(c uint8) bool {
 }
 
 // StrPos alias of the strings.Index
-func StrPos(s, sub string) int {
-	return strings.Index(s, sub)
-}
+func StrPos(s, sub string) int { return strings.Index(s, sub) }
 
 // BytePos alias of the strings.IndexByte
-func BytePos(s string, bt byte) int {
-	return strings.IndexByte(s, bt)
+func BytePos(s string, bt byte) int { return strings.IndexByte(s, bt) }
+
+// IEqual ignore case check given two string is equals.
+func IEqual(s1, s2 string) bool { return strings.EqualFold(s1, s2) }
+
+// NoCaseEq check two strings is equals and case-insensitivity
+func NoCaseEq(s, t string) bool { return strings.EqualFold(s, t) }
+
+// IContains ignore case check substr in the given string.
+func IContains(s, sub string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(sub))
 }
 
-// HasOneSub substr in the given string.
+// ContainsByte in given string.
+func ContainsByte(s string, c byte) bool {
+	return strings.IndexByte(s, c) >= 0
+}
+
+// ContainsOne substr(s) in the given string. alias of HasOneSub()
+func ContainsOne(s string, subs []string) bool { return HasOneSub(s, subs) }
+
+// HasOneSub substr(s) in the given string.
 func HasOneSub(s string, subs []string) bool {
 	for _, sub := range subs {
 		if strings.Contains(s, sub) {
@@ -65,6 +72,9 @@ func HasOneSub(s string, subs []string) bool {
 	}
 	return false
 }
+
+// ContainsAll substr(s) in the given string. alias of HasAllSubs()
+func ContainsAll(s string, subs []string) bool { return HasAllSubs(s, subs) }
 
 // HasAllSubs all substr in the given string.
 func HasAllSubs(s string, subs []string) bool {
@@ -112,22 +122,16 @@ func IsValidUtf8(s string) bool { return utf8.ValidString(s) }
 var spaceTable = [256]int8{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 // IsSpace returns true if the given character is a space, otherwise false.
-func IsSpace(c byte) bool {
-	return spaceTable[c] == 1
-}
+func IsSpace(c byte) bool { return spaceTable[c] == 1 }
 
 // IsEmpty returns true if the given string is empty.
 func IsEmpty(s string) bool { return len(s) == 0 }
 
 // IsBlank returns true if the given string is all space characters.
-func IsBlank(s string) bool {
-	return IsBlankBytes([]byte(s))
-}
+func IsBlank(s string) bool { return IsBlankBytes([]byte(s)) }
 
 // IsNotBlank returns true if the given string is not blank.
-func IsNotBlank(s string) bool {
-	return !IsBlankBytes([]byte(s))
-}
+func IsNotBlank(s string) bool { return !IsBlankBytes([]byte(s)) }
 
 // IsBlankBytes returns true if the given []byte is all space characters.
 func IsBlankBytes(bs []byte) bool {
@@ -140,21 +144,35 @@ func IsBlankBytes(bs []byte) bool {
 }
 
 // IsSymbol reports whether the rune is a symbolic character.
-func IsSymbol(r rune) bool {
-	return unicode.IsSymbol(r)
+func IsSymbol(r rune) bool { return unicode.IsSymbol(r) }
+
+// HasEmpty value for input strings
+func HasEmpty(ss ...string) bool {
+	for _, s := range ss {
+		if s == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// IsAllEmpty for input strings
+func IsAllEmpty(ss ...string) bool {
+	for _, s := range ss {
+		if s != "" {
+			return false
+		}
+	}
+	return true
 }
 
 var verRegex = regexp.MustCompile(`^[0-9][\d.]+(-\w+)?$`)
 
 // IsVersion number. eg: 1.2.0
-func IsVersion(s string) bool {
-	return verRegex.MatchString(s)
-}
+func IsVersion(s string) bool { return verRegex.MatchString(s) }
 
 // Compare for two string.
-func Compare(s1, s2, op string) bool {
-	return VersionCompare(s1, s2, op)
-}
+func Compare(s1, s2, op string) bool { return VersionCompare(s1, s2, op) }
 
 // VersionCompare for two version string.
 func VersionCompare(v1, v2, op string) bool {
@@ -172,4 +190,21 @@ func VersionCompare(v1, v2, op string) bool {
 	default: // eq
 		return v1 == v2
 	}
+}
+
+// QuickMatch check for a string. pattern can be a sub string.
+func QuickMatch(pattern, s string) bool {
+	if strings.ContainsRune(pattern, '*') {
+		return GlobMatch(pattern, s)
+	}
+	return strings.Contains(s, pattern)
+}
+
+// GlobMatch check for a string.
+func GlobMatch(pattern, s string) bool {
+	ok, err := path.Match(pattern, s)
+	if err != nil {
+		ok = false
+	}
+	return ok
 }

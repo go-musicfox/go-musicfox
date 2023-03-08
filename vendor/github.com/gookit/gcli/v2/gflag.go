@@ -34,7 +34,7 @@ type FlagsOption struct {
 	// NameDescOL flag and desc at one line on print help
 	NameDescOL bool
 	// Alignment flag align left or right. default is: right
-	Alignment uint8
+	Alignment strutil.PosFlag
 	// TagName on struct
 	TagName string
 }
@@ -317,8 +317,9 @@ func (fs *Flags) Var(p flag.Value, meta FlagMeta) {
 
 // VarOpt binding a custom var option
 // Usage:
-//		var names gcli.Strings
-// 		cmd.VarOpt(&names, "tables", "t", "description ...")
+//
+//	var names gcli.Strings
+//	cmd.VarOpt(&names, "tables", "t", "description ...")
 func (fs *Flags) VarOpt(p flag.Value, name, shorts, desc string) {
 	fs.varOpt(p, newFlagMeta(name, desc, nil, splitShortStr(shorts)))
 }

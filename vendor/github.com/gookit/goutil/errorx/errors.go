@@ -37,6 +37,11 @@ func Fail(code int, msg string) ErrorR {
 	return &errorR{code: code, msg: msg}
 }
 
+// Failf code with error response
+func Failf(code int, tpl string, v ...any) ErrorR {
+	return &errorR{code: code, msg: fmt.Sprintf(tpl, v...)}
+}
+
 // Suc success response reply
 func Suc(msg string) ErrorR {
 	return &errorR{code: 0, msg: msg}
@@ -110,6 +115,8 @@ func (e ErrMap) One() error {
 
 // Errors multi error list
 type Errors []error
+
+// ErrList alias for Errors
 type ErrList = Errors
 
 // Error string
