@@ -8,6 +8,27 @@ import (
 	"strings"
 )
 
+// values from https://github.com/go-terminfo/terminfo
+// var (
+// RgbaBlack    = image_color.RGBA{0, 0, 0, 255}
+// Red       = color.RGBA{205, 0, 0, 255}
+// Green     = color.RGBA{0, 205, 0, 255}
+// Orange    = color.RGBA{205, 205, 0, 255}
+// Blue      = color.RGBA{0, 0, 238, 255}
+// Magenta   = color.RGBA{205, 0, 205, 255}
+// Cyan      = color.RGBA{0, 205, 205, 255}
+// LightGrey = color.RGBA{229, 229, 229, 255}
+//
+// DarkGrey     = color.RGBA{127, 127, 127, 255}
+// LightRed     = color.RGBA{255, 0, 0, 255}
+// LightGreen   = color.RGBA{0, 255, 0, 255}
+// Yellow       = color.RGBA{255, 255, 0, 255}
+// LightBlue    = color.RGBA{92, 92, 255, 255}
+// LightMagenta = color.RGBA{255, 0, 255, 255}
+// LightCyan    = color.RGBA{0, 255, 255, 255}
+// White        = color.RGBA{255, 255, 255, 255}
+// )
+
 var (
 	// ---------- basic(16) <=> 256 color convert ----------
 	basicTo256Map = map[uint8]uint8{
@@ -32,14 +53,14 @@ var (
 	// ---------- basic(16) <=> RGB color convert ----------
 	// refer from Hyper app
 	basic2hexMap = map[uint8]string{
-		30:  "000000", // black
-		31:  "c51e14", // red
-		32:  "1dc121", // green
-		33:  "c7c329", // yellow
-		34:  "0a2fc4", // blue
-		35:  "c839c5", // magenta
-		36:  "20c5c6", // cyan
-		37:  "c7c7c7", // white
+		30: "000000", // black
+		31: "c51e14", // red
+		32: "1dc121", // green
+		33: "c7c329", // yellow
+		34: "0a2fc4", // blue
+		35: "c839c5", // magenta
+		36: "20c5c6", // cyan
+		37: "c7c7c7", // white
 		// - don't add bg color
 		// 40:  "000000", // black
 		// 41:  "c51e14", // red
@@ -49,14 +70,14 @@ var (
 		// 45:  "c839c5", // magenta
 		// 46:  "20c5c6", // cyan
 		// 47:  "c7c7c7", // white
-		90:  "686868", // lightBlack/darkGray
-		91:  "fd6f6b", // lightRed
-		92:  "67f86f", // lightGreen
-		93:  "fffa72", // lightYellow
-		94:  "6a76fb", // lightBlue
-		95:  "fd7cfc", // lightMagenta
-		96:  "68fdfe", // lightCyan
-		97:  "ffffff", // lightWhite
+		90: "686868", // lightBlack/darkGray
+		91: "fd6f6b", // lightRed
+		92: "67f86f", // lightGreen
+		93: "fffa72", // lightYellow
+		94: "6a76fb", // lightBlue
+		95: "fd7cfc", // lightMagenta
+		96: "68fdfe", // lightCyan
+		97: "ffffff", // lightWhite
 		// - don't add bg color
 		// 100: "686868", // lightBlack/darkGray
 		// 101: "fd6f6b", // lightRed
@@ -497,7 +518,7 @@ func Rgb2basic(r, g, b uint8, isBg bool) uint8 {
 	return RgbToAnsi(r, g, b, isBg)
 }
 
-// Rgb2ansi alias of the RgbToAnsi()
+// Rgb2ansi convert RGB-code to 16-code, alias of the RgbToAnsi()
 func Rgb2ansi(r, g, b uint8, isBg bool) uint8 {
 	return RgbToAnsi(r, g, b, isBg)
 }
@@ -718,7 +739,9 @@ func RgbToHslInt(r, g, b uint8) []int {
 }
 
 // RgbToHsl Converts an RGB color value to HSL. Conversion formula
+//
 // adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+//
 // Assumes r, g, and b are contained in the set [0, 255] and
 // returns h, s, and l in the set [0, 1].
 func RgbToHsl(r, g, b uint8) []float64 {
@@ -733,11 +756,9 @@ func RgbToHsl(r, g, b uint8) []float64 {
 	min, max := ps[0], ps[2]
 	// max := math.Max(math.Max(pr, pg), pb)
 	// min := math.Min(math.Min(pr, pg), pb)
-
 	mid := (max + min) / 2
 
 	h, s, l := mid, mid, mid
-
 	if max == min {
 		h, s = 0, 0 // achromatic
 	} else {

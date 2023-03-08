@@ -2,7 +2,6 @@ package color
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -12,6 +11,17 @@ import (
 	"github.com/xo/terminfo"
 )
 
+// Level is the color level supported by a terminal.
+type Level = terminfo.ColorLevel
+
+// terminal color available level alias of the terminfo.ColorLevel*
+const (
+	LevelNo  = terminfo.ColorLevelNone     // not support color.
+	Level16  = terminfo.ColorLevelBasic    // basic - 3/4 bit color supported
+	Level256 = terminfo.ColorLevelHundreds // hundreds - 8-bit color supported
+	LevelRgb = terminfo.ColorLevelMillions // millions - (24 bit)true color supported
+)
+
 /*************************************************************
  * helper methods for detect color supports
  *************************************************************/
@@ -19,8 +29,8 @@ import (
 // DetectColorLevel for current env
 //
 // NOTICE: The method will detect terminal info each times,
-// 	if only want get current color level, please direct call SupportColor() or TermColorLevel()
-func DetectColorLevel() terminfo.ColorLevel {
+// 	if only want to get current color level, please direct call SupportColor() or TermColorLevel()
+func DetectColorLevel() Level {
 	level, _ := detectTermColorLevel()
 	return level
 }
@@ -28,7 +38,7 @@ func DetectColorLevel() terminfo.ColorLevel {
 // detect terminal color support level
 //
 // refer https://github.com/Delta456/box-cli-maker
-func detectTermColorLevel() (level terminfo.ColorLevel, needVTP bool) {
+func detectTermColorLevel() (level Level, needVTP bool) {
 	// on windows WSL:
 	// - runtime.GOOS == "Linux"
 	// - support true-color
@@ -76,7 +86,7 @@ func detectTermColorLevel() (level terminfo.ColorLevel, needVTP bool) {
 //
 // refer the terminfo.ColorLevelFromEnv()
 // https://en.wikipedia.org/wiki/Terminfo
-func detectColorLevelFromEnv(termVal string, isWin bool) terminfo.ColorLevel {
+func detectColorLevelFromEnv(termVal string, isWin bool) Level {
 	// check for overriding environment variables
 	colorTerm, termProg, forceColor := os.Getenv("COLORTERM"), os.Getenv("TERM_PROGRAM"), os.Getenv("FORCE_COLOR")
 	switch {
@@ -172,6 +182,7 @@ func detectWSL() bool {
 	return false
 }
 
+/*
 // refer
 //  https://github.com/Delta456/box-cli-maker/blob/7b5a1ad8a016ce181e7d8b05e24b54ff60b4b38a/detect_unix.go#L27-L45
 // detect WSL as it has True Color support
@@ -198,10 +209,11 @@ func isWSL() bool {
 	}
 
 	// it gives "Microsoft" for WSL and "microsoft" for WSL 2
-	// it support True-color
+	// it supports True-color
 	content := strings.ToLower(string(wsl))
 	return strings.Contains(content, "microsoft")
 }
+*/
 
 /*************************************************************
  * helper methods for check env
@@ -228,11 +240,7 @@ func IsConsole(w io.Writer) bool {
 // IsMSys msys(MINGW64) environment, does not necessarily support color
 func IsMSys() bool {
 	// like "MSYSTEM=MINGW64"
-	if len(os.Getenv("MSYSTEM")) > 0 {
-		return true
-	}
-
-	return false
+	return len(os.Getenv("MSYSTEM")) > 0
 }
 
 // IsSupportColor check current console is support color.
@@ -243,7 +251,7 @@ func IsSupportColor() bool {
 	return IsSupport16Color()
 }
 
-// IsSupportColor check current console is support color.
+// IsSupport16Color check current console is support color.
 //
 // NOTICE: The method will detect terminal info each times,
 // 	if only want get current color level, please direct call SupportColor() or TermColorLevel()
@@ -255,7 +263,7 @@ func IsSupport16Color() bool {
 // IsSupport256Color render check
 //
 // NOTICE: The method will detect terminal info each times,
-// 	if only want get current color level, please direct call SupportColor() or TermColorLevel()
+// 	if only want to get current color level, please direct call SupportColor() or TermColorLevel()
 func IsSupport256Color() bool {
 	level, _ := detectTermColorLevel()
 	return level > terminfo.ColorLevelBasic

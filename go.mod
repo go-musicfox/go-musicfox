@@ -39,8 +39,8 @@ require (
 	github.com/forgoer/openssl v1.2.1 // indirect
 	github.com/go-flac/go-flac v0.3.1 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
-	github.com/gookit/color v1.5.0 // indirect
-	github.com/gookit/goutil v0.5.2 // indirect
+	github.com/gookit/color v1.5.2 // indirect
+	github.com/gookit/goutil v0.6.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
@@ -50,18 +50,18 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mewkiz/flac v1.0.7 // indirect
 	github.com/mewkiz/pkg v0.0.0-20211102230744-16a6ce8f1b77 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
-	golang.org/x/crypto v0.0.0-20220314234659-1baeb1ce4c0b // indirect
+	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136 // indirect
 	golang.org/x/image v0.5.0 // indirect
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028 // indirect
-	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
+	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.7.0 // indirect
 )
 
