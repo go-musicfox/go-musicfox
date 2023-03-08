@@ -7,6 +7,7 @@ import (
 
 	"github.com/gookit/goutil/internal/comfunc"
 	"github.com/gookit/goutil/reflects"
+	"github.com/gookit/goutil/strutil"
 )
 
 const defaultInitTag = "default"
@@ -30,7 +31,7 @@ type InitOptions struct {
 //
 // TIPS:
 //
-//	Only support init set: string, bool, intX, uintX, floatX
+//	Support init field types: string, bool, intX, uintX, floatX, array, slice
 //
 // Example:
 //
@@ -41,8 +42,7 @@ type InitOptions struct {
 //
 //	u1 := &User1{}
 //	err = structs.InitDefaults(u1)
-//	fmt.Printf("%+v\n", u1)
-//	// Output: {Name:inhere Age:30}
+//	fmt.Printf("%+v\n", u1) // Output: {Name:inhere Age:30}
 func InitDefaults(ptr any, optFns ...InitOptFunc) error {
 	rv := reflect.ValueOf(ptr)
 	if rv.Kind() != reflect.Ptr {
@@ -85,8 +85,8 @@ func initDefaults(rv reflect.Value, opt *InitOptions) error {
 			continue
 		}
 
-		tagVal := ft.Tag.Get(opt.TagName)
-		if err := initDefaultValue(fv, tagVal, opt.ParseEnv); err != nil {
+		val := ft.Tag.Get(opt.TagName)
+		if err := initDefaultValue(fv, val, opt.ParseEnv); err != nil {
 			return err
 		}
 	}
@@ -104,8 +104,20 @@ func initDefaultValue(fv reflect.Value, val string, parseEnv bool) error {
 		val = comfunc.ParseEnvVar(val, nil)
 	}
 
+	var anyVal any = val
+
+	// convert string to slice
+	if reflects.IsArrayOrSlice(fv.Kind()) {
+		ss := strutil.SplitTrimmed(val, ",")
+		valRv, err := reflects.ConvSlice(reflect.ValueOf(ss), fv.Type().Elem())
+		if err != nil {
+			return err
+		}
+		anyVal = valRv.Interface()
+	}
+
 	// set value
-	return reflects.SetValue(fv, val)
+	return reflects.SetValue(fv, anyVal)
 }
 
 /*************************************************************
@@ -163,7 +175,7 @@ func SetValues(ptr any, data map[string]any, optFns ...SetOptFunc) error {
 }
 
 func setValues(rv reflect.Value, data map[string]any, opt *SetOptions) error {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return nil
 	}
 

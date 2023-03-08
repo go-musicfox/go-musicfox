@@ -55,7 +55,7 @@ func Len(v reflect.Value) int {
 //
 //	SliceSubKind(reflect.TypeOf([]string{"abc"})) // reflect.String
 func SliceSubKind(typ reflect.Type) reflect.Kind {
-	if typ.Kind() == reflect.Slice {
+	if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
 		return typ.Elem().Kind()
 	}
 	return reflect.Invalid
@@ -76,12 +76,10 @@ func SetValue(rv reflect.Value, val any) error {
 	}
 
 	rv1, err := ValueByType(val, rv.Type())
-	if err != nil {
-		return err
+	if err == nil {
+		rv.Set(rv1)
 	}
-
-	rv.Set(rv1)
-	return nil
+	return err
 }
 
 // FlatFunc custom collect handle func

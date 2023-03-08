@@ -17,7 +17,9 @@ import (
 )
 
 var (
-	ErrDateLayout   = errors.New("invalid date layout string")
+	// ErrDateLayout error
+	ErrDateLayout = errors.New("invalid date layout string")
+	// ErrInvalidParam error
 	ErrInvalidParam = errors.New("invalid input parameter")
 
 	// some regex for convert string.
@@ -70,6 +72,16 @@ func Join(sep string, ss ...string) string { return strings.Join(ss, sep) }
 // JoinList alias of strings.Join
 func JoinList(sep string, ss []string) string { return strings.Join(ss, sep) }
 
+// JoinAny type to string
+func JoinAny(sep string, parts ...any) string {
+	ss := make([]string, 0, len(parts))
+	for _, part := range parts {
+		ss = append(ss, QuietString(part))
+	}
+
+	return strings.Join(ss, sep)
+}
+
 // Implode alias of strings.Join
 func Implode(sep string, ss ...string) string { return strings.Join(ss, sep) }
 
@@ -77,8 +89,13 @@ func Implode(sep string, ss ...string) string { return strings.Join(ss, sep) }
  * convert value to string
  *************************************************************/
 
-// String convert val to string
+// String convert value to string, return error on failed
 func String(val any) (string, error) {
+	return AnyToString(val, true)
+}
+
+// ToString convert value to string, return error on failed
+func ToString(val any) (string, error) {
 	return AnyToString(val, true)
 }
 
@@ -88,9 +105,18 @@ func QuietString(in any) string {
 	return val
 }
 
-// MustString convert value to string, TODO will panic on error
-func MustString(in any) string {
+// SafeString convert value to string, will ignore error
+func SafeString(in any) string {
 	val, _ := AnyToString(in, false)
+	return val
+}
+
+// MustString convert value to string, will panic on error
+func MustString(in any) string {
+	val, err := AnyToString(in, false)
+	if err != nil {
+		panic(err)
+	}
 	return val
 }
 
@@ -99,17 +125,12 @@ func StringOrErr(val any) (string, error) {
 	return AnyToString(val, true)
 }
 
-// ToString convert value to string
-func ToString(val any) (string, error) {
-	return AnyToString(val, true)
-}
-
 // AnyToString convert value to string.
 //
-// if defaultAsErr:
+// For defaultAsErr:
 //
-//	False will use fmt.Sprint convert complex type
-//	True  will return error on fail.
+//   - False  will use fmt.Sprint convert complex type
+//   - True   will return error on fail.
 func AnyToString(val any, defaultAsErr bool) (str string, err error) {
 	if val == nil {
 		return
@@ -203,7 +224,10 @@ func QuietBool(s string) bool {
 
 // MustBool convert, will panic on error
 func MustBool(s string) bool {
-	val, _ := comfunc.StrToBool(strings.TrimSpace(s))
+	val, err := comfunc.StrToBool(strings.TrimSpace(s))
+	if err != nil {
+		panic(err)
+	}
 	return val
 }
 
@@ -226,6 +250,12 @@ func ToInt(s string) (int, error) {
 	return strconv.Atoi(strings.TrimSpace(s))
 }
 
+// Int2 convert string to int, will ignore error
+func Int2(s string) int {
+	val, _ := ToInt(s)
+	return val
+}
+
 // QuietInt convert string to int, will ignore error
 func QuietInt(s string) int {
 	val, _ := ToInt(s)
@@ -234,8 +264,7 @@ func QuietInt(s string) int {
 
 // MustInt convert string to int, will panic on error
 func MustInt(s string) int {
-	val, _ := ToInt(s)
-	return val
+	return IntOrPanic(s)
 }
 
 // IntOrPanic convert value to int, will panic on error

@@ -3,12 +3,15 @@ package maputil
 import (
 	"strings"
 
+	"github.com/gookit/goutil/arrutil"
 	"github.com/gookit/goutil/mathutil"
 	"github.com/gookit/goutil/strutil"
 )
 
 // Data an map data type
 type Data map[string]any
+
+// Map alias of Data
 type Map = Data
 
 // Has value on the data map
@@ -123,6 +126,14 @@ func (d Data) Int64(key string) int64 {
 	return 0
 }
 
+// Uint value get
+func (d Data) Uint(key string) uint64 {
+	if val, ok := d.GetByPath(key); ok {
+		return mathutil.QuietUint(val)
+	}
+	return 0
+}
+
 // Str value get by key
 func (d Data) Str(key string) string {
 	if val, ok := d.GetByPath(key); ok {
@@ -154,10 +165,16 @@ func (d Data) Strings(key string) []string {
 		return nil
 	}
 
-	if ss, ok := val.([]string); ok {
-		return ss
+	switch typVal := val.(type) {
+	case string:
+		return []string{typVal}
+	case []string:
+		return typVal
+	case []any:
+		return arrutil.SliceToStrings(typVal)
+	default:
+		return nil
 	}
-	return nil
 }
 
 // StrSplit get strings by split key value
@@ -216,4 +233,11 @@ func (d Data) ToStringMap() map[string]string {
 // String data to string
 func (d Data) String() string {
 	return ToString(d)
+}
+
+// Load data to current data map
+func (d Data) Load(sub map[string]any) {
+	for name, val := range sub {
+		d[name] = val
+	}
 }

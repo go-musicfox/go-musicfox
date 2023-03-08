@@ -90,11 +90,6 @@ func IsShellSpecialVar(c uint8) bool {
 	return false
 }
 
-// EnvPaths get and split $PATH to []string
-func EnvPaths() []string {
-	return filepath.SplitList(os.Getenv("PATH"))
-}
-
 // FindExecutable in the system
 //
 // Usage:
@@ -104,7 +99,7 @@ func FindExecutable(binName string) (string, error) {
 	return exec.LookPath(binName)
 }
 
-// Executable find in the system
+// Executable find in the system, alias of FindExecutable()
 //
 // Usage:
 //
@@ -123,25 +118,58 @@ func HasExecutable(binName string) bool {
 	return err == nil
 }
 
+// Getenv get ENV value by key name, can with default value
+func Getenv(name string, def ...string) string {
+	val := os.Getenv(name)
+	if val == "" && len(def) > 0 {
+		val = def[0]
+	}
+	return val
+}
+
+// Environ like os.Environ, but will returns key-value map[string]string data.
+func Environ() map[string]string {
+	return comfunc.Environ()
+}
+
+// EnvPaths get and split $PATH to []string
+func EnvPaths() []string {
+	return filepath.SplitList(os.Getenv("PATH"))
+}
+
 // SearchPath search executable files in the system $PATH
 //
 // Usage:
 //
 //	sysutil.SearchPath("go")
-func SearchPath(keywords string) []string {
+func SearchPath(keywords string, limit int) []string {
 	path := os.Getenv("PATH")
 	ptn := "*" + keywords + "*"
-
 	list := make([]string, 0)
+
+	checked := make(map[string]bool)
 	for _, dir := range filepath.SplitList(path) {
+		// Unix shell semantics: path element "" means "."
 		if dir == "" {
-			// Unix shell semantics: path element "" means "."
 			dir = "."
 		}
 
+		// mark dir is checked
+		if _, ok := checked[dir]; ok {
+			continue
+		}
+
+		checked[dir] = true
 		matches, err := filepath.Glob(filepath.Join(dir, ptn))
 		if err == nil && len(matches) > 0 {
 			list = append(list, matches...)
+			size := len(list)
+
+			// limit result size
+			if limit > 0 && size >= limit {
+				list = list[:limit]
+				break
+			}
 		}
 	}
 

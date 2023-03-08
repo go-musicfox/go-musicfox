@@ -160,6 +160,58 @@ func CloneSlice(data any) any {
 	return reflect.AppendSlice(reflect.New(reflect.SliceOf(typeOfData.Elem())).Elem(), reflect.ValueOf(data)).Interface()
 }
 
+// Differences Produces the set difference of two slice according to a comparer function.
+//
+//	first: the first slice. MUST BE A SLICE.
+//	second: the second slice. MUST BE A SLICE.
+//	fn: the comparer function.
+//	returns: the difference of the two slices.
+func Differences[T any](first, second []T, fn Comparer) []T {
+	typeOfFirst := reflect.TypeOf(first)
+	if typeOfFirst.Kind() != reflect.Slice {
+		panic("collections.Excepts: first must be a slice")
+	}
+
+	typeOfSecond := reflect.TypeOf(second)
+	if typeOfSecond.Kind() != reflect.Slice {
+		panic("collections.Excepts: second must be a slice")
+	}
+
+	firstLen := len(first)
+	if firstLen == 0 {
+		return CloneSlice(second).([]T)
+	}
+
+	secondLen := len(second)
+	if secondLen == 0 {
+		return CloneSlice(first).([]T)
+	}
+
+	max := firstLen
+	if secondLen > firstLen {
+		max = secondLen
+	}
+
+	result := make([]T, 0)
+	for i := 0; i < max; i++ {
+		if i < firstLen {
+			s := first[i]
+			if i, _ := TwowaySearch(second, s, fn); i < 0 {
+				result = append(result, s)
+			}
+		}
+
+		if i < secondLen {
+			t := second[i]
+			if i, _ := TwowaySearch(first, t, fn); i < 0 {
+				result = append(result, t)
+			}
+		}
+	}
+
+	return result
+}
+
 // Excepts Produces the set difference of two slice according to a comparer function.
 //
 //	first: the first slice. MUST BE A SLICE.

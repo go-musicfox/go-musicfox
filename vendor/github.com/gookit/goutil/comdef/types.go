@@ -7,12 +7,11 @@ type Int interface {
 
 // Uint interface type
 type Uint interface {
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
 }
 
 // Xint interface type. all int or uint types
 type Xint interface {
-	// equal: ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint32 | ~uint64
 	Int | Uint
 }
 
@@ -29,6 +28,14 @@ type IntOrFloat interface {
 // XintOrFloat interface type. all (x)int and float types
 type XintOrFloat interface {
 	Int | Uint | Float
+}
+
+// SortedType interface type.
+// that supports the operators < <= >= >.
+//
+// contains: (x)int, float, ~string types
+type SortedType interface {
+	Int | Uint | Float | ~string
 }
 
 // ScalarType interface type.

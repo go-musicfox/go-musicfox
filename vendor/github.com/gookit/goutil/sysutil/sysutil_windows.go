@@ -5,36 +5,25 @@ package sysutil
 
 import (
 	"errors"
-	"os/exec"
 	"syscall"
 
-	"github.com/gookit/goutil/sysutil/process"
+	"golang.org/x/sys/windows"
 )
 
 // IsWin system. linux windows darwin
-func IsWin() bool {
-	return true
-}
+func IsWin() bool { return true }
 
 // IsWindows system. linux windows darwin
-func IsWindows() bool {
-	return true
-}
+func IsWindows() bool { return true }
 
 // IsMac system
-func IsMac() bool {
-	return false
-}
+func IsMac() bool { return false }
 
 // IsDarwin system
-func IsDarwin() bool {
-	return false
-}
+func IsDarwin() bool { return false }
 
 // IsLinux system
-func IsLinux() bool {
-	return false
-}
+func IsLinux() bool { return false }
 
 // Kill a process by pid
 func Kill(pid int, signal syscall.Signal) error {
@@ -43,10 +32,12 @@ func Kill(pid int, signal syscall.Signal) error {
 
 // ProcessExists check process exists by pid
 func ProcessExists(pid int) bool {
-	return process.Exists(pid)
+	panic("TIP: please use sysutil/process.Exists()")
 }
 
-// OpenBrowser Open browser URL
+// OpenURL Open file or  browser URL
+//
+// - refers https://github.com/pkg/browser
 //
 // Mac：
 //
@@ -60,6 +51,7 @@ func ProcessExists(pid int) bool {
 // Windows:
 //
 //	cmd /c start https://github.com/inhere
-func OpenBrowser(URL string) error {
-	return exec.Command("cmd", "/c", "start", URL).Run()
+func OpenURL(url string) error {
+	// return exec.Command("cmd", "/C", "start", URL).Run()
+	return windows.ShellExecute(0, nil, windows.StringToUTF16Ptr(url), nil, nil, windows.SW_SHOWNORMAL)
 }

@@ -7,12 +7,11 @@ import (
 const (
 	// maxFileLength is the max file length.
 	maxFileLength = 4096
-
 	// magic is the file magic for terminfo files.
-	magic = 0432
-
-	// magicExtended is the file magic for terminfo files with the extended number format.
-	magicExtended = 01036
+	magic = 0o432
+	// magicExtended is the file magic for terminfo files with the extended
+	// number format.
+	magicExtended = 0o1036
 )
 
 // header fields.
@@ -99,12 +98,12 @@ func readStrings(idx []int, buf []byte, n int) (map[int][]byte, int, error) {
 type decoder struct {
 	buf []byte
 	pos int
-	len int
+	n   int
 }
 
 // readBytes reads the next n bytes of buf, incrementing pos by n.
 func (d *decoder) readBytes(n int) ([]byte, error) {
-	if d.len < d.pos+n {
+	if d.n < d.pos+n {
 		return nil, ErrUnexpectedFileEnd
 	}
 	n, d.pos = d.pos, d.pos+n
@@ -115,15 +114,12 @@ func (d *decoder) readBytes(n int) ([]byte, error) {
 func (d *decoder) readInts(n, w int) ([]int, error) {
 	w /= 8
 	l := n * w
-
 	buf, err := d.readBytes(l)
 	if err != nil {
 		return nil, err
 	}
-
 	// align
 	d.pos += d.pos % 2
-
 	z := make([]int, n)
 	for i, j := 0, 0; i < l; i, j = i+w, j+1 {
 		switch w {
@@ -135,7 +131,6 @@ func (d *decoder) readInts(n, w int) ([]int, error) {
 			z[j] = int(buf[i+3])<<24 | int(buf[i+2])<<16 | int(buf[i+1])<<8 | int(buf[i])
 		}
 	}
-
 	return z, nil
 }
 
@@ -145,7 +140,6 @@ func (d *decoder) readBools(n int) (map[int]bool, map[int]bool, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// process
 	bools, boolsM := make(map[int]bool), make(map[int]bool)
 	for i, b := range buf {
@@ -154,7 +148,6 @@ func (d *decoder) readBools(n int) (map[int]bool, map[int]bool, error) {
 			boolsM[i] = true
 		}
 	}
-
 	return bools, boolsM, nil
 }
 
@@ -164,7 +157,6 @@ func (d *decoder) readNums(n, w int) (map[int]int, map[int]bool, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// process
 	nums, numsM := make(map[int]int), make(map[int]bool)
 	for i := 0; i < n; i++ {
@@ -173,7 +165,6 @@ func (d *decoder) readNums(n, w int) (map[int]int, map[int]bool, error) {
 			numsM[i] = true
 		}
 	}
-
 	return nums, numsM, nil
 }
 
@@ -184,16 +175,13 @@ func (d *decoder) readStringTable(n, sz int) ([][]byte, []int, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// read string data table
 	data, err := d.readBytes(sz)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// align
 	d.pos += d.pos % 2
-
 	// process
 	s := make([][]byte, n)
 	var m []int
@@ -209,7 +197,6 @@ func (d *decoder) readStringTable(n, sz int) ([][]byte, []int, error) {
 			}
 		}
 	}
-
 	return s, m, nil
 }
 
@@ -220,7 +207,6 @@ func (d *decoder) readStrings(n, sz int) (map[int][]byte, map[int]bool, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-
 	strs := make(map[int][]byte)
 	for k, v := range s {
 		if k == AcsChars {
@@ -228,39 +214,32 @@ func (d *decoder) readStrings(n, sz int) (map[int][]byte, map[int]bool, error) {
 		}
 		strs[k] = v
 	}
-
 	strsM := make(map[int]bool, len(m))
 	for _, k := range m {
 		strsM[k] = true
 	}
-
 	return strs, strsM, nil
 }
 
 // canonicalizeAscChars reorders chars to be unique, in order.
 //
-// see repair_ascc in ncurses-6.0/progs/dump_entry.c
+// see repair_ascc in ncurses-6.3/progs/dump_entry.c
 func canonicalizeAscChars(z []byte) []byte {
-	var c chars
+	var c []byte
 	enc := make(map[byte]byte, len(z)/2)
 	for i := 0; i < len(z); i += 2 {
 		if _, ok := enc[z[i]]; !ok {
 			a, b := z[i], z[i+1]
-			//log.Printf(">>> a: %d %c, b: %d %c", a, a, b, b)
+			// log.Printf(">>> a: %d %c, b: %d %c", a, a, b, b)
 			c, enc[a] = append(c, b), b
 		}
 	}
-	sort.Sort(c)
-
+	sort.Slice(c, func(i, j int) bool {
+		return c[i] < c[j]
+	})
 	r := make([]byte, 2*len(c))
 	for i := 0; i < len(c); i++ {
 		r[i*2], r[i*2+1] = c[i], enc[c[i]]
 	}
 	return r
 }
-
-type chars []byte
-
-func (c chars) Len() int           { return len(c) }
-func (c chars) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
-func (c chars) Less(i, j int) bool { return c[i] < c[j] }

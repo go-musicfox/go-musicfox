@@ -366,7 +366,7 @@ func TryToString(val any, defaultAsErr bool) (str string, err error) {
 	case int32: // same as `rune`
 		str = strconv.Itoa(int(value))
 	case int64:
-		str = strconv.Itoa(int(value))
+		str = strconv.FormatInt(value, 10)
 	case uint:
 		str = strconv.FormatUint(uint64(value), 10)
 	case uint8:
