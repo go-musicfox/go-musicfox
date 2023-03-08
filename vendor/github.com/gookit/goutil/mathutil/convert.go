@@ -2,17 +2,12 @@ package mathutil
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-)
 
-var (
-	// ErrConvertFail convert error
-	ErrConvertFail = errors.New("convert data type is failure")
-	// ErrConvertFail = errors.New("convert data type is failure")
+	"github.com/gookit/goutil/comdef"
 )
 
 /*************************************************************
@@ -20,18 +15,24 @@ var (
  *************************************************************/
 
 // Int convert value to int
-func Int(in interface{}) (int, error) {
+func Int(in any) (int, error) {
 	return ToInt(in)
 }
 
-// MustInt convert value to int
-func MustInt(in interface{}) int {
+// QuietInt convert value to int, will ignore error
+func QuietInt(in any) int {
+	val, _ := ToInt(in)
+	return val
+}
+
+// MustInt convert value to int, will panic on error
+func MustInt(in any) int {
 	val, _ := ToInt(in)
 	return val
 }
 
 // IntOrPanic convert value to int, will panic on error
-func IntOrPanic(in interface{}) int {
+func IntOrPanic(in any) int {
 	val, err := ToInt(in)
 	if err != nil {
 		panic(err)
@@ -39,8 +40,13 @@ func IntOrPanic(in interface{}) int {
 	return val
 }
 
-// ToInt convert string to int
-func ToInt(in interface{}) (iVal int, err error) {
+// IntOrErr convert value to int, return error on failed
+func IntOrErr(in any) (iVal int, err error) {
+	return ToInt(in)
+}
+
+// ToInt convert value to int, return error on failed
+func ToInt(in any) (iVal int, err error) {
 	switch tVal := in.(type) {
 	case nil:
 		iVal = 0
@@ -77,28 +83,45 @@ func ToInt(in interface{}) (iVal int, err error) {
 		i64, err = tVal.Int64()
 		iVal = int(i64)
 	default:
-		err = ErrConvertFail
+		err = comdef.ErrConvType
 	}
 	return
+}
+
+// StrInt convert.
+func StrInt(s string) int {
+	iVal, _ := strconv.Atoi(strings.TrimSpace(s))
+	return iVal
 }
 
 /*************************************************************
  * convert value to uint
  *************************************************************/
 
-// Uint convert string to uint
-func Uint(in interface{}) (uint64, error) {
+// Uint convert string to uint, return error on failed
+func Uint(in any) (uint64, error) {
 	return ToUint(in)
 }
 
-// MustUint convert string to uint
-func MustUint(in interface{}) uint64 {
+// QuietUint convert string to uint, will ignore error
+func QuietUint(in any) uint64 {
 	val, _ := ToUint(in)
 	return val
 }
 
-// ToUint convert string to uint
-func ToUint(in interface{}) (u64 uint64, err error) {
+// MustUint convert string to uint, will panic on error
+func MustUint(in any) uint64 {
+	val, _ := ToUint(in)
+	return val
+}
+
+// UintOrErr convert value to uint, return error on failed
+func UintOrErr(in any) (uint64, error) {
+	return ToUint(in)
+}
+
+// ToUint convert value to uint, return error on failed
+func ToUint(in any) (u64 uint64, err error) {
 	switch tVal := in.(type) {
 	case nil:
 		u64 = 0
@@ -135,7 +158,7 @@ func ToUint(in interface{}) (u64 uint64, err error) {
 	case string:
 		u64, err = strconv.ParseUint(strings.TrimSpace(tVal), 10, 0)
 	default:
-		err = ErrConvertFail
+		err = comdef.ErrConvType
 	}
 	return
 }
@@ -144,19 +167,32 @@ func ToUint(in interface{}) (u64 uint64, err error) {
  * convert value to int64
  *************************************************************/
 
-// Int64 convert string to int64
-func Int64(in interface{}) (int64, error) {
+// Int64 convert string to int64, return error on failed
+func Int64(in any) (int64, error) {
 	return ToInt64(in)
 }
 
-// MustInt64 convert
-func MustInt64(in interface{}) int64 {
+// QuietInt64 convert value to int64, will ignore error
+func QuietInt64(in any) int64 {
 	i64, _ := ToInt64(in)
 	return i64
 }
 
-// ToInt64 convert string to int64
-func ToInt64(in interface{}) (i64 int64, err error) {
+// MustInt64 convert value to int64, will panic on error
+func MustInt64(in any) int64 {
+	i64, _ := ToInt64(in)
+	return i64
+}
+
+// TODO StrictInt64,AsInt64 strict convert to int64
+
+// Int64OrErr convert string to int64, return error on failed
+func Int64OrErr(in any) (int64, error) {
+	return ToInt64(in)
+}
+
+// ToInt64 convert string to int64, return error on failed
+func ToInt64(in any) (i64 int64, err error) {
 	switch tVal := in.(type) {
 	case nil:
 		i64 = 0
@@ -191,7 +227,7 @@ func ToInt64(in interface{}) (i64 int64, err error) {
 	case json.Number:
 		i64, err = tVal.Int64()
 	default:
-		err = ErrConvertFail
+		err = comdef.ErrConvType
 	}
 	return
 }
@@ -200,18 +236,44 @@ func ToInt64(in interface{}) (i64 int64, err error) {
  * convert value to float
  *************************************************************/
 
-// Float convert value to float64
-func Float(in interface{}) (float64, error) {
+// QuietFloat convert value to float64, will ignore error
+func QuietFloat(in any) float64 {
+	val, _ := ToFloat(in)
+	return val
+}
+
+// FloatOrPanic convert value to float64, will panic on error
+func FloatOrPanic(in any) float64 {
+	val, err := ToFloat(in)
+	if err != nil {
+		panic(err)
+	}
+	return val
+}
+
+// MustFloat convert value to float64 TODO will panic on error
+func MustFloat(in any) float64 {
+	val, _ := ToFloat(in)
+	return val
+}
+
+// Float convert value to float64, return error on failed
+func Float(in any) (float64, error) {
 	return ToFloat(in)
 }
 
-// ToFloat convert value to float64
-func ToFloat(in interface{}) (f64 float64, err error) {
+// FloatOrErr convert value to float64, return error on failed
+func FloatOrErr(in any) (float64, error) {
+	return ToFloat(in)
+}
+
+// ToFloat convert value to float64, return error on failed
+func ToFloat(in any) (f64 float64, err error) {
 	switch tVal := in.(type) {
 	case nil:
 		f64 = 0
 	case string:
-		f64, err = strconv.ParseFloat(strings.TrimSpace(tVal), 0)
+		f64, err = strconv.ParseFloat(strings.TrimSpace(tVal), 64)
 	case int:
 		f64 = float64(tVal)
 	case int8:
@@ -241,34 +303,55 @@ func ToFloat(in interface{}) (f64 float64, err error) {
 	case json.Number:
 		f64, err = tVal.Float64()
 	default:
-		err = ErrConvertFail
+		err = comdef.ErrConvType
 	}
 	return
-}
-
-// FloatOrPanic convert value to float64, will panic on error
-func FloatOrPanic(in interface{}) float64 {
-	val, err := ToFloat(in)
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-// MustFloat convert value to float64 TODO will panic on error
-func MustFloat(in interface{}) float64 {
-	val, _ := ToFloat(in)
-	return val
 }
 
 /*************************************************************
  * convert intX/floatX to string
  *************************************************************/
 
+// StringOrPanic convert intX/floatX value to string, will panic on error
+func StringOrPanic(val any) string {
+	str, err := TryToString(val, true)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+// MustString convert intX/floatX value to string, will panic on error
+func MustString(val any) string {
+	return StringOrPanic(val)
+}
+
+// ToString convert intX/floatX value to string, return error on failed
+func ToString(val any) (string, error) {
+	return TryToString(val, true)
+}
+
+// StringOrErr convert intX/floatX value to string, return error on failed
+func StringOrErr(val any) (string, error) {
+	return TryToString(val, true)
+}
+
+// QuietString convert intX/floatX value to string, other type convert by fmt.Sprint
+func QuietString(val any) string {
+	str, _ := TryToString(val, false)
+	return str
+}
+
+// String convert intX/floatX value to string, other type convert by fmt.Sprint
+func String(val any) string {
+	str, _ := TryToString(val, false)
+	return str
+}
+
 // TryToString try convert intX/floatX value to string
 //
 // if defaultAsErr is False, will use fmt.Sprint convert other type
-func TryToString(val interface{}, defaultAsErr bool) (str string, err error) {
+func TryToString(val any, defaultAsErr bool) (str string, err error) {
 	if val == nil {
 		return
 	}
@@ -304,35 +387,10 @@ func TryToString(val interface{}, defaultAsErr bool) (str string, err error) {
 		str = value.String()
 	default:
 		if defaultAsErr {
-			err = ErrConvertFail
+			err = comdef.ErrConvType
 		} else {
 			str = fmt.Sprint(value)
 		}
 	}
 	return
-}
-
-// StringOrPanic convert intX/floatX value to string, will panic on error
-func StringOrPanic(val interface{}) string {
-	str, err := TryToString(val, true)
-	if err != nil {
-		panic(err)
-	}
-	return str
-}
-
-// MustString convert intX/floatX value to string, will panic on error
-func MustString(val interface{}) string {
-	return StringOrPanic(val)
-}
-
-// ToString convert intX/floatX value to string
-func ToString(val interface{}) (string, error) {
-	return TryToString(val, true)
-}
-
-// String convert intX/floatX value to string, other type convert by fmt.Sprint
-func String(val interface{}) string {
-	str, _ := TryToString(val, false)
-	return str
 }

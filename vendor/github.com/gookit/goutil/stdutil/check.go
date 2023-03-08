@@ -1,54 +1,135 @@
 package stdutil
 
 import (
-	"fmt"
 	"reflect"
-	"strconv"
+	"strings"
+
+	"github.com/gookit/goutil/reflects"
 )
 
-// IsEquals(s, d interface{}) bool
-// IsContains(v, sub interface{}) bool
-
-// ValueIsEmpty check
-func ValueIsEmpty(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Invalid:
+// IsNil value check
+func IsNil(v any) bool {
+	if v == nil {
 		return true
-	case reflect.String, reflect.Array:
-		return v.Len() == 0
-	case reflect.Map, reflect.Slice:
-		return v.Len() == 0 || v.IsNil()
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
-		return v.IsNil()
 	}
-
-	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
+	return reflects.IsNil(reflect.ValueOf(v))
 }
 
-// ValueLen get value length
-func ValueLen(v reflect.Value) int {
-	k := v.Kind()
+// IsEmpty value check
+func IsEmpty(v any) bool {
+	if v == nil {
+		return true
+	}
+	return reflects.IsEmpty(reflect.ValueOf(v))
+}
 
-	// (u)int use width.
-	switch k {
-	case reflect.Map, reflect.Array, reflect.Chan, reflect.Slice, reflect.String:
-		return v.Len()
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return len(strconv.FormatInt(int64(v.Uint()), 10))
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return len(strconv.FormatInt(v.Int(), 10))
-	case reflect.Float32, reflect.Float64:
-		return len(fmt.Sprint(v.Interface()))
+// IsFunc value
+func IsFunc(val any) bool {
+	if val == nil {
+		return false
+	}
+	return reflect.TypeOf(val).Kind() == reflect.Func
+}
+
+// IsEqual determines if two objects are considered equal.
+//
+// TIP: cannot compare function type
+func IsEqual(src, dst any) bool {
+	if src == nil || dst == nil {
+		return src == dst
 	}
 
-	// cannot get length
-	return -1
+	// cannot compare function type
+	if IsFunc(src) || IsFunc(dst) {
+		return false
+	}
+	return reflects.IsEqual(src, dst)
+}
+
+// Contains try loop over the data check if the data includes the element.
+// alias of the IsContains
+//
+// TIP: only support types: string, map, array, slice
+//
+//	map         - check key exists
+//	string 	    - check sub-string exists
+//	array,slice - check sub-element exists
+func Contains(data, elem any) bool {
+	_, found := CheckContains(data, elem)
+	return found
+}
+
+// IsContains try loop over the data check if the data includes the element.
+//
+// TIP: only support types: string, map, array, slice
+//
+//	map         - check key exists
+//	string 	    - check sub-string exists
+//	array,slice - check sub-element exists
+func IsContains(data, elem any) bool {
+	_, found := CheckContains(data, elem)
+	return found
+}
+
+// CheckContains try loop over the data check if the data includes the element.
+//
+// TIP: only support types: string, map, array, slice
+//
+//	map         - check key exists
+//	string 	    - check sub-string exists
+//	array,slice - check sub-element exists
+//
+// return (false, false) if impossible.
+// return (true, false) if element was not found.
+// return (true, true) if element was found.
+func CheckContains(data, elem any) (valid, found bool) {
+	dataRv := reflect.ValueOf(data)
+	dataRt := reflect.TypeOf(data)
+	if dataRt == nil {
+		return false, false
+	}
+
+	dataKind := dataRt.Kind()
+
+	// string
+	if dataKind == reflect.String {
+		return true, strings.Contains(dataRv.String(), reflect.ValueOf(elem).String())
+	}
+
+	// map
+	if dataKind == reflect.Map {
+		mapKeys := dataRv.MapKeys()
+		for i := 0; i < len(mapKeys); i++ {
+			if reflects.IsEqual(mapKeys[i].Interface(), elem) {
+				return true, true
+			}
+		}
+		return true, false
+	}
+
+	// array, slice - other return false
+	if dataKind != reflect.Slice && dataKind != reflect.Array {
+		return false, false
+	}
+
+	for i := 0; i < dataRv.Len(); i++ {
+		if reflects.IsEqual(dataRv.Index(i).Interface(), elem) {
+			return true, true
+		}
+	}
+	return true, false
+}
+
+// ValueIsEmpty reflect value check.
+//
+// Deprecated: please use reflects.IsEmpty()
+func ValueIsEmpty(v reflect.Value) bool {
+	return reflects.IsEmpty(v)
+}
+
+// ValueLen get reflect value length
+//
+// Deprecated: please use reflects.Len()
+func ValueLen(v reflect.Value) int {
+	return reflects.Len(v)
 }

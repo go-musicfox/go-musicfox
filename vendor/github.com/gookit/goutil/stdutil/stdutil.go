@@ -3,7 +3,11 @@ package stdutil
 
 import (
 	"fmt"
+	"runtime"
 )
+
+// DiscardE discard error
+func DiscardE(_ error) {}
 
 // PanicIfErr if error is not empty
 func PanicIfErr(err error) {
@@ -20,6 +24,11 @@ func PanicIf(err error) {
 }
 
 // Panicf format panic message use fmt.Sprintf
-func Panicf(format string, v ...interface{}) {
+func Panicf(format string, v ...any) {
 	panic(fmt.Sprintf(format, v...))
+}
+
+// GoVersion get go runtime version. eg: "1.18.2"
+func GoVersion() string {
+	return runtime.Version()[2:]
 }

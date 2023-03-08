@@ -50,7 +50,6 @@ func TrimRight(s string, cutSet ...string) string {
 		if ln == 1 {
 			return strings.TrimRight(s, cutSet[0])
 		}
-
 		return strings.TrimRight(s, strings.Join(cutSet, ""))
 	}
 

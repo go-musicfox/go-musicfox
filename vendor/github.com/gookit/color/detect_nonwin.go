@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // The method in the file has no effect
@@ -13,7 +14,7 @@ import (
 )
 
 // detect special term color support
-func detectSpecialTermColor(termVal string) (terminfo.ColorLevel, bool) {
+func detectSpecialTermColor(termVal string) (Level, bool) {
 	if termVal == "" {
 		return terminfo.ColorLevelNone, false
 	}

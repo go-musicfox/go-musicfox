@@ -20,10 +20,16 @@ func MustCut(s, sep string) (before string, after string) {
 	return
 }
 
-// SplitValid string to slice. will filter empty string node.
+// TrimCut always returns two substring and trim space for items.
+func TrimCut(s, sep string) (string, string) {
+	before, after, _ := Cut(s, sep)
+	return strings.TrimSpace(before), strings.TrimSpace(after)
+}
+
+// SplitValid string to slice. will trim each item and filter empty string node.
 func SplitValid(s, sep string) (ss []string) { return Split(s, sep) }
 
-// Split string to slice. will filter empty string node.
+// Split string to slice. will trim each item and filter empty string node.
 func Split(s, sep string) (ss []string) {
 	if s = strings.TrimSpace(s); s == "" {
 		return
@@ -105,4 +111,16 @@ func Substr(s string, pos, length int) string {
 	}
 
 	return string(runes[pos:stopIdx])
+}
+
+// SplitInlineComment for a text string.
+func SplitInlineComment(val string) (string, string) {
+	if pos := strings.IndexByte(val, '#'); pos > -1 {
+		return strings.TrimRight(val[0:pos], " "), val[pos:]
+	}
+
+	if pos := strings.Index(val, "//"); pos > -1 {
+		return strings.TrimRight(val[0:pos], " "), val[pos:]
+	}
+	return val, ""
 }
