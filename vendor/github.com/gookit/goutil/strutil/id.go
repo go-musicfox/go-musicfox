@@ -8,8 +8,9 @@ import (
 )
 
 // global id:
+//
 //	https://github.com/rs/xid
-// 	https://github.com/satori/go.uuid
+//	https://github.com/satori/go.uuid
 var (
 	DefMinInt = 1000
 	DefMaxInt = 9999

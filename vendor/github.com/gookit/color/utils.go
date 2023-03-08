@@ -47,6 +47,7 @@ func Println(a ...interface{}) {
 }
 
 // Fprint print rendered messages to writer
+//
 // Notice: will ignore print error
 func Fprint(w io.Writer, a ...interface{}) {
 	_, err := fmt.Fprint(w, Render(a...))
@@ -84,14 +85,15 @@ func Lprint(l *log.Logger, a ...interface{}) {
 }
 
 // Render parse color tags, return rendered string.
+//
 // Usage:
+//
 //	text := Render("<info>hello</> <cyan>world</>!")
 //	fmt.Println(text)
 func Render(a ...interface{}) string {
 	if len(a) == 0 {
 		return ""
 	}
-
 	return ReplaceTag(fmt.Sprint(a...))
 }
 
@@ -182,6 +184,11 @@ func debugf(f string, v ...interface{}) {
 		fmt.Printf(f, v...)
 		fmt.Println()
 	}
+}
+
+// equals: return ok ? val1 : val2
+func isValidUint8(val int) bool {
+	return val >= 0 && val < 256
 }
 
 // equals: return ok ? val1 : val2

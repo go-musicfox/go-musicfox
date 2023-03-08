@@ -149,15 +149,12 @@ func (c Color256) FullCode() string {
 // String convert to color code string with prefix. eg: "38;5;12"
 func (c Color256) String() string {
 	if c[1] == AsFg { // 0 is Fg
-		// return fmt.Sprintf(TplFg256, c[0])
 		return Fg256Pfx + strconv.Itoa(int(c[0]))
 	}
 
 	if c[1] == AsBg { // 1 is Bg
-		// return fmt.Sprintf(TplBg256, c[0])
 		return Bg256Pfx + strconv.Itoa(int(c[0]))
 	}
-
 	return "" // empty
 }
 
@@ -198,8 +195,6 @@ func (c Color256) IsEmpty() bool {
 // 都是由两位uint8组成, 第一位是色彩值；
 // 第二位与 Bit8Color 不一样的是，在这里表示是否设置了值 0 未设置 !=0 已设置
 type Style256 struct {
-	// p Printer
-
 	// Name of the style
 	Name string
 	// color options of the style
@@ -209,6 +204,7 @@ type Style256 struct {
 }
 
 // S256 create a color256 style
+//
 // Usage:
 // 	s := color.S256()
 // 	s := color.S256(132) // fg
@@ -293,16 +289,15 @@ func (s *Style256) Code() string {
 func (s *Style256) String() string {
 	var ss []string
 	if s.fg[1] > 0 {
-		ss = append(ss, fmt.Sprintf(TplFg256, s.fg[0]))
+		ss = append(ss, Fg256Pfx+strconv.FormatInt(int64(s.fg[0]), 10))
 	}
 
 	if s.bg[1] > 0 {
-		ss = append(ss, fmt.Sprintf(TplBg256, s.bg[0]))
+		ss = append(ss, Bg256Pfx+strconv.FormatInt(int64(s.bg[0]), 10))
 	}
 
 	if s.opts.IsValid() {
 		ss = append(ss, s.opts.String())
 	}
-
 	return strings.Join(ss, ";")
 }

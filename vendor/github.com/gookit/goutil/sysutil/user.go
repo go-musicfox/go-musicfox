@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/mitchellh/go-homedir"
+	"github.com/gookit/goutil/internal/comfunc"
 )
 
 // MustFindUser must find an system user by name
@@ -31,12 +31,6 @@ func CurrentUser() *user.User {
 	return u
 }
 
-// UserHomeDir is alias of os.UserHomeDir, but ignore error
-func UserHomeDir() string {
-	dir, _ := os.UserHomeDir()
-	return dir
-}
-
 // UHomeDir get user home dir path.
 func UHomeDir() string {
 	// check $HOME/.terminfo
@@ -47,35 +41,43 @@ func UHomeDir() string {
 	return u.HomeDir
 }
 
+// homeDir cache
+var homeDir string
+
+// UserHomeDir is alias of os.UserHomeDir, but ignore error
+func UserHomeDir() string {
+	if homeDir != "" {
+		return homeDir
+	}
+
+	homeDir, _ = os.UserHomeDir()
+	return homeDir
+}
+
 // HomeDir get user home dir path.
 func HomeDir() string {
-	dir, _ := homedir.Dir()
-	return dir
+	return UserHomeDir()
 }
 
 // UserDir will prepend user home dir to subPath
 func UserDir(subPath string) string {
-	dir, _ := homedir.Dir()
-
+	dir := UserHomeDir()
 	return dir + "/" + subPath
 }
 
 // UserCacheDir will prepend user `$HOME/.cache` to subPath
 func UserCacheDir(subPath string) string {
-	dir, _ := homedir.Dir()
-
+	dir := UserHomeDir()
 	return dir + "/.cache/" + subPath
 }
 
 // UserConfigDir will prepend user `$HOME/.config` to subPath
 func UserConfigDir(subPath string) string {
-	dir, _ := homedir.Dir()
-
+	dir := UserHomeDir()
 	return dir + "/.config/" + subPath
 }
 
 // ExpandPath will parse `~` as user home dir path.
 func ExpandPath(path string) string {
-	path, _ = homedir.Expand(path)
-	return path
+	return comfunc.ExpandPath(path)
 }

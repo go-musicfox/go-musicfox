@@ -1,37 +1,21 @@
 package strutil
 
 import (
-	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
-	"fmt"
 	mathRand "math/rand"
 	"time"
 )
 
+// some consts string chars
 const (
+	Numbers   = "0123456789"
 	AlphaBet  = "abcdefghijklmnopqrstuvwxyz"
+	AlphaBet1 = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
 	AlphaNum  = "abcdefghijklmnopqrstuvwxyz0123456789"
 	AlphaNum2 = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	AlphaNum3 = "0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
 )
-
-// Md5 Generate a 32-bit md5 string
-func Md5(src interface{}) string {
-	return GenMd5(src)
-}
-
-// GenMd5 Generate a 32-bit md5 string
-func GenMd5(src interface{}) string {
-	h := md5.New()
-	if s, ok := src.(string); ok {
-		h.Write([]byte(s))
-	} else {
-		h.Write([]byte(fmt.Sprint(src)))
-	}
-
-	return hex.EncodeToString(h.Sum(nil))
-}
 
 // RandomChars generate give length random chars at `a-z`
 func RandomChars(ln int) string {
@@ -86,12 +70,13 @@ func RandomBytes(length int) ([]byte, error) {
 
 // RandomString generate.
 // Example:
-// 	// this will give us a 44 byte, base64 encoded output
-// 	token, err := RandomString(32)
-// 	if err != nil {
-//     // Serve an appropriately vague error to the
-//     // user, but log the details internally.
-// 	}
+//
+//		// this will give us a 44 byte, base64 encoded output
+//		token, err := RandomString(32)
+//		if err != nil {
+//	    // Serve an appropriately vague error to the
+//	    // user, but log the details internally.
+//		}
 func RandomString(length int) (string, error) {
 	b, err := RandomBytes(length)
 	return base64.URLEncoding.EncodeToString(b), err

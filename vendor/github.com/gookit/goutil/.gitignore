@@ -1,6 +1,7 @@
 *.log
 *.swp
 .idea
+.vscode/
 *.patch
 ### Go template
 # Binaries for programs and plugins
@@ -17,3 +18,5 @@
 *.out
 *.cov
 .DS_Store
+
+testdata/

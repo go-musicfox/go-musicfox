@@ -1,3 +1,4 @@
+// Package process Provide some process handle util functions
 package process
 
 import "os"

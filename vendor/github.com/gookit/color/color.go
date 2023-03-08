@@ -1,5 +1,5 @@
 /*
-Package color is Command line color library.
+Package color is command line color library.
 Support rich color rendering output, universal API method, compatible with Windows system
 
 Source code and other details for the project are available at GitHub:
@@ -15,28 +15,28 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/xo/terminfo"
 )
 
-// terminal color available level alias of the terminfo.ColorLevel*
-const (
-	LevelNo  = terminfo.ColorLevelNone     // not support color.
-	Level16  = terminfo.ColorLevelBasic    // 3/4 bit color supported
-	Level256 = terminfo.ColorLevelHundreds // 8 bit color supported
-	LevelRgb = terminfo.ColorLevelMillions // (24 bit)true color supported
-)
-
 // color render templates
+//
 // ESC 操作的表示:
-// 	"\033"(Octal 8进制) = "\x1b"(Hexadecimal 16进制) = 27 (10进制)
+//
+//	"\033"(Octal 8进制) = "\x1b"(Hexadecimal 16进制) = 27 (10进制)
 const (
-	SettingTpl   = "\x1b[%sm"
+	// StartSet chars
+	StartSet = "\x1b["
+	// ResetSet close all properties.
+	ResetSet = "\x1b[0m"
+	// SettingTpl string.
+	SettingTpl = "\x1b[%sm"
+	// FullColorTpl for build color code
 	FullColorTpl = "\x1b[%sm%s\x1b[0m"
+	// CodeSuffix string for color code.
+	CodeSuffix = "[0m"
 )
-
-// ResetSet Close all properties.
-const ResetSet = "\x1b[0m"
 
 // CodeExpr regex to clear color codes eg "\033[1;36mText\x1b[0m"
 const CodeExpr = `\033\[[\d;?]+m`
@@ -61,10 +61,10 @@ var (
 	// output the default io.Writer message print
 	output io.Writer = os.Stdout
 	// mark current env, It's like in `cmd.exe`
-	// if not in windows, it's always is False.
+	// if not in windows, it's always False.
 	isLikeInCmd bool
 	// the color support level for current terminal
-	// needVTP - need enable VTP, only for windows OS
+	// needVTP - need enable VTP, only for Windows OS
 	colorLevel, needVTP = detectTermColorLevel()
 	// match color codes
 	codeRegex = regexp.MustCompile(CodeExpr)
@@ -73,12 +73,12 @@ var (
 	// supportColor = IsSupportColor()
 )
 
-// TermColorLevel value on current ENV
-func TermColorLevel() terminfo.ColorLevel {
+// TermColorLevel Get the currently supported color level
+func TermColorLevel() Level {
 	return colorLevel
 }
 
-// SupportColor on the current ENV
+// SupportColor Whether the current environment supports color output
 func SupportColor() bool {
 	return colorLevel > terminfo.ColorLevelNone
 }
@@ -88,12 +88,12 @@ func SupportColor() bool {
 // 	return colorLevel > terminfo.ColorLevelNone
 // }
 
-// Support256Color on the current ENV
+// Support256Color Whether the current environment supports 256-color output
 func Support256Color() bool {
 	return colorLevel > terminfo.ColorLevelBasic
 }
 
-// SupportTrueColor on the current ENV
+// SupportTrueColor Whether the current environment supports (RGB)True-color output
 func SupportTrueColor() bool {
 	return colorLevel > terminfo.ColorLevelHundreds
 }
@@ -102,7 +102,7 @@ func SupportTrueColor() bool {
  * global settings
  *************************************************************/
 
-// Set set console color attributes
+// Set console color attributes
 func Set(colors ...Color) (int, error) {
 	code := Colors2code(colors...)
 	err := SetTerminal(code)
@@ -144,7 +144,7 @@ func ResetOptions() {
 	output = os.Stdout
 }
 
-// ForceColor force open color render
+// ForceSetColorLevel force open color render
 func ForceSetColorLevel(level terminfo.ColorLevel) terminfo.ColorLevel {
 	oldLevelVal := colorLevel
 	colorLevel = level
@@ -163,7 +163,8 @@ func ForceOpenColor() terminfo.ColorLevel {
 }
 
 // IsLikeInCmd check result
-// Deprecated
+//
+// Deprecated: please don't use
 func IsLikeInCmd() bool {
 	return isLikeInCmd
 }
@@ -178,8 +179,10 @@ func InnerErrs() []error {
  *************************************************************/
 
 // RenderCode render message by color code.
+//
 // Usage:
-// 	msg := RenderCode("3;32;45", "some", "message")
+//
+//	msg := RenderCode("3;32;45", "some", "message")
 func RenderCode(code string, args ...interface{}) string {
 	var message string
 	if ln := len(args); ln == 0 {
@@ -196,28 +199,31 @@ func RenderCode(code string, args ...interface{}) string {
 		return ClearCode(message)
 	}
 
-	return fmt.Sprintf(FullColorTpl, code, message)
+	// return fmt.Sprintf(FullColorTpl, code, message)
+	return StartSet + code + "m" + message + ResetSet
 }
 
 // RenderWithSpaces Render code with spaces.
 // If the number of args is > 1, a space will be added between the args
 func RenderWithSpaces(code string, args ...interface{}) string {
-	message := formatArgsForPrintln(args)
+	msg := formatArgsForPrintln(args)
 	if len(code) == 0 {
-		return message
+		return msg
 	}
 
 	// disabled OR not support color
 	if !Enable || !SupportColor() {
-		return ClearCode(message)
+		return ClearCode(msg)
 	}
 
-	return fmt.Sprintf(FullColorTpl, code, message)
+	return StartSet + code + "m" + msg + ResetSet
 }
 
 // RenderString render a string with color code.
+//
 // Usage:
-// 	msg := RenderString("3;32;45", "a message")
+//
+//	msg := RenderString("3;32;45", "a message")
 func RenderString(code string, str string) string {
 	if len(code) == 0 || str == "" {
 		return str
@@ -228,11 +234,18 @@ func RenderString(code string, str string) string {
 		return ClearCode(str)
 	}
 
-	return fmt.Sprintf(FullColorTpl, code, str)
+	// return fmt.Sprintf(FullColorTpl, code, str)
+	return StartSet + code + "m" + str + ResetSet
 }
 
 // ClearCode clear color codes.
-// eg: "\033[36;1mText\x1b[0m" -> "Text"
+//
+// eg:
+//
+//	"\033[36;1mText\x1b[0m" -> "Text"
 func ClearCode(str string) string {
+	if !strings.Contains(str, CodeSuffix) {
+		return str
+	}
 	return codeRegex.ReplaceAllString(str, "")
 }

@@ -1,3 +1,4 @@
+// Package sysutil provide some system util functions. eg: sysenv, exec, user, process
 package sysutil
 
 import (
