@@ -17,19 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout...
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - run: git fetch --prune --unshallow
 
       - name: Setup go...
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
 
       - name: branch name
         id: branch_name
         run: |
-          echo ::set-output name=RELEASE_TAG::${GITHUB_REF#refs/tags/}
+          echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: setup release environment
         run: |-
