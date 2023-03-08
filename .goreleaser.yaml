@@ -85,11 +85,11 @@ archives:
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
     tap:
-      owner: anhoder
+      owner: go-musicfox
       name: homebrew-go-musicfox
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    url_template: "https://github.com/anhoder/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    homepage: "https://github.com/anhoder/go-musicfox"
+    url_template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://github.com/go-musicfox/go-musicfox"
     description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
     commit_author:
       name: anhoder
@@ -99,12 +99,12 @@ brews:
       - name: terminal-notifier
         type: optional
     install: |
-      system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/anhoder/go-musicfox \033[0m"
+      system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/go-musicfox/go-musicfox \033[0m"
       bin.install 'musicfox'
 
 release:
   github:
-    owner: anhoder
+    owner: go-musicfox
     name: go-musicfox
   prerelease: auto
   mode: replace
