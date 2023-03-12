@@ -309,8 +309,8 @@ func DownloadMusic(song structs.Song) {
 }
 
 var brMap = map[service.SongQualityLevel]string{
-	service.Standard: "128000",
-	service.Higher:   "192000",
+	service.Standard: "320000",
+	service.Higher:   "320000",
 	service.Exhigh:   "320000",
 	service.Lossless: "999000",
 	service.Hires:    "999000",
