@@ -112,9 +112,30 @@ emerge --sync
 emerge -a media-sound/go-musicfox
 ```
 
-#### 4. NixOS可使用NUR安装：
+#### 4. NixOS可从[Nixpkgs](https://search.nixos.org/packages?channel=unstable&show=go-musicfox&from=0&size=50&sort=relevance&type=packages&query=go-musicfox)安装：
 
-NUR路径为[nur.repos.aleksana.go-musicfox](https://github.com/nix-community/nur-combined/blob/master/repos/aleksana/pkgs/go-musicfox/default.nix#L35)。关于如何使用NUR，请参阅[NUR#how-to-use](https://github.com/nix-community/NUR#how-to-use)。
+安装到本地profile：
+```
+nix-env -iA nixos.go-musicfox
+```
+
+临时安装：
+```
+nix-shell -p go-musicfox
+```
+
+安装到Configuration.nix（推荐）：
+```nix
+# configuration
+environment.systemPackages = [
+  pkgs.go-musicfox
+];
+
+# 或者home manager
+home.packages = [
+  pkgs.go-musicfox
+];
+```
 
 #### 5. Void Linux可使用 void-packages-zh 安装：
 
