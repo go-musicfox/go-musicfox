@@ -555,7 +555,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "T":
 		// trash selected song
 		trashSelectedSong(m)
-	case "<", "〈", "＜", "《", "«": // half-width, full-width, japanese, chinese and french
+	case "<", "〈", "＜", "《", "«": // half-width, full-width, Japanese, Chinese and French
 		// like selected song
 		likeSelectedSong(m, true)
 	case ">", "〉", "＞", "》", "»":
