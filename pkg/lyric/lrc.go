@@ -90,7 +90,7 @@ func readLRCLine(line string, lineNo int) (fragments []LRCFragment, err error) {
 
 	tm, err := parseLRCTime(line, "[", "]")
 	if err != nil {
-		err = fmt.Errorf("Error on line %d: %v", lineNo, err)
+		err = fmt.Errorf("error on line %d: %v", lineNo, err)
 		return
 	}
 

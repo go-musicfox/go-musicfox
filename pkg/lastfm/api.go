@@ -7,7 +7,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/pkg/errors"
-	lastfm_go "github.com/shkh/lastfm-go"
+	lastfmgo "github.com/shkh/lastfm-go"
 )
 
 type AuthInvalid struct {
@@ -15,7 +15,7 @@ type AuthInvalid struct {
 }
 
 type Client struct {
-	api *lastfm_go.Api
+	api *lastfmgo.Api
 }
 
 func NewClient() *Client {
@@ -24,7 +24,7 @@ func NewClient() *Client {
 		err := errors.New("lastfm key或secret为空")
 		_, _ = client.errorHandle(err)
 	} else {
-		client.api = lastfm_go.New(constants.LastfmKey, constants.LastfmSecret)
+		client.api = lastfmgo.New(constants.LastfmKey, constants.LastfmSecret)
 	}
 	return client
 }
@@ -33,7 +33,7 @@ func (c *Client) errorHandle(e error) (bool, error) {
 	if e == nil {
 		return false, nil
 	}
-	if lastfmErr, ok := e.(*lastfm_go.LastfmError); ok {
+	if lastfmErr, ok := e.(*lastfmgo.LastfmError); ok {
 		switch lastfmErr.Code {
 		case 9: // invalid session key
 			return false, AuthInvalid{lastfmErr}
@@ -113,13 +113,13 @@ func (c *Client) Scrobble(args map[string]interface{}) error {
 	return err
 }
 
-func (c *Client) GetUserInfo(args map[string]interface{}) (lastfm_go.UserGetInfo, error) {
+func (c *Client) GetUserInfo(args map[string]interface{}) (lastfmgo.UserGetInfo, error) {
 	if c.api == nil {
-		return lastfm_go.UserGetInfo{}, errors.New("lastfm key或secret为空")
+		return lastfmgo.UserGetInfo{}, errors.New("lastfm key或secret为空")
 	}
 	if c.api.GetSessionKey() == "" {
 		_, err := c.errorHandle(errors.New("empty session key"))
-		return lastfm_go.UserGetInfo{}, err
+		return lastfmgo.UserGetInfo{}, err
 	}
 	userInfo, err := c.api.User.GetInfo(args)
 

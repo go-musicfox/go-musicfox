@@ -94,9 +94,9 @@ func homeUnix() (string, error) {
 
 func homeWindows() (string, error) {
 	drive := os.Getenv("HOMEDRIVE")
-	path := os.Getenv("HOMEPATH")
-	home := drive + path
-	if drive == "" || path == "" {
+	p := os.Getenv("HOMEPATH")
+	home := drive + p
+	if drive == "" || p == "" {
 		home = os.Getenv("USERPROFILE")
 	}
 	if home == "" {
