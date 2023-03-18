@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
 
 	"github.com/muesli/termenv"
 )

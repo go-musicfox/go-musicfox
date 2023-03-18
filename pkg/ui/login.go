@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/storage"
-	"go-musicfox/pkg/structs"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/storage"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/anhoder/bubbles/textinput"
 	tea "github.com/anhoder/bubbletea"

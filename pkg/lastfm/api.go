@@ -3,8 +3,8 @@ package lastfm
 import (
 	"fmt"
 
-	"go-musicfox/pkg/constants"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/pkg/errors"
 	lastfm_go "github.com/shkh/lastfm-go"

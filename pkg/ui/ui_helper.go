@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	ds2 "go-musicfox/pkg/structs"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	ds2 "github.com/go-musicfox/go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/muesli/termenv"

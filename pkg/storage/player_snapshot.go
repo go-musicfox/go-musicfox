@@ -1,9 +1,10 @@
 package storage
 
 import (
-	"go-musicfox/pkg/constants"
-	"go-musicfox/pkg/structs"
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
 )
 
 type PlayerSnapshot struct {

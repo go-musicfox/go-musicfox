@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
 
 	"github.com/skratchdot/open-golang/open"
 )

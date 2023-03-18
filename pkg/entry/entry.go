@@ -3,7 +3,7 @@
 
 package entry
 
-import "go-musicfox/utils"
+import "github.com/go-musicfox/go-musicfox/utils"
 
 func AppEntry() {
 	defer utils.Recover(false)

@@ -1,6 +1,6 @@
 package ui
 
-import "go-musicfox/pkg/structs"
+import "github.com/go-musicfox/go-musicfox/pkg/structs"
 
 type Hook func(m *NeteaseModel) bool
 

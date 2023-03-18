@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	ds2 "go-musicfox/pkg/structs"
+	ds2 "github.com/go-musicfox/go-musicfox/pkg/structs"
 )
 
 type searchRes struct {

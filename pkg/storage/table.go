@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/boltdb/bolt"
 )

@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
 )
 
 const CurPlaylistKey = "cur_playlist"

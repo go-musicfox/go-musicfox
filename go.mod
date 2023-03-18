@@ -1,4 +1,4 @@
-module go-musicfox
+module github.com/go-musicfox/go-musicfox
 
 go 1.18
 

@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"go-musicfox/pkg/storage"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/storage"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/skratchdot/open-golang/open"
 )

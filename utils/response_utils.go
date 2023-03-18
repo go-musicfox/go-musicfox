@@ -3,7 +3,7 @@ package utils
 import (
 	"strings"
 
-	"go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
 
 	"github.com/buger/jsonparser"
 )

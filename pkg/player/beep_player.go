@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/effects"

@@ -1,6 +1,6 @@
 package player
 
-import "go-musicfox/pkg/structs"
+import "github.com/go-musicfox/go-musicfox/pkg/structs"
 
 // SongType 歌曲类型
 type SongType uint8
