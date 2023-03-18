@@ -158,7 +158,8 @@ home.packages = [
 
 (Linux编译前需要安装flac)
 
-> go build cmd/musicfox.go
+> make # 编译到bin目录下
+> make install # 安装到$GOPATH/bin下
 ```
 
 ## 使用
