@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"go-musicfox/pkg/player"
+	"github.com/go-musicfox/go-musicfox/pkg/player"
 
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/core"

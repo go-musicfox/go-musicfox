@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/progrium/macdriver/avcore"
 	"github.com/progrium/macdriver/core"

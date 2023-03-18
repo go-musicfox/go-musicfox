@@ -8,11 +8,11 @@ import (
 	"math"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/pkg/player"
+	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/prop"
 	"github.com/pkg/errors"
-	"go-musicfox/pkg/player"
-	"go-musicfox/utils"
 )
 
 // Player is a DBus object satisfying the `org.mpris.MediaPlayer2.Player` interface.

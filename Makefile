@@ -1,12 +1,20 @@
 PACKAGE_NAME          := go-musicfox
 GOLANG_CROSS_VERSION  ?= v1.19.0
-INJECT_PACKAGE        ?= "go-musicfox/pkg/constants"
-LD_FLAGS              ?= "-s -w"
-LASTFM_KEY            ?= ""
-LASTFM_SECRET         ?= ""
+INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/pkg/constants
+LDFLAGS               := -s -w
+LASTFM_KEY            ?=
+LASTFM_SECRET         ?=
 
 SYSROOT_DIR     ?= sysroots
 SYSROOT_ARCHIVE ?= sysroots.tar.bz2
+
+.PHONY: build
+build:
+	./hack/build.sh build
+
+.PHONY: install
+install:
+	./hack/build.sh install
 
 .PHONY: sysroot-pack
 sysroot-pack:
@@ -15,10 +23,6 @@ sysroot-pack:
 .PHONY: sysroot-unpack
 sysroot-unpack:
 	@pv $(SYSROOT_ARCHIVE) | pbzip2 -cd | tar -xf -
-
-.PHONY: build
-build:
-	./build.sh
 
 .PHONY: release-dry-run
 release-dry-run:

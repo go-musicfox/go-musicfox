@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go-musicfox/pkg/entry"
+	"github.com/go-musicfox/go-musicfox/pkg/entry"
 )
 
 func main() {

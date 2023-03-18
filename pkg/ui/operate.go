@@ -10,11 +10,11 @@ import (
 
 	"github.com/skratchdot/open-golang/open"
 
-	"go-musicfox/pkg/constants"
-	"go-musicfox/pkg/player"
-	"go-musicfox/pkg/storage"
-	"go-musicfox/pkg/structs"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/player"
+	"github.com/go-musicfox/go-musicfox/pkg/storage"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"

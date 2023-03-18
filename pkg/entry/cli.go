@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"go-musicfox/pkg/commands"
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/pkg/ui"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/commands"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/ui"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	neteaseutil "github.com/anhoder/netease-music/util"
 	"github.com/gookit/gcli/v2"

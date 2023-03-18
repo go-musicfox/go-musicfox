@@ -6,7 +6,7 @@ package entry
 import (
 	"os"
 
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/objc"

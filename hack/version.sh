@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -o nounset
+set -o pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -14,7 +17,7 @@ fi
 
 RELEASE_TAG=$(git describe --tags --always --dirty=-dev || echo "")
 
-VERSION="${GIT_REVISION}"
+VERSION="0.0.0-${GIT_REVISION}"
 if [[ -n "${RELEASE_TAG}" ]]; then
   VERSION="${RELEASE_TAG}"
 fi
@@ -23,4 +26,4 @@ echo AppVersion    "${VERSION}"
 echo GitRevision   "${GIT_REVISION}"
 echo User          "$(whoami)"
 echo Host          "$(hostname -f)"
-echo Time          "$(date '+%Y-%m-%d %T')"
+echo Time          "$(date '+%Y-%m-%dT%T')"``

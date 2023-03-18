@@ -3,7 +3,7 @@ package state_handler
 import (
 	"time"
 
-	"go-musicfox/pkg/player"
+	"github.com/go-musicfox/go-musicfox/pkg/player"
 )
 
 type PlayingInfo struct {

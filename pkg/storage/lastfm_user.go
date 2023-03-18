@@ -2,7 +2,8 @@ package storage
 
 import (
 	"encoding/json"
-	"go-musicfox/pkg/constants"
+
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
 )
 
 type LastfmUser struct {

@@ -3,7 +3,7 @@ package ui
 import (
 	"fmt"
 
-	"go-musicfox/pkg/storage"
+	"github.com/go-musicfox/go-musicfox/pkg/storage"
 
 	"github.com/skratchdot/open-golang/open"
 )

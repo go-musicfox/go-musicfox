@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
-	"go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/bogem/id3v2/v2"
@@ -150,10 +150,22 @@ func CheckUpdate() bool {
 		return false
 	}
 
+	Logger().Println(tag, constants.AppVersion)
 	return CompareVersion(tag, constants.AppVersion, false)
 }
 
 func CompareVersion(v1, v2 string, equal bool) bool {
+	var (
+		v1IsDev = strings.HasSuffix(v1, "-dev")
+		v2IsDev = strings.HasSuffix(v2, "-dev")
+	)
+	if v1IsDev && !v2IsDev {
+		return true
+	}
+	if !v1IsDev && v2IsDev {
+		return false
+	}
+
 	v1 = strings.Trim(v1, "v")
 	v2 = strings.Trim(v2, "v")
 	if equal && v1 == v2 {

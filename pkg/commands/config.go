@@ -3,8 +3,8 @@ package commands
 import (
 	"fmt"
 
-	"go-musicfox/pkg/constants"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/gookit/gcli/v2"
 )

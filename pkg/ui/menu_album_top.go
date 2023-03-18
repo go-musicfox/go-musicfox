@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"go-musicfox/pkg/structs"
-	"go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"

@@ -18,7 +18,7 @@ builds:
     goos:
       - linux
     ldflags:
-      - -s -w -X go-musicfox/pkg/constants.AppVersion={{.Tag}} -X go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
 #  - id: go-musicfox-linux-arm64
 #    binary: musicfox
 #    hooks:
@@ -40,7 +40,7 @@ builds:
     goos:
       - windows
     ldflags:
-      - -s -w -X go-musicfox/pkg/constants.AppVersion={{.Tag}} -X go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
@@ -52,7 +52,7 @@ builds:
     goos:
       - darwin
     ldflags:
-      - -s -w -X go-musicfox/pkg/constants.AppVersion={{.Tag}} -X go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
@@ -64,7 +64,7 @@ builds:
     goos:
       - darwin
     ldflags:
-      - -s -w -X go-musicfox/pkg/constants.AppVersion={{.Tag}} -X go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
     env:
       - CC=o64-clang
       - CXX=o64-clang++

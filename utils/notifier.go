@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"go-musicfox/pkg/configs"
-	"go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
 
 	"github.com/anhoder/notificator"
 	"github.com/pkg/errors"
