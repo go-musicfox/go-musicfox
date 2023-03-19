@@ -105,16 +105,15 @@ func (p *osxPlayer) listen() {
 					OnPaused:       func() {},
 					OnDone:         func(stopped bool) {},
 					OnTick: func() {
-						// FIXME 获取osx播放器有内存释放问题，先用timer的时间
-						//var curTime time.Duration
-						//objc.Autorelease(func() {
-						//	t := p.player.CurrentTime()
-						//	curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
-						//})
+						var curTime time.Duration
+						objc.Autorelease(func() {
+							t := p.player.CurrentTime()
+							curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
+						})
 						select {
 						//osx_player存在一点延迟
-						//case p.timeChan <- curTime + time.Millisecond*800:
-						case p.timeChan <- p.timer.Passed():
+						case p.timeChan <- curTime + time.Millisecond*800:
+						//case p.timeChan <- p.timer.Passed():
 						default:
 						}
 					},
