@@ -357,9 +357,15 @@ func (p *beepPlayer) Toggle() {
 
 // Close 关闭
 func (p *beepPlayer) Close() {
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	if p.timer != nil {
 		p.timer.Stop()
 	}
 	speaker.Clear()
-	close(p.close)
+	if p.close != nil {
+		close(p.close)
+		p.close = nil
+	}
 }
