@@ -342,7 +342,7 @@ func (p *mpdPlayer) Close() {
 	err := p.watcher.Close()
 	mpdErrorHandler(err, true)
 
-	p.close <- struct{}{}
+	close(p.close)
 
 	err = p.client().Stop()
 	mpdErrorHandler(err, true)

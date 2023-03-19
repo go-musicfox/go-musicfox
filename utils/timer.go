@@ -129,8 +129,5 @@ func (t *Timer) pushDone() {
 		t.ticker.Stop()
 		t.ticker = nil
 	}
-	select {
-	case t.done <- struct{}{}:
-	default:
-	}
+	close(t.done)
 }
