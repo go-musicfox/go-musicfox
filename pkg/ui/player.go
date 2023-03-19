@@ -384,7 +384,6 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
-
 	loading := NewLoading(p.model)
 	loading.start()
 	defer loading.complete()
