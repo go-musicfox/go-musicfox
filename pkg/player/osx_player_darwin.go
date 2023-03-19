@@ -266,11 +266,17 @@ func (p *osxPlayer) SetVolume(volume int) {
 }
 
 func (p *osxPlayer) Close() {
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	if p.timer != nil {
 		p.timer.Stop()
 	}
 
-	close(p.close)
+	if p.close != nil {
+		close(p.close)
+		p.close = nil
+	}
 	objc.Autorelease(func() {
 		p.handler.Release()
 		if p.player != nil {

@@ -129,5 +129,8 @@ func (t *Timer) pushDone() {
 		t.ticker.Stop()
 		t.ticker = nil
 	}
-	close(t.done)
+	if t.done != nil {
+		close(t.done)
+		t.done = nil
+	}
 }

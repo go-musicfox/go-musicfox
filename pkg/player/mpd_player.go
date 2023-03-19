@@ -335,6 +335,9 @@ func (p *mpdPlayer) SetVolume(volume int) {
 }
 
 func (p *mpdPlayer) Close() {
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	if p.timer != nil {
 		p.timer.Stop()
 	}
@@ -342,7 +345,10 @@ func (p *mpdPlayer) Close() {
 	err := p.watcher.Close()
 	mpdErrorHandler(err, true)
 
-	close(p.close)
+	if p.close != nil {
+		close(p.close)
+		p.close = nil
+	}
 
 	err = p.client().Stop()
 	mpdErrorHandler(err, true)

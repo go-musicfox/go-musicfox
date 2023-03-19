@@ -15,7 +15,7 @@ type LRCTimer struct {
 	listeners []Listener
 
 	curIndex int
-	indexL   sync.Mutex
+	l        sync.Mutex
 }
 
 func NewLRCTimer(file *LRCFile, transFile *TranslateLRCFile) *LRCTimer {
@@ -53,9 +53,9 @@ func (t *LRCTimer) Start() {
 
 			// Rewind后快速定位
 			for t.curIndex < len(fragments)-1 && duration >= time.Duration(fragments[t.curIndex+1].StartTimeMs)*time.Millisecond {
-				t.indexL.Lock()
+				t.l.Lock()
 				t.curIndex++
-				t.indexL.Unlock()
+				t.l.Unlock()
 			}
 
 			transContent := t.transFile.FindByTimeMs(current.StartTimeMs)
@@ -69,9 +69,9 @@ func (t *LRCTimer) Start() {
 				break
 			}
 
-			t.indexL.Lock()
+			t.l.Lock()
 			t.curIndex++
-			t.indexL.Unlock()
+			t.l.Unlock()
 			current = fragments[t.curIndex]
 		case <-t.stop:
 			return
@@ -85,14 +85,19 @@ func (t *LRCTimer) IsStarted() bool {
 }
 
 func (t *LRCTimer) Stop() {
-	close(t.stop)
+	t.l.Lock()
+	defer t.l.Unlock()
+	if t.stop != nil {
+		close(t.stop)
+		t.stop = nil
+	}
 	t.timer = nil
 	t.listeners = nil
 }
 
 func (t *LRCTimer) Rewind() {
-	t.indexL.Lock()
-	defer t.indexL.Unlock()
+	t.l.Lock()
+	defer t.l.Unlock()
 	t.curIndex = 0
 }
 
