@@ -361,5 +361,5 @@ func (p *beepPlayer) Close() {
 		p.timer.Stop()
 	}
 	speaker.Clear()
-	p.close <- struct{}{}
+	close(p.close)
 }

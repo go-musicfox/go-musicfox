@@ -148,7 +148,7 @@ func (main *MainUIModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cm
 
 		// 播放器歌词
 		spaceHeight := m.WindowHeight - 4 - m.menuBottomRow
-		if spaceHeight < 4 {
+		if spaceHeight < 4 || !configs.ConfigRegistry.MainShowLyric {
 			// 不显示歌词
 			m.player.showLyric = false
 		} else {

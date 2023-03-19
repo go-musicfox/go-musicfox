@@ -85,11 +85,9 @@ func (t *LRCTimer) IsStarted() bool {
 }
 
 func (t *LRCTimer) Stop() {
-	select {
-	case t.stop <- struct{}{}:
-	default:
-	}
+	close(t.stop)
 	t.timer = nil
+	t.listeners = nil
 }
 
 func (t *LRCTimer) Rewind() {

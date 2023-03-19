@@ -270,7 +270,7 @@ func (p *osxPlayer) Close() {
 		p.timer.Stop()
 	}
 
-	p.close <- struct{}{}
+	close(p.close)
 	objc.Autorelease(func() {
 		p.handler.Release()
 		if p.player != nil {
