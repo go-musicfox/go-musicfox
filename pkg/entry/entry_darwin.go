@@ -8,7 +8,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/progrium/macdriver/cocoa"
-	"github.com/progrium/macdriver/objc"
 )
 
 func AppEntry() {
@@ -16,9 +15,7 @@ func AppEntry() {
 
 	go func() {
 		defer utils.Recover(false)
-		objc.Autorelease(func() {
-			runCLI()
-		})
+		runCLI()
 		os.Exit(0)
 	}()
 

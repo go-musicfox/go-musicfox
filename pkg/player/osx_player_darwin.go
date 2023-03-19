@@ -82,7 +82,7 @@ func (p *osxPlayer) listen() {
 					}
 					if p.player != nil {
 						//p.player.ReplaceCurrentItemWithPlayerItem_(nil)
-						p.player.Release()
+						p.player.Autorelease()
 					}
 				}
 
@@ -277,10 +277,8 @@ func (p *osxPlayer) Close() {
 		close(p.close)
 		p.close = nil
 	}
-	objc.Autorelease(func() {
-		p.handler.Release()
-		if p.player != nil {
-			p.player.Release()
-		}
-	})
+	p.handler.Release()
+	if p.player != nil {
+		p.player.Release()
+	}
 }

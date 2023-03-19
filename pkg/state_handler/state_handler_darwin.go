@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/pkg/player"
+	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/progrium/macdriver/cocoa"
 	"github.com/progrium/macdriver/core"
@@ -149,13 +150,12 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyAlbumArtist))
 
 		if info.PicUrl != "" {
+			picUrl := utils.AddResizeParamForPicUrl(info.PicUrl, 60)
 			s.l.Lock()
-			if s.curArtworkUrl != info.PicUrl {
-				s.curArtworkUrl = info.PicUrl
-				if s.curArtwork != nil {
-					s.curArtwork.Release()
-				}
-				s.curArtwork = mediaplayer.ArtworkFromUrl(core.NSURL_URLWithString_(core.String(info.PicUrl)))
+			if s.curArtworkUrl != picUrl {
+				s.curArtworkUrl = picUrl
+				s.curArtwork = mediaplayer.ArtworkFromUrl(core.NSURL_URLWithString_(core.String(picUrl)))
+				s.curArtwork.Autorelease()
 			}
 			s.l.Unlock()
 			values = values.ArrayByAddingObject_(s.curArtwork)
@@ -171,8 +171,8 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 
 func (s *Handler) Release() {
 	objc.Autorelease(func() {
-		s.nowPlayingCenter.Release()
-		s.remoteCommandCenter.Release()
+		s.nowPlayingCenter.Autorelease()
+		s.remoteCommandCenter.Autorelease()
 	})
 }
 
