@@ -276,8 +276,10 @@ beepMp3Decoder=go-mp3
 mpdBin=/usr/local/bin/mpd
 # !!!注意!!! 一定要在配置文件中设置pid_file，否则在退出时不会kill掉mpd进程
 mpdConfigFile=/Users/anhoder/.mpd/mpd.conf
+# tcp 或 unix
 mpdNetwork=unix
-mpdAddr=
+# tcp时填写ip+port(例如:127.0.0.1:1234)，unix时填写socket文件路径
+
 
 [unm]
 # UNM开关
