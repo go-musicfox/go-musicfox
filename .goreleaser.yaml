@@ -108,6 +108,7 @@ scoop:
   bucket:
     owner: go-musicfox
     name: go-musicfox
+  folder: deploy/scoop
 
   commit_author:
     name: anhoder
