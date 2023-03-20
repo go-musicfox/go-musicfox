@@ -147,6 +147,16 @@ home.packages = [
 
 ### Windows
 
+#### 1. scoop安装
+
+```sh
+scoop bucket add go-musicfox https://github.com/go-musicfox/go-musicfox.git
+
+scoop install go-musicfox
+```
+
+#### 2. 直接下载
+
 下载Windows可执行文件: https://github.com/go-musicfox/go-musicfox/releases/latest
 
 ### 手动编译
