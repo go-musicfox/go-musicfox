@@ -64,7 +64,7 @@ func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
 	m.searchModel = NewSearch()
 
 	// 东亚
-	runewidth.EastAsianWidth = true
+	runewidth.DefaultCondition.EastAsianWidth = false
 
 	return
 }
