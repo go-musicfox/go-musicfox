@@ -270,7 +270,7 @@ func DownloadMusic(song structs.Song) {
 				_ = os.Rename(f.Name(), targetFilename)
 				break
 			}
-			defer tag.Close()
+			// defer tag.Close() //fix: "The process cannot access the file because it is being used by another process" Err on Windows
 			tag.SetDefaultEncoding(id3v2.EncodingUTF8)
 			if imgResp, err := http.Get(AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
 				defer imgResp.Body.Close()
@@ -287,7 +287,16 @@ func DownloadMusic(song structs.Song) {
 			tag.SetAlbum(song.Album.Name)
 			tag.SetArtist(song.ArtistName())
 			_ = tag.Save()
-			_ = os.Rename(f.Name(), targetFilename)
+			tag.Close() //fix: "The process cannot access the file because it is being used by another process" Err on Windows
+			err = os.Rename(f.Name(), targetFilename)
+			if err != nil && runtime.GOOS == "windows" {
+				//fix: Windows下载路径修改为其他盘符时报错：The system cannot move the file to a different disk drive.
+				srcFile, _ := os.Open(f.Name())
+				dstFile, _ := os.Create(targetFilename)
+				defer dstFile.Close()
+				_, _ = io.Copy(dstFile, srcFile)
+				srcFile.Close()
+			}
 		default:
 			metadata, err := songtag.Read(f)
 			if err != nil {
