@@ -391,7 +391,15 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 			menuName = SetNormalStyle(tmp)
 		}
 	} else if menuTitleLen+menuSubtitleLen > itemMaxLen {
-		tmp = runewidth.Truncate(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen, "")
+		r := []rune(m.menuList[index].Subtitle)
+		i := time.Now().Second() % len(r)
+		if i+itemMaxLen-menuTitleLen >= len(r) {
+			r = append(r, []rune("   ")...)
+			r = append(r, r...)
+		}
+		s := r[i : i+itemMaxLen-menuTitleLen]
+		tmp = string(s)
+		tmp = runewidth.Truncate(tmp, itemMaxLen-menuTitleLen, "")
 		tmp = runewidth.FillRight(tmp, itemMaxLen-menuTitleLen)
 		if isSelected {
 			menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, GetPrimaryColor()), SetFgStyle(tmp, termenv.ANSIBrightBlack))
