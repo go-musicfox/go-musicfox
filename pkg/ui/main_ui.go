@@ -106,8 +106,8 @@ func (main *MainUIModel) refreshMenuTitle() {
 }
 
 // update main ui
-func (main *MainUIModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+	switch msg := message.(type) {
 	case tea.KeyMsg:
 		return main.keyMsgHandle(msg, m)
 	case tea.ClearScreenMsg:
@@ -153,7 +153,6 @@ func (main *MainUIModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cm
 			m.player.showLyric = false
 		} else {
 			m.player.showLyric = true
-
 			if spaceHeight > 6 {
 				// 5行歌词
 				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 3
@@ -398,20 +397,19 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 			r = append(r, r...)
 		}
 		s := r[i : i+itemMaxLen-menuTitleLen]
-		tmp = string(s)
-		tmp = runewidth.Truncate(tmp, itemMaxLen-menuTitleLen, "")
+		tmp = runewidth.Truncate(string(s), itemMaxLen-menuTitleLen, "")
 		tmp = runewidth.FillRight(tmp, itemMaxLen-menuTitleLen)
 		if isSelected {
-			menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, GetPrimaryColor()), SetFgStyle(tmp, termenv.ANSIBrightBlack))
+			menuName = SetFgStyle(menuTitle, GetPrimaryColor()) + SetFgStyle(tmp, termenv.ANSIBrightBlack)
 		} else {
-			menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(tmp, termenv.ANSIBrightBlack))
+			menuName = SetNormalStyle(menuTitle) + SetFgStyle(tmp, termenv.ANSIBrightBlack)
 		}
 	} else {
 		tmp = runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen)
 		if isSelected {
-			menuName = fmt.Sprintf("%s%s", SetFgStyle(menuTitle, GetPrimaryColor()), SetFgStyle(tmp, termenv.ANSIBrightBlack))
+			menuName = SetFgStyle(menuTitle, GetPrimaryColor()) + SetFgStyle(tmp, termenv.ANSIBrightBlack)
 		} else {
-			menuName = fmt.Sprintf("%s%s", SetNormalStyle(menuTitle), SetFgStyle(tmp, termenv.ANSIBrightBlack))
+			menuName = SetNormalStyle(menuTitle) + SetFgStyle(tmp, termenv.ANSIBrightBlack)
 		}
 	}
 
