@@ -34,6 +34,8 @@ github.com/anhoder/lastfm-go v0.0.2 h1:yqaRzclR83RIecowZX4ffH3kzbEzX+wSeOztAx2nA
 github.com/anhoder/lastfm-go v0.0.2/go.mod h1:QAs3ciul8v40zzwgDPDVq12CSACAIZUHXSSeBJLCdQE=
 github.com/anhoder/macdriver v0.2.9 h1:NwN3v/T6hN99gCEIQ7X4orFRYQ1mkZTX9l00gK+2lvs=
 github.com/anhoder/macdriver v0.2.9/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
+github.com/anhoder/macdriver v0.3.0 h1:hBiZlQYcvQu/gXawzDKtBRON297jRiedYy2nLcxmFEc=
+github.com/anhoder/macdriver v0.3.0/go.mod h1:hisnCiuw9vbXkwUKOul5etCfd+oMbsWYn+7kw5Um4Vo=
 github.com/anhoder/minimp3 v1.0.5 h1:79eCzn5InmzCN1QbFnquZXgMQ+5GYbrQgBPxaZ2Wssc=
 github.com/anhoder/minimp3 v1.0.5/go.mod h1:WFso0UvZL1fPit45V6RQPKxbehLI4XZaJyLs2/TJHoU=
 github.com/anhoder/netease-music v1.3.4 h1:M7Iaw7uxldN3iJFfQKw77HZfqKkBOaTBtpQs7ZxQpqo=
