@@ -4,8 +4,9 @@
 package core
 
 import (
-	"github.com/progrium/macdriver/objc"
 	"unsafe"
+
+	"github.com/progrium/macdriver/objc"
 )
 
 /*
