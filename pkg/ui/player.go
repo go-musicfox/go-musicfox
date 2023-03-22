@@ -42,6 +42,8 @@ type CtrlSignal struct {
 const (
 	CtrlResume   CtrlType = "Resume"
 	CtrlPaused   CtrlType = "Paused"
+	CtrlStop     CtrlType = "Stop"
+	CtrlToggle   CtrlType = "Toggle"
 	CtrlPrevious CtrlType = "Previous"
 	CtrlNext     CtrlType = "Next"
 	CtrlSeek     CtrlType = "Seek"
@@ -107,9 +109,13 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case signal := <-p.ctrl:
 				switch signal.Type {
 				case CtrlPaused:
-					p.Paused()
+					p.Player.Paused()
 				case CtrlResume:
-					p.Resume()
+					p.Player.Resume()
+				case CtrlStop:
+					p.Player.Stop()
+				case CtrlToggle:
+					p.Player.Toggle()
 				case CtrlPrevious:
 					p.PreviousSong()
 				case CtrlNext:
@@ -397,7 +403,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	p.curSong = song
 
 	p.LocatePlayingSong()
-	p.Paused()
+	p.Player.Paused()
 	url, musicType, err := utils.GetSongUrl(song.Id)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
@@ -692,27 +698,6 @@ func (p *Player) Intelligence(appendMode bool) {
 	_ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)
 }
 
-func (p *Player) Next() {
-	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
-	p.ctrl <- CtrlSignal{Type: CtrlNext}
-}
-
-func (p *Player) Previous() {
-	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
-	p.ctrl <- CtrlSignal{Type: CtrlPrevious}
-}
-
-func (p *Player) Rerender() {
-	p.ctrl <- CtrlSignal{Type: CtrlRerender}
-}
-
-func (p *Player) Seek(duration time.Duration) {
-	p.ctrl <- CtrlSignal{
-		Type:     CtrlSeek,
-		Duration: duration,
-	}
-}
-
 func (p *Player) UpVolume() {
 	p.Player.UpVolume()
 
@@ -739,27 +724,6 @@ func (p *Player) SetVolume(volume int) {
 	p.Player.SetVolume(volume)
 
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-}
-
-func (p *Player) SetVolumeByExternalCtrl(volume int) {
-	// 不更新playingInfo
-	p.Player.SetVolume(volume)
-}
-
-func (p *Player) PlayingInfo() state_handler.PlayingInfo {
-	music := p.curSong
-	return state_handler.PlayingInfo{
-		TotalDuration:  music.Duration,
-		PassedDuration: p.PassedTime(),
-		State:          p.State(),
-		Volume:         p.Volume(),
-		TrackID:        music.Id,
-		PicUrl:         music.PicUrl,
-		Name:           music.Name,
-		Album:          music.Album.Name,
-		Artist:         music.ArtistName(),
-		AlbumArtist:    music.Album.ArtistName(),
-	}
 }
 
 func (p *Player) report(phase ReportPhase) {
