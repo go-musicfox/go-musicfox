@@ -181,44 +181,32 @@ type remoteCommandHandler struct {
 }
 
 func (r *remoteCommandHandler) handlePlayCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		r.player.Resume()
-	})
+	r.player.Resume()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePauseCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		r.player.Paused()
-	})
+	r.player.Paused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleStopCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		r.player.Paused()
-	})
+	r.player.Paused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleTogglePlayPauseCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		r.player.Toggle()
-	})
+	r.player.Toggle()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handleNextTrackCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		r.player.Next()
-	})
+	r.player.Next()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func (r *remoteCommandHandler) handlePreviousTrackCommand(_ objc.Object, _ objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		r.player.Previous()
-	})
+	r.player.Previous()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -251,10 +239,8 @@ func (r *remoteCommandHandler) handleSkipBackwardCommand(_ objc.Object, _ objc.O
 }
 
 func (r *remoteCommandHandler) handleChangePlaybackPositionCommand(_ objc.Object, eventObj objc.Object) core.NSInteger {
-	objc.Autorelease(func() {
-		event := mediaplayer.MPChangePlaybackPositionCommandEvent_fromRef(eventObj)
-		r.player.Seek(time.Duration(event.PositionTime()) * time.Second)
-	})
+	event := mediaplayer.MPChangePlaybackPositionCommandEvent_fromRef(eventObj)
+	r.player.Seek(time.Duration(event.PositionTime()) * time.Second)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -279,9 +265,7 @@ func (r *remoteCommandHandler) handleDisableLanguageOptionCommand(_ objc.Object,
 }
 
 func (r *remoteCommandHandler) handleWillSleepOrPowerOff(_ objc.Object, _ objc.Object) {
-	objc.Autorelease(func() {
-		r.player.Paused()
-	})
+	r.player.Paused()
 }
 
 func (r *remoteCommandHandler) handleDidWake(_ objc.Object, _ objc.Object) {
