@@ -9,19 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/pkg/configs"
-	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/effects"
-	"github.com/faiface/beep/flac"
-	"github.com/faiface/beep/minimp3"
-	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
-	"github.com/faiface/beep/vorbis"
-	"github.com/faiface/beep/wav"
-	minimp3pkg "github.com/tosone/minimp3"
 )
 
 type beepPlayer struct {
@@ -29,6 +21,9 @@ type beepPlayer struct {
 
 	curMusic UrlMusic
 	timer    *utils.Timer
+
+	cacheReader *os.File
+	cacheWriter *os.File
 
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
@@ -71,16 +66,12 @@ func NewBeepPlayer() Player {
 
 // listen 开始监听
 func (p *beepPlayer) listen() {
-	done := make(chan bool)
-	isDownloaded := make(chan bool)
-
 	var (
-		cacheRFile *os.File
-		cacheWFile *os.File
-		resp       *http.Response
-		err        error
-		ctx        context.Context
-		cancel     context.CancelFunc
+		done   = make(chan struct{})
+		resp   *http.Response
+		err    error
+		ctx    context.Context
+		cancel context.CancelFunc
 	)
 
 	cacheFile := path.Join(utils.GetLocalDataDir(), "music_cache")
@@ -121,86 +112,38 @@ func (p *beepPlayer) listen() {
 			if p.timer != nil {
 				p.timer.SetPassed(0)
 			}
-			// 重置
-			{
-				speaker.Clear()
-				speaker.Close()
-				if cancel != nil {
-					cancel()
-				}
-				// 关闭旧响应body
-				if resp != nil {
-					_ = resp.Body.Close()
-				}
-				// 关闭旧计时器
-				if p.timer != nil {
-					p.timer.Stop()
-				}
-				if cacheRFile != nil {
-					_ = cacheRFile.Close()
-				}
-				if cacheWFile != nil {
-					_ = cacheWFile.Close()
-				}
-				if p.curStreamer != nil {
-					_ = p.curStreamer.Close()
-				}
+			// 清理上一轮
+			if cancel != nil {
+				cancel()
 			}
+			p.reset()
 
 			ctx, cancel = context.WithCancel(context.Background())
 
 			// FIXME 先这样处理，暂时没想到更好的办法
-			cacheRFile, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666)
-			if err != nil {
+			if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
 				panic(err)
 			}
-			cacheWFile, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-			if err != nil {
+			if p.cacheWriter, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666); err != nil {
 				panic(err)
 			}
 
-			resp, err = p.httpClient.Get(p.curMusic.Url)
-			if err != nil {
+			if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
 				p.Stop()
 				break
 			}
 
 			go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 				defer utils.Recover(false)
-				_, _ = utils.Copy(ctx, cacheWFile, read)
-				isDownloaded <- true
-			}(ctx, cacheWFile, resp.Body)
+				_, _ = utils.CopyClose(ctx, cacheWFile, read)
+			}(ctx, p.cacheWriter, resp.Body)
 
-			for i := 0; i < 50; i++ {
-				t := make([]byte, 256)
-				_, err = io.ReadFull(cacheRFile, t)
-				_, _ = cacheRFile.Seek(0, 0)
-				if err != io.EOF {
-					break
-				}
-				<-time.After(time.Millisecond * 100)
-			}
-
-			switch p.curMusic.Type {
-			case Mp3:
-				switch configs.ConfigRegistry.PlayerBeepMp3Decoder {
-				case constants.BeepMiniMp3Decoder:
-					minimp3pkg.BufferSize = 1024 * 50
-					p.curStreamer, p.curFormat, err = minimp3.Decode(cacheRFile)
-				default:
-					p.curStreamer, p.curFormat, err = mp3.Decode(cacheRFile)
-				}
-			case Wav:
-				p.curStreamer, p.curFormat, err = wav.Decode(cacheRFile)
-			case Ogg:
-				p.curStreamer, p.curFormat, err = vorbis.Decode(cacheRFile)
-			case Flac:
-				p.curStreamer, p.curFormat, err = flac.Decode(cacheRFile)
-			default:
+			if err = utils.WaitForNBytes(256, p.cacheReader, time.Millisecond*100, 50); err != nil {
 				p.Stop()
 				break
 			}
-			if err != nil {
+
+			if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
 				p.Stop()
 				break
 			}
@@ -209,9 +152,7 @@ func (p *beepPlayer) listen() {
 				panic(err)
 			}
 
-			p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() {
-				done <- true
-			}))
+			p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() { done <- struct{}{} }))
 			p.volume.Streamer = p.ctrl
 			speaker.Play(p.volume)
 
@@ -405,5 +346,23 @@ func (p *beepPlayer) Close() {
 	if p.close != nil {
 		close(p.close)
 		p.close = nil
+	}
+}
+
+func (p *beepPlayer) reset() {
+	speaker.Clear()
+	speaker.Close()
+	// 关闭旧计时器
+	if p.timer != nil {
+		p.timer.Stop()
+	}
+	if p.cacheReader != nil {
+		_ = p.cacheReader.Close()
+	}
+	if p.cacheWriter != nil {
+		_ = p.cacheWriter.Close()
+	}
+	if p.curStreamer != nil {
+		_ = p.curStreamer.Close()
 	}
 }
