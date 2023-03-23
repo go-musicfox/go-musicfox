@@ -72,6 +72,7 @@ func NewBeepPlayer() Player {
 // listen 开始监听
 func (p *beepPlayer) listen() {
 	done := make(chan bool)
+	isDownloaded := make(chan bool)
 
 	var (
 		cacheRFile *os.File
@@ -92,6 +93,29 @@ func (p *beepPlayer) listen() {
 			return
 		case <-done:
 			p.Stop()
+		case <-isDownloaded:
+			switch p.curMusic.Type {
+			case Mp3:
+				switch configs.ConfigRegistry.PlayerBeepMp3Decoder {
+				case constants.BeepMiniMp3Decoder:
+					minimp3pkg.BufferSize = 1024 * 50
+					p.curStreamer, p.curFormat, _ = minimp3.Decode(cacheRFile)
+				default:
+					p.curStreamer, p.curFormat, _ = mp3.Decode(cacheRFile)
+				}
+			case Wav:
+				p.curStreamer, p.curFormat, _ = wav.Decode(cacheRFile)
+			case Ogg:
+				p.curStreamer, p.curFormat, _ = vorbis.Decode(cacheRFile)
+			case Flac:
+				p.curStreamer, p.curFormat, _ = flac.Decode(cacheRFile)
+			}
+			// FIXME: 如果需要请修复，否则请忽略
+			// 更新p.ctrl.Streamer,否则p.curStreamer.Position()将一直等于上一次的值，导致进度条不正确跳转
+			p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() {
+				done <- true
+			}))
+
 		case p.curMusic = <-p.musicChan:
 			p.Paused()
 			if p.timer != nil {
@@ -144,6 +168,7 @@ func (p *beepPlayer) listen() {
 			go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 				defer utils.Recover(false)
 				_, _ = utils.Copy(ctx, cacheWFile, read)
+				isDownloaded <- true
 			}(ctx, cacheWFile, resp.Body)
 
 			for i := 0; i < 50; i++ {
@@ -251,18 +276,31 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *beepPlayer) Seek(_ time.Duration) {
-	// 还有问题，暂时不实现
-	//if p.curStreamer != nil {
-	//	err := p.curStreamer.Seek(p.curStreamer.Position())
-	//	fmt.Println(err)
-	//	if err != nil {
-	//		utils.Logger().Printf("seek error: %+v", err)
-	//	}
-	//}
-	//if p.timer != nil {
-	//	p.timer.SetPassed(duration)
-	//}
+func (p *beepPlayer) Seek(duration time.Duration) {
+	if p.state == Playing || p.state == Paused {
+
+		speaker.Lock()
+		newPos := p.curStreamer.Position()
+		newPos += p.curFormat.SampleRate.N(duration)
+
+		if newPos < 0 {
+			newPos = 0
+		}
+		if newPos >= p.curStreamer.Len() {
+			newPos = p.curStreamer.Len() - 1
+		}
+		if p.curStreamer != nil {
+			err := p.curStreamer.Seek(newPos)
+			if err != nil {
+				utils.Logger().Printf("seek error: %+v", err)
+			}
+		}
+		passTime := p.curFormat.SampleRate.D(newPos)
+		if p.timer != nil {
+			p.timer.SetPassed(passTime)
+		}
+		speaker.Unlock()
+	}
 }
 
 // UpVolume 调大音量

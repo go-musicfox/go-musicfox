@@ -528,6 +528,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		}
 	case " ", "　":
 		spaceKeyHandle(m)
+	case "v":
+		m.player.Seek(time.Second * 5)
+	case "x":
+		m.player.Seek(time.Second * -1)
 	case "[", "【":
 		m.player.PreviousSong()
 	case "]", "】":
