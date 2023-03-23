@@ -135,7 +135,7 @@ func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error
 
 	var left = strings.Index(line, openChar)
 	var right = strings.Index(line, closeChar)
-	if left < 0 && right < 0 {
+	if left < 0 || right < 0 {
 		err = errors.New("brackets missing")
 		return
 	}
