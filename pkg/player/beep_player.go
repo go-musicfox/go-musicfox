@@ -117,7 +117,7 @@ func (p *beepPlayer) listen() {
 				p.curStreamer, p.curFormat, _ = DecodeSong(p.curMusic.Type, p.cacheReader)
 			}(ctx, p.cacheWriter, resp.Body)
 
-			if err = utils.WaitForNBytes(256, p.cacheReader, time.Millisecond*100, 50); err != nil {
+			if err = utils.WaitForNBytes(512, p.cacheReader, time.Millisecond*100, 50); err != nil {
 				p.Stop()
 				break
 			}
