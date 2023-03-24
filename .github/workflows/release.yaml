@@ -55,7 +55,7 @@ jobs:
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
         name: Generate and commit scoop config
-        run: |
+        run: |-
           ./hack/scoop_gen.sh
           git config --global user.email "anhoder@88.com"
           git config --global user.name "anhoder"
