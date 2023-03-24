@@ -28,7 +28,7 @@ jobs:
 
       - name: branch name
         id: branch_name
-        run: |
+        run: |-
           echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: setup release environment
@@ -63,7 +63,7 @@ jobs:
           git commit -m "feat: update scoop config"
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
-      - name: Push scoop config
+        name: Push scoop config
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{secrets.ACCESS_TOKEN}}
