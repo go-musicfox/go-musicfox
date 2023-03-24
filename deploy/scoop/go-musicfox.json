@@ -1,10 +1,10 @@
 {
-    "version": "3.7.6",
+    "version": "3.7.5",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v3.7.6/go-musicfox_3.7.6_windows_amd64.zip",
+            "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v3.7.5/go-musicfox_3.7.5_windows_amd64.zip",
             "bin": [
-                "go-musicfox_3.7.6_windows_amd64/musicfox.exe"
+                "go-musicfox_3.7.5_windows_amd64/musicfox.exe"
             ]
         }
     },
