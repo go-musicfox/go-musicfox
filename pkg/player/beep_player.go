@@ -66,6 +66,7 @@ func NewBeepPlayer() Player {
 
 // listen 开始监听
 func (p *beepPlayer) listen() {
+
 	var (
 		done   = make(chan struct{})
 		resp   *http.Response
@@ -113,6 +114,7 @@ func (p *beepPlayer) listen() {
 			go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 				defer utils.Recover(false)
 				_, _ = utils.CopyClose(ctx, cacheWFile, read)
+				p.curStreamer, p.curFormat, _ = DecodeSong(p.curMusic.Type, p.cacheReader)
 			}(ctx, p.cacheWriter, resp.Body)
 
 			if err = utils.WaitForNBytes(256, p.cacheReader, time.Millisecond*100, 50); err != nil {
@@ -194,18 +196,29 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *beepPlayer) Seek(_ time.Duration) {
-	// 还有问题，暂时不实现
-	//if p.curStreamer != nil {
-	//	err := p.curStreamer.Seek(p.curStreamer.Position())
-	//	fmt.Println(err)
-	//	if err != nil {
-	//		utils.Logger().Printf("seek error: %+v", err)
-	//	}
-	//}
-	//if p.timer != nil {
-	//	p.timer.SetPassed(duration)
-	//}
+func (p *beepPlayer) Seek(duration time.Duration) {
+	if p.state == Playing || p.state == Paused {
+
+		speaker.Lock()
+		newPos := p.curFormat.SampleRate.N(duration)
+
+		if newPos < 0 {
+			newPos = 0
+		}
+		if newPos >= p.curStreamer.Len() {
+			newPos = p.curStreamer.Len() - 1
+		}
+		if p.curStreamer != nil {
+			err := p.curStreamer.Seek(newPos)
+			if err != nil {
+				utils.Logger().Printf("seek error: %+v", err)
+			}
+		}
+		if p.timer != nil {
+			p.timer.SetPassed(duration)
+		}
+		speaker.Unlock()
+	}
 }
 
 // UpVolume 调大音量
