@@ -21,6 +21,22 @@ jobs:
 
       - run: git fetch --prune --unshallow
 
+      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
+        name: Generate and commit scoop config
+        run: |-
+          ./hack/scoop_gen.sh
+          git config --global user.email "anhoder@88.com"
+          git config --global user.name "anhoder"
+          git add .
+          git commit -m "feat: update scoop config"
+
+      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
+        name: Push scoop config
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{secrets.ACCESS_TOKEN}}
+          branch: master
+
       - name: Setup go...
         uses: actions/setup-go@v3
         with:
@@ -52,19 +68,3 @@ jobs:
           make release
         env:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
-
-      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
-        name: Generate and commit scoop config
-        run: |-
-          ./hack/scoop_gen.sh
-          git config --global user.email "anhoder@88.com"
-          git config --global user.name "anhoder"
-          git add .
-          git commit -m "feat: update scoop config"
-
-      - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
-        name: Push scoop config
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{secrets.ACCESS_TOKEN}}
-          branch: master
