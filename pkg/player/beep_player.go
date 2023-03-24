@@ -69,7 +69,6 @@ func (p *beepPlayer) listen() {
 
 	var (
 		done   = make(chan struct{})
-		isDownloaded = make(chan bool)
 		resp   *http.Response
 		err    error
 		ctx    context.Context
@@ -86,14 +85,6 @@ func (p *beepPlayer) listen() {
 			return
 		case <-done:
 			p.Stop()
-		case <-isDownloaded:
-			p.curStreamer, p.curFormat, _ = DecodeSong(p.curMusic.Type, p.cacheReader)
-			// FIXME: 如果需要请修复，否则请忽略
-			// 更新p.ctrl.Streamer,否则p.curStreamer.Position()将一直等于上一次的值，导致进度条不正确跳转
-			p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() {
-				done <- struct{}{}
-			}))
-
 		case p.curMusic = <-p.musicChan:
 			p.Paused()
 			if p.timer != nil {
@@ -123,7 +114,7 @@ func (p *beepPlayer) listen() {
 			go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 				defer utils.Recover(false)
 				_, _ = utils.CopyClose(ctx, cacheWFile, read)
-				isDownloaded <- true
+				p.curStreamer, p.curFormat, _ = DecodeSong(p.curMusic.Type, p.cacheReader)
 			}(ctx, p.cacheWriter, resp.Body)
 
 			if err = utils.WaitForNBytes(256, p.cacheReader, time.Millisecond*100, 50); err != nil {
@@ -209,8 +200,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	if p.state == Playing || p.state == Paused {
 
 		speaker.Lock()
-		newPos := p.curStreamer.Position()
-		newPos += p.curFormat.SampleRate.N(duration)
+		newPos := p.curFormat.SampleRate.N(duration)
 
 		if newPos < 0 {
 			newPos = 0
@@ -224,9 +214,8 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 				utils.Logger().Printf("seek error: %+v", err)
 			}
 		}
-		passTime := p.curFormat.SampleRate.D(newPos)
 		if p.timer != nil {
-			p.timer.SetPassed(passTime)
+			p.timer.SetPassed(duration)
 		}
 		speaker.Unlock()
 	}
