@@ -5,6 +5,8 @@ set -o pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+GITHUB_REF=${GITHUB_REF:-""}
+
 if [[ -z "$GITHUB_REF" ]]; then
   echo "GITHUB_REF is empty"
   exit -1
