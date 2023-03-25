@@ -5,14 +5,14 @@ set -o pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-GITHUB_REF=${GITHUB_REF:-""}
+TAG=${GITHUB_REF:-"$(git describe --tags --abbrev=0)"}
 
-if [[ -z "$GITHUB_REF" ]]; then
-  echo "GITHUB_REF is empty"
+if [[ -z "$TAG" ]]; then
+  echo "TAG is empty"
   exit -1
 fi
 
-SCOOP_VERSION=${GITHUB_REF#refs/tags/}
+SCOOP_VERSION=${TAG#refs/tags/}
 SCOOP_VERSION=${SCOOP_VERSION#v}
 
 SCOOP_HASH="$(sha256sum "dist/go-musicfox_${SCOOP_VERSION}_windows_amd64.zip" | awk '{print $1}')"
