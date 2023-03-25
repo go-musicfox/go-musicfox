@@ -20,7 +20,7 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v\$version/go-musicfox_$version_windows_amd64.zip",
+                "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v\$version/go-musicfox_\$version_windows_amd64.zip",
                 "extract_dir": "go-musicfox_\$version_windows_amd64"
             }
         }
