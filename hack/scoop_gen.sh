@@ -15,7 +15,7 @@ fi
 SCOOP_VERSION=${GITHUB_REF#refs/tags/}
 SCOOP_VERSION=${SCOOP_VERSION#v}
 
-SCOOP_HASH="$(sha256sum dist/go-musicfox-windows-amd64_windows_amd64_v1/musicfox.exe)"
+SCOOP_HASH="$(sha256sum dist/go-musicfox_3.7.6_windows_amd64.zip)"
 
 eval "cat <<EOF
 $(< "$ROOT"/deploy/scoop/go-musicfox.json.tpl)
