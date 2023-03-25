@@ -43,7 +43,7 @@ jobs:
         name: release dry-run
         run: |-
           make release-dry-run
-          sha256sum dist/go-musicfox_3.7.6_windows_amd64.zip
+          sha256sum -b dist/go-musicfox_3.7.6_windows_amd64.zip
         env:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
 
