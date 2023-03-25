@@ -5,7 +5,7 @@ set -o pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-TAG=${GITHUB_REF:-"$(git describe --tags --abbrev=0)"}
+TAG="$(git describe --tags --abbrev=0)"
 
 if [[ -z "$TAG" ]]; then
   echo "TAG is empty"
