@@ -43,7 +43,7 @@ jobs:
         name: release dry-run
         run: |-
           make release-dry-run
-          sha256sum dist/go-musicfox-windows-amd64_windows_amd64_v1/musicfox.exe
+          sha256sum dist/go-musicfox_3.7.6_windows_amd64.zip
         env:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
 
@@ -62,7 +62,7 @@ jobs:
           git config --global user.email "anhoder@88.com"
           git config --global user.name "anhoder"
           git add .
-          -git commit -m "feat: update scoop config"
+          git commit -m "feat: update scoop config" || true
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
         name: Push scoop config
