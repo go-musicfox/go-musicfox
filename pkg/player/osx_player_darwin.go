@@ -111,8 +111,7 @@ func (p *osxPlayer) listen() {
 							curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
 						})
 						select {
-						//osx_player存在一点延迟
-						case p.timeChan <- curTime + time.Millisecond*800:
+						case p.timeChan <- curTime:
 						//case p.timeChan <- p.timer.Passed():
 						default:
 						}
