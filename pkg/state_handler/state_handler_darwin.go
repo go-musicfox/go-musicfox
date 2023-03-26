@@ -119,8 +119,12 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 		ur := info.PassedDuration.Seconds()
 
 		values, keys := core.NSArray_array(), core.NSArray_array()
+
 		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(total)))
 		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyPlaybackDuration))
+
+		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(info.TrackID)))
+		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPMediaItemPropertyPersistentID))
 
 		values = values.ArrayByAddingObject_(core.NSNumber_numberWithInt_(int32(ur)))
 		keys = keys.ArrayByAddingObject_(core.String(mediaplayer.MPNowPlayingInfoPropertyElapsedPlaybackTime))
