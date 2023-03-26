@@ -48,7 +48,7 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 #### 9. MacOS歌词显示
 
-![LyricsX](previews/lyricsX.png)
+![LyricsX](previews/lyricsX.gif)
 
 > 1. 需要下载安装[LyricsX go-musicfox Fork版本](https://github.com/go-musicfox/LyricsX/releases/latest)
 > 2. 且go-musicfox >= v3.7.7
