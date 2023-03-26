@@ -50,8 +50,9 @@ go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持Unbl
 
 ![LyricsX](previews/lyricsX.png)
 
-> 1. 需要下载[LyricsX go-musicfox Fork版本](https://github.com/go-musicfox/LyricsX/releases/latest)
-> 2. go-musicfox >= v3.7.7
+> 1. 需要下载安装[LyricsX go-musicfox Fork版本](https://github.com/go-musicfox/LyricsX/releases/latest)
+> 2. 且go-musicfox >= v3.7.7
+> 3. 在LyricsX设置中，打开`使用系统正在播放的应用`
 
 ## 安装
 
