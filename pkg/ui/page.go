@@ -1,6 +1,6 @@
 package ui
 
-import tea "github.com/anhoder/bubbletea"
+import tea "github.com/charmbracelet/bubbletea"
 
 type Page interface {
 	update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd)

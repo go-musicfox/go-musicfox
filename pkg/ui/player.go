@@ -107,29 +107,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case <-ctx.Done():
 				return
 			case signal := <-p.ctrl:
-				switch signal.Type {
-				case CtrlPaused:
-					p.Player.Paused()
-				case CtrlResume:
-					p.Player.Resume()
-				case CtrlStop:
-					p.Player.Stop()
-				case CtrlToggle:
-					p.Player.Toggle()
-				case CtrlPrevious:
-					p.PreviousSong()
-				case CtrlNext:
-					p.NextSong()
-				case CtrlSeek:
-					p.Player.Seek(signal.Duration)
-					if p.lrcTimer != nil {
-						p.lrcTimer.Rewind()
-					}
-					p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				case CtrlRerender:
-					p.model.Rerender()
-				}
-
+				p.handleControlSignal(signal)
 			}
 		}
 	}()
@@ -751,5 +729,30 @@ func (p *Player) report(phase ReportPhase) {
 				})
 			}(p.curSong, p.PassedTime())
 		}
+	}
+}
+
+func (p *Player) handleControlSignal(signal CtrlSignal) {
+	switch signal.Type {
+	case CtrlPaused:
+		p.Player.Paused()
+	case CtrlResume:
+		p.Player.Resume()
+	case CtrlStop:
+		p.Player.Stop()
+	case CtrlToggle:
+		p.Player.Toggle()
+	case CtrlPrevious:
+		p.PreviousSong()
+	case CtrlNext:
+		p.NextSong()
+	case CtrlSeek:
+		p.Player.Seek(signal.Duration)
+		if p.lrcTimer != nil {
+			p.lrcTimer.Rewind()
+		}
+		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	case CtrlRerender:
+		p.model.Rerender()
 	}
 }
