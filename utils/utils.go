@@ -150,7 +150,6 @@ func CheckUpdate() bool {
 		return false
 	}
 
-	Logger().Println(tag, constants.AppVersion)
 	return CompareVersion(tag, constants.AppVersion, false)
 }
 
