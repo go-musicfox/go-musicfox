@@ -311,6 +311,7 @@ func (p *Player) songView() string {
 	if p.model.menuStartColumn-4 > 0 {
 		builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
 		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
+		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", player.SongTypeName(p.CurMusic().Type)), termenv.ANSIGreen))
 	}
 	builder.WriteString(SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	if p.State() == player.Playing {
