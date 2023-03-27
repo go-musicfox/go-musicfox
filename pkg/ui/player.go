@@ -113,21 +113,20 @@ func (p *Player) updateCurrentLyric() {
 				i = f(true)
 				lrcTmp = p.lyrics[2]
 			}
-			tmp := []rune(p.lyrics[2])
+			var tmp string
 			length := runewidth.StringWidth(p.lyrics[2])
 			width := p.model.WindowWidth - p.model.menuStartColumn - 4
-			// 歌词首末补偿，歌词开头等待15*100ms
-			// 末尾延长不定长度显示时间(歌词显示宽度越大时间越长)
+			// 歌词首末补偿，歌词开头结尾等待15*100ms
 			// 100ms由上述ticker间隔决定
-			a := i%(width+int(1000/width)) - 15
-
+			a := i%(length+15) - 15
 			if length < width || a < 1 {
-				p.lyricNow = lrcTmp
+				tmp = runewidth.TruncateLeft(lrcTmp, 0, "")
 			} else if a+width <= length {
-				p.lyricNow = runewidth.TruncateLeft(string(tmp), a, "")
+				tmp = runewidth.TruncateLeft(lrcTmp, a, "")
 			} else {
-				p.lyricNow = runewidth.TruncateLeft(string(tmp), length-width, "")
+				tmp = runewidth.TruncateLeft(lrcTmp, length-width, "")
 			}
+			p.lyricNow = runewidth.Truncate(runewidth.FillRight(tmp, width), width, "")
 		}
 	}
 }
