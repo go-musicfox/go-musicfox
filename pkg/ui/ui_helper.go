@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	ds2 "github.com/go-musicfox/go-musicfox/pkg/structs"
@@ -27,16 +28,21 @@ func GetPrimaryColor() termenv.Color {
 	if primaryColor != nil {
 		return primaryColor
 	}
+	primaryColor = termProfile.Color(GetPrimaryColorString())
+	return primaryColor
+}
 
+func GetPrimaryColorString() string {
+	if primaryColorStr != "" {
+		return primaryColorStr
+	}
 	if configs.ConfigRegistry.MainPrimaryColor == "" || configs.ConfigRegistry.MainPrimaryColor == constants.AppPrimaryRandom {
 		rand.New(rand.NewSource(time.Now().UnixNano()))
 		primaryColorStr = strconv.Itoa(rand.Intn(228-17) + 17)
 	} else {
 		primaryColorStr = configs.ConfigRegistry.MainPrimaryColor
 	}
-	primaryColor = termProfile.Color(primaryColorStr)
-
-	return primaryColor
+	return primaryColorStr
 }
 
 // GetPrimaryColorStr get random color string
@@ -94,6 +100,10 @@ func SetFgBgStyle(content string, fg, bg termenv.Color) string {
 func SetNormalStyle(content string) string {
 	seq := strings.Join([]string{"0"}, ";")
 	return fmt.Sprintf("%s%sm%s%sm", termenv.CSI, seq, content, termenv.CSI+termenv.ResetSeq)
+}
+
+func GetPrimaryFontStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(GetPrimaryColorString()))
 }
 
 // Generate a blend of colors.

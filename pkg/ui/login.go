@@ -6,15 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/storage"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	"github.com/anhoder/bubbles/textinput"
-	tea "github.com/anhoder/bubbletea"
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"github.com/pkg/errors"
@@ -35,14 +36,14 @@ type LoginModel struct {
 
 func NewLogin() (login *LoginModel) {
 	login = new(LoginModel)
-	login.accountInput = textinput.NewModel()
+	login.accountInput = textinput.New()
 	login.accountInput.Placeholder = " 手机号或邮箱"
 	login.accountInput.Focus()
 	login.accountInput.Prompt = GetFocusedPrompt()
-	login.accountInput.TextColor = primaryColorStr
+	login.accountInput.TextStyle = GetPrimaryFontStyle()
 	login.accountInput.CharLimit = 32
 
-	login.passwordInput = textinput.NewModel()
+	login.passwordInput = textinput.New()
 	login.passwordInput.Placeholder = " 密码"
 	login.passwordInput.Prompt = "> "
 	login.passwordInput.EchoMode = textinput.EchoPassword
@@ -216,13 +217,13 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 					// Remove focused state
 					inputs[i].Blur()
 					inputs[i].Prompt = GetBlurredPrompt()
-					inputs[i].TextColor = ""
+					inputs[i].TextStyle = lipgloss.NewStyle()
 					continue
 				}
 				// Set focused state
 				inputs[i].Focus()
 				inputs[i].Prompt = GetFocusedPrompt()
-				inputs[i].TextColor = primaryColorStr
+				inputs[i].TextStyle = GetPrimaryFontStyle()
 			}
 
 			m.loginModel.accountInput = inputs[0]
