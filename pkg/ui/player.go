@@ -74,6 +74,7 @@ type Player struct {
 	showLyric     bool            // 显示歌词
 	lyricStartRow int             // 歌词开始行
 	lyricLines    int             // 歌词显示行数，3或5
+	lyricNow      string          // 当前播放的歌词 = lyrics[2]
 
 	// 播放进度条
 	progressLastWidth float64
@@ -87,6 +88,49 @@ type Player struct {
 	player.Player // 播放器
 }
 
+// 调用自增长 闭包
+func increment(max int) func(change bool) int {
+	i := 0
+	return func(change bool) int {
+		i++
+		if i > max || change {
+			i = 1
+		}
+		return i
+	}
+}
+
+// 更新当前正在播放的歌词，实现水平滚动
+func (p *Player) updateCurrentLyric() {
+	ticker := time.NewTicker(time.Millisecond * 100)
+	f := increment(1000)
+	var lrcTmp string
+	for {
+		select {
+		case <-ticker.C:
+			i := f(false)
+			if lrcTmp != p.lyrics[2] {
+				i = f(true)
+				lrcTmp = p.lyrics[2]
+			}
+			var tmp string
+			length := runewidth.StringWidth(p.lyrics[2])
+			width := p.model.WindowWidth - p.model.menuStartColumn - 4
+			// 歌词首末补偿，歌词开头结尾等待15*100ms
+			// 100ms由上述ticker间隔决定
+			a := i%(length+15) - 15
+			if length < width || a < 1 {
+				tmp = runewidth.TruncateLeft(lrcTmp, 0, "")
+			} else if a+width <= length {
+				tmp = runewidth.TruncateLeft(lrcTmp, a, "")
+			} else {
+				tmp = runewidth.TruncateLeft(lrcTmp, length-width, "")
+			}
+			p.lyricNow = runewidth.Truncate(runewidth.FillRight(tmp, width), width, "")
+		}
+	}
+}
+
 func NewPlayer(model *NeteaseModel) *Player {
 	p := &Player{
 		model: model,
@@ -98,6 +142,8 @@ func NewPlayer(model *NeteaseModel) *Player {
 
 	p.Player = player.NewPlayerFromConfig()
 	p.stateHandler = state_handler.NewHandler(p)
+	// 更新当前歌词
+	go p.updateCurrentLyric()
 
 	// remote control
 	go func() {
@@ -202,7 +248,7 @@ func (p *Player) lyricView() string {
 			}
 			lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
 			if i == 2 {
-				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+				lyricBuilder.WriteString(SetFgStyle(p.lyricNow, termenv.ANSIBrightCyan))
 			} else {
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
@@ -220,7 +266,7 @@ func (p *Player) lyricView() string {
 				p.model.WindowWidth-p.model.menuStartColumn-4,
 				"")
 			if i == 2 {
-				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+				lyricBuilder.WriteString(SetFgStyle(p.lyricNow, termenv.ANSIBrightCyan))
 			} else {
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
