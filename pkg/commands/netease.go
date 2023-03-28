@@ -35,6 +35,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	neteaseModel := ui.NewNeteaseModel(configs.ConfigRegistry.StartupLoadingDuration)
 
 	var opts []tea.ProgramOption
+	opts = append(opts, tea.WithMouseCellMotion())
 	if configs.ConfigRegistry.MainAltScreen {
 		opts = append(opts, tea.WithAltScreen())
 	}

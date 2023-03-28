@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/player"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -122,6 +123,8 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
 	switch msg := message.(type) {
 	case tea.KeyMsg:
 		return main.keyMsgHandle(msg, m)
+	case tea.MouseMsg:
+		return main.mouseMsgHandle(msg, m)
 	//case tea.ClearScreenMsg:
 	//	return m, tickMainUI(time.Nanosecond)
 	case tickMainUIMsg:
@@ -403,7 +406,7 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 		}
 	} else if menuTitleLen+menuSubtitleLen > itemMaxLen {
 		r := []rune(m.menuList[index].Subtitle)
-		i := time.Now().Second() % len(r)
+		i := int(m.player.PassedTime().Seconds()*2) % len(r) // 使用播放时间控制，暂停保持滚动位置
 		if i+itemMaxLen-menuTitleLen >= len(r) {
 			r = append(r, []rune("   ")...)
 			r = append(r, r...)
@@ -542,8 +545,12 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		spaceKeyHandle(m)
 	case "v":
 		m.player.Seek(m.player.PassedTime() + time.Second*5)
+	case "V":
+		m.player.Seek(m.player.PassedTime() + time.Second*10)
 	case "x":
 		m.player.Seek(m.player.PassedTime() - time.Second*1)
+	case "X":
+		m.player.Seek(m.player.PassedTime() - time.Second*5)
 	case "[", "【":
 		m.player.PreviousSong()
 	case "]", "】":
@@ -621,6 +628,36 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		return m, func() tea.Msg {
 			return tea.ClearScreen()
 		}
+	}
+
+	return m, tickMainUI(time.Nanosecond)
+}
+
+// mouse handle
+func (main *MainUIModel) mouseMsgHandle(msg tea.MouseMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+	if !m.isListeningKey {
+		return m, nil
+	}
+	switch msg.Type {
+	case tea.MouseLeft:
+		x := msg.X
+		y := msg.Y
+		w := len(m.player.progressRamp)
+		if y+1 == m.WindowHeight && x+1 <= len(m.player.progressRamp) {
+			allDuration := int(m.player.CurMusic().Duration.Seconds())
+			if allDuration == 0 {
+				return m, nil
+			}
+			duration := float64(x) * m.player.CurMusic().Duration.Seconds() / float64(w)
+			m.player.Seek(time.Second * time.Duration(duration))
+			if m.player.State() != player.Playing {
+				m.player.Resume()
+			}
+		}
+	case tea.MouseWheelDown:
+		m.player.DownVolume()
+	case tea.MouseWheelUp:
+		m.player.UpVolume()
 	}
 
 	return m, tickMainUI(time.Nanosecond)
