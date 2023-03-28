@@ -11,8 +11,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	"github.com/anhoder/bubbles/textinput"
-	tea "github.com/anhoder/bubbletea"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 )
@@ -25,6 +25,18 @@ const (
 	PtLogin                  // 登录页面
 	PtSearch                 // 搜索页面
 )
+
+func MsgOfPageType(t PageType) tea.Msg {
+	switch t {
+	case PtMain:
+		return tickMainUIMsg{}
+	case PtLogin:
+		return tickLoginMsg{}
+	case PtSearch:
+		return tickSearchMsg{}
+	}
+	return nil
+}
 
 type MenuItem struct {
 	Title    string
@@ -88,10 +100,10 @@ func NewMainUIModel(parentModel *NeteaseModel) (m *MainUIModel) {
 	m.menuPageSize = 10
 	m.selectedIndex = 0
 
-	m.searchInput = textinput.NewModel()
+	m.searchInput = textinput.New()
 	m.searchInput.Placeholder = " 搜索"
 	m.searchInput.Prompt = GetFocusedPrompt()
-	m.searchInput.TextColor = primaryColorStr
+	m.searchInput.TextStyle = GetPrimaryFontStyle()
 	m.searchInput.CharLimit = 32
 
 	return
@@ -110,8 +122,8 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
 	switch msg := message.(type) {
 	case tea.KeyMsg:
 		return main.keyMsgHandle(msg, m)
-	case tea.ClearScreenMsg:
-		return m, tickMainUI(time.Nanosecond)
+	//case tea.ClearScreenMsg:
+	//	return m, tickMainUI(time.Nanosecond)
 	case tickMainUIMsg:
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -485,12 +497,12 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 			m.searchInput.Blur()
 			m.searchInput.Reset()
 			return m, func() tea.Msg {
-				return tea.ClearScreenMsg{}
+				return tea.ClearScreen()
 			}
 		case "enter":
 			searchMenuHandle(m)
 			return m, func() tea.Msg {
-				return tea.ClearScreenMsg{}
+				return tea.ClearScreen()
 			}
 		}
 
@@ -607,7 +619,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "r", "R":
 		// rerender
 		return m, func() tea.Msg {
-			return tea.ClearScreenMsg{}
+			return tea.ClearScreen()
 		}
 	}
 

@@ -5,13 +5,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	"github.com/anhoder/bubbles/textinput"
-	tea "github.com/anhoder/bubbletea"
 	"github.com/anhoder/netease-music/service"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 )
@@ -45,18 +46,18 @@ func (s *SearchModel) Reset() {
 	s.index = 0
 	s.wordsInput.Focus()
 	s.wordsInput.Prompt = GetFocusedPrompt()
-	s.wordsInput.TextColor = primaryColorStr
+	s.wordsInput.TextStyle = GetPrimaryFontStyle()
 	s.wordsInput.CharLimit = 32
 	s.submitButton = GetBlurredSubmitButton()
 }
 
 func NewSearch() (search *SearchModel) {
 	search = new(SearchModel)
-	search.wordsInput = textinput.NewModel()
+	search.wordsInput = textinput.New()
 	search.wordsInput.Placeholder = " 输入关键词"
 	search.wordsInput.Focus()
 	search.wordsInput.Prompt = GetFocusedPrompt()
-	search.wordsInput.TextColor = primaryColorStr
+	search.wordsInput.TextStyle = GetPrimaryFontStyle()
 	search.wordsInput.CharLimit = 32
 
 	search.submitButton = GetBlurredSubmitButton()
@@ -160,13 +161,13 @@ func (s *SearchModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) 
 					// Set focused state
 					inputs[i].Focus()
 					inputs[i].Prompt = GetFocusedPrompt()
-					inputs[i].TextColor = primaryColorStr
+					inputs[i].TextStyle = GetPrimaryFontStyle()
 					continue
 				}
 				// Remove focused state
 				inputs[i].Blur()
 				inputs[i].Prompt = GetBlurredPrompt()
-				inputs[i].TextColor = ""
+				inputs[i].TextStyle = lipgloss.NewStyle()
 			}
 
 			m.searchModel.wordsInput = inputs[0]
