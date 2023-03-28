@@ -11,7 +11,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	tea "github.com/anhoder/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fogleman/ease"
 	"github.com/muesli/termenv"
 )
@@ -40,7 +40,6 @@ func NewStartup() (m *StartupModel) {
 // startup func
 func (s *StartupModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
-
 	case tickStartupMsg:
 		if s.loadedDuration >= s.TotalDuration {
 			s.loaded = true
@@ -53,9 +52,6 @@ func (s *StartupModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd)
 			s.loadedPercent = ease.OutBounce(s.loadedPercent)
 		}
 		return m, tickStartup(constants.StartupTickDuration)
-
-	case tea.ClearScreenMsg:
-		return m, tickStartup(time.Nanosecond)
 	}
 
 	return m, nil
