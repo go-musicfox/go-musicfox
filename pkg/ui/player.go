@@ -588,7 +588,8 @@ func (p *Player) SetPlayMode(playMode player.Mode) {
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayMode{}, p.mode)
 
-	p.model.Rerender()
+	// FIXME: 启用会导致模式切换卡屏
+	// p.model.Rerender()
 }
 
 // Close 关闭
