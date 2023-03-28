@@ -496,14 +496,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 			m.inSearching = false
 			m.searchInput.Blur()
 			m.searchInput.Reset()
-			return m, func() tea.Msg {
-				return tea.ClearScreen()
-			}
+			return m, tea.ClearScreen
 		case "enter":
 			searchMenuHandle(m)
-			return m, func() tea.Msg {
-				return tea.ClearScreen()
-			}
+			return m, tea.ClearScreen
 		}
 
 		var cmd tea.Cmd
@@ -614,9 +610,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		collectSelectedPlaylist(m, false)
 	case "r", "R":
 		// rerender
-		return m, func() tea.Msg {
-			return tea.ClearScreen()
-		}
+		return m, tea.ClearScreen
 	}
 
 	return m, tickMainUI(time.Nanosecond)
