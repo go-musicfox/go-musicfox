@@ -24,3 +24,17 @@ type UrlMusic struct {
 	Type SongType
 	structs.Song
 }
+
+var typeNames = map[SongType]string{
+	0: "MP3",
+	1: "WAV",
+	2: "OGG",
+	3: "FLAC",
+}
+
+func SongTypeName(t SongType) string {
+	if name, ok := typeNames[t]; ok {
+		return name
+	}
+	return "未知"
+}

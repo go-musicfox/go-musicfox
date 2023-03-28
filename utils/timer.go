@@ -105,7 +105,7 @@ func (t *Timer) Pause() {
 	t.pushDone()
 	t.passed += time.Now().Sub(t.lastTick)
 	t.lastTick = time.Now()
-	t.options.OnPaused()
+	go t.options.OnPaused()
 }
 
 // Stop finishes the timer.
