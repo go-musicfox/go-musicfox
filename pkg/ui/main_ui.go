@@ -3,14 +3,12 @@ package ui
 import (
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
-	"github.com/go-musicfox/go-musicfox/pkg/player"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -124,8 +122,8 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
 	switch msg := message.(type) {
 	case tea.KeyMsg:
 		return main.keyMsgHandle(msg, m)
-	case tea.MouseMsg:
-		return main.mouseMsgHandle(msg, m)
+	//case tea.ClearScreenMsg:
+	//	return m, tickMainUI(time.Nanosecond)
 	case tickMainUIMsg:
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -176,8 +174,8 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
 				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 2
 				m.player.lyricLines = 3
 			}
+
 		}
-		return m, m.rerenderTicker(true)
 	}
 
 	return m, nil
@@ -256,7 +254,7 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
 	realString := menuTitle.OriginString()
 	formatString := menuTitle.String()
 	if runewidth.StringWidth(realString) > maxLen {
-		var menuTmp = *menuTitle
+		var menuTmp = menuTitle
 		titleLen := runewidth.StringWidth(menuTmp.Title)
 		subTitleLen := runewidth.StringWidth(menuTmp.Subtitle)
 		if titleLen >= maxLen-1 {
@@ -272,7 +270,7 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
 		title = runewidth.FillRight(menuTitle.String(), maxLen+formatLen-realLen)
 	}
 
-	if top != nil && m.menuTitleStartRow-*top > 0 {
+	if m.menuTitleStartRow-*top > 0 {
 		menuTitleBuilder.WriteString(strings.Repeat("\n", m.menuTitleStartRow-*top))
 	}
 	if m.menuTitleStartColumn > 0 {
@@ -280,9 +278,7 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
 	}
 	menuTitleBuilder.WriteString(SetFgStyle(title, termenv.ANSIBrightGreen))
 
-	if top != nil {
-		*top = m.menuTitleStartRow
-	}
+	*top = m.menuTitleStartRow
 
 	return menuTitleBuilder.String()
 }
@@ -500,10 +496,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 			m.inSearching = false
 			m.searchInput.Blur()
 			m.searchInput.Reset()
-			return m, m.rerenderTicker(true)
+			return m, tea.ClearScreen
 		case "enter":
 			searchMenuHandle(m)
-			return m, m.rerenderTicker(true)
+			return m, tea.ClearScreen
 		}
 
 		var cmd tea.Cmd
@@ -512,8 +508,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		return m, tea.Batch(cmd)
 	}
 
-	key := msg.String()
-	switch key {
+	switch msg.String() {
 	case "j", "J", "down":
 		moveDown(m)
 	case "k", "K", "up":
@@ -522,12 +517,6 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		moveLeft(m)
 	case "l", "L", "right":
 		moveRight(m)
-	case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
-		num, _ := strconv.Atoi(key)
-		start := (m.menuCurPage - 1) * m.menuPageSize
-		if start+num < len(m.menuList) {
-			m.selectedIndex = start + num
-		}
 	case "g":
 		moveTop(m)
 	case "G":
@@ -547,14 +536,6 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		}
 	case " ", "　":
 		spaceKeyHandle(m)
-	case "v":
-		m.player.Seek(m.player.PassedTime() + time.Second*5)
-	case "V":
-		m.player.Seek(m.player.PassedTime() + time.Second*10)
-	case "x":
-		m.player.Seek(m.player.PassedTime() - time.Second*1)
-	case "X":
-		m.player.Seek(m.player.PassedTime() - time.Second*5)
 	case "[", "【":
 		m.player.PreviousSong()
 	case "]", "】":
@@ -629,36 +610,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		collectSelectedPlaylist(m, false)
 	case "r", "R":
 		// rerender
-		return m, m.rerenderTicker(true)
-	}
-
-	return m, tickMainUI(time.Nanosecond)
-}
-
-// mouse handle
-func (main *MainUIModel) mouseMsgHandle(msg tea.MouseMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
-	if !m.isListeningKey {
-		return m, nil
-	}
-	switch msg.Type {
-	case tea.MouseLeft:
-		x, y := msg.X, msg.Y
-		w := len(m.player.progressRamp)
-		if y+1 == m.WindowHeight && x+1 <= len(m.player.progressRamp) {
-			allDuration := int(m.player.CurMusic().Duration.Seconds())
-			if allDuration == 0 {
-				return m, nil
-			}
-			duration := float64(x) * m.player.CurMusic().Duration.Seconds() / float64(w)
-			m.player.Seek(time.Second * time.Duration(duration))
-			if m.player.State() != player.Playing {
-				m.player.Resume()
-			}
-		}
-	case tea.MouseWheelDown:
-		m.player.DownVolume()
-	case tea.MouseWheelUp:
-		m.player.UpVolume()
+		return m, tea.ClearScreen
 	}
 
 	return m, tickMainUI(time.Nanosecond)
