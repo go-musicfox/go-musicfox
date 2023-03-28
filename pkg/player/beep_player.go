@@ -114,7 +114,13 @@ func (p *beepPlayer) listen() {
 			go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 				defer utils.Recover(false)
 				_, _ = utils.CopyClose(ctx, cacheWFile, read)
-				p.curStreamer, p.curFormat, _ = DecodeSong(p.curMusic.Type, p.cacheReader)
+				// 除了MP3格式，其他格式无需重载
+				if p.curMusic.Type == Mp3 {
+					if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
+						p.Stop()
+					}
+				}
+
 			}(ctx, p.cacheWriter, resp.Body)
 
 			if err = utils.WaitForNBytes(p.cacheReader, 512, time.Millisecond*100, 50); err != nil {
@@ -197,6 +203,12 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *beepPlayer) Seek(duration time.Duration) {
+	// FIXME: 暂时仅对MP3格式提供跳转功能
+	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
+	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
+	if p.curMusic.Type != Mp3 {
+		return
+	}
 	if p.state == Playing || p.state == Paused {
 
 		speaker.Lock()
