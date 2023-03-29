@@ -231,7 +231,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	if p.curMusic.Type != Mp3 {
 		return
 	}
-	// 歌词随跟随进度显示,暂停后鼠标点击不继续播放时使用，实现歌词随跟
+	// 歌词跟随进度显示,暂停后鼠标点击不继续播放时使用，实现歌词跟随
 	// if p.state == Paused {
 	// 	p.timeChan <- p.timer.Passed()
 	// }
