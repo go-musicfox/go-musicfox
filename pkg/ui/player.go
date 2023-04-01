@@ -185,17 +185,23 @@ func (p *Player) lyricView() string {
 	}
 
 	var lyricBuilder strings.Builder
-
 	if p.lyricStartRow > p.model.menuBottomRow {
 		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-p.model.menuBottomRow))
+	}
+
+	var startCol int
+	if p.model.doubleColumn {
+		startCol = p.model.menuStartColumn + 3
+	} else {
+		startCol = p.model.menuStartColumn - 4
 	}
 
 	switch p.lyricLines {
 	// 3行歌词
 	case 3:
 		for i := 1; i <= 3; i++ {
-			if p.model.menuStartColumn+3 > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+			if startCol > 0 {
+				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
 			if i == 2 {
 				lyricLine := p.lyricNowScrollBar.Tick(p.model.WindowWidth-p.model.menuStartColumn-4, p.lyrics[i])
@@ -210,8 +216,8 @@ func (p *Player) lyricView() string {
 	// 5行歌词
 	case 5:
 		for i := 0; i < 5; i++ {
-			if p.model.menuStartColumn+3 > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+			if startCol > 0 {
+				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
 			if i == 2 {
 				lyricLine := p.lyricNowScrollBar.Tick(p.model.WindowWidth-p.model.menuStartColumn-4, p.lyrics[i])
