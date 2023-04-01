@@ -2,8 +2,10 @@ package lastfm
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/pkg/errors"
@@ -128,4 +130,39 @@ func (c *Client) GetUserInfo(args map[string]interface{}) (lastfmgo.UserGetInfo,
 		return c.GetUserInfo(args)
 	}
 	return userInfo, err
+}
+
+type ReportPhase uint8
+
+const (
+	ReportPhaseStart ReportPhase = iota
+	ReportPhaseComplete
+)
+
+func Report(client *Client, phase ReportPhase, song structs.Song, passedTime time.Duration) {
+	switch phase {
+	case ReportPhaseStart:
+		go func(song structs.Song) {
+			_ = client.UpdateNowPlaying(map[string]interface{}{
+				"artist":   song.ArtistName(),
+				"track":    song.Name,
+				"album":    song.Album.Name,
+				"duration": song.Duration,
+			})
+		}(song)
+	case ReportPhaseComplete:
+		duration := song.Duration.Seconds()
+		passedSeconds := passedTime.Seconds()
+		if duration <= passedSeconds || passedSeconds >= duration/2 {
+			go func(song structs.Song, passed time.Duration) {
+				_ = client.Scrobble(map[string]interface{}{
+					"artist":    song.ArtistName(),
+					"track":     song.Name,
+					"album":     song.Album.Name,
+					"timestamp": time.Now().Unix(),
+					"duration":  song.Duration.Seconds(),
+				})
+			}(song, passedTime)
+		}
+	}
 }

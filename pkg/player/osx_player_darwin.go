@@ -105,11 +105,8 @@ func (p *osxPlayer) listen() {
 					OnPaused:       func() {},
 					OnDone:         func(stopped bool) {},
 					OnTick: func() {
-						var curTime time.Duration
-						objc.Autorelease(func() {
-							t := p.player.CurrentTime()
-							curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
-						})
+						t := p.player.CurrentTime()
+						curTime := time.Duration(t.Value/int64(t.Timescale)) * time.Second
 						select {
 						//osx_player存在一点延迟
 						case p.timeChan <- curTime + time.Millisecond*800:

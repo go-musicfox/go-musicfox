@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/faiface/beep"
@@ -206,11 +208,11 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	// FIXME: 暂时仅对MP3格式提供跳转功能
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
-	if p.curMusic.Type != Mp3 {
+	// minimp3未实现Seek
+	if p.curMusic.Type != Mp3 || configs.ConfigRegistry.PlayerBeepMp3Decoder == constants.BeepMiniMp3Decoder {
 		return
 	}
 	if p.state == Playing || p.state == Paused {
-
 		speaker.Lock()
 		newPos := p.curFormat.SampleRate.N(duration)
 
