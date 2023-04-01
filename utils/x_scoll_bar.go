@@ -13,7 +13,7 @@ type XScrollBar struct {
 	l           sync.Mutex
 }
 
-func NewXScrollbar() *XScrollBar {
+func NewXScrollBar() *XScrollBar {
 	return &XScrollBar{
 		_increment: 0,
 	}

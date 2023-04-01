@@ -87,7 +87,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 		model:             model,
 		mode:              player.PmListLoop,
 		ctrl:              make(chan CtrlSignal),
-		lyricNowScrollBar: utils.NewXScrollbar(),
+		lyricNowScrollBar: utils.NewXScrollBar(),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
