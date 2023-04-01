@@ -248,7 +248,10 @@ func (p *Player) lyricView() string {
 			}
 			lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
 			if i == 2 {
-				lyricBuilder.WriteString(SetFgStyle(p.lyricNow, termenv.ANSIBrightCyan))
+				if runewidth.StringWidth(p.lyrics[2]) > p.model.WindowWidth-p.model.menuStartColumn-4 {
+					lyricLine = p.lyricNow
+				}
+				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
@@ -266,7 +269,10 @@ func (p *Player) lyricView() string {
 				p.model.WindowWidth-p.model.menuStartColumn-4,
 				"")
 			if i == 2 {
-				lyricBuilder.WriteString(SetFgStyle(p.lyricNow, termenv.ANSIBrightCyan))
+				if runewidth.StringWidth(p.lyrics[2]) > p.model.WindowWidth-p.model.menuStartColumn-4 {
+					lyricLine = p.lyricNow
+				}
+				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
