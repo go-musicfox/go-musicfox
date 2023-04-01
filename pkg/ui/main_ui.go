@@ -255,7 +255,7 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
 	realString := menuTitle.OriginString()
 	formatString := menuTitle.String()
 	if runewidth.StringWidth(realString) > maxLen {
-		var menuTmp = menuTitle
+		var menuTmp = *menuTitle
 		titleLen := runewidth.StringWidth(menuTmp.Title)
 		subTitleLen := runewidth.StringWidth(menuTmp.Subtitle)
 		if titleLen >= maxLen-1 {
