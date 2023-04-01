@@ -134,7 +134,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
 		}
-		m.Rerender()
+		m.Rerender(false)
 
 		// 获取扩展信息
 		{
@@ -273,11 +273,21 @@ func (m *NeteaseModel) BindProgram(program *tea.Program) {
 	m.program = program
 }
 
-func (m *NeteaseModel) Rerender() {
+func (m *NeteaseModel) Rerender(cleanScreen bool) {
 	if m.program == nil {
 		return
 	}
-	m.program.Send(MsgOfPageType(m.pageType))
+	ticker := m.rerenderTicker(cleanScreen)
+	m.program.Send(ticker())
+}
+
+func (m *NeteaseModel) rerenderTicker(cleanScreen bool) tea.Cmd {
+	return func() tea.Msg {
+		if cleanScreen {
+			m.program.Send(tea.ClearScreen())
+		}
+		return MsgOfPageType(m.pageType)
+	}
 }
 
 func (m *NeteaseModel) Close() {

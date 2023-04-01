@@ -125,8 +125,6 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
 		return main.keyMsgHandle(msg, m)
 	case tea.MouseMsg:
 		return main.mouseMsgHandle(msg, m)
-	//case tea.ClearScreenMsg:
-	//	return m, tickMainUI(time.Nanosecond)
 	case tickMainUIMsg:
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -177,8 +175,8 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
 				m.player.lyricStartRow = (m.WindowHeight-3+m.menuBottomRow)/2 - 2
 				m.player.lyricLines = 3
 			}
-
 		}
+		return m, m.rerenderTicker(true)
 	}
 
 	return m, nil
@@ -499,14 +497,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 			m.inSearching = false
 			m.searchInput.Blur()
 			m.searchInput.Reset()
-			return m, func() tea.Msg {
-				return tea.ClearScreen()
-			}
+			return m, m.rerenderTicker(true)
 		case "enter":
 			searchMenuHandle(m)
-			return m, func() tea.Msg {
-				return tea.ClearScreen()
-			}
+			return m, m.rerenderTicker(true)
 		}
 
 		var cmd tea.Cmd
@@ -625,9 +619,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		collectSelectedPlaylist(m, false)
 	case "r", "R":
 		// rerender
-		return m, func() tea.Msg {
-			return tea.ClearScreen()
-		}
+		return m, m.rerenderTicker(true)
 	}
 
 	return m, tickMainUI(time.Nanosecond)
@@ -640,8 +632,7 @@ func (main *MainUIModel) mouseMsgHandle(msg tea.MouseMsg, m *NeteaseModel) (tea.
 	}
 	switch msg.Type {
 	case tea.MouseLeft:
-		x := msg.X
-		y := msg.Y
+		x, y := msg.X, msg.Y
 		w := len(m.player.progressRamp)
 		if y+1 == m.WindowHeight && x+1 <= len(m.player.progressRamp) {
 			allDuration := int(m.player.CurMusic().Duration.Seconds())
