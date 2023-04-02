@@ -3,24 +3,24 @@
 package entry
 
 import (
-	"os"
-
+	"github.com/go-musicfox/go-musicfox/pkg/cocoa"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/progrium/macdriver/cocoa"
 )
 
 func AppEntry() {
 	defer utils.Recover(false)
 
+	var app = cocoa.NSApp()
+	app.SetActivationPolicy(cocoa.NSApplicationActivationPolicyProhibited)
+	app.SetDelegate(cocoa.DefaultAppDelegate())
+	app.ActivateIgnoringOtherApps(true)
+
 	go func() {
 		defer utils.Recover(false)
 		runCLI()
-		os.Exit(0)
+
+		app.Terminate(0)
 	}()
 
-	app := cocoa.NSApp()
-	app.SetActivationPolicy(cocoa.NSApplicationActivationPolicyProhibited)
-	app.ActivateIgnoringOtherApps(true)
 	app.Run()
 }
