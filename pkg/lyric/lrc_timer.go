@@ -57,7 +57,7 @@ func (t *LRCTimer) Start() {
 				break
 			}
 
-			if duration < time.Duration(fragments[t.curIndex+1].StartTimeMs)*time.Millisecond {
+			if duration < time.Duration(fragments[t.curIndex].StartTimeMs)*time.Millisecond {
 				for _, l := range t.listeners {
 					go l(current.StartTimeMs, current.Content, transContent, isLast, t.curIndex)
 				}
@@ -71,7 +71,7 @@ func (t *LRCTimer) Start() {
 				t.l.Unlock()
 				current = fragments[t.curIndex]
 				transContent = t.transFile.FindByTimeMs(current.StartTimeMs)
-				isLast = t.curIndex >= len(fragments)-1
+				isLast = t.curIndex > len(fragments)-1
 			}
 
 			for _, l := range t.listeners {
