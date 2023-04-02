@@ -18,6 +18,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/storage"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
@@ -250,6 +251,14 @@ func (p *Player) songView() string {
 		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
 	} else {
 		builder.WriteString(SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
+	}
+
+	if p.curSong.Id > 0 {
+		if like_list.IsLikeSong(p.curSong.Id) {
+			builder.WriteString(SetFgStyle("✦ ", termenv.ANSIRed))
+		} else {
+			builder.WriteString(SetFgStyle("✧ ", termenv.ANSIWhite))
+		}
 	}
 
 	if p.curSongIndex < len(p.playlist) {

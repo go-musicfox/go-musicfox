@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
@@ -420,6 +421,11 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		})
 		return
 	}
+
+	go func() {
+		like_list.RefreshLikeList(m.user.UserId)
+		m.Rerender(false)
+	}()
 
 	if isLike {
 		utils.Notify(utils.NotifyContent{

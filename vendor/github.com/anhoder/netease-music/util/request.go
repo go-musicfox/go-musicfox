@@ -72,13 +72,15 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		}
 	}()
 
+	if cookieJar == nil {
+		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
+	}
+
 	if u, err := urlpkg.Parse(url); err == nil {
 		options.Cookies = append(options.Cookies, cookieJar.Cookies(u)...)
 	}
 	req := requests.Requests()
-	if cookieJar == nil {
-		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
-	}
+
 	req.Client.Jar = cookieJar
 	req.Header.Set("User-Agent", chooseUserAgent(options.Ua))
 	csrfToken := ""

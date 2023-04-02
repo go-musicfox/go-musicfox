@@ -3,7 +3,7 @@ module github.com/go-musicfox/go-musicfox
 go 1.18
 
 require (
-	github.com/anhoder/netease-music v1.3.4
+	github.com/anhoder/netease-music v1.3.5
 	github.com/anhoder/notificator v0.0.5
 	github.com/bogem/id3v2/v2 v2.1.3
 	github.com/boltdb/bolt v1.3.1

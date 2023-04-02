@@ -14,6 +14,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/storage"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/anhoder/netease-music/util"
@@ -160,6 +161,12 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				extInfo.StorageVersion = constants.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)
 			}
+		}
+
+		// 刷新like list
+		if m.user != nil {
+			like_list.RefreshLikeList(m.user.UserId)
+			m.Rerender(false)
 		}
 
 		// 签到
