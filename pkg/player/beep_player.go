@@ -122,7 +122,6 @@ func (p *beepPlayer) listen() {
 						p.Stop()
 					}
 				}
-
 			}(ctx, p.cacheWriter, resp.Body)
 
 			if err = utils.WaitForNBytes(p.cacheReader, 512, time.Millisecond*100, 50); err != nil {

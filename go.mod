@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.23.2
 	github.com/charmbracelet/lipgloss v0.6.0
+	github.com/ebitengine/purego v0.3.2
 	github.com/faiface/beep v1.1.0
 	github.com/fhs/gompd/v2 v2.2.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
