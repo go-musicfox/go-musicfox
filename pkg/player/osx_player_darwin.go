@@ -201,7 +201,8 @@ func (p *osxPlayer) PassedTime() time.Duration {
 	if p.timer == nil {
 		return 0
 	}
-	return p.timer.Passed()
+	t := p.player.CurrentTime()
+	return time.Duration(t.Value/int64(t.Timescale)) * time.Second
 }
 
 func (p *osxPlayer) TimeChan() <-chan time.Duration {
