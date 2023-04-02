@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/anhoder/netease-music/util"
 	"net/http"
+
+	"github.com/anhoder/netease-music/util"
 )
 
 type LikeService struct {
@@ -11,12 +12,11 @@ type LikeService struct {
 }
 
 func (service *LikeService) Like() (float64, []byte) {
-
 	options := &util.Options{
-		Crypto:  "weapi",
+		Crypto: "weapi",
 		Cookies: []*http.Cookie{
-			&http.Cookie{Name: "os", Value: "pc"},
-			&http.Cookie{Name: "appver", Value: "2.7.1.198277"},
+			{Name: "os", Value: "pc"},
+			{Name: "appver", Value: "2.7.1.198277"},
 		},
 	}
 	data := make(map[string]string)

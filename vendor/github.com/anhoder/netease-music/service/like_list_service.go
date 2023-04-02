@@ -9,9 +9,8 @@ type LikeListService struct {
 }
 
 func (service *LikeListService) LikeList() (float64, []byte) {
-
 	options := &util.Options{
-		Crypto:  "weapi",
+		Crypto: "weapi",
 	}
 
 	data := make(map[string]string)
