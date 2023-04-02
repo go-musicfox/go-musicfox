@@ -265,7 +265,6 @@ func updateLoginInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 }
 
 func loginView(m *NeteaseModel) string {
-
 	var builder strings.Builder
 
 	// 距离顶部的行数

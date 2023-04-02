@@ -271,7 +271,7 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
 		title = runewidth.FillRight(menuTitle.String(), maxLen+formatLen-realLen)
 	}
 
-	if m.menuTitleStartRow-*top > 0 {
+	if top != nil && m.menuTitleStartRow-*top > 0 {
 		menuTitleBuilder.WriteString(strings.Repeat("\n", m.menuTitleStartRow-*top))
 	}
 	if m.menuTitleStartColumn > 0 {
@@ -279,7 +279,9 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
 	}
 	menuTitleBuilder.WriteString(SetFgStyle(title, termenv.ANSIBrightGreen))
 
-	*top = m.menuTitleStartRow
+	if top != nil {
+		*top = m.menuTitleStartRow
+	}
 
 	return menuTitleBuilder.String()
 }
