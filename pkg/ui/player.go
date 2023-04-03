@@ -197,6 +197,7 @@ func (p *Player) lyricView() string {
 		startCol = p.model.menuStartColumn - 4
 	}
 
+	maxLen := p.model.WindowWidth - startCol - 4
 	switch p.lyricLines {
 	// 3行歌词
 	case 3:
@@ -205,10 +206,10 @@ func (p *Player) lyricView() string {
 				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
 			if i == 2 {
-				lyricLine := p.lyricNowScrollBar.Tick(p.model.WindowWidth-p.model.menuStartColumn-4, p.lyrics[i])
+				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
-				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
+				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
 
@@ -221,10 +222,10 @@ func (p *Player) lyricView() string {
 				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
 			if i == 2 {
-				lyricLine := p.lyricNowScrollBar.Tick(p.model.WindowWidth-p.model.menuStartColumn-4, p.lyrics[i])
+				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
-				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
+				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
 			lyricBuilder.WriteString("\n")
