@@ -206,7 +206,6 @@ func (s *SearchModel) view(m *NeteaseModel) string {
 
 	// title
 	if configs.ConfigRegistry.MainShowTitle {
-
 		builder.WriteString(m.titleView(m, &top))
 	} else {
 		top++
@@ -264,6 +263,10 @@ func (s *SearchModel) view(m *NeteaseModel) string {
 		builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
 	}
 	builder.WriteString(m.searchModel.submitButton)
+	spaceLen := m.WindowWidth - m.menuStartColumn - runewidth.StringWidth(SubmitText)
+	if spaceLen > 0 {
+		builder.WriteString(strings.Repeat(" ", spaceLen))
+	}
 	builder.WriteString("\n")
 
 	if m.WindowHeight > top+3 {

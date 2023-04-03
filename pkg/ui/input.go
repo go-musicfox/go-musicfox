@@ -13,6 +13,8 @@ var (
 	blurredSubmitButton string
 )
 
+const SubmitText = "确认"
+
 func GetFocusedPrompt() string {
 	if focusedPrompt != "" {
 		return focusedPrompt
@@ -45,7 +47,7 @@ func GetFocusedSubmitButton() string {
 	if focusedSubmitButton != "" {
 		return focusedSubmitButton
 	}
-	focusedSubmitButton = GetFocusedButton("确认")
+	focusedSubmitButton = GetFocusedButton(SubmitText)
 	return focusedSubmitButton
 }
 
@@ -53,6 +55,6 @@ func GetBlurredSubmitButton() string {
 	if blurredSubmitButton != "" {
 		return blurredSubmitButton
 	}
-	blurredSubmitButton = GetBlurredButton("确认")
+	blurredSubmitButton = GetBlurredButton(SubmitText)
 	return blurredSubmitButton
 }
