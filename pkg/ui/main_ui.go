@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -511,7 +512,8 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		return m, tea.Batch(cmd)
 	}
 
-	switch msg.String() {
+	key := msg.String()
+	switch key {
 	case "j", "J", "down":
 		moveDown(m)
 	case "k", "K", "up":
@@ -520,6 +522,12 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		moveLeft(m)
 	case "l", "L", "right":
 		moveRight(m)
+	case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		num, _ := strconv.Atoi(key)
+		start := (m.menuCurPage - 1) * m.menuPageSize
+		if start+num < len(m.menuList) {
+			m.selectedIndex = start + num
+		}
 	case "g":
 		moveTop(m)
 	case "G":
