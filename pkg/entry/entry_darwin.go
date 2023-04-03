@@ -3,7 +3,8 @@
 package entry
 
 import (
-	"github.com/go-musicfox/go-musicfox/pkg/cocoa"
+	"github.com/ebitengine/purego/objc"
+	"github.com/go-musicfox/go-musicfox/pkg/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/utils"
 )
 
@@ -12,15 +13,16 @@ func AppEntry() {
 
 	var app = cocoa.NSApp()
 	app.SetActivationPolicy(cocoa.NSApplicationActivationPolicyProhibited)
-	app.SetDelegate(cocoa.DefaultAppDelegate())
 	app.ActivateIgnoringOtherApps(true)
 
-	go func() {
-		defer utils.Recover(false)
-		runCLI()
-
-		app.Terminate(0)
-	}()
-
+	delegate := cocoa.DefaultAppDelegate()
+	delegate.RegisterDidFinishLaunchingCallback(func(_ objc.ID) {
+		go func() {
+			defer utils.Recover(false)
+			runCLI()
+			app.Terminate(0)
+		}()
+	})
+	app.SetDelegate(delegate)
 	app.Run()
 }

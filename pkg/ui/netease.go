@@ -238,12 +238,13 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.WindowWidth = msgWithType.Width
 	}
 
+	if _, ok := msg.(tea.WindowSizeMsg); ok {
+		m.MainUIModel.update(msg, m)
+	}
+
 	// Hand off the message and model to the approprate update function for the
 	// appropriate view based on the current state.
 	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
-		if _, ok := msg.(tea.WindowSizeMsg); ok {
-			m.MainUIModel.update(msg, m)
-		}
 		return m.startup.update(msg, m)
 	}
 
