@@ -7,8 +7,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver/core"
 )
 
-var (
+func init() {
+	importFramework()
 	class_NSApplication = objc.GetClass("NSApplication")
+}
+
+var (
+	class_NSApplication objc.Class
 )
 
 var (
@@ -21,7 +26,7 @@ var (
 	sel_terminate                 = objc.RegisterName("terminate:")
 )
 
-type NSApplicationActivationPolicy int
+type NSApplicationActivationPolicy core.NSInteger
 
 const (
 	NSApplicationActivationPolicyRegular    NSApplicationActivationPolicy = 0

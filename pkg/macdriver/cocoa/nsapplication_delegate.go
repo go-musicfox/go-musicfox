@@ -6,6 +6,16 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver/core"
 )
 
+func init() {
+	importFramework()
+
+	var err error
+	class_DefaultAppDelegate, err = objc.RegisterClass(&defaultAppDelegateBinding{})
+	if err != nil {
+		panic(err)
+	}
+}
+
 var (
 	class_DefaultAppDelegate objc.Class
 )
@@ -18,15 +28,6 @@ var (
 var (
 	defaultDelegate *defaultAppDelegate
 )
-
-func init() {
-	var err error
-	class_DefaultAppDelegate, err = objc.RegisterClass(&defaultAppDelegateBinding{})
-	if err != nil {
-		panic(err)
-	}
-
-}
 
 type defaultAppDelegateBinding struct {
 	isa objc.Class `objc:"NSDefaultAppDelegate : NSObject <NSApplicationDelegate>"`

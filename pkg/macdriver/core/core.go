@@ -1,29 +1,36 @@
 package core
 
 import (
+	"sync"
+
+	"github.com/ebitengine/purego"
 	"github.com/ebitengine/purego/objc"
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver"
 )
 
-var (
-	class_NSAutoreleasePool = objc.GetClass("NSAutoreleasePool")
-	class_NSString          = objc.GetClass("NSString")
-)
+var importOnce sync.Once
 
-var (
-	sel_initWithUTF8String = objc.RegisterName("initWithUTF8String:")
-	sel_UTF8String         = objc.RegisterName("UTF8String")
-	sel_unsignedIntValue   = objc.RegisterName("unsignedIntValue")
-)
+func importFramework() {
+	importOnce.Do(func() {
+		_, err := purego.Dlopen("Foundation.framework/Foundation", purego.RTLD_GLOBAL)
+		if err != nil {
+			panic(err)
+		}
+	})
+}
 
-type NSUInteger = uint
-type NSInteger = int
+type NSUInteger = uint32
+type NSInteger = int32
 
 type NSObject struct {
 	objc.ID
 }
 
-func (o NSObject) Release() {
+func (o *NSObject) SetObjcID(id objc.ID) {
+	o.ID = id
+}
+
+func (o *NSObject) Release() {
 	o.Send(macdriver.SEL_release)
 }
 
@@ -33,12 +40,4 @@ type NSError struct {
 
 type NSAutoreleasePool struct {
 	NSObject
-}
-
-func NSAutoreleasePool_new() NSAutoreleasePool {
-	return NSAutoreleasePool{
-		NSObject{
-			ID: objc.ID(class_NSAutoreleasePool).Send(macdriver.SEL_new),
-		},
-	}
 }

@@ -5,8 +5,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver"
 )
 
-var (
+func init() {
+	importFramework()
 	class_NSMutableDictionary = objc.GetClass("NSMutableDictionary")
+}
+
+var (
+	class_NSMutableDictionary objc.Class
 )
 
 var (
@@ -14,17 +19,21 @@ var (
 )
 
 type NSMutableDictionary struct {
-	objc.ID
+	NSDictionary
 }
 
 func NSMutableDictionary_init() NSMutableDictionary {
-	return NSMutableDictionary{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init)}
+	return NSMutableDictionary{
+		NSDictionary{NSObject: NSObject{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init)}},
+	}
 }
 
-func NSMutableDictionary_initWithCapacity() NSMutableDictionary {
-	return NSMutableDictionary{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_initWithCapacity)}
+func NSMutableDictionary_initWithCapacity(cap NSUInteger) NSMutableDictionary {
+	return NSMutableDictionary{
+		NSDictionary{NSObject: NSObject{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_initWithCapacity, cap)}},
+	}
 }
 
-func (d NSMutableDictionary) SetValueForKey(key NSString, value objc.ID) {
-	d.Send(sel_setValueForKey, value, key.ID)
+func (d NSMutableDictionary) SetValueForKey(key NSString, value NSObject) {
+	d.Send(sel_setValueForKey, value.ID, key.ID)
 }
