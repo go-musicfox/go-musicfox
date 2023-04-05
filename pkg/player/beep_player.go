@@ -124,7 +124,12 @@ func (p *beepPlayer) listen() {
 				}
 			}(ctx, p.cacheWriter, resp.Body)
 
-			if err = utils.WaitForNBytes(p.cacheReader, 512, time.Millisecond*100, 50); err != nil {
+			var N = 512
+			if p.curMusic.Type == Flac {
+				N *= 4
+			}
+			if err = utils.WaitForNBytes(p.cacheReader, N, time.Millisecond*100, 50); err != nil {
+				utils.Logger().Printf("WaitForNBytes err: %+v", err)
 				p.Stop()
 				break
 			}

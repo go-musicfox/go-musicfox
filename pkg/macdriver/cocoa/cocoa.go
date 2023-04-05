@@ -2,6 +2,23 @@
 
 package cocoa
 
+import (
+	"sync"
+
+	"github.com/ebitengine/purego"
+)
+
+var importOnce sync.Once
+
+func importFramework() {
+	importOnce.Do(func() {
+		_, err := purego.Dlopen("AppKit.framework/AppKit", purego.RTLD_GLOBAL)
+		if err != nil {
+			panic(err)
+		}
+	})
+}
+
 type CGFloat = float64
 
 type CGSize struct {

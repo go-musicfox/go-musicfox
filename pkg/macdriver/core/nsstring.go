@@ -7,6 +7,20 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver"
 )
 
+func init() {
+	importFramework()
+	class_NSString = objc.GetClass("NSString")
+}
+
+var (
+	class_NSString objc.Class
+)
+
+var (
+	sel_initWithUTF8String = objc.RegisterName("initWithUTF8String:")
+	sel_UTF8String         = objc.RegisterName("UTF8String")
+)
+
 type NSString struct {
 	NSObject
 }
@@ -20,13 +34,14 @@ func NSString_alloc() NSString {
 }
 
 func (s NSString) InitWithUTF8String(utf8 string) NSString {
-	return NSString{
-		NSObject{
-			ID: s.Send(sel_initWithUTF8String, utf8),
-		},
-	}
+	s.ID = s.Send(sel_initWithUTF8String, utf8)
+	return s
 }
 
 func (s NSString) String() string {
 	return string(unsafe.Slice((*byte)(unsafe.Pointer(s.Send(sel_UTF8String))), s.Send(macdriver.SEL_length)))
+}
+
+func String(str string) NSString {
+	return NSString_alloc().InitWithUTF8String(str)
 }
