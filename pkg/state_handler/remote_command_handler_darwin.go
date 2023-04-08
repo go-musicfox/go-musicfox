@@ -224,7 +224,7 @@ type remoteCommandHandler struct {
 func remoteCommandHandler_new(c Controller) remoteCommandHandler {
 	_playerController = c
 	return remoteCommandHandler{
-		NSObject: core.NSObject{
+		core.NSObject{
 			ID: objc.ID(class_RemoteCommandHandler).Send(macdriver.SEL_new),
 		},
 	}

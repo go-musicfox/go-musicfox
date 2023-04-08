@@ -12,11 +12,10 @@ import (
 var (
 	val int
 	c   = make(chan struct{}, 1)
-	app NSApplication
 )
 
 func TestMain(m *testing.M) {
-	app = NSApp()
+	app := NSApp()
 	if app.ID == 0 {
 		panic("app init error")
 	}

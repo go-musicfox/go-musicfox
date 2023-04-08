@@ -33,13 +33,19 @@ func (o *NSObject) SetObjcID(id objc.ID) {
 }
 
 func (o *NSObject) Release() {
+	if o.ID == 0 {
+		return
+	}
 	o.Send(macdriver.SEL_release)
 }
 
-type NSError struct {
-	NSObject
+func (o *NSObject) Autorelease() {
+	if o.ID == 0 {
+		return
+	}
+	o.Send(macdriver.SEL_autorelease)
 }
 
-type NSAutoreleasePool struct {
+type NSError struct {
 	NSObject
 }

@@ -46,7 +46,7 @@ type MPRemoteCommandCenter struct {
 
 func MPRemoteCommandCenter_sharedCommandCenter() MPRemoteCommandCenter {
 	return MPRemoteCommandCenter{
-		NSObject: core.NSObject{ID: objc.ID(class_MPRemoteCommandCenter).Send(sel_sharedCommandCenter)},
+		core.NSObject{ID: objc.ID(class_MPRemoteCommandCenter).Send(sel_sharedCommandCenter)},
 	}
 }
 

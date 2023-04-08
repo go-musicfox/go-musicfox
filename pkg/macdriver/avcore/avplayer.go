@@ -4,6 +4,8 @@ package avcore
 
 import "C"
 import (
+	"unsafe"
+
 	"github.com/ebitengine/purego/objc"
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver"
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver/core"
@@ -19,14 +21,15 @@ var (
 )
 
 var (
-	sel_initWithPlayerItem = objc.RegisterName("initWithPlayerItem:")
-	sel_setActionAtItemEnd = objc.RegisterName("setActionAtItemEnd:")
-	sel_setVolume          = objc.RegisterName("setVolume:")
-	sel_currentItem        = objc.RegisterName("currentItem")
-	sel_currentTime        = objc.RegisterName("currentTime")
-	sel_pause              = objc.RegisterName("pause")
-	sel_play               = objc.RegisterName("play")
-	sel_seekToTime         = objc.RegisterName("seekToTime")
+	sel_initWithPlayerItem               = objc.RegisterName("initWithPlayerItem:")
+	sel_setActionAtItemEnd               = objc.RegisterName("setActionAtItemEnd:")
+	sel_setVolume                        = objc.RegisterName("setVolume:")
+	sel_currentItem                      = objc.RegisterName("currentItem")
+	sel_currentTime                      = objc.RegisterName("currentTime")
+	sel_pause                            = objc.RegisterName("pause")
+	sel_play                             = objc.RegisterName("play")
+	sel_seekToTime                       = objc.RegisterName("seekToTime:")
+	sel_replaceCurrentItemWithPlayerItem = objc.RegisterName("replaceCurrentItemWithPlayerItem:")
 )
 
 type AVPlayer struct {
@@ -35,10 +38,15 @@ type AVPlayer struct {
 
 func AVPlayer_alloc() AVPlayer {
 	return AVPlayer{
-		NSObject: core.NSObject{
+		core.NSObject{
 			ID: objc.ID(class_AVPlayer).Send(macdriver.SEL_alloc),
 		},
 	}
+}
+
+func (p AVPlayer) Init() AVPlayer {
+	p.Send(macdriver.SEL_init)
+	return p
 }
 
 func (p AVPlayer) InitWithPlayerItem(item AVPlayerItem) AVPlayer {
@@ -51,7 +59,11 @@ func (p AVPlayer) SetActionAtItemEnd(value core.NSInteger) {
 }
 
 func (p AVPlayer) SetVolume(value float32) {
-	p.Send(sel_setVolume, value)
+	sig := core.NSMethodSignature_instanceMethodSignatureForSelector(objc.ID(class_AVPlayer), sel_setVolume)
+	inv := core.NSInvocation_invocationWithMethodSignature(sig)
+	inv.SetSelector(sel_setVolume)
+	inv.SetArgumentAtIndex(unsafe.Pointer(&value), 2)
+	inv.InvokeWithTarget(p.ID)
 }
 
 func (p AVPlayer) CurrentItem() (item AVPlayerItem) {
@@ -59,8 +71,13 @@ func (p AVPlayer) CurrentItem() (item AVPlayerItem) {
 	return
 }
 
-func (p AVPlayer) CurrentTime() objc.ID {
-	return p.Send(sel_currentTime)
+func (p AVPlayer) CurrentTime() (time CMTime) {
+	sig := core.NSMethodSignature_instanceMethodSignatureForSelector(objc.ID(class_AVPlayer), sel_currentTime)
+	inv := core.NSInvocation_invocationWithMethodSignature(sig)
+	inv.SetSelector(sel_currentTime)
+	inv.InvokeWithTarget(p.ID)
+	inv.GetReturnValue(unsafe.Pointer(&time))
+	return
 }
 
 func (p AVPlayer) Pause() {
@@ -72,5 +89,13 @@ func (p AVPlayer) Play() {
 }
 
 func (p AVPlayer) SeekToTime(time CMTime) {
-	p.Send(sel_seekToTime, time)
+	sig := core.NSMethodSignature_instanceMethodSignatureForSelector(objc.ID(class_AVPlayer), sel_seekToTime)
+	inv := core.NSInvocation_invocationWithMethodSignature(sig)
+	inv.SetSelector(sel_seekToTime)
+	inv.SetArgumentAtIndex(unsafe.Pointer(&time), 2)
+	inv.InvokeWithTarget(p.ID)
+}
+
+func (p AVPlayer) ReplaceCurrentItemWithPlayerItem(item AVPlayerItem) {
+	p.Send(sel_replaceCurrentItemWithPlayerItem, item.ID)
 }

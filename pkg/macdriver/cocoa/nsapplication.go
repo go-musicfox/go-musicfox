@@ -44,7 +44,7 @@ type NSApplication struct {
 
 func NSApplication_sharedApplication() NSApplication {
 	return NSApplication{
-		NSObject: core.NSObject{
+		core.NSObject{
 			ID: objc.ID(class_NSApplication).Send(sel_sharedApplication),
 		},
 	}

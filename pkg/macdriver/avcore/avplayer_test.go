@@ -3,21 +3,61 @@
 package avcore
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/go-musicfox/go-musicfox/pkg/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver/core"
 )
 
+func TestMain(m *testing.M) {
+	app := cocoa.NSApp()
+	if app.ID == 0 {
+		panic("app init error")
+	}
+
+	app.SetActivationPolicy(cocoa.NSApplicationActivationPolicyProhibited)
+	app.ActivateIgnoringOtherApps(true)
+
+	go func() {
+		m.Run()
+		app.Terminate(0)
+	}()
+
+	app.Run()
+}
+
 func TestAVPlayer(t *testing.T) {
-	player := AVPlayer_alloc().InitWithPlayerItem(AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String("http://m801.music.126.net/20230405213504/57bd814bc9ce001962f988d48145b250/jdymusic/obj/wo3DlMOGwrbDjj7DisKw/9444694535/c8bb/65da/db54/9e257ff0610f84e4242cf0127dac6005.mp3"))))
+	player := AVPlayer_alloc().Init()
+	player.SetActionAtItemEnd(2)
+	player.SetVolume(0.1)
 	if player.ID == 0 {
 		panic("init player failed")
 	}
+	defer player.Release()
 
-	player.SetActionAtItemEnd(2)
-	player.SetVolume(100)
-	item := player.CurrentItem()
-	if item.ID == 0 {
+	file := core.String("./testdata/a.mp3")
+	defer file.Release()
+	url := core.NSURL_fileURLWithPath(file)
+	defer url.Release()
+	item := AVPlayerItem_playerItemWithURL(url)
+	defer item.Release()
+
+	player.ReplaceCurrentItemWithPlayerItem(item)
+	player.Play()
+	<-time.After(time.Second * 2)
+	player.Pause()
+
+	curItem := player.CurrentItem()
+	if curItem.ID == 0 {
 		panic("get player current item failed")
 	}
+	asset := curItem.Asset()
+	fmt.Println(asset.URL().AbsoluteString())
+
+	curTime := player.CurrentTime()
+	fmt.Println(curTime)
+
+	player.SeekToTime(curTime)
 }

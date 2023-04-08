@@ -27,7 +27,7 @@ type NSImage struct {
 
 func NSImage_alloc() NSImage {
 	return NSImage{
-		NSObject: core.NSObject{
+		core.NSObject{
 			ID: objc.ID(class_NSImage).Send(macdriver.SEL_alloc),
 		},
 	}
