@@ -24,5 +24,5 @@ type NSArray struct {
 }
 
 func NSArray_arrayWithObject(obj NSObject) NSArray {
-	return NSArray{NSObject: NSObject{ID: objc.ID(class_NSArray).Send(sel_arrayWithObject, obj.ID)}}
+	return NSArray{NSObject{ID: objc.ID(class_NSArray).Send(sel_arrayWithObject, obj.ID)}}
 }

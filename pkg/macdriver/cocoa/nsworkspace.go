@@ -27,7 +27,7 @@ type NSWorkspace struct {
 
 func NSWorkspace_sharedWorkspace() NSWorkspace {
 	return NSWorkspace{
-		NSObject: core.NSObject{
+		core.NSObject{
 			ID: objc.ID(class_NSWorkspace).Send(sel_sharedWorkspace),
 		},
 	}

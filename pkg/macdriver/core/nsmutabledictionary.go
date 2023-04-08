@@ -26,13 +26,13 @@ type NSMutableDictionary struct {
 
 func NSMutableDictionary_init() NSMutableDictionary {
 	return NSMutableDictionary{
-		NSDictionary{NSObject: NSObject{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init)}},
+		NSDictionary{NSObject{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init)}},
 	}
 }
 
 func NSMutableDictionary_initWithCapacity(cap NSUInteger) NSMutableDictionary {
 	return NSMutableDictionary{
-		NSDictionary{NSObject: NSObject{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_initWithCapacity, cap)}},
+		NSDictionary{NSObject{ID: objc.ID(class_NSMutableDictionary).Send(macdriver.SEL_alloc).Send(macdriver.SEL_initWithCapacity, cap)}},
 	}
 }
 

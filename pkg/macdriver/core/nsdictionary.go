@@ -25,7 +25,7 @@ type NSDictionary struct {
 }
 
 func NSDictionary_init() NSDictionary {
-	return NSDictionary{NSObject: NSObject{ID: objc.ID(class_NSDictionary).Send(macdriver.SEL_init)}}
+	return NSDictionary{NSObject{ID: objc.ID(class_NSDictionary).Send(macdriver.SEL_init)}}
 }
 
 func (d NSDictionary) ValueForKey(key NSString) objc.ID {

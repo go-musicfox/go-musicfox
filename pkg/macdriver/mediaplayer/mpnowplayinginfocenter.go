@@ -29,7 +29,7 @@ type MPNowPlayingInfoCenter struct {
 }
 
 func MPNowPlayingInfoCenter_defaultCenter() MPNowPlayingInfoCenter {
-	return MPNowPlayingInfoCenter{NSObject: core.NSObject{ID: objc.ID(class_MPNowPlayingInfoCenter).Send(macdriver.SEL_defaultCenter)}}
+	return MPNowPlayingInfoCenter{core.NSObject{ID: objc.ID(class_MPNowPlayingInfoCenter).Send(macdriver.SEL_defaultCenter)}}
 }
 
 func (c MPNowPlayingInfoCenter) PlaybackState() MPNowPlayingPlaybackState {

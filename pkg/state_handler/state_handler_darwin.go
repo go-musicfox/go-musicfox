@@ -51,8 +51,13 @@ func NewHandler(p Controller) *Handler {
 }
 
 func (s *Handler) registerCommands() {
-	s.remoteCommandCenter.SkipBackwardCommand().SetPreferredIntervals(core.NSArray_arrayWithObject(core.NSNumber_numberWithDouble(15.0).NSObject))
-	s.remoteCommandCenter.SkipForwardCommand().SetPreferredIntervals(core.NSArray_arrayWithObject(core.NSNumber_numberWithDouble(15.0).NSObject))
+	number := core.NSNumber_numberWithDouble(15.0)
+	defer number.Release()
+	intervals := core.NSArray_arrayWithObject(number.NSObject)
+	defer intervals.Release()
+
+	s.remoteCommandCenter.SkipBackwardCommand().SetPreferredIntervals(intervals)
+	s.remoteCommandCenter.SkipForwardCommand().SetPreferredIntervals(intervals)
 
 	s.remoteCommandCenter.PlayCommand().AddTargetAction(s.commandHandler.ID, sel_handlePlayCommand)
 	s.remoteCommandCenter.PauseCommand().AddTargetAction(s.commandHandler.ID, sel_handlePauseCommand)

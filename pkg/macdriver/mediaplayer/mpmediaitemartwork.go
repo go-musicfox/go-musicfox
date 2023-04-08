@@ -28,7 +28,7 @@ type MPMediaItemArtwork struct {
 
 func MPMediaItemArtwork_alloc() MPMediaItemArtwork {
 	return MPMediaItemArtwork{
-		NSObject: core.NSObject{
+		core.NSObject{
 			ID: objc.ID(class_MPMediaItemArtwork).Send(macdriver.SEL_alloc),
 		},
 	}

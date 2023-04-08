@@ -16,9 +16,10 @@ var (
 )
 
 var (
-	sel_URLWithString  = objc.RegisterName("URLWithString:")
-	sel_host           = objc.RegisterName("host")
-	sel_absoluteString = objc.RegisterName("absoluteString")
+	sel_URLWithString   = objc.RegisterName("URLWithString:")
+	sel_fileURLWithPath = objc.RegisterName("fileURLWithPath:")
+	sel_host            = objc.RegisterName("host")
+	sel_absoluteString  = objc.RegisterName("absoluteString")
 )
 
 type NSURL struct {
@@ -29,6 +30,14 @@ func NSURL_URLWithString(url NSString) NSURL {
 	return NSURL{
 		NSObject{
 			ID: objc.ID(class_NSURL).Send(sel_URLWithString, url.ID),
+		},
+	}
+}
+
+func NSURL_fileURLWithPath(path NSString) NSURL {
+	return NSURL{
+		NSObject{
+			ID: objc.ID(class_NSURL).Send(sel_fileURLWithPath, path.ID),
 		},
 	}
 }
