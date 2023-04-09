@@ -25,7 +25,15 @@ builds:
     hooks:
       pre:
         - apt update
-        - apt install -y libasound2-dev libflac-dev
+        - ls -l /usr/aarch64-linux-gnu
+        - wget https://github.com/xiph/flac/releases/download/1.4.2/flac-1.4.2.tar.xz
+        - tar -xf flac-1.4.2.tar.xz && cd flac-1.4.2
+        - ./autogen.sh && CFLAGS='' CPPFLAGS='' LDFLAGS='' LIBS='' ./configure --host=aarch64-linux-gnu --prefix=/usr/aarch64-linux-gnu --disable-ogg
+        - make -j4 && make install
+        - wget https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.8.tar.bz2
+        - tar -jvxf alsa-lib-1.2.8.tar.bz2 && cd alsa-lib-1.2.8
+        - CFLAGS='' CPPFLAGS='' LDFLAGS='' LIBS='' ./configure --host=aarch64-linux-gnu --prefix=/usr/aarch64-linux-gnu --enable-shared=yes --enable-static=no --with-pic
+        - make -j4 && make install
     goarch:
       - arm64
     goos:
