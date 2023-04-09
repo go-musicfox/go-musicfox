@@ -9,7 +9,7 @@ builds:
     hooks:
       pre:
         - apt update
-        - apt install -y libasound2-dev libflac-dev gobjc++-mingw-w64 gobjc
+        - apt install -y libasound2-dev libflac-dev
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -19,19 +19,19 @@ builds:
       - linux
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
-#  - id: go-musicfox-linux-arm64
-#    binary: musicfox
-#    hooks:
-#      pre:
-#        - apt update
-#        - apt install -y gobjc++-mingw-w64 gobjc
-#    goarch:
-#      - arm64
-#    goos:
-#      - linux
-#    env:
-#      - CC=aarch64-linux-gnu-gcc
-#      - CXX=aarch64-linux-gnu-g++
+  - id: go-musicfox-linux-arm64
+    binary: musicfox
+    hooks:
+      pre:
+        - apt update
+        - apt install -y libasound2-dev libflac-dev
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
