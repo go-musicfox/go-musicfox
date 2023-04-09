@@ -403,7 +403,7 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 		}
 	} else if menuTitleLen+menuSubtitleLen > itemMaxLen {
 		r := []rune(m.menuList[index].Subtitle)
-		i := int(m.player.PassedTime().Seconds()*2) % len(r) // 使用播放时间控制，暂停保持滚动位置
+		i := int(m.player.PassedTime().Milliseconds()/500) % len(r) // 使用播放时间控制，暂停保持滚动位置
 		if i+itemMaxLen-menuTitleLen >= len(r) {
 			r = append(r, []rune("   ")...)
 			r = append(r, r...)
