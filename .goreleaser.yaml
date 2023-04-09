@@ -20,6 +20,7 @@ builds:
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-linux-arm64
+    main: ./cmd/musicfox.go
     binary: musicfox
     hooks:
       pre:
@@ -32,6 +33,8 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
+    ldflags:
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
