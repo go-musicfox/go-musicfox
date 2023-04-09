@@ -74,7 +74,7 @@ require (
 replace (
 	github.com/charmbracelet/bubbletea v0.23.2 => github.com/go-musicfox/bubbletea v0.23.3
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
-	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.0
+	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.2
 	github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.8
 	github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5

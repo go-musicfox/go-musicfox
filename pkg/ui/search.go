@@ -76,7 +76,7 @@ func (s *SearchModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) 
 		case "esc":
 			m.pageType = PtMain
 			m.searchModel.Reset()
-			return m, tickMainUI(time.Nanosecond)
+			return m, m.rerenderTicker(true)
 
 		// Cycle between inputs
 		case "tab", "shift+tab", "enter", "up", "down":

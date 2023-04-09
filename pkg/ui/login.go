@@ -84,7 +84,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 			} else {
 				m.loginModel.qrLoginButton = GetBlurredButton(m.loginModel.qrButtonTextByStep())
 			}
-
+			return m, m.rerenderTicker(true)
 		case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 			s := msg.String()
 

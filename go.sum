@@ -8,6 +8,10 @@ github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU
 github.com/anhoder/gcli/v2 v2.3.5/go.mod h1:AOxm27rFzNDLpBrwbW1pAh3ofebpXOQk/9x009qC9y8=
 github.com/anhoder/goflac v0.1.0 h1:pJYotoqIc934K5jGUu5Y0RZ++rR8zCVkNzb2I2nQe58=
 github.com/anhoder/goflac v0.1.0/go.mod h1:1vVUG/CQcKJDaI6f9N8qJY/YlnNnAChS/hZb8NvaeqE=
+github.com/anhoder/goflac v0.1.1 h1:3f3SKDqnfcX/A7ZxmP+PW3SAlo3esNMMP3oVN48ro6U=
+github.com/anhoder/goflac v0.1.1/go.mod h1:1vVUG/CQcKJDaI6f9N8qJY/YlnNnAChS/hZb8NvaeqE=
+github.com/anhoder/goflac v0.1.2 h1:tBz5izA8ZJnUmyJ6I9S4elGCRASfd7NwUz+OBG44nI0=
+github.com/anhoder/goflac v0.1.2/go.mod h1:1vVUG/CQcKJDaI6f9N8qJY/YlnNnAChS/hZb8NvaeqE=
 github.com/anhoder/lastfm-go v0.0.2 h1:yqaRzclR83RIecowZX4ffH3kzbEzX+wSeOztAx2nAg4=
 github.com/anhoder/lastfm-go v0.0.2/go.mod h1:QAs3ciul8v40zzwgDPDVq12CSACAIZUHXSSeBJLCdQE=
 github.com/anhoder/minimp3 v1.0.5 h1:79eCzn5InmzCN1QbFnquZXgMQ+5GYbrQgBPxaZ2Wssc=
