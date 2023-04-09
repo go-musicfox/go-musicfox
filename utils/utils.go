@@ -48,7 +48,7 @@ func GetLocalDataDir() string {
 		projectDir = path.Join(homeDir, constants.AppLocalDataDir)
 	}
 
-	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
+	if !FileOrDirExists(projectDir) {
 		_ = os.MkdirAll(projectDir, os.ModePerm)
 	}
 	return projectDir
@@ -124,7 +124,7 @@ func BinToID(bin []byte) uint64 {
 func LoadIniConfig() {
 	projectDir := GetLocalDataDir()
 	configFile := path.Join(projectDir, constants.AppIniFile)
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+	if !FileOrDirExists(configFile) {
 		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
 	}
 	configs.ConfigRegistry = configs.NewRegistryFromIniFile(configFile)
@@ -222,7 +222,7 @@ func DownloadMusic(song structs.Song) {
 		if downloadDir == "" {
 			downloadDir = path.Join(GetLocalDataDir(), "download")
 		}
-		if _, err = os.Stat(downloadDir); os.IsNotExist(err) {
+		if !FileOrDirExists(downloadDir) {
 			_ = os.MkdirAll(downloadDir, os.ModePerm)
 		}
 
@@ -469,4 +469,9 @@ func AddResizeParamForPicUrl(picurl string, size int64) string {
 		return ""
 	}
 	return fmt.Sprintf("%s?param=%dy%d", picurl, size, size)
+}
+
+func FileOrDirExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !os.IsNotExist(err)
 }

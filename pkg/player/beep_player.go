@@ -75,7 +75,7 @@ func (p *beepPlayer) listen() {
 		err        error
 		ctx        context.Context
 		cancel     context.CancelFunc
-		PrevSongId int64
+		prevSongId int64
 	)
 
 	cacheFile := path.Join(utils.GetLocalDataDir(), "music_cache")
@@ -98,7 +98,7 @@ func (p *beepPlayer) listen() {
 				cancel()
 			}
 			p.reset()
-			if PrevSongId != p.curMusic.Id {
+			if prevSongId != p.curMusic.Id || !utils.FileOrDirExists(cacheFile) {
 				ctx, cancel = context.WithCancel(context.Background())
 
 				// FIXME 先这样处理，暂时没想到更好的办法
@@ -134,8 +134,8 @@ func (p *beepPlayer) listen() {
 					p.Stop()
 					break
 				}
-			// 单曲循环以及歌单只有一首歌时不再请求网络
 			} else {
+				// 单曲循环以及歌单只有一首歌时不再请求网络
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_RDONLY, 0666); err != nil {
 					panic(err)
 				}
@@ -169,7 +169,7 @@ func (p *beepPlayer) listen() {
 				},
 			})
 			p.Resume()
-			PrevSongId = p.curMusic.Id
+			prevSongId = p.curMusic.Id
 		}
 	}
 }
