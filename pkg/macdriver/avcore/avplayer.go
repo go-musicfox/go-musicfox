@@ -2,7 +2,6 @@
 
 package avcore
 
-import "C"
 import (
 	"unsafe"
 
