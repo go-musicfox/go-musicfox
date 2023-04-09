@@ -6,18 +6,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/pkg/macdriver/avcore"
+	"github.com/go-musicfox/go-musicfox/pkg/macdriver/cocoa"
+	"github.com/go-musicfox/go-musicfox/pkg/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/progrium/macdriver/avcore"
-	"github.com/progrium/macdriver/core"
-	"github.com/progrium/macdriver/objc"
 )
 
 type osxPlayer struct {
 	l sync.Mutex
 
 	player  *avcore.AVPlayer
-	handler objc.Object
+	handler *playerHandler
 
 	curMusic UrlMusic
 	timer    *utils.Timer
@@ -41,61 +40,42 @@ func NewOsxPlayer() Player {
 		volume:    100,
 	}
 
-	clsName := "AVPlayerHandler"
-	handlerCls := objc.NewClass(clsName, "NSObject")
-	handlerCls.AddMethod("handleFinish:", func(_ objc.Object, ns objc.Object) {
-		// 这里会出现两次通知
-		url := avcore.AVPlayerItem_fromRef(ns.Get("object")).Asset().Get("URL")
-		curUrl := p.player.CurrentItem().Asset().Get("URL")
-		if url == curUrl {
-			p.Stop()
-		}
-	})
-	objc.RegisterClass(handlerCls)
-	p.handler = objc.Get(clsName).Alloc().Init()
+	handler := playerHandler_new(p)
+	p.handler = &handler
 
-	go func() {
-		defer utils.Recover(false)
-		p.listen()
-	}()
+	avPlayer := avcore.AVPlayer_alloc().Init()
+	p.player = &avPlayer
+	p.player.SetActionAtItemEnd(2) // do nothing => https://developer.apple.com/documentation/avfoundation/avplayeractionatitemend/avplayeractionatitemendnone?language=objc
+	p.player.SetVolume(float32(p.volume) / 100.0)
+	cocoa.NSNotificationCenter_defaultCenter().
+		AddObserverSelectorNameObject(p.handler.ID, sel_handleFinish, core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
+
+	go p.listen()
 
 	return p
 }
 
 // listen 开始监听
 func (p *osxPlayer) listen() {
+	defer utils.Recover(false)
+
 	for {
 		select {
 		case <-p.close:
 			return
 		case p.curMusic = <-p.musicChan:
-			objc.Autorelease(func() {
+			core.Autorelease(func() {
 				p.Paused()
 				if p.timer != nil {
 					p.timer.SetPassed(0)
 				}
-				// 重置
-				{
-					if p.timer != nil {
-						p.timer.Stop()
-						p.timer = nil
-					}
-					if p.player != nil {
-						//p.player.ReplaceCurrentItemWithPlayerItem_(nil)
-						p.player.Autorelease()
-					}
+				if p.timer != nil {
+					p.timer.Stop()
+					p.timer = nil
 				}
 
-				// 有内存释放问题，所以每次都重新创建Player
-				avPlayer := avcore.AVPlayer_alloc().Init_asAVPlayer()
-				item := avcore.AVPlayerItem_playerItemWithURL_(core.NSURL_URLWithString_(core.String(p.curMusic.Url)))
-				p.player = &avPlayer
-				p.player.InitWithPlayerItem__asAVPlayer(item)
-				p.player.SetActionAtItemEnd_(2) // do nothing => https://developer.apple.com/documentation/avfoundation/avplayeractionatitemend/avplayeractionatitemendnone?language=objc
-				p.player.SetVolume_(float32(p.volume) / 100.0)
-
-				core.NSNotificationCenter_defaultCenter().
-					AddObserver_selector_name_object_(p.handler, objc.Sel("handleFinish:"), core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem())
+				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.Url)))
+				p.player.ReplaceCurrentItemWithPlayerItem(item)
 
 				// 计时器
 				p.timer = utils.NewTimer(utils.Options{
@@ -106,8 +86,11 @@ func (p *osxPlayer) listen() {
 					OnDone:         func(stopped bool) {},
 					OnTick: func() {
 						var curTime time.Duration
-						objc.Autorelease(func() {
+						core.Autorelease(func() {
 							t := p.player.CurrentTime()
+							if t.Timescale <= 0 {
+								return
+							}
 							curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
 						})
 						select {
@@ -192,7 +175,7 @@ func (p *osxPlayer) Seek(duration time.Duration) {
 	if scale == 0 {
 		return
 	}
-	p.player.SeekToTime_(core.CMTime{
+	p.player.SeekToTime(avcore.CMTime{
 		Value:     int64(float64(scale) * duration.Seconds()),
 		Timescale: scale,
 		Flags:     1,
@@ -205,8 +188,11 @@ func (p *osxPlayer) PassedTime() time.Duration {
 		return 0
 	}
 	var curTime time.Duration
-	objc.Autorelease(func() {
+	core.Autorelease(func() {
 		t := p.player.CurrentTime()
+		if t.Timescale <= 0 {
+			return
+		}
 		curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
 	})
 	return curTime
@@ -233,7 +219,7 @@ func (p *osxPlayer) UpVolume() {
 		p.volume += 5
 	}
 	if p.player != nil {
-		p.player.SetVolume_(float32(p.volume) / 100.0)
+		p.player.SetVolume(float32(p.volume) / 100.0)
 	}
 }
 
@@ -246,7 +232,7 @@ func (p *osxPlayer) DownVolume() {
 		p.volume -= 5
 	}
 	if p.player != nil {
-		p.player.SetVolume_(float32(p.volume) / 100.0)
+		p.player.SetVolume(float32(p.volume) / 100.0)
 	}
 }
 
@@ -265,7 +251,7 @@ func (p *osxPlayer) SetVolume(volume int) {
 	defer p.l.Unlock()
 	p.volume = volume
 	if p.player != nil {
-		p.player.SetVolume_(float32(p.volume) / 100.0)
+		p.player.SetVolume(float32(p.volume) / 100.0)
 	}
 }
 

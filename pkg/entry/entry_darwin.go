@@ -5,6 +5,7 @@ package entry
 import (
 	"github.com/ebitengine/purego/objc"
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver/cocoa"
+	"github.com/go-musicfox/go-musicfox/pkg/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/utils"
 )
 
@@ -19,8 +20,10 @@ func AppEntry() {
 	delegate.RegisterDidFinishLaunchingCallback(func(_ objc.ID) {
 		go func() {
 			defer utils.Recover(false)
-			runCLI()
-			app.Terminate(0)
+			core.Autorelease(func() {
+				runCLI()
+				app.Terminate(0)
+			})
 		}()
 	})
 	app.SetDelegate(delegate)

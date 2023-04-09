@@ -3,22 +3,39 @@
 package core
 
 import (
+	"runtime"
 	"sync"
+	"unsafe"
 
 	"github.com/ebitengine/purego"
 	"github.com/ebitengine/purego/objc"
 	"github.com/go-musicfox/go-musicfox/pkg/macdriver"
 )
 
-var importOnce sync.Once
+var (
+	importOnce sync.Once
+	objcLib    uintptr
+
+	objc_autoreleasePoolPush func() unsafe.Pointer
+	objc_autoreleasePoolPop  func(ptr unsafe.Pointer)
+)
 
 func importFramework() {
 	importOnce.Do(func() {
-		_, err := purego.Dlopen("Foundation.framework/Foundation", purego.RTLD_GLOBAL)
-		if err != nil {
+		var err error
+		if _, err = purego.Dlopen("Foundation.framework/Foundation", purego.RTLD_GLOBAL); err != nil {
+			panic(err)
+		}
+		if objcLib, err = purego.Dlopen("/usr/lib/libobjc.A.dylib", purego.RTLD_GLOBAL); err != nil {
 			panic(err)
 		}
 	})
+}
+
+func init() {
+	importFramework()
+	purego.RegisterLibFunc(&objc_autoreleasePoolPush, objcLib, "objc_autoreleasePoolPush")
+	purego.RegisterLibFunc(&objc_autoreleasePoolPop, objcLib, "objc_autoreleasePoolPop")
 }
 
 type NSUInteger = uint32
@@ -48,4 +65,14 @@ func (o *NSObject) Autorelease() {
 
 type NSError struct {
 	NSObject
+}
+
+func Autorelease(body func()) {
+	// ObjC autoreleasepools are thread-local, so we need the body to be locked to
+	// the same OS thread.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	pool := objc_autoreleasePoolPush()
+	defer objc_autoreleasePoolPop(pool)
+	body()
 }
