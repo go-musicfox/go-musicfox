@@ -42,12 +42,25 @@ func (t *LRCTimer) Start() {
 	}
 
 	t.Rewind()
-	current := fragments[0]
 	t.stop = make(chan struct{})
+	var (
+		current      = fragments[0]
+		transContent = t.transFile.FindByTimeMs(current.StartTimeMs)
+		isLast       = t.curIndex >= len(fragments)-1
+	)
 	for {
 		select {
+		case <-t.stop:
+			return
 		case duration := <-t.timer:
+			if isLast {
+				break
+			}
+
 			if duration < time.Duration(fragments[t.curIndex].StartTimeMs)*time.Millisecond {
+				for _, l := range t.listeners {
+					go l(current.StartTimeMs, current.Content, transContent, isLast, t.curIndex)
+				}
 				continue
 			}
 
@@ -56,27 +69,15 @@ func (t *LRCTimer) Start() {
 				t.l.Lock()
 				t.curIndex++
 				t.l.Unlock()
+				current = fragments[t.curIndex]
+				transContent = t.transFile.FindByTimeMs(current.StartTimeMs)
+				isLast = t.curIndex > len(fragments)-1
 			}
-
-			transContent := t.transFile.FindByTimeMs(current.StartTimeMs)
-			last := t.curIndex >= len(fragments)-1
 
 			for _, l := range t.listeners {
-				go l(current.StartTimeMs, current.Content, transContent, last, t.curIndex)
+				go l(current.StartTimeMs, current.Content, transContent, isLast, t.curIndex)
 			}
-
-			if last {
-				break
-			}
-
-			t.l.Lock()
-			t.curIndex++
-			t.l.Unlock()
-			current = fragments[t.curIndex]
-		case <-t.stop:
-			return
 		}
-
 	}
 }
 

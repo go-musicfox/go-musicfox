@@ -11,12 +11,14 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
+	"github.com/go-musicfox/go-musicfox/pkg/lastfm"
 	"github.com/go-musicfox/go-musicfox/pkg/lyric"
 	"github.com/go-musicfox/go-musicfox/pkg/player"
 	"github.com/go-musicfox/go-musicfox/pkg/state_handler"
 	"github.com/go-musicfox/go-musicfox/pkg/storage"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
@@ -50,13 +52,6 @@ const (
 	CtrlRerender CtrlType = "Rerender"
 )
 
-type ReportPhase uint8
-
-const (
-	ReportPhaseStart ReportPhase = iota
-	ReportPhaseComplete
-)
-
 // Player 网易云音乐播放器
 type Player struct {
 	model  *NeteaseModel
@@ -69,11 +64,12 @@ type Player struct {
 	playingMenuKey   string         // 正在播放的菜单Key
 	playingMenu      Menu
 
-	lrcTimer      *lyric.LRCTimer // 歌词计时器
-	lyrics        [5]string       // 歌词信息，保留5行
-	showLyric     bool            // 显示歌词
-	lyricStartRow int             // 歌词开始行
-	lyricLines    int             // 歌词显示行数，3或5
+	lrcTimer          *lyric.LRCTimer   // 歌词计时器
+	lyrics            [5]string         // 歌词信息，保留5行
+	showLyric         bool              // 显示歌词
+	lyricStartRow     int               // 歌词开始行
+	lyricLines        int               // 歌词显示行数，3或5
+	lyricNowScrollBar *utils.XScrollBar // 当前歌词滚动
 
 	// 播放进度条
 	progressLastWidth float64
@@ -89,9 +85,10 @@ type Player struct {
 
 func NewPlayer(model *NeteaseModel) *Player {
 	p := &Player{
-		model: model,
-		mode:  player.PmListLoop,
-		ctrl:  make(chan CtrlSignal),
+		model:             model,
+		mode:              player.PmListLoop,
+		ctrl:              make(chan CtrlSignal),
+		lyricNowScrollBar: utils.NewXScrollBar(),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
@@ -123,10 +120,10 @@ func NewPlayer(model *NeteaseModel) *Player {
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 				if s == player.Stopped {
 					// 上报lastfm
-					p.report(ReportPhaseComplete)
+					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 					p.Next()
 				} else {
-					p.Rerender()
+					p.model.Rerender(false)
 				}
 			}
 		}
@@ -142,7 +139,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case duration := <-p.TimeChan():
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
-					p.report(ReportPhaseComplete)
+					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 					p.NextSong()
 				}
 				if p.lrcTimer != nil {
@@ -151,7 +148,8 @@ func NewPlayer(model *NeteaseModel) *Player {
 					default:
 					}
 				}
-				p.model.Rerender()
+
+				p.model.Rerender(false)
 			}
 		}
 	}()
@@ -188,22 +186,30 @@ func (p *Player) lyricView() string {
 	}
 
 	var lyricBuilder strings.Builder
-
 	if p.lyricStartRow > p.model.menuBottomRow {
 		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-p.model.menuBottomRow))
 	}
 
+	var startCol int
+	if p.model.doubleColumn {
+		startCol = p.model.menuStartColumn + 3
+	} else {
+		startCol = p.model.menuStartColumn - 4
+	}
+
+	maxLen := p.model.WindowWidth - startCol - 4
 	switch p.lyricLines {
 	// 3行歌词
 	case 3:
 		for i := 1; i <= 3; i++ {
-			if p.model.menuStartColumn+3 > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+			if startCol > 0 {
+				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
-			lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4), p.model.WindowWidth-p.model.menuStartColumn-4, "")
 			if i == 2 {
+				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
+				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
 
@@ -212,16 +218,14 @@ func (p *Player) lyricView() string {
 	// 5行歌词
 	case 5:
 		for i := 0; i < 5; i++ {
-			if p.model.menuStartColumn+3 > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", p.model.menuStartColumn+3))
+			if startCol > 0 {
+				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
-			lyricLine := runewidth.Truncate(
-				runewidth.FillRight(p.lyrics[i], p.model.WindowWidth-p.model.menuStartColumn-4),
-				p.model.WindowWidth-p.model.menuStartColumn-4,
-				"")
 			if i == 2 {
+				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
+				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
 				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
 			lyricBuilder.WriteString("\n")
@@ -248,6 +252,14 @@ func (p *Player) songView() string {
 		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
 	} else {
 		builder.WriteString(SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
+	}
+
+	if p.curSong.Id > 0 {
+		if like_list.IsLikeSong(p.curSong.Id) {
+			builder.WriteString(SetFgStyle("♥ ", termenv.ANSIRed))
+		} else {
+			builder.WriteString(SetFgStyle("♥ ", termenv.ANSIWhite))
+		}
 	}
 
 	if p.curSongIndex < len(p.playlist) {
@@ -409,7 +421,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	})
 
 	// 上报
-	p.report(ReportPhaseStart)
+	lastfm.Report(p.model.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
 
 	go utils.Notify(utils.NotifyContent{
 		Title:   "正在播放: " + song.Name,
@@ -541,8 +553,6 @@ func (p *Player) SetPlayMode(playMode player.Mode) {
 
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayMode{}, p.mode)
-
-	p.model.Rerender()
 }
 
 // Close 关闭
@@ -574,12 +584,10 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 	p.lyrics[curIndex] = content
 	if transContent != "" {
 		p.lyrics[curIndex] += " [" + transContent + "]"
-	} else {
-		p.lyrics[curIndex] = ""
 	}
 
 	// after
-	for i := 0; i < len(p.lyrics)-curIndex; i++ {
+	for i := 1; i < len(p.lyrics)-curIndex; i++ {
 		if f, tf := p.lrcTimer.GetLRCFragment(index + i); f != nil {
 			p.lyrics[curIndex+i] = f.Content
 			if tf != nil && tf.Content != "" {
@@ -704,34 +712,6 @@ func (p *Player) SetVolume(volume int) {
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
-func (p *Player) report(phase ReportPhase) {
-	switch phase {
-	case ReportPhaseStart:
-		go func(song structs.Song) {
-			_ = p.model.lastfm.UpdateNowPlaying(map[string]interface{}{
-				"artist":   song.ArtistName(),
-				"track":    song.Name,
-				"album":    song.Album.Name,
-				"duration": song.Duration,
-			})
-		}(p.curSong)
-	case ReportPhaseComplete:
-		duration := p.curSong.Duration.Seconds()
-		passedTime := p.PassedTime().Seconds()
-		if duration <= passedTime || passedTime >= duration/2 {
-			go func(song structs.Song, passed time.Duration) {
-				_ = p.model.lastfm.Scrobble(map[string]interface{}{
-					"artist":    song.ArtistName(),
-					"track":     song.Name,
-					"album":     song.Album.Name,
-					"timestamp": time.Now().Unix(),
-					"duration":  song.Duration.Seconds(),
-				})
-			}(p.curSong, p.PassedTime())
-		}
-	}
-}
-
 func (p *Player) handleControlSignal(signal CtrlSignal) {
 	switch signal.Type {
 	case CtrlPaused:
@@ -753,6 +733,6 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 		}
 		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	case CtrlRerender:
-		p.model.Rerender()
+		p.model.Rerender(false)
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/pkg/configs"
+	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/faiface/beep"
@@ -66,12 +68,14 @@ func NewBeepPlayer() Player {
 
 // listen 开始监听
 func (p *beepPlayer) listen() {
+
 	var (
-		done   = make(chan struct{})
-		resp   *http.Response
-		err    error
-		ctx    context.Context
-		cancel context.CancelFunc
+		done       = make(chan struct{})
+		resp       *http.Response
+		err        error
+		ctx        context.Context
+		cancel     context.CancelFunc
+		prevSongId int64
 	)
 
 	cacheFile := path.Join(utils.GetLocalDataDir(), "music_cache")
@@ -94,30 +98,47 @@ func (p *beepPlayer) listen() {
 				cancel()
 			}
 			p.reset()
+			if prevSongId != p.curMusic.Id || !utils.FileOrDirExists(cacheFile) {
+				ctx, cancel = context.WithCancel(context.Background())
 
-			ctx, cancel = context.WithCancel(context.Background())
+				// FIXME 先这样处理，暂时没想到更好的办法
+				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
+					panic(err)
+				}
+				if p.cacheWriter, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666); err != nil {
+					panic(err)
+				}
 
-			// FIXME 先这样处理，暂时没想到更好的办法
-			if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
-				panic(err)
-			}
-			if p.cacheWriter, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666); err != nil {
-				panic(err)
-			}
+				if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
+					p.Stop()
+					break
+				}
 
-			if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
-				p.Stop()
-				break
-			}
+				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
+					defer utils.Recover(false)
+					_, _ = utils.CopyClose(ctx, cacheWFile, read)
+					// 除了MP3格式，其他格式无需重载
+					if p.curMusic.Type == Mp3 {
+						if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
+							p.Stop()
+						}
+					}
+				}(ctx, p.cacheWriter, resp.Body)
 
-			go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
-				defer utils.Recover(false)
-				_, _ = utils.CopyClose(ctx, cacheWFile, read)
-			}(ctx, p.cacheWriter, resp.Body)
-
-			if err = utils.WaitForNBytes(p.cacheReader, 512, time.Millisecond*100, 50); err != nil {
-				p.Stop()
-				break
+				var N = 512
+				if p.curMusic.Type == Flac {
+					N *= 4
+				}
+				if err = utils.WaitForNBytes(p.cacheReader, N, time.Millisecond*100, 50); err != nil {
+					utils.Logger().Printf("WaitForNBytes err: %+v", err)
+					p.Stop()
+					break
+				}
+			} else {
+				// 单曲循环以及歌单只有一首歌时不再请求网络
+				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_RDONLY, 0666); err != nil {
+					panic(err)
+				}
 			}
 
 			if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
@@ -148,6 +169,7 @@ func (p *beepPlayer) listen() {
 				},
 			})
 			p.Resume()
+			prevSongId = p.curMusic.Id
 		}
 	}
 }
@@ -194,18 +216,35 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *beepPlayer) Seek(_ time.Duration) {
-	// 还有问题，暂时不实现
-	//if p.curStreamer != nil {
-	//	err := p.curStreamer.Seek(p.curStreamer.Position())
-	//	fmt.Println(err)
-	//	if err != nil {
-	//		utils.Logger().Printf("seek error: %+v", err)
-	//	}
-	//}
-	//if p.timer != nil {
-	//	p.timer.SetPassed(duration)
-	//}
+func (p *beepPlayer) Seek(duration time.Duration) {
+	// FIXME: 暂时仅对MP3格式提供跳转功能
+	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
+	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
+	// minimp3未实现Seek
+	if p.curMusic.Type != Mp3 || configs.ConfigRegistry.PlayerBeepMp3Decoder == constants.BeepMiniMp3Decoder {
+		return
+	}
+	if p.state == Playing || p.state == Paused {
+		speaker.Lock()
+		newPos := p.curFormat.SampleRate.N(duration)
+
+		if newPos < 0 {
+			newPos = 0
+		}
+		if newPos >= p.curStreamer.Len() {
+			newPos = p.curStreamer.Len() - 1
+		}
+		if p.curStreamer != nil {
+			err := p.curStreamer.Seek(newPos)
+			if err != nil {
+				utils.Logger().Printf("seek error: %+v", err)
+			}
+		}
+		if p.timer != nil {
+			p.timer.SetPassed(duration)
+		}
+		speaker.Unlock()
+	}
 }
 
 // UpVolume 调大音量

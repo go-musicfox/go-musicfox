@@ -265,7 +265,6 @@ func updateLoginInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
 }
 
 func loginView(m *NeteaseModel) string {
-
 	var builder strings.Builder
 
 	// 距离顶部的行数
@@ -325,8 +324,15 @@ func loginView(m *NeteaseModel) string {
 		builder.WriteString(strings.Repeat(" ", m.menuStartColumn))
 	}
 	builder.WriteString(m.loginModel.submitButton)
-	builder.WriteString("    ")
+
+	var btnBlank = "    "
+	builder.WriteString(btnBlank)
 	builder.WriteString(m.loginModel.qrLoginButton)
+
+	spaceLen := m.WindowWidth - m.menuStartColumn - runewidth.StringWidth(SubmitText) - runewidth.StringWidth(m.loginModel.qrButtonTextByStep()) - len(btnBlank)
+	if spaceLen > 0 {
+		builder.WriteString(strings.Repeat(" ", spaceLen))
+	}
 	builder.WriteString("\n")
 
 	if m.WindowHeight > top+3 {

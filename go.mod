@@ -3,7 +3,7 @@ module github.com/go-musicfox/go-musicfox
 go 1.18
 
 require (
-	github.com/anhoder/netease-music v1.3.4
+	github.com/anhoder/netease-music v1.3.6
 	github.com/anhoder/notificator v0.0.5
 	github.com/bogem/id3v2/v2 v2.1.3
 	github.com/boltdb/bolt v1.3.1
@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.23.2
 	github.com/charmbracelet/lipgloss v0.6.0
+	github.com/ebitengine/purego v0.3.2
 	github.com/faiface/beep v1.1.0
 	github.com/fhs/gompd/v2 v2.2.0
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
@@ -23,7 +24,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/muesli/termenv v0.14.0
 	github.com/pkg/errors v0.9.1
-	github.com/progrium/macdriver v0.2.0
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -79,7 +79,6 @@ replace (
 	github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
-	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.3.0
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
 )

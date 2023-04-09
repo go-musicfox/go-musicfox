@@ -36,10 +36,6 @@ func (p *Player) Previous() {
 	p.ctrl <- CtrlSignal{Type: CtrlPrevious}
 }
 
-func (p *Player) Rerender() {
-	p.ctrl <- CtrlSignal{Type: CtrlRerender}
-}
-
 func (p *Player) Seek(duration time.Duration) {
 	p.ctrl <- CtrlSignal{
 		Type:     CtrlSeek,

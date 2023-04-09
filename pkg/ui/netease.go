@@ -14,6 +14,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/storage"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
 	"github.com/anhoder/netease-music/service"
 	"github.com/anhoder/netease-music/util"
@@ -134,7 +135,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
 		}
-		m.Rerender()
+		m.Rerender(false)
 
 		// 获取扩展信息
 		{
@@ -160,6 +161,12 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				extInfo.StorageVersion = constants.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)
 			}
+		}
+
+		// 刷新like list
+		if m.user != nil {
+			like_list.RefreshLikeList(m.user.UserId)
+			m.Rerender(false)
 		}
 
 		// 签到
@@ -231,12 +238,13 @@ func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.WindowWidth = msgWithType.Width
 	}
 
+	if _, ok := msg.(tea.WindowSizeMsg); ok {
+		m.MainUIModel.update(msg, m)
+	}
+
 	// Hand off the message and model to the approprate update function for the
 	// appropriate view based on the current state.
 	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
-		if _, ok := msg.(tea.WindowSizeMsg); ok {
-			m.MainUIModel.update(msg, m)
-		}
 		return m.startup.update(msg, m)
 	}
 
@@ -273,11 +281,21 @@ func (m *NeteaseModel) BindProgram(program *tea.Program) {
 	m.program = program
 }
 
-func (m *NeteaseModel) Rerender() {
+func (m *NeteaseModel) Rerender(cleanScreen bool) {
 	if m.program == nil {
 		return
 	}
-	m.program.Send(MsgOfPageType(m.pageType))
+	ticker := m.rerenderTicker(cleanScreen)
+	m.program.Send(ticker())
+}
+
+func (m *NeteaseModel) rerenderTicker(cleanScreen bool) tea.Cmd {
+	return func() tea.Msg {
+		if cleanScreen {
+			m.program.Send(tea.ClearScreen())
+		}
+		return MsgOfPageType(m.pageType)
+	}
 }
 
 func (m *NeteaseModel) Close() {
