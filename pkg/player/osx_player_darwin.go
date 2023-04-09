@@ -193,7 +193,7 @@ func (p *osxPlayer) PassedTime() time.Duration {
 		if t.Timescale <= 0 {
 			return
 		}
-		curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
+		curTime = time.Duration(float64(t.Value*1000.0)/float64(t.Timescale)) * time.Millisecond
 	})
 	return curTime
 }
