@@ -24,7 +24,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/muesli/termenv v0.14.0
 	github.com/pkg/errors v0.9.1
-	github.com/progrium/macdriver v0.2.0
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -80,7 +79,6 @@ replace (
 	github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
-	github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.3.0
 	github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
 )

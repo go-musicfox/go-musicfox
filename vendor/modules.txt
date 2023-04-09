@@ -217,14 +217,6 @@ github.com/muesli/termenv
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/progrium/macdriver v0.2.0 => github.com/anhoder/macdriver v0.3.0
-## explicit; go 1.16
-github.com/progrium/macdriver/avcore
-github.com/progrium/macdriver/cocoa
-github.com/progrium/macdriver/core
-github.com/progrium/macdriver/mediaplayer
-github.com/progrium/macdriver/misc/variadic
-github.com/progrium/macdriver/objc
 # github.com/rivo/uniseg v0.4.2
 ## explicit; go 1.18
 github.com/rivo/uniseg

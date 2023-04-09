@@ -133,8 +133,12 @@ func (remoteCommandHandlerBinding) HandleChangePlaybackPositionCommand(_ objc.SE
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
 	// event MPChangePlaybackPositionCommandEvent
-	position := objc.Send[float64](event, objc.RegisterName("positionTime"))
-	_playerController.Seek(time.Duration(position) * time.Second)
+	var position time.Duration
+	core.Autorelease(func() {
+		pos := objc.Send[float64](event, objc.RegisterName("positionTime"))
+		position = time.Duration(pos) * time.Second
+	})
+	_playerController.Seek(position)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 

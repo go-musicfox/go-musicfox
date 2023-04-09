@@ -135,5 +135,4 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 func (s *Handler) Release() {
 	s.nowPlayingCenter.Release()
 	s.remoteCommandCenter.Release()
-	s.curArtwork.Release()
 }
