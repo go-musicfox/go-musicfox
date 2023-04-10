@@ -163,6 +163,7 @@ type Decoder struct {
 	error    bool
 	errorStr string
 	frame    *Frame
+	l        sync.Mutex
 }
 
 // Encoder is a FLAC encoder.
@@ -283,13 +284,15 @@ func NewDecoderReader(reader io.ReadCloser) (d *Decoder, err error) {
 
 // Close closes a decoder and frees the resources.
 func (d *Decoder) Close() {
+	d.l.Lock()
+	defer d.l.Unlock()
 	if d.d != nil {
 		C.FLAC__stream_decoder_delete(d.d)
 		decoderPtrs.del(d)
 		d.d = nil
 	}
 	if d.reader != nil {
-		d.reader.Close()
+		_ = d.reader.Close()
 	}
 	runtime.SetFinalizer(d, nil)
 }
