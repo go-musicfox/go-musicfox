@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 	"log"
 	"strconv"
 	"strings"
@@ -372,6 +373,9 @@ func (m *LoginModel) loginSuccessHandle(nm *NeteaseModel, userInfo []byte) {
 		// 写入本地数据库
 		table := storage.NewTable()
 		_ = table.SetByKVModel(storage.User{}, user)
+
+		// 更新like list
+		go like_list.RefreshLikeList(user.UserId)
 
 		if m.AfterLogin != nil {
 			m.AfterLogin(nm, nil, nil)
