@@ -8,11 +8,16 @@ builds:
     binary: musicfox
     hooks:
       pre:
-        - apt update
-        - apt install -y libasound2-dev libflac-dev
+        - apt update && apt install -y libtool gettext libtool-bin
+        - ./hack/init_linux_env.sh
     env:
+      - BUILD_HOST=x86_64-linux-gnu
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
+      - CFLAGS=-I/usr/x86_64-linux-gnu/include:$CFLAGS
+      - CPPFLAGS=-I/usr/x86_64-linux-gnu/include:$CPPFLAGS
+      - LDFLAGS=-L/usr/x86_64-linux-gnu/lib:$LDFLAGS
+      - PKG_CONFIG_PATH=/usr/x86_64-linux-gnu/lib/pkgconfig:$PKG_CONFIG_PATH
     goarch:
       - amd64
     goos:
@@ -24,25 +29,28 @@ builds:
     binary: musicfox
     hooks:
       pre:
-        - apt update
-        - wget https://github.com/xiph/flac/releases/download/1.4.2/flac-1.4.2.tar.xz
-        - tar -xf flac-1.4.2.tar.xz && cd flac-1.4.2 && ./autogen.sh && CFLAGS='' CPPFLAGS='' LDFLAGS='' LIBS='' ./configure --host=aarch64-linux-gnu --prefix=/usr/aarch64-linux-gnu --disable-ogg && make -j4 && make install
-        - wget https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.8.tar.bz2
-        - tar -jvxf alsa-lib-1.2.8.tar.bz2 && cd alsa-lib-1.2.8 && CFLAGS='' CPPFLAGS='' LDFLAGS='' LIBS='' ./configure --host=aarch64-linux-gnu --prefix=/usr/aarch64-linux-gnu --enable-shared=yes --enable-static=no --with-pic && make -j4 && make install
+        - apt update && apt install -y libtool gettext libtool-bin
+        - ./hack/init_linux_env.sh
     goarch:
       - arm64
     goos:
       - linux
     env:
+      - BUILD_HOST=aarch64-linux-gnu 
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-      - CFLAGS=-I/usr/aarch64-linux-gnu/include
-      - CPPFLAGS=-I/usr/aarch64-linux-gnu/include
+      - CFLAGS=-I/usr/aarch64-linux-gnu/include:$CFLAGS
+      - CPPFLAGS=-I/usr/aarch64-linux-gnu/include:$CPPFLAGS
+      - LDFLAGS=-L/usr/aarch64-linux-gnu/lib:$LDFLAGS
+      - PKG_CONFIG_PATH=/usr/aarch64-linux-gnu/lib/pkgconfig:$PKG_CONFIG_PATH
     ldflags:
-      - -L/usr/aarch64-linux-gnu/lib -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
+    hooks:
+      pre:
+        - ./hack/init_windows_env.sh
     goarch:
       - amd64
     goos:
@@ -50,8 +58,23 @@ builds:
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
     env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
+      - CC=/usr/local/mingw/bin/x86_64-w64-mingw32-gcc
+      - CXX=/usr/local/mingw/bin/x86_64-w64-mingw32-g++
+  - id: go-musicfox-windows-arm64
+    main: ./cmd/musicfox.go
+    binary: musicfox
+    hooks:
+      pre:
+        - ./hack/init_windows_env.sh
+    goarch:
+      - arm64
+    goos:
+      - windows
+    ldflags:
+      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+    env:
+      - CC=/usr/local/mingw/bin/aarch64-w64-mingw32-gcc
+      - CXX=/usr/local/mingw/bin/aarch64-w64-mingw32-g++
   - id: go-musicfox-darwin-arm64
     main: ./cmd/musicfox.go
     binary: musicfox
@@ -82,6 +105,7 @@ archives:
       - go-musicfox-linux-amd64
       - go-musicfox-linux-arm64
       - go-musicfox-windows-amd64
+      - go-musicfox-windows-arm64
       - go-musicfox-darwin-amd64
       - go-musicfox-darwin-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
