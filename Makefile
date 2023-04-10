@@ -59,3 +59,18 @@ release:
 		-w /go/src/$(PACKAGE_NAME) \
 		alanalbert/goreleaser-cross:${GOLANG_CROSS_VERSION} \
 		release --rm-dist
+
+.PHONY: release-debug-shell
+release-debug-shell:
+	docker run \
+    	-it \
+    	--rm \
+    	--privileged \
+    	-e CGO_ENABLED=1 \
+    	-v /var/run/docker.sock:/var/run/docker.sock \
+    	-v `pwd`:/go/src/$(PACKAGE_NAME) \
+		-v `pwd`/sysroot:/sysroot \
+		-w /go/src/$(PACKAGE_NAME) \
+    	-w /go/src/go-musicfox \
+    	--entrypoint="/bin/bash" \
+    	alanalbert/goreleaser-cross:${GOLANG_CROSS_VERSION}

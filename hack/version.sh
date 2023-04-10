@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# get version info from git
+
 set -o nounset
 set -o pipefail
 

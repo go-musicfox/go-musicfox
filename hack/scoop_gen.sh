@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# generate windows scoop config 
+
 set -o nounset
 set -o pipefail
 
