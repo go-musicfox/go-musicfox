@@ -25,7 +25,6 @@ builds:
     hooks:
       pre:
         - apt update
-        - ls -l /usr/aarch64-linux-gnu
         - wget https://github.com/xiph/flac/releases/download/1.4.2/flac-1.4.2.tar.xz
         - tar -xf flac-1.4.2.tar.xz && cd flac-1.4.2 && ./autogen.sh && CFLAGS='' CPPFLAGS='' LDFLAGS='' LIBS='' ./configure --host=aarch64-linux-gnu --prefix=/usr/aarch64-linux-gnu --disable-ogg && make -j4 && make install
         - wget https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.8.tar.bz2
@@ -37,8 +36,10 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
+      - CFLAGS=-I/usr/aarch64-linux-gnu/include
+      - CPPFLAGS=-I/usr/aarch64-linux-gnu/include
     ldflags:
-      - -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
+      - -L/usr/aarch64-linux-gnu/lib -s -w -X github.com/go-musicfox/go-musicfox/pkg/constants.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/pkg/constants.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
@@ -79,7 +80,7 @@ archives:
   - id: musicfox
     builds:
       - go-musicfox-linux-amd64
-#      - go-musicfox-linux-arm64
+      - go-musicfox-linux-arm64
       - go-musicfox-windows-amd64
       - go-musicfox-darwin-amd64
       - go-musicfox-darwin-arm64
