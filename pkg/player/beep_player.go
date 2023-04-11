@@ -119,9 +119,33 @@ func (p *beepPlayer) listen() {
 					_, _ = utils.CopyClose(ctx, cacheWFile, read)
 					// 除了MP3格式，其他格式无需重载
 					if p.curMusic.Type == Mp3 {
-						if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
+						// time.Sleep(time.Second * 2)
+						// pos := p.curStreamer.Position() 偶尔panic，原因未知
+						// invalid memory address or nil pointer dereference
+						defer func() {
+							if err := recover(); err != nil {
+								p.Stop()
+								return
+							}
+						}()
+						// 需再开一次文件，保证其指针变化，否则将概率导致 p.ctrl.Streamer = beep.Seq(……) 直接停止播放
+						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0666)
+						// 使用新的文件后需手动Seek到上次播放处
+						pos := p.curStreamer.Position()
+						if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, cacheReader); err != nil {
 							p.Stop()
+							return
 						}
+						if pos >= p.curStreamer.Len() {
+							pos = p.curStreamer.Len() - 1
+						}
+						if pos < 0 {
+							pos = 1
+						}
+						p.curStreamer.Seek(pos)
+						p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() {
+							done <- struct{}{}
+						}))
 					}
 				}(ctx, p.cacheWriter, resp.Body)
 
