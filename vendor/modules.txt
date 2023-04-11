@@ -35,7 +35,7 @@ github.com/charmbracelet/bubbletea
 # github.com/charmbracelet/lipgloss v0.6.0
 ## explicit; go 1.15
 github.com/charmbracelet/lipgloss
-# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/anhoder/UnblockNeteaseMusic v0.1.0
+# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/go-musicfox/UnblockNeteaseMusic v0.1.0
 ## explicit; go 1.16
 github.com/cnsilvan/UnblockNeteaseMusic/cache
 github.com/cnsilvan/UnblockNeteaseMusic/common
@@ -53,7 +53,7 @@ github.com/cnsilvan/UnblockNeteaseMusic/provider/migu
 github.com/cnsilvan/UnblockNeteaseMusic/provider/qq
 github.com/cnsilvan/UnblockNeteaseMusic/utils
 github.com/cnsilvan/UnblockNeteaseMusic/version
-# github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/anhoder/goflac v0.1.3
+# github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.3
 ## explicit
 github.com/cocoonlife/goflac
 # github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81
@@ -67,7 +67,7 @@ github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
 github.com/ebitengine/purego/objc
-# github.com/faiface/beep v1.1.0 => github.com/anhoder/beep v1.1.8
+# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.1.8
 ## explicit; go 1.14
 github.com/faiface/beep
 github.com/faiface/beep/effects
@@ -86,7 +86,7 @@ github.com/fogleman/ease
 # github.com/forgoer/openssl v1.2.1
 ## explicit; go 1.12
 github.com/forgoer/openssl
-# github.com/frolovo22/tag v0.0.2 => github.com/anhoder/tag v1.0.2
+# github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 ## explicit; go 1.17
 github.com/frolovo22/tag
 # github.com/go-flac/flacpicture v0.2.0
@@ -146,7 +146,7 @@ github.com/hajimehoshi/go-mp3/internal/huffman
 github.com/hajimehoshi/go-mp3/internal/imdct
 github.com/hajimehoshi/go-mp3/internal/maindata
 github.com/hajimehoshi/go-mp3/internal/sideinfo
-# github.com/hajimehoshi/oto v1.0.1 => github.com/anhoder/oto v1.0.2
+# github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.2
 ## explicit; go 1.13
 github.com/hajimehoshi/oto
 github.com/hajimehoshi/oto/internal/mux
@@ -220,7 +220,7 @@ github.com/pkg/errors
 # github.com/rivo/uniseg v0.4.2
 ## explicit; go 1.18
 github.com/rivo/uniseg
-# github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/anhoder/lastfm-go v0.0.2
+# github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/go-musicfox/lastfm-go v0.0.2
 ## explicit; go 1.19
 github.com/shkh/lastfm-go
 # github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
@@ -234,7 +234,7 @@ github.com/skratchdot/open-golang/open
 # github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 ## explicit
 github.com/telanflow/cookiejar
-# github.com/tosone/minimp3 v1.0.1 => github.com/anhoder/minimp3 v1.0.5
+# github.com/tosone/minimp3 v1.0.1 => github.com/go-musicfox/minimp3 v1.0.5
 ## explicit; go 1.15
 github.com/tosone/minimp3
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
@@ -293,4 +293,4 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# github.com/shkh/lastfm-go => github.com/anhoder/lastfm-go v0.0.2
+# github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
