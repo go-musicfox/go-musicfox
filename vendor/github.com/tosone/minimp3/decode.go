@@ -32,8 +32,9 @@ const maxSamplesPerFrame = 1152 * 2
 
 // Decoder decode the mp3 stream by minimp3
 type Decoder struct {
-	readerLocker  *sync.Mutex
-	data          []byte
+	data []byte
+
+	needFillChan  chan struct{}
 	decoderLocker *sync.Mutex
 	decodedData   []byte
 	decode        C.mp3dec_t
@@ -56,8 +57,8 @@ var WaitForDataDuration = time.Millisecond * 10
 // NewDecoder decode mp3 stream and get a Decoder for read the raw data to play.
 func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 	dec = new(Decoder)
-	dec.readerLocker = new(sync.Mutex)
-	dec.decoderLocker = new(sync.Mutex)
+	dec.decoderLocker = &sync.Mutex{}
+	dec.needFillChan = make(chan struct{}, 1)
 	dec.context, dec.contextCancel = context.WithCancel(context.Background())
 	dec.decode = C.mp3dec_t{}
 	C.mp3dec_init(&dec.decode)
@@ -70,7 +71,7 @@ func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 			default:
 			}
 			if len(dec.decodedData) > BufferSize {
-				<-time.After(WaitForDataDuration)
+				<-dec.needFillChan
 				continue
 			}
 			var decoded = [maxSamplesPerFrame * 2]byte{}
@@ -82,9 +83,7 @@ func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 				n, err = io.ReadFull(reader, data)
 				dec.err = err
 
-				dec.readerLocker.Lock()
 				dec.data = append(dec.data, data[:n]...)
-				dec.readerLocker.Unlock()
 				if err != nil {
 					break
 				}
@@ -104,34 +103,35 @@ func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 			dec.Channels = int(dec.info.channels)
 			dec.Kbps = int(dec.info.bitrate_kbps)
 			dec.Layer = int(dec.info.layer)
-			dec.readerLocker.Lock()
 			dec.decoderLocker.Lock()
 			dec.decodedData = append(dec.decodedData, decoded[:decodedLength]...)
 			if int(frameSize) <= len(dec.data) {
 				dec.data = dec.data[int(frameSize):]
 			}
 			dec.decoderLocker.Unlock()
-			dec.readerLocker.Unlock()
 		}
 	}()
 	return
 }
 
 // Started check the record mp3 stream started ot not.
-func (dec *Decoder) Started() (channel chan bool) {
-	channel = make(chan bool)
+func (dec *Decoder) Started() (channel chan error) {
+	channel = make(chan error)
 	go func() {
 		for {
 			select {
 			case <-dec.context.Done():
-				channel <- false
+				channel <- nil
 				return
 			default:
 			}
 			if len(dec.decodedData) != 0 {
-				channel <- true
+				channel <- nil
 				return
 			} else {
+				if dec.err != nil {
+					channel <- dec.err
+				}
 				<-time.After(time.Millisecond * 100)
 			}
 		}
@@ -157,6 +157,12 @@ func (dec *Decoder) Read(data []byte) (n int, err error) {
 	defer dec.decoderLocker.Unlock()
 	n = copy(data, dec.decodedData[:])
 	dec.decodedData = dec.decodedData[n:]
+	if len(dec.decodedData) <= BufferSize {
+		select {
+		case dec.needFillChan <- struct{}{}:
+		default:
+		}
+	}
 	return
 }
 
