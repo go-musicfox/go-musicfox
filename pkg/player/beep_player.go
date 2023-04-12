@@ -124,7 +124,7 @@ func (p *beepPlayer) listen() {
 					p.l.Lock()
 					defer p.l.Unlock()
 					if p.curStreamer == nil {
-						// nil说明外层解析还没开始，所以不需要再处理
+						// nil说明外层解析还没开始或解析失败，这里直接退出
 						return
 					}
 					// 除了MP3格式，其他格式无需重载

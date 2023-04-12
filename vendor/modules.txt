@@ -67,7 +67,7 @@ github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
 github.com/ebitengine/purego/objc
-# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.1.8
+# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.1.9
 ## explicit; go 1.14
 github.com/faiface/beep
 github.com/faiface/beep/effects
@@ -234,7 +234,7 @@ github.com/skratchdot/open-golang/open
 # github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 ## explicit
 github.com/telanflow/cookiejar
-# github.com/tosone/minimp3 v1.0.1 => github.com/go-musicfox/minimp3 v1.0.5
+# github.com/tosone/minimp3 v1.0.1 => github.com/go-musicfox/minimp3 v1.0.6
 ## explicit; go 1.15
 github.com/tosone/minimp3
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
