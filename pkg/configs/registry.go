@@ -34,6 +34,7 @@ type Registry struct {
 	MainShowNotify             bool                     // 显示通知
 	MainPProfPort              int                      // pprof端口
 	MainAltScreen              bool                     // AltScreen显示模式
+	MainEnableMouseEvent       bool                     // 启用鼠标事件
 	MainDoubleColumn           bool                     // 是否双列显示
 	MainDownloadDir            string                   // 指定下载目录
 	MainShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
@@ -74,6 +75,7 @@ func NewRegistryWithDefault() *Registry {
 		MainShowNotify:       true,
 		MainPProfPort:        constants.MainPProfPort,
 		MainAltScreen:        true,
+		MainEnableMouseEvent: true,
 		PlayerEngine:         constants.BeepPlayer,
 		PlayerBeepMp3Decoder: constants.BeepGoMp3Decoder,
 
@@ -135,6 +137,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainShowNotify = ini.Bool("main.showNotify", true)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", true)
+	registry.MainEnableMouseEvent = ini.Bool("main.enableMouseEvent", true)
 	registry.MainDoubleColumn = ini.Bool("main.doubleColumn", true)
 	registry.MainDownloadDir = ini.String("main.downloadDir", "")
 	registry.MainShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)

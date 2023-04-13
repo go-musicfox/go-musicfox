@@ -243,11 +243,13 @@ func (p *Player) lyricView() string {
 func (p *Player) songView() string {
 	var builder strings.Builder
 
+	var prefixLen = 10
 	if p.model.menuStartColumn-4 > 0 {
+		prefixLen += 12
 		builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
 		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
+		builder.WriteString(SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	}
-	builder.WriteString(SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	if p.State() == player.Playing {
 		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
 	} else {
@@ -263,7 +265,6 @@ func (p *Player) songView() string {
 	}
 
 	if p.curSongIndex < len(p.playlist) {
-		prefixLen := 22
 		// 按剩余长度截断字符串
 		truncateSong := runewidth.Truncate(p.curSong.Name, p.model.WindowWidth-p.model.menuStartColumn-prefixLen, "") // 多减，避免剩余1个中文字符
 		builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
