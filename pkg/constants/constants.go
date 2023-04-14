@@ -19,7 +19,7 @@ const AppLatestReleases = "https://github.com/anhoder/go-musicfox/releases/lates
 const AppCheckUpdateUrl = "https://api.github.com/repos/anhoder/go-musicfox/releases/latest"
 const LastfmAuthUrl = "https://www.last.fm/api/auth/?api_key=%s&token=%s"
 const ProgressFullChar = "#"
-const ProgressEmptyChar = " "
+const ProgressEmptyChar = "."
 const StartupLoadingSeconds = 2
 const StartupTickDuration = time.Millisecond * 16
 

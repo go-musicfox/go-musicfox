@@ -308,24 +308,14 @@ func (p *Player) progressView() string {
 		p.progressLastWidth = width
 	}
 
-	fullSize := int(math.Round(width * float64(progress) / 100))
-	var fullCells string
-	for i := 0; i < fullSize && i < len(p.progressRamp); i++ {
-		fullCells += termenv.String(string(configs.ConfigRegistry.ProgressFullChar)).Foreground(termProfile.Color(p.progressRamp[i])).String()
-	}
-
-	emptySize := 0
-	if int(width)-fullSize > 0 {
-		emptySize = int(width) - fullSize
-	}
-	emptyCells := SetFgStyle(strings.Repeat(string(configs.ConfigRegistry.ProgressEmptyChar), emptySize), termenv.ANSIBrightBlack)
+	progressView := Progress(int(width), int(math.Round(width*float64(progress)/100)))
 
 	if allDuration/60 >= 100 {
 		times := SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())
-		return fmt.Sprintf("%s%s %s", fullCells, emptyCells, times)
+		return progressView + " " + times
 	} else {
 		times := SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())
-		return fmt.Sprintf("%s%s  %s ", fullCells, emptyCells, times)
+		return progressView + " " + times + " "
 	}
 
 }
