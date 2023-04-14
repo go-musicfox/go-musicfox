@@ -245,9 +245,13 @@ signin=true
 # 进度条配置
 [progress]
 # 进度条已加载字符
-fullChar=#
+fullChar="#"
+firstFullChar="#"
+lastFullChar="#"
 # 进度条未加载字符
-emptyChar=
+emptyChar="."
+firstEmptyChar="."
+lastEmptyChar="."
 
 # 主页面配置
 [main]
@@ -274,6 +278,8 @@ showNotify=true
 pprofPort=9876
 # altScreen显示模式
 altScreen=true
+# 开启鼠标事件
+enableMouseEvent=true
 # 双列显示，开启务必使用等宽字体
 doubleColumn=true
 # 下载目录，默认为$HOME/.go-musicfox/download
@@ -283,9 +289,9 @@ showAllSongsOfPlaylist=false
 
 [player]
 # 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
-# 不填Mac默认使用osx，其他系统默认使用beep
+# 不填Mac默认使用osx，其他系统默认使用beep（推荐的配置）
 #engine=beep
-# beep使用的mp3解码器，可选：go-mp3, minimp3
+# beep使用的mp3解码器，可选：go-mp3, minimp3 (minimp3更少的CPU占用，但是稳定性不如go-mp3)
 beepMp3Decoder=go-mp3
 
 # mpd配置
@@ -295,7 +301,7 @@ mpdConfigFile=/Users/anhoder/.mpd/mpd.conf
 # tcp 或 unix
 mpdNetwork=unix
 # tcp时填写ip+port(例如:127.0.0.1:1234)，unix时填写socket文件路径
-
+mpdAddr=
 
 [unm]
 # UNM开关
