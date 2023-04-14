@@ -21,8 +21,12 @@ type Registry struct {
 	StartupSignIn            bool          // 每天启动时自动签到
 	StartupCheckUpdate       bool          // 启动检查更新
 
-	ProgressFullChar  rune // 进度条已加载字符
-	ProgressEmptyChar rune // 进度条未加载字符
+	ProgressFirstEmptyChar rune // 进度条第一个未加载字符
+	ProgressEmptyChar      rune // 进度条未加载字符
+	ProgressLastEmptyChar  rune // 进度条最后一个未加载字符
+	ProgressFirstFullChar  rune // 进度条第一个已加载字符
+	ProgressFullChar       rune // 进度条已加载字符
+	ProgressLastFullChar   rune // 进度条最后一个已加载字符
 
 	MainShowTitle              bool                     // 主界面是否显示标题
 	MainLoadingText            string                   // 主页面加载中提示
@@ -63,8 +67,12 @@ func NewRegistryWithDefault() *Registry {
 		StartupSignIn:            true,
 		StartupCheckUpdate:       true,
 
-		ProgressFullChar:  rune(constants.ProgressFullChar[0]),
-		ProgressEmptyChar: rune(constants.ProgressEmptyChar[0]),
+		ProgressFirstEmptyChar: []rune(constants.ProgressEmptyChar)[0],
+		ProgressEmptyChar:      []rune(constants.ProgressEmptyChar)[0],
+		ProgressLastEmptyChar:  []rune(constants.ProgressEmptyChar)[0],
+		ProgressFirstFullChar:  []rune(constants.ProgressFullChar)[0],
+		ProgressFullChar:       []rune(constants.ProgressFullChar)[0],
+		ProgressLastFullChar:   []rune(constants.ProgressFullChar)[0],
 
 		MainShowTitle:        true,
 		MainLoadingText:      constants.MainLoadingText,
@@ -106,18 +114,19 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.StartupSignIn = ini.Bool("startup.signIn", true)
 	registry.StartupCheckUpdate = ini.Bool("startup.checkUpdate", true)
 
-	fullChar := ini.String("progress.fullChar", constants.ProgressFullChar)
-	if len(fullChar) > 0 {
-		registry.ProgressFullChar = rune(fullChar[0])
-	} else {
-		registry.ProgressFullChar = rune(constants.ProgressFullChar[0])
-	}
 	emptyChar := ini.String("progress.emptyChar", constants.ProgressEmptyChar)
-	if len(emptyChar) > 0 {
-		registry.ProgressEmptyChar = rune(emptyChar[0])
-	} else {
-		registry.ProgressEmptyChar = rune(constants.ProgressEmptyChar[0])
-	}
+	registry.ProgressEmptyChar = firstCharOrDefault(emptyChar, constants.ProgressEmptyChar)
+	firstEmptyChar := ini.String("progress.firstEmptyChar", constants.ProgressEmptyChar)
+	registry.ProgressFirstEmptyChar = firstCharOrDefault(firstEmptyChar, constants.ProgressEmptyChar)
+	lastEmptyChar := ini.String("progress.lastEmptyChar", constants.ProgressEmptyChar)
+	registry.ProgressLastEmptyChar = firstCharOrDefault(lastEmptyChar, constants.ProgressEmptyChar)
+
+	fullChar := ini.String("progress.fullChar", constants.ProgressFullChar)
+	registry.ProgressFullChar = firstCharOrDefault(fullChar, constants.ProgressFullChar)
+	firstFullChar := ini.String("progress.firstFullChar", constants.ProgressFullChar)
+	registry.ProgressFirstFullChar = firstCharOrDefault(firstFullChar, constants.ProgressFullChar)
+	lastFullChar := ini.String("progress.lastFullChar", constants.ProgressFullChar)
+	registry.ProgressLastFullChar = firstCharOrDefault(lastFullChar, constants.ProgressFullChar)
 
 	registry.MainShowTitle = ini.Bool("main.showTitle", true)
 	registry.MainLoadingText = ini.String("main.loadingText", constants.MainLoadingText)
@@ -171,4 +180,11 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.UNMQQCookieFile = ini.String("unm.qqCookieFile", "")
 
 	return registry
+}
+
+func firstCharOrDefault(s, defaultStr string) rune {
+	if len(s) > 0 {
+		return []rune(s)[0]
+	}
+	return []rune(defaultStr)[0]
 }

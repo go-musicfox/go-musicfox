@@ -150,17 +150,5 @@ func (s *StartupModel) progressView(m *NeteaseModel) string {
 		progressLastWidth = width
 	}
 
-	fullSize := int(math.Round(width * s.loadedPercent))
-	var fullCells string
-	for i := 0; i < fullSize && i < len(progressRamp); i++ {
-		fullCells += termenv.String(string(configs.ConfigRegistry.ProgressFullChar)).Foreground(termProfile.Color(progressRamp[i])).String()
-	}
-
-	emptySize := 0
-	if int(width)-fullSize > 0 {
-		emptySize = int(width) - fullSize
-	}
-	emptyCells := SetFgStyle(strings.Repeat(string(configs.ConfigRegistry.ProgressEmptyChar), emptySize), termenv.ANSIBrightBlack)
-
-	return fmt.Sprintf("%s%s", fullCells, emptyCells)
+	return Progress(int(width), int(math.Round(width*s.loadedPercent)))
 }
