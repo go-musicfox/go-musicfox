@@ -406,13 +406,13 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) 
 			menuName = SetNormalStyle(tmp)
 		}
 	} else if menuTitleLen+menuSubtitleLen > itemMaxLen {
-		r := []rune(m.menuList[index].Subtitle)
+		var r = []rune(m.menuList[index].Subtitle)
+		r = append(r, []rune("   ")...)
 		i := int(m.player.PassedTime().Milliseconds()/500) % len(r) // 使用播放时间控制，暂停保持滚动位置
-		if i+itemMaxLen-menuTitleLen >= len(r) {
-			r = append(r, []rune("   ")...)
-			r = append(r, r...)
+		var s = make([]rune, 0, itemMaxLen-menuTitleLen)
+		for j := i; j < i+itemMaxLen-menuTitleLen; j++ {
+			s = append(s, r[j%len(r)])
 		}
-		s := r[i : i+itemMaxLen-menuTitleLen]
 		tmp = runewidth.Truncate(string(s), itemMaxLen-menuTitleLen, "")
 		tmp = runewidth.FillRight(tmp, itemMaxLen-menuTitleLen)
 		if isSelected {
