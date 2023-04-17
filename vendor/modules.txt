@@ -67,7 +67,7 @@ github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
 github.com/ebitengine/purego/objc
-# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.1.9
+# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.0
 ## explicit; go 1.14
 github.com/faiface/beep
 github.com/faiface/beep/effects

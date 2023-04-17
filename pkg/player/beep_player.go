@@ -24,8 +24,9 @@ type beepPlayer struct {
 	curMusic UrlMusic
 	timer    *utils.Timer
 
-	cacheReader *os.File
-	cacheWriter *os.File
+	cacheReader     *os.File
+	cacheWriter     *os.File
+	cacheDownloaded bool
 
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
@@ -75,6 +76,12 @@ func (p *beepPlayer) listen() {
 		ctx        context.Context
 		cancel     context.CancelFunc
 		prevSongId int64
+		doneHandle = func() {
+			select {
+			case done <- struct{}{}:
+			case <-p.close:
+			}
+		}
 	)
 
 	cacheFile := path.Join(utils.GetLocalDataDir(), "music_cache")
@@ -121,6 +128,7 @@ func (p *beepPlayer) listen() {
 						}
 					}()
 					_, _ = utils.CopyClose(ctx, cacheWFile, read)
+					p.cacheDownloaded = true
 					p.l.Lock()
 					defer p.l.Unlock()
 					if p.curStreamer == nil {
@@ -146,7 +154,7 @@ func (p *beepPlayer) listen() {
 							pos = 1
 						}
 						_ = p.curStreamer.Seek(pos)
-						p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() { done <- struct{}{} }))
+						p.ctrl.Streamer = beep.Seq(beep.StreamerFunc(p.streamer), beep.Callback(doneHandle))
 					}
 				}(ctx, p.cacheWriter, resp.Body)
 
@@ -175,7 +183,7 @@ func (p *beepPlayer) listen() {
 				panic(err)
 			}
 
-			p.ctrl.Streamer = beep.Seq(p.curStreamer, beep.Callback(func() { done <- struct{}{} }))
+			p.ctrl.Streamer = beep.Seq(beep.StreamerFunc(p.streamer), beep.Callback(doneHandle))
 			p.volume.Streamer = p.ctrl
 			speaker.Play(p.volume)
 
@@ -383,8 +391,8 @@ func (p *beepPlayer) Close() {
 	if p.timer != nil {
 		p.timer.Stop()
 	}
-	speaker.Clear()
 	close(p.close)
+	speaker.Clear()
 }
 
 func (p *beepPlayer) reset() {
@@ -404,4 +412,32 @@ func (p *beepPlayer) reset() {
 		_ = p.curStreamer.Close()
 		p.curStreamer = nil
 	}
+	p.cacheDownloaded = false
+}
+
+func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
+	pos := p.curStreamer.Position()
+	n, ok = p.curStreamer.Stream(samples)
+	err := p.curStreamer.Err()
+	if ok || p.cacheDownloaded || (err != nil && err != io.ErrUnexpectedEOF && err != io.EOF) {
+		return
+	}
+	p.pausedNoLock()
+	for !ok {
+		if p.curMusic.Type == Flac {
+			if err = p.curStreamer.Seek(pos); err != nil {
+				return
+			}
+		}
+		utils.ResetError(p.curStreamer)
+
+		select {
+		case <-time.After(time.Second * 5):
+			n, ok = p.curStreamer.Stream(samples)
+		case <-p.close:
+			return
+		}
+	}
+	p.resumeNoLock()
+	return
 }

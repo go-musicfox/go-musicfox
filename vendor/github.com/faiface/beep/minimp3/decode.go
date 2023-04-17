@@ -75,8 +75,8 @@ func (d *decoder) Position() int {
 	return d.pos / (d.f.Precision * d.f.NumChannels)
 }
 
-func (d *decoder) Seek(p int) error {
-	return nil
+func (d *decoder) Seek(_ int) error {
+	return errors.New("unimplemented")
 }
 
 func (d *decoder) Close() error {
@@ -86,4 +86,8 @@ func (d *decoder) Close() error {
 		return errors.Wrap(err, "mp3")
 	}
 	return nil
+}
+
+func (d *decoder) ResetError() {
+	d.err = nil
 }

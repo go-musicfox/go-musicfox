@@ -75,7 +75,7 @@ replace (
 	github.com/charmbracelet/bubbletea v0.23.2 => github.com/go-musicfox/bubbletea v0.23.3
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/go-musicfox/UnblockNeteaseMusic v0.1.0
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.3
-	github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.1.9
+	github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.0
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.2

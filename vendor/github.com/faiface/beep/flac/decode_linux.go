@@ -155,7 +155,7 @@ func (d *decoder) Position() int {
 }
 
 func (d *decoder) Seek(_ int) error {
-	return nil
+	return errors.New("unimplemented")
 }
 
 func (d *decoder) Close() error {
@@ -167,4 +167,8 @@ func (d *decoder) Close() error {
 		}
 	}
 	return nil
+}
+
+func (d *decoder) ResetError() {
+	d.err = nil
 }

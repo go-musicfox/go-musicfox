@@ -121,7 +121,7 @@ func Decode(r io.Reader) (s beep.StreamSeekCloser, format beep.Format, err error
 			if err := binary.Read(r, binary.LittleEndian, &fs); err != nil {
 				return nil, beep.Format{}, errors.Wrap(err, "wav: missing unknown chunk size")
 			}
-			if fs % 2 != 0 {
+			if fs%2 != 0 {
 				fs = fs + 1
 			}
 			trash := make([]byte, fs)
@@ -294,4 +294,8 @@ func (d *decoder) Close() error {
 		}
 	}
 	return nil
+}
+
+func (d *decoder) ResetError() {
+	d.err = nil
 }

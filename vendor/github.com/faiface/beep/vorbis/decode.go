@@ -94,3 +94,7 @@ func (d *decoder) Close() error {
 	}
 	return nil
 }
+
+func (d *decoder) ResetError() {
+	d.err = nil
+}
