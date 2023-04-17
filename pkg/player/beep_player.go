@@ -384,10 +384,7 @@ func (p *beepPlayer) Close() {
 		p.timer.Stop()
 	}
 	speaker.Clear()
-	if p.close != nil {
-		close(p.close)
-		p.close = nil
-	}
+	close(p.close)
 }
 
 func (p *beepPlayer) reset() {
