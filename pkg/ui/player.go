@@ -308,7 +308,7 @@ func (p *Player) progressView() string {
 		p.progressLastWidth = width
 	}
 
-	progressView := Progress(int(width), int(math.Round(width*float64(progress)/100)))
+	progressView := Progress(int(width), int(math.Round(width*float64(progress)/100)), p.progressRamp)
 
 	if allDuration/60 >= 100 {
 		times := SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())

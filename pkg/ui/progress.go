@@ -7,7 +7,7 @@ import (
 	"github.com/muesli/termenv"
 )
 
-func Progress(width, fullSize int) string {
+func Progress(width, fullSize int, progressRamp []string) string {
 	var fullCells strings.Builder
 	for i := 0; i < fullSize && i < len(progressRamp); i++ {
 		if i == 0 {

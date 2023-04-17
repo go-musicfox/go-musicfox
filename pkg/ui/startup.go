@@ -150,5 +150,5 @@ func (s *StartupModel) progressView(m *NeteaseModel) string {
 		progressLastWidth = width
 	}
 
-	return Progress(int(width), int(math.Round(width*s.loadedPercent)))
+	return Progress(int(width), int(math.Round(width*s.loadedPercent)), progressRamp)
 }
