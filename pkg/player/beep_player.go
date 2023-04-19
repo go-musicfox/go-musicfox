@@ -423,7 +423,9 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 		return
 	}
 	p.pausedNoLock()
-	for !ok {
+
+	var retry = 6
+	for !ok && retry > 0 {
 		if p.curMusic.Type == Flac {
 			if err = p.curStreamer.Seek(pos); err != nil {
 				return
@@ -437,6 +439,7 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 		case <-p.close:
 			return
 		}
+		retry--
 	}
 	p.resumeNoLock()
 	return
