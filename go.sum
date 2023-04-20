@@ -64,12 +64,16 @@ github.com/go-musicfox/beep v1.2.0 h1:M1tMIHr11kbW9AtCOFot9tx1aA2LD1gLwako9H+5h7
 github.com/go-musicfox/beep v1.2.0/go.mod h1:Lso4U3MzhEsKcLxCN/2rf9tCf46w7yRjROjT9BaFEOI=
 github.com/go-musicfox/beep v1.2.1 h1:sgV2O71XeUN5KfJRb9AK8gEOjuNHrvBmMZ3WoDWlL74=
 github.com/go-musicfox/beep v1.2.1/go.mod h1:W0glXEHcBm2cr++jb+Dvh4oQSzkW8qT0P8hOxX60hQo=
+github.com/go-musicfox/beep v1.2.2 h1:XjxMEsQxkgPju1juyjPZUFE+boE1XOR7X4ZpqLc5yKc=
+github.com/go-musicfox/beep v1.2.2/go.mod h1:z3MxxrEeXS2aCyQdobPksf21oqx8eyNRKMzIsRPe9nM=
 github.com/go-musicfox/bubbletea v0.23.3 h1:m59b+J9K9BmqPjBLYCcnkefcn5PJi1RKL7drboq38Kk=
 github.com/go-musicfox/bubbletea v0.23.3/go.mod h1:VYLXIczSWpzsNE/QVeGiJetHZYR8nl11aP9agx1v8xc=
 github.com/go-musicfox/goflac v0.1.3 h1:hximdt/d5hCqVk7QOHlAaMfPWwtO/tz3wmPRJU9fzw0=
 github.com/go-musicfox/goflac v0.1.3/go.mod h1:vSxTubJfc8EfFFMmJqxdSp4/iwBVf9TPcapx8I/+W5g=
 github.com/go-musicfox/goflac v0.1.4 h1:p2wvcelFIoGsTOg74+bz0tSH00E+sHl2BwRYZaKyi78=
 github.com/go-musicfox/goflac v0.1.4/go.mod h1:vSxTubJfc8EfFFMmJqxdSp4/iwBVf9TPcapx8I/+W5g=
+github.com/go-musicfox/goflac v0.1.5 h1:1fSNZphzXaTq++fwSiPdGt/nDw7IUsPwcSy6C9vUuh8=
+github.com/go-musicfox/goflac v0.1.5/go.mod h1:vSxTubJfc8EfFFMmJqxdSp4/iwBVf9TPcapx8I/+W5g=
 github.com/go-musicfox/lastfm-go v0.0.2 h1:S/jXVK/bSi9JGZGm7ynQWY3nQ8gvMzbpHf2yKZ9ge+g=
 github.com/go-musicfox/lastfm-go v0.0.2/go.mod h1:QAs3ciul8v40zzwgDPDVq12CSACAIZUHXSSeBJLCdQE=
 github.com/go-musicfox/minimp3 v1.0.6 h1:YUD7P0ApW3eqYnrQADsffvTM3Sf8CLoNMqXsW+I2XvQ=
