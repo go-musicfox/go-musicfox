@@ -141,6 +141,9 @@ func newDriver(sampleRate, numChans, bitDepthInBytes, bufferSizeInBytes int) (tr
 }
 
 func (p *driver) TryWrite(data []byte) (n int, err error) {
+	if p.handle == nil {
+		return
+	}
 	bufSize := p.bufSamples * p.numChans * p.bitDepthInBytes
 	for len(data) > 0 {
 		toWrite := min(len(data), max(0, bufSize-len(p.buf)))
@@ -179,6 +182,7 @@ func (p *driver) Close() error {
 	if errCode := C.snd_pcm_close(p.handle); errCode < 0 {
 		return alsaError(errCode)
 	}
+	p.handle = nil
 	return nil
 }
 

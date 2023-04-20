@@ -80,6 +80,8 @@ github.com/go-musicfox/minimp3 v1.0.6 h1:YUD7P0ApW3eqYnrQADsffvTM3Sf8CLoNMqXsW+I
 github.com/go-musicfox/minimp3 v1.0.6/go.mod h1:WFso0UvZL1fPit45V6RQPKxbehLI4XZaJyLs2/TJHoU=
 github.com/go-musicfox/oto v1.0.2 h1:m/Txr5ENJqG1R1GlTcnXKwJgfliXnMTMcLs1vOiDX4g=
 github.com/go-musicfox/oto v1.0.2/go.mod h1:wovJ8WWMfFKvP587mhHgot/MBr4DnNy9m6EepeVGnos=
+github.com/go-musicfox/oto v1.0.3 h1:O6LIcfSRPgVcsgE2/yCmh4e7nOoX80yPCFgWSMLVXCc=
+github.com/go-musicfox/oto v1.0.3/go.mod h1:wovJ8WWMfFKvP587mhHgot/MBr4DnNy9m6EepeVGnos=
 github.com/go-musicfox/tag v1.0.2 h1:reDl0/U4IHlA4eKQ4GsdCIXS6JrfHH8pub+YaZsjLlg=
 github.com/go-musicfox/tag v1.0.2/go.mod h1:Ywby7Ky0rK5j1mv30tIMb0Tskcn6fgC1dppRfDXjuwM=
 github.com/godbus/dbus/v5 v5.1.0 h1:4KLkAxT3aOY8Li4FRJe/KvhoNFFxo0m6fNuFUO8QJUk=

@@ -146,7 +146,7 @@ github.com/hajimehoshi/go-mp3/internal/huffman
 github.com/hajimehoshi/go-mp3/internal/imdct
 github.com/hajimehoshi/go-mp3/internal/maindata
 github.com/hajimehoshi/go-mp3/internal/sideinfo
-# github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.2
+# github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
 ## explicit; go 1.13
 github.com/hajimehoshi/oto
 github.com/hajimehoshi/oto/internal/mux
