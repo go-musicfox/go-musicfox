@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"runtime"
 	"sync"
 	"unsafe"
 )
@@ -306,7 +307,7 @@ func NewDecoder(name string) (d *Decoder, err error) {
 	}
 	c := C.CString(name)
 	defer C.free(unsafe.Pointer(c))
-	//runtime.SetFinalizer(d, (*Decoder).Close)
+	runtime.SetFinalizer(d, (*Decoder).Close)
 	status := C.FLAC__stream_decoder_init_file(d.d, c,
 		(C.FLAC__StreamDecoderWriteCallback)(unsafe.Pointer(C.decoderWriteCallback_cgo)),
 		(C.FLAC__StreamDecoderMetadataCallback)(unsafe.Pointer(C.decoderMetadataCallback_cgo)),
@@ -331,7 +332,7 @@ func NewDecoderReader(reader io.ReadSeekCloser) (d *Decoder, err error) {
 		return nil, errors.New("failed to create decoder")
 	}
 	d.reader = reader
-	//runtime.SetFinalizer(d, (*Decoder).Close)
+	runtime.SetFinalizer(d, (*Decoder).Close)
 	status := C.FLAC__stream_decoder_init_stream(d.d,
 		(C.FLAC__StreamDecoderReadCallback)(unsafe.Pointer(C.decoderReadCallback_cgo)),
 		(C.FLAC__StreamDecoderSeekCallback)(unsafe.Pointer(C.decoderSeekCallback_cgo)),
@@ -365,7 +366,7 @@ func (d *Decoder) Close() {
 	if d.reader != nil {
 		_ = d.reader.Close()
 	}
-	//runtime.SetFinalizer(d, nil)
+	runtime.SetFinalizer(d, nil)
 }
 
 // ReadFrame reads a frame of audio data from the decoder.
@@ -425,7 +426,7 @@ func NewEncoder(name string, channels int, depth int, rate int) (e *Encoder, err
 	encoderPtrs.add(e)
 	c := C.CString(name)
 	defer C.free(unsafe.Pointer(c))
-	//runtime.SetFinalizer(e, (*Encoder).Close)
+	runtime.SetFinalizer(e, (*Encoder).Close)
 	C.FLAC__stream_encoder_set_channels(e.e, C.uint(channels))
 	C.FLAC__stream_encoder_set_bits_per_sample(e.e, C.uint(depth))
 	C.FLAC__stream_encoder_set_sample_rate(e.e, C.uint(rate))
@@ -495,7 +496,7 @@ func NewEncoderWriter(writer FlacWriter, channels int, depth int, rate int) (e *
 	}
 	encoderPtrs.add(e)
 	e.writer = writer
-	//runtime.SetFinalizer(e, (*Encoder).Close)
+	runtime.SetFinalizer(e, (*Encoder).Close)
 	C.FLAC__stream_encoder_set_channels(e.e, C.uint(channels))
 	C.FLAC__stream_encoder_set_bits_per_sample(e.e, C.uint(depth))
 	C.FLAC__stream_encoder_set_sample_rate(e.e, C.uint(rate))
@@ -536,5 +537,5 @@ func (e *Encoder) Close() {
 		encoderPtrs.del(e)
 		e.e = nil
 	}
-	//runtime.SetFinalizer(e, nil)
+	runtime.SetFinalizer(e, nil)
 }
