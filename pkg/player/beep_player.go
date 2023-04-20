@@ -258,7 +258,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
 	// minimp3未实现Seek
-	if p.curMusic.Type != Mp3 || configs.ConfigRegistry.PlayerBeepMp3Decoder == constants.BeepMiniMp3Decoder {
+	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.ConfigRegistry.PlayerBeepMp3Decoder == constants.BeepMiniMp3Decoder {
 		return
 	}
 	if p.state == Playing || p.state == Paused {
@@ -422,12 +422,12 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
 	err := p.curStreamer.Err()
-	if ok || p.cacheDownloaded || (err != nil && err != io.ErrUnexpectedEOF && err != io.EOF) {
+	if err == nil && (ok || p.cacheDownloaded) {
 		return
 	}
 	p.pausedNoLock()
 
-	var retry = 6
+	var retry = 4
 	for !ok && retry > 0 {
 		if p.curMusic.Type == Flac {
 			if err = p.curStreamer.Seek(pos); err != nil {

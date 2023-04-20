@@ -15,7 +15,7 @@ import (
 	minimp3pkg "github.com/tosone/minimp3"
 )
 
-func DecodeSong(t SongType, r io.ReadCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
+func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
 	switch t {
 	case Mp3:
 		switch configs.ConfigRegistry.PlayerBeepMp3Decoder {

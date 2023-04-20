@@ -20,6 +20,40 @@ decoderMetadataCallback_cgo(const FLAC__StreamDecoder *decoder,
 			    (FLAC__StreamMetadata *)metadata, data);
 }
 
+FLAC__StreamDecoderSeekStatus
+decoderSeekCallback_cgo(const FLAC__StreamDecoder *decoder,
+                FLAC__uint64 absolute_byte_offset,
+                void *data)
+{
+	return decoderSeekCallback((FLAC__StreamDecoder *)decoder,
+    			       absolute_byte_offset, data);
+}
+
+FLAC__StreamDecoderTellStatus
+decoderTellCallback_cgo(const FLAC__StreamDecoder *decoder,
+                FLAC__uint64 *absolute_byte_offset,
+                void *data)
+{
+	return decoderTellCallback((FLAC__StreamDecoder *)decoder,
+    			       (FLAC__uint64 *)absolute_byte_offset, data);
+}
+
+FLAC__StreamDecoderLengthStatus
+decoderLengthCallback_cgo(const FLAC__StreamDecoder *decoder,
+                FLAC__uint64 *stream_length,
+                void *data)
+{
+	return decoderLengthCallback((FLAC__StreamDecoder *)decoder,
+    			       (FLAC__uint64 *)stream_length, data);
+}
+
+FLAC__bool
+decoderEofCallback_cgo(const FLAC__StreamDecoder *decoder,
+                void *data)
+{
+	return decoderEofCallback((FLAC__StreamDecoder *)decoder, data);
+}
+
 FLAC__StreamDecoderWriteStatus
 decoderWriteCallback_cgo(const FLAC__StreamDecoder *decoder,
 		         const FLAC__Frame *frame,
