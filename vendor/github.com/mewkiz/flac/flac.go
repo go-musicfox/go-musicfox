@@ -184,7 +184,7 @@ func (stream *Stream) parseStreamInfo() (block *meta.Block, err error) {
 	}
 	si, ok := block.Body.(*meta.StreamInfo)
 	if !ok {
-		return block, fmt.Errorf("flac.parseStreamInfo: incorrect type of first metadata block; expected *meta.StreamInfo, got %T", si)
+		return block, fmt.Errorf("flac.parseStreamInfo: incorrect type of first metadata block; expected *meta.StreamInfo, got %T", block.Body)
 	}
 	stream.Info = si
 	return block, nil

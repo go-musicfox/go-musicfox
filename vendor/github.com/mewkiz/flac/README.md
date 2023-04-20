@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/mewkiz/flac.svg?branch=master)](https://travis-ci.org/mewkiz/flac)
 [![Coverage Status](https://img.shields.io/coveralls/mewkiz/flac.svg)](https://coveralls.io/r/mewkiz/flac?branch=master)
-[![GoDoc](https://godoc.org/github.com/mewkiz/flac?status.svg)](https://godoc.org/github.com/mewkiz/flac)
+[![GoDoc](https://pkg.go.dev/badge/github.com/mewkiz/flac)](https://pkg.go.dev/github.com/mewkiz/flac)
 
 This package provides access to [FLAC][1] (Free Lossless Audio Codec) streams.
 
@@ -16,11 +16,16 @@ Documentation provided by GoDoc.
     - [frame][flac/frame]: implements access to FLAC audio frames.
     - [meta][flac/meta]: implements access to FLAC metadata blocks.
 
-[flac]: http://godoc.org/github.com/mewkiz/flac
-[flac/frame]: http://godoc.org/github.com/mewkiz/flac/frame
-[flac/meta]: http://godoc.org/github.com/mewkiz/flac/meta
+[flac]: http://pkg.go.dev/github.com/mewkiz/flac
+[flac/frame]: http://pkg.go.dev/github.com/mewkiz/flac/frame
+[flac/meta]: http://pkg.go.dev/github.com/mewkiz/flac/meta
 
 ## Changes
+
+* Version 1.0.8 (2023-04-09)
+    - Fix race condition when reading meta data (see [#56](https://github.com/mewkiz/flac/pull/56)). Thanks to [Zach Orosz](https://github.com/zachorosz).
+    - Fix encoding of 8-bps WAV audio samples (see [#52](https://github.com/mewkiz/flac/pull/52)). Thanks to [Martijn van Beurden](https://github.com/ktmf01).
+    - Fix StreamInfo block type error message (see [#49](https://github.com/mewkiz/flac/pull/49)).
 
 * Version 1.0.7 (2021-01-28)
     - Add seek API (see [#44](https://github.com/mewkiz/flac/pull/44) and [#46](https://github.com/mewkiz/flac/pull/46)). Thanks to [Craig Swank](https://github.com/cswank).
