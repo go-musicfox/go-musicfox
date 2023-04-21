@@ -1,4 +1,4 @@
-name: Bug Report / 反馈Bug
+name: "Bug Report / 反馈Bug"
 description: "Create a report about the issues you encountered while using musicfox / 反馈你使用musicfox时遇到的问题"
 labels: ["bug"]
 body:
