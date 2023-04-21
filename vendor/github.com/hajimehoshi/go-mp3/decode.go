@@ -15,7 +15,7 @@
 package mp3
 
 import (
-	"fmt"
+	"errors"
 	"io"
 
 	"github.com/hajimehoshi/go-mp3/internal/consts"
@@ -69,8 +69,17 @@ func (d *Decoder) Read(buf []byte) (int, error) {
 
 // Seek is io.Seeker's Seek.
 //
-// Seek panics when the underlying source is not io.Seeker.
+// Seek returns an error when the underlying source is not io.Seeker.
+//
+// Note that seek uses a byte offset but samples are aligned to 4 bytes (2
+// channels, 2 bytes each). Be careful to seek to an offset that is divisible by
+// 4 if you want to read at full sample boundaries.
 func (d *Decoder) Seek(offset int64, whence int) (int64, error) {
+	if offset == 0 && whence == io.SeekCurrent {
+		// Handle the special case of asking for the current position specially.
+		return d.pos, nil
+	}
+
 	npos := int64(0)
 	switch whence {
 	case io.SeekStart:
@@ -80,7 +89,7 @@ func (d *Decoder) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekEnd:
 		npos = d.Length() + offset
 	default:
-		panic(fmt.Sprintf("mp3: invalid whence: %v", whence))
+		return 0, errors.New("mp3: invalid whence")
 	}
 	d.pos = npos
 	d.buf = nil
@@ -99,7 +108,12 @@ func (d *Decoder) Seek(offset int64, whence int) (int64, error) {
 		if err := d.readFrame(); err != nil {
 			return 0, err
 		}
-		d.buf = d.buf[d.bytesPerFrame+(d.pos%d.bytesPerFrame):]
+		pos := d.bytesPerFrame + (d.pos % d.bytesPerFrame)
+		l := int64(len(d.buf))
+		if pos > l {
+			pos = l
+		}
+		d.buf = d.buf[pos:]
 	} else {
 		if _, err := d.source.Seek(d.frameStarts[f], 0); err != nil {
 			return 0, err
@@ -157,7 +171,11 @@ func (d *Decoder) ensureFrameStartsAndLength() error {
 		d.bytesPerFrame = int64(h.BytesPerFrame())
 		l += d.bytesPerFrame
 
-		buf := make([]byte, h.FrameSize()-4)
+		framesize, err := h.FrameSize()
+		if err != nil {
+			return err
+		}
+		buf := make([]byte, framesize-4)
 		if _, err := d.source.ReadFull(buf); err != nil {
 			if err == io.EOF {
 				break
@@ -204,7 +222,11 @@ func NewDecoder(r io.Reader) (*Decoder, error) {
 	if err := d.readFrame(); err != nil {
 		return nil, err
 	}
-	d.sampleRate = d.frame.SamplingFrequency()
+	freq, err := d.frame.SamplingFrequency()
+	if err != nil {
+		return nil, err
+	}
+	d.sampleRate = freq
 
 	if err := d.ensureFrameStartsAndLength(); err != nil {
 		return nil, err
