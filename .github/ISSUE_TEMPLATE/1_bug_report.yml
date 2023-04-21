@@ -25,13 +25,13 @@ body:
   - type: textarea
     attributes:
       label: If applicable, list the error messages you see / 如果有错误输出请一并填入
-      description: ""
+      description: "Input your error message / 输入你看到的错误信息"
     validations:
       required: false
   - type: textarea
     attributes:
       label: |
         If applicable, attach your `${MUSICFOX_ROOT}/musicfox.log` file to this issue. / 如果`${MUSICFOX_ROOT}/musicfox.log`里有错误日志，请一并上传
-      description: ""
+      description: "Upload `${MUSICFOX_ROOT}/musicfox.log` / 上传`${MUSICFOX_ROOT}/musicfox.log`日志文件"
     validations:
       required: false
