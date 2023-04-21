@@ -1,5 +1,6 @@
 .idea/
 .Ds_Store
+.DS_Store
 bin/
 dist/
 .release-env
