@@ -64,7 +64,10 @@ var sideInfoBitsToRead = [2][4]int{
 
 func Read(source FullReader, header frameheader.FrameHeader) (*SideInfo, error) {
 	nch := header.NumberOfChannels()
-	framesize := header.FrameSize()
+	framesize, err := header.FrameSize()
+	if err != nil {
+		return nil, err
+	}
 	if framesize > 2000 {
 		return nil, fmt.Errorf("mp3: framesize = %d\n", framesize)
 	}

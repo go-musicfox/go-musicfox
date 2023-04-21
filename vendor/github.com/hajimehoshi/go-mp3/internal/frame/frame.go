@@ -111,7 +111,7 @@ func Read(source FullReader, position int64, prev *Frame) (frame *Frame, startPo
 	return nf, pos, nil
 }
 
-func (f *Frame) SamplingFrequency() int {
+func (f *Frame) SamplingFrequency() (int, error) {
 	return f.header.SamplingFrequencyValue()
 }
 
