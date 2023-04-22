@@ -151,6 +151,8 @@ home.packages = [
 
 ### Windows
 
+**如果在使用时出现莫名奇妙的光标移动、切歌、暂停等现象，请把配置项enableMouseEvent设置为false**
+
 #### 1. scoop安装
 
 ```sh
