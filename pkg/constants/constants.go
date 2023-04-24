@@ -32,6 +32,7 @@ const AppHttpTimeout = time.Second * 5
 
 const MainLoadingText = "[加载中...]"
 const MainPProfPort = 9876
+const MainNotifyIcon = "logo.png"
 const UNMDefaultSources = "kuwo"
 
 const BeepPlayer = "beep" // beep
