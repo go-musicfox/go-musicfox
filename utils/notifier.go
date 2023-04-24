@@ -128,7 +128,7 @@ func Notify(content NotifyContent) {
 		localDir := GetLocalDataDir()
 		content.Icon = path.Join(localDir, configs.ConfigRegistry.MainNotifyIcon)
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
-			content.Icon = path.Join(localDir, constants.MainNotifyIcon)
+			content.Icon = path.Join(localDir, constants.DefaultNotifyIcon)
 			// 写入logo文件
 			err = CopyFileFromEmbed("embed/logo.png", content.Icon)
 			if err != nil {

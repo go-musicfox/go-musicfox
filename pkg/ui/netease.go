@@ -156,7 +156,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				_ = os.RemoveAll(path.Join(localDir, "musicfox-notifier.app"))
 
 				// 删除旧logo
-				_ = os.Remove(path.Join(localDir, "logo.png"))
+				_ = os.Remove(path.Join(localDir, constants.DefaultNotifyIcon))
 
 				extInfo.StorageVersion = constants.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)
