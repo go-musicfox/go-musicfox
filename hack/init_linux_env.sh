@@ -6,8 +6,8 @@ set -o nounset
 set -o pipefail
 
 BUILD_HOST=${BUILD_HOST:-"x86_64-linux-gnu"}
-LIBFLAC_VER=1.3.3
-LIBALSA_VER=1.2.2
+LIBFLAC_VER=1.4.2
+LIBALSA_VER=1.2.8
 
 # install libflac
 cd /tmp
