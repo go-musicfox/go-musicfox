@@ -151,6 +151,8 @@ home.packages = [
 
 ### Windows
 
+**如果在使用时出现莫名奇妙的光标移动、切歌、暂停等现象，请把配置项enableMouseEvent设置为false**
+
 #### 1. scoop安装
 
 ```sh
@@ -194,8 +196,8 @@ $ musicfox
 |   space   |     暂停/播放      |                             |
 |     [     |      上一曲       |                             |
 |     ]     |      下一曲       |                             |
-|  -/滚轮下 |      减小音量      |                             |
-|  =/滚轮上 |      加大音量      |                             |
+|   -/滚轮下   |      减小音量      |                             |
+|   =/滚轮上   |      加大音量      |                             |
 | n/N/ENTER |    进入选中的菜单     |                             |
 |  b/B/ESC  |     返回上级菜单     |                             |
 |    w/W    |    退出并退出登录     |                             |
@@ -203,8 +205,8 @@ $ musicfox
 |     P     | 心动模式(仅在歌单中时有效) |                             |
 |    r/R    |     重新渲染UI     | 如果UI界面因为某种原因出现错乱，可以使用这个重新渲染 |
 |    c/C    |     当前播放列表     |                             |
-|    v/V    |     快进5s/10s          |                             |
-|    x/X    |     快退1s/5s          |                             |
+|    v/V    |    快进5s/10s    |                             |
+|    x/X    |    快退1s/5s     |                             |
 |     ,     |    喜欢当前播放歌曲    |                             |
 |     <     |    喜欢当前选中歌曲    |                             |
 |     .     |  当前播放歌曲移除出喜欢   |                             |
@@ -226,97 +228,9 @@ $ musicfox
 
 ## 配置文件
 
-配置文件路径为用户目录下的.go-musicfox/go-musicfox.ini，相关配置有：
+配置文件路径为用户目录下的.go-musicfox/go-musicfox.ini，相关配置：
 
-```ini
-# 启动页配置
-[startup]
-# 是否显示启动页
-show=true
-# 启动页进度条是否有回弹效果
-progressOutBounce=true
-# 启动页时长
-loadingSeconds=2
-# 启动页欢迎语
-welcome=musicfox
-# 启动时自动签到
-signin=true
-
-# 进度条配置
-[progress]
-# 进度条已加载字符
-fullChar="#"
-firstFullChar="#"
-lastFullChar="#"
-# 进度条未加载字符
-emptyChar="."
-firstEmptyChar="."
-lastEmptyChar="."
-
-# 主页面配置
-[main]
-# 是否显示标题
-showTitle=true
-# 加载中提示
-loadingText=[加载中...]
-# 歌曲音质，standard,higher,exhigh,lossless,hires
-songLevel=higher
-# 主题颜色
-# 随机
-# primaryColor=random
-# 经典网易云音乐红
-primaryColor="#ea403f"
-# 是否显示歌词
-showLyric=true
-# 歌词偏移 ms
-lyricOffset=0
-# 显示歌词翻译
-showLyricTrans=true
-# 是否显示通知信息
-showNotify=true
-# 开启pprof, --pprof时会开启
-pprofPort=9876
-# altScreen显示模式
-altScreen=true
-# 开启鼠标事件
-enableMouseEvent=true
-# 双列显示，开启务必使用等宽字体
-doubleColumn=true
-# 下载目录，默认为$HOME/.go-musicfox/download
-downloadDir=
-# 是否显示歌单下所有歌曲，默认不开启，仅获取歌单前1000首，开启后可能会占用更多内存（大量歌曲数据）和带宽（会同时发送多个请求获取歌单下歌曲数据）
-showAllSongsOfPlaylist=false
-
-[player]
-# 播放引擎 beep / mpd(需要安装配置mpd) / osx(Mac才可用)
-# 不填Mac默认使用osx，其他系统默认使用beep（推荐的配置）
-#engine=beep
-# beep使用的mp3解码器，可选：go-mp3, minimp3 (minimp3更少的CPU占用，但是稳定性不如go-mp3)
-beepMp3Decoder=go-mp3
-
-# mpd配置
-mpdBin=/usr/local/bin/mpd
-# !!!注意!!! 一定要在配置文件中设置pid_file，否则在退出时不会kill掉mpd进程
-mpdConfigFile=/Users/anhoder/.mpd/mpd.conf
-# tcp 或 unix
-mpdNetwork=unix
-# tcp时填写ip+port(例如:127.0.0.1:1234)，unix时填写socket文件路径
-mpdAddr=
-
-[unm]
-# UNM开关
-switch=true
-# UNM源: kuwo,kugou,migu,qq
-sources=kuwo
-# UNM搜索其他平台限制 0-3
-searchLimit=0
-# 解除会员限制
-enableLocalVip=true
-# 解除音质限制
-unlockSoundEffects=true
-# QQ音乐cookie文件
-qqCookieFile=
-```
+[详细配置](./utils/embed/go-musicfox.ini)
 
 ## 相关项目
 

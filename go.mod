@@ -43,7 +43,7 @@ require (
 	github.com/gomodule/redigo v1.8.8 // indirect
 	github.com/gookit/color v1.5.2 // indirect
 	github.com/gookit/goutil v0.6.6 // indirect
-	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.1 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
 	github.com/jfreymuth/oggvorbis v1.0.3 // indirect
@@ -51,8 +51,8 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mewkiz/flac v1.0.7 // indirect
-	github.com/mewkiz/pkg v0.0.0-20211102230744-16a6ce8f1b77 // indirect
+	github.com/mewkiz/flac v1.0.8 // indirect
+	github.com/mewkiz/pkg v0.0.0-20230226050401-4010bf0fec14 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -74,11 +74,12 @@ require (
 replace (
 	github.com/charmbracelet/bubbletea v0.23.2 => github.com/go-musicfox/bubbletea v0.23.3
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb => github.com/go-musicfox/UnblockNeteaseMusic v0.1.0
-	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.3
-	github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.0
+	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
+	github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.3
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
-	github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.2
+	github.com/hajimehoshi/go-mp3 v0.3.1 => github.com/go-musicfox/go-mp3 v0.3.1
+	github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 	github.com/tosone/minimp3 v1.0.1 => github.com/go-musicfox/minimp3 v1.0.6
 )

@@ -126,8 +126,9 @@ func Notify(content NotifyContent) {
 
 	if runtime.GOOS != "darwin" {
 		localDir := GetLocalDataDir()
-		content.Icon = path.Join(localDir, "logo.png")
+		content.Icon = path.Join(localDir, configs.ConfigRegistry.MainNotifyIcon)
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
+			content.Icon = path.Join(localDir, constants.DefaultNotifyIcon)
 			// 写入logo文件
 			err = CopyFileFromEmbed("embed/logo.png", content.Icon)
 			if err != nil {

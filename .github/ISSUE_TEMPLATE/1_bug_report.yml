@@ -1,0 +1,54 @@
+name: "Bug Report / 反馈Bug"
+description: "Create a report about the issues you encountered while using musicfox / 反馈你使用musicfox时遇到的问题"
+labels: ["bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: |
+        Check for existing issues
+        检查是否已存在相同issue
+      description: |
+        Check the backlog of issues to reduce the chances of creating duplicates; if an issue already exists, place a +1 (👍) on it.
+        检查现有的issue以避免创建重复的issue, 如果有已存在加个👍就OK了
+      options:
+        - label: Completed/已检查
+          required: true
+  - type: textarea
+    attributes:
+      label: |
+        Describe the bug and provide steps to reproduce it
+        描述遇到的bug并提供相应的复现方法
+      description: |
+        A clear and concise description of what the bug is.
+        清楚简洁地描述遇到的bug
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment / 运行环境
+      description: |
+        Describe the OS, CPU Arch of your machine and the version of musicfox (`musicfox -V`).
+        描述你电脑的操作系统及CPU架构，以及musicfox的版本(可通过`musicfox -V`获取)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: |
+        If applicable, list the error messages you see
+        如果有错误输出请一并填入
+      description: |
+        Input your error message
+        输入你看到的错误信息
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: |
+        If applicable, attach your `${MUSICFOX_ROOT}/musicfox.log` file to this issue.
+        如果`${MUSICFOX_ROOT}/musicfox.log`里有错误日志，请一并上传
+      description: |
+        Upload `${MUSICFOX_ROOT}/musicfox.log`
+        上传`${MUSICFOX_ROOT}/musicfox.log`日志文件
+    validations:
+      required: false

@@ -115,6 +115,9 @@ func readHuffman(m *bits.Bits, header frameheader.FrameHeader, sideInfo *sideinf
 		// Remove last words read
 		is_pos -= 4
 	}
+	if is_pos < 0 {
+		is_pos = 0
+	}
 
 	// Setup count1 which is the index of the first sample in the rzero reg.
 	sideInfo.Count1[gr][ch] = is_pos

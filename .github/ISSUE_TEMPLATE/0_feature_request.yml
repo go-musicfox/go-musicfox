@@ -1,0 +1,25 @@
+name: "Feature request / 功能建议"
+description: "Your new idea / 你的新想法"
+labels: ["enhancement"]
+body:
+  - type: checkboxes
+    attributes:
+      label: |
+        Check for existing issues
+        检查是否已存在相同issue
+      description: |
+        Check the backlog of issues to reduce the chances of creating duplicates; if an issue already exists, place a +1 (👍) on it.
+        检查现有的issue以避免创建重复的issue, 如果有已存在加个👍就OK了
+      options:
+        - label: Completed/已检查
+          required: true
+  - type: textarea
+    attributes:
+      label: |
+        Describe the feature
+        描述你的新功能
+      description: |
+        Provide a brief description of the features you want to add
+        对你想要添加的功能进行简单的描述
+    validations:
+      required: true

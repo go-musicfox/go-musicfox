@@ -26,13 +26,13 @@ func (block *Block) parseVorbisComment() (err error) {
 	}
 
 	// (vendor length) bits: Vendor.
-	buf, err := readBytes(block.lr, int(x))
+	vendor, err := readString(block.lr, int(x))
 	if err != nil {
 		return unexpected(err)
 	}
 	comment := new(VorbisComment)
 	block.Body = comment
-	comment.Vendor = string(buf)
+	comment.Vendor = vendor
 
 	// Parse tags.
 	// 32 bits: number of tags.
@@ -50,11 +50,10 @@ func (block *Block) parseVorbisComment() (err error) {
 		}
 
 		// (vector length): vector.
-		buf, err = readBytes(block.lr, int(x))
+		vector, err := readString(block.lr, int(x))
 		if err != nil {
 			return unexpected(err)
 		}
-		vector := string(buf)
 
 		// Parse tag, which has the following format:
 		//    NAME=VALUE

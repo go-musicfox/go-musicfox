@@ -45,6 +45,25 @@ decoderReadCallback_cgo(const FLAC__StreamDecoder *,
 			size_t *,
 		        void *);
 
+FLAC__StreamDecoderSeekStatus
+decoderSeekCallback_cgo(const FLAC__StreamDecoder *,
+			FLAC__uint64,
+		        void *);
+
+FLAC__StreamDecoderTellStatus
+decoderTellCallback_cgo(const FLAC__StreamDecoder *,
+			FLAC__uint64*,
+		        void *);
+
+FLAC__StreamDecoderLengthStatus
+decoderLengthCallback_cgo(const FLAC__StreamDecoder *,
+			FLAC__uint64*,
+		        void *);
+
+FLAC__bool
+decoderEofCallback_cgo(const FLAC__StreamDecoder *,
+                void *);
+
 FLAC__StreamEncoderWriteStatus
 encoderWriteCallback_cgo(const FLAC__StreamEncoder *,
 			 const FLAC__byte *,
@@ -156,7 +175,7 @@ type Frame struct {
 // Decoder is a FLAC decoder.
 type Decoder struct {
 	d        *C.FLAC__StreamDecoder
-	reader   io.ReadCloser
+	reader   io.ReadSeekCloser
 	Channels int
 	Depth    int
 	Rate     int
@@ -229,6 +248,56 @@ func decoderReadCallback(d *C.FLAC__StreamDecoder, buffer *C.FLAC__byte, bytes *
 	return C.FLAC__STREAM_DECODER_READ_STATUS_CONTINUE
 }
 
+//export decoderSeekCallback
+func decoderSeekCallback(e *C.FLAC__StreamDecoder, absPos C.FLAC__uint64, data unsafe.Pointer) C.FLAC__StreamDecoderSeekStatus {
+	decoder := decoderPtrs.get(e)
+	decoder.l.Lock()
+	defer decoder.l.Unlock()
+	_, err := decoder.reader.Seek(int64(absPos), io.SeekStart)
+	if err != nil {
+		return C.FLAC__STREAM_DECODER_SEEK_STATUS_ERROR
+	}
+	return C.FLAC__STREAM_DECODER_SEEK_STATUS_OK
+}
+
+//export decoderTellCallback
+func decoderTellCallback(e *C.FLAC__StreamDecoder, absPos *C.FLAC__uint64, data unsafe.Pointer) C.FLAC__StreamDecoderTellStatus {
+	decoder := decoderPtrs.get(e)
+	decoder.l.Lock()
+	defer decoder.l.Unlock()
+	pos, err := decoder.reader.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return C.FLAC__STREAM_DECODER_TELL_STATUS_ERROR
+	}
+	*absPos = C.FLAC__uint64(pos)
+	return C.FLAC__STREAM_DECODER_TELL_STATUS_OK
+}
+
+//export decoderLengthCallback
+func decoderLengthCallback(e *C.FLAC__StreamDecoder, len *C.FLAC__uint64, data unsafe.Pointer) C.FLAC__StreamDecoderLengthStatus {
+	decoder := decoderPtrs.get(e)
+	_, l, err := decoder.Tell()
+	if err != nil {
+		return C.FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR
+	}
+
+	*len = C.FLAC__uint64(l)
+	return C.FLAC__STREAM_DECODER_LENGTH_STATUS_OK
+}
+
+//export decoderEofCallback
+func decoderEofCallback(e *C.FLAC__StreamDecoder, data unsafe.Pointer) C.FLAC__bool {
+	decoder := decoderPtrs.get(e)
+	nowPos, l, err := decoder.Tell()
+	if err != nil {
+		return C.FLAC__bool(0)
+	}
+	if nowPos < l {
+		return C.FLAC__bool(0)
+	}
+	return C.FLAC__bool(1)
+}
+
 // NewDecoder creates a new Decoder object.
 func NewDecoder(name string) (d *Decoder, err error) {
 	d = new(Decoder)
@@ -256,7 +325,7 @@ func NewDecoder(name string) (d *Decoder, err error) {
 }
 
 // NewDecoderReader creates a new Decoder object from a Reader.
-func NewDecoderReader(reader io.ReadCloser) (d *Decoder, err error) {
+func NewDecoderReader(reader io.ReadSeekCloser) (d *Decoder, err error) {
 	d = new(Decoder)
 	d.d = C.FLAC__stream_decoder_new()
 	if d.d == nil {
@@ -266,7 +335,10 @@ func NewDecoderReader(reader io.ReadCloser) (d *Decoder, err error) {
 	runtime.SetFinalizer(d, (*Decoder).Close)
 	status := C.FLAC__stream_decoder_init_stream(d.d,
 		(C.FLAC__StreamDecoderReadCallback)(unsafe.Pointer(C.decoderReadCallback_cgo)),
-		nil, nil, nil, nil,
+		(C.FLAC__StreamDecoderSeekCallback)(unsafe.Pointer(C.decoderSeekCallback_cgo)),
+		(C.FLAC__StreamDecoderTellCallback)(unsafe.Pointer(C.decoderTellCallback_cgo)),
+		(C.FLAC__StreamDecoderLengthCallback)(unsafe.Pointer(C.decoderLengthCallback_cgo)),
+		(C.FLAC__StreamDecoderEofCallback)(unsafe.Pointer(C.decoderEofCallback_cgo)),
 		(C.FLAC__StreamDecoderWriteCallback)(unsafe.Pointer(C.decoderWriteCallback_cgo)),
 		(C.FLAC__StreamDecoderMetadataCallback)(unsafe.Pointer(C.decoderMetadataCallback_cgo)),
 		(C.FLAC__StreamDecoderErrorCallback)(unsafe.Pointer(C.decoderErrorCallback_cgo)),
@@ -309,6 +381,32 @@ func (d *Decoder) ReadFrame() (f *Frame, err error) {
 	}
 	f = d.frame
 	d.frame = nil
+	return
+}
+
+func (d *Decoder) Seek(pos uint64) (uint64, error) {
+	var res C.FLAC__bool = C.FLAC__stream_decoder_seek_absolute(d.d, C.FLAC__uint64(pos))
+	if int32(res) == 0 {
+		return 0, errors.New("seek failed")
+	}
+	return pos, nil
+}
+
+func (d *Decoder) Tell() (curPos int64, len int64, err error) {
+	d.l.Lock()
+	defer d.l.Unlock()
+	curPos, err = d.reader.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return
+	}
+	len, err = d.reader.Seek(0, io.SeekEnd)
+	if err != nil {
+		return
+	}
+	_, err = d.reader.Seek(curPos, io.SeekStart)
+	if err != nil {
+		return
+	}
 	return
 }
 

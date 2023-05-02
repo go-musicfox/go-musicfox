@@ -15,6 +15,7 @@
 package frameheader
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -49,16 +50,16 @@ func (f FrameHeader) SamplingFrequency() consts.SamplingFrequency {
 	return consts.SamplingFrequency(int(f&0x00000c00) >> 10)
 }
 
-func (f FrameHeader) SamplingFrequencyValue() int {
+func (f FrameHeader) SamplingFrequencyValue() (int, error) {
 	switch f.SamplingFrequency() {
 	case 0:
-		return 44100 >> f.LowSamplingFrequency()
+		return 44100 >> uint(f.LowSamplingFrequency()), nil
 	case 1:
-		return 48000 >> f.LowSamplingFrequency()
+		return 48000 >> uint(f.LowSamplingFrequency()), nil
 	case 2:
-		return 32000 >> f.LowSamplingFrequency()
+		return 32000 >> uint(f.LowSamplingFrequency()), nil
 	}
-	panic("not reached")
+	return 0, errors.New("mp3: frame header has invalid sample frequency")
 }
 
 // PaddingBit returns the padding bit stored in position 9
@@ -126,7 +127,7 @@ func (f FrameHeader) BytesPerFrame() int {
 }
 
 func (f FrameHeader) Granules() int {
-	return consts.GranulesMpeg1 >> f.LowSamplingFrequency() // MPEG2 uses only 1 granule
+	return consts.GranulesMpeg1 >> uint(f.LowSamplingFrequency()) // MPEG2 uses only 1 granule
 }
 
 // IsValid returns a boolean value indicating whether the header is valid or not.
@@ -185,10 +186,14 @@ func (f FrameHeader) Bitrate() int {
 	return bitrates[f.LowSamplingFrequency()][f.Layer()-1][f.BitrateIndex()]
 }
 
-func (f FrameHeader) FrameSize() int {
-	return ((144*f.Bitrate())/
-		f.SamplingFrequencyValue() +
-		int(f.PaddingBit())) >> f.LowSamplingFrequency()
+func (f FrameHeader) FrameSize() (int, error) {
+	freq, err := f.SamplingFrequencyValue()
+	if err != nil {
+		return 0, err
+	}
+	size := ((144*f.Bitrate())/freq +
+		int(f.PaddingBit())) >> uint(f.LowSamplingFrequency())
+	return size, nil
 }
 
 func (f FrameHeader) SideInfoSize() int {

@@ -67,11 +67,11 @@ func (block *Block) parsePicture() error {
 	}
 
 	// (MIME type length) bytes: MIME.
-	buf, err := readBytes(block.lr, int(x))
+	mime, err := readString(block.lr, int(x))
 	if err != nil {
 		return unexpected(err)
 	}
-	pic.MIME = string(buf)
+	pic.MIME = mime
 
 	// 32 bits: (description length).
 	if err = binary.Read(block.lr, binary.BigEndian, &x); err != nil {
@@ -79,11 +79,11 @@ func (block *Block) parsePicture() error {
 	}
 
 	// (description length) bytes: Desc.
-	buf, err = readBytes(block.lr, int(x))
+	desc, err := readString(block.lr, int(x))
 	if err != nil {
 		return unexpected(err)
 	}
-	pic.Desc = string(buf)
+	pic.Desc = desc
 
 	// 32 bits: Width.
 	if err = binary.Read(block.lr, binary.BigEndian, &pic.Width); err != nil {

@@ -1,12 +1,12 @@
 package meta
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 )
 
 // A CueSheet describes how tracks are laid out within a FLAC stream.
@@ -30,12 +30,12 @@ type CueSheet struct {
 func (block *Block) parseCueSheet() error {
 	// Parse cue sheet.
 	// 128 bytes: MCN.
-	buf, err := readBytes(block.lr, 128)
+	szMCN, err := readString(block.lr, 128)
 	if err != nil {
 		return unexpected(err)
 	}
 	cs := &CueSheet{
-		MCN: stringFromSZ(buf),
+		MCN: stringFromSZ(szMCN),
 	}
 	block.Body = cs
 
@@ -130,11 +130,11 @@ func (block *Block) parseTrack(cs *CueSheet, i int, uniq map[uint8]struct{}) err
 	}
 
 	// 12 bytes: ISRC.
-	buf, err := readBytes(block.lr, 12)
+	szISRC, err := readString(block.lr, 12)
 	if err != nil {
 		return unexpected(err)
 	}
-	track.ISRC = stringFromSZ(buf)
+	track.ISRC = stringFromSZ(szISRC)
 
 	// 1 bit: IsAudio.
 	var x uint8
@@ -200,14 +200,14 @@ func (block *Block) parseTrack(cs *CueSheet, i int, uniq map[uint8]struct{}) err
 	return nil
 }
 
-// stringFromSZ converts the provided byte slice to a string after terminating
-// it at the first occurrence of a NULL character.
-func stringFromSZ(buf []byte) string {
-	pos := bytes.IndexByte(buf, 0)
+// stringFromSZ returns a copy of the given string terminated at the first
+// occurrence of a NULL character.
+func stringFromSZ(szStr string) string {
+	pos := strings.IndexByte(szStr, '\x00')
 	if pos == -1 {
-		return string(buf)
+		return szStr
 	}
-	return string(buf[:pos])
+	return string(szStr[:pos])
 }
 
 // CueSheetTrack contains the start offset of a track and other track specific

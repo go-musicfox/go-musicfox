@@ -15,6 +15,7 @@
 package mp3
 
 import (
+	"errors"
 	"io"
 )
 
@@ -27,7 +28,7 @@ type source struct {
 func (s *source) Seek(position int64, whence int) (int64, error) {
 	seeker, ok := s.reader.(io.Seeker)
 	if !ok {
-		panic("mp3: source must be io.Seeker")
+		return 0, errors.New("mp3: source must be io.Seeker")
 	}
 	s.buf = nil
 	n, err := seeker.Seek(position, whence)

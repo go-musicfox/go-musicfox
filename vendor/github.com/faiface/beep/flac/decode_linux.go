@@ -16,7 +16,7 @@ import (
 //
 // Do not close the supplied Reader, instead, use the Close method of the returned
 // StreamSeekCloser when you want to release the resources.
-func Decode(r io.Reader) (s beep.StreamSeekCloser, format beep.Format, err error) {
+func Decode(r io.ReadSeekCloser) (s beep.StreamSeekCloser, format beep.Format, err error) {
 	d := decoder{r: r}
 	defer func() { // hacky way to always close r if an error occurred
 		if closer, ok := d.r.(io.Closer); ok {
@@ -26,7 +26,7 @@ func Decode(r io.Reader) (s beep.StreamSeekCloser, format beep.Format, err error
 		}
 	}()
 
-	d.d, err = libflac.NewDecoderReader(io.NopCloser(r))
+	d.d, err = libflac.NewDecoderReader(r)
 
 	if err != nil {
 		return nil, beep.Format{}, errors.Wrap(err, "flac")
@@ -40,12 +40,11 @@ func Decode(r io.Reader) (s beep.StreamSeekCloser, format beep.Format, err error
 }
 
 type decoder struct {
-	r           io.Reader
-	d           *libflac.Decoder
-	buf         [][2]float64
-	pos         int
-	err         error
-	seekEnabled bool
+	r   io.Reader
+	d   *libflac.Decoder
+	buf [][2]float64
+	pos int
+	err error
 }
 
 func (d *decoder) Stream(samples [][2]float64) (n int, ok bool) {
@@ -147,24 +146,24 @@ func (d *decoder) Err() error {
 }
 
 func (d *decoder) Len() int {
-	return 1
+	_, total, _ := d.d.Tell()
+	return int(total)
 }
 
 func (d *decoder) Position() int {
 	return d.pos
 }
 
-func (d *decoder) Seek(_ int) error {
-	return errors.New("unimplemented")
+func (d *decoder) Seek(p int) error {
+	pos, err := d.d.Seek(uint64(p))
+	d.pos = int(pos)
+	return err
 }
 
 func (d *decoder) Close() error {
 	d.d.Close()
 	if closer, ok := d.r.(io.Closer); ok {
-		err := closer.Close()
-		if err != nil {
-			return errors.Wrap(err, "flac")
-		}
+		_ = closer.Close()
 	}
 	return nil
 }

@@ -36,6 +36,7 @@ type Registry struct {
 	MainLyricOffset            int                      // 偏移:ms
 	MainShowLyricTrans         bool                     // 显示歌词翻译
 	MainShowNotify             bool                     // 显示通知
+	MainNotifyIcon             string                   // logo 图片名
 	MainPProfPort              int                      // pprof端口
 	MainAltScreen              bool                     // AltScreen显示模式
 	MainEnableMouseEvent       bool                     // 启用鼠标事件
@@ -81,6 +82,7 @@ func NewRegistryWithDefault() *Registry {
 		MainShowLyric:        true,
 		MainShowLyricTrans:   true,
 		MainShowNotify:       true,
+		MainNotifyIcon:       constants.DefaultNotifyIcon,
 		MainPProfPort:        constants.MainPProfPort,
 		MainAltScreen:        true,
 		MainEnableMouseEvent: true,
@@ -144,6 +146,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainLyricOffset = ini.Int("main.lyricOffset", 0)
 	registry.MainShowLyricTrans = ini.Bool("main.showLyricTrans", true)
 	registry.MainShowNotify = ini.Bool("main.showNotify", true)
+	registry.MainNotifyIcon = ini.String("main.notifyIcon", constants.DefaultNotifyIcon)
 	registry.MainPProfPort = ini.Int("main.pprofPort", constants.MainPProfPort)
 	registry.MainAltScreen = ini.Bool("main.altScreen", true)
 	registry.MainEnableMouseEvent = ini.Bool("main.enableMouseEvent", true)
