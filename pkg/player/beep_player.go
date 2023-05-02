@@ -251,6 +251,9 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *beepPlayer) Seek(duration time.Duration) {
+	if duration < 0 {
+		return
+	}
 	// FIXME: 暂时仅对MP3格式提供跳转功能
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
