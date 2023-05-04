@@ -63,6 +63,7 @@ type Player struct {
 	curSong          structs.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
 	playingMenuKey   string         // 正在播放的菜单Key
 	playingMenu      Menu
+	playedDuration  time.Duration // 已经播放的时长
 
 	lrcTimer          *lyric.LRCTimer   // 歌词计时器
 	lyrics            [5]string         // 歌词信息，保留5行
@@ -121,6 +122,10 @@ func NewPlayer(model *NeteaseModel) *Player {
 				if s == player.Stopped {
 					// 上报lastfm
 					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+					// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
+					if p.CurMusic().Duration.Seconds()-p.playedDuration.Seconds() < 20 {
+						p.playEnd()
+					}
 					p.Next()
 				} else {
 					p.model.Rerender(false)
@@ -137,6 +142,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case <-ctx.Done():
 				return
 			case duration := <-p.TimeChan():
+				p.playedDuration = duration
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
 					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
@@ -725,5 +731,19 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	case CtrlRerender:
 		p.model.Rerender(false)
+	}
+}
+
+// 播放结束上报网易云
+func (p *Player) playEnd() {
+	playendService := service.ScrobbleService{
+		ID:       strconv.FormatInt(p.curSong.Id, 10),
+		Sourceid: strconv.FormatInt(p.PlayingInfo().TrackID, 10),
+		Time:     int64(p.PassedTime()),
+	}
+	code, response := playendService.Scrobble()
+	if code != 200 {
+		utils.Logger().Printf("网易云上报播放结束失败: %v", string(response))
+		return
 	}
 }
