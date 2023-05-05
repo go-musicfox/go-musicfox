@@ -127,7 +127,6 @@ func NewPlayer(model *NeteaseModel) *Player {
 						utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
 					}
 					p.Next()
-					p.playedTime = 0
 				} else {
 					p.model.Rerender(false)
 				}
@@ -390,6 +389,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		PlaylistUpdateAt: p.playlistUpdateAt,
 	})
 	p.curSong = song
+	p.playedTime = 0
 
 	p.LocatePlayingSong()
 	p.Player.Paused()
@@ -437,7 +437,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 // NextSong 下一曲
 func (p *Player) NextSong() {
-	p.playedTime = 0
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
@@ -488,7 +487,6 @@ func (p *Player) NextSong() {
 
 // PreviousSong 上一曲
 func (p *Player) PreviousSong() {
-	p.playedTime = 0
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
