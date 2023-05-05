@@ -47,7 +47,7 @@ func (m *Lastfm) SubMenu(_ *NeteaseModel, index int) Menu {
 	case 1:
 		m.model.lastfmUser = &storage.LastfmUser{}
 		m.model.lastfmUser.Clear()
-		return NewLastfmRes("清楚授权", nil, 2)
+		return NewLastfmRes("清除授权", nil, 2)
 	}
 	return nil
 }
