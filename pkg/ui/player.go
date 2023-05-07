@@ -466,7 +466,7 @@ func (p *Player) NextSong() {
 		if len(p.playlist)-1 < 0 {
 			return
 		}
-		if len(p.playlist) == 0 {
+		if len(p.playlist)-1 == 0 {
 			p.curSongIndex = 0
 		} else {
 			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
