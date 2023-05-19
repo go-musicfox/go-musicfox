@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"embed"
 	"encoding/binary"
 	"errors"
@@ -11,8 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"os/user"
 	"path"
 	"runtime"
 	"strconv"
@@ -40,70 +37,45 @@ func GetLocalDataDir() string {
 	if root := os.Getenv("MUSICFOX_ROOT"); root != "" {
 		projectDir = root
 	} else {
-		// Home目录
-		homeDir, err := Home()
+		configDir, err := os.UserConfigDir()
 		if nil != err {
-			panic("未获取到用户Home目录: " + err.Error())
+			panic("未获取到本地数据目录：" + err.Error())
 		}
-		projectDir = path.Join(homeDir, constants.AppLocalDataDir)
+		projectDir = path.Join(configDir, constants.AppLocalDataDir)
 	}
 
-	if !FileOrDirExists(projectDir) {
-		_ = os.MkdirAll(projectDir, os.ModePerm)
+	// 如果 projectDir 不存在且未设置 MUSICFOX_ROOT 环境变量
+	// 则尝试从默认路径迁移配置
+	if !FileOrDirExists(projectDir) && os.Getenv("MUSICFOX_ROOT") == "" {
+		_ = autoMigrateConfigDir(projectDir)
 	}
+
 	return projectDir
 }
 
-// Home 获取当前用户的Home目录
-func Home() (string, error) {
-	curUser, err := user.Current()
-	if nil == err {
-		return curUser.HomeDir, nil
+// 检查默认路径和 os.UserHomeDir 是否已存在配置文件
+// 如果存在则将它们移动到 newPath
+func autoMigrateConfigDir(newPath string) error {
+	home, err := os.UserHomeDir()
+	oldPath := path.Join(home, "."+constants.AppLocalDataDir)
+	if err == nil && FileOrDirExists(oldPath) {
+		return moveDir(oldPath, newPath)
 	}
 
-	// cross compile support
-	if "windows" == runtime.GOOS {
-		return homeWindows()
-	}
-
-	// Unix-like system, so just assume Unix
-	return homeUnix()
+	return errors.New(oldPath + " not exists")
 }
 
-func homeUnix() (string, error) {
-	// First prefer the HOME environmental variable
-	if home := os.Getenv("HOME"); home != "" {
-		return home, nil
+func moveDir(oldPath, newPath string) error {
+	if oldPath == newPath {
+		return errors.New(oldPath + " is the same path as " + newPath)
 	}
 
-	// If that fails, try the shell
-	var stdout bytes.Buffer
-	cmd := exec.Command("sh", "-c", "eval echo ~$USER")
-	cmd.Stdout = &stdout
-	if err := cmd.Run(); err != nil {
-		return "", err
+	if !FileOrDirExists(oldPath) {
+		return errors.New(oldPath + " not exists")
 	}
 
-	result := strings.TrimSpace(stdout.String())
-	if result == "" {
-		return "", errors.New("blank output when reading home directory")
-	}
-
-	return result, nil
-}
-
-func homeWindows() (string, error) {
-	drive := os.Getenv("HOMEDRIVE")
-	p := os.Getenv("HOMEPATH")
-	home := drive + p
-	if drive == "" || p == "" {
-		home = os.Getenv("USERPROFILE")
-	}
-	if home == "" {
-		return "", errors.New("HOMEDRIVE, HOMEPATH, and USERPROFILE are blank")
-	}
-
-	return home, nil
+	_ = os.MkdirAll(path.Dir(newPath), os.ModePerm)
+	return os.Rename(oldPath, newPath)
 }
 
 // IDToBin convert autoincrement ID to []byte
