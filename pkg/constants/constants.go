@@ -23,7 +23,7 @@ const ProgressEmptyChar = "."
 const StartupLoadingSeconds = 2
 const StartupTickDuration = time.Millisecond * 16
 
-const AppLocalDataDir = ".go-musicfox"
+const AppLocalDataDir = "go-musicfox"
 const AppDBName = "musicfox"
 const AppIniFile = "go-musicfox.ini"
 const AppPrimaryRandom = "random"
