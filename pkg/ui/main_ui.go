@@ -627,6 +627,12 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "'", "\"":
 		// 取消收藏选中歌单
 		collectSelectedPlaylist(m, false)
+	case "e":
+		// 追加到下一曲播放
+		addSongToPlaylist(m, true)
+	case "E":
+		// 追加到播放列表末尾
+		addSongToPlaylist(m, false)
 	case "r", "R":
 		// rerender
 		return m, m.rerenderTicker(true)

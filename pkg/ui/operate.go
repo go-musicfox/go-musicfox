@@ -341,12 +341,16 @@ func spaceKeyHandle(m *NeteaseModel) {
 		m.player.curSongIndex = selectedIndex
 		m.player.playingMenuKey = m.menu.GetMenuKey()
 		m.player.playingMenu = m.menu
-		m.player.playlist = songs
+
+		var newPlaylists = make([]structs.Song, len(songs))
+		copy(newPlaylists, songs)
+		m.player.playlist = newPlaylists
+
 		m.player.playlistUpdateAt = time.Now()
 		if m.player.mode == player.PmIntelligent {
 			m.player.SetPlayMode(0)
 		}
-		_ = m.player.PlaySong(songs[selectedIndex], DurationNext)
+		_ = m.player.PlaySong(m.player.playlist[selectedIndex], DurationNext)
 	}
 }
 
@@ -790,6 +794,7 @@ func openSelectedItemInWeb(m *NeteaseModel) {
 	}
 }
 
+// collectSelectedPlaylist 收藏选中歌单
 func collectSelectedPlaylist(m *NeteaseModel, isCollect bool) {
 	loading := NewLoading(m)
 	loading.start()
@@ -838,4 +843,42 @@ func collectSelectedPlaylist(m *NeteaseModel, isCollect bool) {
 			GroupId: constants.GroupID,
 		})
 	}
+}
+
+// addSongToPlaylist 添加歌曲到播放列表
+func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	menu, ok := m.menu.(SongsMenu)
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(menu.Songs()) {
+		return
+	}
+	songs := menu.Songs()
+
+	var notifyTitle string
+	if addToNext {
+		// 添加为下一曲
+		targetIndex := m.player.curSongIndex + 1
+		m.player.playlist = append(m.player.playlist, structs.Song{})
+		copy(m.player.playlist[targetIndex+1:], m.player.playlist[targetIndex:])
+		m.player.playlist[targetIndex] = songs[selectedIndex]
+		notifyTitle = "已添加为下一曲播放"
+	} else {
+		// 添加到播放列表末尾
+		m.player.playlist = append(m.player.playlist, songs[selectedIndex])
+		notifyTitle = "已添加到播放列表末尾"
+	}
+	// 替换播放中数据，避免数据错乱
+	m.player.playingMenu = nil
+	m.player.playingMenuKey += "modified"
+
+	utils.Notify(utils.NotifyContent{
+		Title:   notifyTitle,
+		Text:    songs[selectedIndex].Name,
+		Url:     utils.WebUrlOfSong(songs[selectedIndex].Id),
+		GroupId: constants.GroupID,
+	})
 }
