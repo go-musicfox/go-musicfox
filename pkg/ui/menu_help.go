@@ -50,6 +50,8 @@ func NewHelpMenu() *HelpMenu {
 		{Title: "S", Subtitle: "选中歌曲的所属歌手"},
 		{Title: "o", Subtitle: "网页打开播放中歌曲"},
 		{Title: "O", Subtitle: "网页打开选中歌曲/专辑..."},
+		{Title: "e", Subtitle: "添加为下一曲播放"},
+		{Title: "E", Subtitle: "添加到播放列表末尾"},
 		{Title: "v/V", Subtitle: "快进5s/10s"},
 		{Title: "x/X", Subtitle: "快退1s/5s"},
 		{Title: ";/:", Subtitle: "收藏选中歌单"},

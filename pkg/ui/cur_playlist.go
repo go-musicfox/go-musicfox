@@ -38,3 +38,19 @@ func (m *CurPlaylist) MenuViews() []MenuItem {
 func (m *CurPlaylist) Songs() []structs.Song {
 	return m.songs
 }
+
+func (m *CurPlaylist) BottomOutHook() Hook {
+	return func(model *NeteaseModel) bool {
+		if model.player.playingMenu == nil {
+			return true
+		}
+		hook := model.player.playingMenu.BottomOutHook()
+		if hook == nil {
+			return true
+		}
+		res := hook(model)
+		m.songs = model.player.playlist
+		m.menus = GetViewFromSongs(m.songs)
+		return res
+	}
+}
