@@ -64,6 +64,10 @@ github.com/go-musicfox/bubbletea v0.23.3 h1:m59b+J9K9BmqPjBLYCcnkefcn5PJi1RKL7dr
 github.com/go-musicfox/bubbletea v0.23.3/go.mod h1:VYLXIczSWpzsNE/QVeGiJetHZYR8nl11aP9agx1v8xc=
 github.com/go-musicfox/go-mp3 v0.3.1 h1:/kkJkqxg7yoNIN6yvAPHtADdNvqpjkk9LXqFLqzjiOI=
 github.com/go-musicfox/go-mp3 v0.3.1/go.mod h1:fRtZraRFcWb0pu7ok0LqyFhCUrPeMsGRSVop0eemFmo=
+github.com/go-musicfox/go-mp3 v0.3.2 h1:HWfu/MZ1B+Il3ov5KA41J84RCmqhvygHEa0IqCS6UGg=
+github.com/go-musicfox/go-mp3 v0.3.2/go.mod h1:fRtZraRFcWb0pu7ok0LqyFhCUrPeMsGRSVop0eemFmo=
+github.com/go-musicfox/go-mp3 v0.3.3 h1:xBfUaYhbG6LipvPLDSlawLSO1A5z3InSJz8vB3+3bHc=
+github.com/go-musicfox/go-mp3 v0.3.3/go.mod h1:fRtZraRFcWb0pu7ok0LqyFhCUrPeMsGRSVop0eemFmo=
 github.com/go-musicfox/goflac v0.1.5 h1:1fSNZphzXaTq++fwSiPdGt/nDw7IUsPwcSy6C9vUuh8=
 github.com/go-musicfox/goflac v0.1.5/go.mod h1:vSxTubJfc8EfFFMmJqxdSp4/iwBVf9TPcapx8I/+W5g=
 github.com/go-musicfox/lastfm-go v0.0.2 h1:S/jXVK/bSi9JGZGm7ynQWY3nQ8gvMzbpHf2yKZ9ge+g=

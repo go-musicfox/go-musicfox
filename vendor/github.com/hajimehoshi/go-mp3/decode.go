@@ -121,6 +121,10 @@ func (d *Decoder) Seek(offset int64, whence int) (int64, error) {
 		if err := d.readFrame(); err != nil {
 			return 0, err
 		}
+		l := int64(len(d.buf))
+		if d.pos > l {
+			d.pos = l
+		}
 		d.buf = d.buf[d.pos:]
 	}
 	return npos, nil
