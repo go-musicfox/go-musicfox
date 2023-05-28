@@ -110,7 +110,53 @@ $ emerge -a media-sound/go-musicfox
 
 #### NixOS
 
-##### 配置 configuration.nix 或使用 Home Manager（推荐）
+<details>
+<summary>
+<b>1. flake support</b>
+</summary>
+下面是一个在nixos配置中使用它的例子
+
+```nix
+{
+  description = "My configuration";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    go-musicfox.url = "github:go-musicfox/go-musicfox";
+  };
+
+  outputs = { nixpkgs, go-musicfox, ... }:
+    {
+      nixosConfigurations = {
+        hostname = nixpkgs.lib.nixosSystem
+          {
+            system = "x86_64-linux";
+            modules = [
+              {
+                nixpkgs.overlays = [ go-musicfox.overlays.default ];
+                environment.systemPackages = with pkgs;[
+                  go-musicfox
+                ];
+              }
+            ];
+          };
+      };
+    };
+}
+```
+
+临时运行:
+
+```sh
+$ nix run github:go-musicfox/go-musicfox
+```
+
+</details>
+<details>
+<summary>
+<b>2. 配置 configuration.nix 或使用 Home Manager（推荐）</b>
+</summary>
+
 ```nix
 # configuration.nix
 environment.systemPackages = [
@@ -122,17 +168,24 @@ home.packages = [
   pkgs.go-musicfox
 ];
 ```
-##### 从 [Nixpkgs](https://search.nixos.org/packages?channel=unstable&show=go-musicfox&from=0&size=50&sort=relevance&type=packages&query=go-musicfox) 安装
 
+</details>
+<details>
+<summary>
+<b>3. 从 <a href="https://search.nixos.org/packages?channel=unstable&show=go-musicfox&from=0&size=50&sort=relevance&type=packages&query=go-musicfox">Nixpkgs </a>安装</b>
+</summary>
 安装到本地 profile：
+
 ```sh
 $ nix-env -iA nixos.go-musicfox
 ```
 
 临时安装：
+
 ```sh
 $ nix-shell -p go-musicfox
 ```
+</details>
 
 #### Void Linux
 
