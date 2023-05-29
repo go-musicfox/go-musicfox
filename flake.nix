@@ -32,7 +32,7 @@
         overlayAttrs = {
           inherit (config.packages) go-musicfox;
         };
-        packages.joshuto = pkgs.callPackage ./nix { };
+        packages.go-musicfox = pkgs.callPackage ./nix { };
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [
