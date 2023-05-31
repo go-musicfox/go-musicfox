@@ -81,16 +81,16 @@ $ brew unlink musicfox && brew link --overwrite go-musicfox
 
 #### 1. 使用发行版软件包（推荐）
 
-#### Arch Linux
+##### Arch Linux
 
-##### 从 [AUR](https://aur.archlinux.org/) 安装
+###### 从 [AUR](https://aur.archlinux.org/) 安装
 
 ```sh
 $ paru -S go-musicfox # 下载源代码编译安装
 $ paru -S go-musicfox-bin # 下载安装预编译好的二进制
 ```
 
-##### 从 `archlinuxcn` 安装
+###### 从 `archlinuxcn` 安装
 
 首先[添加 archlinuxcn 仓库到系统](https://www.archlinuxcn.org/archlinux-cn-repo-and-mirror/)。
 
@@ -98,9 +98,9 @@ $ paru -S go-musicfox-bin # 下载安装预编译好的二进制
 # pacman -S go-musicfox
 ```
 
-#### Gentoo Linux
+##### Gentoo Linux
 
-##### 从 [gentoo-zh Overlay](https://github.com/microcai/gentoo-zh) 安装
+###### 从 [gentoo-zh Overlay](https://github.com/microcai/gentoo-zh) 安装
 
 ```sh
 $ eselect repository enable gentoo-zh
@@ -108,7 +108,7 @@ $ emerge --sync
 $ emerge -a media-sound/go-musicfox
 ```
 
-#### NixOS
+##### NixOS
 
 <details>
 <summary>
@@ -187,7 +187,7 @@ $ nix-shell -p go-musicfox
 ```
 </details>
 
-#### Void Linux
+##### Void Linux
 
 从 [void-packages-zh](https://github.com/voidlinux-zh-association/void-packages-zh#readme) 安装。
 
