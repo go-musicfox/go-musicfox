@@ -46,8 +46,16 @@ func GetLocalDataDir() string {
 
 	// 如果 projectDir 不存在且未设置 MUSICFOX_ROOT 环境变量
 	// 则尝试从默认路径迁移配置
-	if !FileOrDirExists(projectDir) && os.Getenv("MUSICFOX_ROOT") == "" {
-		_ = autoMigrateConfigDir(projectDir)
+	if !FileOrDirExists(projectDir) {
+		_ = os.MkdirAll(projectDir, os.ModePerm)
+		home, _ := os.UserHomeDir()
+		oldPath := path.Join(home, "."+constants.AppLocalDataDir)
+		if !FileOrDirExists(oldPath) {
+			return projectDir
+		}
+		if os.Getenv("MUSICFOX_ROOT") == "" {
+			_ = autoMigrateConfigDir(oldPath, projectDir)
+		}
 	}
 
 	return projectDir
@@ -55,10 +63,8 @@ func GetLocalDataDir() string {
 
 // 检查默认路径和 os.UserHomeDir 是否已存在配置文件
 // 如果存在则将它们移动到 newPath
-func autoMigrateConfigDir(newPath string) error {
-	home, err := os.UserHomeDir()
-	oldPath := path.Join(home, "."+constants.AppLocalDataDir)
-	if err == nil && FileOrDirExists(oldPath) {
+func autoMigrateConfigDir(oldPath, newPath string) error {
+	if FileOrDirExists(oldPath) {
 		return moveDir(oldPath, newPath)
 	}
 
@@ -68,10 +74,6 @@ func autoMigrateConfigDir(newPath string) error {
 func moveDir(oldPath, newPath string) error {
 	if oldPath == newPath {
 		return errors.New(oldPath + " is the same path as " + newPath)
-	}
-
-	if !FileOrDirExists(oldPath) {
-		return errors.New(oldPath + " not exists")
 	}
 
 	_ = os.MkdirAll(path.Dir(newPath), os.ModePerm)
