@@ -1,10 +1,10 @@
 {
-    "version": "4.1.1",
+    "version": "4.1.2",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v4.1.1/go-musicfox_4.1.1_windows_amd64.zip",
-            "hash": "09c4a7050610f970b428ec93108fce835fa35b827ee0d4d2ef9d39a86fcfd0d8",
-            "extract_dir": "go-musicfox_4.1.1_windows_amd64"
+            "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v4.1.2/go-musicfox_4.1.2_windows_amd64.zip",
+            "hash": "1af4d8f065a7a231d252b21ba3904fda59adc13141135d956c580606e8fdbd1d",
+            "extract_dir": "go-musicfox_4.1.2_windows_amd64"
         }
     },
     "bin": "musicfox.exe",
