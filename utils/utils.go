@@ -47,10 +47,10 @@ func GetLocalDataDir() string {
 	// 如果 projectDir 不存在且未设置 MUSICFOX_ROOT 环境变量
 	// 则尝试从默认路径迁移配置
 	if !FileOrDirExists(projectDir) {
-		_ = os.MkdirAll(projectDir, os.ModePerm)
 		home, _ := os.UserHomeDir()
 		oldPath := path.Join(home, "."+constants.AppLocalDataDir)
 		if !FileOrDirExists(oldPath) {
+			_ = os.MkdirAll(projectDir, os.ModePerm)
 			return projectDir
 		}
 		if os.Getenv("MUSICFOX_ROOT") == "" {
