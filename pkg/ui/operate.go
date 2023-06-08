@@ -901,23 +901,30 @@ func delSongFromPlaylist(m *NeteaseModel) {
 		return
 	}
 	// 选中歌曲为当前播放歌曲时处理逻辑
-	if m.player.curSong.Id == menu.Songs()[selectedIndex].Id {
+	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == menu.Songs()[selectedIndex].Id {
 		// 防止用户快速删除当前播放歌曲导致错位
 		if m.player.State() >= player.Playing && m.player.playedTime.Seconds() < 2 {
 			return
 		}
-		//TODO: {末尾歌曲删除往前退}实现太难搞，暂时就酱紫
+		// 末尾歌曲删除向前退
 		if m.player.curSongIndex+1 >= len(m.player.playlist) {
-			return
+			m.player.curSongIndex = len(m.player.playlist) - 1
+			m.player.Previous()
+		} else {
+			m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
+
 		}
-		m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
 	}
 	// 以下2行 为防止切片越界
 	m.player.playlist = append(m.player.playlist[:selectedIndex], m.player.playlist[selectedIndex+1:]...)
 	songs := m.player.playlist
 	menu.menus = GetViewFromSongs(songs)
 	menu.songs = songs
-
+	// 更新当前歌曲下标
+	if selectedIndex < m.player.curSongIndex {
+		m.player.curSongIndex = m.player.curSongIndex - 1
+	}
+	// 更新游标位置
 	if m.selectedIndex >= len(menu.Songs()) {
 		m.selectedIndex = len(menu.Songs()) - 1
 	}
