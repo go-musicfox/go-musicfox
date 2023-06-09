@@ -23,16 +23,16 @@
         mission-control.scripts = {
           run = {
             description = "Run app";
-            exec = "go run ../../cmd/musicfox.go";
+            exec = "go run ./cmd/musicfox.go";
             category = "Dev Tools";
           };
         };
 
-        packages.default = pkgs.callPackage ./default.nix { };
+        packages.default = pkgs.callPackage ./deploy/nix { };
         overlayAttrs = {
           inherit (config.packages) go-musicfox;
         };
-        packages.go-musicfox = pkgs.callPackage ./default.nix { };
+        packages.go-musicfox = pkgs.callPackage ./deploy/nix { };
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [
