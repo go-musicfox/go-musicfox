@@ -6,3 +6,4 @@ dist/
 .release-env
 go.work
 .vscode/
+.devenv/
