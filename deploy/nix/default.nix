@@ -10,9 +10,9 @@ buildGoModule rec {
   pname = "go-musicfox";
   inherit version;
 
-  src = ../.;
+  src = ../../.;
 
-  modRoot = ../.;
+  modRoot = ../../.;
 
   vendorHash = null;
 
