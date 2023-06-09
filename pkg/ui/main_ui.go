@@ -594,7 +594,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case ">", "〉", "＞", "》", "»":
 		// unlike selected song
 		likeSelectedSong(m, false)
-	case "/", "／", "、":
+	case "/", "／":
 		// 搜索菜单
 		if m.menu.IsSearchable() {
 			m.inSearching = true
@@ -627,6 +627,9 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "'", "\"":
 		// 取消收藏选中歌单
 		collectSelectedPlaylist(m, false)
+	case "\\","、":
+		// 从播放列表删除歌曲,仅在当前播放列表界面有效
+		delSongFromPlaylist(m)
 	case "e":
 		// 追加到下一曲播放
 		addSongToPlaylist(m, true)
