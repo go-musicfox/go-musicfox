@@ -12,7 +12,7 @@ type PlaylistDetailService struct {
 func (service *PlaylistDetailService) PlaylistDetail() (float64, []byte) {
 
 	options := &util.Options{
-		Crypto:  "linuxapi",
+		Crypto: "api",
 	}
 	data := make(map[string]string)
 	if service.S == "" {
@@ -22,7 +22,7 @@ func (service *PlaylistDetailService) PlaylistDetail() (float64, []byte) {
 	data["n"] = "100000"
 	data["s"] = service.S
 
-	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/weapi/v3/playlist/detail`, data, options)
+	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/api/v6/playlist/detail`, data, options)
 
 	return code, reBody
 }
