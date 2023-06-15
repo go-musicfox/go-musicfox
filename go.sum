@@ -2,10 +2,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU=
 github.com/anhoder/gcli/v2 v2.3.5/go.mod h1:AOxm27rFzNDLpBrwbW1pAh3ofebpXOQk/9x009qC9y8=
-github.com/anhoder/netease-music v1.3.6 h1:FWD/taQOxG1s8wj/XUp3d3ewVpsvR3V678ezNOnBPRc=
-github.com/anhoder/netease-music v1.3.6/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
-github.com/anhoder/netease-music v1.3.7 h1:O9/lFUbChUEQH1UGkyz8ec8QcwZQAeRtiGDOQKOcHOI=
-github.com/anhoder/netease-music v1.3.7/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
+github.com/anhoder/netease-music v1.3.8 h1:AeBsW4+CRyiMV7Iq5NxOn7RIoquDyyHdwfrv871rjmo=
+github.com/anhoder/netease-music v1.3.8/go.mod h1:f8Ka6fq0GIPC7yAza3u2V6K4uJAmBPa2DPSco+aF2/Q=
 github.com/anhoder/notificator v0.0.5 h1:CyPvxAqaDtN330eKbX9ltvIr4Y/PloLLc8wALqyhqb4=
 github.com/anhoder/notificator v0.0.5/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/anhoder/requests v0.1.2 h1:b7wQ8rP0+nUfN5SQ0hEOadu/QAPKgZ1CKT0Pv1PgSuM=
@@ -64,10 +62,6 @@ github.com/go-musicfox/beep v1.2.3 h1:z8sNWfv/hRUA7qgDqowIuRkLrxrvE66+RGFq9WTVvj
 github.com/go-musicfox/beep v1.2.3/go.mod h1:330inOnv9Qfk7Oh0mlcAp+X2dZ8FNRprd2ekyDBjk4Q=
 github.com/go-musicfox/bubbletea v0.23.3 h1:m59b+J9K9BmqPjBLYCcnkefcn5PJi1RKL7drboq38Kk=
 github.com/go-musicfox/bubbletea v0.23.3/go.mod h1:VYLXIczSWpzsNE/QVeGiJetHZYR8nl11aP9agx1v8xc=
-github.com/go-musicfox/go-mp3 v0.3.1 h1:/kkJkqxg7yoNIN6yvAPHtADdNvqpjkk9LXqFLqzjiOI=
-github.com/go-musicfox/go-mp3 v0.3.1/go.mod h1:fRtZraRFcWb0pu7ok0LqyFhCUrPeMsGRSVop0eemFmo=
-github.com/go-musicfox/go-mp3 v0.3.2 h1:HWfu/MZ1B+Il3ov5KA41J84RCmqhvygHEa0IqCS6UGg=
-github.com/go-musicfox/go-mp3 v0.3.2/go.mod h1:fRtZraRFcWb0pu7ok0LqyFhCUrPeMsGRSVop0eemFmo=
 github.com/go-musicfox/go-mp3 v0.3.3 h1:xBfUaYhbG6LipvPLDSlawLSO1A5z3InSJz8vB3+3bHc=
 github.com/go-musicfox/go-mp3 v0.3.3/go.mod h1:fRtZraRFcWb0pu7ok0LqyFhCUrPeMsGRSVop0eemFmo=
 github.com/go-musicfox/goflac v0.1.5 h1:1fSNZphzXaTq++fwSiPdGt/nDw7IUsPwcSy6C9vUuh8=
