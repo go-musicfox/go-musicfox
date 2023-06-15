@@ -3,8 +3,9 @@ package service
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/anhoder/netease-music/util"
 	"net/http"
+
+	"github.com/anhoder/netease-music/util"
 )
 
 type LoginEmailService struct {
@@ -14,13 +15,13 @@ type LoginEmailService struct {
 }
 
 func (service *LoginEmailService) LoginEmail() (float64, []byte) {
-
-	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
-
 	options := &util.Options{
-		Crypto:  "weapi",
-		Ua:      "pc",
-		Cookies: []*http.Cookie{cookiesOS},
+		Crypto: "weapi",
+		Ua:     "pc",
+		Cookies: []*http.Cookie{
+			{Name: "os", Value: "ios"},
+			{Name: "appver", Value: "8.7.01"},
+		},
 	}
 	data := make(map[string]string)
 
@@ -35,8 +36,7 @@ func (service *LoginEmailService) LoginEmail() (float64, []byte) {
 	data["rememberLogin"] = "true"
 
 	//reBody, cookies := util.CreateRequest("POST", `https://www.httpbin.org/post`, data, options)
-	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/weapi/login`, data, options)
-
+	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/api/login`, data, options)
 
 	return code, reBody
 }
