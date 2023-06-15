@@ -400,16 +400,26 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
 		_ = table.SetByKVModel(storage.User{}, m.user)
 	}
 
-	op := "add"
-	if !isLike {
-		op = "del"
+	var (
+		code float64
+		resp []byte
+	)
+
+	if isLike {
+		likeService := service.PlaylistTrackAddService{
+			Id:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
+			SongIds: []string{strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10)},
+		}
+		code, resp = likeService.AddTracks()
+	} else {
+		dislikeService := service.PlaylistTrackDeleteService{
+			Id:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
+			SongIds: []string{strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10)},
+		}
+		code, resp = dislikeService.DeleteTracks()
 	}
-	likeService := service.PlaylistTracksService{
-		TrackIds: []string{strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10)},
-		Op:       op,
-		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
-	}
-	if code, resp := likeService.PlaylistTracks(); code != 200 {
+
+	if code != 200 {
 		var msg string
 		if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
 			msg, _ = jsonparser.GetString(resp, "data", "message")
