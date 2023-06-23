@@ -9,6 +9,7 @@ A functions wrapping of OpenSSL library for symmetric and asymmetric encryption 
 - [DES](#DES)
 - [3DES](#DES)
 - [RSA](#RSA)
+- [HMAC-SHA](#HMAC-SHA)
 
 ## Installation
 
@@ -94,8 +95,30 @@ openssl.RSAGeneratePublicKey(priKey []byte, out io.Writer)
 openssl.RSAEncrypt(src, pubKey []byte) ([]byte, error)
 openssl.RSADecrypt(src, priKey []byte) ([]byte, error)
 
-openssl.RSASign(src []byte, priKey []byte) ([]byte, error)
-openssl.RSAVerify(src, sign, pubKey []byte) error
+openssl.RSASign(src []byte, priKey []byte, hash crypto.Hash) ([]byte, error)
+openssl.RSAVerify(src, sign, pubKey []byte, hash crypto.Hash) error
+```
+
+### HMAC-SHA
+
+```
+// Sha1 Calculate the sha1 hash of a string
+Sha1(str string) []byte
+
+// HmacSha1 Calculate the sha1 hash of a string using the HMAC method
+HmacSha1(key string, data string) []byte
+
+// HmacSha1ToString Calculate the sha1 hash of a string using the HMAC method, outputs lowercase hexits
+HmacSha1ToString(key string, data string) string
+
+// Sha256 Calculate the sha256 hash of a string
+Sha256(str string) []byte
+
+// HmacSha256 Calculate the sha256 hash of a string using the HMAC method
+HmacSha256(key string, data string) []byte
+
+// HmacSha256ToString Calculate the sha256 hash of a string using the HMAC method, outputs lowercase hexits
+HmacSha256ToString(key string, data string) string
 ```
 
 ## License

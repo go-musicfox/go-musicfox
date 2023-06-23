@@ -3,7 +3,6 @@ module github.com/go-musicfox/go-musicfox
 go 1.18
 
 require (
-	github.com/anhoder/netease-music v1.3.8
 	github.com/anhoder/notificator v0.0.5
 	github.com/bogem/id3v2/v2 v2.1.3
 	github.com/boltdb/bolt v1.3.1
@@ -17,6 +16,7 @@ require (
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.2.0
+	github.com/go-musicfox/netease-music v1.4.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.1.0
@@ -32,14 +32,14 @@ require (
 )
 
 require (
-	github.com/anhoder/requests v0.1.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect
-	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20220606141015-ee827820fabb // indirect
+	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 // indirect
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
-	github.com/forgoer/openssl v1.2.1 // indirect
+	github.com/forgoer/openssl v1.6.0 // indirect
 	github.com/go-flac/go-flac v0.3.1 // indirect
+	github.com/go-musicfox/requests v0.2.0 // indirect
 	github.com/gomodule/redigo v1.8.8 // indirect
 	github.com/gookit/color v1.5.2 // indirect
 	github.com/gookit/goutil v0.6.6 // indirect
@@ -68,7 +68,7 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/text v0.10.0 // indirect
 )
 
 replace (

@@ -10,9 +10,9 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	"github.com/anhoder/netease-music/service"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 )

@@ -2,14 +2,13 @@ package base
 
 import (
 	"errors"
+	"github.com/cnsilvan/UnblockNeteaseMusic/common"
+	"github.com/cnsilvan/UnblockNeteaseMusic/network"
+	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/cnsilvan/UnblockNeteaseMusic/common"
-	"github.com/cnsilvan/UnblockNeteaseMusic/network"
-	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 )
 
 func PreSearchSong(song common.SearchSong) common.SearchSong {
@@ -57,12 +56,7 @@ func CalScore(song common.SearchSong, songName string, singerName string, index 
 		}
 		var songNameSores float32 = 0.0
 		if len(songName) > 0 {
-			for _, name := range strings.Split(songName, "-") {
-				score := utils.CalMatchScoresV2(song.Name, name, "songName")
-				if score > songNameSores {
-					songNameSores = score
-				}
-			}
+			songNameSores = utils.CalMatchScoresV2(song.Name, songName, "songName")
 		}
 		var artistsNameSores float32 = 0.0
 		if len(singerName) > 0 {
