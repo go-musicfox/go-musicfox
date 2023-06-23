@@ -321,9 +321,8 @@ $ musicfox
 
 ## 相关项目
 
-1. [anhoder/bubbletea](https://github.com/anhoder/bubbletea)：基于 [bubbletea](https://github.com/charmbracelet/bubbletea) 进行部分定制 
-2. [anhoder/bubbles](https://github.com/anhoder/bubbles)：基于 [bubbles](https://github.com/charmbracelet/bubbles) 进行部分定制
-3. [anhoder/netease-music](https://github.com/anhoder/netease-music)：fork 自 [NeteaseCloudMusicApiWithGo](https://github.com/sirodeneko/NeteaseCloudMusicApiWithGo) ，在原项目的基础上去除 API 功能，只保留 service 和 util 作为一个独立的包，方便在其他 Go 项目中调用
+1. [go-musicfox/bubbletea](https://github.com/go-musicfox/bubbletea)：基于 [bubbletea](https://github.com/charmbracelet/bubbletea) 进行部分定制
+2. [go-musicfox/netease-music](https://github.com/go-musicfox/netease-music)：fork 自 [NeteaseCloudMusicApiWithGo](https://github.com/sirodeneko/NeteaseCloudMusicApiWithGo) ，在原项目的基础上去除 API 功能，只保留 service 和 util 作为一个独立的包，方便在其他 Go 项目中调用
 
 ## 感谢
 

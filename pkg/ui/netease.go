@@ -16,9 +16,9 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
-	"github.com/anhoder/netease-music/service"
-	"github.com/anhoder/netease-music/util"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/netease-music/service"
+	"github.com/go-musicfox/netease-music/util"
 	"github.com/mattn/go-runewidth"
 	"github.com/telanflow/cookiejar"
 )

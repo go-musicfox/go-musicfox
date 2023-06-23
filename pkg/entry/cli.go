@@ -10,7 +10,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/ui"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	neteaseutil "github.com/anhoder/netease-music/util"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/gookit/gcli/v2"
 )
 

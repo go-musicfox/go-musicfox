@@ -20,11 +20,11 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 
-	"github.com/anhoder/netease-music/service"
 	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"
 	songtag "github.com/frolovo22/tag"
 	"github.com/go-flac/flacpicture"
+	"github.com/go-musicfox/netease-music/service"
 	"github.com/skip2/go-qrcode"
 )
 
