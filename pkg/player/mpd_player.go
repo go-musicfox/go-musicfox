@@ -23,7 +23,7 @@ func mpdErrorHandler(err error, ignore bool) {
 		return
 	}
 
-	utils.Logger().Printf("err: %+v", err)
+	utils.Logger().Printf("[ERROR] mpdPlayer, err: %+v", err)
 	if !ignore {
 		panic(err)
 	}
@@ -57,9 +57,20 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 	if configFile != "" {
 		cmd.Args = append(cmd.Args, configFile)
 	}
+
+	// 启动前kill
+	{
+		var killCmd = *cmd
+		killCmd.Args = append(killCmd.Args, "--kill")
+		output, err := killCmd.CombinedOutput()
+		if err != nil {
+			utils.Logger().Printf("[WARNIG] MPD kill失败:%s, 详情:\n%s", err, output)
+		}
+	}
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(fmt.Sprintf("MPD启动失败: %s, 详情:\n%s", err, output))
+		panic(fmt.Sprintf("[ERROR] MPD启动失败:%s, 详情:\n%s", err, output))
 	}
 
 	client, err := mpd.Dial(network, address)
