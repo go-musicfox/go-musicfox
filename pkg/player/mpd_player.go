@@ -198,6 +198,13 @@ func (p *mpdPlayer) listen() {
 
 			err = p.client().PlayID(p.curSongId)
 			mpdErrorHandler(err, false)
+			// Doing this because github.com/fhs/gompd/v2/mpd hasn't implement "addtagid" yet
+			err = p.client().Command("addtagid %d %s %s", p.curSongId, "artist", p.curMusic.ArtistName()).OK()
+			mpdErrorHandler(err, false)
+			err = p.client().Command("addtagid %d %s %s", p.curSongId, "album", p.curMusic.Album.Name).OK()
+			mpdErrorHandler(err, false)
+			err = p.client().Command("addtagid %d %s %s", p.curSongId, "title", p.curMusic.Name).OK()
+			mpdErrorHandler(err, false)
 			p.Resume()
 		}
 	}
