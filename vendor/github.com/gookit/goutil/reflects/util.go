@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"unsafe"
 )
 
 // Elem returns the value that the interface v contains
@@ -49,23 +50,56 @@ func Len(v reflect.Value) int {
 	return -1
 }
 
-// SliceSubKind get sub-elem kind of the array, slice, variadic-var.
+// SliceSubKind get sub-elem kind of the array, slice, variadic-var. alias SliceElemKind()
+func SliceSubKind(typ reflect.Type) reflect.Kind {
+	return SliceElemKind(typ)
+}
+
+// SliceElemKind get sub-elem kind of the array, slice, variadic-var.
 //
 // Usage:
 //
-//	SliceSubKind(reflect.TypeOf([]string{"abc"})) // reflect.String
-func SliceSubKind(typ reflect.Type) reflect.Kind {
+//	SliceElemKind(reflect.TypeOf([]string{"abc"})) // reflect.String
+func SliceElemKind(typ reflect.Type) reflect.Kind {
 	if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
 		return typ.Elem().Kind()
 	}
 	return reflect.Invalid
 }
 
-// SetValue to a reflect.Value
+// UnexportedValue quickly get unexported value by reflect.Value
+//
+// NOTE: this method is unsafe, use it carefully.
+// should ensure rv is addressable by field.CanAddr()
+//
+// refer: https://stackoverflow.com/questions/42664837/how-to-access-unexported-struct-fields
+func UnexportedValue(rv reflect.Value) any {
+	if rv.CanAddr() {
+		// create new value from addr, now can be read and set.
+		return reflect.NewAt(rv.Type(), unsafe.Pointer(rv.UnsafeAddr())).Elem().Interface()
+	}
+
+	// If the rv is not addressable this trick won't work, but you can create an addressable copy like this
+	rs2 := reflect.New(rv.Type()).Elem()
+	rs2.Set(rv)
+	rv = rs2.Field(0)
+	rv = reflect.NewAt(rv.Type(), unsafe.Pointer(rv.UnsafeAddr())).Elem()
+	// Now rv can be read. TIP: Setting will succeed but only affects the temporary copy.
+	return rv.Interface()
+}
+
+// SetUnexportedValue quickly set unexported field value by reflect
+//
+// NOTE: this method is unsafe, use it carefully.
+// should ensure rv is addressable by field.CanAddr()
+func SetUnexportedValue(rv reflect.Value, value any) {
+	reflect.NewAt(rv.Type(), unsafe.Pointer(rv.UnsafeAddr())).Elem().Set(reflect.ValueOf(value))
+}
+
+// SetValue to a `reflect.Value`. will auto convert type if needed.
 func SetValue(rv reflect.Value, val any) error {
 	// get real type of the ptr value
 	if rv.Kind() == reflect.Ptr {
-		// init if is nil
 		if rv.IsNil() {
 			elemTyp := rv.Type().Elem()
 			rv.Set(reflect.New(elemTyp))
@@ -80,6 +114,40 @@ func SetValue(rv reflect.Value, val any) error {
 		rv.Set(rv1)
 	}
 	return err
+}
+
+// SetRValue to a `reflect.Value`. will direct set value without convert type.
+func SetRValue(rv, val reflect.Value) {
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			elemTyp := rv.Type().Elem()
+			rv.Set(reflect.New(elemTyp))
+		}
+		rv = reflect.Indirect(rv)
+	}
+
+	rv.Set(val)
+}
+
+// EachMap process any map data
+func EachMap(mp reflect.Value, fn func(key, val reflect.Value)) {
+	if fn == nil {
+		return
+	}
+	if mp.Kind() != reflect.Map {
+		panic("only allow map value data")
+	}
+
+	for _, key := range mp.MapKeys() {
+		fn(key, mp.MapIndex(key))
+	}
+}
+
+// EachStrAnyMap process any map data as string key and any value
+func EachStrAnyMap(mp reflect.Value, fn func(key string, val any)) {
+	EachMap(mp, func(key, val reflect.Value) {
+		fn(String(key), val.Interface())
+	})
 }
 
 // FlatFunc custom collect handle func

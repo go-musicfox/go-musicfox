@@ -1,22 +1,28 @@
 package termenv
 
 import (
-	"github.com/aymanbagabas/go-osc52"
-)
+	"strings"
 
-func (o Output) osc52Output() *osc52.Output {
-	return osc52.NewOutput(o.tty, o.environ.Environ())
-}
+	"github.com/aymanbagabas/go-osc52/v2"
+)
 
 // Copy copies text to clipboard using OSC 52 escape sequence.
 func (o Output) Copy(str string) {
-	o.osc52Output().Copy(str)
+	s := osc52.New(str)
+	if strings.HasPrefix(o.environ.Getenv("TERM"), "screen") {
+		s = s.Screen()
+	}
+	_, _ = s.WriteTo(o)
 }
 
 // CopyPrimary copies text to primary clipboard (X11) using OSC 52 escape
 // sequence.
 func (o Output) CopyPrimary(str string) {
-	o.osc52Output().CopyPrimary(str)
+	s := osc52.New(str).Primary()
+	if strings.HasPrefix(o.environ.Getenv("TERM"), "screen") {
+		s = s.Screen()
+	}
+	_, _ = s.WriteTo(o)
 }
 
 // Copy copies text to clipboard using OSC 52 escape sequence.

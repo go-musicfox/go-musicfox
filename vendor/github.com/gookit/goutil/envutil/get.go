@@ -58,10 +58,11 @@ func EnvPaths() []string {
 	return filepath.SplitList(os.Getenv("PATH"))
 }
 
+// EnvMap like os.Environ, but will returns key-value map[string]string data.
+func EnvMap() map[string]string { return comfunc.Environ() }
+
 // Environ like os.Environ, but will returns key-value map[string]string data.
-func Environ() map[string]string {
-	return comfunc.Environ()
-}
+func Environ() map[string]string { return comfunc.Environ() }
 
 // SearchEnvKeys values by given keywords
 func SearchEnvKeys(keywords string) map[string]string {

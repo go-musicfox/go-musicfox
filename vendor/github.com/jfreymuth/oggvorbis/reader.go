@@ -39,6 +39,7 @@ func (r *Reader) init() error {
 		if err == nil {
 			r.length = length
 		}
+		r.r.buffer = nil
 		r.r.seeker.Seek(0, io.SeekStart)
 	}
 
@@ -46,7 +47,7 @@ func (r *Reader) init() error {
 	for i := 0; i < 3; i++ {
 		packet, err := r.r.NextPacket()
 		if err != nil {
-			return err
+			return noEOF(err)
 		}
 		err = r.dec.ReadHeader(packet)
 		if err != nil {

@@ -26,7 +26,7 @@ const (
 	EchoNormal EchoMode = iota
 
 	// EchoPassword displays the EchoCharacter mask instead of actual
-	// characters.  This is commonly used for password fields.
+	// characters. This is commonly used for password fields.
 	EchoPassword
 
 	// EchoNone displays nothing as characters are entered. This is commonly
@@ -64,7 +64,7 @@ var DefaultKeyMap = KeyMap{
 	WordForward:             key.NewBinding(key.WithKeys("alt+right", "alt+f")),
 	WordBackward:            key.NewBinding(key.WithKeys("alt+left", "alt+b")),
 	DeleteWordBackward:      key.NewBinding(key.WithKeys("alt+backspace", "ctrl+w")),
-	DeleteWordForward:       key.NewBinding(key.WithKeys("alte+delete", "alt+d")),
+	DeleteWordForward:       key.NewBinding(key.WithKeys("alt+delete", "alt+d")),
 	DeleteAfterCursor:       key.NewBinding(key.WithKeys("ctrl+k")),
 	DeleteBeforeCursor:      key.NewBinding(key.WithKeys("ctrl+u")),
 	DeleteCharacterBackward: key.NewBinding(key.WithKeys("backspace", "ctrl+h")),
@@ -94,9 +94,10 @@ type Model struct {
 	// https://github.com/charmbracelet/lipgloss
 	PromptStyle      lipgloss.Style
 	TextStyle        lipgloss.Style
-	BackgroundStyle  lipgloss.Style
 	PlaceholderStyle lipgloss.Style
-	CursorStyle      lipgloss.Style
+
+	// Deprecated: use Cursor.Style instead.
+	CursorStyle lipgloss.Style
 
 	// CharLimit is the maximum amount of characters this input element will
 	// accept. If 0 or less, there's no limit.
@@ -404,7 +405,7 @@ func (m *Model) deleteWordBackward() {
 	}
 }
 
-// deleteWordForward deletes the word right to the cursor If input is masked
+// deleteWordForward deletes the word right to the cursor. If input is masked
 // delete everything after the cursor so as not to reveal word breaks in the
 // masked input.
 func (m *Model) deleteWordForward() {
@@ -515,7 +516,8 @@ func (m Model) echoTransform(v string) string {
 		return strings.Repeat(string(m.EchoCharacter), rw.StringWidth(v))
 	case EchoNone:
 		return ""
-
+	case EchoNormal:
+		return v
 	default:
 		return v
 	}
@@ -593,7 +595,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	m.Cursor, cmd = m.Cursor.Update(msg)
 	cmds = append(cmds, cmd)
 
-	if oldPos != m.pos {
+	if oldPos != m.pos && m.Cursor.Mode() == cursor.CursorBlink {
 		m.Cursor.Blink = false
 		cmds = append(cmds, m.Cursor.BlinkCmd())
 	}

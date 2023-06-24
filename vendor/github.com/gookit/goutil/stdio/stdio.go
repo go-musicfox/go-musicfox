@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -58,4 +59,31 @@ func NewScanner(in any) *bufio.Scanner {
 	default:
 		panic("invalid input type for create scanner")
 	}
+}
+
+// WriteByte to stdout
+func WriteByte(b byte) {
+	_, _ = os.Stdout.Write([]byte{b})
+}
+
+// WriteBytes to stdout
+func WriteBytes(bs []byte) {
+	_, _ = os.Stdout.Write(bs)
+}
+
+// WritelnBytes to stdout
+func WritelnBytes(bs []byte) {
+	_, _ = os.Stdout.Write(bs)
+	_, _ = os.Stdout.Write([]byte("\n"))
+}
+
+// WriteString to stdout
+func WriteString(s string) {
+	_, _ = os.Stdout.WriteString(s)
+}
+
+// Writeln to stdout
+func Writeln(s string) {
+	_, _ = os.Stdout.WriteString(s)
+	_, _ = os.Stdout.Write([]byte("\n"))
 }

@@ -76,6 +76,7 @@ func UserConfigDir(subPath string) string {
 }
 
 // ExpandPath will parse `~` as user home dir path.
-func ExpandPath(path string) string {
-	return comfunc.ExpandPath(path)
-}
+func ExpandPath(path string) string { return comfunc.ExpandHome(path) }
+
+// ExpandHome will parse `~` as user home dir path.
+func ExpandHome(path string) string { return comfunc.ExpandHome(path) }

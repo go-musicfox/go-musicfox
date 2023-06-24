@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build android
 // +build android
 
 /*
@@ -35,8 +36,9 @@ package app
 #include <pthread.h>
 #include <stdlib.h>
 
-EGLDisplay display;
-EGLSurface surface;
+extern EGLDisplay display;
+extern EGLSurface surface;
+
 
 char* createEGLSurface(ANativeWindow* window);
 char* destroyEGLSurface();
@@ -285,8 +287,12 @@ func mainUI(vm, jniEnv, ctx uintptr) error {
 
 	donec := make(chan struct{})
 	go func() {
+		// close the donec channel in a defer statement
+		// so that we could still be able to return even
+		// if mainUserFn panics.
+		defer close(donec)
+
 		mainUserFn(theApp)
-		close(donec)
 	}()
 
 	var pixelsPerPt float32

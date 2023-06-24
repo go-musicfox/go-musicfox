@@ -25,7 +25,7 @@ type IntOrFloat interface {
 	Int | Float
 }
 
-// XintOrFloat interface type. all (x)int and float types
+// XintOrFloat interface type. all int, uint and float types
 type XintOrFloat interface {
 	Int | Uint | Float
 }

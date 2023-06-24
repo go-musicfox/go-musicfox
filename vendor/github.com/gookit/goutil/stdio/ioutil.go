@@ -7,8 +7,8 @@ import (
 )
 
 // QuietFprint to writer, will ignore error
-func QuietFprint(w io.Writer, ss ...string) {
-	_, _ = fmt.Fprint(w, strings.Join(ss, ""))
+func QuietFprint(w io.Writer, a ...any) {
+	_, _ = fmt.Fprint(w, a...)
 }
 
 // QuietFprintf to writer, will ignore error
@@ -17,8 +17,8 @@ func QuietFprintf(w io.Writer, tpl string, vs ...any) {
 }
 
 // QuietFprintln to writer, will ignore error
-func QuietFprintln(w io.Writer, ss ...string) {
-	_, _ = fmt.Fprintln(w, strings.Join(ss, ""))
+func QuietFprintln(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
 }
 
 // QuietWriteString to writer, will ignore error

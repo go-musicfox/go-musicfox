@@ -8,20 +8,24 @@ import (
 
 // 24 bit RGB color
 // RGB:
-// 	R 0-255 G 0-255 B 0-255
-// 	R 00-FF G 00-FF B 00-FF (16进制)
+//
+//	R 0-255 G 0-255 B 0-255
+//	R 00-FF G 00-FF B 00-FF (16进制)
 //
 // Format:
-// 	ESC[ … 38;2;<r>;<g>;<b> … m // Select RGB foreground color
-// 	ESC[ … 48;2;<r>;<g>;<b> … m // Choose RGB background color
+//
+//	ESC[ … 38;2;<r>;<g>;<b> … m // Select RGB foreground color
+//	ESC[ … 48;2;<r>;<g>;<b> … m // Choose RGB background color
 //
 // links:
-// 	https://zh.wikipedia.org/wiki/ANSI%E8%BD%AC%E4%B9%89%E5%BA%8F%E5%88%97#24位
+//
+//	https://zh.wikipedia.org/wiki/ANSI%E8%BD%AC%E4%B9%89%E5%BA%8F%E5%88%97#24位
 //
 // example:
-// 	fg: \x1b[38;2;30;144;255mMESSAGE\x1b[0m
-// 	bg: \x1b[48;2;30;144;255mMESSAGE\x1b[0m
-// 	both: \x1b[38;2;233;90;203;48;2;30;144;255mMESSAGE\x1b[0m
+//
+//	fg: \x1b[38;2;30;144;255mMESSAGE\x1b[0m
+//	bg: \x1b[48;2;30;144;255mMESSAGE\x1b[0m
+//	both: \x1b[38;2;233;90;203;48;2;30;144;255mMESSAGE\x1b[0m
 const (
 	TplFgRGB = "38;2;%d;%d;%d"
 	TplBgRGB = "48;2;%d;%d;%d"
@@ -45,10 +49,11 @@ const (
 // The last digit represents the foreground(0), background(1), >1 is unset value
 //
 // Usage:
-// 	// 0, 1, 2 is R,G,B.
-// 	// 3rd: Fg=0, Bg=1, >1: unset value
-// 	RGBColor{30,144,255, 0}
-// 	RGBColor{30,144,255, 1}
+//
+//	// 0, 1, 2 is R,G,B.
+//	// 3rd: Fg=0, Bg=1, >1: unset value
+//	RGBColor{30,144,255, 0}
+//	RGBColor{30,144,255, 1}
 //
 // NOTICE: now support RGB color on Windows CMD, PowerShell
 type RGBColor [4]uint8
@@ -59,9 +64,10 @@ var emptyRGBColor = RGBColor{3: 99}
 // RGB color create.
 //
 // Usage:
-// 	c := RGB(30,144,255)
-// 	c := RGB(30,144,255, true)
-// 	c.Print("message")
+//
+//	c := RGB(30,144,255)
+//	c := RGB(30,144,255, true)
+//	c.Print("message")
 func RGB(r, g, b uint8, isBg ...bool) RGBColor {
 	rgb := RGBColor{r, g, b}
 	if len(isBg) > 0 && isBg[0] {
@@ -90,11 +96,12 @@ func RgbFromInts(rgb []int, isBg ...bool) RGBColor {
 // HEX create RGB color from a HEX color string.
 //
 // Usage:
-// 	c := HEX("ccc") // rgb: [204 204 204]
-// 	c := HEX("aabbcc") // rgb: [170 187 204]
-// 	c := HEX("#aabbcc")
-// 	c := HEX("0xaabbcc")
-// 	c.Print("message")
+//
+//	c := HEX("ccc") // rgb: [204 204 204]
+//	c := HEX("aabbcc") // rgb: [170 187 204]
+//	c := HEX("#aabbcc")
+//	c := HEX("0xaabbcc")
+//	c.Print("message")
 func HEX(hex string, isBg ...bool) RGBColor {
 	if rgb := HexToRgb(hex); len(rgb) > 0 {
 		return RGB(uint8(rgb[0]), uint8(rgb[1]), uint8(rgb[2]), isBg...)
@@ -139,11 +146,12 @@ func RGBFromSlice(rgb []uint8, isBg ...bool) RGBColor {
 // Support use color name in the {namedRgbMap}
 //
 // Usage:
-// 	c := RGBFromString("170,187,204")
-// 	c.Print("message")
 //
-// 	c := RGBFromString("brown")
-// 	c.Print("message with color brown")
+//	c := RGBFromString("170,187,204")
+//	c.Print("message")
+//
+//	c := RGBFromString("brown")
+//	c.Print("message with color brown")
 func RGBFromString(rgb string, isBg ...bool) RGBColor {
 	// use color name in the {namedRgbMap}
 	if rgbVal, ok := namedRgbMap[rgb]; ok {
@@ -180,27 +188,27 @@ func (c RGBColor) Reset() error {
 }
 
 // Print print message
-func (c RGBColor) Print(a ...interface{}) {
+func (c RGBColor) Print(a ...any) {
 	doPrintV2(c.String(), fmt.Sprint(a...))
 }
 
 // Printf format and print message
-func (c RGBColor) Printf(format string, a ...interface{}) {
+func (c RGBColor) Printf(format string, a ...any) {
 	doPrintV2(c.String(), fmt.Sprintf(format, a...))
 }
 
 // Println print message with newline
-func (c RGBColor) Println(a ...interface{}) {
+func (c RGBColor) Println(a ...any) {
 	doPrintlnV2(c.String(), a)
 }
 
 // Sprint returns rendered message
-func (c RGBColor) Sprint(a ...interface{}) string {
+func (c RGBColor) Sprint(a ...any) string {
 	return RenderCode(c.String(), a...)
 }
 
 // Sprintf returns format and rendered message
-func (c RGBColor) Sprintf(format string, a ...interface{}) string {
+func (c RGBColor) Sprintf(format string, a ...any) string {
 	return RenderString(c.String(), fmt.Sprintf(format, a...))
 }
 
@@ -279,8 +287,8 @@ func (c RGBColor) C16() Color { return c.Basic() }
 // All are composed of 4 digits uint8, the first three digits are the color value;
 // The last bit is different from RGBColor, here it indicates whether the value is set.
 //
-// 	1    Has been set
-// 	^1   Not set
+//	1    Has been set
+//	^1   Not set
 type RGBStyle struct {
 	// Name of the style
 	Name string
@@ -303,8 +311,9 @@ func NewRGBStyle(fg RGBColor, bg ...RGBColor) *RGBStyle {
 // HEXStyle create a RGBStyle from HEX color string.
 //
 // Usage:
-// 	s := HEXStyle("aabbcc", "eee")
-// 	s.Print("message")
+//
+//	s := HEXStyle("aabbcc", "eee")
+//	s.Print("message")
 func HEXStyle(fg string, bg ...string) *RGBStyle {
 	s := &RGBStyle{}
 	if len(bg) > 0 {
@@ -320,8 +329,9 @@ func HEXStyle(fg string, bg ...string) *RGBStyle {
 // RGBStyleFromString create a RGBStyle from color value string.
 //
 // Usage:
-// 	s := RGBStyleFromString("170,187,204", "70,87,4")
-// 	s.Print("message")
+//
+//	s := RGBStyleFromString("170,187,204", "70,87,4")
+//	s.Print("message")
 func RGBStyleFromString(fg string, bg ...string) *RGBStyle {
 	s := &RGBStyle{}
 	if len(bg) > 0 {
@@ -363,27 +373,27 @@ func (s *RGBStyle) AddOpts(opts ...Color) *RGBStyle {
 }
 
 // Print print message
-func (s *RGBStyle) Print(a ...interface{}) {
+func (s *RGBStyle) Print(a ...any) {
 	doPrintV2(s.String(), fmt.Sprint(a...))
 }
 
 // Printf format and print message
-func (s *RGBStyle) Printf(format string, a ...interface{}) {
+func (s *RGBStyle) Printf(format string, a ...any) {
 	doPrintV2(s.String(), fmt.Sprintf(format, a...))
 }
 
 // Println print message with newline
-func (s *RGBStyle) Println(a ...interface{}) {
+func (s *RGBStyle) Println(a ...any) {
 	doPrintlnV2(s.String(), a)
 }
 
 // Sprint returns rendered message
-func (s *RGBStyle) Sprint(a ...interface{}) string {
+func (s *RGBStyle) Sprint(a ...any) string {
 	return RenderCode(s.String(), a...)
 }
 
 // Sprintf returns format and rendered message
-func (s *RGBStyle) Sprintf(format string, a ...interface{}) string {
+func (s *RGBStyle) Sprintf(format string, a ...any) string {
 	return RenderString(s.String(), fmt.Sprintf(format, a...))
 }
 

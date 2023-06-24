@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gookit/goutil/comdef"
 	"github.com/gookit/goutil/mathutil"
 	"github.com/gookit/goutil/reflects"
 	"github.com/gookit/goutil/strutil"
@@ -107,18 +108,31 @@ func StringsTryInts(ss []string) (ints []int, err error) {
 	return
 }
 
+// AnyToSlice convert any(allow: array,slice) to []any
+func AnyToSlice(sl any) (ls []any, err error) {
+	rfKeys := reflect.ValueOf(sl)
+	if rfKeys.Kind() != reflect.Slice && rfKeys.Kind() != reflect.Array {
+		return nil, ErrInvalidType
+	}
+
+	for i := 0; i < rfKeys.Len(); i++ {
+		ls = append(ls, rfKeys.Index(i).Interface())
+	}
+	return
+}
+
+// AnyToStrings convert array or slice to []string
+func AnyToStrings(arr any) []string {
+	ret, _ := ToStrings(arr)
+	return ret
+}
+
 // MustToStrings convert array or slice to []string
 func MustToStrings(arr any) []string {
 	ret, err := ToStrings(arr)
 	if err != nil {
 		panic(err)
 	}
-	return ret
-}
-
-// AnyToStrings convert array or slice to []string
-func AnyToStrings(arr any) []string {
-	ret, _ := ToStrings(arr)
 	return ret
 }
 
@@ -224,6 +238,22 @@ func ToString(arr []any) string {
 
 	sb.WriteByte(']')
 	return sb.String()
+}
+
+// CombineToMap combine two slice to map[K]V.
+//
+// If keys length is greater than values, the extra keys will be ignored.
+func CombineToMap[K comdef.SortedType, V any](keys []K, values []V) map[K]V {
+	ln := len(values)
+	mp := make(map[K]V, len(keys))
+
+	for i, key := range keys {
+		if i >= ln {
+			break
+		}
+		mp[key] = values[i]
+	}
+	return mp
 }
 
 // CombineToSMap combine two string-slice to map[string]string

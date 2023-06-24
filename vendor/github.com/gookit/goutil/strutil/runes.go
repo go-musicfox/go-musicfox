@@ -88,6 +88,9 @@ func RunesWidth(rs []rune) (w int) {
 	return w
 }
 
+// Truncate alias of the Utf8Truncate()
+func Truncate(s string, w int, tail string) string { return Utf8Truncate(s, w, tail) }
+
 // TextTruncate alias of the Utf8Truncate()
 func TextTruncate(s string, w int, tail string) string { return Utf8Truncate(s, w, tail) }
 
