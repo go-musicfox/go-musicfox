@@ -2,8 +2,6 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU=
 github.com/anhoder/gcli/v2 v2.3.5/go.mod h1:AOxm27rFzNDLpBrwbW1pAh3ofebpXOQk/9x009qC9y8=
-github.com/anhoder/notificator v0.0.5 h1:CyPvxAqaDtN330eKbX9ltvIr4Y/PloLLc8wALqyhqb4=
-github.com/anhoder/notificator v0.0.5/go.mod h1:mThyrOpubmQPe3ei+eksGFKYvtGQ0GTvYz8AjPemMX0=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
 github.com/atotto/clipboard v0.1.4/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
 github.com/aymanbagabas/go-osc52 v1.0.3/go.mod h1:zT8H+Rk4VSabYN90pWyugflM3ZhpTZNC7cASDfUCdT4=
@@ -67,6 +65,8 @@ github.com/go-musicfox/minimp3 v1.0.6 h1:YUD7P0ApW3eqYnrQADsffvTM3Sf8CLoNMqXsW+I
 github.com/go-musicfox/minimp3 v1.0.6/go.mod h1:WFso0UvZL1fPit45V6RQPKxbehLI4XZaJyLs2/TJHoU=
 github.com/go-musicfox/netease-music v1.4.0 h1:duPVEL+iQVx2jKTpWti9aMTCazn7RreOzVoAK5fj16w=
 github.com/go-musicfox/netease-music v1.4.0/go.mod h1:9xh9+QfU8OE20VvG+hO6gNuAoGXpRv+gfQ7OygfDA3k=
+github.com/go-musicfox/notificator v0.1.0 h1:bWkLOIDYZKpmZMfNwsbPETqKJvWVrxyRvxqFPsd+5Vw=
+github.com/go-musicfox/notificator v0.1.0/go.mod h1:1FtZ3LEbv/I+EnrHOagRI2e3CwltRFhda6xLR3kOViI=
 github.com/go-musicfox/oto v1.0.3 h1:O6LIcfSRPgVcsgE2/yCmh4e7nOoX80yPCFgWSMLVXCc=
 github.com/go-musicfox/oto v1.0.3/go.mod h1:wovJ8WWMfFKvP587mhHgot/MBr4DnNy9m6EepeVGnos=
 github.com/go-musicfox/requests v0.2.0 h1:VIg9BmtTGw93ugmNPUcJXaL647C12W48g1RTPHahdCU=

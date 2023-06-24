@@ -12,7 +12,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 
-	"github.com/anhoder/notificator"
+	"github.com/go-musicfox/notificator"
 	"github.com/pkg/errors"
 )
 

@@ -3,7 +3,6 @@ module github.com/go-musicfox/go-musicfox
 go 1.18
 
 require (
-	github.com/anhoder/notificator v0.0.5
 	github.com/bogem/id3v2/v2 v2.1.3
 	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
@@ -17,6 +16,7 @@ require (
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.2.0
 	github.com/go-musicfox/netease-music v1.4.0
+	github.com/go-musicfox/notificator v0.1.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.1.0

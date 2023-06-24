@@ -1,6 +1,3 @@
-# github.com/anhoder/notificator v0.0.5
-## explicit; go 1.16
-github.com/anhoder/notificator
 # github.com/atotto/clipboard v0.1.4
 ## explicit
 github.com/atotto/clipboard
@@ -92,6 +89,9 @@ github.com/go-flac/go-flac
 ## explicit; go 1.12
 github.com/go-musicfox/netease-music/service
 github.com/go-musicfox/netease-music/util
+# github.com/go-musicfox/notificator v0.1.0
+## explicit; go 1.16
+github.com/go-musicfox/notificator
 # github.com/go-musicfox/requests v0.2.0
 ## explicit; go 1.13
 github.com/go-musicfox/requests
