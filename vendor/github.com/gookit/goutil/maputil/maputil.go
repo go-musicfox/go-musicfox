@@ -22,18 +22,25 @@ func SimpleMerge(src, dst map[string]any) map[string]any {
 	if len(src) == 0 {
 		return dst
 	}
-
-	if dst == nil {
+	if len(dst) == 0 {
 		return src
 	}
 
 	for key, val := range src {
+		if mp, ok := val.(map[string]any); ok {
+			if dmp, ok := dst[key].(map[string]any); ok {
+				dst[key] = SimpleMerge(mp, dmp)
+				continue
+			}
+		}
+
+		// simple merge
 		dst[key] = val
 	}
 	return dst
 }
 
-// func DeepMerge(src, dst map[string]any, deep int) map[string]any {
+// func DeepMerge(src, dst map[string]any, deep int) map[string]any { TODO
 // }
 
 // MergeSMap simple merge two string map. merge src to dst map
@@ -43,11 +50,17 @@ func MergeSMap(src, dst map[string]string, ignoreCase bool) map[string]string {
 
 // MergeStringMap simple merge two string map. merge src to dst map
 func MergeStringMap(src, dst map[string]string, ignoreCase bool) map[string]string {
+	if len(src) == 0 {
+		return dst
+	}
+	if len(dst) == 0 {
+		return src
+	}
+
 	for k, v := range src {
 		if ignoreCase {
 			k = strings.ToLower(k)
 		}
-
 		dst[k] = v
 	}
 	return dst

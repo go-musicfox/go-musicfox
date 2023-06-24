@@ -148,14 +148,15 @@ func (d Data) Bool(key string) bool {
 	if !ok {
 		return false
 	}
-	if bl, ok := val.(bool); ok {
-		return bl
-	}
 
-	if str, ok := val.(string); ok {
-		return strutil.QuietBool(str)
+	switch tv := val.(type) {
+	case string:
+		return strutil.QuietBool(tv)
+	case bool:
+		return tv
+	default:
+		return false
 	}
-	return false
 }
 
 // Strings get []string value
@@ -193,6 +194,11 @@ func (d Data) StringsByStr(key string) []string {
 	return nil
 }
 
+// StrMap get map[string]string value
+func (d Data) StrMap(key string) map[string]string {
+	return d.StringMap(key)
+}
+
 // StringMap get map[string]string value
 func (d Data) StringMap(key string) map[string]string {
 	val, ok := d.GetByPath(key)
@@ -200,10 +206,14 @@ func (d Data) StringMap(key string) map[string]string {
 		return nil
 	}
 
-	if smp, ok := val.(map[string]string); ok {
-		return smp
+	switch tv := val.(type) {
+	case map[string]string:
+		return tv
+	case map[string]any:
+		return ToStringMap(tv)
+	default:
+		return nil
 	}
-	return nil
 }
 
 // Sub get sub value as new Data
@@ -235,9 +245,16 @@ func (d Data) String() string {
 	return ToString(d)
 }
 
-// Load data to current data map
+// Load other data to current data map
 func (d Data) Load(sub map[string]any) {
 	for name, val := range sub {
+		d[name] = val
+	}
+}
+
+// LoadSMap to data
+func (d Data) LoadSMap(smp map[string]string) {
+	for name, val := range smp {
 		d[name] = val
 	}
 }

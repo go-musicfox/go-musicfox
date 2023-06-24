@@ -46,8 +46,8 @@ func newPromisedAttrs() *PromisedAttrs {
 // PromisedID is a promised identifier (to be) returned by MPD.
 type PromisedID int
 
-// Value is a convenience method for ensuring that a promise
-// has been computed, returning the Attrs.
+// Value returns the Attrs that were computed when CommandList.End was
+// called. Returns an error if CommandList.End has not yet been called.
 func (pa *PromisedAttrs) Value() (Attrs, error) {
 	if !pa.computed {
 		return nil, errors.New("value has not been computed yet")
@@ -55,8 +55,8 @@ func (pa *PromisedAttrs) Value() (Attrs, error) {
 	return pa.attrs, nil
 }
 
-// Value is a convenience method for ensuring that a promise
-// has been computed, returning the ID.
+// Value returns the ID that was computed when CommandList.End was
+// called. Returns an error if CommandList.End has not yet been called.
 func (pi *PromisedID) Value() (int, error) {
 	if *pi == -1 {
 		return -1, errors.New("value has not been computed yet")

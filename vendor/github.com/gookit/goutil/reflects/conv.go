@@ -130,7 +130,11 @@ func ValueByKind(val any, kind reflect.Kind) (rv reflect.Value, err error) {
 	return
 }
 
-// ConvSlice make new type slice from old slice
+// ConvSlice make new type slice from old slice, will auto convert element type.
+//
+// TIPs:
+//
+//	Only support kind: string, bool, intX, uintX, floatX
 func ConvSlice(oldSlRv reflect.Value, newElemTyp reflect.Type) (rv reflect.Value, err error) {
 	if !IsArrayOrSlice(oldSlRv.Kind()) {
 		panic("only allow array or slice type value")

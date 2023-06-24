@@ -41,7 +41,8 @@ var (
 // There are internal defined fg color tags
 //
 // Usage:
-// 	<tag>content text</>
+//
+//	<tag>content text</>
 //
 // @notice 加 0 在前面是为了防止之前的影响到现在的设置
 var colorTags = map[string]string{
@@ -324,15 +325,17 @@ func (tp *TagParser) ParseByEnv(str string) string {
 	return tp.Parse(str)
 }
 
-// Parse parse given string, replace color tag and return rendered string
+// Parse given string, replace color tag and return rendered string
 //
 // Use built in tags:
-// 	<TAG_NAME>CONTENT</>
-// 	// e.g: `<info>message</>`
+//
+//	<TAG_NAME>CONTENT</>
+//	// e.g: `<info>message</>`
 //
 // Custom tag attributes:
-// 	`<fg=VALUE;bg=VALUE;op=VALUES>CONTENT</>`
-// 	// e.g: `<fg=167;bg=232>wel</>`
+//
+//	`<fg=VALUE;bg=VALUE;op=VALUES>CONTENT</>`
+//	// e.g: `<fg=167;bg=232>wel</>`
 func (tp *TagParser) Parse(str string) string {
 	// not contains color tag
 	if !strings.Contains(str, "</>") {
@@ -376,26 +379,30 @@ func ReplaceTag(str string) string {
 // ParseCodeFromAttr parse color attributes.
 //
 // attr format:
-// 	// VALUE please see var: FgColors, BgColors, AllOptions
-// 	"fg=VALUE;bg=VALUE;op=VALUE"
+//
+//	// VALUE please see var: FgColors, BgColors, AllOptions
+//	"fg=VALUE;bg=VALUE;op=VALUE"
 //
 // 16 color:
-// 	"fg=yellow"
-// 	"bg=red"
-// 	"op=bold,underscore" // option is allow multi value
-// 	"fg=white;bg=blue;op=bold"
-// 	"fg=white;op=bold,underscore"
+//
+//	"fg=yellow"
+//	"bg=red"
+//	"op=bold,underscore" // option is allow multi value
+//	"fg=white;bg=blue;op=bold"
+//	"fg=white;op=bold,underscore"
 //
 // 256 color:
+//
 //	"fg=167"
 //	"fg=167;bg=23"
 //	"fg=167;bg=23;op=bold"
 //
 // True color:
-// 	// hex
+//
+//	// hex
 //	"fg=fc1cac"
 //	"fg=fc1cac;bg=c2c3c4"
-// 	// r,g,b
+//	// r,g,b
 //	"fg=23,45,214"
 //	"fg=23,45,214;bg=109,99,88"
 func ParseCodeFromAttr(attr string) (code string) {
@@ -476,12 +483,10 @@ func ClearTag(s string) string {
  *************************************************************/
 
 // GetTagCode get color code by tag name
-func GetTagCode(name string) string {
-	return colorTags[name]
-}
+func GetTagCode(name string) string { return colorTags[name] }
 
 // ApplyTag for messages
-func ApplyTag(tag string, a ...interface{}) string {
+func ApplyTag(tag string, a ...any) string {
 	return RenderCode(GetTagCode(tag), a...)
 }
 
@@ -510,11 +515,12 @@ func IsDefinedTag(name string) bool {
 
 // Tag value is a defined style name
 // Usage:
-// 	Tag("info").Println("message")
+//
+//	Tag("info").Println("message")
 type Tag string
 
 // Print messages
-func (tg Tag) Print(a ...interface{}) {
+func (tg Tag) Print(a ...any) {
 	name := string(tg)
 	str := fmt.Sprint(a...)
 
@@ -526,7 +532,7 @@ func (tg Tag) Print(a ...interface{}) {
 }
 
 // Printf format and print messages
-func (tg Tag) Printf(format string, a ...interface{}) {
+func (tg Tag) Printf(format string, a ...any) {
 	name := string(tg)
 	str := fmt.Sprintf(format, a...)
 
@@ -538,7 +544,7 @@ func (tg Tag) Printf(format string, a ...interface{}) {
 }
 
 // Println messages line
-func (tg Tag) Println(a ...interface{}) {
+func (tg Tag) Println(a ...any) {
 	name := string(tg)
 	if stl := GetStyle(name); !stl.IsEmpty() {
 		stl.Println(a...)
@@ -548,12 +554,12 @@ func (tg Tag) Println(a ...interface{}) {
 }
 
 // Sprint render messages
-func (tg Tag) Sprint(a ...interface{}) string {
+func (tg Tag) Sprint(a ...any) string {
 	return RenderCode(GetTagCode(string(tg)), a...)
 }
 
 // Sprintf format and render messages
-func (tg Tag) Sprintf(format string, a ...interface{}) string {
+func (tg Tag) Sprintf(format string, a ...any) string {
 	tag := string(tg)
 	str := fmt.Sprintf(format, a...)
 

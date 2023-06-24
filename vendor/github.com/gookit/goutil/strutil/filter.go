@@ -64,6 +64,9 @@ func FilterEmail(s string) string {
 		return s
 	}
 
-	// According to rfc5321, "The local-part of a mailbox MUST BE treated as case sensitive"
+	// According to rfc5321, "The local-part of a mailbox MUST BE treated as case-sensitive"
 	return s[0:i] + "@" + strings.ToLower(s[i+1:])
 }
+
+// func Filter(ss []string, fls ...comdef.StringMatchFunc) []string  {
+// }

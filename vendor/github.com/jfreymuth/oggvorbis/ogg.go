@@ -204,7 +204,7 @@ func (p *page) readHeader(r io.Reader) error {
 	segmentTable := make([]byte, p.PageSegments)
 	_, err = io.ReadFull(r, segmentTable)
 	if err != nil {
-		return err
+		return noEOF(err)
 	}
 	data[22], data[23], data[24], data[25] = 0, 0, 0, 0
 	p.headerChecksum = crcUpdate(0, data)
@@ -231,7 +231,7 @@ func (p *page) readContent(r io.Reader) error {
 	content := make([]byte, p.totalSize)
 	_, err := io.ReadFull(r, content)
 	if err != nil {
-		return err
+		return noEOF(err)
 	}
 	checksum := crcUpdate(p.headerChecksum, content)
 	if checksum != p.PageChecksum {
@@ -245,4 +245,11 @@ func (p *page) readContent(r io.Reader) error {
 	}
 	p.packets[p.packetCount] = content[offset:]
 	return nil
+}
+
+func noEOF(err error) error {
+	if err == io.EOF {
+		return io.ErrUnexpectedEOF
+	}
+	return err
 }

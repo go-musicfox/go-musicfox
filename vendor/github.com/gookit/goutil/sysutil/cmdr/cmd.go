@@ -10,6 +10,7 @@ import (
 
 	"github.com/gookit/goutil"
 	"github.com/gookit/goutil/arrutil"
+	"github.com/gookit/goutil/cliutil/cmdline"
 	"github.com/gookit/goutil/internal/comfunc"
 )
 
@@ -20,6 +21,8 @@ type Cmd struct {
 	Name string
 	// DryRun if True, not real execute command
 	DryRun bool
+	// Vars mapping
+	Vars map[string]string
 
 	// BeforeRun hook
 	BeforeRun func(c *Cmd)
@@ -27,31 +30,38 @@ type Cmd struct {
 	AfterRun func(c *Cmd, err error)
 }
 
-// WrapGoCmd instance
-func WrapGoCmd(cmd *exec.Cmd) *Cmd {
-	return &Cmd{Cmd: cmd}
-}
-
 // NewGitCmd instance
 func NewGitCmd(subCmd string, args ...string) *Cmd {
 	return NewCmd("git", subCmd).AddArgs(args)
+}
+
+// NewCmdline instance
+//
+// see exec.Command
+func NewCmdline(line string) *Cmd {
+	bin, args := cmdline.NewParser(line).WithParseEnv().BinAndArgs()
+	return NewCmd(bin, args...)
 }
 
 // NewCmd instance
 //
 // see exec.Command
 func NewCmd(bin string, args ...string) *Cmd {
-	return &Cmd{
-		Cmd: exec.Command(bin, args...),
-	}
+	return WrapGoCmd(exec.Command(bin, args...))
 }
 
 // CmdWithCtx create new instance with context.
 //
 // see exec.CommandContext
 func CmdWithCtx(ctx context.Context, bin string, args ...string) *Cmd {
+	return WrapGoCmd(exec.CommandContext(ctx, bin, args...))
+}
+
+// WrapGoCmd instance
+func WrapGoCmd(cmd *exec.Cmd) *Cmd {
 	return &Cmd{
-		Cmd: exec.CommandContext(ctx, bin, args...),
+		Cmd:  cmd,
+		Vars: make(map[string]string),
 	}
 }
 
@@ -125,9 +135,36 @@ func (c *Cmd) WithWorkDir(dir string) *Cmd {
 
 // WorkDirOnNE set workdir on input is not empty
 func (c *Cmd) WorkDirOnNE(dir string) *Cmd {
-	if c.Dir == "" {
+	if dir == "" {
 		c.Dir = dir
 	}
+	return c
+}
+
+// WithEnvMap override set new ENV for run
+func (c *Cmd) WithEnvMap(mp map[string]string) *Cmd {
+	if ln := len(mp); ln > 0 {
+		c.Env = make([]string, 0, ln)
+		for key, val := range mp {
+			c.Env = append(c.Env, key+"="+val)
+		}
+	}
+	return c
+}
+
+// AppendEnv to the os ENV for run command
+func (c *Cmd) AppendEnv(mp map[string]string) *Cmd {
+	if len(mp) > 0 {
+		// init env data
+		if c.Env == nil {
+			c.Env = os.Environ()
+		}
+
+		for name, val := range mp {
+			c.Env = append(c.Env, name+"="+val)
+		}
+	}
+
 	return c
 }
 
@@ -223,6 +260,20 @@ func (c *Cmd) WithArgsIf(args []string, exprOk bool) *Cmd {
 	return c
 }
 
+// WithVars add vars and returns the current object
+func (c *Cmd) WithVars(vs map[string]string) *Cmd {
+	if len(vs) > 0 {
+		c.Vars = vs
+	}
+	return c
+}
+
+// SetVar add var and returns the current object
+func (c *Cmd) SetVar(name, val string) *Cmd {
+	c.Vars[name] = val
+	return c
+}
+
 // -------------------------------------------------
 // helper command
 // -------------------------------------------------
@@ -266,6 +317,11 @@ func (c *Cmd) ResetArgs() {
 	} else {
 		c.Args = c.Args[:0]
 	}
+}
+
+// Workdir of the command
+func (c *Cmd) Workdir() string {
+	return c.Dir
 }
 
 // Cmdline to command line

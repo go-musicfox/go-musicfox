@@ -33,6 +33,9 @@ func (w *WriteWrapper) WriteByte(c byte) error {
 
 // WriteString data
 func (w *WriteWrapper) WriteString(s string) (n int, err error) {
+	if sw, ok := w.Out.(io.StringWriter); ok {
+		return sw.WriteString(s)
+	}
 	return w.Out.Write([]byte(s))
 }
 

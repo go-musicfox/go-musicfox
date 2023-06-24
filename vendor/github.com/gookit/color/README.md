@@ -570,6 +570,7 @@ Check out these projects, which use https://github.com/gookit/color :
   - [xo/terminfo](https://github.com/xo/terminfo)
   - [beego/bee](https://github.com/beego/bee)
   - [issue9/term](https://github.com/issue9/term)
+  - [muesli/termenv](https://github.com/muesli/termenv)
   - [ANSI escape code](https://en.wikipedia.org/wiki/ANSI_escape_code)
   - [Standard ANSI color map](https://conemu.github.io/en/AnsiEscapeCodes.html#Standard_ANSI_color_map)
   - [Terminal Colors](https://gist.github.com/XVilka/8346728)

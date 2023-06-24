@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build windows
 // +build windows
 
 package app
@@ -37,10 +38,23 @@ func main(f func(a App)) {
 			}
 		}()
 
-		go f(theApp)
+		donec := make(chan struct{})
+		go func() {
+			// close the donec channel in a defer statement
+			// so that we could still be able to return even
+			// if f panics.
+			defer close(donec)
+
+			f(theApp)
+		}()
 
 		for {
-			theApp.Send(convertEvent(w.NextEvent()))
+			select {
+			case <-donec:
+				return
+			default:
+				theApp.Send(convertEvent(w.NextEvent()))
+			}
 		}
 	})
 }

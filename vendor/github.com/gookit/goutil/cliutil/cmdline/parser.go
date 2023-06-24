@@ -1,10 +1,13 @@
 package cmdline
 
 import (
+	"bytes"
 	"os/exec"
 	"strings"
 
+	"github.com/gookit/goutil/comdef"
 	"github.com/gookit/goutil/internal/comfunc"
+	"github.com/gookit/goutil/strutil"
 )
 
 // LineParser struct
@@ -12,7 +15,7 @@ import (
 type LineParser struct {
 	parsed bool
 	// Line the full input command line text
-	// eg `kite top sub -a "the a message" --foo val1 --bar "val 2"`
+	// eg `kite top sub -a "this is a message" --foo val1 --bar "val 2"`
 	Line string
 	// ParseEnv parse ENV var on the line.
 	ParseEnv bool
@@ -20,17 +23,16 @@ type LineParser struct {
 	nodes []string
 	// the parsed args
 	args []string
+
+	// temp value
+	quoteChar  byte
+	quoteIndex int // if > 0, mark is not on start
+	tempNode   bytes.Buffer
 }
 
 // NewParser create
 func NewParser(line string) *LineParser {
 	return &LineParser{Line: line}
-}
-
-// ParseLine input command line text. alias of the StringToOSArgs()
-func ParseLine(line string) []string {
-	p := &LineParser{Line: line}
-	return p.Parse()
 }
 
 // WithParseEnv with parse ENV var
@@ -43,6 +45,31 @@ func (p *LineParser) WithParseEnv() *LineParser {
 func (p *LineParser) AlsoEnvParse() []string {
 	p.ParseEnv = true
 	return p.Parse()
+}
+
+// NewExecCmd quick create exec.Cmd by cmdline string
+func (p *LineParser) NewExecCmd() *exec.Cmd {
+	// parse get bin and args
+	binName, args := p.BinAndArgs()
+
+	// create a new Cmd instance
+	return exec.Command(binName, args...)
+}
+
+// BinAndArgs get binName and args
+func (p *LineParser) BinAndArgs() (bin string, args []string) {
+	p.Parse() // ensure parsed.
+
+	ln := len(p.args)
+	if ln == 0 {
+		return
+	}
+
+	bin = p.args[0]
+	if ln > 1 {
+		args = p.args[1:]
+	}
+	return
 }
 
 // Parse input command line text to os.Args
@@ -68,98 +95,80 @@ func (p *LineParser) Parse() []string {
 		return p.args
 	}
 
-	// temp value
-	var quoteChar, fullNode string
-	for _, node := range p.nodes {
+	for i := 0; i < len(p.nodes); i++ {
+		node := p.nodes[i]
 		if node == "" {
 			continue
 		}
 
-		nodeLen := len(node)
-		start, end := node[:1], node[nodeLen-1:]
-
-		var clearTemp bool
-		if start == "'" || start == `"` {
-			noStart := node[1:]
-			if quoteChar == "" { // start
-				// only one words. eg: `-m "msg"`
-				if end == start {
-					p.args = append(p.args, node[1:nodeLen-1])
-					continue
-				}
-
-				fullNode += noStart
-				quoteChar = start
-			} else if quoteChar == start { // invalid. eg: `-m "this is "message` `-m "this is "message"`
-				p.appendWithPrefix(strings.Trim(node, quoteChar), fullNode)
-				clearTemp = true // clear temp value
-			} else if quoteChar == end { // eg: `"has inner 'quote'"`
-				p.appendWithPrefix(node[:nodeLen-1], fullNode)
-				clearTemp = true // clear temp value
-			} else { // goon. eg: `-m "the 'some' message"`
-				fullNode += " " + node
-			}
-		} else if end == "'" || end == `"` {
-			noEnd := node[:nodeLen-1]
-			if quoteChar == "" { // end
-				p.appendWithPrefix(noEnd, fullNode)
-				clearTemp = true // clear temp value
-			} else if quoteChar == end { // end
-				p.appendWithPrefix(noEnd, fullNode)
-				clearTemp = true // clear temp value
-			} else { // goon. eg: `-m "the 'some' message"`
-				fullNode += " " + node
-			}
-		} else {
-			if quoteChar != "" {
-				fullNode += " " + node
-			} else {
-				p.args = append(p.args, node)
-			}
-		}
-
-		// clear temp value
-		if clearTemp {
-			quoteChar, fullNode = "", ""
-		}
+		p.parseNode(node)
 	}
 
-	if fullNode != "" {
-		p.args = append(p.args, fullNode)
+	p.nodes = p.nodes[:0]
+	if p.tempNode.Len() > 0 {
+		p.appendTempNode()
 	}
-
 	return p.args
 }
 
-// BinAndArgs get binName and args
-func (p *LineParser) BinAndArgs() (bin string, args []string) {
-	p.Parse() // ensure parsed.
+func (p *LineParser) parseNode(node string) {
+	maxIdx := len(node) - 1
+	start, end := node[0], node[maxIdx]
 
-	ln := len(p.args)
-	if ln == 0 {
+	// in quotes
+	if p.quoteChar != 0 {
+		p.tempNode.WriteByte(' ')
+
+		// end quotes
+		if end == p.quoteChar {
+			if p.quoteIndex > 0 {
+				p.tempNode.WriteString(node) // eg: node="--pretty=format:'one two'"
+			} else {
+				p.tempNode.WriteString(node[:maxIdx]) // remove last quote
+			}
+			p.appendTempNode()
+		} else { // goon ... write to temp node
+			p.tempNode.WriteString(node)
+		}
 		return
 	}
 
-	bin = p.args[0]
-	if ln > 1 {
-		args = p.args[1:]
-	}
-	return
-}
+	// quote start
+	if start == comdef.DoubleQuote || start == comdef.SingleQuote {
+		// only one words. eg: `-m "msg"`
+		if end == start {
+			p.args = append(p.args, node[1:maxIdx])
+			return
+		}
 
-// NewExecCmd quick create exec.Cmd by cmdline string
-func (p *LineParser) NewExecCmd() *exec.Cmd {
-	// parse get bin and args
-	binName, args := p.BinAndArgs()
-
-	// create a new Cmd instance
-	return exec.Command(binName, args...)
-}
-
-func (p *LineParser) appendWithPrefix(node, prefix string) {
-	if prefix != "" {
-		p.args = append(p.args, prefix+" "+node)
+		p.quoteChar = start
+		p.tempNode.WriteString(node[1:])
+	} else if end == comdef.DoubleQuote || end == comdef.SingleQuote {
+		p.args = append(p.args, node) // only one node: `msg"`
 	} else {
-		p.args = append(p.args, node)
+		// eg: --pretty=format:'one two three'
+		if strutil.ContainsByte(node, comdef.DoubleQuote) {
+			p.quoteIndex = 1 // mark is not on start
+			p.quoteChar = comdef.DoubleQuote
+		} else if strutil.ContainsByte(node, comdef.SingleQuote) {
+			p.quoteIndex = 1
+			p.quoteChar = comdef.SingleQuote
+		}
+
+		// in quote, append to temp-node
+		if p.quoteChar != 0 {
+			p.tempNode.WriteString(node)
+		} else {
+			p.args = append(p.args, node)
+		}
 	}
+}
+
+func (p *LineParser) appendTempNode() {
+	p.args = append(p.args, p.tempNode.String())
+
+	// reset context value
+	p.quoteChar = 0
+	p.quoteIndex = 0
+	p.tempNode.Reset()
 }

@@ -8,7 +8,7 @@ import (
 
 var (
 	// output is the default global output.
-	output = NewOutput(nil)
+	output = NewOutput(os.Stdout)
 )
 
 // File represents a file descriptor.
@@ -26,12 +26,13 @@ type Output struct {
 	tty     io.Writer
 	environ Environ
 
-	unsafe  bool
-	cache   bool
-	fgSync  *sync.Once
-	fgColor Color
-	bgSync  *sync.Once
-	bgColor Color
+	assumeTTY bool
+	unsafe    bool
+	cache     bool
+	fgSync    *sync.Once
+	fgColor   Color
+	bgSync    *sync.Once
+	bgColor   Color
 }
 
 // Environ is an interface for getting environment variables.
@@ -55,6 +56,11 @@ func DefaultOutput() *Output {
 	return output
 }
 
+// SetDefaultOutput sets the default global output.
+func SetDefaultOutput(o *Output) {
+	output = o
+}
+
 // NewOutput returns a new Output for the given file descriptor.
 func NewOutput(tty io.Writer, opts ...OutputOption) *Output {
 	o := &Output{
@@ -67,34 +73,34 @@ func NewOutput(tty io.Writer, opts ...OutputOption) *Output {
 		bgColor: NoColor{},
 	}
 
+	if o.tty == nil {
+		o.tty = os.Stdout
+	}
 	for _, opt := range opts {
 		opt(o)
 	}
 	if o.Profile < 0 {
 		o.Profile = o.EnvColorProfile()
 	}
-	if o.tty == nil {
-		o.tty = os.Stdout
-	}
 
 	return o
 }
 
-// WithEnvironment returns a new Output for the given environment.
+// WithEnvironment returns a new OutputOption for the given environment.
 func WithEnvironment(environ Environ) OutputOption {
 	return func(o *Output) {
 		o.environ = environ
 	}
 }
 
-// WithProfile returns a new Output for the given profile.
+// WithProfile returns a new OutputOption for the given profile.
 func WithProfile(profile Profile) OutputOption {
 	return func(o *Output) {
 		o.Profile = profile
 	}
 }
 
-// WithColorCache returns a new Output with fore- and background color values
+// WithColorCache returns a new OutputOption with fore- and background color values
 // pre-fetched and cached.
 func WithColorCache(v bool) OutputOption {
 	return func(o *Output) {
@@ -106,8 +112,18 @@ func WithColorCache(v bool) OutputOption {
 	}
 }
 
-// WithUnsafe returns a new Output with unsafe mode enabled. Unsafe mode doesn't
+// WithTTY returns a new OutputOption to assume whether or not the output is a TTY.
+// This is useful when mocking console output.
+func WithTTY(v bool) OutputOption {
+	return func(o *Output) {
+		o.assumeTTY = v
+	}
+}
+
+// WithUnsafe returns a new OutputOption with unsafe mode enabled. Unsafe mode doesn't
 // check whether or not the terminal is a TTY.
+//
+// This option supersedes WithTTY.
 //
 // This is useful when mocking console output and enforcing ANSI escape output
 // e.g. on SSH sessions.

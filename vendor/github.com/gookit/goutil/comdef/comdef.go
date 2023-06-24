@@ -20,6 +20,19 @@ type StringWriteStringer interface {
 	fmt.Stringer
 }
 
+// StringMatcher interface
+type StringMatcher interface {
+	Match(s string) bool
+}
+
+// StringMatchFunc definition
+type StringMatchFunc func(s string) bool
+
+// Match satisfies the StringMatcher interface
+func (fn StringMatchFunc) Match(s string) bool {
+	return fn(s)
+}
+
 type (
 	// MarshalFunc define
 	MarshalFunc func(v any) ([]byte, error)

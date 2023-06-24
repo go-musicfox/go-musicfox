@@ -23,3 +23,5 @@ const (
 
 // NoIdx invalid index or length
 const NoIdx = -1
+
+// const VarPathReg = `(\w[\w-]*(?:\.[\w-]+)*)`
