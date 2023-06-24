@@ -26,7 +26,7 @@ func main() {
     AppName:     "My test App",
   })
 
-  notify.Push(notificator.UrNormal, "title", "text", "/home/user/icon.png", "https://github.com/anhoder/go-musicfox")
+  notify.Push(notificator.UrNormal, "title", "text", "/home/user/icon.png", "https://github.com/go-musicfox/go-musicfox")
 }
 ```
 
