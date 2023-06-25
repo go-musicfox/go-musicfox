@@ -15,7 +15,7 @@ require (
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.3.0
-	github.com/go-musicfox/netease-music v1.4.0
+	github.com/go-musicfox/netease-music v1.4.1
 	github.com/go-musicfox/notificator v0.1.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
