@@ -19,7 +19,7 @@ require (
 	github.com/go-musicfox/notificator v0.1.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
-	github.com/gookit/ini/v2 v2.1.0
+	github.com/gookit/ini/v2 v2.2.2
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/muesli/termenv v0.15.1

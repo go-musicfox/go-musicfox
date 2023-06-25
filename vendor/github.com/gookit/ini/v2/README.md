@@ -2,12 +2,12 @@
 
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/gookit/ini?style=flat-square)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/gookit/ini)](https://github.com/gookit/ini)
-[![GoDoc](https://pkg.go.dev/github.com/gookit/ini?status.svg)](https://pkg.go.dev/github.com/gookit/ini)
 [![Coverage Status](https://coveralls.io/repos/github/gookit/ini/badge.svg?branch=master)](https://coveralls.io/github/gookit/ini?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/ini)](https://goreportcard.com/report/github.com/gookit/ini)
 [![Unit-Tests](https://github.com/gookit/ini/actions/workflows/go.yml/badge.svg)](https://github.com/gookit/ini)
+[![Go Reference](https://pkg.go.dev/badge/github.com/gookit/ini/v2.svg)](https://pkg.go.dev/github.com/gookit/ini/v2)
 
-INI data parse by golang. INI config data management tool library.
+`INI` contents parser by Golang, `INI` config data management.
 
 > **[中文说明](README.zh-CN.md)**
 
@@ -15,11 +15,21 @@ INI data parse by golang. INI config data management tool library.
 
 - Easy to use(get: `Int` `Int64` `Bool` `String` `StringMap` ..., set: `Set`)
 - Support multi file, data load
-- Support for rebinding data to structure
+- Support for decode data to struct
 - Support data override merge
 - Support parse ENV variable
+- Support comments start with  `;` `#`, multi line comments `/* .. */`
+- Support multi line value with `"""` or `'''`
 - Complete unit test(coverage > 90%)
 - Support variable reference, default compatible with Python's configParser format `%(VAR)s`
+
+### [Parser](./parser)
+
+Package `parser` is a Parser for parse INI format content to golang data
+
+### [Dotenv](./dotenv)
+
+Package `dotenv` that supports importing ENV data from files (eg `.env`)
 
 ## More formats
 
@@ -29,8 +39,7 @@ If you want more support for file content formats, recommended use `gookit/confi
 
 ## GoDoc
 
-- [doc on gowalker](https://gowalker.org/github.com/gookit/ini)
-- [godoc for github](https://pkg.go.dev/github.com/gookit/ini)
+- [godoc](https://pkg.go.dev/github.com/gookit/ini)
 
 ## Install
 
@@ -143,13 +152,13 @@ value := ini.String("sec1.varRef")
 fmt.Printf("%q", value) // "val in default section"
 ```
 
-- Setting new value
+- Set new value
 
 ```go
 // set value
 ini.Set("name", "new name")
 name = ini.String("name")
-fmt.Printf("%q", value) // "new name"
+fmt.Printf("%q", name) // "new name"
 ```
 
 ## Mapping data to struct
@@ -218,17 +227,17 @@ type Options struct {
 }
 ```
 
-- setting options for default instance
+Setting options for default instance:
 
 ```go
 ini.WithOptions(ini.ParseEnv,ini.ParseVar)
 ```
 
-- setting options with new instance
+Setting options with new instance:
 
 ```go
 cfg := ini.New()
-cfg.WithOptions(ini.ParseEnv,ini.ParseVar, func (opts *Options) {
+cfg.WithOptions(ini.ParseEnv, ini.ParseVar, func (opts *Options) {
 	opts.SectionSep = ":"
 	opts.DefSection = "default"
 })
@@ -248,6 +257,9 @@ val := dotenv.Get("ENV_KEY")
 // Or use 
 // val := os.Getenv("ENV_KEY")
 
+// get int value
+intVal := dotenv.Int("LOG_LEVEL")
+
 // with default value
 val := dotenv.Get("ENV_KEY", "default value")
 ```
@@ -266,11 +278,6 @@ go test ./... -cover
 golint ./...
 ```
 
-## Refer 
-
-- [go-ini/ini](https://github.com/go-ini/ini) ini parser and config manage
-- [dombenson/go-ini](https://github.com/dombenson/go-ini) ini parser and config manage
-
 ## Gookit packages
 
 - [gookit/ini](https://github.com/gookit/ini) Go config management, use INI files
@@ -285,6 +292,11 @@ golint ./...
 - [gookit/validate](https://github.com/gookit/validate) Use for data validation and filtering. support Map, Struct, Form data
 - [gookit/goutil](https://github.com/gookit/goutil) Some utils for the Go: string, array/slice, map, format, cli, env, filesystem, test and more
 - More, please see https://github.com/gookit
+
+## Related
+
+- [go-ini/ini](https://github.com/go-ini/ini) ini parser and config manage
+- [dombenson/go-ini](https://github.com/dombenson/go-ini) ini parser and config manage
 
 ## License
 

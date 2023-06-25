@@ -130,11 +130,13 @@ github.com/gookit/goutil/stdio
 github.com/gookit/goutil/stdutil
 github.com/gookit/goutil/structs
 github.com/gookit/goutil/strutil
+github.com/gookit/goutil/strutil/textscan
 github.com/gookit/goutil/strutil/textutil
 github.com/gookit/goutil/sysutil
 github.com/gookit/goutil/sysutil/cmdr
-# github.com/gookit/ini/v2 v2.1.0
-## explicit; go 1.15
+github.com/gookit/goutil/timex
+# github.com/gookit/ini/v2 v2.2.2
+## explicit; go 1.18
 github.com/gookit/ini/v2
 github.com/gookit/ini/v2/parser
 # github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
