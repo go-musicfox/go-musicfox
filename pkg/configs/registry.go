@@ -44,6 +44,11 @@ type Registry struct {
 	MainDownloadDir            string                   // 指定下载目录
 	MainShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
 
+	AutoPlay       bool   // 是否自动开始播放
+	AutoPlayList   string // 自动播放列表：dailyReco（每日推荐）、like（我喜欢的音乐）、no（保持上次退出时的设置，无视offset）、name:[歌单名]
+	AutoPlayOffset int    // 播放偏移：0为歌单第一项，-1为歌单最后一项
+	AutoPlayMode   string // 播放模式: listLoop, order, singleLoop, random（无视offset）, intelligent（心动）, last（上次退出时的模式），默认为last
+
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
 	UNMSearchLimit        int      // UNM其他平台搜索限制
@@ -88,6 +93,11 @@ func NewRegistryWithDefault() *Registry {
 		MainEnableMouseEvent: true,
 		PlayerEngine:         constants.BeepPlayer,
 		PlayerBeepMp3Decoder: constants.BeepGoMp3Decoder,
+
+		AutoPlay:       false,
+		AutoPlayList:   "dailyReco",
+		AutoPlayOffset: 0,
+		AutoPlayMode:   "last",
 
 		UNMSwitch:             true,
 		UNMSources:            []string{constants.UNMDefaultSources},
@@ -164,6 +174,12 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.PlayerMpdConfigFile = ini.String("player.mpdConfigFile", "")
 	registry.PlayerMpdNetwork = ini.String("player.mpdNetwork", "")
 	registry.PlayerMpdAddr = ini.String("player.mpdAddr", "")
+
+	// Auto play
+	registry.AutoPlay = ini.Bool("autoplay.autoPlay")
+	registry.AutoPlayList = ini.String("autoplay.autoPlayList")
+	registry.AutoPlayOffset = ini.Int("autoplay.offset")
+	registry.AutoPlayMode = ini.String("autoplay.playMode")
 
 	// UNM
 	registry.UNMSwitch = ini.Bool("unm.switch", true)

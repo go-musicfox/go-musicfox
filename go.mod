@@ -62,6 +62,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.10.0 // indirect
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/exp/shiny v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/image v0.8.0 // indirect
 	golang.org/x/mobile v0.0.0-20230531173138-3c911d8e3eda // indirect
