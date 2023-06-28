@@ -89,7 +89,7 @@ func GetRecentSongs(data []byte) (list []structs.Song) {
 	return
 }
 
-// GetDailyPlaylists 获取播放列表
+// GetDailyPlaylists 获取每日推荐歌单
 func GetDailyPlaylists(data []byte) (list []structs.Playlist) {
 
 	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
