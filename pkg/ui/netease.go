@@ -2,9 +2,12 @@ package ui
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
@@ -213,6 +216,136 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				Url:   constants.AppLatestReleases,
 			})
 		}
+
+		// 自动播放
+		if configs.ConfigRegistry.AutoPlay {
+			var notice string // 错误通知文本
+			var index int     // 歌曲索引
+			var length int    // 歌单长度（用于获取歌曲索引）
+			var allFlag bool  // 用于标记是否需要获取全部歌曲的flag
+			if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+				notice = "账号未登录"
+				goto Complete
+			}
+			if configs.ConfigRegistry.AutoPlayOffset >= 0 && configs.ConfigRegistry.AutoPlayOffset >= 1000 || configs.ConfigRegistry.AutoPlayOffset < 0 {
+				allFlag = true
+			}
+			switch configs.ConfigRegistry.AutoPlayList {
+			case "dailyReco":
+				recommendSongs := service.RecommendSongsService{}
+				code, response := recommendSongs.RecommendSongs()
+				codeType := utils.CheckCode(code)
+				if codeType != utils.Success {
+					notice = "网络错误"
+					goto Complete
+				}
+				m.player.playlist = utils.GetDailySongs(response)
+			case "like":
+				userPlaylists := service.UserPlaylistService{
+					Uid:    strconv.FormatInt(m.user.UserId, 10),
+					Limit:  "1",
+					Offset: "0",
+				}
+				code, response := userPlaylists.UserPlaylist()
+				codeType := utils.CheckCode(code)
+				if codeType != utils.Success {
+					notice = "网络错误"
+					goto Complete
+				}
+				playlistId := utils.GetPlaylists(response)[0].Id
+				if !allFlag {
+					playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(playlistId, 10), S: "0"} // 最近S个收藏者，设为0
+					code, response = playlistDetail.PlaylistDetail()
+				} else {
+					allTrack := service.PlaylistTrackAllService{Id: strconv.FormatInt(playlistId, 10), S: "0"} // 最近S个收藏者，设为0
+					code, response = allTrack.AllTracks()
+				}
+				codeType = utils.CheckCode(code)
+				if codeType != utils.Success {
+					notice = "网络错误"
+					goto Complete
+				}
+				m.player.playlist = utils.GetSongsOfPlaylist(response)
+			default:
+				if !strings.HasPrefix(configs.ConfigRegistry.AutoPlayList, "name:") {
+					notice = fmt.Sprintf("歌单格式错误：%s", configs.ConfigRegistry.AutoPlayList)
+					goto Complete
+				}
+				name := configs.ConfigRegistry.AutoPlayList[5:]
+				var playlistId int64
+				hasMore := true
+				offset := 0
+				for hasMore {
+					userPlaylists := service.UserPlaylistService{
+						Uid:    strconv.FormatInt(m.user.UserId, 10),
+						Limit:  "30",
+						Offset: strconv.Itoa(offset),
+					}
+					code, response := userPlaylists.UserPlaylist()
+					codeType := utils.CheckCode(code)
+					if codeType != utils.Success {
+						notice = "网络错误"
+						goto Complete
+					}
+					list := utils.GetPlaylists(response)
+					offset += len(list)
+					for _, playlist := range list {
+						if playlist.Name == name {
+							playlistId = playlist.Id
+							goto Ok
+						}
+					}
+				}
+				notice = fmt.Sprintf("未找到歌单：%s", name)
+				goto Complete
+			Ok:
+				var code float64
+				var response []byte
+				if !allFlag {
+					playlistDetail := service.PlaylistDetailService{Id: strconv.FormatInt(playlistId, 10), S: "0"} // 最近S个收藏者，设为0
+					code, response = playlistDetail.PlaylistDetail()
+				} else {
+					allTrack := service.PlaylistTrackAllService{Id: strconv.FormatInt(playlistId, 10), S: "0"} // 最近S个收藏者，设为0
+					code, response = allTrack.AllTracks()
+				}
+				codeType := utils.CheckCode(code)
+				if codeType != utils.Success {
+					notice = "网络错误"
+					goto Complete
+				}
+				m.player.playlist = utils.GetSongsOfPlaylist(response)
+			}
+			length = len(m.player.playlist)
+			if !configs.ConfigRegistry.AutoPlayRandom {
+				if configs.ConfigRegistry.AutoPlayOffset >= 0 {
+					if configs.ConfigRegistry.AutoPlayOffset >= length {
+						notice = fmt.Sprintf("无效的偏移量：%d", configs.ConfigRegistry.AutoPlayOffset)
+						goto Complete
+					} else {
+						index = configs.ConfigRegistry.AutoPlayOffset
+					}
+				} else {
+					if -(configs.ConfigRegistry.AutoPlayOffset) > length {
+						notice = fmt.Sprintf("无效的偏移量：%d", configs.ConfigRegistry.AutoPlayOffset)
+						goto Complete
+					} else {
+						index = (configs.ConfigRegistry.AutoPlayOffset + length) % length
+					}
+				}
+			} else {
+				rand.Seed(time.Now().UnixMicro())
+				index = rand.Intn(length)
+			}
+			m.player.PlaySong(m.player.playlist[index], DurationNext)
+		Complete:
+			if notice != "" {
+				utils.Notify(utils.NotifyContent{
+					Title: "自动播放失败",
+					Text:  notice,
+				})
+			}
+		}
+
 	}()
 
 	if configs.ConfigRegistry.StartupShow {
