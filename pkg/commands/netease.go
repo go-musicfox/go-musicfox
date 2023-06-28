@@ -41,7 +41,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	if configs.ConfigRegistry.MainAltScreen {
 		opts = append(opts, tea.WithAltScreen())
 	}
-	program := tea.ReplaceWithMusicfoxRenderer(tea.NewProgram(neteaseModel, opts...))
+	program := tea.ReplaceWithFoxfulRenderer(tea.NewProgram(neteaseModel, opts...))
 	neteaseModel.BindProgram(program)
 
 	_, err := program.Run()

@@ -1,11 +1,12 @@
 package ui
 
 import (
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
@@ -13,10 +14,10 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"github.com/pkg/errors"

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build darwin && !ios
 // +build darwin
 // +build !ios
 
@@ -33,6 +34,7 @@ uint64 threadID() {
 
 @implementation MobileGLView
 - (void)prepareOpenGL {
+	[super prepareOpenGL];
 	[self setWantsBestResolutionOpenGLSurface:YES];
 	GLint swapInt = 1;
 

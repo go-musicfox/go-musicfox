@@ -14,9 +14,18 @@ go get github.com/gookit/goutil/byteutil
 
 ## Functions API
 
+> **Note**: doc by run `go doc ./byteutil`
+
 ```go
-var HexEncoder = NewStdEncoder(func(src []byte) []byte { ... }, func(src []byte) ([]byte, error) { ... }) ...
+func AppendAny(dst []byte, v any) []byte
+func FirstLine(bs []byte) []byte
+func IsNumChar(c byte) bool
 func Md5(src any) []byte
+func Random(length int) ([]byte, error)
+func SafeString(bs []byte, err error) string
+func StrOrErr(bs []byte, err error) (string, error)
+func String(b []byte) string
+func ToString(b []byte) string
 type Buffer struct{ ... }
 func NewBuffer() *Buffer
 type BytesEncoder interface{ ... }

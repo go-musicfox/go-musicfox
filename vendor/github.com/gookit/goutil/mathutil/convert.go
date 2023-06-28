@@ -172,6 +172,12 @@ func Int64(in any) (int64, error) {
 	return ToInt64(in)
 }
 
+// SafeInt64 convert value to int64, will ignore error
+func SafeInt64(in any) int64 {
+	i64, _ := ToInt64(in)
+	return i64
+}
+
 // QuietInt64 convert value to int64, will ignore error
 func QuietInt64(in any) int64 {
 	i64, _ := ToInt64(in)
@@ -382,8 +388,8 @@ func TryToString(val any, defaultAsErr bool) (str string, err error) {
 	case float64:
 		str = strconv.FormatFloat(value, 'f', -1, 64)
 	case time.Duration:
-		str = strconv.FormatUint(uint64(value.Nanoseconds()), 10)
-	case json.Number:
+		str = strconv.FormatInt(int64(value), 10)
+	case fmt.Stringer:
 		str = value.String()
 	default:
 		if defaultAsErr {

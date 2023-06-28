@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -28,7 +27,7 @@ func RSAGenerateKey(bits int, out io.Writer) error {
 // RSAGeneratePublicKey generate RSA public key
 func RSAGeneratePublicKey(priKey []byte, out io.Writer) error {
 	block, _ := pem.Decode(priKey)
-	if block == nil{
+	if block == nil {
 		return errors.New("key is invalid format")
 	}
 
@@ -51,7 +50,7 @@ func RSAGeneratePublicKey(priKey []byte, out io.Writer) error {
 // RSAEncrypt RSA encrypt
 func RSAEncrypt(src, pubKey []byte) ([]byte, error) {
 	block, _ := pem.Decode(pubKey)
-	if block == nil{
+	if block == nil {
 		return nil, errors.New("key is invalid format")
 	}
 
@@ -77,7 +76,7 @@ func RSAEncrypt(src, pubKey []byte) ([]byte, error) {
 // RSADecrypt RSA decrypt
 func RSADecrypt(src, priKey []byte) ([]byte, error) {
 	block, _ := pem.Decode(priKey)
-	if block == nil{
+	if block == nil {
 		return nil, errors.New("key is invalid format")
 	}
 
@@ -95,10 +94,10 @@ func RSADecrypt(src, priKey []byte) ([]byte, error) {
 	return dst, nil
 }
 
-// RSASign RSA sign, use crypto.SHA256
-func RSASign(src []byte, priKey []byte) ([]byte, error) {
+// RSASign RSA sign
+func RSASign(src []byte, priKey []byte, hash crypto.Hash) ([]byte, error) {
 	block, _ := pem.Decode(priKey)
-	if block == nil{
+	if block == nil {
 		return nil, errors.New("key is invalid format")
 	}
 
@@ -108,14 +107,14 @@ func RSASign(src []byte, priKey []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	hash := sha256.New()
-	_, err = hash.Write(src)
+	h := hash.New()
+	_, err = h.Write(src)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes := hash.Sum(nil)
-	sign, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, bytes)
+	bytes := h.Sum(nil)
+	sign, err := rsa.SignPKCS1v15(rand.Reader, privateKey, hash, bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -123,10 +122,10 @@ func RSASign(src []byte, priKey []byte) ([]byte, error) {
 	return sign, nil
 }
 
-// RSAVerify RSA Verify
-func RSAVerify(src, sign, pubKey []byte) error {
+// RSAVerify RSA verify
+func RSAVerify(src, sign, pubKey []byte, hash crypto.Hash) error {
 	block, _ := pem.Decode(pubKey)
-	if block == nil{
+	if block == nil {
 		return errors.New("key is invalid format")
 	}
 
@@ -141,13 +140,13 @@ func RSAVerify(src, sign, pubKey []byte) error {
 		return errors.New("the kind of key is not a rsa.PublicKey")
 	}
 
-	hash := sha256.New()
-	_, err = hash.Write(src)
+	h := hash.New()
+	_, err = h.Write(src)
 	if err != nil {
 		return err
 	}
 
-	bytes := hash.Sum(nil)
+	bytes := h.Sum(nil)
 
-	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, bytes, sign)
+	return rsa.VerifyPKCS1v15(publicKey, hash, bytes, sign)
 }

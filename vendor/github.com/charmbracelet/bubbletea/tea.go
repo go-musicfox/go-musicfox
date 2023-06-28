@@ -58,7 +58,23 @@ type Model interface {
 // update function.
 type Cmd func() Msg
 
-type handlers []chan struct{}
+type inputType int
+
+const (
+	defaultInput inputType = iota
+	ttyInput
+	customInput
+)
+
+// String implements the stringer interface for [inputType]. It is inteded to
+// be used in testing.
+func (i inputType) String() string {
+	return [...]string{
+		"default input",
+		"tty input",
+		"custom input",
+	}[i]
+}
 
 // Options to customize the program during its initialization. These are
 // generally set with ProgramOptions.
@@ -74,8 +90,6 @@ const (
 	withAltScreen startupOptions = 1 << iota
 	withMouseCellMotion
 	withMouseAllMotion
-	withInputTTY
-	withCustomInput
 	withANSICompressor
 	withoutSignalHandler
 
@@ -86,6 +100,29 @@ const (
 	withoutCatchPanics
 )
 
+// handlers manages series of channels returned by various processes. It allows
+// us to wait for those processes to terminate before exiting the program.
+type handlers []chan struct{}
+
+// Adds a channel to the list of handlers. We wait for all handlers to terminate
+// gracefully on shutdown.
+func (h *handlers) add(ch chan struct{}) {
+	*h = append(*h, ch)
+}
+
+// shutdown waits for all handlers to terminate.
+func (h handlers) shutdown() {
+	var wg sync.WaitGroup
+	for _, ch := range h {
+		wg.Add(1)
+		go func(ch chan struct{}) {
+			<-ch
+			wg.Done()
+		}(ch)
+	}
+	wg.Wait()
+}
+
 // Program is a terminal user interface.
 type Program struct {
 	initialModel Model
@@ -94,11 +131,14 @@ type Program struct {
 	// treated as bits. These options can be set via various ProgramOptions.
 	startupOptions startupOptions
 
+	inputType inputType
+
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	msgs chan Msg
-	errs chan error
+	msgs     chan Msg
+	errs     chan error
+	finished chan struct{}
 
 	// where to send output, this will usually be os.Stdout.
 	output        *termenv.Output
@@ -123,22 +163,27 @@ type Program struct {
 	// as this value only comes into play on Windows, hence the ignore comment
 	// below.
 	windowsStdin *os.File //nolint:golint,structcheck,unused
+
+	filter func(Model, Msg) Msg
+
+	// fps is the frames per second we should set on the renderer, if
+	// applicable,
+	fps int
 }
 
 // Quit is a special command that tells the Bubble Tea program to exit.
 func Quit() Msg {
-	return quitMsg{}
+	return QuitMsg{}
 }
 
-// quitMsg in an internal message signals that the program should quit. You can
-// send a quitMsg with Quit.
-type quitMsg struct{}
+// QuitMsg signals that the program should quit. You can send a QuitMsg with
+// Quit.
+type QuitMsg struct{}
 
 // NewProgram creates a new Program.
 func NewProgram(model Model, opts ...ProgramOption) *Program {
 	p := &Program{
 		initialModel: model,
-		input:        os.Stdin,
 		msgs:         make(chan Msg),
 	}
 
@@ -194,7 +239,7 @@ func (p *Program) handleSignals() chan struct{} {
 
 			case <-sig:
 				if !p.ignoreSignals {
-					p.msgs <- quitMsg{}
+					p.msgs <- QuitMsg{}
 					return
 				}
 			}
@@ -267,9 +312,17 @@ func (p *Program) eventLoop(model Model, cmds chan Cmd) (Model, error) {
 			return model, err
 
 		case msg := <-p.msgs:
+			// Filter messages.
+			if p.filter != nil {
+				msg = p.filter(model, msg)
+			}
+			if msg == nil {
+				continue
+			}
+
 			// Handle special internal messages.
 			switch msg := msg.(type) {
-			case quitMsg:
+			case QuitMsg:
 				return model, nil
 
 			case clearScreenMsg:
@@ -314,6 +367,7 @@ func (p *Program) eventLoop(model Model, cmds chan Cmd) (Model, error) {
 						if cmd == nil {
 							continue
 						}
+
 						msg := cmd()
 						if batchMsg, ok := msg.(BatchMsg); ok {
 							g, _ := errgroup.WithContext(p.ctx)
@@ -324,12 +378,13 @@ func (p *Program) eventLoop(model Model, cmds chan Cmd) (Model, error) {
 									return nil
 								})
 							}
+
 							//nolint:errcheck
 							g.Wait() // wait for all commands from batch msg to finish
 							continue
-						} else {
-							p.Send(msg)
 						}
+
+						p.Send(msg)
 					}
 				}()
 			}
@@ -354,24 +409,20 @@ func (p *Program) Run() (Model, error) {
 	handlers := handlers{}
 	cmds := make(chan Cmd)
 	p.errs = make(chan error)
+	p.finished = make(chan struct{}, 1)
 
 	defer p.cancel()
 
-	switch {
-	case p.startupOptions.has(withInputTTY):
-		// Open a new TTY, by request
-		f, err := openInputTTY()
-		if err != nil {
-			return p.initialModel, err
-		}
-		defer f.Close() //nolint:errcheck
-		p.input = f
+	switch p.inputType {
+	case defaultInput:
+		p.input = os.Stdin
 
-	case !p.startupOptions.has(withCustomInput):
-		// If the user hasn't set a custom input, and input's not a terminal,
-		// open a TTY so we can capture input as normal. This will allow things
-		// to "just work" in cases where data was piped or redirected into this
-		// application.
+		// The user has not set a custom input, so we need to check whether or
+		// not standard input is a terminal. If it's not, we open a new TTY for
+		// input. This will allow things to "just work" in cases where data was
+		// piped in or redirected to the application.
+		//
+		// To disable input entirely pass nil to the [WithInput] program option.
 		f, isFile := p.input.(*os.File)
 		if !isFile {
 			break
@@ -386,6 +437,18 @@ func (p *Program) Run() (Model, error) {
 		}
 		defer f.Close() //nolint:errcheck
 		p.input = f
+
+	case ttyInput:
+		// Open a new TTY, by request
+		f, err := openInputTTY()
+		if err != nil {
+			return p.initialModel, err
+		}
+		defer f.Close() //nolint:errcheck
+		p.input = f
+
+	case customInput:
+		// (There is nothing extra to do.)
 	}
 
 	// Handle signals.
@@ -407,7 +470,7 @@ func (p *Program) Run() (Model, error) {
 
 	// If no renderer is set use the standard one.
 	if p.renderer == nil {
-		p.renderer = newRenderer(p.output, p.startupOptions.has(withANSICompressor))
+		p.renderer = newRenderer(p.output, p.startupOptions.has(withANSICompressor), p.fps)
 	}
 
 	// Check if output is a TTY before entering raw mode, hiding the cursor and
@@ -543,6 +606,11 @@ func (p *Program) Kill() {
 	p.cancel()
 }
 
+// Wait waits/blocks until the underlying Program finished shutting down.
+func (p *Program) Wait() {
+	<-p.finished
+}
+
 // shutdown performs operations to free up resources and restore the terminal
 // to its original state.
 func (p *Program) shutdown(kill bool) {
@@ -558,6 +626,7 @@ func (p *Program) shutdown(kill bool) {
 	if p.restoreOutput != nil {
 		_ = p.restoreOutput()
 	}
+	p.finished <- struct{}{}
 }
 
 // ReleaseTerminal restores the original terminal state and cancels the input
@@ -631,21 +700,13 @@ func (p *Program) Printf(template string, args ...interface{}) {
 	}
 }
 
-// Adds a handler to the list of handlers. We wait for all handlers to terminate
-// gracefully on shutdown.
-func (h *handlers) add(ch chan struct{}) {
-	*h = append(*h, ch)
+type flusher interface {
+	flush()
 }
 
-// Shutdown waits for all handlers to terminate.
-func (h handlers) shutdown() {
-	var wg sync.WaitGroup
-	for _, ch := range h {
-		wg.Add(1)
-		go func(ch chan struct{}) {
-			<-ch
-			wg.Done()
-		}(ch)
+// Rerender use last render ui to refresh.
+func (p *Program) Rerender() {
+	if f, ok := p.renderer.(flusher); ok {
+		f.flush()
 	}
-	wg.Wait()
 }

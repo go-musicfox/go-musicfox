@@ -11,6 +11,7 @@ import (
 )
 
 // OrCond return s1 on cond is True, OR return s2.
+// Like: cond ? s1 : s2
 func OrCond(cond bool, s1, s2 string) string {
 	if cond {
 		return s1
@@ -18,12 +19,12 @@ func OrCond(cond bool, s1, s2 string) string {
 	return s2
 }
 
-// OrElse return s OR nv(new-value) on s is empty
-func OrElse(s, newVal string) string {
+// OrElse return s OR orVal(new-value) on s is empty
+func OrElse(s, orVal string) string {
 	if s != "" {
 		return s
 	}
-	return newVal
+	return orVal
 }
 
 // OrHandle return fn(s) on s is not empty.
@@ -52,12 +53,16 @@ func Valid(ss ...string) string {
 //
 //	strings.NewReplacer("old1", "new1", "old2", "new2").Replace(str)
 func Replaces(str string, pairs map[string]string) string {
+	return NewReplacer(pairs).Replace(str)
+}
+
+// NewReplacer instance
+func NewReplacer(pairs map[string]string) *strings.Replacer {
 	ss := make([]string, len(pairs)*2)
 	for old, newVal := range pairs {
 		ss = append(ss, old, newVal)
 	}
-
-	return strings.NewReplacer(ss...).Replace(str)
+	return strings.NewReplacer(ss...)
 }
 
 // PrettyJSON get pretty Json string

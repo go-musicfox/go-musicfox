@@ -2,22 +2,35 @@
 
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/gookit/ini?style=flat-square)
 [![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/gookit/ini)](https://github.com/gookit/ini)
-[![GoDoc](https://pkg.go.dev/github.com/gookit/ini?status.svg)](https://pkg.go.dev/github.com/gookit/ini)
+[![GoDoc](https://godoc.org/github.com/gookit/ini?status.svg)](https://pkg.go.dev/github.com/gookit/ini)
 [![Coverage Status](https://coveralls.io/repos/github/gookit/ini/badge.svg?branch=master)](https://coveralls.io/github/gookit/ini?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gookit/ini)](https://goreportcard.com/report/github.com/gookit/ini)
 [![Unit-Tests](https://github.com/gookit/ini/actions/workflows/go.yml/badge.svg)](https://github.com/gookit/ini)
 
-使用INI格式作为配置，配置数据的加载，管理，使用。
+INI格式内容解析; 使用INI格式作为配置，配置数据的加载，管理，使用。
 
 > **[EN README](README.md)**
+
+## 功能简介
 
 - 使用简单(获取: `Int` `Int64` `Bool` `String` `StringMap` ..., 设置: `Set` )
 - 支持多文件，数据加载
 - 支持数据覆盖合并
-- 支持将数据重新绑定到结构体
-- 支持解析 ENV 变量名
-- 支持变量参考，默认兼容Python的configParser格式 `%(VAR)s`
+- 支持将数据绑定到结构体
+- 支持解析 `ENV` 变量名
+- 支持使用 `;` `#` 注释一行, 同时支持多行注释 `/* .. */`
+- 支持使用 `"""` or `'''` 编写多行值
+- 支持变量参考引用
+  - 默认兼容 Python 的 configParser 格式 `%(VAR)s`
 - 完善的单元测试(coverage > 90%)
+
+### [Parser](./parser)
+
+子包 `parser` - 实现了解析 `INI` 格式内容为 Go 数据
+
+### [Dotenv](./dotenv)
+
+子包 `dotenv` - 提供了加载解析 `.env` 文件数据为ENV环境变量
 
 ## 更多格式
 
@@ -147,7 +160,7 @@ fmt.Printf("%q", value)  // "val in default section"
 // set value
 ini.Set("name", "new name")
 name = ini.String("name")
-fmt.Printf("%q", value)  // "new name"
+fmt.Printf("%q", name)  // "new name"
 ```
 
 ### 将数据映射到结构
@@ -240,6 +253,9 @@ val := dotenv.Get("ENV_KEY")
 // Or use 
 // val := os.Getenv("ENV_KEY")
 
+// get int value
+intVal := dotenv.Int("LOG_LEVEL")
+
 // with default value
 val := dotenv.Get("ENV_KEY", "default value")
 ```
@@ -258,11 +274,6 @@ go test ./... -cover
 golint ./... 
 ```
 
-## 参考 
-
-- [go-ini/ini](https://github.com/go-ini/ini) ini parser and config manage
-- [dombenson/go-ini](https://github.com/dombenson/go-ini) ini parser and config manage
-
 ## Gookit packages
 
 - [gookit/ini](https://github.com/gookit/ini) Go config management, use INI files
@@ -277,6 +288,11 @@ golint ./...
 - [gookit/validate](https://github.com/gookit/validate) Use for data validation and filtering. support Map, Struct, Form data
 - [gookit/goutil](https://github.com/gookit/goutil) Some utils for the Go: string, array/slice, map, format, cli, env, filesystem, test and more
 - More, please see https://github.com/gookit
+
+## 相关项目参考
+
+- [go-ini/ini](https://github.com/go-ini/ini) ini parser and config manage
+- [dombenson/go-ini](https://github.com/dombenson/go-ini) ini parser and config manage
 
 ## License
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 
-	"github.com/anhoder/netease-music/service"
+	"github.com/go-musicfox/netease-music/service"
 	"github.com/gookit/ini/v2"
 )
 

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anhoder/netease-music/service"
+	"github.com/go-musicfox/netease-music/service"
 )
 
 // 播放结束上报网易云

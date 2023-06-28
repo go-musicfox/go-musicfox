@@ -188,57 +188,65 @@ func (c Color) Text(message string) string { return RenderString(c.String(), mes
 // Render messages by color setting
 //
 // Usage:
-// 		green := color.FgGreen.Render
-// 		fmt.Println(green("message"))
-func (c Color) Render(a ...interface{}) string { return RenderCode(c.String(), a...) }
+//
+//	green := color.FgGreen.Render
+//	fmt.Println(green("message"))
+func (c Color) Render(a ...any) string { return RenderCode(c.String(), a...) }
 
 // Renderln messages by color setting.
 // like Println, will add spaces for each argument
 //
 // Usage:
-// 		green := color.FgGreen.Renderln
-// 		fmt.Println(green("message"))
-func (c Color) Renderln(a ...interface{}) string { return RenderWithSpaces(c.String(), a...) }
+//
+//	green := color.FgGreen.Renderln
+//	fmt.Println(green("message"))
+func (c Color) Renderln(a ...any) string { return RenderWithSpaces(c.String(), a...) }
 
 // Sprint render messages by color setting. is alias of the Render()
-func (c Color) Sprint(a ...interface{}) string { return RenderCode(c.String(), a...) }
+func (c Color) Sprint(a ...any) string { return RenderCode(c.String(), a...) }
 
 // Sprintf format and render message.
 //
 // Usage:
-// 	green := color.Green.Sprintf
-//  colored := green("message")
-func (c Color) Sprintf(format string, args ...interface{}) string {
+//
+//		green := color.Green.Sprintf
+//	 colored := green("message")
+func (c Color) Sprintf(format string, args ...any) string {
 	return RenderString(c.String(), fmt.Sprintf(format, args...))
 }
 
 // Print messages.
 //
 // Usage:
-// 		color.Green.Print("message")
+//
+//	color.Green.Print("message")
+//
 // OR:
-// 		green := color.FgGreen.Print
-// 		green("message")
-func (c Color) Print(args ...interface{}) {
+//
+//	green := color.FgGreen.Print
+//	green("message")
+func (c Color) Print(args ...any) {
 	doPrintV2(c.Code(), fmt.Sprint(args...))
 }
 
 // Printf format and print messages.
 //
 // Usage:
-// 		color.Cyan.Printf("string %s", "arg0")
-func (c Color) Printf(format string, a ...interface{}) {
+//
+//	color.Cyan.Printf("string %s", "arg0")
+func (c Color) Printf(format string, a ...any) {
 	doPrintV2(c.Code(), fmt.Sprintf(format, a...))
 }
 
 // Println messages with new line
-func (c Color) Println(a ...interface{}) { doPrintlnV2(c.String(), a) }
+func (c Color) Println(a ...any) { doPrintlnV2(c.String(), a) }
 
 // Light current color. eg: 36(FgCyan) -> 96(FgLightCyan).
 //
 // Usage:
-// 	lightCyan := Cyan.Light()
-// 	lightCyan.Print("message")
+//
+//	lightCyan := Cyan.Light()
+//	lightCyan.Print("message")
 func (c Color) Light() Color {
 	val := int(c)
 	if val >= 30 && val <= 47 {
@@ -252,8 +260,9 @@ func (c Color) Light() Color {
 // Darken current color. eg. 96(FgLightCyan) -> 36(FgCyan)
 //
 // Usage:
-// 	cyan := LightCyan.Darken()
-// 	cyan.Print("message")
+//
+//	cyan := LightCyan.Darken()
+//	cyan.Print("message")
 func (c Color) Darken() Color {
 	val := int(c)
 	if val >= 90 && val <= 107 {
@@ -461,9 +470,7 @@ func Fg2Bg(val uint8) uint8 {
 }
 
 // Basic2nameMap data
-func Basic2nameMap() map[uint8]string {
-	return basic2nameMap
-}
+func Basic2nameMap() map[uint8]string { return basic2nameMap }
 
 // func initName2basicMap() map[string]uint8 {
 // 	n2b := make(map[string]uint8, len(basic2nameMap))

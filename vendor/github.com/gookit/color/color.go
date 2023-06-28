@@ -183,7 +183,7 @@ func InnerErrs() []error {
 // Usage:
 //
 //	msg := RenderCode("3;32;45", "some", "message")
-func RenderCode(code string, args ...interface{}) string {
+func RenderCode(code string, args ...any) string {
 	var message string
 	if ln := len(args); ln == 0 {
 		return ""
@@ -205,7 +205,7 @@ func RenderCode(code string, args ...interface{}) string {
 
 // RenderWithSpaces Render code with spaces.
 // If the number of args is > 1, a space will be added between the args
-func RenderWithSpaces(code string, args ...interface{}) string {
+func RenderWithSpaces(code string, args ...any) string {
 	msg := formatArgsForPrintln(args)
 	if len(code) == 0 {
 		return msg

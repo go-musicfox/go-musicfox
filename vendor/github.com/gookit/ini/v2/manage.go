@@ -2,19 +2,20 @@ package ini
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/gookit/goutil/envutil"
+	"github.com/gookit/goutil/maputil"
+	"github.com/gookit/goutil/strutil"
+	"github.com/gookit/ini/v2/parser"
 	"github.com/mitchellh/mapstructure"
 )
 
 /*************************************************************
- * get config
+ * read config value
  *************************************************************/
 
 // GetValue get a value by key string.
@@ -22,9 +23,9 @@ import (
 func GetValue(key string) (string, bool) { return dc.GetValue(key) }
 
 // GetValue a value by key string.
+//
 // you can use '.' split for get value in a special section
 func (c *Ini) GetValue(key string) (val string, ok bool) {
-	// if not is readonly
 	if !c.opts.Readonly {
 		c.lock.Lock()
 		defer c.lock.Unlock()
@@ -45,14 +46,7 @@ func (c *Ini) GetValue(key string) (val string, ok bool) {
 
 	// if enable parse var refer
 	if c.opts.ParseVar {
-		// must close lock. because parseVarReference() maybe loop call Get()
-		if !c.opts.Readonly {
-			c.lock.Unlock()
-			val = c.parseVarReference(key, val, strMap)
-			c.lock.Lock()
-		} else {
-			val = c.parseVarReference(key, val, strMap)
-		}
+		val = c.parseVarReference(key, val, strMap)
 	}
 
 	// if opts.ParseEnv is true. will parse like: "${SHELL}"
@@ -62,11 +56,27 @@ func (c *Ini) GetValue(key string) (val string, ok bool) {
 	return
 }
 
-// Get get a value by key string.
+func (c *Ini) getValue(key string) (val string, ok bool) {
+	if key = c.formatKey(key); key == "" {
+		return
+	}
+
+	// get section data
+	name, key := c.splitSectionAndKey(key)
+
+	// get value
+	if strMap, has := c.data[name]; has {
+		val, ok = strMap[key]
+	}
+	return
+}
+
+// Get a value by key string.
 // you can use '.' split for get value in a special section
 func Get(key string, defVal ...string) string { return dc.Get(key, defVal...) }
 
 // Get a value by key string.
+//
 // you can use '.' split for get value in a special section
 func (c *Ini) Get(key string, defVal ...string) string {
 	value, ok := c.GetValue(key)
@@ -147,16 +157,8 @@ func Bool(key string, defVal ...bool) bool { return dc.Bool(key, defVal...) }
 
 // Bool Looks up a value for a key in this section and attempts to parse that value as a boolean,
 // along with a boolean result similar to a map lookup.
-// of following(case insensitive):
-//  - true
-//  - false
-//  - yes
-//  - no
-//  - off
-//  - on
-//  - 0
-//  - 1
-// The `ok` boolean will be false in the event that the value could not be parsed as a bool
+//
+// The `value` boolean will be false in the event that the value could not be parsed as a bool
 func (c *Ini) Bool(key string, defVal ...bool) (value bool) {
 	rawVal, ok := c.GetValue(key)
 	if !ok {
@@ -166,15 +168,12 @@ func (c *Ini) Bool(key string, defVal ...bool) (value bool) {
 		return
 	}
 
-	lowerCase := strings.ToLower(rawVal)
-	switch lowerCase {
-	case "", "0", "false", "no", "off":
-		value = false
-	case "1", "true", "yes", "on":
-		value = true
-	default:
-		c.addErrorf("the value '%s' cannot be convert to bool", lowerCase)
+	var err error
+	value, err = strutil.ToBool(rawVal)
+	if err != nil {
+		c.err = err
 	}
+
 	return
 }
 
@@ -188,16 +187,20 @@ func (c *Ini) Strings(key string, sep ...string) (ss []string) {
 		return
 	}
 
+	sepChar := ","
 	if len(sep) > 0 {
-		return stringToArray(str, sep[0])
+		sepChar = sep[0]
 	}
-	return stringToArray(str, ",")
+	return strutil.Split(str, sepChar)
 }
 
 // StringMap get a section data map
 func StringMap(name string) map[string]string { return dc.StringMap(name) }
 
-// StringMap get a section data map
+// Section get a section data map. is alias of StringMap()
+func (c *Ini) Section(name string) Section { return c.StringMap(name) }
+
+// StringMap get a section data map by name
 func (c *Ini) StringMap(name string) (mp map[string]string) {
 	name = c.formatKey(name)
 	// empty name, return default section
@@ -210,40 +213,53 @@ func (c *Ini) StringMap(name string) (mp map[string]string) {
 		return
 	}
 
-	// parser Var refer
-	if c.opts.ParseVar {
+	if c.opts.ParseVar || c.opts.ParseEnv {
 		for k, v := range mp {
-			mp[k] = c.parseVarReference(k, v, mp)
+			// parser Var refer
+			if c.opts.ParseVar {
+				v = c.parseVarReference(k, v, mp)
+			}
+
+			// parse ENV. like: "${SHELL}"
+			if c.opts.ParseEnv {
+				v = envutil.ParseEnvValue(v)
+			}
+
+			mp[k] = v
 		}
 	}
 
-	// if opts.ParseEnv is true. will parse like: "${SHELL}"
-	if c.opts.ParseEnv {
-		for k, v := range mp {
-			mp[k] = envutil.ParseEnvValue(v)
-		}
-	}
 	return
 }
 
 // MapStruct get config data and binding to the structure.
-func MapStruct(key string, ptr interface{}) error { return dc.MapStruct(key, ptr) }
+func MapStruct(key string, ptr any) error { return dc.MapStruct(key, ptr) }
+
+// Decode all data to struct pointer
+func (c *Ini) Decode(ptr any) error { return c.MapStruct("", ptr) }
+
+// MapTo mapping all data to struct pointer.
+//
+// Deprecated: please use Decode()
+func (c *Ini) MapTo(ptr any) error { return c.MapStruct("", ptr) }
 
 // MapStruct get config data and binding to the structure.
-// If the key is empty, will binding all data to the struct ptr.
+// If the key is empty, will bind all data to the struct ptr.
 //
 // Usage:
-// 	user := &Db{}
-// 	ini.MapStruct("user", &user)
-func (c *Ini) MapStruct(key string, ptr interface{}) error {
+//
+//	user := &Db{}
+//	ini.MapStruct("user", &user)
+func (c *Ini) MapStruct(key string, ptr any) error {
 	// binding all data
 	if key == "" {
 		defSec := c.opts.DefSection
 		if defMap, ok := c.data[defSec]; ok {
-			data := make(map[string]interface{}, len(defMap)+len(c.data)-1)
+			data := make(map[string]any, len(defMap)+len(c.data)-1)
 			for key, val := range defMap {
 				data[key] = val
 			}
+
 			for secKey, secVals := range c.data {
 				if secKey != defSec {
 					data[secKey] = secVals
@@ -252,7 +268,7 @@ func (c *Ini) MapStruct(key string, ptr interface{}) error {
 			return mapStruct(c.opts.TagName, data, ptr)
 		}
 
-		// no data of the default section
+		// no default section
 		return mapStruct(c.opts.TagName, c.data, ptr)
 	}
 
@@ -261,16 +277,10 @@ func (c *Ini) MapStruct(key string, ptr interface{}) error {
 	if len(data) == 0 {
 		return errNotFound
 	}
-
 	return mapStruct(c.opts.TagName, data, ptr)
 }
 
-// MapTo mapping all data to struct pointer
-func (c *Ini) MapTo(ptr interface{}) error {
-	return c.MapStruct("", ptr)
-}
-
-func mapStruct(tagName string, data interface{}, ptr interface{}) error {
+func mapStruct(tagName string, data any, ptr any) error {
 	mapConf := &mapstructure.DecoderConfig{
 		Metadata: nil,
 		Result:   ptr,
@@ -283,24 +293,24 @@ func mapStruct(tagName string, data interface{}, ptr interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	return decoder.Decode(data)
 }
 
 /*************************************************************
- * config set
+ * write config value
  *************************************************************/
 
 // Set a value to the section by key.
+//
 // if section is empty, will set to default section
-func Set(key string, val interface{}, section ...string) error {
+func Set(key string, val any, section ...string) error {
 	return dc.Set(key, val, section...)
 }
 
 // Set a value to the section by key.
+//
 // if section is empty, will set to default section
-func (c *Ini) Set(key string, val interface{}, section ...string) (err error) {
-	// if is readonly
+func (c *Ini) Set(key string, val any, section ...string) (err error) {
 	if c.opts.Readonly {
 		return errReadonly
 	}
@@ -315,26 +325,57 @@ func (c *Ini) Set(key string, val interface{}, section ...string) (err error) {
 	}
 
 	// section name
-	name := c.opts.DefSection
-	if len(section) > 0 {
-		name = section[0]
-	}
-
-	strVal, isString := val.(string)
-	if !isString {
-		strVal = fmt.Sprint(val)
+	group := c.opts.DefSection
+	if len(section) > 0 && section[0] != "" {
+		group = section[0]
 	}
 
 	// allow section name is empty string ""
-	name = c.formatKey(name)
-	sec, ok := c.data[name]
+	group = c.formatKey(group)
+	strVal := strutil.QuietString(val)
+
+	sec, ok := c.data[group]
 	if ok {
 		sec[key] = strVal
 	} else {
 		sec = Section{key: strVal}
 	}
 
-	c.data[name] = sec
+	c.data[group] = sec
+	return
+}
+
+// SetSection if not exist, add new section. If existed, will merge to old section.
+func (c *Ini) SetSection(name string, values map[string]string) (err error) {
+	if c.opts.Readonly {
+		return errReadonly
+	}
+
+	name = c.formatKey(name)
+	if old, ok := c.data[name]; ok {
+		c.data[name] = maputil.MergeStringMap(values, old, c.opts.IgnoreCase)
+		return
+	}
+
+	if c.opts.IgnoreCase {
+		values = mapKeyToLower(values)
+	}
+	c.data[name] = values
+	return
+}
+
+// NewSection add new section data, existed will be replaced
+func (c *Ini) NewSection(name string, values map[string]string) (err error) {
+	if c.opts.Readonly {
+		return errReadonly
+	}
+
+	if c.opts.IgnoreCase {
+		name = strings.ToLower(name)
+		c.data[name] = mapKeyToLower(values)
+	} else {
+		c.data[name] = values
+	}
 	return
 }
 
@@ -354,111 +395,35 @@ func (c *Ini) PrettyJSON() string {
 
 // WriteToFile write config data to a file
 func (c *Ini) WriteToFile(file string) (int64, error) {
-	// open file
 	fd, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
-
 	if err != nil {
 		return 0, err
 	}
+
+	defer fd.Close()
 	return c.WriteTo(fd)
 }
 
 // WriteTo out an INI File representing the current state to a writer.
 func (c *Ini) WriteTo(out io.Writer) (n int64, err error) {
-	n = 0
-	counter := 0
-	thisWrite := 0
-	// section
-	defaultSection := c.opts.DefSection
-	orderedSections := make([]string, len(c.data))
-
-	for section := range c.data {
-		orderedSections[counter] = section
-		counter++
+	mp := make(map[string]map[string]string, len(c.data))
+	for group, secMp := range c.data {
+		mp[group] = secMp
 	}
 
-	sort.Strings(orderedSections)
-
-	for _, section := range orderedSections {
-		// don't add section title for DefSection
-		if section != defaultSection {
-			thisWrite, err = fmt.Fprintln(out, "["+section+"]")
-			n += int64(thisWrite)
-			if err != nil {
-				return
-			}
-		}
-
-		items := c.data[section]
-		orderedStringKeys := make([]string, len(items))
-		counter = 0
-		for key := range items {
-			orderedStringKeys[counter] = key
-			counter++
-		}
-
-		sort.Strings(orderedStringKeys)
-		for _, key := range orderedStringKeys {
-			thisWrite, err = fmt.Fprintln(out, key, "=", items[key])
-			n += int64(thisWrite)
-			if err != nil {
-				return
-			}
-		}
-
-		thisWrite, err = fmt.Fprintln(out)
-		n += int64(thisWrite)
-		if err != nil {
-			return
-		}
+	bs, err := parser.EncodeLite(mp, c.opts.DefSection)
+	if err != nil {
+		return 0, err
 	}
-	return
+
+	var ni int
+	ni, err = out.Write(bs)
+	return int64(ni), err
 }
 
 /*************************************************************
  * section operate
  *************************************************************/
-
-// Section get a section data map. is alias of StringMap()
-func (c *Ini) Section(name string) Section {
-	return c.StringMap(name)
-}
-
-// SetSection if not exist, add new section. If exist, will merge to old section.
-func (c *Ini) SetSection(name string, values map[string]string) (err error) {
-	// if is readonly
-	if c.opts.Readonly {
-		return errReadonly
-	}
-
-	name = c.formatKey(name)
-
-	if old, ok := c.data[name]; ok {
-		c.data[name] = mergeStringMap(values, old, c.opts.IgnoreCase)
-	} else {
-		if c.opts.IgnoreCase {
-			values = mapKeyToLower(values)
-		}
-		c.data[name] = values
-	}
-	return
-}
-
-// NewSection add new section data, existed will be replace
-func (c *Ini) NewSection(name string, values map[string]string) (err error) {
-	// if is readonly
-	if c.opts.Readonly {
-		return errReadonly
-	}
-
-	if c.opts.IgnoreCase {
-		name = strings.ToLower(name)
-		c.data[name] = mapKeyToLower(values)
-	} else {
-		c.data[name] = values
-	}
-	return
-}
 
 // HasSection has section
 func (c *Ini) HasSection(name string) bool {
@@ -469,7 +434,6 @@ func (c *Ini) HasSection(name string) bool {
 
 // DelSection del section by name
 func (c *Ini) DelSection(name string) (ok bool) {
-	// if is readonly
 	if c.opts.Readonly {
 		return
 	}
@@ -482,17 +446,16 @@ func (c *Ini) DelSection(name string) (ok bool) {
 }
 
 // SectionKeys get all section names
-func SectionKeys(withDefaultSection bool) (ls []string) {
-	return dc.SectionKeys(withDefaultSection)
+func SectionKeys(withDefSection bool) (ls []string) {
+	return dc.SectionKeys(withDefSection)
 }
 
 // SectionKeys get all section names
-func (c *Ini) SectionKeys(withDefaultSection bool) (ls []string) {
-	// default section name
+func (c *Ini) SectionKeys(withDefSection bool) (ls []string) {
 	defaultSection := c.opts.DefSection
 
 	for section := range c.data {
-		if !withDefaultSection && section == defaultSection {
+		if !withDefSection && section == defaultSection {
 			continue
 		}
 

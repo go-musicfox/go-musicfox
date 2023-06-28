@@ -21,7 +21,25 @@ func HasKey(mp, key any) (ok bool) {
 	return
 }
 
-// HasAllKeys check of the given map.
+// HasOneKey check of the given map. return the first exist key
+func HasOneKey(mp any, keys ...any) (ok bool, key any) {
+	rftVal := reflect.Indirect(reflect.ValueOf(mp))
+	if rftVal.Kind() != reflect.Map {
+		return
+	}
+
+	for _, key = range keys {
+		for _, keyRv := range rftVal.MapKeys() {
+			if reflects.IsEqual(keyRv.Interface(), key) {
+				return true, key
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// HasAllKeys check of the given map. return the first not exist key
 func HasAllKeys(mp any, keys ...any) (ok bool, noKey any) {
 	rftVal := reflect.Indirect(reflect.ValueOf(mp))
 	if rftVal.Kind() != reflect.Map {

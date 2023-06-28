@@ -2,6 +2,7 @@
 
 [![Documentation](https://godoc.org/github.com/go-flac/flacpicture?status.svg)](https://godoc.org/github.com/go-flac/flacpicture)
 [![Build Status](https://travis-ci.org/go-flac/flacpicture.svg?branch=master)](https://travis-ci.org/go-flac/flacpicture)
+[![Coverage Status](https://coveralls.io/repos/github/go-flac/flacpicture/badge.svg?branch=master)](https://coveralls.io/github/go-flac/flacpicture?branch=master)
 
 FLAC picture metablock manipulation for [go-flac](https://www.github.com/go-flac/go-flac)
 
@@ -41,16 +42,16 @@ import (
     "github.com/go-flac/go-flac"
 )
 
-func extractFLACCover(fileName string) *MetadataBlockPicture {
+func extractFLACCover(fileName string) *flacpicure.MetadataBlockPicture {
 	f, err := flac.ParseFile(fileName)
 	if err != nil {
 		panic(err)
 	}
     
-    var pic *MetadataBlockPicture
+    var pic *flacpicure.MetadataBlockPicture
 	for _, meta := range f.Meta {
 		if meta.Type == flac.Picture {
-			pic, err = ParseFromMetaDataBlock(*meta)
+			pic, err = flacpicure.ParseFromMetaDataBlock(*meta)
 			if err != nil {
 				panic(err)
 			}

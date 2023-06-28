@@ -3,8 +3,8 @@ package like_list
 import (
 	"strconv"
 
-	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
 )
 
 type LikeList map[int64]struct{}

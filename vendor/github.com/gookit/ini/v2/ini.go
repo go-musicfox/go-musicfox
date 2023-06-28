@@ -6,20 +6,16 @@ Source code and other details for the project are available at GitHub:
 	https://github.com/gookit/ini
 
 INI parser is: https://github.com/gookit/ini/parser
-
 */
 package ini
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/gookit/ini/v2/parser"
 )
 
 // some default constants
@@ -38,30 +34,6 @@ var (
 
 // Section in INI config
 type Section map[string]string
-
-// Options for config
-type Options struct {
-	// Readonly set to read-only mode. default False
-	Readonly bool
-	// ParseEnv parse ENV var name. default True
-	ParseEnv bool
-	// ParseVar parse variable reference "%(varName)s". default False
-	ParseVar bool
-	// TagName for binding struct
-	TagName string
-
-	// VarOpen var left open char. default "%("
-	VarOpen string
-	// VarClose var right close char. default ")s"
-	VarClose string
-
-	// IgnoreCase ignore key name case. default False
-	IgnoreCase bool
-	// DefSection default section name. default "__default", it's allow empty string.
-	DefSection string
-	// SectionSep sep char for split key path. default ".", use like "section.subKey"
-	SectionSep string
-}
 
 // Ini config data manager
 type Ini struct {
@@ -85,9 +57,11 @@ func New() *Ini {
 	}
 }
 
-// NewWithOptions new a instance and with some options
+// NewWithOptions new an instance and with some options
+//
 // Usage:
-// ini.NewWithOptions(ini.ParseEnv, ini.Readonly)
+//
+//	ini.NewWithOptions(ini.ParseEnv, ini.Readonly)
 func NewWithOptions(opts ...func(*Options)) *Ini {
 	c := New()
 	// apply options
@@ -96,9 +70,10 @@ func NewWithOptions(opts ...func(*Options)) *Ini {
 }
 
 // Default config instance
-func Default() *Ini {
-	return dc
-}
+func Default() *Ini { return dc }
+
+// ResetStd instance
+func ResetStd() { dc = New() }
 
 func (c *Ini) ensureInit() {
 	if !c.IsEmpty() {
@@ -129,55 +104,15 @@ func (c *Ini) ensureInit() {
  * options func
  *************************************************************/
 
-// newDefaultOptions create a new default Options
-// Notice:
-// Cannot use package var instead it. That will allow multiple instances to use the same Options
-func newDefaultOptions() *Options {
-	return &Options{
-		ParseEnv: true,
-
-		VarOpen:  "%(",
-		VarClose: ")s",
-		TagName:  DefTagName,
-
-		DefSection: parser.DefSection,
-		SectionSep: SepSection,
-	}
-}
-
-// Readonly setting
-// Usage:
-// ini.NewWithOptions(ini.Readonly)
-func Readonly(opts *Options) {
-	opts.Readonly = true
-}
-
-// ParseVar on get value
-// Usage:
-// 	ini.WithOptions(ini.ParseVar)
-func ParseVar(opts *Options) {
-	opts.ParseVar = true
-}
-
-// ParseEnv will parse ENV key on get value
-// Usage:
-// 	ini.WithOptions(ini.ParseEnv)
-func ParseEnv(opts *Options) {
-	opts.ParseEnv = true
-}
-
-// IgnoreCase for get/set value by key
-func IgnoreCase(opts *Options) {
-	opts.IgnoreCase = true
-}
-
 // GetOptions get options info.
+//
 // Notice: return is value. so, cannot change Ini instance
 func GetOptions() Options {
 	return dc.Options()
 }
 
 // Options get options info.
+//
 // Notice: return is value. so, cannot change options
 func (c *Ini) Options() Options {
 	return *c.opts
@@ -191,7 +126,7 @@ func WithOptions(opts ...func(*Options)) {
 // WithOptions apply some options
 func (c *Ini) WithOptions(opts ...func(*Options)) {
 	if !c.IsEmpty() {
-		panic("ini: Cannot set options after data has been load")
+		panic("ini: cannot set options after data has been load")
 	}
 
 	// apply options
@@ -382,11 +317,6 @@ func (c *Ini) Error() error {
 	return c.err
 }
 
-// format and record error
-func (c *Ini) addErrorf(format string, a ...interface{}) {
-	c.err = fmt.Errorf(format, a...)
-}
-
 /*************************************************************
  * internal helper methods
  *************************************************************/
@@ -417,18 +347,6 @@ func (c *Ini) formatKey(key string) string {
 	return key
 }
 
-// simple merge two string map
-func mergeStringMap(src, dst map[string]string, ignoreCase bool) map[string]string {
-	for k, v := range src {
-		if ignoreCase {
-			k = strings.ToLower(k)
-		}
-
-		dst[k] = v
-	}
-	return dst
-}
-
 func mapKeyToLower(src map[string]string) map[string]string {
 	newMp := make(map[string]string)
 
@@ -437,16 +355,4 @@ func mapKeyToLower(src map[string]string) map[string]string {
 		newMp[k] = v
 	}
 	return newMp
-}
-
-func stringToArray(str, sep string) (arr []string) {
-	str = strings.TrimSpace(str)
-	ss := strings.Split(str, sep)
-
-	for _, val := range ss {
-		if val = strings.TrimSpace(val); val != "" {
-			arr = append(arr, val)
-		}
-	}
-	return arr
 }

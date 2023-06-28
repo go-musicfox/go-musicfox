@@ -105,6 +105,10 @@ func RandomOne[T any](arr []T) T {
 
 // Unique value in the given slice data.
 func Unique[T ~string | comdef.XintOrFloat](list []T) []T {
+	if len(list) < 2 {
+		return list
+	}
+
 	valMap := make(map[T]struct{}, len(list))
 	uniArr := make([]T, 0, len(list))
 

@@ -25,7 +25,7 @@ const (
 )
 
 func (o *Output) isTTY() bool {
-	if o.unsafe {
+	if o.assumeTTY || o.unsafe {
 		return true
 	}
 	if len(o.environ.Getenv("CI")) > 0 {
@@ -88,11 +88,13 @@ func EnvColorProfile() Profile {
 	return output.EnvColorProfile()
 }
 
-// EnvNoColor returns true if the environment variables explicitly disable color output
-// by setting NO_COLOR (https://no-color.org/)
-// or CLICOLOR/CLICOLOR_FORCE (https://bixense.com/clicolors/)
-// If NO_COLOR is set, this will return true, ignoring CLICOLOR/CLICOLOR_FORCE
-// If CLICOLOR=="0", it will be true only if CLICOLOR_FORCE is also "0" or is unset.
+// EnvColorProfile returns the color profile based on environment variables set
+// Supports NO_COLOR (https://no-color.org/)
+// and CLICOLOR/CLICOLOR_FORCE (https://bixense.com/clicolors/)
+// If none of these environment variables are set, this behaves the same as ColorProfile()
+// It will return the Ascii color profile if EnvNoColor() returns true
+// If the terminal does not support any colors, but CLICOLOR_FORCE is set and not "0"
+// then the ANSI color profile will be returned.
 func (o *Output) EnvColorProfile() Profile {
 	if o.EnvNoColor() {
 		return Ascii

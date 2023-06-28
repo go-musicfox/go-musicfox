@@ -7,12 +7,28 @@ import (
 	"github.com/gookit/goutil/comdef"
 )
 
+// Min compare two value and return max value
+func Min[T comdef.XintOrFloat](x, y T) T {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 // Max compare two value and return max value
 func Max[T comdef.XintOrFloat](x, y T) T {
 	if x > y {
 		return x
 	}
 	return y
+}
+
+// SwapMin compare and always return [min, max] value
+func SwapMin[T comdef.XintOrFloat](x, y T) (T, T) {
+	if x < y {
+		return x, y
+	}
+	return y, x
 }
 
 // SwapMax compare and always return [max, min] value

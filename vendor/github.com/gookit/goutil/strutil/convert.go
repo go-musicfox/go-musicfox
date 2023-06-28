@@ -1,7 +1,6 @@
 package strutil
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -20,7 +19,7 @@ var (
 	// ErrDateLayout error
 	ErrDateLayout = errors.New("invalid date layout string")
 	// ErrInvalidParam error
-	ErrInvalidParam = errors.New("invalid input parameter")
+	ErrInvalidParam = errors.New("invalid input for parse time")
 
 	// some regex for convert string.
 	toSnakeReg  = regexp.MustCompile("[A-Z][a-z]")
@@ -41,6 +40,8 @@ var (
 func Quote(s string) string { return strconv.Quote(s) }
 
 // Unquote remove start and end quotes by single-quote or double-quote
+//
+// tip: strconv.Unquote cannot unquote single-quote
 func Unquote(s string) string {
 	ln := len(s)
 	if ln < 2 {
@@ -168,8 +169,8 @@ func AnyToString(val any, defaultAsErr bool) (str string, err error) {
 	case []byte:
 		str = string(value)
 	case time.Duration:
-		str = value.String()
-	case json.Number:
+		str = strconv.FormatInt(int64(value), 10)
+	case fmt.Stringer:
 		str = value.String()
 	default:
 		if defaultAsErr {
@@ -363,87 +364,8 @@ func ToSlice(s string, sep ...string) []string {
 // 	return cliutil.StringToOSArgs(s) // error: import cycle not allowed
 // }
 
-// MustToTime convert date string to time.Time
-func MustToTime(s string, layouts ...string) time.Time {
-	t, err := ToTime(s, layouts...)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-// auto match use some commonly layouts.
-// key is layout length.
-var layoutMap = map[int][]string{
-	6:  {"200601", "060102", time.Kitchen},
-	8:  {"20060102"},
-	10: {"2006-01-02"},
-	13: {"2006-01-02 15"},
-	15: {time.Stamp},
-	16: {"2006-01-02 15:04"},
-	19: {"2006-01-02 15:04:05", time.RFC822, time.StampMilli},
-	20: {"2006-01-02 15:04:05Z"},
-	21: {time.RFC822Z},
-	22: {time.StampMicro},
-	24: {time.ANSIC},
-	25: {time.RFC3339, time.StampNano},
-	// 26: {time.Layout}, // must go >= 1.19
-	28: {time.UnixDate},
-	29: {time.RFC1123},
-	30: {time.RFC850},
-	31: {time.RFC1123Z},
-	35: {time.RFC3339Nano},
-}
-
-// ToTime convert date string to time.Time
-func ToTime(s string, layouts ...string) (t time.Time, err error) {
-	// custom layout
-	if len(layouts) > 0 {
-		if len(layouts[0]) > 0 {
-			return time.Parse(layouts[0], s)
-		}
-
-		err = ErrDateLayout
-		return
-	}
-
-	// auto match use some commonly layouts.
-	strLn := len(s)
-	maybeLayouts, ok := layoutMap[strLn]
-	if !ok {
-		err = ErrInvalidParam
-		return
-	}
-
-	var hasAlphaT bool
-	if pos := strings.IndexByte(s, 'T'); pos > 0 && pos < 12 {
-		hasAlphaT = true
-	}
-
-	hasSlashR := strings.IndexByte(s, '/') > 0
-	for _, layout := range maybeLayouts {
-		// date string has "T". eg: "2006-01-02T15:04:05"
-		if hasAlphaT {
-			layout = strings.Replace(layout, " ", "T", 1)
-		}
-
-		// date string has "/". eg: "2006/01/02 15:04:05"
-		if hasSlashR {
-			layout = strings.Replace(layout, "-", "/", -1)
-		}
-
-		t, err = time.Parse(layout, s)
-		if err == nil {
-			return
-		}
-	}
-
-	// t, err = time.ParseInLocation(layout, s, time.Local)
-	return
-}
-
 // ToDuration parses a duration string. such as "300ms", "-1.5h" or "2h45m".
 // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func ToDuration(s string) (time.Duration, error) {
-	return time.ParseDuration(s)
+	return comfunc.ToDuration(s)
 }

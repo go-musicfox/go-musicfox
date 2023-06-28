@@ -2,25 +2,26 @@ package cmdline
 
 import (
 	"strings"
+
+	"github.com/gookit/goutil/strutil"
 )
 
 // LineBuilder build command line string.
 // codes refer from strings.Builder
 type LineBuilder struct {
-	buf []byte
+	strings.Builder
 }
 
 // NewBuilder create
 func NewBuilder(binFile string, args ...string) *LineBuilder {
 	b := &LineBuilder{}
-	b.AddArg(binFile)
+
+	if binFile != "" {
+		b.AddArg(binFile)
+	}
+
 	b.AddArray(args)
 	return b
-}
-
-// LineBuild build command line string by given args.
-func LineBuild(binFile string, args []string) string {
-	return NewBuilder(binFile, args...).String()
 }
 
 // AddArg to builder
@@ -40,52 +41,45 @@ func (b *LineBuilder) AddArray(args []string) {
 	}
 }
 
+// AddAny args to builder
+func (b *LineBuilder) AddAny(args ...any) {
+	for _, arg := range args {
+		_, _ = b.WriteString(strutil.SafeString(arg))
+	}
+}
+
 // WriteString arg string to the builder, will auto quote special string.
 // refer strconv.Quote()
 func (b *LineBuilder) WriteString(a string) (int, error) {
 	var quote byte
-	if strings.ContainsRune(a, '"') {
+	if pos := strings.IndexByte(a, '"'); pos > -1 {
 		quote = '\''
-	} else if a == "" || strings.ContainsRune(a, '\'') || strings.ContainsRune(a, ' ') {
+		// fix: a = `--pretty=format:"one two three"`
+		if pos > 0 && '"' == a[len(a)-1] {
+			quote = 0
+		}
+	} else if pos := strings.IndexByte(a, '\''); pos > -1 {
+		quote = '"'
+		// fix: a = "--pretty=format:'one two three'"
+		if pos > 0 && '\'' == a[len(a)-1] {
+			quote = 0
+		}
+	} else if a == "" || strings.ContainsRune(a, ' ') {
 		quote = '"'
 	}
 
-	// add sep on first write.
-	if b.buf != nil {
-		b.buf = append(b.buf, ' ')
+	// add sep on not-first write.
+	if b.Len() != 0 {
+		_ = b.WriteByte(' ')
 	}
 
-	// no quote char
+	// no quote char OR not need quote
 	if quote == 0 {
-		b.buf = append(b.buf, a...)
-		return len(a) + 1, nil
+		return b.Builder.WriteString(a)
 	}
 
-	b.buf = append(b.buf, quote) // add start quote
-	b.buf = append(b.buf, a...)
-	b.buf = append(b.buf, quote) // add end quote
-	return len(a) + 3, nil
+	_ = b.WriteByte(quote) // add start quote
+	n, err := b.Builder.WriteString(a)
+	_ = b.WriteByte(quote) // add end quote
+	return n, err
 }
-
-// String to command line string
-func (b *LineBuilder) String() string {
-	return string(b.buf)
-}
-
-// Len of the builder
-func (b *LineBuilder) Len() int {
-	return len(b.buf)
-}
-
-// Reset builder
-func (b *LineBuilder) Reset() {
-	b.buf = nil
-}
-
-// grow copies the buffer to a new, larger buffer so that there are at least n
-// bytes of capacity beyond len(b.buf).
-// func (b *LineBuilder) grow(n int) {
-// 	buf := make([]byte, len(b.buf), 2*cap(b.buf)+n)
-// 	copy(buf, b.buf)
-// 	b.buf = buf
-// }

@@ -41,7 +41,7 @@ func (m *CurPlaylist) Songs() []structs.Song {
 
 func (m *CurPlaylist) BottomOutHook() Hook {
 	return func(model *NeteaseModel) bool {
-		if model.player.playingMenu == nil {
+		if model.player.playingMenu == nil || model.player.playingMenu.GetMenuKey() == CurPlaylistKey {
 			return true
 		}
 		hook := model.player.playingMenu.BottomOutHook()

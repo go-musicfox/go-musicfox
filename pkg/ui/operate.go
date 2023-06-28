@@ -17,8 +17,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
-	"github.com/anhoder/netease-music/service"
 	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
 )
 
 type menuStackItem struct {
@@ -875,10 +875,63 @@ func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
 	m.player.playingMenu = nil
 	m.player.playingMenuKey += "modified"
 
+	if menu, ok := m.menu.(*CurPlaylist); ok {
+		menu.songs = m.player.playlist
+		menu.menus = GetViewFromSongs(m.player.playlist)
+		m.refreshMenuList()
+	}
+
 	utils.Notify(utils.NotifyContent{
 		Title:   notifyTitle,
 		Text:    songs[selectedIndex].Name,
 		Url:     utils.WebUrlOfSong(songs[selectedIndex].Id),
 		GroupId: constants.GroupID,
 	})
+}
+
+// 从播放列表删除选中歌曲,仅在当前播放列表界面有效
+func delSongFromPlaylist(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+
+	menu, ok := m.menu.(*CurPlaylist)
+	selectedIndex := m.menu.RealDataIndex(m.selectedIndex)
+	if !ok || selectedIndex >= len(menu.Songs()) {
+		return
+	}
+	// 选中歌曲为当前播放歌曲时处理逻辑
+	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == menu.Songs()[selectedIndex].Id {
+		// 防止用户快速删除当前播放歌曲导致错位
+		if m.player.State() >= player.Playing && m.player.playedTime.Seconds() < 2 {
+			return
+		}
+		// 末尾歌曲删除向前退
+		if m.player.curSongIndex+1 >= len(m.player.playlist) {
+			m.player.curSongIndex = len(m.player.playlist) - 1
+			m.player.Previous()
+		} else {
+			m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
+
+		}
+	}
+	// 以下2行 为防止切片越界
+	m.player.playlist = append(m.player.playlist[:selectedIndex], m.player.playlist[selectedIndex+1:]...)
+	songs := m.player.playlist
+	menu.menus = GetViewFromSongs(songs)
+	menu.songs = songs
+	// 更新当前歌曲下标
+	if selectedIndex < m.player.curSongIndex {
+		m.player.curSongIndex = m.player.curSongIndex - 1
+	}
+	// 更新游标位置
+	if m.selectedIndex >= len(menu.Songs()) {
+		m.selectedIndex = len(menu.Songs()) - 1
+	}
+
+	// 替换播放中数据，避免数据错乱
+	m.player.playingMenu = nil
+	m.player.playingMenuKey += "modified"
+
+	m.refreshMenuList()
 }

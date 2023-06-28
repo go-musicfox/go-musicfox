@@ -2,6 +2,7 @@ package cmdr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gookit/color"
 	"github.com/gookit/goutil/arrutil"
@@ -9,6 +10,7 @@ import (
 	"github.com/gookit/goutil/errorx"
 	"github.com/gookit/goutil/maputil"
 	"github.com/gookit/goutil/mathutil"
+	"github.com/gookit/goutil/strutil/textutil"
 )
 
 // Task struct
@@ -46,6 +48,24 @@ func (t *Task) ensureID(idx int) {
 	t.ID = id
 }
 
+var rpl = textutil.NewVarReplacer("$").DisableFlatten()
+
+// RunWith command
+func (t *Task) RunWith(ctx maputil.Data) error {
+	cmdVars := ctx.StringMap("cmdVars")
+
+	if len(cmdVars) > 0 {
+		// rpl := strutil.NewReplacer(cmdVars)
+		for i, val := range t.Cmd.Args {
+			if strings.ContainsRune(val, '$') {
+				t.Cmd.Args[i] = rpl.RenderSimple(val, cmdVars)
+			}
+		}
+	}
+
+	return t.Run()
+}
+
 // Run command
 func (t *Task) Run() error {
 	if t.BeforeRun != nil {
@@ -76,6 +96,9 @@ func (t *Task) IsSuccess() bool {
 	return t.err == nil
 }
 
+// RunnerHookFn func
+type RunnerHookFn func(r *Runner, t *Task) bool
+
 // Runner use for batch run multi task commands
 type Runner struct {
 	prev *Task
@@ -86,8 +109,11 @@ type Runner struct {
 	Errs errorx.ErrMap
 
 	// TODO Concurrent run
-	// common workdir
-	// wordDir string
+
+	// Workdir common workdir
+	Workdir string
+	// EnvMap will append to task.Cmd on run
+	EnvMap map[string]string
 
 	// Params for add custom params
 	Params maputil.Map
@@ -113,10 +139,17 @@ func NewRunner(fns ...func(rr *Runner)) *Runner {
 		Params: make(maputil.Map),
 	}
 
+	rr.OutToStd = true
 	for _, fn := range fns {
 		fn(rr)
 	}
 	return rr
+}
+
+// WithOutToStd set
+func (r *Runner) WithOutToStd() *Runner {
+	r.OutToStd = true
+	return r
 }
 
 // Add multitask at once
@@ -209,16 +242,30 @@ func (r *Runner) Run() error {
 	return r.Errs
 }
 
+// StepRun one command
+func (r *Runner) StepRun() error {
+	return nil // TODO
+}
+
 // RunTask command
 func (r *Runner) RunTask(task *Task) (goon bool) {
+	if len(r.EnvMap) > 0 {
+		task.Cmd.AppendEnv(r.EnvMap)
+	}
+
 	if r.OutToStd && !task.Cmd.HasStdout() {
 		task.Cmd.ToOSStdoutStderr()
 	}
 
+	// common workdir
+	if r.Workdir != "" && task.Cmd.Dir == "" {
+		task.Cmd.WithWorkDir(r.Workdir)
+	}
+
 	// do running
-	if err := task.Run(); err != nil {
+	if err := task.RunWith(r.Params); err != nil {
 		r.Errs[task.ID] = err
-		color.Errorf("Task #%d run error: %s\n", task.Index()+1, err)
+		color.Errorf("Task#%d run error: %s\n", task.Index()+1, err)
 
 		// not ignore error, stop.
 		if !r.IgnoreErr {
@@ -238,6 +285,14 @@ func (r *Runner) RunTask(task *Task) (goon bool) {
 // Len of tasks
 func (r *Runner) Len() int {
 	return len(r.tasks)
+}
+
+// Reset instance
+func (r *Runner) Reset() *Runner {
+	r.prev = nil
+	r.tasks = make([]*Task, 0)
+	r.idMap = make(map[string]int, 0)
+	return r
 }
 
 // TaskIDs get

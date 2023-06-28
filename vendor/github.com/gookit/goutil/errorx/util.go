@@ -5,9 +5,29 @@ import (
 	"fmt"
 )
 
+// E new a raw go error. alias of errors.New()
+func E(msg string) error {
+	return errors.New(msg)
+}
+
+// Err new a raw go error. alias of errors.New()
+func Err(msg string) error {
+	return errors.New(msg)
+}
+
 // Raw new a raw go error. alias of errors.New()
 func Raw(msg string) error {
 	return errors.New(msg)
+}
+
+// Ef new a raw go error. alias of errors.New()
+func Ef(tpl string, vars ...any) error {
+	return fmt.Errorf(tpl, vars...)
+}
+
+// Errf new a raw go error. alias of errors.New()
+func Errf(tpl string, vars ...any) error {
+	return fmt.Errorf(tpl, vars...)
 }
 
 // Rawf new a raw go error. alias of errors.New()
@@ -54,7 +74,7 @@ func ToErrorX(err error) (ex *ErrorX, ok bool) {
 	return
 }
 
-// Has check err has contains target, or err is eq target.
+// Has contains target error, or err is eq target.
 // alias of errors.Is()
 func Has(err, target error) bool {
 	return errors.Is(err, target)

@@ -9,18 +9,19 @@ import "fmt"
 // PrinterFace interface
 type PrinterFace interface {
 	fmt.Stringer
-	Sprint(a ...interface{}) string
-	Sprintf(format string, a ...interface{}) string
-	Print(a ...interface{})
-	Printf(format string, a ...interface{})
-	Println(a ...interface{})
+	Sprint(a ...any) string
+	Sprintf(format string, a ...any) string
+	Print(a ...any)
+	Printf(format string, a ...any)
+	Println(a ...any)
 }
 
 // Printer a generic color message printer.
 //
 // Usage:
-// 	p := &Printer{Code: "32;45;3"}
-// 	p.Print("message")
+//
+//	p := &Printer{Code: "32;45;3"}
+//	p.Print("message")
 type Printer struct {
 	// NoColor disable color.
 	NoColor bool
@@ -40,27 +41,27 @@ func (p *Printer) String() string {
 }
 
 // Sprint returns rendering colored messages
-func (p *Printer) Sprint(a ...interface{}) string {
+func (p *Printer) Sprint(a ...any) string {
 	return RenderCode(p.String(), a...)
 }
 
 // Sprintf returns format and rendering colored messages
-func (p *Printer) Sprintf(format string, a ...interface{}) string {
+func (p *Printer) Sprintf(format string, a ...any) string {
 	return RenderString(p.String(), fmt.Sprintf(format, a...))
 }
 
 // Print rendering colored messages
-func (p *Printer) Print(a ...interface{}) {
+func (p *Printer) Print(a ...any) {
 	doPrintV2(p.String(), fmt.Sprint(a...))
 }
 
 // Printf format and rendering colored messages
-func (p *Printer) Printf(format string, a ...interface{}) {
+func (p *Printer) Printf(format string, a ...any) {
 	doPrintV2(p.String(), fmt.Sprintf(format, a...))
 }
 
 // Println rendering colored messages with newline
-func (p *Printer) Println(a ...interface{}) {
+func (p *Printer) Println(a ...any) {
 	doPrintlnV2(p.Code, a)
 }
 
@@ -77,46 +78,56 @@ func (p *Printer) IsEmpty() bool {
 type SimplePrinter struct{}
 
 // Print message
-func (s *SimplePrinter) Print(v ...interface{}) {
+func (s *SimplePrinter) Print(v ...any) {
 	Print(v...)
 }
 
 // Printf message
-func (s *SimplePrinter) Printf(format string, v ...interface{}) {
+func (s *SimplePrinter) Printf(format string, v ...any) {
 	Printf(format, v...)
 }
 
 // Println message
-func (s *SimplePrinter) Println(v ...interface{}) {
+func (s *SimplePrinter) Println(v ...any) {
 	Println(v...)
 }
 
+// Successf message
+func (s *SimplePrinter) Successf(format string, a ...any) {
+	Success.Printf(format, a...)
+}
+
+// Successln message
+func (s *SimplePrinter) Successln(a ...any) {
+	Success.Println(a...)
+}
+
 // Infof message
-func (s *SimplePrinter) Infof(format string, a ...interface{}) {
+func (s *SimplePrinter) Infof(format string, a ...any) {
 	Info.Printf(format, a...)
 }
 
 // Infoln message
-func (s *SimplePrinter) Infoln(a ...interface{}) {
+func (s *SimplePrinter) Infoln(a ...any) {
 	Info.Println(a...)
 }
 
 // Warnf message
-func (s *SimplePrinter) Warnf(format string, a ...interface{}) {
+func (s *SimplePrinter) Warnf(format string, a ...any) {
 	Warn.Printf(format, a...)
 }
 
 // Warnln message
-func (s *SimplePrinter) Warnln(a ...interface{}) {
+func (s *SimplePrinter) Warnln(a ...any) {
 	Warn.Println(a...)
 }
 
 // Errorf message
-func (s *SimplePrinter) Errorf(format string, a ...interface{}) {
+func (s *SimplePrinter) Errorf(format string, a ...any) {
 	Error.Printf(format, a...)
 }
 
 // Errorln message
-func (s *SimplePrinter) Errorln(a ...interface{}) {
+func (s *SimplePrinter) Errorln(a ...any) {
 	Error.Println(a...)
 }

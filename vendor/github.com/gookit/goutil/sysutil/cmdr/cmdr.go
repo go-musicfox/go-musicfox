@@ -9,7 +9,11 @@ import (
 
 // PrintCmdline on before exec
 func PrintCmdline(c *Cmd) {
-	color.Yellowln(">", c.Cmdline())
+	if c.DryRun {
+		color.Yellowln("DRY-RUN>", c.Cmdline())
+	} else {
+		color.Yellowln(">", c.Cmdline())
+	}
 }
 
 // OutputLines split output to lines
