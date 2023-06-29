@@ -232,9 +232,6 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			if configs.ConfigRegistry.AutoPlayOffset >= 1000 || configs.ConfigRegistry.AutoPlayOffset < 0 {
 				allFlag = true
 			}
-			if configs.ConfigRegistry.AutoPlayRandom {
-				m.player.mode = player.PmRandom
-			}
 			switch configs.ConfigRegistry.AutoPlayMode {
 			case "listLoop":
 				m.player.mode = player.PmListLoop
@@ -343,7 +340,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				playlist = utils.GetSongsOfPlaylist(response)
 			}
 			length = len(playlist)
-			if !configs.ConfigRegistry.AutoPlayRandom {
+			if m.player.mode != player.PmRandom {
 				if configs.ConfigRegistry.AutoPlayOffset >= 0 {
 					if configs.ConfigRegistry.AutoPlayOffset >= length {
 						notice = fmt.Sprintf("无效的偏移量：%d", configs.ConfigRegistry.AutoPlayOffset)

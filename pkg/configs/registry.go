@@ -47,9 +47,7 @@ type Registry struct {
 	AutoPlay       bool   // 是否自动开始播放
 	AutoPlayList   string // 自动播放列表：dailyReco（每日推荐）、like（我喜欢的音乐）、name:[歌单名]
 	AutoPlayOffset int    // 播放偏移：0为歌单第一项，-1为歌单最后一项
-	AutoPlayRandom bool   // 是否随机选择歌曲
-	AutoPlayMode   string /* 播放模式，如果不为last,将覆盖autoPlayList为true时的播放模式:
-	listLoop, order, singleLoop, random, intelligent（心动）, last（上次退出时的模式），默认为last */
+	AutoPlayMode   string // 播放模式: listLoop, order, singleLoop, random, intelligent（心动）, last（上次退出时的模式），默认为last
 
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
@@ -181,7 +179,6 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.AutoPlay = ini.Bool("autoplay.autoPlay")
 	registry.AutoPlayList = ini.String("autoplay.autoPlayList")
 	registry.AutoPlayOffset = ini.Int("autoplay.offset")
-	registry.AutoPlayRandom = ini.Bool("autoplay.random")
 	registry.AutoPlayMode = ini.String("autoplay.playMode")
 
 	// UNM
