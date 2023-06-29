@@ -95,7 +95,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 	ctx, p.cancel = context.WithCancel(context.Background())
 
 	p.Player = player.NewPlayerFromConfig()
-	p.stateHandler = state_handler.NewHandler(p, p.PlayingInfo())
+	p.stateHandler = state_handler.NewHandler(p)
 
 	// remote control
 	go func() {
@@ -119,17 +119,17 @@ func NewPlayer(model *NeteaseModel) *Player {
 				return
 			case s := <-p.Player.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				if s != player.Stopped {
+				if s == player.Stopped {
+					// 上报lastfm
+					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+					// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
+					if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
+						utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
+					}
+					p.NextSong(false)
+				} else {
 					p.model.Rerender(false)
-					break
 				}
-				// 上报lastfm
-				lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
-				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
-				if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
-					utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
-				}
-				p.NextSong(false)
 			}
 		}
 	}()
@@ -393,7 +393,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	p.LocatePlayingSong()
 	p.Player.Paused()
-	url, musicType, err := utils.GetSongUrl(song)
+	url, musicType, err := utils.GetSongUrl(song.Id)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
@@ -545,14 +545,6 @@ func (p *Player) PreviousSong(isManual bool) {
 	}
 	song := p.playlist[p.curSongIndex]
 	_ = p.PlaySong(song, DurationPrev)
-}
-
-func (p *Player) Seek(duration time.Duration) {
-	p.Player.Seek(duration)
-	if p.lrcTimer != nil {
-		p.lrcTimer.Rewind()
-	}
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
 // SetPlayMode 播放模式切换
@@ -746,24 +738,12 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlNext:
 		p.NextSong(true)
 	case CtrlSeek:
-		p.Seek(signal.Duration)
+		p.Player.Seek(signal.Duration)
+		if p.lrcTimer != nil {
+			p.lrcTimer.Rewind()
+		}
+		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	case CtrlRerender:
 		p.model.Rerender(false)
-	}
-}
-
-func (p *Player) PlayingInfo() state_handler.PlayingInfo {
-	music := p.curSong
-	return state_handler.PlayingInfo{
-		TotalDuration:  music.Duration,
-		PassedDuration: p.PassedTime(),
-		State:          p.State(),
-		Volume:         p.Volume(),
-		TrackID:        music.Id,
-		PicUrl:         music.PicUrl,
-		Name:           music.Name,
-		Album:          music.Album.Name,
-		Artist:         music.ArtistName(),
-		AlbumArtist:    music.Album.ArtistName(),
 	}
 }
