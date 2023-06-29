@@ -45,9 +45,9 @@ type Registry struct {
 	MainShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
 
 	AutoPlay       bool   // 是否自动开始播放
-	AutoPlayList   string // 自动播放列表：dailyReco（每日推荐）、like（我喜欢的音乐）、name:[歌单名]
+	AutoPlayList   string // 自动播放列表：dailyReco（每日推荐）、like（我喜欢的音乐）、no（保持上次退出时的设置，无视offset）、name:[歌单名]
 	AutoPlayOffset int    // 播放偏移：0为歌单第一项，-1为歌单最后一项
-	AutoPlayMode   string // 播放模式: listLoop, order, singleLoop, random, intelligent（心动）, last（上次退出时的模式），默认为last
+	AutoPlayMode   string // 播放模式: listLoop, order, singleLoop, random（无视offset）, intelligent（心动）, last（上次退出时的模式），默认为last
 
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
