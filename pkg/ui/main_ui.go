@@ -537,9 +537,9 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case " ", "　":
 		spaceKeyHandle(m)
 	case "[", "【":
-		m.player.PreviousSong()
+		m.player.PreviousSong(true)
 	case "]", "】":
-		m.player.NextSong()
+		m.player.NextSong(true)
 	case "p":
 		m.player.SetPlayMode(0)
 	case "P":
