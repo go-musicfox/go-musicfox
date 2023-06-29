@@ -147,7 +147,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
 					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
-					p.NextSong()
+					p.NextSong(false)
 				}
 				if p.lrcTimer != nil {
 					select {
@@ -402,9 +402,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		}
 		switch direction {
 		case DurationPrev:
-			p.PreviousSong()
+			p.PreviousSong(false)
 		case DurationNext:
-			p.NextSong()
+			p.NextSong(false)
 		}
 		return nil
 	}
@@ -436,7 +436,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 }
 
 // NextSong 下一曲
-func (p *Player) NextSong() {
+func (p *Player) NextSong(isManual bool) {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
@@ -462,6 +462,12 @@ func (p *Player) NextSong() {
 			p.curSongIndex = 0
 		}
 	case player.PmSingleLoop:
+		if isManual && p.curSongIndex < len(p.playlist)-1 {
+			p.curSongIndex++
+		} else if isManual && p.curSongIndex >= len(p.playlist)-1 {
+			return
+		}
+		// else pass
 	case player.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
@@ -486,7 +492,7 @@ func (p *Player) NextSong() {
 }
 
 // PreviousSong 上一曲
-func (p *Player) PreviousSong() {
+func (p *Player) PreviousSong(isManual bool) {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
@@ -512,6 +518,12 @@ func (p *Player) PreviousSong() {
 			p.curSongIndex = len(p.playlist) - 1
 		}
 	case player.PmSingleLoop:
+		if isManual && p.curSongIndex > 0 {
+			p.curSongIndex--
+		} else if isManual && p.curSongIndex <= 0 {
+			return
+		}
+		// else pass
 	case player.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
@@ -722,9 +734,9 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlToggle:
 		p.Player.Toggle()
 	case CtrlPrevious:
-		p.PreviousSong()
+		p.PreviousSong(true)
 	case CtrlNext:
-		p.NextSong()
+		p.NextSong(true)
 	case CtrlSeek:
 		p.Player.Seek(signal.Duration)
 		if p.lrcTimer != nil {
