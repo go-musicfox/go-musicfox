@@ -223,12 +223,35 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			var index int     // 歌曲索引
 			var length int    // 歌单长度（用于获取歌曲索引）
 			var allFlag bool  // 用于标记是否需要获取全部歌曲的flag
+			var playlist []structs.Song
+			lastPlayMode := m.player.mode
 			if utils.CheckUserInfo(m.user) == utils.NeedLogin {
 				notice = "账号未登录"
 				goto Complete
 			}
-			if configs.ConfigRegistry.AutoPlayOffset >= 0 && configs.ConfigRegistry.AutoPlayOffset >= 1000 || configs.ConfigRegistry.AutoPlayOffset < 0 {
+			if configs.ConfigRegistry.AutoPlayOffset >= 1000 || configs.ConfigRegistry.AutoPlayOffset < 0 {
 				allFlag = true
+			}
+			if configs.ConfigRegistry.AutoPlayRandom {
+				m.player.mode = player.PmRandom
+			}
+			switch configs.ConfigRegistry.AutoPlayMode {
+			case "listLoop":
+				m.player.mode = player.PmListLoop
+			case "order":
+				m.player.mode = player.PmOrder
+			case "singleLoop":
+				m.player.mode = player.PmSingleLoop
+			case "random":
+				m.player.mode = player.PmRandom
+			case "intelligent":
+				m.player.mode = player.PmIntelligent
+			case "last":
+				m.player.mode = lastPlayMode
+			case "default":
+			default:
+				notice = fmt.Sprintf("无效的播放模式：%s", configs.ConfigRegistry.AutoPlayMode)
+				goto Complete
 			}
 			switch configs.ConfigRegistry.AutoPlayList {
 			case "dailyReco":
@@ -239,7 +262,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 					notice = "网络错误"
 					goto Complete
 				}
-				m.player.playlist = utils.GetDailySongs(response)
+				playlist = utils.GetDailySongs(response)
 			case "like":
 				userPlaylists := service.UserPlaylistService{
 					Uid:    strconv.FormatInt(m.user.UserId, 10),
@@ -265,7 +288,11 @@ func (m *NeteaseModel) Init() tea.Cmd {
 					notice = "网络错误"
 					goto Complete
 				}
-				m.player.playlist = utils.GetSongsOfPlaylist(response)
+				playlist = utils.GetSongsOfPlaylist(response)
+			case "no":
+				playlist = m.player.playlist
+				index = m.player.curSongIndex
+				goto Play
 			default:
 				if !strings.HasPrefix(configs.ConfigRegistry.AutoPlayList, "name:") {
 					notice = fmt.Sprintf("歌单格式错误：%s", configs.ConfigRegistry.AutoPlayList)
@@ -289,9 +316,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 					}
 					list := utils.GetPlaylists(response)
 					offset += len(list)
-					for _, playlist := range list {
-						if playlist.Name == name {
-							playlistId = playlist.Id
+					for _, p := range list {
+						if p.Name == name {
+							playlistId = p.Id
 							goto Ok
 						}
 					}
@@ -313,9 +340,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 					notice = "网络错误"
 					goto Complete
 				}
-				m.player.playlist = utils.GetSongsOfPlaylist(response)
+				playlist = utils.GetSongsOfPlaylist(response)
 			}
-			length = len(m.player.playlist)
+			length = len(playlist)
 			if !configs.ConfigRegistry.AutoPlayRandom {
 				if configs.ConfigRegistry.AutoPlayOffset >= 0 {
 					if configs.ConfigRegistry.AutoPlayOffset >= length {
@@ -336,6 +363,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				rand.Seed(time.Now().UnixMicro())
 				index = rand.Intn(length)
 			}
+		Play:
+			m.player.playlist = playlist
+			m.player.curSongIndex = index
 			m.player.PlaySong(m.player.playlist[index], DurationNext)
 		Complete:
 			if notice != "" {
