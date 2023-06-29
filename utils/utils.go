@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -260,10 +259,10 @@ func DownloadMusic(song structs.Song) {
 			tag.SetAlbum(song.Album.Name)
 			tag.SetArtist(song.ArtistName())
 			_ = tag.Save()
-			tag.Close() //fix: "The process cannot access the file because it is being used by another process" Err on Windows
+			tag.Close() // fix: "The process cannot access the file because it is being used by another process" Err on Windows
 			err = os.Rename(f.Name(), targetFilename)
-			if err != nil && runtime.GOOS == "windows" {
-				//fix: Windows下载路径修改为其他盘符时报错：The system cannot move the file to a different disk drive.
+			if err != nil && strings.HasSuffix(err.Error(), "invalid cross-device link") {
+				// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 				srcFile, _ := os.Open(f.Name())
 				dstFile, _ := os.Create(targetFilename)
 				defer dstFile.Close()
