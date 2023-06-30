@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -181,7 +180,7 @@ func CompareVersion(v1, v2 string, equal bool) bool {
 // DownloadMusic 下载音乐
 func DownloadMusic(song structs.Song) {
 	errHandler := func(errs ...error) {
-		log.Printf("下载歌曲失败, err: %+v", errs)
+		Logger().Printf("[ERROR] 下载歌曲失败, err: %+v", errs)
 	}
 
 	url, musicType, err := GetSongUrl(song.Id)

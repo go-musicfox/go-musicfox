@@ -126,7 +126,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 					if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
 						utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
 					}
-					p.Next()
+					p.NextSong(false)
 				} else {
 					p.model.Rerender(false)
 				}
