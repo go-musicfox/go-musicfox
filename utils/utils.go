@@ -104,10 +104,10 @@ func LoadIniConfig() {
 }
 
 // CheckUpdate 检查更新
-func CheckUpdate() bool {
+func CheckUpdate() (bool, string) {
 	response, err := http.Get(constants.AppCheckUpdateUrl)
 	if err != nil {
-		return false
+		return false, ""
 	}
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
@@ -115,15 +115,15 @@ func CheckUpdate() bool {
 
 	jsonBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return false
+		return false, ""
 	}
 
 	tag, err := jsonparser.GetString(jsonBytes, "tag_name")
 	if err != nil {
-		return false
+		return false, ""
 	}
 
-	return CompareVersion(tag, constants.AppVersion, false)
+	return CompareVersion(tag, constants.AppVersion, false), tag
 }
 
 func CompareVersion(v1, v2 string, equal bool) bool {
@@ -261,7 +261,7 @@ func DownloadMusic(song structs.Song) {
 			_ = tag.Save()
 			tag.Close() // fix: "The process cannot access the file because it is being used by another process" Err on Windows
 			err = os.Rename(f.Name(), targetFilename)
-			if err != nil && (runtime.GOOS == "Windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
+			if err != nil && (runtime.GOOS == "windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
 				// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 				srcFile, _ := os.Open(f.Name())
 				dstFile, _ := os.Create(targetFilename)
