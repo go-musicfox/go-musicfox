@@ -3,7 +3,9 @@ package player
 import (
 	"fmt"
 	"os/exec"
+	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -189,7 +191,20 @@ func (p *mpdPlayer) listen() {
 				}
 			}
 
-			p.curSongId, err = p.client().AddID(p.curMusic.Url, 0)
+			_, err = p.client().Update("") // Update music database (for cached music)
+			mpdErrorHandler(err, true)
+			var (
+				url     string
+				isCache bool
+			)
+			if strings.HasPrefix(p.curMusic.Url, "http") {
+				url = p.curMusic.Url
+				isCache = false
+			} else {
+				url = path.Base(p.curMusic.Url)
+				isCache = true
+			}
+			p.curSongId, err = p.client().AddID(url, 0)
 			mpdErrorHandler(err, false)
 
 			// 计时器
@@ -209,13 +224,16 @@ func (p *mpdPlayer) listen() {
 
 			err = p.client().PlayID(p.curSongId)
 			mpdErrorHandler(err, false)
-			// Doing this because github.com/fhs/gompd/v2/mpd hasn't implement "addtagid" yet
-			err = p.client().Command("addtagid %d %s %s", p.curSongId, "artist", p.curMusic.ArtistName()).OK()
-			mpdErrorHandler(err, false)
-			err = p.client().Command("addtagid %d %s %s", p.curSongId, "album", p.curMusic.Album.Name).OK()
-			mpdErrorHandler(err, false)
-			err = p.client().Command("addtagid %d %s %s", p.curSongId, "title", p.curMusic.Name).OK()
-			mpdErrorHandler(err, false)
+			if !isCache {
+				// Doing this because github.com/fhs/gompd/v2/mpd hasn't implement "addtagid" yet
+				command := "addtagid %d %s %s"
+				err = p.client().Command(command, p.curSongId, "artist", p.curMusic.ArtistName()).OK()
+				mpdErrorHandler(err, false)
+				err = p.client().Command(command, p.curSongId, "album", p.curMusic.Album.Name).OK()
+				mpdErrorHandler(err, false)
+				err = p.client().Command(command, p.curSongId, "title", p.curMusic.Name).OK()
+				mpdErrorHandler(err, false)
+			}
 			p.Resume()
 		}
 	}
