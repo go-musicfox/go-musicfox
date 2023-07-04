@@ -26,6 +26,7 @@ func NewMainMenu(m *NeteaseModel) *MainMenu {
 		{Title: "LastFM"},
 		{Title: "帮助"},
 		{Title: "检查更新"},
+		{Title: "清除缓存"},
 	}
 	mainMenu.menuList = []Menu{
 		NewDailyRecommendSongsMenu(),
@@ -43,6 +44,7 @@ func NewMainMenu(m *NeteaseModel) *MainMenu {
 		NewLastfm(m),
 		NewHelpMenu(),
 		NewCheckUpdateMenu(),
+		NewClearCacheMenu(),
 	}
 
 	mainMenu.model = m
