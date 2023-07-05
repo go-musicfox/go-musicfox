@@ -11,4 +11,5 @@ type Controller interface {
 	CtrlPrevious()
 	CtrlSeek(duration time.Duration)
 	CtrlSetVolume(volume int)
+	PlayingInfo() PlayingInfo
 }

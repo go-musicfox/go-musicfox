@@ -208,19 +208,6 @@ func nextPage(m *NeteaseModel) {
 	m.menuCurPage++
 }
 
-func enterKeyHandle(m *NeteaseModel) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
-
-	switch m.menu.(type) {
-	case *AddToUserPlaylistMenu:
-		addSongToUserPlaylist(m, m.menu.(*AddToUserPlaylistMenu).action)
-	default:
-		enterMenu(m, nil, nil)
-	}
-}
-
 // 进入菜单
 func enterMenu(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
 	m.isListeningKey = false
@@ -650,7 +637,7 @@ func downloadSelectedSong(m *NeteaseModel) {
 		return
 	}
 	songs := menu.Songs()
-	go utils.DownloadMusic(songs[selectedIndex])
+	utils.DownloadMusic(songs[selectedIndex])
 }
 
 func downloadPlayingSong(m *NeteaseModel) {
@@ -662,7 +649,7 @@ func downloadPlayingSong(m *NeteaseModel) {
 		return
 	}
 
-	go utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+	utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
 }
 
 func albumOfPlayingSong(m *NeteaseModel) {
@@ -872,7 +859,7 @@ func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
 	songs := menu.Songs()
 
 	var notifyTitle string
-	if addToNext && len(m.player.playlist) > 0 {
+	if addToNext {
 		// 添加为下一曲
 		targetIndex := m.player.curSongIndex + 1
 		m.player.playlist = append(m.player.playlist, structs.Song{})
@@ -902,114 +889,6 @@ func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
 	})
 }
 
-// openAddSongToUserPlaylistMenu 打开添加歌曲到用户歌单菜单
-func openAddSongToUserPlaylistMenu(m *NeteaseModel, isSelected, isAdd bool) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
-
-	switch m.menu.(type) {
-	case SongsMenu:
-		if m.menu.RealDataIndex(m.selectedIndex) >= len(m.menu.(SongsMenu).Songs()) {
-			return
-		}
-	default:
-		if isSelected {
-			return
-		}
-	}
-	// 避免重复进入
-	if _, ok := m.menu.(*AddToUserPlaylistMenu); ok {
-		return
-	}
-	var song structs.Song
-	var subtitle string
-	if isSelected {
-		song = m.menu.(SongsMenu).Songs()[m.menu.RealDataIndex(m.selectedIndex)]
-	} else {
-		song = m.player.curSong
-	}
-	if isAdd {
-		subtitle = "将「" + song.Name + "」加入歌单"
-	} else {
-		subtitle = "将「" + song.Name + "」从歌单中删除"
-	}
-	enterMenu(m, NewAddToUserPlaylistMenu(m.user.UserId, song, isAdd), &MenuItem{Title: "我的歌单", Subtitle: subtitle})
-}
-
-// addSongToUserPlaylist 添加歌曲到用户歌单
-func addSongToUserPlaylist(m *NeteaseModel, isAdd bool) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
-
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
-			addSongToUserPlaylist(m, isAdd)
-		})
-		return
-	}
-
-	menu := m.menu.(*AddToUserPlaylistMenu)
-	playlist := menu.playlists[menu.RealDataIndex(m.selectedIndex)]
-
-	var op string
-	if isAdd {
-		op = "add"
-	} else {
-		op = "del"
-	}
-	likeService := service.PlaylistTracksService{
-		TrackIds: []string{strconv.FormatInt(menu.song.Id, 10)},
-		Op:       op,
-		Pid:      strconv.FormatInt(playlist.Id, 10),
-	}
-	if code, resp := likeService.PlaylistTracks(); code != 200 {
-		var msg string
-		if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
-			msg, _ = jsonparser.GetString(resp, "data", "message")
-		}
-		if msg == "" && isAdd {
-			msg = "加入歌单失败"
-		} else if msg == "" && !isAdd {
-			msg = "从歌单中删除失败"
-		}
-		utils.Notify(utils.NotifyContent{
-			Title:   msg,
-			Text:    menu.song.Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
-		})
-		backMenu(m)
-		return
-	}
-
-	var title string
-	if isAdd {
-		title = "已添加到歌单「" + playlist.Name + "」"
-	} else {
-		title = "已从歌单「" + playlist.Name + "」中删除"
-	}
-	utils.Notify(utils.NotifyContent{
-		Title:   title,
-		Text:    menu.song.Name,
-		Url:     utils.WebUrlOfPlaylist(playlist.Id),
-		GroupId: constants.GroupID,
-	})
-	backMenu(m)
-	switch mt := m.menu.(type) {
-	case *PlaylistDetailMenu:
-		// 刷新菜单
-		if !isAdd && mt.playlistId == playlist.Id {
-			t := m.menuTitle
-			backMenu(m)
-			menu.BeforeEnterMenuHook()(m)
-			enterMenu(m, menu, t)
-		}
-	default:
-	}
-}
-
 // 从播放列表删除选中歌曲,仅在当前播放列表界面有效
 func delSongFromPlaylist(m *NeteaseModel) {
 	loading := NewLoading(m)
@@ -1021,10 +900,6 @@ func delSongFromPlaylist(m *NeteaseModel) {
 	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
-	// 防止切片越界
-	if len(m.player.playlist) == 0 {
-		return
-	}
 	// 选中歌曲为当前播放歌曲时处理逻辑
 	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == menu.Songs()[selectedIndex].Id {
 		// 防止用户快速删除当前播放歌曲导致错位
@@ -1034,10 +909,7 @@ func delSongFromPlaylist(m *NeteaseModel) {
 		// 末尾歌曲删除向前退
 		if m.player.curSongIndex+1 >= len(m.player.playlist) {
 			m.player.curSongIndex = len(m.player.playlist) - 1
-			// 不在只剩一个歌曲的情况下重新播放歌曲
-			if len(m.player.playlist) > 1 {
-				m.player.PreviousSong(false)
-			}
+			m.player.PreviousSong(false)
 		} else {
 			_ = m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
 		}
@@ -1060,30 +932,5 @@ func delSongFromPlaylist(m *NeteaseModel) {
 	m.player.playingMenu = nil
 	m.player.playingMenuKey += "modified"
 
-	// 如果播放列表中已经没有歌曲，停止播放
-	if len(m.player.playlist) == 0 {
-		m.player.Stop()
-	}
-
 	m.refreshMenuList()
-}
-
-func clearSongCache(m *NeteaseModel) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
-	err := utils.ClearMusicCache()
-	if err != nil {
-		utils.Notify(utils.NotifyContent{
-			Title:   "清除缓存失败",
-			Text:    err.Error(),
-			GroupId: constants.GroupID,
-		})
-	} else {
-		utils.Notify(utils.NotifyContent{
-			Title:   "清除缓存成功",
-			Text:    "缓存已清除",
-			GroupId: constants.GroupID,
-		})
-	}
 }
