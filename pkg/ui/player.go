@@ -119,17 +119,17 @@ func NewPlayer(model *NeteaseModel) *Player {
 				return
 			case s := <-p.Player.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				if s == player.Stopped {
-					// 上报lastfm
-					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
-					// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
-					if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
-						utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
-					}
-					p.NextSong(false)
-				} else {
+				if s != player.Stopped {
 					p.model.Rerender(false)
+					break
 				}
+				// 上报lastfm
+				lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
+				if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
+					utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
+				}
+				p.NextSong(false)
 			}
 		}
 	}()

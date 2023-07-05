@@ -909,10 +909,9 @@ func delSongFromPlaylist(m *NeteaseModel) {
 		// 末尾歌曲删除向前退
 		if m.player.curSongIndex+1 >= len(m.player.playlist) {
 			m.player.curSongIndex = len(m.player.playlist) - 1
-			m.player.Previous()
+			m.player.PreviousSong(false)
 		} else {
-			m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
-
+			_ = m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
 		}
 	}
 	// 以下2行 为防止切片越界
