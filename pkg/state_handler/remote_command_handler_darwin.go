@@ -56,7 +56,7 @@ func (remoteCommandHandlerBinding) HandlePlayCommand(_ objc.SEL, event objc.ID) 
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Resume()
+	_playerController.CtrlResume()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -64,7 +64,7 @@ func (remoteCommandHandlerBinding) HandlePauseCommand(_ objc.SEL, event objc.ID)
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Paused()
+	_playerController.CtrlPaused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -72,7 +72,7 @@ func (remoteCommandHandlerBinding) HandleStopCommand(_ objc.SEL, event objc.ID) 
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Paused()
+	_playerController.CtrlPaused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -80,7 +80,7 @@ func (remoteCommandHandlerBinding) HandleTogglePlayPauseCommand(_ objc.SEL, even
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Toggle()
+	_playerController.CtrlToggle()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -88,7 +88,7 @@ func (remoteCommandHandlerBinding) HandleNextTrackCommand(_ objc.SEL, event objc
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Next()
+	_playerController.CtrlNext()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -96,7 +96,7 @@ func (remoteCommandHandlerBinding) HandlePreviousTrackCommand(_ objc.SEL, event 
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Previous()
+	_playerController.CtrlPrevious()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -138,7 +138,7 @@ func (remoteCommandHandlerBinding) HandleChangePlaybackPositionCommand(_ objc.SE
 		pos := objc.Send[float64](event, objc.RegisterName("positionTime"))
 		position = time.Duration(pos) * time.Second
 	})
-	_playerController.Seek(position)
+	_playerController.CtrlSeek(position)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -166,7 +166,7 @@ func (remoteCommandHandlerBinding) HandleWillSleepOrPowerOff(_ objc.SEL, notific
 	if _playerController == nil {
 		return
 	}
-	_playerController.Paused()
+	_playerController.CtrlPaused()
 }
 
 func (remoteCommandHandlerBinding) HandleDidWake(_ objc.SEL, notification objc.ID) {
