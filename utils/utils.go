@@ -455,12 +455,12 @@ func ClearMusicCache() error {
 
 func ClearDir(dir string) error {
 	if FileOrDirExists(dir) {
-		err := os.RemoveAll(dir)
-		if err != nil {
+		if err := os.RemoveAll(dir); err != nil {
 			return err
 		}
+		return os.MkdirAll(dir, os.ModePerm)
 	}
-	return os.MkdirAll(dir, os.ModePerm)
+	return nil
 }
 
 var brMap = map[service.SongQualityLevel]string{
