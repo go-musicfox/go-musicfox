@@ -33,7 +33,7 @@ func (m *MediaPlayer2) properties() map[string]*prop.Prop {
 func (m *MediaPlayer2) Raise() *dbus.Error { return nil }
 
 func (m *MediaPlayer2) Quit() *dbus.Error {
-	m.player.Paused() // 只暂停
+	m.player.CtrlPaused() // 只暂停
 	return nil
 }
 
