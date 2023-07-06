@@ -608,7 +608,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "'", "\"":
 		// 取消收藏选中歌单
 		collectSelectedPlaylist(m, false)
-	case "\\","、":
+	case "\\", "、":
 		// 从播放列表删除歌曲,仅在当前播放列表界面有效
 		delSongFromPlaylist(m)
 	case "e":
@@ -617,6 +617,9 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "E":
 		// 追加到播放列表末尾
 		addSongToPlaylist(m, false)
+	case "u", "U":
+		// 清除歌曲缓存
+		clearSongCache(m)
 	case "r", "R":
 		// rerender
 		return m, tea.ClearScreen

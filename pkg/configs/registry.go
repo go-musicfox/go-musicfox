@@ -44,7 +44,7 @@ type Registry struct {
 	MainDownloadDir            string                   // 指定下载目录
 	MainShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
 	MainCacheDir               string                   // 指定缓存目录
-	MainCacheLimit             int64                    // 缓存大小（以MB为单位），-1为不使用缓存，0为不限制，默认为-1
+	MainCacheLimit             int64                    // 缓存大小（以MB为单位），0为不使用缓存，-1为不限制，默认为0
 
 	UNMSwitch             bool     // UNM开关
 	UNMSources            []string // UNM资源
@@ -158,7 +158,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainDownloadDir = ini.String("main.downloadDir", "")
 	registry.MainShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)
 	registry.MainCacheDir = ini.String("main.cacheDir", "")
-	registry.MainCacheLimit = ini.Int64("main.cacheLimit", -1)
+	registry.MainCacheLimit = ini.Int64("main.cacheLimit", 0)
 
 	defaultPlayer := constants.BeepPlayer
 	if runtime.GOOS == "darwin" {

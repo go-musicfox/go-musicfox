@@ -237,18 +237,24 @@ func DownloadFile(url, filename, dirname string) error {
 	return nil
 }
 
-func IsCached(song structs.Song) bool {
+func getCacheUri(songId int64) (uri string, ok bool) {
 	cacheDir := GetCacheDir()
+	if !FileOrDirExists(cacheDir) {
+		_ = os.MkdirAll(cacheDir, os.ModePerm)
+		return
+	}
 	files, err := ioutil.ReadDir(cacheDir)
-	if err != nil {
-		return false
+	if err != nil || len(files) == 0 {
+		return
 	}
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), strconv.FormatInt(song.Id, 10)) {
-			return true
+		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) {
+			uri = path.Join(cacheDir, file.Name())
+			ok = true
+			return
 		}
 	}
-	return false
+	return
 }
 
 func CopyCachedSong(song structs.Song) error {
@@ -260,19 +266,11 @@ func CopyCachedSong(song structs.Song) error {
 	if !FileOrDirExists(cacheDir) {
 		_ = os.MkdirAll(cacheDir, os.ModePerm)
 	}
-	files, _ := ioutil.ReadDir(cacheDir)
-	var filename string
-	for _, file := range files {
-		if strings.HasPrefix(file.Name(), strconv.FormatInt(song.Id, 10)) {
-			filename = file.Name()
-			break
-		}
+	oldFilename, ok := getCacheUri(song.Id)
+	if !ok {
+		return errors.New("cache file not exists")
 	}
-	if filename == "" {
-		return errors.New("cached file not found")
-	}
-	oldFilename := path.Join(cacheDir, filename)
-	split := strings.Split(filename, ".")
+	split := strings.Split(path.Base(oldFilename), ".")
 	musicType := split[len(split)-1]
 	targetFilename := path.Join(downloadDir, fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType))
 
@@ -344,11 +342,25 @@ func SetSongTag(file *os.File, song structs.Song) {
 	}
 }
 
+func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
+	err := DownloadFile(url, song.Name, downloadDir)
+	if err != nil {
+		return err
+	}
+	filename := path.Join(downloadDir, fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType))
+	file, _ := os.OpenFile(path.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
+	SetSongTag(file, song)
+	return nil
+}
+
 // DownloadMusic 下载音乐
 func DownloadMusic(song structs.Song) {
-	errHandler := func(errs ...error) {
-		Logger().Printf("[ERROR] 下载歌曲失败, err: %+v", errs)
-	}
+	var (
+		errHandler = func(errs ...error) {
+			Logger().Printf("[ERROR] 下载歌曲失败, err: %+v", errs)
+		}
+		err error
+	)
 
 	url, musicType, err := GetSongUrl(song)
 	if err != nil {
@@ -357,67 +369,35 @@ func DownloadMusic(song structs.Song) {
 	}
 
 	downloadDir := GetDownloadDir()
+	Notify(NotifyContent{
+		Title:   "👇🏻正在下载，请稍候...",
+		Text:    song.Name,
+		Url:     FileUrl(downloadDir),
+		GroupId: constants.GroupID,
+	})
 
-	if IsCached(song) {
-		go func() {
-			Notify(NotifyContent{
-				Title:   "👇🏻正在下载，请稍候...",
-				Text:    song.Name,
-				Url:     FileUrl(downloadDir),
-				GroupId: constants.GroupID,
-			})
-			err := CopyCachedSong(song)
-			switch err.(type) {
-			case nil:
-				Notify(NotifyContent{
-					Title:   "✅下载完成",
-					Text:    song.Name,
-					Url:     FileUrl(downloadDir),
-					GroupId: constants.GroupID,
-				})
-			case FileExistsError:
-				Notify(NotifyContent{
-					Title:   "🙅🏻‍文件已存在",
-					Text:    song.Name,
-					Url:     FileUrl(downloadDir),
-					GroupId: constants.GroupID,
-				})
-			default:
-				errHandler(err)
-			}
-
-		}()
+	if _, ok := getCacheUri(song.Id); ok {
+		err = CopyCachedSong(song)
 	} else {
-		go func() {
-			Notify(NotifyContent{
-				Title:   "👇🏻正在下载，请稍候...",
-				Text:    song.Name,
-				Url:     FileUrl(downloadDir),
-				GroupId: constants.GroupID,
-			})
-			err := DownloadFile(url, song.Name, downloadDir)
-			switch err.(type) {
-			case nil:
-				filename := path.Join(downloadDir, fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType))
-				file, _ := os.OpenFile(path.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
-				SetSongTag(file, song)
-				Notify(NotifyContent{
-					Title:   "✅下载完成",
-					Text:    song.Name,
-					Url:     FileUrl(downloadDir),
-					GroupId: constants.GroupID,
-				})
-			case FileExistsError:
-				Notify(NotifyContent{
-					Title:   "🙅🏻‍文件已存在",
-					Text:    song.Name,
-					Url:     FileUrl(downloadDir),
-					GroupId: constants.GroupID,
-				})
-			default:
-				errHandler(err)
-			}
-		}()
+		err = downloadMusic(url, musicType, song, downloadDir)
+	}
+	switch err.(type) {
+	case nil:
+		Notify(NotifyContent{
+			Title:   "✅下载完成",
+			Text:    song.Name,
+			Url:     FileUrl(downloadDir),
+			GroupId: constants.GroupID,
+		})
+	case FileExistsError:
+		Notify(NotifyContent{
+			Title:   "🙅🏻‍文件已存在",
+			Text:    song.Name,
+			Url:     FileUrl(downloadDir),
+			GroupId: constants.GroupID,
+		})
+	default:
+		errHandler(err)
 	}
 }
 
@@ -440,7 +420,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 		errHandler(err)
 		return
 	}
-	if configs.ConfigRegistry.MainCacheLimit > 0 && size > configs.ConfigRegistry.MainCacheLimit*1024*1024 {
+	if configs.ConfigRegistry.MainCacheLimit != -1 && size > configs.ConfigRegistry.MainCacheLimit*1024*1024 {
 		return
 	}
 	filename := fmt.Sprintf("%d-%d.%s", song.Id, priority[quality], musicType)
@@ -458,35 +438,29 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 }
 
 func GetCacheUrl(songId int64) (url, musicType string, ok bool) {
-	var (
-		cacheDir = GetCacheDir()
-		err      error
-		files    []fs.FileInfo
-		song     string
-	)
+	url, ok = getCacheUri(songId)
+	if !ok || path.Base(url) < fmt.Sprintf("%d-%d", songId, priority[configs.ConfigRegistry.MainPlayerSongLevel]) {
+		return
+	}
+	split := strings.Split(path.Base(url), ".")
+	musicType = split[len(split)-1]
+	ok = true
+	return
+}
 
-	if !FileOrDirExists(cacheDir) {
-		_ = os.MkdirAll(cacheDir, os.ModePerm)
-		return
-	}
-	files, err = ioutil.ReadDir(cacheDir)
-	if err != nil || len(files) == 0 {
-		return
-	}
-	for i := range files {
-		if song = files[i].Name(); strings.HasPrefix(song, strconv.FormatInt(songId, 10)) {
-			if song < fmt.Sprintf("%d-%d", songId, priority[configs.ConfigRegistry.MainPlayerSongLevel]) {
-				_ = os.Remove(path.Join(cacheDir, song))
-				return
-			}
-			url = path.Join(cacheDir, song)
-			split := strings.Split(song, ".")
-			musicType = split[len(split)-1]
-			ok = true
-			return
+func ClearMusicCache() error {
+	cacheDir := GetCacheDir()
+	return ClearDir(cacheDir)
+}
+
+func ClearDir(dir string) error {
+	if FileOrDirExists(dir) {
+		err := os.RemoveAll(dir)
+		if err != nil {
+			return err
 		}
 	}
-	return
+	return os.MkdirAll(dir, os.ModePerm)
 }
 
 var brMap = map[service.SongQualityLevel]string{
@@ -498,7 +472,7 @@ var brMap = map[service.SongQualityLevel]string{
 }
 
 func GetSongUrl(song structs.Song) (url, musicType string, err error) {
-	if configs.ConfigRegistry.MainCacheLimit > -1 && runtime.GOOS != "darwin" {
+	if configs.ConfigRegistry.MainCacheLimit != 0 {
 		// FIXME: 目前没有Mac开发环境，暂不支持MacOS的缓存
 		var ok bool
 		if url, musicType, ok = GetCacheUrl(song.Id); ok {
@@ -545,7 +519,7 @@ func GetSongUrl(song structs.Song) (url, musicType string, err error) {
 		musicType = "mp3"
 	}
 	err = nil
-	if configs.ConfigRegistry.MainCacheLimit > -1 {
+	if configs.ConfigRegistry.MainCacheLimit != 0 {
 		go CacheMusic(song, url, musicType, urlService.Level)
 	}
 	return

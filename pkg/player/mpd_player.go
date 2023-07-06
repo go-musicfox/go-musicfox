@@ -191,8 +191,6 @@ func (p *mpdPlayer) listen() {
 				}
 			}
 
-			_, err = p.client().Update("") // Update music database (for cached music)
-			mpdErrorHandler(err, true)
 			var (
 				url     string
 				isCache bool
@@ -204,6 +202,13 @@ func (p *mpdPlayer) listen() {
 				url = path.Base(p.curMusic.Url)
 				isCache = true
 			}
+
+			_, err = p.client().Update("") // Update music database (for cached music)
+			if err != nil && isCache {
+				mpdErrorHandler(err, true)
+				continue
+			}
+
 			p.curSongId, err = p.client().AddID(url, 0)
 			mpdErrorHandler(err, false)
 
