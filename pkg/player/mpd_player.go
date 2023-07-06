@@ -170,6 +170,7 @@ func (p *mpdPlayer) listen() {
 		err error
 	)
 
+Loop:
 	for {
 		select {
 		case <-p.close:
@@ -206,7 +207,7 @@ func (p *mpdPlayer) listen() {
 			_, err = p.client().Update("") // Update music database (for cached music)
 			if err != nil && isCache {
 				mpdErrorHandler(err, true)
-				continue
+				continue Loop
 			}
 
 			p.curSongId, err = p.client().AddID(url, 0)
