@@ -68,7 +68,7 @@ func notImplemented(c *prop.Change) *dbus.Error {
 func (p *Player) OnVolume(c *prop.Change) *dbus.Error {
 	val := int(math.Round(c.Value.(float64) * 100))
 
-	p.Handler.player.SetVolumeByExternalCtrl(val)
+	p.Handler.player.CtrlSetVolume(val)
 	return nil
 }
 
@@ -106,7 +106,7 @@ func (p *Player) createStatus(info PlayingInfo) {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Next
 func (p *Player) Next() *dbus.Error {
 	log.Printf("Next requested\n")
-	p.Handler.player.Next()
+	p.Handler.player.CtrlNext()
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (p *Player) Next() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Previous
 func (p *Player) Previous() *dbus.Error {
 	log.Printf("Previous requested\n")
-	p.Handler.player.Previous()
+	p.Handler.player.CtrlPrevious()
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (p *Player) Previous() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Pause
 func (p *Player) Pause() *dbus.Error {
 	log.Printf("Pause requested\n")
-	p.Handler.player.Paused()
+	p.Handler.player.CtrlPaused()
 	return nil
 }
 
@@ -130,7 +130,7 @@ func (p *Player) Pause() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Play
 func (p *Player) Play() *dbus.Error {
 	log.Printf("Play requested\n")
-	p.Handler.player.Resume()
+	p.Handler.player.CtrlResume()
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (p *Player) Play() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Stop
 func (p *Player) Stop() *dbus.Error {
 	log.Printf("Stop requested\n")
-	p.Handler.player.Paused() // 只暂停
+	p.Handler.player.CtrlPaused() // 只暂停
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (p *Player) Stop() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:PlayPause
 func (p *Player) PlayPause() *dbus.Error {
 	log.Printf("Play/Pause requested. Switching context...\n")
-	p.Handler.player.Toggle()
+	p.Handler.player.CtrlToggle()
 	return nil
 }
 
