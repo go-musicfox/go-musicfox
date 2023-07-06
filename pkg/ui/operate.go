@@ -930,9 +930,9 @@ func openAddSongToUserPlaylistMenu(m *NeteaseModel, isSelected, isAdd bool) {
 		song = m.player.curSong
 	}
 	if isAdd {
-		subtitle = "将" + "「" + song.Name + "」" + "加入歌单"
+		subtitle = "将「" + song.Name + "」加入歌单"
 	} else {
-		subtitle = "将" + "「" + song.Name + "」" + "从歌单中删除"
+		subtitle = "将「" + song.Name + "」从歌单中删除"
 	}
 	enterMenu(m, NewAddToUserPlaylistMenu(m.user.UserId, song, isAdd), &MenuItem{Title: "我的歌单", Subtitle: subtitle})
 }
@@ -986,9 +986,9 @@ func addSongToUserPlaylist(m *NeteaseModel, isAdd bool) {
 
 	var title string
 	if isAdd {
-		title = "已添加到歌单" + playlist.Name
+		title = "已添加到歌单「" + playlist.Name + "」"
 	} else {
-		title = "已从歌单" + playlist.Name + "中删除"
+		title = "已从歌单「" + playlist.Name + "」中删除"
 	}
 	utils.Notify(utils.NotifyContent{
 		Title:   title,
@@ -997,15 +997,14 @@ func addSongToUserPlaylist(m *NeteaseModel, isAdd bool) {
 		GroupId: constants.GroupID,
 	})
 	backMenu(m)
-	switch m.menu.(type) {
+	switch mt := m.menu.(type) {
 	case *PlaylistDetailMenu:
-		menu := m.menu.(*PlaylistDetailMenu)
 		// 刷新菜单
-		if !isAdd && menu.playlistId == playlist.Id {
-			title := m.menuTitle
+		if !isAdd && mt.playlistId == playlist.Id {
+			t := m.menuTitle
 			backMenu(m)
 			menu.BeforeEnterMenuHook()(m)
-			enterMenu(m, menu, title)
+			enterMenu(m, menu, t)
 		}
 	default:
 	}
