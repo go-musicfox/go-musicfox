@@ -251,72 +251,21 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			}
 			switch config.AutoPlayList {
 			case "dailyReco":
-				recommendSongs := service.RecommendSongsService{}
-				code, response := recommendSongs.RecommendSongs()
-				codeType := utils.CheckCode(code)
-				if codeType != utils.Success {
-					notice = "网络错误"
-					goto Complete
-				}
-				playlist = utils.GetDailySongs(response)
+				playlist, notice = getDailySongs()
 			case "like":
-				var (
-					codeType  utils.ResCode
-					playlists []structs.Playlist
-					songs     []structs.Song
-				)
-				codeType, playlists, _ = getUserPlaylists(m.user.UserId, 1, 0)
-				if codeType != utils.Success {
-					notice = "网络错误"
-					goto Complete
-				}
-				codeType, songs = getSongsInPlaylist(playlists[0].Id, getAll)
-				if codeType != utils.Success {
-					notice = "网络错误"
-					goto Complete
-				}
-				playlist = songs
+				playlist, notice = getLikeSongs(m.user.UserId, getAll)
 			case "no":
 				playlist = m.player.playlist
-			default:
+			default: // name:xxx
 				if !strings.HasPrefix(config.AutoPlayList, "name:") {
 					notice = fmt.Sprintf("歌单格式错误：%s", config.AutoPlayList)
 					goto Complete
 				}
 				name := config.AutoPlayList[5:]
-				var (
-					playlistId int64
-					offset     int = 0
-					codeType   utils.ResCode
-					playlists  []structs.Playlist
-					hasMore    bool = true
-				)
-				// 寻找歌单
-			Loop:
-				for {
-					codeType, playlists, hasMore = getUserPlaylists(m.user.UserId, 30, offset)
-					if codeType != utils.Success {
-						notice = "网络错误"
-						goto Complete
-					}
-					offset += len(playlists)
-					for i := range playlists {
-						if playlists[i].Name == name {
-							playlistId = playlists[index].Id
-							break Loop
-						}
-					}
-					if !hasMore {
-						notice = fmt.Sprintf("未找到歌单：%s", name)
-						goto Complete
-					}
-				}
-				codeType, songs := getSongsInPlaylist(playlistId, getAll)
-				if codeType != utils.Success {
-					notice = "网络错误"
-					goto Complete
-				}
-				playlist = songs
+				playlist, notice = getPlaylistByName(m.user.UserId, name, getAll)
+			}
+			if notice != "" {
+				goto Complete
 			}
 			length = len(playlist)
 			if config.AutoPlayList == "no" {
@@ -352,6 +301,75 @@ func (m *NeteaseModel) Init() tea.Cmd {
 	}
 
 	return tickMainUI(time.Nanosecond)
+}
+
+func getDailySongs() (playlist []structs.Song, notice string) {
+	recommendSongs := service.RecommendSongsService{}
+	code, response := recommendSongs.RecommendSongs()
+	codeType := utils.CheckCode(code)
+	if codeType != utils.Success {
+		notice = "网络错误"
+		return
+	}
+	playlist = utils.GetDailySongs(response)
+	return
+}
+
+func getLikeSongs(userId int64, getAll bool) (playlist []structs.Song, notice string) {
+	var (
+		codeType  utils.ResCode
+		playlists []structs.Playlist
+		songs     []structs.Song
+	)
+	codeType, playlists, _ = getUserPlaylists(userId, 1, 0)
+	if codeType != utils.Success {
+		notice = "网络错误"
+		return
+	}
+	codeType, songs = getSongsInPlaylist(playlists[0].Id, getAll)
+	if codeType != utils.Success {
+		notice = "网络错误"
+		return
+	}
+	playlist = songs
+	return
+}
+
+func getPlaylistByName(userId int64, playlistName string, getAll bool) (playlist []structs.Song, notice string) {
+	var (
+		playlistId int64
+		offset     int = 0
+		codeType   utils.ResCode
+		playlists  []structs.Playlist
+		hasMore    bool = true
+	)
+	// 寻找歌单
+Loop:
+	for {
+		codeType, playlists, hasMore = getUserPlaylists(userId, 30, offset)
+		if codeType != utils.Success {
+			notice = "网络错误"
+			return
+		}
+		offset += len(playlists)
+		for _, playlist := range playlists {
+			if playlist.Name == playlistName {
+				playlistId = playlist.Id
+				break Loop
+			}
+		}
+		if !hasMore {
+			notice = fmt.Sprintf("未找到歌单：%s", playlistName)
+			return
+		}
+	}
+	codeType, songs := getSongsInPlaylist(playlistId, getAll)
+	if codeType != utils.Success {
+		notice = "网络错误"
+		return
+	}
+	playlist = songs
+	return
 }
 
 func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
