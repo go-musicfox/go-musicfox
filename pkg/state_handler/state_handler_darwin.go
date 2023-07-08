@@ -121,11 +121,11 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 			url := core.NSURL_URLWithString(core.String(picUrl))
 			defer url.Release()
 			image := cocoa.NSImage_alloc()
-			defer image.Release()
 			if i := image.InitWithContentsOfURL(url); i.ID > 0 {
 				image = i
 				s.curArtwork = mediaplayer.MPMediaItemArtwork_alloc().InitWithImage(image)
 			}
+			defer image.Release()
 		}
 		s.l.Unlock()
 		dic.SetValueForKey(core.String(mediaplayer.MPMediaItemPropertyArtwork), s.curArtwork.NSObject)
