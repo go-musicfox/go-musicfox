@@ -89,7 +89,7 @@ func NewRegistryWithDefault() *Registry {
 		MainAltScreen:        true,
 		MainEnableMouseEvent: true,
 		MainDownloadDir:      "",
-		MainCacheLimit:       -1,
+		MainCacheLimit:       0,
 		PlayerEngine:         constants.BeepPlayer,
 		PlayerBeepMp3Decoder: constants.BeepGoMp3Decoder,
 

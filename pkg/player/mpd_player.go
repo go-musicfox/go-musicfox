@@ -170,7 +170,6 @@ func (p *mpdPlayer) listen() {
 		err error
 	)
 
-Loop:
 	for {
 		select {
 		case <-p.close:
@@ -204,10 +203,21 @@ Loop:
 				isCache = true
 			}
 
-			_, err = p.client().Update("") // Update music database (for cached music)
-			if err != nil && isCache {
-				mpdErrorHandler(err, true)
-				continue Loop
+			if isCache {
+				_, err := p.client().Update(url)
+				mpdErrorHandler(err, false)
+				for {
+					var attr map[string]string
+					if attr, err = p.client().Status(); err != nil {
+						mpdErrorHandler(err, true)
+						break
+					}
+					if _, ok := attr["updating_db"]; ok {
+						continue
+					}
+					// 确保更新完成
+					break
+				}
 			}
 
 			p.curSongId, err = p.client().AddID(url, 0)
@@ -234,11 +244,11 @@ Loop:
 				// Doing this because github.com/fhs/gompd/v2/mpd hasn't implement "addtagid" yet
 				command := "addtagid %d %s %s"
 				err = p.client().Command(command, p.curSongId, "artist", p.curMusic.ArtistName()).OK()
-				mpdErrorHandler(err, false)
+				mpdErrorHandler(err, true)
 				err = p.client().Command(command, p.curSongId, "album", p.curMusic.Album.Name).OK()
-				mpdErrorHandler(err, false)
+				mpdErrorHandler(err, true)
 				err = p.client().Command(command, p.curSongId, "title", p.curMusic.Name).OK()
-				mpdErrorHandler(err, false)
+				mpdErrorHandler(err, true)
 			}
 			p.Resume()
 		}
