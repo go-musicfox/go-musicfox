@@ -286,8 +286,6 @@ func CopyCachedSong(song structs.Song) error {
 		defer dst.Close()
 		_, _ = io.Copy(dst, src)
 	}
-	f, _ := os.OpenFile(targetFilename, os.O_RDWR, os.ModePerm)
-	SetSongTag(f, song)
 	return nil
 }
 
