@@ -85,11 +85,6 @@ func (m *CloudMenu) BottomOutHook() Hook {
 	return func(model *NeteaseModel) bool {
 		m.offset += m.limit
 
-		// 不重复请求
-		if len(m.menus) > 0 && len(m.songs) > 0 {
-			return true
-		}
-
 		cloudService := service.UserCloudService{
 			Offset: strconv.Itoa(m.offset),
 			Limit:  strconv.Itoa(m.limit),
