@@ -204,7 +204,7 @@ func (p *mpdPlayer) listen() {
 			}
 
 			if isCache {
-				_, err := p.client().Update(url)
+				_, err := p.client().Rescan(url)
 				mpdErrorHandler(err, false)
 				for {
 					var attr map[string]string
