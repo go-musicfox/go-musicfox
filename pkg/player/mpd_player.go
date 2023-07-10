@@ -320,7 +320,7 @@ func (p *mpdPlayer) UpVolume() {
 	} else {
 		p.volume += 5
 	}
-	_ = p.client().SetVolume(p.volume)
+	mpdErrorHandler(p.client().SetVolume(p.volume), true)
 }
 
 func (p *mpdPlayer) DownVolume() {
@@ -331,7 +331,7 @@ func (p *mpdPlayer) DownVolume() {
 	} else {
 		p.volume -= 5
 	}
-	_ = p.client().SetVolume(p.volume)
+	mpdErrorHandler(p.client().SetVolume(p.volume), true)
 }
 
 func (p *mpdPlayer) Volume() int {
@@ -349,7 +349,7 @@ func (p *mpdPlayer) SetVolume(volume int) {
 	defer p.l.Unlock()
 
 	p.volume = volume
-	_ = p.client().SetVolume(volume)
+	mpdErrorHandler(p.client().SetVolume(volume), true)
 }
 
 func (p *mpdPlayer) Close() {
