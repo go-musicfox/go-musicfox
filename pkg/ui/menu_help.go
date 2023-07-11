@@ -57,6 +57,7 @@ func NewHelpMenu() *HelpMenu {
 		{Title: "x/X", Subtitle: "快退1s/5s"},
 		{Title: ";/:", Subtitle: "收藏选中歌单"},
 		{Title: "'/\"", Subtitle: "取消收藏选中歌单"},
+		{Title: "u/U", Subtitle: "清除音乐缓存"},
 	}
 
 	return menu
