@@ -35,6 +35,8 @@ func MPMediaItemArtwork_alloc() MPMediaItemArtwork {
 }
 
 func (art MPMediaItemArtwork) InitWithImage(image cocoa.NSImage) MPMediaItemArtwork {
-	art.Send(sel_initWithImage, image.ID)
+	if art.ID > 0 && image.ID > 0 {
+		art.Send(sel_initWithImage, image.ID)
+	}
 	return art
 }

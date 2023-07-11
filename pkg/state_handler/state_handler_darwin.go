@@ -128,7 +128,9 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 			defer image.Release()
 		}
 		s.l.Unlock()
-		dic.SetValueForKey(core.String(mediaplayer.MPMediaItemPropertyArtwork), s.curArtwork.NSObject)
+		if s.curArtwork.ID > 0 {
+			dic.SetValueForKey(core.String(mediaplayer.MPMediaItemPropertyArtwork), s.curArtwork.NSObject)
+		}
 	}
 
 	s.nowPlayingCenter.SetPlaybackState(stateMap[info.State])
