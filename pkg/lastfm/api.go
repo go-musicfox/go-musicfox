@@ -153,7 +153,7 @@ func Report(client *Client, phase ReportPhase, song structs.Song, passedTime tim
 	case ReportPhaseComplete:
 		duration := song.Duration.Seconds()
 		passedSeconds := passedTime.Seconds()
-		if duration <= passedSeconds || passedSeconds >= duration/2 {
+		if passedSeconds >= duration/2 {
 			go func(song structs.Song, passed time.Duration) {
 				_ = client.Scrobble(map[string]interface{}{
 					"artist":    song.ArtistName(),
