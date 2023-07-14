@@ -35,7 +35,7 @@ const (
 	MediaTypeVedio
 )
 
-func NewHandler(p Controller) *Handler {
+func NewHandler(p Controller, _ PlayingInfo) *Handler {
 	playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
 	commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
 	commandHandler := remoteCommandHandler_new(p)
@@ -120,12 +120,17 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 			s.curArtworkUrl = picUrl
 			url := core.NSURL_URLWithString(core.String(picUrl))
 			defer url.Release()
-			image := cocoa.NSImage_alloc().InitWithContentsOfURL(url)
+			image := cocoa.NSImage_alloc()
+			if i := image.InitWithContentsOfURL(url); i.ID > 0 {
+				image = i
+				s.curArtwork = mediaplayer.MPMediaItemArtwork_alloc().InitWithImage(image)
+			}
 			defer image.Release()
-			s.curArtwork = mediaplayer.MPMediaItemArtwork_alloc().InitWithImage(image)
 		}
 		s.l.Unlock()
-		dic.SetValueForKey(core.String(mediaplayer.MPMediaItemPropertyArtwork), s.curArtwork.NSObject)
+		if s.curArtwork.ID > 0 {
+			dic.SetValueForKey(core.String(mediaplayer.MPMediaItemPropertyArtwork), s.curArtwork.NSObject)
+		}
 	}
 
 	s.nowPlayingCenter.SetPlaybackState(stateMap[info.State])

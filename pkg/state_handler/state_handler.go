@@ -5,7 +5,7 @@ package state_handler
 type Handler struct {
 }
 
-func NewHandler(_ Controller) *Handler {
+func NewHandler(_ Controller, _ PlayingInfo) *Handler {
 	return &Handler{}
 }
 

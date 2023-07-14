@@ -41,7 +41,7 @@ func (m *CheckUpdateMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
 
 func (m *CheckUpdateMenu) BeforeEnterMenuHook() Hook {
 	return func(model *NeteaseModel) bool {
-		m.hasUpdate = utils.CheckUpdate()
+		m.hasUpdate, _ = utils.CheckUpdate()
 		return true
 	}
 }
