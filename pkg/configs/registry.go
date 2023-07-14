@@ -43,6 +43,8 @@ type Registry struct {
 	MainDoubleColumn           bool                     // 是否双列显示
 	MainDownloadDir            string                   // 指定下载目录
 	MainShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
+	MainCacheDir               string                   // 指定缓存目录
+	MainCacheLimit             int64                    // 缓存大小（以MB为单位），0为不使用缓存，-1为不限制，默认为0
 
 	AutoPlay       bool   // 是否自动开始播放
 	AutoPlayList   string // 自动播放列表：dailyReco（每日推荐）、like（我喜欢的音乐）、no（保持上次退出时的设置，无视offset）、name:[歌单名]
@@ -91,6 +93,8 @@ func NewRegistryWithDefault() *Registry {
 		MainPProfPort:        constants.MainPProfPort,
 		MainAltScreen:        true,
 		MainEnableMouseEvent: true,
+		MainDownloadDir:      "",
+		MainCacheLimit:       0,
 		PlayerEngine:         constants.BeepPlayer,
 		PlayerBeepMp3Decoder: constants.BeepGoMp3Decoder,
 
@@ -163,6 +167,8 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.MainDoubleColumn = ini.Bool("main.doubleColumn", true)
 	registry.MainDownloadDir = ini.String("main.downloadDir", "")
 	registry.MainShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)
+	registry.MainCacheDir = ini.String("main.cacheDir", "")
+	registry.MainCacheLimit = ini.Int64("main.cacheLimit", 0)
 
 	defaultPlayer := constants.BeepPlayer
 	if runtime.GOOS == "darwin" {

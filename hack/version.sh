@@ -27,5 +27,9 @@ fi
 echo AppVersion    "${VERSION}"
 echo GitRevision   "${GIT_REVISION}"
 echo User          "$(whoami)"
-echo Host          "$(hostname -f)"
+if [[ ! `hostname -f` ]]; then
+    echo Host          "$(cat /etc/hostname)"
+else
+    echo Host          "$(hostname -f)"
+fi
 echo Time          "$(date '+%Y-%m-%dT%T')"``
