@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -105,10 +104,10 @@ func LoadIniConfig() {
 }
 
 // CheckUpdate 检查更新
-func CheckUpdate() bool {
+func CheckUpdate() (bool, string) {
 	response, err := http.Get(constants.AppCheckUpdateUrl)
 	if err != nil {
-		return false
+		return false, ""
 	}
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
@@ -116,15 +115,15 @@ func CheckUpdate() bool {
 
 	jsonBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return false
+		return false, ""
 	}
 
 	tag, err := jsonparser.GetString(jsonBytes, "tag_name")
 	if err != nil {
-		return false
+		return false, ""
 	}
 
-	return CompareVersion(tag, constants.AppVersion, false)
+	return CompareVersion(tag, constants.AppVersion, false), tag
 }
 
 func CompareVersion(v1, v2 string, equal bool) bool {
@@ -182,7 +181,7 @@ func CompareVersion(v1, v2 string, equal bool) bool {
 // DownloadMusic 下载音乐
 func DownloadMusic(song structs.Song) {
 	errHandler := func(errs ...error) {
-		log.Printf("下载歌曲失败, err: %+v", errs)
+		Logger().Printf("[ERROR] 下载歌曲失败, err: %+v", errs)
 	}
 
 	url, musicType, err := GetSongUrl(song.Id)
@@ -201,6 +200,8 @@ func DownloadMusic(song structs.Song) {
 		}
 
 		fileName := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+		// Windows Linux 均不允许文件名中出现 / \ 替换为 _
+		fileName = strings.Replace(fileName, "/", "_", -1)
 		targetFilename := path.Join(downloadDir, fileName)
 		if _, err := os.Stat(targetFilename); err == nil {
 			Notify(NotifyContent{
@@ -212,7 +213,10 @@ func DownloadMusic(song structs.Song) {
 			return
 		}
 
-		resp, err := http.Get(url)
+		client := &http.Client{
+			Timeout: 60 * time.Second,
+		}
+		resp, err := client.Get(url)
 		if err != nil {
 			errHandler(err)
 			return
@@ -233,7 +237,11 @@ func DownloadMusic(song structs.Song) {
 			GroupId: constants.GroupID,
 		})
 
-		_, _ = io.Copy(f, resp.Body)
+		_, err = io.Copy(f, resp.Body)
+		if err != nil {
+			errHandler(err)
+			return
+		}
 
 		version := songtag.CheckVersion(f)
 		switch version {
@@ -260,10 +268,10 @@ func DownloadMusic(song structs.Song) {
 			tag.SetAlbum(song.Album.Name)
 			tag.SetArtist(song.ArtistName())
 			_ = tag.Save()
-			tag.Close() //fix: "The process cannot access the file because it is being used by another process" Err on Windows
+			tag.Close() // fix: "The process cannot access the file because it is being used by another process" Err on Windows
 			err = os.Rename(f.Name(), targetFilename)
-			if err != nil && runtime.GOOS == "windows" {
-				//fix: Windows下载路径修改为其他盘符时报错：The system cannot move the file to a different disk drive.
+			if err != nil && (runtime.GOOS == "windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
+				// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 				srcFile, _ := os.Open(f.Name())
 				dstFile, _ := os.Create(targetFilename)
 				defer dstFile.Close()

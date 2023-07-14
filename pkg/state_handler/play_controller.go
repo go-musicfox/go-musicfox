@@ -3,13 +3,12 @@ package state_handler
 import "time"
 
 type Controller interface {
-	Paused()
-	Resume()
-	Stop()
-	Toggle()
-	Next()
-	Previous()
-	Seek(duration time.Duration)
-	SetVolumeByExternalCtrl(volume int)
-	PlayingInfo() PlayingInfo
+	CtrlPaused()
+	CtrlResume()
+	CtrlStop()
+	CtrlToggle()
+	CtrlNext()
+	CtrlPrevious()
+	CtrlSeek(duration time.Duration)
+	CtrlSetVolume(volume int)
 }

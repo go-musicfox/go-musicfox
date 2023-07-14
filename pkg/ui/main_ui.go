@@ -532,8 +532,10 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 		moveTop(m)
 	case "G":
 		moveBottom(m)
-	case "n", "N", "enter":
+	case "n", "N":
 		enterMenu(m, nil, nil)
+	case "enter":
+		enterKeyHandle(m)
 	case "b", "B", "esc":
 		backMenu(m)
 	case "c", "C":
@@ -556,9 +558,9 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "X":
 		m.player.Seek(m.player.PassedTime() - time.Second*5)
 	case "[", "【":
-		m.player.PreviousSong()
+		m.player.PreviousSong(true)
 	case "]", "】":
-		m.player.NextSong()
+		m.player.NextSong(true)
 	case "p":
 		m.player.SetPlayMode(0)
 	case "P":
@@ -603,6 +605,14 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "?", "？":
 		// 帮助
 		enterMenu(m, NewHelpMenu(), &MenuItem{Title: "帮助"})
+	case "tab":
+		openAddSongToUserPlaylistMenu(m, true, true)
+	case "shift+tab":
+		openAddSongToUserPlaylistMenu(m, true, false)
+	case "`":
+		openAddSongToUserPlaylistMenu(m, false, true)
+	case "~", "～":
+		openAddSongToUserPlaylistMenu(m, false, false)
 	case "a":
 		// 当前歌曲所属专辑
 		albumOfPlayingSong(m)
@@ -627,7 +637,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case "'", "\"":
 		// 取消收藏选中歌单
 		collectSelectedPlaylist(m, false)
-	case "\\","、":
+	case "\\", "、":
 		// 从播放列表删除歌曲,仅在当前播放列表界面有效
 		delSongFromPlaylist(m)
 	case "e":

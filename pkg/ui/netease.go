@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -210,12 +211,20 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		}
 
 		// 检查更新
-		if config.StartupCheckUpdate && utils.CheckUpdate() {
-			utils.Notify(utils.NotifyContent{
-				Title: "发现新版本",
-				Text:  "去看看呗",
-				Url:   constants.AppLatestReleases,
-			})
+		if configs.ConfigRegistry.StartupCheckUpdate {
+			if ok, newVersion := utils.CheckUpdate(); ok {
+				if runtime.GOOS == "windows" {
+					enterMenu(m, NewCheckUpdateMenu(),
+						&MenuItem{Title: "新版本: " + newVersion,
+							Subtitle: "当前版本: " + constants.AppVersion})
+				}
+
+				utils.Notify(utils.NotifyContent{
+					Title: "发现新版本: " + newVersion,
+					Text:  "去看看呗",
+					Url:   constants.AppLatestReleases,
+				})
+			}
 		}
 
 		// 自动播放
