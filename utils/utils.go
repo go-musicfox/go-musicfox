@@ -106,10 +106,10 @@ func LoadIniConfig() {
 }
 
 // CheckUpdate 检查更新
-func CheckUpdate() bool {
+func CheckUpdate() (bool, string) {
 	response, err := http.Get(constants.AppCheckUpdateUrl)
 	if err != nil {
-		return false
+		return false, ""
 	}
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
@@ -117,15 +117,15 @@ func CheckUpdate() bool {
 
 	jsonBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return false
+		return false, ""
 	}
 
 	tag, err := jsonparser.GetString(jsonBytes, "tag_name")
 	if err != nil {
-		return false
+		return false, ""
 	}
 
-	return CompareVersion(tag, constants.AppVersion, false)
+	return CompareVersion(tag, constants.AppVersion, false), tag
 }
 
 func CompareVersion(v1, v2 string, equal bool) bool {
@@ -272,7 +272,10 @@ func CopyCachedSong(song structs.Song) error {
 	}
 	split := strings.Split(path.Base(oldFilename), ".")
 	musicType := split[len(split)-1]
-	targetFilename := path.Join(downloadDir, fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType))
+  filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+  // Windows Linux 均不允许文件名中出现 / \ 替换为 _
+	filename = strings.Replace(filename, "/", "_", -1)
+	targetFilename := path.Join(downloadDir, filename)
 
 	if _, err := os.Stat(targetFilename); err == nil {
 		return FileExistsError{path: targetFilename}

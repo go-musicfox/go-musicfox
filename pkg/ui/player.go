@@ -95,7 +95,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 	ctx, p.cancel = context.WithCancel(context.Background())
 
 	p.Player = player.NewPlayerFromConfig()
-	p.stateHandler = state_handler.NewHandler(p)
+	p.stateHandler = state_handler.NewHandler(p, p.PlayingInfo())
 
 	// remote control
 	go func() {
@@ -119,17 +119,17 @@ func NewPlayer(model *NeteaseModel) *Player {
 				return
 			case s := <-p.Player.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				if s == player.Stopped {
-					// 上报lastfm
-					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
-					// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
-					if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
-						utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
-					}
-					p.Next()
-				} else {
+				if s != player.Stopped {
 					p.model.Rerender(false)
+					break
 				}
+				// 上报lastfm
+				lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
+				if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
+					utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
+				}
+				p.NextSong(false)
 			}
 		}
 	}()
@@ -147,7 +147,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
 					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
-					p.NextSong()
+					p.NextSong(false)
 				}
 				if p.lrcTimer != nil {
 					select {
@@ -402,9 +402,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		}
 		switch direction {
 		case DurationPrev:
-			p.PreviousSong()
+			p.PreviousSong(false)
 		case DurationNext:
-			p.NextSong()
+			p.NextSong(false)
 		}
 		return nil
 	}
@@ -436,7 +436,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 }
 
 // NextSong 下一曲
-func (p *Player) NextSong() {
+func (p *Player) NextSong(isManual bool) {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
@@ -462,6 +462,12 @@ func (p *Player) NextSong() {
 			p.curSongIndex = 0
 		}
 	case player.PmSingleLoop:
+		if isManual && p.curSongIndex < len(p.playlist)-1 {
+			p.curSongIndex++
+		} else if isManual && p.curSongIndex >= len(p.playlist)-1 {
+			return
+		}
+		// else pass
 	case player.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
@@ -486,7 +492,7 @@ func (p *Player) NextSong() {
 }
 
 // PreviousSong 上一曲
-func (p *Player) PreviousSong() {
+func (p *Player) PreviousSong(isManual bool) {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
 		if p.mode == player.PmIntelligent {
 			p.Intelligence(true)
@@ -512,6 +518,12 @@ func (p *Player) PreviousSong() {
 			p.curSongIndex = len(p.playlist) - 1
 		}
 	case player.PmSingleLoop:
+		if isManual && p.curSongIndex > 0 {
+			p.curSongIndex--
+		} else if isManual && p.curSongIndex <= 0 {
+			return
+		}
+		// else pass
 	case player.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
@@ -533,6 +545,14 @@ func (p *Player) PreviousSong() {
 	}
 	song := p.playlist[p.curSongIndex]
 	_ = p.PlaySong(song, DurationPrev)
+}
+
+func (p *Player) Seek(duration time.Duration) {
+	p.Player.Seek(duration)
+	if p.lrcTimer != nil {
+		p.lrcTimer.Rewind()
+	}
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
 // SetPlayMode 播放模式切换
@@ -722,16 +742,28 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlToggle:
 		p.Player.Toggle()
 	case CtrlPrevious:
-		p.PreviousSong()
+		p.PreviousSong(true)
 	case CtrlNext:
-		p.NextSong()
+		p.NextSong(true)
 	case CtrlSeek:
-		p.Player.Seek(signal.Duration)
-		if p.lrcTimer != nil {
-			p.lrcTimer.Rewind()
-		}
-		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+		p.Seek(signal.Duration)
 	case CtrlRerender:
 		p.model.Rerender(false)
+	}
+}
+
+func (p *Player) PlayingInfo() state_handler.PlayingInfo {
+	music := p.curSong
+	return state_handler.PlayingInfo{
+		TotalDuration:  music.Duration,
+		PassedDuration: p.PassedTime(),
+		State:          p.State(),
+		Volume:         p.Volume(),
+		TrackID:        music.Id,
+		PicUrl:         music.PicUrl,
+		Name:           music.Name,
+		Album:          music.Album.Name,
+		Artist:         music.ArtistName(),
+		AlbumArtist:    music.Album.ArtistName(),
 	}
 }

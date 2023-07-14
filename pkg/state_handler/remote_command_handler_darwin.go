@@ -46,6 +46,30 @@ var (
 	sel_handleDisableLanguageOptionCommand  = objc.RegisterName("handleDisableLanguageOptionCommand:")
 	sel_handleWillSleepOrPowerOff           = objc.RegisterName("handleWillSleepOrPowerOff:")
 	sel_handleDidWake                       = objc.RegisterName("handleDidWake:")
+
+	sels = map[string]objc.SEL{
+		"HandlePlayCommand":                   sel_handlePlayCommand,
+		"HandlePauseCommand":                  sel_handlePauseCommand,
+		"HandleStopCommand":                   sel_handleStopCommand,
+		"HandleTogglePlayPauseCommand":        sel_handleTogglePlayPauseCommand,
+		"HandleNextTrackCommand":              sel_handleNextTrackCommand,
+		"HandlePreviousTrackCommand":          sel_handlePreviousTrackCommand,
+		"HandleChangeRepeatModeCommand":       sel_handleChangeRepeatModeCommand,
+		"HandleChangeShuffleModeCommand":      sel_handleChangeShuffleModeCommand,
+		"HandleChangePlaybackRateCommand":     sel_handleChangePlaybackRateCommand,
+		"HandleSeekBackwardCommand":           sel_handleSeekBackwardCommand,
+		"HandleSeekForwardCommand":            sel_handleSeekForwardCommand,
+		"HandleSkipForwardCommand":            sel_handleSkipForwardCommand,
+		"HandleSkipBackwardCommand":           sel_handleSkipBackwardCommand,
+		"HandleChangePlaybackPositionCommand": sel_handleChangePlaybackPositionCommand,
+		"HandleLikeCommand":                   sel_handleLikeCommand,
+		"HandleDislikeCommand":                sel_handleDislikeCommand,
+		"HandleBookmarkCommand":               sel_handleBookmarkCommand,
+		"HandleEnableLanguageOptionCommand":   sel_handleEnableLanguageOptionCommand,
+		"HandleDisableLanguageOptionCommand":  sel_handleDisableLanguageOptionCommand,
+		"HandleWillSleepOrPowerOff":           sel_handleWillSleepOrPowerOff,
+		"HandleDidWake":                       sel_handleDidWake,
+	}
 )
 
 type remoteCommandHandlerBinding struct {
@@ -56,7 +80,7 @@ func (remoteCommandHandlerBinding) HandlePlayCommand(_ objc.SEL, event objc.ID) 
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Resume()
+	_playerController.CtrlResume()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -64,7 +88,7 @@ func (remoteCommandHandlerBinding) HandlePauseCommand(_ objc.SEL, event objc.ID)
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Paused()
+	_playerController.CtrlPaused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -72,7 +96,7 @@ func (remoteCommandHandlerBinding) HandleStopCommand(_ objc.SEL, event objc.ID) 
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Paused()
+	_playerController.CtrlPaused()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -80,7 +104,7 @@ func (remoteCommandHandlerBinding) HandleTogglePlayPauseCommand(_ objc.SEL, even
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Toggle()
+	_playerController.CtrlToggle()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -88,7 +112,7 @@ func (remoteCommandHandlerBinding) HandleNextTrackCommand(_ objc.SEL, event objc
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Next()
+	_playerController.CtrlNext()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -96,7 +120,7 @@ func (remoteCommandHandlerBinding) HandlePreviousTrackCommand(_ objc.SEL, event 
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.Previous()
+	_playerController.CtrlPrevious()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -138,7 +162,7 @@ func (remoteCommandHandlerBinding) HandleChangePlaybackPositionCommand(_ objc.SE
 		pos := objc.Send[float64](event, objc.RegisterName("positionTime"))
 		position = time.Duration(pos) * time.Second
 	})
-	_playerController.Seek(position)
+	_playerController.CtrlSeek(position)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -166,59 +190,17 @@ func (remoteCommandHandlerBinding) HandleWillSleepOrPowerOff(_ objc.SEL, notific
 	if _playerController == nil {
 		return
 	}
-	_playerController.Paused()
+	_playerController.CtrlPaused()
 }
 
 func (remoteCommandHandlerBinding) HandleDidWake(_ objc.SEL, notification objc.ID) {
 }
 
 func (remoteCommandHandlerBinding) Selector(metName string) objc.SEL {
-	switch metName {
-	case "HandlePlayCommand":
-		return sel_handlePlayCommand
-	case "HandlePauseCommand":
-		return sel_handlePauseCommand
-	case "HandleStopCommand":
-		return sel_handleStopCommand
-	case "HandleTogglePlayPauseCommand":
-		return sel_handleTogglePlayPauseCommand
-	case "HandleNextTrackCommand":
-		return sel_handleNextTrackCommand
-	case "HandlePreviousTrackCommand":
-		return sel_handlePreviousTrackCommand
-	case "HandleChangeRepeatModeCommand":
-		return sel_handleChangeRepeatModeCommand
-	case "HandleChangeShuffleModeCommand":
-		return sel_handleChangeShuffleModeCommand
-	case "HandleChangePlaybackRateCommand":
-		return sel_handleChangePlaybackRateCommand
-	case "HandleSeekBackwardCommand":
-		return sel_handleSeekBackwardCommand
-	case "HandleSeekForwardCommand":
-		return sel_handleSeekForwardCommand
-	case "HandleSkipForwardCommand":
-		return sel_handleSkipForwardCommand
-	case "HandleSkipBackwardCommand":
-		return sel_handleSkipBackwardCommand
-	case "HandleChangePlaybackPositionCommand":
-		return sel_handleChangePlaybackPositionCommand
-	case "HandleLikeCommand":
-		return sel_handleLikeCommand
-	case "HandleDislikeCommand":
-		return sel_handleDislikeCommand
-	case "HandleBookmarkCommand":
-		return sel_handleBookmarkCommand
-	case "HandleEnableLanguageOptionCommand":
-		return sel_handleEnableLanguageOptionCommand
-	case "HandleDisableLanguageOptionCommand":
-		return sel_handleDisableLanguageOptionCommand
-	case "HandleWillSleepOrPowerOff":
-		return sel_handleWillSleepOrPowerOff
-	case "HandleDidWake":
-		return sel_handleDidWake
-	default:
-		return 0
+	if sel, ok := sels[metName]; ok {
+		return sel
 	}
+	return 0
 }
 
 type remoteCommandHandler struct {
