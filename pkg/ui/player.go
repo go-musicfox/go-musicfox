@@ -95,7 +95,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 	ctx, p.cancel = context.WithCancel(context.Background())
 
 	p.Player = player.NewPlayerFromConfig()
-	p.stateHandler = state_handler.NewHandler(p)
+	p.stateHandler = state_handler.NewHandler(p, p.PlayingInfo())
 
 	// remote control
 	go func() {
@@ -547,6 +547,14 @@ func (p *Player) PreviousSong(isManual bool) {
 	_ = p.PlaySong(song, DurationPrev)
 }
 
+func (p *Player) Seek(duration time.Duration) {
+	p.Player.Seek(duration)
+	if p.lrcTimer != nil {
+		p.lrcTimer.Rewind()
+	}
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+}
+
 // SetPlayMode 播放模式切换
 func (p *Player) SetPlayMode(playMode player.Mode) {
 	if playMode > 0 {
@@ -738,12 +746,24 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlNext:
 		p.NextSong(true)
 	case CtrlSeek:
-		p.Player.Seek(signal.Duration)
-		if p.lrcTimer != nil {
-			p.lrcTimer.Rewind()
-		}
-		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+		p.Seek(signal.Duration)
 	case CtrlRerender:
 		p.model.Rerender(false)
+	}
+}
+
+func (p *Player) PlayingInfo() state_handler.PlayingInfo {
+	music := p.curSong
+	return state_handler.PlayingInfo{
+		TotalDuration:  music.Duration,
+		PassedDuration: p.PassedTime(),
+		State:          p.State(),
+		Volume:         p.Volume(),
+		TrackID:        music.Id,
+		PicUrl:         music.PicUrl,
+		Name:           music.Name,
+		Album:          music.Album.Name,
+		Artist:         music.ArtistName(),
+		AlbumArtist:    music.Album.ArtistName(),
 	}
 }
