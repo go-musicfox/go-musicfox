@@ -550,13 +550,13 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
 	case " ", "　":
 		spaceKeyHandle(m)
 	case "v":
-		m.player.Seek(m.player.PassedTime() + time.Second*5)
+		m.player.CtrlSeek(m.player.PassedTime() + time.Second*5)
 	case "V":
-		m.player.Seek(m.player.PassedTime() + time.Second*10)
+		m.player.CtrlSeek(m.player.PassedTime() + time.Second*10)
 	case "x":
-		m.player.Seek(m.player.PassedTime() - time.Second*1)
+		m.player.CtrlSeek(m.player.PassedTime() - time.Second*1)
 	case "X":
-		m.player.Seek(m.player.PassedTime() - time.Second*5)
+		m.player.CtrlSeek(m.player.PassedTime() - time.Second*5)
 	case "[", "【":
 		m.player.PreviousSong(true)
 	case "]", "】":
@@ -669,7 +669,7 @@ func (main *MainUIModel) mouseMsgHandle(msg tea.MouseMsg, m *NeteaseModel) (tea.
 				return m, nil
 			}
 			duration := float64(x) * m.player.CurMusic().Duration.Seconds() / float64(w)
-			m.player.Seek(time.Second * time.Duration(duration))
+			m.player.CtrlSeek(time.Second * time.Duration(duration))
 			if m.player.State() != player.Playing {
 				m.player.Resume()
 			}
