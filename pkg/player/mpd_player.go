@@ -108,7 +108,7 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 		p.watch()
 	}()
 
-	p.SyncMpdStatus("")
+	p.syncMpdStatus("")
 	return p
 }
 
@@ -126,7 +126,7 @@ func (p *mpdPlayer) client() *mpd.Client {
 	return _client
 }
 
-func (p *mpdPlayer) SyncMpdStatus(subsystem string) {
+func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 	status, err := p.client().Status()
 	mpdErrorHandler(err, true)
 
@@ -150,14 +150,17 @@ func (p *mpdPlayer) SyncMpdStatus(subsystem string) {
 			p.setState(Stopped)
 		}
 	}
-	p.volume, _ = strconv.Atoi(status["volume"])
-	duration, _ := time.ParseDuration(status["elapsed"] + "s")
-
-	if p.timer != nil {
-		p.timer.SetPassed(duration)
-		select {
-		case p.timeChan <- p.timer.Passed():
-		default:
+	if vol := status["volume"]; vol != "" {
+		p.volume, _ = strconv.Atoi(vol)
+	}
+	if elapsed := status["elapsed"]; elapsed != "" {
+		duration, _ := time.ParseDuration(elapsed + "s")
+		if p.timer != nil {
+			p.timer.SetPassed(duration)
+			select {
+			case p.timeChan <- p.timer.Passed():
+			default:
+			}
 		}
 	}
 }
@@ -228,7 +231,7 @@ func (p *mpdPlayer) watch() {
 			return
 		case subsystem := <-p.watcher.Event:
 			if subsystem == "player" || subsystem == "mixer" {
-				p.SyncMpdStatus(subsystem)
+				p.syncMpdStatus(subsystem)
 			}
 		}
 	}

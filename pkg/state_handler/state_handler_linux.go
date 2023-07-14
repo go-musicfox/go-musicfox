@@ -45,7 +45,7 @@ type Handler struct {
 	once   sync.Once
 }
 
-func NewHandler(p Controller) *Handler {
+func NewHandler(p Controller, nowInfo PlayingInfo) *Handler {
 	handler := &Handler{
 		player: p,
 		name:   fmt.Sprintf("org.mpris.MediaPlayer2.musicfox.instance%d", os.Getpid()),
@@ -61,7 +61,7 @@ func NewHandler(p Controller) *Handler {
 	_ = handler.dbus.Export(mp2, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2")
 
 	mprisPlayer := &Player{Handler: handler}
-	mprisPlayer.createStatus(p.PlayingInfo())
+	mprisPlayer.createStatus(nowInfo)
 	_ = handler.dbus.Export(mprisPlayer, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player")
 
 	_ = handler.dbus.Export(introspect.NewIntrospectable(handler.IntrospectNode()), "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Introspectable")
