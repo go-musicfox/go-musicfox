@@ -650,7 +650,7 @@ func downloadSelectedSong(m *NeteaseModel) {
 		return
 	}
 	songs := menu.Songs()
-	utils.DownloadMusic(songs[selectedIndex])
+	go utils.DownloadMusic(songs[selectedIndex])
 }
 
 func downloadPlayingSong(m *NeteaseModel) {
@@ -662,7 +662,7 @@ func downloadPlayingSong(m *NeteaseModel) {
 		return
 	}
 
-	utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+	go utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
 }
 
 func albumOfPlayingSong(m *NeteaseModel) {
@@ -1054,4 +1054,24 @@ func delSongFromPlaylist(m *NeteaseModel) {
 	m.player.playingMenuKey += "modified"
 
 	m.refreshMenuList()
+}
+
+func clearSongCache(m *NeteaseModel) {
+	loading := NewLoading(m)
+	loading.start()
+	defer loading.complete()
+	err := utils.ClearMusicCache()
+	if err != nil {
+		utils.Notify(utils.NotifyContent{
+			Title:   "清除缓存失败",
+			Text:    err.Error(),
+			GroupId: constants.GroupID,
+		})
+	} else {
+		utils.Notify(utils.NotifyContent{
+			Title:   "清除缓存成功",
+			Text:    "缓存已清除",
+			GroupId: constants.GroupID,
+		})
+	}
 }

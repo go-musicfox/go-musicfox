@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -72,6 +73,7 @@ func (p *beepPlayer) listen() {
 	var (
 		done       = make(chan struct{})
 		resp       *http.Response
+		reader     io.ReadCloser
 		err        error
 		ctx        context.Context
 		cancel     context.CancelFunc
@@ -116,9 +118,16 @@ func (p *beepPlayer) listen() {
 					panic(err)
 				}
 
-				if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
+				if !strings.HasPrefix(p.curMusic.Url, "http") {
+					reader, err = os.Open(p.curMusic.Url)
+					if err != nil {
+						panic(err)
+					}
+				} else if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
 					p.stopNoLock()
 					continue
+				} else {
+					reader = resp.Body
 				}
 
 				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
@@ -156,7 +165,7 @@ func (p *beepPlayer) listen() {
 						_ = p.curStreamer.Seek(pos)
 						p.ctrl.Streamer = beep.Seq(beep.StreamerFunc(p.streamer), beep.Callback(doneHandle))
 					}
-				}(ctx, p.cacheWriter, resp.Body)
+				}(ctx, p.cacheWriter, reader)
 
 				var N = 512
 				if p.curMusic.Type == Flac {
