@@ -35,7 +35,7 @@ const (
 	MediaTypeVedio
 )
 
-func NewHandler(p Controller) *Handler {
+func NewHandler(p Controller, _ PlayingInfo) *Handler {
 	playingCenter := mediaplayer.MPNowPlayingInfoCenter_defaultCenter()
 	commandCenter := mediaplayer.MPRemoteCommandCenter_sharedCommandCenter()
 	commandHandler := remoteCommandHandler_new(p)
