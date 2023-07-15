@@ -335,7 +335,6 @@ func SetSongTag(file *os.File, song structs.Song) {
 			return
 		}
 		defer metadata.Close()
-		defer metadata.SaveFile(file.Name())
 		_ = metadata.SetAlbum(song.Album.Name)
 		_ = metadata.SetArtist(song.ArtistName())
 		_ = metadata.SetAlbumArtist(song.Album.ArtistName())
@@ -350,6 +349,8 @@ func SetSongTag(file *os.File, song structs.Song) {
 				_ = metadata.(*songtag.FLAC).SetFlacPicture(img)
 			}
 		}
+		metadata.SaveFile(file.Name() + "-tmp")
+		os.Rename(file.Name() + "-tmp", file.Name())
 	}
 }
 
