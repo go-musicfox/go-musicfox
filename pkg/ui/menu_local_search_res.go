@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	ds2 "github.com/go-musicfox/go-musicfox/pkg/structs"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 type searchRes struct {
@@ -22,7 +23,8 @@ func NewSearchMenu(originMenu Menu, search string) *LocalSearchMenu {
 	}
 
 	for i, item := range originMenu.MenuViews() {
-		if strings.Contains(item.Title, search) || strings.Contains(item.Subtitle, search) {
+		if fuzzy.Match(strings.ToLower(search), strings.ToLower(item.Title)) ||
+			fuzzy.Match(strings.ToLower(search), strings.ToLower(item.Subtitle)) {
 			menu.resItems = append(menu.resItems, searchRes{
 				item:  item,
 				index: i,
