@@ -212,7 +212,10 @@ func DownloadFile(url, filename, dirname string) error {
 	if _, err := os.Stat(targetFilename); err == nil {
 		return FileExistsError{path: targetFilename}
 	}
-	resp, err := http.Get(url)
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
@@ -224,9 +227,13 @@ func DownloadFile(url, filename, dirname string) error {
 	}
 	defer os.Remove(f.Name())
 
-	_, _ = io.Copy(f, resp.Body)
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		Logger().Printf("[ERROR] 下载歌曲失败, err: %+v", err)
+		return err
+	}
 	err = os.Rename(f.Name(), targetFilename)
-	if err != nil && (runtime.GOOS == "Windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
+	if err != nil && (runtime.GOOS == "windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
 		// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 		srcFile, _ := os.Open(f.Name())
 		dstFile, _ := os.Create(targetFilename)
@@ -272,16 +279,17 @@ func CopyCachedSong(song structs.Song) error {
 	}
 	split := strings.Split(path.Base(oldFilename), ".")
 	musicType := split[len(split)-1]
-  filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
-  // Windows Linux 均不允许文件名中出现 / \ 替换为 _
+	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
 	filename = strings.Replace(filename, "/", "_", -1)
+	filename = strings.Replace(filename, "\\", "_", -1)
 	targetFilename := path.Join(downloadDir, filename)
 
 	if _, err := os.Stat(targetFilename); err == nil {
 		return FileExistsError{path: targetFilename}
 	}
 	err := os.Rename(oldFilename, targetFilename)
-	if err != nil && (runtime.GOOS == "Windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
+	if err != nil && (runtime.GOOS == "windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
 		// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 		src, _ := os.Open(oldFilename)
 		defer src.Close()
