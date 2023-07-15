@@ -247,7 +247,9 @@ func DownloadFile(url, filename, dirname string) error {
 func getCacheUri(songId int64) (uri string, ok bool) {
 	cacheDir := GetCacheDir()
 	if !FileOrDirExists(cacheDir) {
-		_ = os.MkdirAll(cacheDir, os.ModePerm)
+		if configs.ConfigRegistry.MainCacheLimit != 0 {
+			_ = os.MkdirAll(cacheDir, os.ModePerm)
+		}
 		return
 	}
 	files, err := ioutil.ReadDir(cacheDir)
@@ -352,11 +354,11 @@ func SetSongTag(file *os.File, song structs.Song) {
 }
 
 func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
-	err := DownloadFile(url, song.Name, downloadDir)
+	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
 	}
-	filename := path.Join(downloadDir, fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType))
 	file, _ := os.OpenFile(path.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
 	SetSongTag(file, song)
 	return nil
@@ -406,6 +408,12 @@ func DownloadMusic(song structs.Song) {
 			GroupId: constants.GroupID,
 		})
 	default:
+		Notify(NotifyContent{
+			Title:   "❌下载失败",
+			Text:    err.Error(),
+			Url:     FileUrl(downloadDir),
+			GroupId: constants.GroupID,
+		})
 		errHandler(err)
 	}
 }
