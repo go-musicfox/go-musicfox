@@ -240,7 +240,9 @@ func DownloadFile(url, filename, dirname string) error {
 func getCacheUri(songId int64) (uri string, ok bool) {
 	cacheDir := GetCacheDir()
 	if !FileOrDirExists(cacheDir) {
-		_ = os.MkdirAll(cacheDir, os.ModePerm)
+		if configs.ConfigRegistry.MainCacheLimit != 0 {
+			_ = os.MkdirAll(cacheDir, os.ModePerm)
+		}
 		return
 	}
 	files, err := ioutil.ReadDir(cacheDir)
@@ -272,8 +274,8 @@ func CopyCachedSong(song structs.Song) error {
 	}
 	split := strings.Split(path.Base(oldFilename), ".")
 	musicType := split[len(split)-1]
-  filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
-  // Windows Linux 均不允许文件名中出现 / \ 替换为 _
+	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
 	filename = strings.Replace(filename, "/", "_", -1)
 	targetFilename := path.Join(downloadDir, filename)
 
@@ -344,11 +346,11 @@ func SetSongTag(file *os.File, song structs.Song) {
 }
 
 func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
-	err := DownloadFile(url, song.Name, downloadDir)
+	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
 	}
-	filename := path.Join(downloadDir, fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType))
 	file, _ := os.OpenFile(path.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
 	SetSongTag(file, song)
 	return nil
