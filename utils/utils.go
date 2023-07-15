@@ -400,6 +400,12 @@ func DownloadMusic(song structs.Song) {
 			GroupId: constants.GroupID,
 		})
 	default:
+		Notify(NotifyContent{
+			Title:   "❌下载失败",
+			Text:    err.Error(),
+			Url:     FileUrl(downloadDir),
+			GroupId: constants.GroupID,
+		})
 		errHandler(err)
 	}
 }
