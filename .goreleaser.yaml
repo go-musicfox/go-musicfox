@@ -168,13 +168,13 @@ winget:
       name: winget-pkgs
       branch: "{{.ProjectName}}-{{.Version}}"
       token: "{{ .Env.GITHUB_TOKEN }}"
-      pull_request:
-        enabled: true
-        draft: true
-        base:
-          owner: microsoft
-          name: winget-pkgs
-          branch: master
+      # pull_request:
+      #   enabled: true
+      #   draft: true
+      #   base:
+      #     owner: microsoft
+      #     name: winget-pkgs
+      #     branch: master
 
 # goreleaser支持的配置不多，暂时不用
 #scoop:
