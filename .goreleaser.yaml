@@ -167,6 +167,7 @@ winget:
       owner: go-musicfox
       name: winget-pkgs
       branch: "{{.ProjectName}}-{{.Version}}"
+      token: ".Env.GITHUB_TOKEN"
       pull_request:
         enabled: true
         base:
