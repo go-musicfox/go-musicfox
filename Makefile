@@ -1,12 +1,18 @@
 PACKAGE_NAME          := go-musicfox
-GOLANG_CROSS_VERSION  ?= v1.19.0
+GOLANG_CROSS_VERSION  ?= v1.20.6
 INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/pkg/constants
 LDFLAGS               := -s -w
 LASTFM_KEY            ?=
 LASTFM_SECRET         ?=
+REGISTRY              ?=
+GORELEASER_IMAGE      ?= alanalbert/goreleaser-musicfox:$(GOLANG_CROSS_VERSION)
 
 SYSROOT_DIR     ?= sysroots
 SYSROOT_ARCHIVE ?= sysroots.tar.bz2
+
+ifneq ($(REGISTRY),)
+	GORELEASER_IMAGE := $(REGISTRY)/go-musicfox/goreleaser-musicfox:$(GOLANG_CROSS_VERSION)
+endif
 
 .PHONY: build
 build:
@@ -39,8 +45,8 @@ release-dry-run:
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
-		alanalbert/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--rm-dist --skip-validate --skip-publish
+		$(GORELEASER_IMAGE) \
+		--clean --skip-validate --skip-publish
 
 .PHONY: release
 release:
@@ -57,8 +63,8 @@ release:
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
-		alanalbert/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		release --rm-dist
+		$(GORELEASER_IMAGE) \
+		release --clean
 
 .PHONY: release-debug-shell
 release-debug-shell:
@@ -73,4 +79,4 @@ release-debug-shell:
 		-w /go/src/$(PACKAGE_NAME) \
     	-w /go/src/go-musicfox \
     	--entrypoint="/bin/bash" \
-    	alanalbert/goreleaser-cross:${GOLANG_CROSS_VERSION}
+    	$(GORELEASER_IMAGE)

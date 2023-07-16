@@ -6,12 +6,7 @@ builds:
   - id: go-musicfox-linux-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
-    hooks:
-      pre:
-        - apt update && apt install -y libtool gettext libtool-bin
-        - ./hack/init_linux_env.sh
     env:
-      - BUILD_HOST=x86_64-linux-gnu
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
       - CFLAGS=-I/usr/x86_64-linux-gnu/include:$CFLAGS
@@ -27,16 +22,11 @@ builds:
   - id: go-musicfox-linux-arm64
     main: ./cmd/musicfox.go
     binary: musicfox
-    hooks:
-      pre:
-        - apt update && apt install -y libtool gettext libtool-bin
-        - ./hack/init_linux_env.sh
     goarch:
       - arm64
     goos:
       - linux
     env:
-      - BUILD_HOST=aarch64-linux-gnu 
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
       - CFLAGS=-I/usr/aarch64-linux-gnu/include:$CFLAGS
@@ -48,16 +38,11 @@ builds:
   - id: go-musicfox-linux-arm
     main: ./cmd/musicfox.go
     binary: musicfox
-    hooks:
-      pre:
-        - apt update && apt install -y libtool gettext libtool-bin
-        - ./hack/init_linux_env.sh
     goarch:
       - arm
     goos:
       - linux
     env:
-      - BUILD_HOST=arm-linux-gnueabi
       - CC=arm-linux-gnueabi-gcc
       - CXX=arm-linux-gnueabi-g++
       - CFLAGS=-I/usr/arm-linux-gnueabi/include:$CFLAGS
@@ -69,9 +54,6 @@ builds:
   - id: go-musicfox-windows-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
-    hooks:
-      pre:
-        - ./hack/init_windows_env.sh
     goarch:
       - amd64
     goos:
@@ -81,12 +63,12 @@ builds:
     env:
       - CC=/usr/local/mingw/bin/x86_64-w64-mingw32-gcc
       - CXX=/usr/local/mingw/bin/x86_64-w64-mingw32-g++
+      - CFLAGS=-I/usr/local/mingw/x86_64-w64-mingw32/include:$CFLAGS
+      - CPPFLAGS=-I/usr/local/mingw/x86_64-w64-mingw32/include:$CPPFLAGS
+      - LDFLAGS=-L/usr/local/mingw/x86_64-w64-mingw32/lib:$LDFLAGS
   - id: go-musicfox-windows-arm64
     main: ./cmd/musicfox.go
     binary: musicfox
-    hooks:
-      pre:
-        - ./hack/init_windows_env.sh
     goarch:
       - arm64
     goos:
@@ -96,6 +78,9 @@ builds:
     env:
       - CC=/usr/local/mingw/bin/aarch64-w64-mingw32-gcc
       - CXX=/usr/local/mingw/bin/aarch64-w64-mingw32-g++
+      - CFLAGS=-I/usr/local/mingw/aarch64-w64-mingw32/include:$CFLAGS
+      - CPPFLAGS=-I/usr/local/mingw/aarch64-w64-mingw32/include:$CPPFLAGS
+      - LDFLAGS=-L/usr/local/mingw/aarch64-w64-mingw32/lib:$LDFLAGS
   - id: go-musicfox-darwin-arm64
     main: ./cmd/musicfox.go
     binary: musicfox
@@ -138,7 +123,7 @@ archives:
 
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
-    tap:
+    repository:
       owner: go-musicfox
       name: homebrew-go-musicfox
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
@@ -155,6 +140,41 @@ brews:
     install: |
       system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/go-musicfox/go-musicfox \033[0m"
       bin.install 'musicfox'
+
+winget:
+  - name: go-musicfox
+    publisher: go-musicfox
+    short_description: "A netease music player in terminal."
+    license: "MIT"
+    publisher_url: https://github.com/go-musicfox/go-musicfox
+    publisher_support_url: "https://github.com/go-musicfox/go-musicfox/issues/new"
+    package_identifier: go-musicfox.go-musicfox
+    url_template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    commit_author:
+      name: anhoder
+      email: anhoder@88.com
+    commit_msg_template: "{{ .PackageIdentifier }}: {{ .Tag }}"
+    homepage: "https://github.com/go-musicfox/go-musicfox"
+    description: "A netease music player in terminal."
+    skip_upload: auto
+    release_notes: "{{.Changelog}}"
+    tags:
+      - golang
+      - cli
+      - netease music
+      - musicfox
+    repository:
+      owner: go-musicfox
+      name: winget-pkgs
+      branch: "{{.ProjectName}}-{{.Version}}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
+      # pull_request:
+      #   enabled: true
+      #   draft: true
+      #   base:
+      #     owner: microsoft
+      #     name: winget-pkgs
+      #     branch: master
 
 # goreleaser支持的配置不多，暂时不用
 #scoop:
@@ -179,6 +199,7 @@ release:
   github:
     owner: go-musicfox
     name: go-musicfox
+  discussion_category_name: General
   prerelease: auto
   mode: replace
   draft: false
