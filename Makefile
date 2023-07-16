@@ -46,7 +46,7 @@ release-dry-run:
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(GORELEASER_IMAGE) \
-		--rm-dist --skip-validate --skip-publish
+		--clean --skip-validate --skip-publish
 
 .PHONY: release
 release:
@@ -64,7 +64,7 @@ release:
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(GORELEASER_IMAGE) \
-		release --rm-dist
+		release --clean
 
 .PHONY: release-debug-shell
 release-debug-shell:
