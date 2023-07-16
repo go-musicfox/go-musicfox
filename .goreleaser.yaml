@@ -167,12 +167,12 @@ winget:
       owner: go-musicfox
       name: winget-pkgs
       branch: "{{.ProjectName}}-{{.Version}}"
-      token: "{{.Env.GITHUB_TOKEN}}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
       pull_request:
         enabled: true
         base:
           owner: microsoft
-          name: my-repo
+          name: winget-pkgs
           branch: master
 
 # goreleaser支持的配置不多，暂时不用
