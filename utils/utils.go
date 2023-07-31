@@ -350,12 +350,15 @@ func SetSongTag(file *os.File, song structs.Song) {
 			}
 		}
 		metadata.SaveFile(file.Name() + "-tmp")
-		os.Rename(file.Name() + "-tmp", file.Name())
+		os.Rename(file.Name()+"-tmp", file.Name())
 	}
 }
 
 func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
 	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
+	filename = strings.Replace(filename, "/", "_", -1)
+	filename = strings.Replace(filename, "\\", "_", -1)
 	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
