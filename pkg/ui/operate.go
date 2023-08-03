@@ -872,7 +872,7 @@ func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
 	songs := menu.Songs()
 
 	var notifyTitle string
-	if addToNext {
+	if addToNext && len(m.player.playlist) > 0 {
 		// 添加为下一曲
 		targetIndex := m.player.curSongIndex + 1
 		m.player.playlist = append(m.player.playlist, structs.Song{})
@@ -1021,6 +1021,10 @@ func delSongFromPlaylist(m *NeteaseModel) {
 	if !ok || selectedIndex >= len(menu.Songs()) {
 		return
 	}
+	// 防止切片越界
+	if len(m.player.playlist) == 0 {
+		return
+	}
 	// 选中歌曲为当前播放歌曲时处理逻辑
 	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == menu.Songs()[selectedIndex].Id {
 		// 防止用户快速删除当前播放歌曲导致错位
@@ -1030,7 +1034,10 @@ func delSongFromPlaylist(m *NeteaseModel) {
 		// 末尾歌曲删除向前退
 		if m.player.curSongIndex+1 >= len(m.player.playlist) {
 			m.player.curSongIndex = len(m.player.playlist) - 1
-			m.player.PreviousSong(false)
+			// 不在只剩一个歌曲的情况下重新播放歌曲
+			if len(m.player.playlist) > 1 {
+				m.player.PreviousSong(false)
+			}
 		} else {
 			_ = m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
 		}
@@ -1052,6 +1059,11 @@ func delSongFromPlaylist(m *NeteaseModel) {
 	// 替换播放中数据，避免数据错乱
 	m.player.playingMenu = nil
 	m.player.playingMenuKey += "modified"
+
+	// 如果播放列表中已经没有歌曲，停止播放
+	if len(m.player.playlist) == 0 {
+		m.player.Stop()
+	}
 
 	m.refreshMenuList()
 }
