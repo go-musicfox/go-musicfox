@@ -49,7 +49,7 @@ func NewSongFromShortNameSongsJson(json []byte) (Song, error) {
 		song.Album = album
 	}
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
 		if err == nil {
 			song.Artists = append(song.Artists, artist)
@@ -88,7 +88,7 @@ func NewSongFromFmJson(json []byte) (Song, error) {
 		song.Album.PicUrl = alPic
 	}
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
 
 		if err == nil {
@@ -128,7 +128,7 @@ func NewSongFromIntelligenceJson(json []byte) (Song, error) {
 		song.Album.PicUrl = alPic
 	}
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
 
 		if err == nil {
@@ -216,7 +216,7 @@ func NewSongFromCloudJson(json []byte) (Song, error) {
 		song.Album.PicUrl = alPic
 	}
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
 
 		if err == nil {
@@ -256,7 +256,7 @@ func NewSongFromDjRankProgramJson(json []byte) (Song, error) {
 		song.Album.PicUrl = alPic
 	}
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
 
 		if err == nil {

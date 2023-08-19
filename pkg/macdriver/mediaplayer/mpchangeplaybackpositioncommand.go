@@ -12,6 +12,7 @@ func init() {
 }
 
 var (
+	//nolint:golint,unused
 	class_MPChangePlaybackPositionCommand objc.Class
 )
 

@@ -13,6 +13,7 @@ func init() {
 }
 
 var (
+	//nolint:golint,unused
 	class_MPChangeShuffleModeCommand objc.Class
 )
 

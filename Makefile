@@ -26,6 +26,10 @@ install:
 scoop-config-gen:
 	./hack/scoop_gen.sh
 
+.PHONY: lint-fix
+lint-fix:
+	golangci-lint run --fix -v
+
 .PHONY: sysroot-pack
 sysroot-pack:
 	@tar cf - $(SYSROOT_DIR) -P | pv -s $[$(du -sk $(SYSROOT_DIR) | awk '{print $1}') * 1024] | pbzip2 > $(SYSROOT_ARCHIVE)

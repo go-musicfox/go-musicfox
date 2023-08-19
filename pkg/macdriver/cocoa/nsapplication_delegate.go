@@ -32,6 +32,7 @@ var (
 )
 
 type defaultAppDelegateBinding struct {
+	//nolint:golint,unused
 	isa objc.Class `objc:"NSDefaultAppDelegate : NSObject <NSApplicationDelegate>"`
 }
 

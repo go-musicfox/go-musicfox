@@ -133,7 +133,7 @@ func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 	mpdErrorHandler(err, true)
 
 	state := stateMapping[status["state"]]
-	if subsystem == "player" && (state != Stopped || time.Now().Sub(p.latestPlayTime) >= time.Second*2) {
+	if subsystem == "player" && (state != Stopped || time.Since(p.latestPlayTime) >= time.Second*2) {
 		switch state {
 		case Playing:
 			if p.timer != nil {

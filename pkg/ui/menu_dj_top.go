@@ -11,7 +11,7 @@ type DjHotType string
 
 const (
 	DjHot    DjHotType = "hot"
-	DjNotHot           = "not_hot"
+	DjNotHot DjHotType = "not_hot"
 )
 
 type DjHotMenu struct {

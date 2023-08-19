@@ -13,6 +13,7 @@ func init() {
 }
 
 var (
+	//nolint:golint,unused
 	class_MPChangeRepeatModeCommand objc.Class
 )
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -252,7 +251,7 @@ func getCacheUri(songId int64) (uri string, ok bool) {
 		}
 		return
 	}
-	files, err := ioutil.ReadDir(cacheDir)
+	files, err := os.ReadDir(cacheDir)
 	if err != nil || len(files) == 0 {
 		return
 	}
@@ -349,8 +348,8 @@ func SetSongTag(file *os.File, song structs.Song) {
 				_ = metadata.(*songtag.FLAC).SetFlacPicture(img)
 			}
 		}
-		metadata.SaveFile(file.Name() + "-tmp")
-		os.Rename(file.Name()+"-tmp", file.Name())
+		_ = metadata.SaveFile(file.Name() + "-tmp")
+		_ = os.Rename(file.Name()+"-tmp", file.Name())
 	}
 }
 

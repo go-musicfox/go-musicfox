@@ -29,9 +29,9 @@ var (
 type NSApplicationActivationPolicy core.NSInteger
 
 const (
-	NSApplicationActivationPolicyRegular    NSApplicationActivationPolicy = 0
-	NSApplicationActivationPolicyAccessory                                = 1
-	NSApplicationActivationPolicyProhibited                               = 2
+	NSApplicationActivationPolicyRegular NSApplicationActivationPolicy = iota
+	NSApplicationActivationPolicyAccessory
+	NSApplicationActivationPolicyProhibited
 )
 
 type Delegate interface {
