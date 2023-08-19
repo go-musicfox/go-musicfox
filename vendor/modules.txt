@@ -257,6 +257,8 @@ go.etcd.io/bbolt
 # golang.org/x/crypto v0.10.0
 ## explicit; go 1.17
 golang.org/x/crypto/ssh/terminal
+# golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
+## explicit; go 1.20
 # golang.org/x/exp/shiny v0.0.0-20230522175609-2e198f4a06a1
 ## explicit; go 1.18
 golang.org/x/exp/shiny/driver/gldriver
