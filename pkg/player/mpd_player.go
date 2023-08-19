@@ -79,10 +79,13 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 	mpdErrorHandler(err, false)
 
 	err = client.Clear()
-	mpdErrorHandler(err, true)
+	mpdErrorHandler(err, false)
 
 	err = client.Single(true)
 	mpdErrorHandler(err, true)
+
+	err = client.Repeat(false)
+	mpdErrorHandler(err, false)
 
 	watcher, err := mpd.NewWatcher(network, address, "", "player", "mixer")
 	mpdErrorHandler(err, false)
