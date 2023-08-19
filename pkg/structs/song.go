@@ -1,11 +1,11 @@
 package structs
 
 import (
-	"errors"
 	"strings"
 	"time"
 
 	"github.com/buger/jsonparser"
+	"github.com/pkg/errors"
 )
 
 type Song struct {

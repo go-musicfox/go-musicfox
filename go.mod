@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/bogem/id3v2/v2 v2.1.4
-	github.com/boltdb/bolt v1.3.1
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -20,6 +19,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.2.2
+	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/markthree/go-get-folder-size v0.3.4
 	github.com/mattn/go-runewidth v0.0.14
@@ -30,6 +30,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.1
+	go.etcd.io/bbolt v1.3.7
 )
 
 require (
@@ -50,7 +51,6 @@ require (
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect

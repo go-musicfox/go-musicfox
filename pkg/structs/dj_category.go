@@ -1,9 +1,8 @@
 package structs
 
 import (
-	"errors"
-
 	"github.com/buger/jsonparser"
+	"github.com/pkg/errors"
 )
 
 type DjCategory struct {

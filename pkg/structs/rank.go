@@ -2,7 +2,8 @@ package structs
 
 import (
 	"encoding/json"
-	"errors"
+
+	"github.com/pkg/errors"
 )
 
 type Rank struct {
