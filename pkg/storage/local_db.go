@@ -1,18 +1,17 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
+	"go.etcd.io/bbolt"
 )
 
 type LocalDB struct {
-	*bolt.DB
+	*bbolt.DB
 }
 
 // NewLocalDB 创建本地数据库
@@ -25,9 +24,9 @@ func NewLocalDB(dbName string) (*LocalDB, error) {
 	}
 	path := fmt.Sprintf("%s/%s.db", dbDir, dbName)
 
-	options := bolt.DefaultOptions
+	options := bbolt.DefaultOptions
 	options.Timeout = 500 * time.Millisecond
-	boltDB, err := bolt.Open(path, 0600, options)
+	boltDB, err := bbolt.Open(path, 0600, options)
 	if err != nil {
 		return nil, err
 	}

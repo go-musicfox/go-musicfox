@@ -1,10 +1,10 @@
 package structs
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/buger/jsonparser"
+	"github.com/pkg/errors"
 )
 
 type Album struct {

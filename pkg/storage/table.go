@@ -2,12 +2,10 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
+	"go.etcd.io/bbolt"
 )
 
 type IteratorCallback func(k, v []byte) error
@@ -26,7 +24,7 @@ func (table *table) AllMap(model Model, callback IteratorCallback) (err error) {
 		return
 	}
 
-	err = localDB.View(func(tx *bolt.Tx) (err error) {
+	err = localDB.View(func(tx *bbolt.Tx) (err error) {
 		bucketName := model.GetTableName()
 		bucket := tx.Bucket([]byte(bucketName))
 		if err = checkBucket(bucket, bucketName); err != nil {
@@ -48,7 +46,7 @@ func (table *table) IncrAdd(model Model, data IDSetter) (id uint64, err error) {
 		return
 	}
 
-	err = localDB.Update(func(tx *bolt.Tx) error {
+	err = localDB.Update(func(tx *bbolt.Tx) error {
 		bucketName := model.GetTableName()
 		bucket, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if err != nil {
@@ -80,7 +78,7 @@ func (table *table) Set(model Model, key []byte, data interface{}) (err error) {
 		return
 	}
 
-	err = localDB.Update(func(tx *bolt.Tx) error {
+	err = localDB.Update(func(tx *bbolt.Tx) error {
 		bucketName := model.GetTableName()
 		bucket, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if err != nil {
@@ -116,7 +114,7 @@ func (table *table) Delete(model Model, key []byte) (err error) {
 		return
 	}
 
-	err = localDB.Update(func(tx *bolt.Tx) error {
+	err = localDB.Update(func(tx *bbolt.Tx) error {
 		bucketName := model.GetTableName()
 		bucket, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if err != nil {
@@ -146,7 +144,7 @@ func (table *table) Get(model Model, key []byte) (value []byte, err error) {
 		return
 	}
 
-	err = db.View(func(tx *bolt.Tx) error {
+	err = db.View(func(tx *bbolt.Tx) error {
 		bucketName := model.GetTableName()
 		bucket := tx.Bucket([]byte(bucketName))
 		if err = checkBucket(bucket, bucketName); err != nil {
@@ -169,9 +167,9 @@ func (table *table) GetByKVModel(model KVModel) ([]byte, error) {
 	return table.Get(model, []byte(model.GetKey()))
 }
 
-func checkBucket(bucket *bolt.Bucket, bucketName string) error {
+func checkBucket(bucket *bbolt.Bucket, bucketName string) error {
 	if bucket == nil {
-		return errors.New(fmt.Sprintf("Bucket(%s) not exists!", bucketName))
+		return errors.Errorf("Bucket(%s) not exists!", bucketName)
 	}
 	return nil
 }

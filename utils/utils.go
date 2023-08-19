@@ -3,7 +3,6 @@ package utils
 import (
 	"embed"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -26,6 +25,7 @@ import (
 	"github.com/go-flac/flacpicture"
 	"github.com/go-musicfox/netease-music/service"
 	getFolderSize "github.com/markthree/go-get-folder-size/src"
+	"github.com/pkg/errors"
 	"github.com/skip2/go-qrcode"
 )
 

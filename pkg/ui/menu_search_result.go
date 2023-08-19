@@ -20,6 +20,16 @@ type SearchResultMenu struct {
 	result     interface{}
 }
 
+var playableTypes = map[SearchType]bool{
+	StSingleSong: true,
+	StAlbum:      false,
+	StSinger:     false,
+	StPlaylist:   false,
+	StUser:       false,
+	StLyric:      true,
+	StRadio:      false,
+}
+
 func NewSearchResultMenu(searchType SearchType) *SearchResultMenu {
 	return &SearchResultMenu{
 		offset:     0,
@@ -42,21 +52,7 @@ func (m *SearchResultMenu) BeforeBackMenuHook() Hook {
 }
 
 func (m *SearchResultMenu) IsPlayable() bool {
-	playableMap := map[SearchType]bool{
-		StSingleSong: true,
-		StAlbum:      false,
-		StSinger:     false,
-		StPlaylist:   false,
-		StUser:       false,
-		StLyric:      true,
-		StRadio:      false,
-	}
-
-	if playable, ok := playableMap[m.searchType]; ok {
-		return playable
-	}
-
-	return false
+	return playableTypes[m.searchType]
 }
 
 func (m *SearchResultMenu) GetMenuKey() string {
