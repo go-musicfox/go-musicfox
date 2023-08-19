@@ -12,6 +12,7 @@ func init() {
 }
 
 var (
+	//nolint:golint,unused
 	class_MPRatingCommand objc.Class
 )
 

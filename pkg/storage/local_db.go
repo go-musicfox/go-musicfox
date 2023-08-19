@@ -20,7 +20,7 @@ func NewLocalDB(dbName string) (*LocalDB, error) {
 
 	dbDir := fmt.Sprintf("%s/db", projectPath)
 	if _, err := os.Stat(dbDir); err != nil {
-		err = os.MkdirAll(dbDir, 0755)
+		_ = os.MkdirAll(dbDir, 0755)
 	}
 	path := fmt.Sprintf("%s/%s.db", dbDir, dbName)
 

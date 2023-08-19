@@ -67,7 +67,7 @@ func NewAlbumFromAlbumJson(json []byte) (Album, error) {
 		album.PicUrl = alPic
 	}
 
-	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
 
 		if err == nil {

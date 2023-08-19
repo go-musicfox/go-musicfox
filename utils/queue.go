@@ -32,7 +32,6 @@ func (q *Queue) Enqueue(value interface{}) {
 		q.tail = newNode
 	}
 	q.len++
-	newNode = nil
 }
 
 func (q *Queue) Dequeue() interface{} {

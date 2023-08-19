@@ -69,7 +69,7 @@ func GetDailySongs(data []byte) (list []structs.Song) {
 
 // GetRecentSongs 获取每日歌曲列表
 func GetRecentSongs(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		if t, _ := jsonparser.GetString(value, "resourceType"); t != "SONG" {
 			return
 		}
@@ -77,6 +77,7 @@ func GetRecentSongs(data []byte) (list []structs.Song) {
 		var (
 			dataJson []byte
 			song     structs.Song
+			err      error
 		)
 		if dataJson, _, _, err = jsonparser.Get(value, "data"); err != nil {
 			return

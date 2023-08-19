@@ -73,6 +73,7 @@ var (
 )
 
 type remoteCommandHandlerBinding struct {
+	//nolint:golint,unused
 	isa objc.Class `objc:"RemoteCommandHandler : NSObject"`
 }
 

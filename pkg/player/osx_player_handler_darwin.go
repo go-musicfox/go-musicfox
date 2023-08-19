@@ -27,6 +27,7 @@ var (
 )
 
 type playerHandlerBinding struct {
+	//nolint:golint,unused
 	isa objc.Class `objc:"AVPlayerHandler : NSObject"`
 }
 

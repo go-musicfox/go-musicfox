@@ -44,10 +44,6 @@ func (t *Timer) Remaining() time.Duration {
 	return t.options.Duration - t.Passed()
 }
 
-func (t *Timer) timeFromLastTick() time.Duration {
-	return time.Now().Sub(t.lastTick)
-}
-
 // Run starts just created timer and resumes paused.
 func (t *Timer) Run() {
 	if t.started && t.ticker != nil {
@@ -103,7 +99,7 @@ func (t *Timer) Pause() {
 	defer t.l.Unlock()
 
 	t.pushDone()
-	t.passed += time.Now().Sub(t.lastTick)
+	t.passed += time.Since(t.lastTick)
 	t.lastTick = time.Now()
 	t.options.OnPaused()
 }
