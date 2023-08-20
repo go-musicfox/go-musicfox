@@ -50,15 +50,13 @@ func NewOsxPlayer() Player {
 	cocoa.NSNotificationCenter_defaultCenter().
 		AddObserverSelectorNameObject(p.handler.ID, sel_handleFinish, core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
 
-	go p.listen()
+	go utils.PanicRecoverWrapper(false, p.listen)
 
 	return p
 }
 
 // listen 开始监听
 func (p *osxPlayer) listen() {
-	defer utils.Recover(false)
-
 	for {
 		select {
 		case <-p.close:

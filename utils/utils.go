@@ -493,7 +493,6 @@ var brMap = map[service.SongQualityLevel]string{
 
 func GetSongUrl(song structs.Song) (url, musicType string, err error) {
 	if configs.ConfigRegistry.MainCacheLimit != 0 {
-		// FIXME: 目前没有Mac开发环境，暂不支持MacOS的缓存
 		var ok bool
 		if url, musicType, ok = GetCacheUrl(song.Id); ok {
 			return

@@ -16,3 +16,8 @@ func Recover(ignore bool) (hasCaught bool) {
 	}
 	return
 }
+
+func PanicRecoverWrapper(ignorePanic bool, f func()) {
+	defer Recover(ignorePanic)
+	f()
+}

@@ -67,6 +67,7 @@ var (
 		"/api/usertool/sound/mobile/animationList": 1,
 		"/api/usertool/sound/mobile/all":           1,
 		"/api/usertool/sound/mobile/detail":        1,
+		"/api/pc/upgrade/get":                      1,
 	}
 )
 
@@ -94,6 +95,7 @@ func RequestBefore(request *http.Request) *Netease {
 		}
 		request.Header.Del("x-napm-retry")
 		request.Header.Set("X-Real-IP", "118.66.66.66")
+		request.Header.Set("Accept-Encoding", "gzip, deflate")
 		requestBody, _ := ioutil.ReadAll(request.Body)
 		requestHold := ioutil.NopCloser(bytes.NewBuffer(requestBody))
 		request.Body = requestHold
@@ -179,7 +181,7 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 				aeskey = linuxApiKey
 			}
 			result := utils.ParseJson(decryptECBBytes)
-			netease.Encrypted = false;
+			netease.Encrypted = false
 			if result == nil {
 				decryptECBBytes, encrypted := crypto.AesDecryptECB(decryptECBBytes, []byte(aeskey))
 				netease.Encrypted = encrypted
@@ -196,7 +198,8 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 
 			logResponse(netease)
 
-			if strings.EqualFold(netease.Path, "/api/osx/version") {
+			if strings.EqualFold(netease.Path, "/api/osx/version") ||
+				strings.EqualFold(netease.Path, "/api/pc/upgrade/get") {
 				modified = disableUpdate(netease)
 			} else if strings.Contains(netease.Path, "/usertool/sound/") {
 				modified = unblockSoundEffects(netease.JsonBody)
@@ -287,6 +290,9 @@ func disableUpdate(netease *Netease) bool {
 			}
 		default:
 		}
+	} else if value, ok = jsonBody["data"]; ok {
+		modified = true
+		jsonBody["data"].(common.MapType)["packageVO"] = nil
 	}
 	return modified
 }
@@ -314,8 +320,9 @@ func localVIP(netease *Netease) bool {
 		expireTime += 3162240000000
 		info.(common.MapType)["data"].(common.MapType)["redVipLevel"] = 7
 		info.(common.MapType)["data"].(common.MapType)["redVipAnnualCount"] = 1
-		info.(common.MapType)["data"].(common.MapType)["musicPackage"] = &common.MapType{"expireTime": expireTime, "vipCode": 230}
-		info.(common.MapType)["data"].(common.MapType)["associator"] = &common.MapType{"expireTime": expireTime}
+		info.(common.MapType)["data"].(common.MapType)["musicPackage"].(common.MapType)["expireTime"] = expireTime
+		info.(common.MapType)["data"].(common.MapType)["musicPackage"].(common.MapType)["vipCode"] = 230
+		info.(common.MapType)["data"].(common.MapType)["associator"].(common.MapType)["expireTime"] = expireTime
 	}
 	return modified
 }
@@ -333,12 +340,6 @@ func unblockSoundEffects(jsonBody map[string]interface{}) bool {
 				for _, data := range value.(common.SliceType) {
 					if datum, ok := data.(common.MapType); ok {
 						datum["type"] = 1
-						if utils.Exist("type", datum["sound"].(common.MapType)) {
-							datum["sound"].(common.MapType)["type"] = 1
-						}
-						if utils.Exist("type", datum["animation"].(common.MapType)) {
-							datum["animation"].(common.MapType)["type"] = 1
-						}
 					}
 				}
 			}
@@ -346,12 +347,6 @@ func unblockSoundEffects(jsonBody map[string]interface{}) bool {
 			if utils.Exist("type", value.(common.MapType)) {
 				modified = true
 				value.(common.MapType)["type"] = 1
-				if utils.Exist("type", value.(common.MapType)["sound"].(common.MapType)) {
-					value.(common.MapType)["sound"].(common.MapType)["type"] = 1
-				}
-				if utils.Exist("type", value.(common.MapType)["animation"].(common.MapType)) {
-					value.(common.MapType)["animation"].(common.MapType)["type"] = 1
-				}
 			}
 		default:
 		}

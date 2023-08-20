@@ -103,15 +103,8 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 		close:      make(chan struct{}),
 	}
 
-	go func() {
-		defer utils.Recover(false)
-		p.listen()
-	}()
-
-	go func() {
-		defer utils.Recover(false)
-		p.watch()
-	}()
+	go utils.PanicRecoverWrapper(false, p.listen)
+	go utils.PanicRecoverWrapper(false, p.watch)
 
 	p.syncMpdStatus("")
 	return p
