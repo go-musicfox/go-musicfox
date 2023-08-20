@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/cnsilvan/UnblockNeteaseMusic/provider/base"
 	"html"
 	"log"
 	"net/http"
@@ -16,13 +15,14 @@ import (
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"github.com/cnsilvan/UnblockNeteaseMusic/network"
+	"github.com/cnsilvan/UnblockNeteaseMusic/provider/base"
 	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 )
 
 type KuWo struct{}
 
 const (
-	SearchSongURL = "http://www.kuwo.cn/api/www/search/searchMusicBykeyWord?key=%s&pn=1&rn=30"
+	SearchSongURL = "http://kuwo.cn/api/www/search/searchMusicBykeyWord?key=%s&pn=1&rn=30"
 )
 
 var blockSongUrl = map[string]json.Number{
@@ -44,12 +44,12 @@ func (m *KuWo) SearchSong(song common.SearchSong) (songs []*common.Song) {
 			if len(word) != 0 {
 				keyWord = fmt.Sprintf("%s %s", song.Name, word)
 			}
-			token := getToken(keyWord)
+			// key, value := getTokenInfo(keyWord)
 			header := make(http.Header, 4)
 			header["referer"] = append(header["referer"], "http://www.kuwo.cn/search/list?key="+url.QueryEscape(keyWord))
-			header["csrf"] = append(header["csrf"], token)
-			header["cookie"] = append(header["cookie"], "kw_token="+token)
-			searchUrl := fmt.Sprintf(SearchSongURL, keyWord)
+			header["cookie"] = append(header["cookie"], "Hm_Iuvt_cdb524f42f0cer9b268e4v7y734w5esq24=fppPsMdS6XRFXthpMGPXycmTsm3Ny8xr")
+			header["secret"] = append(header["secret"], "46c96f9b8ab640394da88016b1ed67db57a66c474e041c18b0283cdd53ce101d0465c8a8")
+			searchUrl := fmt.Sprintf(SearchSongURL, url.QueryEscape(keyWord))
 			result, err := base.Fetch(searchUrl, nil, header, true)
 			if err != nil {
 				log.Println(err)
@@ -169,6 +169,7 @@ func (m *KuWo) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *com
 	}
 	return song
 }
+
 func (m *KuWo) ParseSong(searchSong common.SearchSong) *common.Song {
 	song := &common.Song{}
 	songs := m.SearchSong(searchSong)
@@ -177,26 +178,99 @@ func (m *KuWo) ParseSong(searchSong common.SearchSong) *common.Song {
 	}
 	return song
 }
-func getToken(keyword string) string {
-	var token = ""
-	clientRequest := network.ClientRequest{
-		Method:    http.MethodGet,
-		RemoteUrl: "http://kuwo.cn/search/list?key=" + keyword,
-		Host:      "kuwo.cn",
-		Header:    nil,
-		Proxy:     false,
-	}
-	resp, err := network.Request(&clientRequest)
-	if err != nil {
-		log.Println(err)
-		return token
-	}
-	defer resp.Body.Close()
-	cookies := resp.Header.Get("set-cookie")
-	if strings.Contains(cookies, "kw_token") {
-		cookies = utils.ReplaceAll(cookies, ";.*", "")
-		splitSlice := strings.Split(cookies, "=")
-		token = splitSlice[len(splitSlice)-1]
-	}
-	return token
-}
+
+// func getTokenInfo(keyword string) (string, string) {
+// 	clientRequest := network.ClientRequest{
+// 		Method:    http.MethodGet,
+// 		RemoteUrl: "http://kuwo.cn/search/list?key=" + keyword,
+// 		Host:      "kuwo.cn",
+// 		Header:    nil,
+// 		Proxy:     false,
+// 	}
+// 	resp, err := network.Request(&clientRequest)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return "", ""
+// 	}
+// 	defer resp.Body.Close()
+
+// 	for _, v := range resp.Header.Values("set-cookie") {
+// 		if !strings.HasPrefix(v, "Hm_") {
+// 			continue
+// 		}
+// 		v = utils.ReplaceAll(v, ";.*", "")
+// 		res := strings.Split(v, "=")
+// 		if len(res) >= 2 {
+// 			return res[0], res[1]
+// 		}
+// 	}
+// 	return "", ""
+// }
+
+// func genSecret(key, value string) (secret string) {
+// 	if key == "" {
+// 		return
+// 	}
+// 	var n string
+// 	for i := 0; i < len(key); i++ {
+// 		n += strconv.Itoa(int(key[i]))
+// 	}
+// 	var (
+// 		r = int(math.Floor(float64(len(n)) / 5))
+// 		o int64
+// 		l = int64(math.Ceil(float64(len(key)) / 2))
+// 		c = int64(math.Pow(2, 31) - 1)
+// 	)
+// 	if r*5 >= len(n) {
+// 		o, _ = strconv.ParseInt(string([]byte{n[r], n[2*r], n[3*r], n[4*r]}), 10, 64)
+// 	} else {
+// 		o, _ = strconv.ParseInt(string([]byte{n[r], n[2*r], n[3*r], n[4*r], n[5*r]}), 10, 64)
+// 	}
+
+// 	if o < 2 {
+// 		return
+// 	}
+// 	var (
+// 		d    = int(math.Round(1e9*rand.Float64())) % 1e8
+// 		dStr = strconv.Itoa(d)
+// 		nNum int64
+// 	)
+// 	for n += dStr; len(n) > 10; {
+// 		a, _ := new(big.Int).SetString(trimInvalidIntChar(n[:10]), 10)
+// 		b, _ := new(big.Int).SetString(trimInvalidIntChar(n[10:]), 10)
+// 		fmt.Println(n, a, b)
+// 		if len(n)-10 >= 22 {
+// 			n = new(big.Float).SetInt(a.Add(a, b)).Text('e', 16)
+// 		} else {
+// 			n = a.Add(a, b).String()
+// 		}
+// 	}
+// 	nNum, _ = strconv.ParseInt(n, 10, 64)
+// 	nNum = (o*nNum + l) % c
+
+// 	var f string
+// 	for i := 0; i < len(value); i++ {
+// 		h := int64(value[i]) ^ int64(math.Floor(float64(nNum)/float64(c)*255))
+// 		if h < 16 {
+// 			f += "0" + strconv.FormatInt(h, 16)
+// 		} else {
+// 			f += strconv.FormatInt(h, 16)
+// 		}
+// 		nNum = (o*nNum + l) % c
+// 	}
+// 	for dStr = strconv.FormatInt(int64(d), 16); len(dStr) < 8; {
+// 		dStr = "0" + dStr
+// 	}
+// 	secret = f + dStr
+// 	return
+// }
+
+// func trimInvalidIntChar(s string) string {
+// 	var i int
+// 	for i = 0; i < len(s); i++ {
+// 		if s[i] < '0' || s[i] > '9' {
+// 			break
+// 		}
+// 	}
+// 	return s[:i]
+// }

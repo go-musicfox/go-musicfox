@@ -61,15 +61,13 @@ func NewBeepPlayer() Player {
 		close:      make(chan struct{}),
 	}
 
-	go p.listen()
+	go utils.PanicRecoverWrapper(false, p.listen)
 
 	return p
 }
 
 // listen 开始监听
 func (p *beepPlayer) listen() {
-	defer utils.Recover(false)
-
 	var (
 		done       = make(chan struct{})
 		resp       *http.Response

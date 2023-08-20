@@ -98,8 +98,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 	p.stateHandler = state_handler.NewHandler(p, p.PlayingInfo())
 
 	// remote control
-	go func() {
-		defer utils.Recover(false)
+	go utils.PanicRecoverWrapper(false, func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -108,11 +107,10 @@ func NewPlayer(model *NeteaseModel) *Player {
 				p.handleControlSignal(signal)
 			}
 		}
-	}()
+	})
 
 	// 状态监听
-	go func() {
-		defer utils.Recover(false)
+	go utils.PanicRecoverWrapper(false, func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -132,11 +130,10 @@ func NewPlayer(model *NeteaseModel) *Player {
 				p.NextSong(false)
 			}
 		}
-	}()
+	})
 
 	// 时间监听
-	go func() {
-		defer utils.Recover(false)
+	go utils.PanicRecoverWrapper(false, func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -159,7 +156,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 				p.model.Rerender(false)
 			}
 		}
-	}()
+	})
 
 	return p
 }

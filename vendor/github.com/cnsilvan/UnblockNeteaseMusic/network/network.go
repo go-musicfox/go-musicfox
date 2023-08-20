@@ -127,8 +127,16 @@ func Request(clientRequest *ClientRequest) (*http.Response, error) {
 		}
 	}
 
+	acceptEncodingArr := strings.Split(acceptEncoding, ",")
+	var newAcceptEncodingArr []string
+	for _, e := range acceptEncodingArr {
+		if strings.TrimSpace(e) != "br" {
+			newAcceptEncodingArr = append(newAcceptEncodingArr, strings.TrimSpace(e))
+		}
+	}
+
 	request.Header.Set("accept", accept)
-	request.Header.Set("accept-encoding", acceptEncoding)
+	request.Header.Set("accept-encoding", strings.Join(newAcceptEncodingArr, ", "))
 	request.Header.Set("accept-language", acceptLanguage)
 	request.Header.Set("user-agent", userAgent)
 	client := directClient

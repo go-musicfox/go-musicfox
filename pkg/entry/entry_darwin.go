@@ -18,13 +18,12 @@ func AppEntry() {
 
 	delegate := cocoa.DefaultAppDelegate()
 	delegate.RegisterDidFinishLaunchingCallback(func(_ objc.ID) {
-		go func() {
-			defer utils.Recover(false)
+		go utils.PanicRecoverWrapper(false, func() {
 			core.Autorelease(func() {
 				runCLI()
 				app.Terminate(0)
 			})
-		}()
+		})
 	})
 	app.SetDelegate(delegate)
 	app.Run()

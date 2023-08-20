@@ -86,9 +86,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 	storage.DBManager = new(storage.LocalDBManager)
 
 	// 获取用户信息
-	go func() {
-		defer utils.Recover(false)
-
+	go utils.PanicRecoverWrapper(false, func() {
 		table := storage.NewTable()
 
 		// 获取用户信息
@@ -302,7 +300,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				})
 			}
 		}
-	}()
+	})
 
 	if config.StartupShow {
 		return tickStartup(time.Nanosecond)
