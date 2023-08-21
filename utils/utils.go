@@ -329,7 +329,6 @@ func SetSongTag(file *os.File, song structs.Song) {
 		tag.Close()
 	default:
 		metadata, err := songtag.Read(file)
-		defer metadata.Close()
 		if err != nil {
 			return
 		}
