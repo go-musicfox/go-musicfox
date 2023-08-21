@@ -95,7 +95,7 @@ func RequestBefore(request *http.Request) *Netease {
 		}
 		request.Header.Del("x-napm-retry")
 		request.Header.Set("X-Real-IP", "118.66.66.66")
-		request.Header.Set("Accept-Encoding", "gzip, deflate")
+		//request.Header.Set("Accept-Encoding", "gzip, deflate")
 		requestBody, _ := ioutil.ReadAll(request.Body)
 		requestHold := ioutil.NopCloser(bytes.NewBuffer(requestBody))
 		request.Body = requestHold
