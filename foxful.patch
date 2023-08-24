@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 419d380..682559b 100644
+index 419d380..955adbf 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -3,12 +3,13 @@ module github.com/go-musicfox/go-musicfox
@@ -26,6 +26,14 @@ index 419d380..682559b 100644
  	github.com/pkg/errors v0.9.1
  	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
  	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+@@ -76,6 +77,7 @@ require (
+ )
+ 
+ replace (
++	github.com/anhoder/foxful-cli => ../foxful-cli
+ 	github.com/charmbracelet/bubbletea v0.24.2 => github.com/go-musicfox/bubbletea v0.24.1
+ 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.2
+ 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 diff --git a/go.sum b/go.sum
 index ceb6f8a..0ba2c4d 100644
 --- a/go.sum
@@ -71,28 +79,30 @@ index a3d7c29..39add98 100644
  		},
  	}
 diff --git a/pkg/commands/netease.go b/pkg/commands/netease.go
-index 08b30ae..9827475 100644
+index 08b30ae..100b1e5 100644
 --- a/pkg/commands/netease.go
 +++ b/pkg/commands/netease.go
-@@ -5,12 +5,11 @@ import (
+@@ -5,12 +5,13 @@ import (
  	_ "net/http/pprof"
  	"strconv"
  
 +	"github.com/anhoder/foxful-cli/model"
  	"github.com/go-musicfox/go-musicfox/pkg/configs"
  	"github.com/go-musicfox/go-musicfox/pkg/constants"
--	"github.com/go-musicfox/go-musicfox/pkg/ui"
+ 	"github.com/go-musicfox/go-musicfox/pkg/ui"
  	"github.com/go-musicfox/go-musicfox/utils"
++	"github.com/mattn/go-runewidth"
  
 -	tea "github.com/charmbracelet/bubbletea"
  	"github.com/gookit/gcli/v2"
  )
  
-@@ -31,18 +30,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
+@@ -31,18 +32,13 @@ func runPlayer(_ *gcli.Command, _ []string) error {
  	}
  
  	http.DefaultClient.Timeout = constants.AppHttpTimeout
 -	neteaseModel := ui.NewNeteaseModel(configs.ConfigRegistry.StartupLoadingDuration)
++	runewidth.DefaultCondition.EastAsianWidth = false
  
 -	var opts []tea.ProgramOption
 -	if configs.ConfigRegistry.MainEnableMouseEvent {
@@ -105,10 +115,13 @@ index 08b30ae..9827475 100644
 -	neteaseModel.BindProgram(program)
 +	var opts = model.DefaultOptions()
 +	configs.ConfigRegistry.FillToModelOpts(opts)
++
++	var netease = ui.NewNetease(model.NewApp(opts))
++	netease.WithHook(netease.InitHook, netease.CloseHook)
  
 -	_, err := program.Run()
 -	return err
-+	return model.NewApp(opts).Run()
++	return netease.Run()
  }
 diff --git a/pkg/configs/registry.go b/pkg/configs/registry.go
 index 9df153e..dcb3859 100644
@@ -211,7 +224,7 @@ index 8d34f2e..4dee706 100644
  	app.Add(commands.NewConfigCommand())
  	app.DefaultCommand(playerCommand.Name)
 diff --git a/pkg/ui/cur_playlist.go b/pkg/ui/cur_playlist.go
-index 4612548..247640d 100644
+index 4612548..18924d5 100644
 --- a/pkg/ui/cur_playlist.go
 +++ b/pkg/ui/cur_playlist.go
 @@ -1,6 +1,7 @@
@@ -222,15 +235,299 @@ index 4612548..247640d 100644
  	"github.com/go-musicfox/go-musicfox/pkg/structs"
  )
  
-@@ -39,7 +40,7 @@ func (m *CurPlaylist) Songs() []structs.Song {
+@@ -39,8 +40,8 @@ func (m *CurPlaylist) Songs() []structs.Song {
  	return m.songs
  }
  
 -func (m *CurPlaylist) BottomOutHook() Hook {
+-	return func(model *NeteaseModel) bool {
 +func (m *CurPlaylist) BottomOutHook() model.Hook {
- 	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
  		if model.player.playingMenu == nil || model.player.playingMenu.GetMenuKey() == CurPlaylistKey {
  			return true
+ 		}
+diff --git a/pkg/ui/lastfm.go b/pkg/ui/lastfm.go
+index 05c77d5..31894b5 100644
+--- a/pkg/ui/lastfm.go
++++ b/pkg/ui/lastfm.go
+@@ -10,11 +10,11 @@ import (
+ 
+ type Lastfm struct {
+ 	DefaultMenu
+-	model *NeteaseModel
++	model *Netease
+ 	auth  *LastfmAuth
+ }
+ 
+-func NewLastfm(model *NeteaseModel) *Lastfm {
++func NewLastfm(model *Netease) *Lastfm {
+ 	return &Lastfm{
+ 		model: model,
+ 		auth:  NewLastfmAuth(model),
+@@ -37,7 +37,7 @@ func (m *Lastfm) MenuViews() []MenuItem {
+ 	}
+ }
+ 
+-func (m *Lastfm) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *Lastfm) SubMenu(_ *Netease, index int) Menu {
+ 	if m.model.lastfmUser == nil || m.model.lastfmUser.SessionKey == "" {
+ 		return m.auth
+ 	}
+diff --git a/pkg/ui/lastfm_auth.go b/pkg/ui/lastfm_auth.go
+index 574db7e..faf3995 100644
+--- a/pkg/ui/lastfm_auth.go
++++ b/pkg/ui/lastfm_auth.go
+@@ -9,13 +9,13 @@ import (
+ 
+ type LastfmAuth struct {
+ 	DefaultMenu
+-	model *NeteaseModel
++	model *Netease
+ 	token string
+ 	url   string
+ 	err   error
+ }
+ 
+-func NewLastfmAuth(model *NeteaseModel) *LastfmAuth {
++func NewLastfmAuth(model *Netease) *LastfmAuth {
+ 	return &LastfmAuth{model: model}
+ }
+ 
+@@ -30,14 +30,14 @@ func (m *LastfmAuth) MenuViews() []MenuItem {
+ }
+ 
+ func (m *LastfmAuth) BeforeBackMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.token, m.url, m.err = "", "", nil
+ 		return true
+ 	}
+ }
+ 
+ func (m *LastfmAuth) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.token, m.url, m.err = model.lastfm.GetAuthUrlWithToken()
+ 		if m.url != "" {
+ 			_ = open.Start(m.url)
+@@ -47,7 +47,7 @@ func (m *LastfmAuth) BeforeEnterMenuHook() Hook {
+ 	}
+ }
+ 
+-func (m *LastfmAuth) SubMenu(model *NeteaseModel, _ int) Menu {
++func (m *LastfmAuth) SubMenu(model *Netease, _ int) Menu {
+ 	var err error
+ 
+ 	loading := NewLoading(model)
+diff --git a/pkg/ui/lastfm_res.go b/pkg/ui/lastfm_res.go
+index e3ff6c3..2d67986 100644
+--- a/pkg/ui/lastfm_res.go
++++ b/pkg/ui/lastfm_res.go
+@@ -27,7 +27,7 @@ func (m *LastfmRes) MenuViews() []MenuItem {
+ 	}
+ }
+ 
+-func (m *LastfmRes) SubMenu(model *NeteaseModel, _ int) Menu {
++func (m *LastfmRes) SubMenu(model *Netease, _ int) Menu {
+ 	level := m.backLevel // 避免后续被更新
+ 	for i := 0; i < level; i++ {
+ 		backMenu(model)
+@@ -36,7 +36,7 @@ func (m *LastfmRes) SubMenu(model *NeteaseModel, _ int) Menu {
+ }
+ 
+ func (m *LastfmRes) BeforeBackMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.opName, m.err, m.backLevel = "", nil, 0
+ 		return true
+ 	}
+diff --git a/pkg/ui/loading.go b/pkg/ui/loading.go
+index 2d33027..0146e29 100644
+--- a/pkg/ui/loading.go
++++ b/pkg/ui/loading.go
+@@ -9,10 +9,10 @@ import (
+ )
+ 
+ type Loading struct {
+-	model *NeteaseModel
++	model *Netease
+ }
+ 
+-func NewLoading(m *NeteaseModel) *Loading {
++func NewLoading(m *Netease) *Loading {
+ 	return &Loading{
+ 		model: m,
+ 	}
+diff --git a/pkg/ui/login.go b/pkg/ui/login.go
+index 3a0ab3f..77b0297 100644
+--- a/pkg/ui/login.go
++++ b/pkg/ui/login.go
+@@ -33,7 +33,7 @@ type LoginModel struct {
+ 	qrLoginStep   int
+ 	qrLoginUniKey string
+ 	tips          string
+-	AfterLogin    func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem)
++	AfterLogin    func(m *Netease, newMenu Menu, newTitle *MenuItem)
+ }
+ 
+ func NewLogin() (login *LoginModel) {
+@@ -59,7 +59,7 @@ func NewLogin() (login *LoginModel) {
+ }
+ 
+ // update main ui
+-func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func updateLogin(msg tea.Msg, m *Netease) (tea.Model, tea.Cmd) {
+ 	inputs := []textinput.Model{
+ 		m.loginModel.accountInput,
+ 		m.loginModel.passwordInput,
+@@ -251,7 +251,7 @@ func updateLogin(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+ 	return updateLoginInputs(msg, m)
+ }
+ 
+-func updateLoginInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func updateLoginInputs(msg tea.Msg, m *Netease) (tea.Model, tea.Cmd) {
+ 	var (
+ 		cmd  tea.Cmd
+ 		cmds []tea.Cmd
+@@ -266,7 +266,7 @@ func updateLoginInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
+ 	return m, tea.Batch(cmds...)
+ }
+ 
+-func loginView(m *NeteaseModel) string {
++func loginView(m *Netease) string {
+ 	var builder strings.Builder
+ 
+ 	// 距离顶部的行数
+@@ -355,7 +355,7 @@ func (m *LoginModel) qrButtonTextByStep() string {
+ 	}
+ }
+ 
+-func (m *LoginModel) loginSuccessHandle(nm *NeteaseModel, userInfo []byte) {
++func (m *LoginModel) loginSuccessHandle(nm *Netease, userInfo []byte) {
+ 	if user, err := structs.NewUserFromJson(userInfo); err == nil {
+ 		nm.user = &user
+ 
+@@ -385,7 +385,7 @@ func (m *LoginModel) loginSuccessHandle(nm *NeteaseModel, userInfo []byte) {
+ }
+ 
+ // NeedLoginHandle 需要登录的处理
+-func NeedLoginHandle(model *NeteaseModel, callback func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem)) {
++func NeedLoginHandle(model *Netease, callback func(m *Netease, newMenu Menu, newTitle *MenuItem)) {
+ 	model.pageType = PtLogin
+ 	model.loginModel.AfterLogin = callback
+ }
+diff --git a/pkg/ui/main_ui.go b/pkg/ui/main_ui.go
+index 38782a8..f2c0dba 100644
+--- a/pkg/ui/main_ui.go
++++ b/pkg/ui/main_ui.go
+@@ -90,7 +90,7 @@ func (main *MainUIModel) Close() {
+ 	main.player.Close()
+ }
+ 
+-func NewMainUIModel(parentModel *NeteaseModel) (m *MainUIModel) {
++func NewMainUIModel(parentModel *Netease) (m *MainUIModel) {
+ 	m = new(MainUIModel)
+ 
+ 	m.menuTitle = &MenuItem{Title: "网易云音乐"}
+@@ -120,7 +120,7 @@ func (main *MainUIModel) refreshMenuTitle() {
+ }
+ 
+ // update main ui
+-func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func (main *MainUIModel) update(message tea.Msg, m *Netease) (tea.Model, tea.Cmd) {
+ 	switch msg := message.(type) {
+ 	case tea.KeyMsg:
+ 		return main.keyMsgHandle(msg, m)
+@@ -184,7 +184,7 @@ func (main *MainUIModel) update(message tea.Msg, m *NeteaseModel) (tea.Model, te
+ }
+ 
+ // get main ui view
+-func (main *MainUIModel) view(m *NeteaseModel) string {
++func (main *MainUIModel) view(m *Netease) string {
+ 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
+ 		return ""
+ 	}
+@@ -221,7 +221,7 @@ func (main *MainUIModel) view(m *NeteaseModel) string {
+ }
+ 
+ // title view
+-func (main *MainUIModel) titleView(m *NeteaseModel, top *int) string {
++func (main *MainUIModel) titleView(m *Netease, top *int) string {
+ 	var titleBuilder strings.Builder
+ 	titleLen := utf8.RuneCountInString(constants.AppName) + 2
+ 	prefixLen := (m.WindowWidth - titleLen) / 2
+@@ -242,7 +242,7 @@ func (main *MainUIModel) titleView(m *NeteaseModel, top *int) string {
+ }
+ 
+ // menu title
+-func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *MenuItem) string {
++func (main *MainUIModel) menuTitleView(m *Netease, top *int, menuTitle *MenuItem) string {
+ 	var (
+ 		menuTitleBuilder strings.Builder
+ 		title            string
+@@ -288,7 +288,7 @@ func (main *MainUIModel) menuTitleView(m *NeteaseModel, top *int, menuTitle *Men
+ }
+ 
+ // 菜单列表
+-func (main *MainUIModel) menuListView(m *NeteaseModel, top *int) string {
++func (main *MainUIModel) menuListView(m *Netease, top *int) string {
+ 	var menuListBuilder strings.Builder
+ 	menus := main.getCurPageMenus(m)
+ 	var lines, maxLines int
+@@ -325,7 +325,7 @@ func (main *MainUIModel) menuListView(m *NeteaseModel, top *int) string {
+ }
+ 
+ // 菜单Line
+-func (main *MainUIModel) menuLineView(m *NeteaseModel, line int) string {
++func (main *MainUIModel) menuLineView(m *Netease, line int) string {
+ 	var menuLineBuilder strings.Builder
+ 	var index int
+ 	if m.doubleColumn {
+@@ -360,7 +360,7 @@ func (main *MainUIModel) menuLineView(m *NeteaseModel, line int) string {
+ }
+ 
+ // 菜单Item
+-func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int) {
++func (main *MainUIModel) menuItemView(m *Netease, index int) (string, int) {
+ 	var (
+ 		menuItemBuilder strings.Builder
+ 		menuTitle       string
+@@ -435,7 +435,7 @@ func (main *MainUIModel) menuItemView(m *NeteaseModel, index int) (string, int)
+ }
+ 
+ // 菜单搜索
+-func (main *MainUIModel) searchInputView(m *NeteaseModel, top *int) string {
++func (main *MainUIModel) searchInputView(m *Netease, top *int) string {
+ 	if !main.inSearching {
+ 		*top++
+ 		return "\n"
+@@ -481,7 +481,7 @@ func (main *MainUIModel) searchInputView(m *NeteaseModel, top *int) string {
+ }
+ 
+ // 获取当前页的菜单
+-func (main *MainUIModel) getCurPageMenus(m *NeteaseModel) []MenuItem {
++func (main *MainUIModel) getCurPageMenus(m *Netease) []MenuItem {
+ 	start := (m.menuCurPage - 1) * m.menuPageSize
+ 	end := int(math.Min(float64(len(m.menuList)), float64(m.menuCurPage*m.menuPageSize)))
+ 
+@@ -489,7 +489,7 @@ func (main *MainUIModel) getCurPageMenus(m *NeteaseModel) []MenuItem {
+ }
+ 
+ // key handle
+-func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *Netease) (tea.Model, tea.Cmd) {
+ 	if !m.isListeningKey {
+ 		return m, nil
+ 	}
+@@ -658,7 +658,7 @@ func (main *MainUIModel) keyMsgHandle(msg tea.KeyMsg, m *NeteaseModel) (tea.Mode
+ }
+ 
+ // mouse handle
+-func (main *MainUIModel) mouseMsgHandle(msg tea.MouseMsg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func (main *MainUIModel) mouseMsgHandle(msg tea.MouseMsg, m *Netease) (tea.Model, tea.Cmd) {
+ 	if !m.isListeningKey {
+ 		return m, nil
+ 	}
 diff --git a/pkg/ui/menu.go b/pkg/ui/menu.go
 index 4830e02..599c3e3 100644
 --- a/pkg/ui/menu.go
@@ -362,6 +659,330 @@ index 4830e02..599c3e3 100644
 -func (e *DefaultMenu) TopOutHook() Hook {
 -	return nil
 -}
+diff --git a/pkg/ui/menu_add_to_user_playlist.go b/pkg/ui/menu_add_to_user_playlist.go
+index 82534c9..f4d9dda 100644
+--- a/pkg/ui/menu_add_to_user_playlist.go
++++ b/pkg/ui/menu_add_to_user_playlist.go
+@@ -49,12 +49,12 @@ func (m *AddToUserPlaylistMenu) Playlists() []structs.Playlist {
+ 	return m.playlists
+ }
+ 
+-func (m *AddToUserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AddToUserPlaylistMenu) SubMenu(_ *Netease, index int) Menu {
+ 	return nil
+ }
+ 
+ func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		// 等于0，获取当前用户歌单
+ 		if m.userId == CurUser && utils.CheckUserInfo(model.user) == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+@@ -101,7 +101,7 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() Hook {
+ 	if !m.hasMore {
+ 		return nil
+ 	}
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		userId := m.userId
+ 		if m.userId == CurUser {
+ 			// 等于0，获取当前用户歌单
+diff --git a/pkg/ui/menu_album_detail.go b/pkg/ui/menu_album_detail.go
+index b7b72d6..b43c682 100644
+--- a/pkg/ui/menu_album_detail.go
++++ b/pkg/ui/menu_album_detail.go
+@@ -40,7 +40,7 @@ func (m *AlbumDetailMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *AlbumDetailMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		albumService := service.AlbumService{
+ 			ID: strconv.FormatInt(m.albumId, 10),
+diff --git a/pkg/ui/menu_album_list.go b/pkg/ui/menu_album_list.go
+index 585b4d5..ba7487b 100644
+--- a/pkg/ui/menu_album_list.go
++++ b/pkg/ui/menu_album_list.go
+@@ -30,7 +30,7 @@ func (m *AlbumListMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *AlbumListMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AlbumListMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.menuList) {
+ 		return nil
+ 	}
+diff --git a/pkg/ui/menu_album_new.go b/pkg/ui/menu_album_new.go
+index 8a49038..898bfc2 100644
+--- a/pkg/ui/menu_album_new.go
++++ b/pkg/ui/menu_album_new.go
+@@ -43,7 +43,7 @@ func (m *AlbumNewMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *AlbumNewMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AlbumNewMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if len(m.albums) < index {
+ 		return nil
+ 	}
+@@ -52,7 +52,7 @@ func (m *AlbumNewMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		if len(m.menus) > 0 && len(m.albums) > 0 {
+ 			return true
+@@ -93,7 +93,7 @@ func (m *AlbumNewMenu) BottomOutHook() Hook {
+ 	if m.total != -1 && m.offset < m.total {
+ 		return nil
+ 	}
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.offset = m.offset + len(m.menus)
+ 		newAlbumService := service.AlbumNewService{
+ 			Area:   m.area,
+diff --git a/pkg/ui/menu_album_new_area.go b/pkg/ui/menu_album_new_area.go
+index eec7c70..50226ac 100644
+--- a/pkg/ui/menu_album_new_area.go
++++ b/pkg/ui/menu_album_new_area.go
+@@ -26,7 +26,7 @@ func (m *AlbumNewAreaMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *AlbumNewAreaMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AlbumNewAreaMenu) SubMenu(_ *Netease, index int) Menu {
+ 	areaValueMapping := []string{
+ 		"ALL",
+ 		"ZH",
+diff --git a/pkg/ui/menu_album_newest.go b/pkg/ui/menu_album_newest.go
+index 995884f..f4a73e8 100644
+--- a/pkg/ui/menu_album_newest.go
++++ b/pkg/ui/menu_album_newest.go
+@@ -32,7 +32,7 @@ func (m *AlbumNewestMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *AlbumNewestMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AlbumNewestMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if len(m.albums) < index {
+ 		return nil
+ 	}
+@@ -41,7 +41,7 @@ func (m *AlbumNewestMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *AlbumNewestMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		if len(m.menus) > 0 && len(m.albums) > 0 {
+ 			return true
+diff --git a/pkg/ui/menu_album_top.go b/pkg/ui/menu_album_top.go
+index 2971b81..e1ec9a7 100644
+--- a/pkg/ui/menu_album_top.go
++++ b/pkg/ui/menu_album_top.go
+@@ -42,7 +42,7 @@ func (m *AlbumTopMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *AlbumTopMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AlbumTopMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if len(m.albums) < index {
+ 		return nil
+ 	}
+@@ -51,7 +51,7 @@ func (m *AlbumTopMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *AlbumTopMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		if len(m.menus) > 0 && len(m.albums) > 0 {
+ 			return true
+@@ -92,7 +92,7 @@ func (m *AlbumTopMenu) BottomOutHook() Hook {
+ 	if !m.hasMore {
+ 		return nil
+ 	}
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.offset = m.offset + len(m.menus)
+ 		topAlbumService := service.TopAlbumService{
+ 			Area:   m.area,
+diff --git a/pkg/ui/menu_album_top_area.go b/pkg/ui/menu_album_top_area.go
+index 8eedf12..d728575 100644
+--- a/pkg/ui/menu_album_top_area.go
++++ b/pkg/ui/menu_album_top_area.go
+@@ -26,7 +26,7 @@ func (m *AlbumTopAreaMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *AlbumTopAreaMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *AlbumTopAreaMenu) SubMenu(_ *Netease, index int) Menu {
+ 	areaValueMapping := []string{
+ 		"ALL",
+ 		"ZH",
+diff --git a/pkg/ui/menu_artist_album.go b/pkg/ui/menu_artist_album.go
+index 4b3003e..44e2b2f 100644
+--- a/pkg/ui/menu_artist_album.go
++++ b/pkg/ui/menu_artist_album.go
+@@ -35,7 +35,7 @@ func (m *ArtistAlbumMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *ArtistAlbumMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *ArtistAlbumMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if len(m.albums) < index {
+ 		return nil
+ 	}
+@@ -44,7 +44,7 @@ func (m *ArtistAlbumMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *ArtistAlbumMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		artistAlbumService := service.ArtistAlbumService{
+ 			ID:     strconv.FormatInt(m.artistId, 10),
+diff --git a/pkg/ui/menu_artist_detail.go b/pkg/ui/menu_artist_detail.go
+index 59bb8fd..cf57a2a 100644
+--- a/pkg/ui/menu_artist_detail.go
++++ b/pkg/ui/menu_artist_detail.go
+@@ -27,7 +27,7 @@ func (m *ArtistDetailMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *ArtistDetailMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *ArtistDetailMenu) SubMenu(_ *Netease, index int) Menu {
+ 	switch index {
+ 	case 0:
+ 		return NewArtistSongMenu(m.artistId)
+diff --git a/pkg/ui/menu_artist_list.go b/pkg/ui/menu_artist_list.go
+index 6da0691..d8b653a 100644
+--- a/pkg/ui/menu_artist_list.go
++++ b/pkg/ui/menu_artist_list.go
+@@ -34,7 +34,7 @@ func (m *ArtistsOfSongMenu) Artists() []structs.Artist {
+ 	return m.song.Artists
+ }
+ 
+-func (m *ArtistsOfSongMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *ArtistsOfSongMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.menuList) {
+ 		return nil
+ 	}
+diff --git a/pkg/ui/menu_artist_song.go b/pkg/ui/menu_artist_song.go
+index a91b026..e8cd999 100644
+--- a/pkg/ui/menu_artist_song.go
++++ b/pkg/ui/menu_artist_song.go
+@@ -40,7 +40,7 @@ func (m *ArtistSongMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *ArtistSongMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		artistSongService := service.ArtistTopSongService{Id: strconv.FormatInt(m.artistId, 10)}
+ 		code, response := artistSongService.ArtistTopSong()
+diff --git a/pkg/ui/menu_check_update.go b/pkg/ui/menu_check_update.go
+index 95e7507..7e31d86 100644
+--- a/pkg/ui/menu_check_update.go
++++ b/pkg/ui/menu_check_update.go
+@@ -1,6 +1,7 @@
+ package ui
+ 
+ import (
++	"github.com/anhoder/foxful-cli/model"
+ 	"github.com/go-musicfox/go-musicfox/pkg/constants"
+ 	"github.com/go-musicfox/go-musicfox/utils"
+ 
+@@ -8,7 +9,7 @@ import (
+ )
+ 
+ type CheckUpdateMenu struct {
+-	DefaultMenu
++	model.DefaultMenu
+ 	hasUpdate bool
+ }
+ 
+@@ -20,27 +21,27 @@ func (m *CheckUpdateMenu) GetMenuKey() string {
+ 	return "check_update"
+ }
+ 
+-func (m *CheckUpdateMenu) MenuViews() []MenuItem {
++func (m *CheckUpdateMenu) MenuViews() []model.MenuItem {
+ 	if m.hasUpdate {
+-		return []MenuItem{
++		return []model.MenuItem{
+ 			{Title: "检查到新版本，回车查看~", Subtitle: "ENTER"},
+ 		}
+ 	}
+ 
+-	return []MenuItem{
++	return []model.MenuItem{
+ 		{Title: "已是最新版本"},
+ 	}
+ }
+ 
+-func (m *CheckUpdateMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
++func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu {
+ 	if m.hasUpdate {
+ 		_ = open.Start(constants.AppGithubUrl)
+ 	}
+ 	return nil
+ }
+ 
+-func (m *CheckUpdateMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++func (m *CheckUpdateMenu) BeforeEnterMenuHook() model.Hook {
++	return func(main *model.Main) bool {
+ 		m.hasUpdate, _ = utils.CheckUpdate()
+ 		return true
+ 	}
+diff --git a/pkg/ui/menu_cloud.go b/pkg/ui/menu_cloud.go
+index 505a993..b6e646a 100644
+--- a/pkg/ui/menu_cloud.go
++++ b/pkg/ui/menu_cloud.go
+@@ -43,7 +43,7 @@ func (m *CloudMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *CloudMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+ 			return false
+@@ -82,7 +82,7 @@ func (m *CloudMenu) BottomOutHook() Hook {
+ 	if !m.hasMore {
+ 		return nil
+ 	}
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.offset += m.limit
+ 
+ 		cloudService := service.UserCloudService{
+diff --git a/pkg/ui/menu_daily_recommend_playlists.go b/pkg/ui/menu_daily_recommend_playlists.go
+index 8bffb2e..8204395 100644
+--- a/pkg/ui/menu_daily_recommend_playlists.go
++++ b/pkg/ui/menu_daily_recommend_playlists.go
+@@ -32,7 +32,7 @@ func (m *DailyRecommendPlaylistsMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.playlists) {
+ 		return nil
+ 	}
+@@ -40,7 +40,7 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+ 			return false
 diff --git a/pkg/ui/menu_daily_recommend_songs.go b/pkg/ui/menu_daily_recommend_songs.go
 index 83e0c89..bd26c83 100644
 --- a/pkg/ui/menu_daily_recommend_songs.go
@@ -407,8 +1028,276 @@ index 83e0c89..bd26c83 100644
  		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
  			NeedLoginHandle(model, enterMenu)
  			return false
+diff --git a/pkg/ui/menu_dj_cate_detail.go b/pkg/ui/menu_dj_cate_detail.go
+index 9ff81a8..ad16631 100644
+--- a/pkg/ui/menu_dj_cate_detail.go
++++ b/pkg/ui/menu_dj_cate_detail.go
+@@ -35,7 +35,7 @@ func (m *DjCategoryDetailMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DjCategoryDetailMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DjCategoryDetailMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.radios) {
+ 		return nil
+ 	}
+@@ -44,7 +44,7 @@ func (m *DjCategoryDetailMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DjCategoryDetailMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		// 不重复请求
+ 		if len(m.menus) > 0 && len(m.radios) > 0 {
+diff --git a/pkg/ui/menu_dj_category.go b/pkg/ui/menu_dj_category.go
+index 5ba74ab..431d28e 100644
+--- a/pkg/ui/menu_dj_category.go
++++ b/pkg/ui/menu_dj_category.go
+@@ -29,7 +29,7 @@ func (m *DjCategoryMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DjCategoryMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DjCategoryMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.categories) {
+ 		return nil
+ 	}
+@@ -38,7 +38,7 @@ func (m *DjCategoryMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DjCategoryMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		// 不重复请求
+ 		if len(m.menus) > 0 && len(m.categories) > 0 {
+diff --git a/pkg/ui/menu_dj_program_hours_rank.go b/pkg/ui/menu_dj_program_hours_rank.go
+index e96a442..b49b428 100644
+--- a/pkg/ui/menu_dj_program_hours_rank.go
++++ b/pkg/ui/menu_dj_program_hours_rank.go
+@@ -34,7 +34,7 @@ func (m *DjProgramHoursRankMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *DjProgramHoursRankMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		djProgramService := service.DjProgramToplistHoursService{
+ 			Limit: "100",
+diff --git a/pkg/ui/menu_dj_program_rank.go b/pkg/ui/menu_dj_program_rank.go
+index 2229f6a..cc5c7c0 100644
+--- a/pkg/ui/menu_dj_program_rank.go
++++ b/pkg/ui/menu_dj_program_rank.go
+@@ -34,7 +34,7 @@ func (m *DjProgramRankMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *DjProgramRankMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		djProgramService := service.DjProgramToplistService{
+ 			Limit: "100",
+diff --git a/pkg/ui/menu_dj_radio_detail.go b/pkg/ui/menu_dj_radio_detail.go
+index 3755108..ba8d219 100644
+--- a/pkg/ui/menu_dj_radio_detail.go
++++ b/pkg/ui/menu_dj_radio_detail.go
+@@ -45,7 +45,7 @@ func (m *DjRadioDetailMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *DjRadioDetailMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		djProgramService := service.DjProgramService{
+ 			RID:    strconv.FormatInt(m.djRadioId, 10),
+ 			Limit:  strconv.Itoa(m.limit),
+@@ -68,7 +68,7 @@ func (m *DjRadioDetailMenu) BeforeEnterMenuHook() Hook {
+ }
+ 
+ func (m *DjRadioDetailMenu) BottomOutHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if len(m.songs) >= m.total {
+ 			return true
+ 		}
+diff --git a/pkg/ui/menu_dj_recommend.go b/pkg/ui/menu_dj_recommend.go
+index 772a19a..4cdcbbd 100644
+--- a/pkg/ui/menu_dj_recommend.go
++++ b/pkg/ui/menu_dj_recommend.go
+@@ -29,7 +29,7 @@ func (m *DjRecommendMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DjRecommendMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DjRecommendMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.radios) {
+ 		return nil
+ 	}
+@@ -38,7 +38,7 @@ func (m *DjRecommendMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DjRecommendMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		// 不重复请求
+ 		if len(m.menus) > 0 && len(m.radios) > 0 {
+diff --git a/pkg/ui/menu_dj_sub_list.go b/pkg/ui/menu_dj_sub_list.go
+index 2da14b3..a177d30 100644
+--- a/pkg/ui/menu_dj_sub_list.go
++++ b/pkg/ui/menu_dj_sub_list.go
+@@ -39,7 +39,7 @@ func (m *DjSubListMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DjSubListMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DjSubListMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.radios) {
+ 		return nil
+ 	}
+@@ -48,7 +48,7 @@ func (m *DjSubListMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DjSubListMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+@@ -89,7 +89,7 @@ func (m *DjSubListMenu) BottomOutHook() Hook {
+ 		return nil
+ 	}
+ 
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		m.offset += m.limit
+ 
+ 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+diff --git a/pkg/ui/menu_dj_today_recommend.go b/pkg/ui/menu_dj_today_recommend.go
+index 45df981..e73c4f5 100644
+--- a/pkg/ui/menu_dj_today_recommend.go
++++ b/pkg/ui/menu_dj_today_recommend.go
+@@ -32,7 +32,7 @@ func (m *DjTodayRecommendMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DjTodayRecommendMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DjTodayRecommendMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.radios) {
+ 		return nil
+ 	}
+@@ -41,7 +41,7 @@ func (m *DjTodayRecommendMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DjTodayRecommendMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		// 不重复请求
+ 		now := time.Now()
+@@ -65,7 +65,7 @@ func (m *DjTodayRecommendMenu) BeforeEnterMenuHook() Hook {
+ }
+ 
+ func (m *DjTodayRecommendMenu) BottomOutHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		djTodayService := service.DjTodayPerferedService{}
+ 		code, response := djTodayService.DjTodayPerfered()
+diff --git a/pkg/ui/menu_dj_top.go b/pkg/ui/menu_dj_top.go
+index 7938709..91ec729 100644
+--- a/pkg/ui/menu_dj_top.go
++++ b/pkg/ui/menu_dj_top.go
+@@ -39,7 +39,7 @@ func (m *DjHotMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *DjHotMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *DjHotMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.radios) {
+ 		return nil
+ 	}
+@@ -48,7 +48,7 @@ func (m *DjHotMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *DjHotMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 
+ 		// 不重复请求
+ 		if len(m.menus) > 0 && len(m.radios) > 0 {
+diff --git a/pkg/ui/menu_help.go b/pkg/ui/menu_help.go
+index ef12a87..99f4d6e 100644
+--- a/pkg/ui/menu_help.go
++++ b/pkg/ui/menu_help.go
+@@ -75,7 +75,7 @@ func (m *HelpMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *HelpMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *HelpMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index == 0 {
+ 		_ = open.Start(constants.AppGithubUrl)
+ 	}
+diff --git a/pkg/ui/menu_high_quality_playlists.go b/pkg/ui/menu_high_quality_playlists.go
+index 64b00c6..810b8ae 100644
+--- a/pkg/ui/menu_high_quality_playlists.go
++++ b/pkg/ui/menu_high_quality_playlists.go
+@@ -29,7 +29,7 @@ func (m *HighQualityPlaylistsMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *HighQualityPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *HighQualityPlaylistsMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.playlists) {
+ 		return nil
+ 	}
+@@ -41,7 +41,7 @@ func (m *HighQualityPlaylistsMenu) Playlists() []structs.Playlist {
+ }
+ 
+ func (m *HighQualityPlaylistsMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		// 不重复请求
+ 		if len(m.menus) > 0 && len(m.playlists) > 0 {
+ 			return true
+diff --git a/pkg/ui/menu_hot_artists.go b/pkg/ui/menu_hot_artists.go
+index e84f681..aedb051 100644
+--- a/pkg/ui/menu_hot_artists.go
++++ b/pkg/ui/menu_hot_artists.go
+@@ -29,7 +29,7 @@ func (m *HotArtistsMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *HotArtistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *HotArtistsMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.artists) {
+ 		return nil
+ 	}
+@@ -37,7 +37,7 @@ func (m *HotArtistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *HotArtistsMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		// 不重复请求
+ 		if len(m.menus) > 0 && len(m.artists) > 0 {
+ 			return true
+diff --git a/pkg/ui/menu_local_search_res.go b/pkg/ui/menu_local_search_res.go
+index cb6bb2f..4888659 100644
+--- a/pkg/ui/menu_local_search_res.go
++++ b/pkg/ui/menu_local_search_res.go
+@@ -46,7 +46,7 @@ func (m *LocalSearchMenu) MenuViews() []MenuItem {
+ 	return items
+ }
+ 
+-func (m *LocalSearchMenu) SubMenu(model *NeteaseModel, index int) Menu {
++func (m *LocalSearchMenu) SubMenu(model *Netease, index int) Menu {
+ 	if index > len(m.resItems)-1 {
+ 		return nil
+ 	}
 diff --git a/pkg/ui/menu_main.go b/pkg/ui/menu_main.go
-index 4be51ba..972ab3c 100644
+index 4be51ba..e88193e 100644
 --- a/pkg/ui/menu_main.go
 +++ b/pkg/ui/menu_main.go
 @@ -1,16 +1,19 @@
@@ -423,11 +1312,13 @@ index 4be51ba..972ab3c 100644
 -	menus    []MenuItem
 +	menus    []model.MenuItem
  	menuList []Menu
- 	model    *NeteaseModel
+-	model    *NeteaseModel
++	model    *Netease
  }
  
- func NewMainMenu(m *NeteaseModel) *MainMenu {
+-func NewMainMenu(m *NeteaseModel) *MainMenu {
 -
++func NewMainMenu(m *Netease) *MainMenu {
  	mainMenu := new(MainMenu)
 -	mainMenu.menus = []MenuItem{
 +	mainMenu.menus = []model.MenuItem{
@@ -460,17 +1351,915 @@ index 4be51ba..972ab3c 100644
  	if index >= len(m.menuList) {
  		return nil
  	}
+diff --git a/pkg/ui/menu_personal_fm.go b/pkg/ui/menu_personal_fm.go
+index 5259951..24d5930 100644
+--- a/pkg/ui/menu_personal_fm.go
++++ b/pkg/ui/menu_personal_fm.go
+@@ -40,7 +40,7 @@ func (m *PersonalFmMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *PersonalFmMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		// 已有数据
+ 		if len(m.menus) > 0 && len(m.songs) > 0 {
+ 			return true
+@@ -62,7 +62,7 @@ func (m *PersonalFmMenu) BeforeEnterMenuHook() Hook {
+ }
+ 
+ func (m *PersonalFmMenu) BottomOutHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		personalFm := service.PersonalFmService{}
+ 		code, response := personalFm.PersonalFm()
+ 		codeType := utils.CheckCode(code)
+diff --git a/pkg/ui/menu_playlist_detail.go b/pkg/ui/menu_playlist_detail.go
+index d88dd3f..31163ad 100644
+--- a/pkg/ui/menu_playlist_detail.go
++++ b/pkg/ui/menu_playlist_detail.go
+@@ -40,7 +40,7 @@ func (m *PlaylistDetailMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *PlaylistDetailMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
++func (m *PlaylistDetailMenu) SubMenu(_ *Netease, _ int) Menu {
+ 	return nil
+ }
+ 
+@@ -66,7 +66,7 @@ func getSongsInPlaylist(playlistId int64, getAll bool) (codeType utils.ResCode,
+ }
+ 
+ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		codeType, songs := getSongsInPlaylist(m.playlistId, configs.ConfigRegistry.MainShowAllSongsOfPlaylist)
+ 		if codeType == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+diff --git a/pkg/ui/menu_radio_dj_type.go b/pkg/ui/menu_radio_dj_type.go
+index 544ae90..263e8a2 100644
+--- a/pkg/ui/menu_radio_dj_type.go
++++ b/pkg/ui/menu_radio_dj_type.go
+@@ -40,7 +40,7 @@ func (m *RadioDjTypeMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *RadioDjTypeMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *RadioDjTypeMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.menuList) {
+ 		return nil
+ 	}
+diff --git a/pkg/ui/menu_ranks.go b/pkg/ui/menu_ranks.go
+index 5924ec2..fc408c7 100644
+--- a/pkg/ui/menu_ranks.go
++++ b/pkg/ui/menu_ranks.go
+@@ -31,7 +31,7 @@ func (m *RanksMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *RanksMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *RanksMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if index >= len(m.ranks) {
+ 		return nil
+ 	}
+@@ -40,7 +40,7 @@ func (m *RanksMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *RanksMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if len(m.menus) > 0 && len(m.ranks) > 0 {
+ 			return true
+ 		}
+diff --git a/pkg/ui/menu_recent_songs.go b/pkg/ui/menu_recent_songs.go
+index 74d7980..c9d92c7 100644
+--- a/pkg/ui/menu_recent_songs.go
++++ b/pkg/ui/menu_recent_songs.go
+@@ -33,7 +33,7 @@ func (m *RecentSongsMenu) MenuViews() []MenuItem {
+ }
+ 
+ func (m *RecentSongsMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+ 			return false
+diff --git a/pkg/ui/menu_search_result.go b/pkg/ui/menu_search_result.go
+index dd4a43d..c067716 100644
+--- a/pkg/ui/menu_search_result.go
++++ b/pkg/ui/menu_search_result.go
+@@ -42,7 +42,7 @@ func (m *SearchResultMenu) IsSearchable() bool {
+ }
+ 
+ func (m *SearchResultMenu) BeforeBackMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if model.searchModel.wordsInput.Value() != "" {
+ 			model.searchModel.wordsInput.SetValue("")
+ 		}
+@@ -63,7 +63,7 @@ func (m *SearchResultMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *SearchResultMenu) SubMenu(_ *Netease, index int) Menu {
+ 	switch resultWithType := m.result.(type) {
+ 	case []ds2.Song:
+ 		return nil
+@@ -98,7 +98,7 @@ func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+ }
+ 
+ func (m *SearchResultMenu) BottomOutHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		var (
+ 			code     float64
+ 			response []byte
+@@ -125,7 +125,7 @@ func (m *SearchResultMenu) BottomOutHook() Hook {
+ }
+ 
+ func (m *SearchResultMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		if model.searchModel.wordsInput.Value() == "" {
+ 			// 显示搜索页面
+ 			model.searchModel.SearchHandle(model, m.searchType)
+diff --git a/pkg/ui/menu_search_type.go b/pkg/ui/menu_search_type.go
+index 1d8d50b..ccac0b1 100644
+--- a/pkg/ui/menu_search_type.go
++++ b/pkg/ui/menu_search_type.go
+@@ -28,7 +28,7 @@ func (m *SearchTypeMenu) MenuViews() []MenuItem {
+ 	return m.menus
+ }
+ 
+-func (m *SearchTypeMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *SearchTypeMenu) SubMenu(_ *Netease, index int) Menu {
+ 
+ 	typeArr := []SearchType{
+ 		StSingleSong,
+diff --git a/pkg/ui/menu_user_playlist.go b/pkg/ui/menu_user_playlist.go
+index 979b706..53cfb1b 100644
+--- a/pkg/ui/menu_user_playlist.go
++++ b/pkg/ui/menu_user_playlist.go
+@@ -47,7 +47,7 @@ func (m *UserPlaylistMenu) Playlists() []structs.Playlist {
+ 	return m.playlists
+ }
+ 
+-func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) Menu {
++func (m *UserPlaylistMenu) SubMenu(_ *Netease, index int) Menu {
+ 	if len(m.playlists) < index {
+ 		return nil
+ 	}
+@@ -82,7 +82,7 @@ func getUserPlaylists(userId int64, limit int, offset int) (codeType utils.ResCo
+ }
+ 
+ func (m *UserPlaylistMenu) BeforeEnterMenuHook() Hook {
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		// 等于0，获取当前用户歌单
+ 		if m.userId == CurUser && utils.CheckUserInfo(model.user) == utils.NeedLogin {
+ 			NeedLoginHandle(model, enterMenu)
+@@ -119,7 +119,7 @@ func (m *UserPlaylistMenu) BottomOutHook() Hook {
+ 	if !m.hasMore {
+ 		return nil
+ 	}
+-	return func(model *NeteaseModel) bool {
++	return func(model *Netease) bool {
+ 		userId := m.userId
+ 		if m.userId == CurUser {
+ 			// 等于0，获取当前用户歌单
+diff --git a/pkg/ui/netease.go b/pkg/ui/netease.go
+index 1ae1b79..1e2eb42 100644
+--- a/pkg/ui/netease.go
++++ b/pkg/ui/netease.go
+@@ -11,6 +11,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/anhoder/foxful-cli/model"
+ 	"github.com/go-musicfox/go-musicfox/pkg/configs"
+ 	"github.com/go-musicfox/go-musicfox/pkg/constants"
+ 	"github.com/go-musicfox/go-musicfox/pkg/lastfm"
+@@ -20,61 +21,30 @@ import (
+ 	"github.com/go-musicfox/go-musicfox/utils"
+ 	"github.com/go-musicfox/go-musicfox/utils/like_list"
+ 
+-	tea "github.com/charmbracelet/bubbletea"
+ 	"github.com/go-musicfox/netease-music/service"
+ 	"github.com/go-musicfox/netease-music/util"
+-	"github.com/mattn/go-runewidth"
+ 	"github.com/telanflow/cookiejar"
+ )
+ 
+-type NeteaseModel struct {
+-	WindowWidth    int
+-	WindowHeight   int
+-	isListeningKey bool
+-	program        *tea.Program
+-	user           *structs.User
+-	lastfm         *lastfm.Client
+-	lastfmUser     *storage.LastfmUser
++type Netease struct {
++	user       *structs.User
++	lastfm     *lastfm.Client
++	lastfmUser *storage.LastfmUser
+ 
+-	// startup
+-	startup *StartupModel
+-
+-	// main ui
+-	*MainUIModel
+-
+-	// login
+-	loginModel *LoginModel
+-
+-	// search
+-	searchModel *SearchModel
++	*model.App
++	player *Player
+ }
+ 
+-// NewNeteaseModel get netease model
+-func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
+-	m = new(NeteaseModel)
+-	m.isListeningKey = !configs.ConfigRegistry.StartupShow
++func NewNetease(app *model.App) *Netease {
++	m := new(Netease)
+ 	m.lastfm = lastfm.NewClient()
++	m.player = NewPlayer(m)
++	m.App = app
+ 
+-	// startup
+-	m.startup = NewStartup()
+-	m.startup.TotalDuration = loadingDuration
+-
+-	// main menu
+-	m.MainUIModel = NewMainUIModel(m)
+-
+-	// login
+-	m.loginModel = NewLogin()
+-
+-	// search
+-	m.searchModel = NewSearch()
+-
+-	// 东亚
+-	runewidth.DefaultCondition.EastAsianWidth = false
+-
+-	return
++	return m
+ }
+ 
+-func (m *NeteaseModel) Init() tea.Cmd {
++func (m *Netease) InitHook(_ *model.App) {
+ 	config := configs.ConfigRegistry
+ 	projectDir := utils.GetLocalDataDir()
+ 
+@@ -95,7 +65,6 @@ func (m *NeteaseModel) Init() tea.Cmd {
+ 				m.user = &user
+ 			}
+ 		}
+-		m.refreshMenuTitle() // 刷新界面用户名
+ 
+ 		// 获取lastfm用户信息
+ 		var lastfmUser storage.LastfmUser
+@@ -105,7 +74,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
+ 				m.lastfm.SetSession(lastfmUser.SessionKey)
+ 			}
+ 		}
+-		m.refreshMenuList()
++		m.MustMain().RefreshMenuList()
+ 
+ 		// 获取播放模式
+ 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
+@@ -212,9 +181,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
+ 		if config.StartupCheckUpdate {
+ 			if ok, newVersion := utils.CheckUpdate(); ok {
+ 				if runtime.GOOS == "windows" {
+-					enterMenu(m, NewCheckUpdateMenu(),
+-						&MenuItem{Title: "新版本: " + newVersion,
+-							Subtitle: "当前版本: " + constants.AppVersion})
++					m.MustMain().EnterMenu(
++						NewCheckUpdateMenu(),
++						&model.MenuItem{Title: "新版本: " + newVersion, Subtitle: "当前版本: " + constants.AppVersion},
++					)
+ 				}
+ 
+ 				utils.Notify(utils.NotifyContent{
+@@ -226,6 +196,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
+ 		}
+ 
+ 		// 自动播放
++		// TODO optimize
+ 		if config.AutoPlay {
+ 			var (
+ 				notice   string // 错误通知文本
+@@ -301,14 +272,13 @@ func (m *NeteaseModel) Init() tea.Cmd {
+ 			}
+ 		}
+ 	})
++}
+ 
+-	if config.StartupShow {
+-		return tickStartup(time.Nanosecond)
+-	}
+-
+-	return tickMainUI(time.Nanosecond)
++func (m *Netease) CloseHook(_ *model.App) {
++	m.player.Close()
+ }
+ 
++// TODO optimize
+ func getDailySongs() (playlist []structs.Song, notice string) {
+ 	recommendSongs := service.RecommendSongsService{}
+ 	code, response := recommendSongs.RecommendSongs()
+@@ -321,6 +291,7 @@ func getDailySongs() (playlist []structs.Song, notice string) {
+ 	return
+ }
+ 
++// TODO optimize
+ func getLikeSongs(userId int64, getAll bool) (playlist []structs.Song, notice string) {
+ 	var (
+ 		codeType  utils.ResCode
+@@ -341,6 +312,7 @@ func getLikeSongs(userId int64, getAll bool) (playlist []structs.Song, notice st
+ 	return
+ }
+ 
++// TODO optimize
+ func getPlaylistByName(userId int64, playlistName string, getAll bool) (playlist []structs.Song, notice string) {
+ 	var (
+ 		playlistId int64
+@@ -377,83 +349,3 @@ Loop:
+ 	playlist = songs
+ 	return
+ }
+-
+-func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+-	// Make sure these keys always quit
+-	switch msgWithType := msg.(type) {
+-	case tea.KeyMsg:
+-		k := msgWithType.String()
+-		// 账号登录或搜索页输入q不退出
+-		if m.pageType == PtMain && !m.inSearching && (k == "q" || k == "Q" || k == "ctrl+c") {
+-			m.startup.quitting = true
+-			m.Close()
+-			return m, tea.Quit
+-		}
+-	case tea.WindowSizeMsg:
+-		m.WindowHeight = msgWithType.Height
+-		m.WindowWidth = msgWithType.Width
+-	}
+-
+-	if _, ok := msg.(tea.WindowSizeMsg); ok {
+-		m.MainUIModel.update(msg, m)
+-	}
+-
+-	// Hand off the message and model to the appropriate update function for the
+-	// appropriate view based on the current state.
+-	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
+-		return m.startup.update(msg, m)
+-	}
+-
+-	switch m.pageType {
+-	case PtLogin:
+-		return updateLogin(msg, m)
+-	case PtSearch:
+-		return m.searchModel.update(msg, m)
+-	}
+-
+-	return m.MainUIModel.update(msg, m)
+-}
+-
+-func (m *NeteaseModel) View() string {
+-	if m.startup.quitting || m.WindowWidth <= 0 || m.WindowHeight <= 0 {
+-		return ""
+-	}
+-
+-	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
+-		return m.startup.view(m)
+-	}
+-
+-	switch m.pageType {
+-	case PtLogin:
+-		return loginView(m)
+-	case PtSearch:
+-		return m.searchModel.view(m)
+-	}
+-
+-	return m.MainUIModel.view(m)
+-}
+-
+-func (m *NeteaseModel) BindProgram(program *tea.Program) {
+-	m.program = program
+-}
+-
+-func (m *NeteaseModel) Rerender(cleanScreen bool) {
+-	if m.program == nil {
+-		return
+-	}
+-	ticker := m.rerenderTicker(cleanScreen)
+-	m.program.Send(ticker())
+-}
+-
+-func (m *NeteaseModel) rerenderTicker(cleanScreen bool) tea.Cmd {
+-	return func() tea.Msg {
+-		if cleanScreen {
+-			m.program.Send(tea.ClearScreen())
+-		}
+-		return MsgOfPageType(m.pageType)
+-	}
+-}
+-
+-func (m *NeteaseModel) Close() {
+-	m.MainUIModel.Close()
+-}
+diff --git a/pkg/ui/operate.go b/pkg/ui/operate.go
+index 4561a11..d059082 100644
+--- a/pkg/ui/operate.go
++++ b/pkg/ui/operate.go
+@@ -30,7 +30,7 @@ type menuStackItem struct {
+ }
+ 
+ // 上移
+-func moveUp(m *NeteaseModel) {
++func moveUp(m *Netease) {
+ 	topHook := m.menu.TopOutHook()
+ 	if m.doubleColumn {
+ 		if m.selectedIndex-2 < 0 && topHook != nil {
+@@ -70,7 +70,7 @@ func moveUp(m *NeteaseModel) {
+ }
+ 
+ // 下移
+-func moveDown(m *NeteaseModel) {
++func moveDown(m *Netease) {
+ 	bottomHook := m.menu.BottomOutHook()
+ 	if m.doubleColumn {
+ 		if m.selectedIndex+2 > len(m.menuList)-1 && bottomHook != nil {
+@@ -109,7 +109,7 @@ func moveDown(m *NeteaseModel) {
+ }
+ 
+ // 左移
+-func moveLeft(m *NeteaseModel) {
++func moveLeft(m *Netease) {
+ 	if !m.doubleColumn || m.selectedIndex%2 == 0 || m.selectedIndex-1 < 0 {
+ 		return
+ 	}
+@@ -117,7 +117,7 @@ func moveLeft(m *NeteaseModel) {
+ }
+ 
+ // 右移
+-func moveRight(m *NeteaseModel) {
++func moveRight(m *Netease) {
+ 	if !m.doubleColumn || m.selectedIndex%2 != 0 {
+ 		return
+ 	}
+@@ -138,7 +138,7 @@ func moveRight(m *NeteaseModel) {
+ }
+ 
+ // 上移到顶部
+-func moveTop(m *NeteaseModel) {
++func moveTop(m *Netease) {
+ 	if m.doubleColumn {
+ 		m.selectedIndex = m.selectedIndex % 2
+ 	} else {
+@@ -148,7 +148,7 @@ func moveTop(m *NeteaseModel) {
+ }
+ 
+ // 下移到底部
+-func moveBottom(m *NeteaseModel) {
++func moveBottom(m *Netease) {
+ 	if m.doubleColumn && len(m.menuList)%2 == 0 {
+ 		m.selectedIndex = len(m.menuList) + (m.selectedIndex%2 - 2)
+ 	} else if m.doubleColumn && m.selectedIndex%2 != 0 {
+@@ -163,7 +163,7 @@ func moveBottom(m *NeteaseModel) {
+ }
+ 
+ // 切换到上一页
+-func prePage(m *NeteaseModel) {
++func prePage(m *Netease) {
+ 	m.isListeningKey = false
+ 	defer func() {
+ 		m.isListeningKey = true
+@@ -186,7 +186,7 @@ func prePage(m *NeteaseModel) {
+ }
+ 
+ // 切换到下一页
+-func nextPage(m *NeteaseModel) {
++func nextPage(m *Netease) {
+ 	m.isListeningKey = false
+ 	defer func() {
+ 		m.isListeningKey = true
+@@ -208,7 +208,7 @@ func nextPage(m *NeteaseModel) {
+ 	m.menuCurPage++
+ }
+ 
+-func enterKeyHandle(m *NeteaseModel) {
++func enterKeyHandle(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -222,7 +222,7 @@ func enterKeyHandle(m *NeteaseModel) {
+ }
+ 
+ // 进入菜单
+-func enterMenu(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++func enterMenu(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 	m.isListeningKey = false
+ 	defer func() {
+ 		m.isListeningKey = true
+@@ -279,7 +279,7 @@ func enterMenu(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
+ }
+ 
+ // 菜单返回
+-func backMenu(m *NeteaseModel) {
++func backMenu(m *Netease) {
+ 	m.isListeningKey = false
+ 	defer func() {
+ 		m.isListeningKey = true
+@@ -316,7 +316,7 @@ func backMenu(m *NeteaseModel) {
+ }
+ 
+ // 空格监听
+-func spaceKeyHandle(m *NeteaseModel) {
++func spaceKeyHandle(m *Netease) {
+ 	var (
+ 		songs         []structs.Song
+ 		inPlayingMenu = m.player.InPlayingMenu()
+@@ -368,7 +368,7 @@ func spaceKeyHandle(m *NeteaseModel) {
+ }
+ 
+ // likePlayingSong like/unlike playing song
+-func likePlayingSong(m *NeteaseModel, isLike bool) {
++func likePlayingSong(m *Netease, isLike bool) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -378,7 +378,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
+ 	}
+ 
+ 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++		NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 			likePlayingSong(m, isLike)
+ 		})
+ 		return
+@@ -394,7 +394,7 @@ func likePlayingSong(m *NeteaseModel, isLike bool) {
+ 		code, response := userPlaylists.UserPlaylist()
+ 		codeType := utils.CheckCode(code)
+ 		if codeType == utils.NeedLogin {
+-			NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++			NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 				likePlayingSong(m, isLike)
+ 			})
+ 			return
+@@ -476,7 +476,7 @@ func logout() {
+ }
+ 
+ // likeSelectedSong like/unlike selected song
+-func likeSelectedSong(m *NeteaseModel, isLike bool) {
++func likeSelectedSong(m *Netease, isLike bool) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -489,7 +489,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
+ 	songs := menu.Songs()
+ 
+ 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++		NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 			likeSelectedSong(m, isLike)
+ 		})
+ 		return
+@@ -505,7 +505,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
+ 		code, response := userPlaylists.UserPlaylist()
+ 		codeType := utils.CheckCode(code)
+ 		if codeType == utils.NeedLogin {
+-			NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++			NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 				likeSelectedSong(m, isLike)
+ 			})
+ 			return
+@@ -568,7 +568,7 @@ func likeSelectedSong(m *NeteaseModel, isLike bool) {
+ }
+ 
+ // trashPlayingSong 标记为不喜欢
+-func trashPlayingSong(m *NeteaseModel) {
++func trashPlayingSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -578,7 +578,7 @@ func trashPlayingSong(m *NeteaseModel) {
+ 	}
+ 
+ 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++		NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 			trashPlayingSong(m)
+ 		})
+ 		return
+@@ -598,7 +598,7 @@ func trashPlayingSong(m *NeteaseModel) {
+ }
+ 
+ // trashSelectedSong 标记为不喜欢
+-func trashSelectedSong(m *NeteaseModel) {
++func trashSelectedSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -611,7 +611,7 @@ func trashSelectedSong(m *NeteaseModel) {
+ 	songs := menu.Songs()
+ 
+ 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++		NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 			trashSelectedSong(m)
+ 		})
+ 		return
+@@ -631,7 +631,7 @@ func trashSelectedSong(m *NeteaseModel) {
+ }
+ 
+ // 搜索当前菜单
+-func searchMenuHandle(m *NeteaseModel) {
++func searchMenuHandle(m *Netease) {
+ 	m.inSearching = false
+ 	enterMenu(m, NewSearchMenu(m.menu, m.searchInput.Value()), &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
+ 	m.searchInput.Blur()
+@@ -639,7 +639,7 @@ func searchMenuHandle(m *NeteaseModel) {
+ }
+ 
+ // 下载当前音乐
+-func downloadSelectedSong(m *NeteaseModel) {
++func downloadSelectedSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -653,7 +653,7 @@ func downloadSelectedSong(m *NeteaseModel) {
+ 	go utils.DownloadMusic(songs[selectedIndex])
+ }
+ 
+-func downloadPlayingSong(m *NeteaseModel) {
++func downloadPlayingSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -665,7 +665,7 @@ func downloadPlayingSong(m *NeteaseModel) {
+ 	go utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+ }
+ 
+-func albumOfPlayingSong(m *NeteaseModel) {
++func albumOfPlayingSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -683,7 +683,7 @@ func albumOfPlayingSong(m *NeteaseModel) {
+ 	enterMenu(m, NewAlbumDetailMenu(curSong.Album.Id), &MenuItem{Title: curSong.Album.Name, Subtitle: "「" + curSong.Name + "」所属专辑"})
+ }
+ 
+-func albumOfSelectedSong(m *NeteaseModel) {
++func albumOfSelectedSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -703,7 +703,7 @@ func albumOfSelectedSong(m *NeteaseModel) {
+ 	enterMenu(m, NewAlbumDetailMenu(songs[selectedIndex].Album.Id), &MenuItem{Title: songs[selectedIndex].Album.Name, Subtitle: "「" + songs[selectedIndex].Name + "」所属专辑"})
+ }
+ 
+-func artistOfPlayingSong(m *NeteaseModel) {
++func artistOfPlayingSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -731,7 +731,7 @@ func artistOfPlayingSong(m *NeteaseModel) {
+ 	enterMenu(m, NewArtistsOfSongMenu(curSong), &MenuItem{Title: "「" + curSong.Name + "」所属歌手"})
+ }
+ 
+-func artistOfSelectedSong(m *NeteaseModel) {
++func artistOfSelectedSong(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -762,7 +762,7 @@ func artistOfSelectedSong(m *NeteaseModel) {
+ 	enterMenu(m, NewArtistsOfSongMenu(song), &MenuItem{Title: "「" + song.Name + "」所属歌手"})
+ }
+ 
+-func openPlayingSongInWeb(m *NeteaseModel) {
++func openPlayingSongInWeb(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -775,7 +775,7 @@ func openPlayingSongInWeb(m *NeteaseModel) {
+ 	_ = open.Start(utils.WebUrlOfSong(curSong.Id))
+ }
+ 
+-func openSelectedItemInWeb(m *NeteaseModel) {
++func openSelectedItemInWeb(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -808,7 +808,7 @@ func openSelectedItemInWeb(m *NeteaseModel) {
+ }
+ 
+ // collectSelectedPlaylist 收藏选中歌单
+-func collectSelectedPlaylist(m *NeteaseModel, isCollect bool) {
++func collectSelectedPlaylist(m *Netease, isCollect bool) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -859,7 +859,7 @@ func collectSelectedPlaylist(m *NeteaseModel, isCollect bool) {
+ }
+ 
+ // addSongToPlaylist 添加歌曲到播放列表
+-func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
++func addSongToPlaylist(m *Netease, addToNext bool) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -903,7 +903,7 @@ func addSongToPlaylist(m *NeteaseModel, addToNext bool) {
+ }
+ 
+ // openAddSongToUserPlaylistMenu 打开添加歌曲到用户歌单菜单
+-func openAddSongToUserPlaylistMenu(m *NeteaseModel, isSelected, isAdd bool) {
++func openAddSongToUserPlaylistMenu(m *Netease, isSelected, isAdd bool) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -938,13 +938,13 @@ func openAddSongToUserPlaylistMenu(m *NeteaseModel, isSelected, isAdd bool) {
+ }
+ 
+ // addSongToUserPlaylist 添加歌曲到用户歌单
+-func addSongToUserPlaylist(m *NeteaseModel, isAdd bool) {
++func addSongToUserPlaylist(m *Netease, isAdd bool) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+ 
+ 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+-		NeedLoginHandle(m, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++		NeedLoginHandle(m, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 			addSongToUserPlaylist(m, isAdd)
+ 		})
+ 		return
+@@ -1011,7 +1011,7 @@ func addSongToUserPlaylist(m *NeteaseModel, isAdd bool) {
+ }
+ 
+ // 从播放列表删除选中歌曲,仅在当前播放列表界面有效
+-func delSongFromPlaylist(m *NeteaseModel) {
++func delSongFromPlaylist(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+@@ -1068,7 +1068,7 @@ func delSongFromPlaylist(m *NeteaseModel) {
+ 	m.refreshMenuList()
+ }
+ 
+-func clearSongCache(m *NeteaseModel) {
++func clearSongCache(m *Netease) {
+ 	loading := NewLoading(m)
+ 	loading.start()
+ 	defer loading.complete()
+diff --git a/pkg/ui/page.go b/pkg/ui/page.go
+index 6cf9753..be3d4e8 100644
+--- a/pkg/ui/page.go
++++ b/pkg/ui/page.go
+@@ -3,6 +3,6 @@ package ui
+ import tea "github.com/charmbracelet/bubbletea"
+ 
+ type Page interface {
+-	update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd)
+-	view(m *NeteaseModel) string
++	update(msg tea.Msg, m *Netease) (tea.Model, tea.Cmd)
++	view(m *Netease) string
+ }
+diff --git a/pkg/ui/player.go b/pkg/ui/player.go
+index be472db..bf23a1b 100644
+--- a/pkg/ui/player.go
++++ b/pkg/ui/player.go
+@@ -54,7 +54,7 @@ const (
+ 
+ // Player 网易云音乐播放器
+ type Player struct {
+-	model  *NeteaseModel
++	model  *Netease
+ 	cancel context.CancelFunc
+ 
+ 	playlist         []structs.Song // 歌曲列表
+@@ -84,7 +84,7 @@ type Player struct {
+ 	player.Player // 播放器
+ }
+ 
+-func NewPlayer(model *NeteaseModel) *Player {
++func NewPlayer(model *Netease) *Player {
+ 	p := &Player{
+ 		model:             model,
+ 		mode:              player.PmListLoop,
+@@ -676,7 +676,7 @@ func (p *Player) Intelligence(appendMode bool) {
+ 	code, response := intelligenceService.PlaymodeIntelligenceList()
+ 	codeType := utils.CheckCode(code)
+ 	if codeType == utils.NeedLogin {
+-		NeedLoginHandle(p.model, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
++		NeedLoginHandle(p.model, func(m *Netease, newMenu Menu, newTitle *MenuItem) {
+ 			p.Intelligence(appendMode)
+ 		})
+ 		return
+diff --git a/pkg/ui/search.go b/pkg/ui/search.go
+index ba1750d..8f6ccf7 100644
+--- a/pkg/ui/search.go
++++ b/pkg/ui/search.go
+@@ -66,7 +66,7 @@ func NewSearch() (search *SearchModel) {
+ }
+ 
+ // update search
+-func (s *SearchModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func (s *SearchModel) update(msg tea.Msg, m *Netease) (tea.Model, tea.Cmd) {
+ 
+ 	switch msg := msg.(type) {
+ 	case tickSearchMsg:
+@@ -186,7 +186,7 @@ func (s *SearchModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd)
+ 	return s.updateSearchInputs(msg, m)
+ }
+ 
+-func (s *SearchModel) updateSearchInputs(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func (s *SearchModel) updateSearchInputs(msg tea.Msg, m *Netease) (tea.Model, tea.Cmd) {
+ 	var (
+ 		cmd  tea.Cmd
+ 		cmds []tea.Cmd
+@@ -198,7 +198,7 @@ func (s *SearchModel) updateSearchInputs(msg tea.Msg, m *NeteaseModel) (tea.Mode
+ 	return m, tea.Batch(cmds...)
+ }
+ 
+-func (s *SearchModel) view(m *NeteaseModel) string {
++func (s *SearchModel) view(m *Netease) string {
+ 	var builder strings.Builder
+ 
+ 	// 距离顶部的行数
+@@ -277,7 +277,7 @@ func (s *SearchModel) view(m *NeteaseModel) string {
+ }
+ 
+ // SearchHandle 搜索
+-func (s *SearchModel) SearchHandle(model *NeteaseModel, searchType SearchType) {
++func (s *SearchModel) SearchHandle(model *Netease, searchType SearchType) {
+ 	model.pageType = PtSearch
+ 	model.searchModel.searchType = searchType
+ }
+diff --git a/pkg/ui/startup.go b/pkg/ui/startup.go
+index a1168b2..3700b90 100644
+--- a/pkg/ui/startup.go
++++ b/pkg/ui/startup.go
+@@ -38,7 +38,7 @@ func NewStartup() (m *StartupModel) {
+ }
+ 
+ // startup func
+-func (s *StartupModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd) {
++func (s *StartupModel) update(msg tea.Msg, m *Netease) (tea.Model, tea.Cmd) {
+ 	switch msg.(type) {
+ 	case tickStartupMsg:
+ 		if s.loadedDuration >= s.TotalDuration {
+@@ -58,7 +58,7 @@ func (s *StartupModel) update(msg tea.Msg, m *NeteaseModel) (tea.Model, tea.Cmd)
+ }
+ 
+ // startup view
+-func (s *StartupModel) view(m *NeteaseModel) string {
++func (s *StartupModel) view(m *Netease) string {
+ 
+ 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
+ 		return ""
+@@ -97,7 +97,7 @@ func (s *StartupModel) view(m *NeteaseModel) string {
+ }
+ 
+ // get logo
+-func (s *StartupModel) logoView(m *NeteaseModel) string {
++func (s *StartupModel) logoView(m *Netease) string {
+ 	if m.WindowWidth <= 0 || m.WindowHeight <= 0 {
+ 		return ""
+ 	}
+@@ -125,7 +125,7 @@ func (s *StartupModel) logoView(m *NeteaseModel) string {
+ }
+ 
+ // get tips
+-func (s *StartupModel) tipsView(m *NeteaseModel) string {
++func (s *StartupModel) tipsView(m *Netease) string {
+ 	example := "Enter after 11.1 seconds..."
+ 	var left int
+ 	if m.WindowWidth-len(example) > 0 {
+@@ -139,7 +139,7 @@ func (s *StartupModel) tipsView(m *NeteaseModel) string {
+ }
+ 
+ // get progress
+-func (s *StartupModel) progressView(m *NeteaseModel) string {
++func (s *StartupModel) progressView(m *Netease) string {
+ 	width := float64(m.WindowWidth)
+ 
+ 	if progressStartColor == "" || progressEndColor == "" {
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/app.go b/vendor/github.com/anhoder/foxful-cli/model/app.go
 new file mode 100644
-index 0000000..467698a
+index 0000000..f756bb1
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/app.go
-@@ -0,0 +1,152 @@
+@@ -0,0 +1,190 @@
 +package model
 +
 +import (
 +	"time"
 +
++	"github.com/anhoder/foxful-cli/util"
 +	tea "github.com/charmbracelet/bubbletea"
 +	"github.com/mattn/go-runewidth"
 +)
@@ -482,8 +2271,10 @@ index 0000000..467698a
 +
 +	program *tea.Program
 +
-+	// 当前页面
-+	page Page
++	startup *StartupPage
++	main    *Main
++
++	page Page // current page
 +}
 +
 +// NewApp create application
@@ -507,6 +2298,13 @@ index 0000000..467698a
 +		}
 +	}
 +	return a
++}
++
++func (a *App) WithHook(init, close func(a *App)) WithOption {
++	return func(opts *Options) {
++		opts.InitHook = init
++		opts.CloseHook = close
++	}
 +}
 +
 +func (a *App) Init() tea.Cmd {
@@ -573,13 +2371,15 @@ index 0000000..467698a
 +}
 +
 +func (a *App) Run() error {
++	util.PrimaryColor = a.options.PrimaryColor
++
 +	if a.page == nil {
-+		var main = NewMain(a, a.options)
++		a.main = NewMain(a, a.options)
++		a.startup = NewStartup(&a.options.StartupOptions, a.main)
 +		if a.options.InitPage == nil {
-+			if a.options.WhetherDisplayStartup() {
-+				a.options.InitPage = NewStartup(&a.options.StartupOptions, main)
-+			} else {
-+				a.options.InitPage = main
++			a.options.InitPage = a.main
++			if a.options.EnableStartup {
++				a.options.InitPage = a.startup
 +			}
 +		}
 +		a.page = a.options.InitPage
@@ -618,6 +2418,32 @@ index 0000000..467698a
 +func (a *App) WindowHeight() int {
 +	return a.windowHeight
 +}
++
++func (a *App) CurPage() Page {
++	return a.page
++}
++
++func (a *App) Startup() *StartupPage {
++	return a.startup
++}
++
++func (a *App) Main() *Main {
++	return a.main
++}
++
++func (a *App) MustMain() *Main {
++	if a.main != nil {
++		return a.main
++	}
++	panic("main page is empty")
++}
++
++func (a *App) MustStartup() *StartupPage {
++	if a.startup != nil {
++		return a.startup
++	}
++	panic("startup page is empty")
++}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/component.go b/vendor/github.com/anhoder/foxful-cli/model/component.go
 new file mode 100644
 index 0000000..3fced3f
@@ -655,10 +2481,10 @@ index 0000000..b07b03b
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/loading.go b/vendor/github.com/anhoder/foxful-cli/model/loading.go
 new file mode 100644
-index 0000000..52022a6
+index 0000000..0fa689d
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/loading.go
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,45 @@
 +package model
 +
 +import (
@@ -677,7 +2503,6 @@ index 0000000..52022a6
 +	}
 +}
 +
-+// 开始
 +func (loading *Loading) start() {
 +	termenv.DefaultOutput().MoveCursor(loading.main.menuTitleStartRow, 0)
 +
@@ -695,7 +2520,6 @@ index 0000000..52022a6
 +	termenv.DefaultOutput().MoveCursor(0, 0)
 +}
 +
-+// 完成
 +func (loading *Loading) complete() {
 +	termenv.DefaultOutput().MoveCursor(loading.main.menuTitleStartRow, 0)
 +
@@ -781,10 +2605,10 @@ index 0000000..91630b5
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/main.go b/vendor/github.com/anhoder/foxful-cli/model/main.go
 new file mode 100644
-index 0000000..e2af9df
+index 0000000..a1e9e37
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/main.go
-@@ -0,0 +1,850 @@
+@@ -0,0 +1,847 @@
 +package model
 +
 +import (
@@ -839,10 +2663,17 @@ index 0000000..e2af9df
 +type tickMainMsg struct{}
 +
 +func NewMain(app *App, options *Options) (m *Main) {
++	var initMenuTitle *MenuItem
++	if options.InitMenuTitle != nil {
++		initMenuTitle = options.InitMenuTitle
++	} else {
++		initMenuTitle = &MenuItem{Title: options.AppName}
++	}
++
 +	m = &Main{
 +		app:          app,
 +		options:      options,
-+		menuTitle:    &MenuItem{Title: options.AppName},
++		menuTitle:    initMenuTitle,
 +		menu:         options.MainMenu,
 +		menuStack:    &util.Stack{},
 +		menuCurPage:  1,
@@ -1307,13 +3138,13 @@ index 0000000..e2af9df
 +	key := msg.String()
 +	switch key {
 +	case "j", "J", "down":
-+		m.moveDown()
++		m.MoveDown()
 +	case "k", "K", "up":
-+		m.moveUp()
++		m.MoveUp()
 +	case "h", "H", "left":
-+		m.moveLeft()
++		m.MoveLeft()
 +	case "l", "L", "right":
-+		m.moveRight()
++		m.MoveRight()
 +	case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
 +		num, _ := strconv.Atoi(key)
 +		start := (m.menuCurPage - 1) * m.menuPageSize
@@ -1321,13 +3152,13 @@ index 0000000..e2af9df
 +			m.selectedIndex = start + num
 +		}
 +	case "g":
-+		m.moveTop()
++		m.MoveTop()
 +	case "G":
-+		m.moveBottom()
++		m.MoveBottom()
 +	case "n", "N", "enter":
-+		m.enterMenu(nil, nil)
++		m.EnterMenu(nil, nil)
 +	case "b", "B", "esc":
-+		m.backMenu()
++		m.BackMenu()
 +	case "r", "R":
 +		return m, a.RerenderCmd(true)
 +	case "/", "／":
@@ -1342,8 +3173,8 @@ index 0000000..e2af9df
 +			if cmd != nil {
 +				lastCmd = cmd
 +			}
-+			if !stopPropagation {
-+				continue
++			if stopPropagation {
++				break
 +			}
 +		}
 +		return m, lastCmd
@@ -1360,8 +3191,8 @@ index 0000000..e2af9df
 +		if cmd != nil {
 +			lastCmd = cmd
 +		}
-+		if !stopPropagation {
-+			continue
++		if stopPropagation {
++			break
 +		}
 +	}
 +	return m, lastCmd
@@ -1369,7 +3200,7 @@ index 0000000..e2af9df
 +
 +func (m *Main) searchMenuHandle() {
 +	m.inSearching = false
-+	m.enterMenu(NewSearchMenu(m.menu, m.searchInput.Value()), &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
++	m.EnterMenu(NewSearchMenu(m.menu, m.searchInput.Value()), &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
 +	m.searchInput.Blur()
 +	m.searchInput.Reset()
 +}
@@ -1382,8 +3213,7 @@ index 0000000..e2af9df
 +	menu          Menu
 +}
 +
-+// 上移
-+func (m *Main) moveUp() {
++func (m *Main) MoveUp() {
 +	topHook := m.menu.TopOutHook()
 +	if m.doubleColumn {
 +		if m.selectedIndex-2 < 0 && topHook != nil {
@@ -1418,12 +3248,11 @@ index 0000000..e2af9df
 +		m.selectedIndex--
 +	}
 +	if m.selectedIndex < (m.menuCurPage-1)*m.menuPageSize {
-+		m.prePage()
++		m.PrePage()
 +	}
 +}
 +
-+// 下移
-+func (m *Main) moveDown() {
++func (m *Main) MoveDown() {
 +	bottomHook := m.menu.BottomOutHook()
 +	if m.doubleColumn {
 +		if m.selectedIndex+2 > len(m.menuList)-1 && bottomHook != nil {
@@ -1457,20 +3286,18 @@ index 0000000..e2af9df
 +		m.selectedIndex++
 +	}
 +	if m.selectedIndex >= m.menuCurPage*m.menuPageSize {
-+		m.nextPage()
++		m.NextPage()
 +	}
 +}
 +
-+// 左移
-+func (m *Main) moveLeft() {
++func (m *Main) MoveLeft() {
 +	if !m.doubleColumn || m.selectedIndex%2 == 0 || m.selectedIndex-1 < 0 {
 +		return
 +	}
 +	m.selectedIndex--
 +}
 +
-+// 右移
-+func (m *Main) moveRight() {
++func (m *Main) MoveRight() {
 +	if !m.doubleColumn || m.selectedIndex%2 != 0 {
 +		return
 +	}
@@ -1490,8 +3317,7 @@ index 0000000..e2af9df
 +	m.selectedIndex++
 +}
 +
-+// 上移到顶部
-+func (m *Main) moveTop() {
++func (m *Main) MoveTop() {
 +	if m.doubleColumn {
 +		m.selectedIndex = m.selectedIndex % 2
 +	} else {
@@ -1500,8 +3326,7 @@ index 0000000..e2af9df
 +	m.menuCurPage = 1
 +}
 +
-+// 下移到底部
-+func (m *Main) moveBottom() {
++func (m *Main) MoveBottom() {
 +	if m.doubleColumn && len(m.menuList)%2 == 0 {
 +		m.selectedIndex = len(m.menuList) + (m.selectedIndex%2 - 2)
 +	} else if m.doubleColumn && m.selectedIndex%2 != 0 {
@@ -1515,8 +3340,7 @@ index 0000000..e2af9df
 +	}
 +}
 +
-+// 切换到上一页
-+func (m *Main) prePage() {
++func (m *Main) PrePage() {
 +	if prePageHook := m.menu.BeforePrePageHook(); prePageHook != nil {
 +		loading := NewLoading(m)
 +		loading.start()
@@ -1533,8 +3357,7 @@ index 0000000..e2af9df
 +	m.menuCurPage--
 +}
 +
-+// 切换到下一页
-+func (m *Main) nextPage() {
++func (m *Main) NextPage() {
 +	if nextPageHook := m.menu.BeforeNextPageHook(); nextPageHook != nil {
 +		loading := NewLoading(m)
 +		loading.start()
@@ -1551,8 +3374,7 @@ index 0000000..e2af9df
 +	m.menuCurPage++
 +}
 +
-+// 进入菜单
-+func (m *Main) enterMenu(newMenu Menu, newTitle *MenuItem) {
++func (m *Main) EnterMenu(newMenu Menu, newTitle *MenuItem) {
 +	if (newMenu == nil || newTitle == nil) && m.selectedIndex >= len(m.menuList) {
 +		return
 +	}
@@ -1603,8 +3425,7 @@ index 0000000..e2af9df
 +	m.menuCurPage = 1
 +}
 +
-+// 菜单返回
-+func (m *Main) backMenu() {
++func (m *Main) BackMenu() {
 +
 +	if m.menuStack.Len() <= 0 {
 +		return
@@ -1637,7 +3458,7 @@ index 0000000..e2af9df
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/menu.go b/vendor/github.com/anhoder/foxful-cli/model/menu.go
 new file mode 100644
-index 0000000..1d343ee
+index 0000000..f6b1517
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/menu.go
 @@ -0,0 +1,177 @@
@@ -1673,40 +3494,40 @@ index 0000000..1d343ee
 +
 +// Menu menu interface
 +type Menu interface {
-+	// IsSearchable 当前菜单是否可搜索
++	// IsSearchable is the current menu searchable
 +	IsSearchable() bool
 +
-+	// RealDataIndex 索引转换
++	// RealDataIndex index of real data
 +	RealDataIndex(index int) int
 +
-+	// GetMenuKey 菜单唯一Key
++	// GetMenuKey Menu unique key
 +	GetMenuKey() string
 +
-+	// MenuViews 获取子菜单View
++	// MenuViews get submenu View
 +	MenuViews() []MenuItem
 +
-+	// FormatMenuItem 进入前的格式化
++	// FormatMenuItem format before entering the menu
 +	FormatMenuItem(item *MenuItem)
 +
-+	// SubMenu 根据下标获取菜单Model
++	// SubMenu obtain menu by index
 +	SubMenu(app *App, index int) Menu
 +
-+	// BeforePrePageHook 切换上一页前的Hook
++	// BeforePrePageHook Hook before turn to previous page
 +	BeforePrePageHook() Hook
 +
-+	// BeforeNextPageHook 切换下一页前的Hook
++	// BeforeNextPageHook Hook before turn to next page
 +	BeforeNextPageHook() Hook
 +
-+	// BeforeEnterMenuHook 进入菜单项前的Hook
++	// BeforeEnterMenuHook Hook before enter menu
 +	BeforeEnterMenuHook() Hook
 +
-+	// BeforeBackMenuHook 菜单返回前的Hook
++	// BeforeBackMenuHook Hook before back menu
 +	BeforeBackMenuHook() Hook
 +
-+	// BottomOutHook 触底的Hook
++	// BottomOutHook Hook while bottom out
 +	BottomOutHook() Hook
 +
-+	// TopOutHook 触顶Hook
++	// TopOutHook Hook while top out
 +	TopOutHook() Hook
 +}
 +
@@ -1820,7 +3641,7 @@ index 0000000..1d343ee
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/options.go b/vendor/github.com/anhoder/foxful-cli/model/options.go
 new file mode 100644
-index 0000000..d081786
+index 0000000..5f5599b
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/options.go
 @@ -0,0 +1,65 @@
@@ -1835,7 +3656,7 @@ index 0000000..d081786
 +
 +type Options struct {
 +	StartupOptions
-+	util.ProgressOptions
++	ProgressOptions
 +
 +	AppName             string
 +	WhetherDisplayTitle bool
@@ -1844,36 +3665,36 @@ index 0000000..d081786
 +	DualColumn          bool // The menu list is displayed as a dual column
 +	HideMenu            bool
 +
-+	InitPage   InitPage
-+	MainMenu   Menu                // Entry menu of app
 +	TeaOptions []tea.ProgramOption // Tea program options
-+	Ticker     Ticker              // Ticker for render
-+	Components []Component         // Custom Extra components
++
++	InitPage      InitPage
++	InitMenuTitle *MenuItem
++	Ticker        Ticker      // Ticker for render
++	MainMenu      Menu        // Entry menu of app
++	Components    []Component // Custom Extra components
 +
 +	InitHook  func(a *App)
 +	CloseHook func(a *App)
 +}
 +
 +type StartupOptions struct {
++	EnableStartup     bool
 +	LoadingDuration   time.Duration
 +	TickDuration      time.Duration
 +	ProgressOutBounce bool
 +	Welcome           string
 +}
 +
-+func (o *StartupOptions) WhetherDisplayStartup() bool {
-+	return o.LoadingDuration > 0
-+}
-+
 +func DefaultOptions() *Options {
 +	return &Options{
 +		StartupOptions: StartupOptions{
++			EnableStartup:     true,
 +			LoadingDuration:   time.Second * 2,
 +			TickDuration:      time.Millisecond * 16,
 +			ProgressOutBounce: true,
 +			Welcome:           util.PkgName,
 +		},
-+		ProgressOptions: util.ProgressOptions{
++		ProgressOptions: ProgressOptions{
 +			FirstEmptyChar: '.',
 +			EmptyChar:      '.',
 +			LastEmptyChar:  '.',
@@ -1891,10 +3712,10 @@ index 0000000..d081786
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/page.go b/vendor/github.com/anhoder/foxful-cli/model/page.go
 new file mode 100644
-index 0000000..82be5a2
+index 0000000..41bddc3
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/page.go
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,25 @@
 +package model
 +
 +import (
@@ -1914,19 +3735,73 @@ index 0000000..82be5a2
 +	Init(a *App) tea.Cmd
 +}
 +
-+// PageType 显示模型的类型
 +type PageType string
 +
 +const (
-+	PtStartup PageType = "startup" // 启动页
-+	PtMain    PageType = "main"    // 主页面
++	PtStartup PageType = "startup"
++	PtMain    PageType = "main"
 +)
+diff --git a/vendor/github.com/anhoder/foxful-cli/model/progress.go b/vendor/github.com/anhoder/foxful-cli/model/progress.go
+new file mode 100644
+index 0000000..3448d2d
+--- /dev/null
++++ b/vendor/github.com/anhoder/foxful-cli/model/progress.go
+@@ -0,0 +1,49 @@
++package model
++
++import (
++	"strings"
++
++	"github.com/anhoder/foxful-cli/util"
++	"github.com/muesli/termenv"
++)
++
++type ProgressOptions struct {
++	FirstEmptyChar rune
++	EmptyChar      rune
++	LastEmptyChar  rune
++	FirstFullChar  rune
++	FullChar       rune
++	LastFullChar   rune
++}
++
++func Progress(options *ProgressOptions, width, fullSize int, progressRamp []string) string {
++	var fullCells strings.Builder
++	for i := 0; i < fullSize && i < len(progressRamp); i++ {
++		if i == 0 {
++			fullCells.WriteString(termenv.String(string(options.FirstFullChar)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
++		} else if i >= width-1 {
++			fullCells.WriteString(termenv.String(string(options.LastFullChar)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
++		} else {
++			fullCells.WriteString(termenv.String(string(options.FullChar)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
++		}
++	}
++
++	var (
++		emptySize  = width - fullSize
++		emptyCells strings.Builder
++	)
++	if emptySize > 0 {
++		if fullSize == 0 {
++			emptyCells.WriteRune(options.FirstEmptyChar)
++			emptySize--
++		}
++		emptySize--
++		if emptySize > 0 {
++			emptyCells.WriteString(strings.Repeat(string(options.EmptyChar), emptySize))
++		}
++		if fullSize < width {
++			emptyCells.WriteRune(options.LastEmptyChar)
++		}
++	}
++	return fullCells.String() + util.SetFgStyle(emptyCells.String(), termenv.ANSIBrightBlack)
++}
 diff --git a/vendor/github.com/anhoder/foxful-cli/model/startup.go b/vendor/github.com/anhoder/foxful-cli/model/startup.go
 new file mode 100644
-index 0000000..751f383
+index 0000000..5a33e1d
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/model/startup.go
-@@ -0,0 +1,173 @@
+@@ -0,0 +1,170 @@
 +package model
 +
 +import (
@@ -2040,7 +3915,6 @@ index 0000000..751f383
 +	return uiBuilder.String()
 +}
 +
-+// get logo
 +func (s *StartupPage) logoView(a *App) string {
 +	var windowHeight, windowWidth = a.WindowHeight(), a.WindowWidth()
 +	if windowWidth <= 0 || windowHeight <= 0 {
@@ -2069,7 +3943,6 @@ index 0000000..751f383
 +	return util.SetFgStyle(logoBuilder.String(), util.GetPrimaryColor())
 +}
 +
-+// get tips
 +func (s *StartupPage) tipsView(a *App) string {
 +	example := "Enter after 11.1 seconds..."
 +	var (
@@ -2086,7 +3959,6 @@ index 0000000..751f383
 +	return util.SetFgStyle(tips, termenv.ANSIBrightBlack)
 +}
 +
-+// get progress
 +func (s *StartupPage) progressView(a *App) string {
 +	var width = float64(a.WindowWidth())
 +
@@ -2098,7 +3970,7 @@ index 0000000..751f383
 +		progressLastWidth = width
 +	}
 +
-+	return util.Progress(&a.options.ProgressOptions, int(width), int(math.Round(width*s.loadedPercent)), progressRamp)
++	return Progress(&a.options.ProgressOptions, int(width), int(math.Round(width*s.loadedPercent)), progressRamp)
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/util/alpha_ascii.go b/vendor/github.com/anhoder/foxful-cli/util/alpha_ascii.go
 new file mode 100644
@@ -2692,7 +4564,7 @@ index 0000000..5784cc9
 +)
 diff --git a/vendor/github.com/anhoder/foxful-cli/util/input.go b/vendor/github.com/anhoder/foxful-cli/util/input.go
 new file mode 100644
-index 0000000..06216bb
+index 0000000..1419cca
 --- /dev/null
 +++ b/vendor/github.com/anhoder/foxful-cli/util/input.go
 @@ -0,0 +1,60 @@
@@ -2711,7 +4583,7 @@ index 0000000..06216bb
 +	blurredSubmitButton string
 +)
 +
-+const SubmitText = "确认"
++const SubmitText = "Submit"
 +
 +func GetFocusedPrompt() string {
 +	if focusedPrompt != "" {
@@ -2755,60 +4627,6 @@ index 0000000..06216bb
 +	}
 +	blurredSubmitButton = GetBlurredButton(SubmitText)
 +	return blurredSubmitButton
-+}
-diff --git a/vendor/github.com/anhoder/foxful-cli/util/progress.go b/vendor/github.com/anhoder/foxful-cli/util/progress.go
-new file mode 100644
-index 0000000..252ef2b
---- /dev/null
-+++ b/vendor/github.com/anhoder/foxful-cli/util/progress.go
-@@ -0,0 +1,48 @@
-+package util
-+
-+import (
-+	"strings"
-+
-+	"github.com/muesli/termenv"
-+)
-+
-+type ProgressOptions struct {
-+	FirstEmptyChar rune // 进度条第一个未加载字符
-+	EmptyChar      rune // 进度条未加载字符
-+	LastEmptyChar  rune // 进度条最后一个未加载字符
-+	FirstFullChar  rune // 进度条第一个已加载字符
-+	FullChar       rune // 进度条已加载字符
-+	LastFullChar   rune // 进度条最后一个已加载字符
-+}
-+
-+func Progress(options *ProgressOptions, width, fullSize int, progressRamp []string) string {
-+	var fullCells strings.Builder
-+	for i := 0; i < fullSize && i < len(progressRamp); i++ {
-+		if i == 0 {
-+			fullCells.WriteString(termenv.String(string(options.FirstFullChar)).Foreground(TermProfile.Color(progressRamp[i])).String())
-+		} else if i >= width-1 {
-+			fullCells.WriteString(termenv.String(string(options.LastFullChar)).Foreground(TermProfile.Color(progressRamp[i])).String())
-+		} else {
-+			fullCells.WriteString(termenv.String(string(options.FullChar)).Foreground(TermProfile.Color(progressRamp[i])).String())
-+		}
-+	}
-+
-+	var (
-+		emptySize  = width - fullSize
-+		emptyCells strings.Builder
-+	)
-+	if emptySize > 0 {
-+		if fullSize == 0 {
-+			emptyCells.WriteRune(options.FirstEmptyChar)
-+			emptySize--
-+		}
-+		emptySize--
-+		if emptySize > 0 {
-+			emptyCells.WriteString(strings.Repeat(string(options.EmptyChar), emptySize))
-+		}
-+		if fullSize < width {
-+			emptyCells.WriteRune(options.LastEmptyChar)
-+		}
-+	}
-+	return fullCells.String() + SetFgStyle(emptyCells.String(), termenv.ANSIBrightBlack)
 +}
 diff --git a/vendor/github.com/anhoder/foxful-cli/util/stack.go b/vendor/github.com/anhoder/foxful-cli/util/stack.go
 new file mode 100644
@@ -4396,11 +6214,11 @@ index 11746d2..24d519a 100644
  	return func() error { return nil }, nil
  }
 diff --git a/vendor/modules.txt b/vendor/modules.txt
-index 54b4c89..3d555e1 100644
+index 54b4c89..b69fb19 100644
 --- a/vendor/modules.txt
 +++ b/vendor/modules.txt
 @@ -1,3 +1,7 @@
-+# github.com/anhoder/foxful-cli v0.0.0-20230626142934-066334e0835b
++# github.com/anhoder/foxful-cli v0.0.0-20230626142934-066334e0835b => ../foxful-cli
 +## explicit; go 1.20
 +github.com/anhoder/foxful-cli/model
 +github.com/anhoder/foxful-cli/util
@@ -4425,3 +6243,9 @@ index 54b4c89..3d555e1 100644
  ## explicit; go 1.17
  github.com/muesli/termenv
  # github.com/panjf2000/ants/v2 v2.8.0
+@@ -309,4 +313,5 @@ golang.org/x/text/runes
+ golang.org/x/text/transform
+ golang.org/x/text/unicode/norm
+ golang.org/x/text/width
++# github.com/anhoder/foxful-cli => ../foxful-cli
+ # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
