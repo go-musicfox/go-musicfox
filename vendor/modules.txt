@@ -58,7 +58,7 @@ github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
 github.com/ebitengine/purego/objc
-# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.3
+# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.4
 ## explicit; go 1.14
 github.com/faiface/beep
 github.com/faiface/beep/effects
@@ -222,8 +222,6 @@ github.com/muesli/reflow/wrap
 # github.com/muesli/termenv v0.15.2
 ## explicit; go 1.17
 github.com/muesli/termenv
-# github.com/panjf2000/ants/v2 v2.8.0
-## explicit; go 1.13
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -312,4 +310,3 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
-# github.com/tosone/minimp3 v1.0.1 => github.com/go-musicfox/minimp3 v1.0.6

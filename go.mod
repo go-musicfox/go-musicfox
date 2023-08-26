@@ -61,7 +61,6 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/panjf2000/ants/v2 v2.8.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
@@ -80,11 +79,10 @@ replace (
 	github.com/charmbracelet/bubbletea v0.24.2 => github.com/go-musicfox/bubbletea v0.24.1
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.2
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
-	github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.3
+	github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.4
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 	github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
-	github.com/tosone/minimp3 v1.0.1 => github.com/go-musicfox/minimp3 v1.0.6
 )
