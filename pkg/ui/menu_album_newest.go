@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -11,13 +12,15 @@ import (
 )
 
 type AlbumNewestMenu struct {
-	DefaultMenu
-	menus  []MenuItem
+	baseMenu
+	menus  []model.MenuItem
 	albums []structs.Album
 }
 
-func NewAlbumNewestMenu() *AlbumNewestMenu {
-	return new(AlbumNewestMenu)
+func NewAlbumNewestMenu(base baseMenu) *AlbumNewestMenu {
+	return &AlbumNewestMenu{
+		baseMenu: base,
+	}
 }
 
 func (m *AlbumNewestMenu) IsSearchable() bool {
@@ -28,30 +31,30 @@ func (m *AlbumNewestMenu) GetMenuKey() string {
 	return "album_new_hot"
 }
 
-func (m *AlbumNewestMenu) MenuViews() []MenuItem {
+func (m *AlbumNewestMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumNewestMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *AlbumNewestMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.albums) < index {
 		return nil
 	}
 
-	return NewAlbumDetailMenu(m.albums[index].Id)
+	return NewAlbumDetailMenu(m.baseMenu, m.albums[index].Id)
 }
 
-func (m *AlbumNewestMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *AlbumNewestMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 
 		if len(m.menus) > 0 && len(m.albums) > 0 {
-			return true
+			return true, nil
 		}
 
 		albumService := service.AlbumNewestService{}
 		code, response := albumService.AlbumNewest()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		m.albums = utils.GetNewAlbums(response)
@@ -62,10 +65,10 @@ func (m *AlbumNewestMenu) BeforeEnterMenuHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
-		return true
+		return true, nil
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
@@ -12,14 +13,15 @@ import (
 )
 
 type PlaylistDetailMenu struct {
-	DefaultMenu
-	menus      []MenuItem
+	baseMenu
+	menus      []model.MenuItem
 	songs      []structs.Song
 	playlistId int64
 }
 
-func NewPlaylistDetailMenu(playlistId int64) *PlaylistDetailMenu {
+func NewPlaylistDetailMenu(base baseMenu, playlistId int64) *PlaylistDetailMenu {
 	return &PlaylistDetailMenu{
+		baseMenu:   base,
 		playlistId: playlistId,
 	}
 }
@@ -36,11 +38,11 @@ func (m *PlaylistDetailMenu) GetMenuKey() string {
 	return fmt.Sprintf("playlist_detail_%d", m.playlistId)
 }
 
-func (m *PlaylistDetailMenu) MenuViews() []MenuItem {
+func (m *PlaylistDetailMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *PlaylistDetailMenu) SubMenu(_ *NeteaseModel, _ int) Menu {
+func (m *PlaylistDetailMenu) SubMenu(_ *model.App, _ int) model.Menu {
 	return nil
 }
 
@@ -65,19 +67,19 @@ func getSongsInPlaylist(playlistId int64, getAll bool) (codeType utils.ResCode, 
 	return
 }
 
-func (m *PlaylistDetailMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *PlaylistDetailMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		codeType, songs := getSongsInPlaylist(m.playlistId, configs.ConfigRegistry.MainShowAllSongsOfPlaylist)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.songs = songs
-		m.menus = GetViewFromSongs(songs)
+		m.menus = utils.GetViewFromSongs(songs)
 
-		return true
+		return true, nil
 	}
 }
 

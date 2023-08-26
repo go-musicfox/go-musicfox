@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -15,15 +16,16 @@ const (
 )
 
 type DjHotMenu struct {
-	DefaultMenu
-	menus   []MenuItem
+	baseMenu
+	menus   []model.MenuItem
 	radios  []structs.DjRadio
 	hotType DjHotType
 }
 
-func NewDjHotMenu(hotType DjHotType) *DjHotMenu {
+func NewDjHotMenu(base baseMenu, hotType DjHotType) *DjHotMenu {
 	return &DjHotMenu{
-		hotType: hotType,
+		baseMenu: base,
+		hotType:  hotType,
 	}
 }
 
@@ -35,24 +37,23 @@ func (m *DjHotMenu) GetMenuKey() string {
 	return "dj_hot"
 }
 
-func (m *DjHotMenu) MenuViews() []MenuItem {
+func (m *DjHotMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DjHotMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *DjHotMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.radios) {
 		return nil
 	}
 
-	return NewDjRadioDetailMenu(m.radios[index].Id)
+	return NewDjRadioDetailMenu(m.baseMenu, m.radios[index].Id)
 }
 
-func (m *DjHotMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-
+func (m *DjHotMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		// 不重复请求
 		if len(m.menus) > 0 && len(m.radios) > 0 {
-			return true
+			return true, nil
 		}
 
 		djTopService := service.DjToplistService{
@@ -61,12 +62,12 @@ func (m *DjHotMenu) BeforeEnterMenuHook() Hook {
 		code, response := djTopService.DjToplist()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		m.radios = utils.GetDjRadiosOfTopDj(response)
-		m.menus = GetViewFromDjRadios(m.radios)
+		m.menus = utils.GetViewFromDjRadios(m.radios)
 
-		return true
+		return true, nil
 	}
 }

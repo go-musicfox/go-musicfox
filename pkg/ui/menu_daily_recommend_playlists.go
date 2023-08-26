@@ -3,6 +3,7 @@ package ui
 import (
 	"time"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -10,14 +11,16 @@ import (
 )
 
 type DailyRecommendPlaylistsMenu struct {
-	DefaultMenu
-	menus     []MenuItem
+	baseMenu
+	menus     []model.MenuItem
 	playlists []structs.Playlist
 	fetchTime time.Time
 }
 
-func NewDailyRecommendPlaylistMenu() *DailyRecommendPlaylistsMenu {
-	return new(DailyRecommendPlaylistsMenu)
+func NewDailyRecommendPlaylistMenu(baseMenu baseMenu) *DailyRecommendPlaylistsMenu {
+	return &DailyRecommendPlaylistsMenu{
+		baseMenu: baseMenu,
+	}
 }
 
 func (m *DailyRecommendPlaylistsMenu) IsSearchable() bool {
@@ -28,46 +31,46 @@ func (m *DailyRecommendPlaylistsMenu) GetMenuKey() string {
 	return "daily_playlists"
 }
 
-func (m *DailyRecommendPlaylistsMenu) MenuViews() []MenuItem {
+func (m *DailyRecommendPlaylistsMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.playlists) {
 		return nil
 	}
-	return NewPlaylistDetailMenu(m.playlists[index].Id)
+	return NewPlaylistDetailMenu(m.baseMenu, m.playlists[index].Id)
 }
 
-func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		// 不重复请求
 		now := time.Now()
 		if len(m.menus) > 0 && len(m.playlists) > 0 && utils.IsSameDate(m.fetchTime, now) {
-			return true
+			return true, nil
 		}
 
 		recommendPlaylists := service.RecommendResourceService{}
 		code, response := recommendPlaylists.RecommendResource()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.playlists = utils.GetDailyPlaylists(response)
 		for _, playlist := range m.playlists {
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.fetchTime = now
 
-		return true
+		return true, nil
 	}
 }
 

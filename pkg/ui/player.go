@@ -9,6 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/util"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/pkg/lastfm"
@@ -54,8 +57,8 @@ const (
 
 // Player 网易云音乐播放器
 type Player struct {
-	model  *NeteaseModel
-	cancel context.CancelFunc
+	netease *Netease
+	cancel  context.CancelFunc
 
 	playlist         []structs.Song // 歌曲列表
 	playlistUpdateAt time.Time      // 播放列表更新时间
@@ -84,9 +87,9 @@ type Player struct {
 	player.Player // 播放器
 }
 
-func NewPlayer(model *NeteaseModel) *Player {
+func NewPlayer(netease *Netease) *Player {
 	p := &Player{
-		model:             model,
+		netease:           netease,
 		mode:              player.PmListLoop,
 		ctrl:              make(chan CtrlSignal),
 		lyricNowScrollBar: utils.NewXScrollBar(),
@@ -118,11 +121,11 @@ func NewPlayer(model *NeteaseModel) *Player {
 			case s := <-p.Player.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 				if s != player.Stopped {
-					p.model.Rerender(false)
+					p.netease.Rerender(false)
 					break
 				}
 				// 上报lastfm
-				lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+				lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
 				if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
 					utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
@@ -143,7 +146,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 				p.playedTime += time.Millisecond * 200
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
-					lastfm.Report(p.model.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+					lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 					p.NextSong(false)
 				}
 				if p.lrcTimer != nil {
@@ -153,7 +156,7 @@ func NewPlayer(model *NeteaseModel) *Player {
 					}
 				}
 
-				p.model.Rerender(false)
+				p.netease.Rerender(false)
 			}
 		}
 	})
@@ -161,47 +164,64 @@ func NewPlayer(model *NeteaseModel) *Player {
 	return p
 }
 
-// playerView 播放器UI，包含 lyricView, songView, progressView
-func (p *Player) playerView(top *int) string {
+func (p *Player) Update(_ tea.Msg, _ *model.App) {
+	var main = p.netease.MustMain()
+	// 播放器歌词
+	spaceHeight := p.netease.WindowHeight() - 4 - main.MenuBottomRow()
+	if spaceHeight < 4 || !configs.ConfigRegistry.MainShowLyric {
+		// 不显示歌词
+		p.showLyric = false
+	} else {
+		p.showLyric = true
+		if spaceHeight > 6 {
+			// 5行歌词
+			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 3
+			p.lyricLines = 5
+		} else {
+			// 3行歌词
+			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 2
+			p.lyricLines = 3
+		}
+	}
+}
+
+func (p *Player) View(a *model.App, main *model.Main) (view string, lines int) {
 	var playerBuilder strings.Builder
-
 	playerBuilder.WriteString(p.lyricView())
-
 	playerBuilder.WriteString(p.songView())
 	playerBuilder.WriteString("\n\n")
-
 	playerBuilder.WriteString(p.progressView())
-
-	*top = p.model.WindowHeight
-
-	return playerBuilder.String()
+	return playerBuilder.String(), a.WindowHeight() - main.SearchBarBottomRow()
 }
 
 // lyricView 歌词显示UI
 func (p *Player) lyricView() string {
-	endRow := p.model.WindowHeight - 4
+	var (
+		endRow = p.netease.WindowHeight() - 4
+		main   = p.netease.MustMain()
+	)
 
 	if !p.showLyric {
-		if endRow-p.model.menuBottomRow > 0 {
-			return strings.Repeat("\n", endRow-p.model.menuBottomRow)
+		if endRow-main.SearchBarBottomRow() > 0 {
+			return strings.Repeat("\n", endRow-main.SearchBarBottomRow())
 		} else {
 			return ""
 		}
 	}
 
 	var lyricBuilder strings.Builder
-	if p.lyricStartRow > p.model.menuBottomRow {
-		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-p.model.menuBottomRow))
+	if p.lyricStartRow > main.SearchBarBottomRow() {
+		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-main.SearchBarBottomRow()))
 	}
 
 	var startCol int
-	if p.model.doubleColumn {
-		startCol = p.model.menuStartColumn + 3
+	if main.IsDualColumn() {
+		startCol = main.MenuStartColumn() + 3
 	} else {
-		startCol = p.model.menuStartColumn - 4
+		startCol = main.MenuStartColumn() - 4
 	}
 
-	maxLen := p.model.WindowWidth - startCol - 4
+	maxLen := p.netease.WindowWidth() - startCol - 4
 	switch p.lyricLines {
 	// 3行歌词
 	case 3:
@@ -211,10 +231,10 @@ func (p *Player) lyricView() string {
 			}
 			if i == 2 {
 				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
-				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
 				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
 
 			lyricBuilder.WriteString("\n")
@@ -227,10 +247,10 @@ func (p *Player) lyricView() string {
 			}
 			if i == 2 {
 				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
-				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
 			} else {
 				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
 			lyricBuilder.WriteString("\n")
 		}
@@ -245,33 +265,36 @@ func (p *Player) lyricView() string {
 
 // songView 歌曲信息UI
 func (p *Player) songView() string {
-	var builder strings.Builder
+	var (
+		builder strings.Builder
+		main    = p.netease.MustMain()
+	)
 
 	var prefixLen = 10
-	if p.model.menuStartColumn-4 > 0 {
+	if main.MenuStartColumn()-4 > 0 {
 		prefixLen += 12
-		builder.WriteString(strings.Repeat(" ", p.model.menuStartColumn-4))
-		builder.WriteString(SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
-		builder.WriteString(SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
+		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()-4))
+		builder.WriteString(util.SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
+		builder.WriteString(util.SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	}
 	if p.State() == player.Playing {
-		builder.WriteString(SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
+		builder.WriteString(util.SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
 	} else {
-		builder.WriteString(SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
+		builder.WriteString(util.SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
 	}
 
 	if p.curSong.Id > 0 {
 		if like_list.IsLikeSong(p.curSong.Id) {
-			builder.WriteString(SetFgStyle("♥ ", termenv.ANSIRed))
+			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIRed))
 		} else {
-			builder.WriteString(SetFgStyle("♥ ", termenv.ANSIWhite))
+			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIWhite))
 		}
 	}
 
 	if p.curSongIndex < len(p.playlist) {
 		// 按剩余长度截断字符串
-		truncateSong := runewidth.Truncate(p.curSong.Name, p.model.WindowWidth-p.model.menuStartColumn-prefixLen, "") // 多减，避免剩余1个中文字符
-		builder.WriteString(SetFgStyle(truncateSong, GetPrimaryColor()))
+		truncateSong := runewidth.Truncate(p.curSong.Name, p.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
+		builder.WriteString(util.SetFgStyle(truncateSong, util.GetPrimaryColor()))
 		builder.WriteString(" ")
 
 		var artists strings.Builder
@@ -284,11 +307,11 @@ func (p *Player) songView() string {
 		}
 
 		// 按剩余长度截断字符串
-		remainLen := p.model.WindowWidth - p.model.menuStartColumn - prefixLen - runewidth.StringWidth(p.curSong.Name)
+		remainLen := p.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(p.curSong.Name)
 		truncateArtists := runewidth.Truncate(
 			runewidth.FillRight(artists.String(), remainLen),
 			remainLen, "")
-		builder.WriteString(SetFgStyle(truncateArtists, termenv.ANSIBrightBlack))
+		builder.WriteString(util.SetFgStyle(truncateArtists, termenv.ANSIBrightBlack))
 	}
 
 	return builder.String()
@@ -303,22 +326,20 @@ func (p *Player) progressView() string {
 	passedDuration := int(p.PassedTime().Seconds())
 	progress := passedDuration * 100 / allDuration
 
-	width := float64(p.model.WindowWidth - 14)
-	if progressStartColor == "" || progressEndColor == "" || len(p.progressRamp) == 0 {
-		progressStartColor, progressEndColor = GetRandomRgbColor(true)
-	}
+	width := float64(p.netease.WindowWidth() - 14)
+	start, end := model.GetProgressColor()
 	if width != p.progressLastWidth || len(p.progressRamp) == 0 {
-		p.progressRamp = makeRamp(progressStartColor, progressEndColor, width)
+		p.progressRamp = util.MakeRamp(start, end, width)
 		p.progressLastWidth = width
 	}
 
-	progressView := Progress(int(width), int(math.Round(width*float64(progress)/100)), p.progressRamp)
+	progressView := model.Progress(&p.netease.Options().ProgressOptions, int(width), int(math.Round(width*float64(progress)/100)), p.progressRamp)
 
 	if allDuration/60 >= 100 {
-		times := SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())
+		times := util.SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
 		return progressView + " " + times
 	} else {
-		times := SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), GetPrimaryColor())
+		times := util.SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
 		return progressView + " " + times + " "
 	}
 
@@ -326,7 +347,8 @@ func (p *Player) progressView() string {
 
 // InPlayingMenu 是否处于正在播放的菜单中
 func (p *Player) InPlayingMenu() bool {
-	return p.model.menu.GetMenuKey() == p.playingMenuKey || p.model.menu.GetMenuKey() == CurPlaylistKey
+	var key = p.netease.MustMain().CurMenu().GetMenuKey()
+	return key == p.playingMenuKey || key == CurPlaylistKey
 }
 
 // CompareWithCurPlaylist 与当前播放列表对比，是否一致
@@ -348,11 +370,19 @@ func (p *Player) CompareWithCurPlaylist(playlist []structs.Song) bool {
 
 // LocatePlayingSong 定位到正在播放的音乐
 func (p *Player) LocatePlayingSong() {
-	if !p.model.menu.IsLocatable() {
+	var (
+		main        = p.netease.MustMain()
+		curMenu, ok = main.CurMenu().(Menu)
+	)
+	if !ok {
 		return
 	}
 
-	menu, ok := p.model.menu.(SongsMenu)
+	if !curMenu.IsLocatable() {
+		return
+	}
+
+	menu, ok := curMenu.(SongsMenu)
 	if !ok {
 		return
 	}
@@ -360,22 +390,22 @@ func (p *Player) LocatePlayingSong() {
 		return
 	}
 
-	var pageDelta = p.curSongIndex/p.model.menuPageSize - (p.model.menuCurPage - 1)
+	var pageDelta = p.curSongIndex/main.PageSize() - (main.CurPage() - 1)
 	if pageDelta > 0 {
 		for i := 0; i < pageDelta; i++ {
-			nextPage(p.model)
+			p.netease.MustMain().NextPage()
 		}
 	} else if pageDelta < 0 {
 		for i := 0; i > pageDelta; i-- {
-			prePage(p.model)
+			p.netease.MustMain().PrePage()
 		}
 	}
-	p.model.selectedIndex = p.curSongIndex
+	main.SetSelectedIndex(p.curSongIndex)
 }
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
-	loading := NewLoading(p.model)
+	loading := NewLoading(p.netease)
 	loading.start()
 	defer loading.complete()
 
@@ -417,7 +447,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	})
 
 	// 上报
-	lastfm.Report(p.model.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
+	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
 
 	go utils.Notify(utils.NotifyContent{
 		Title:   "正在播放: " + song.Name,
@@ -439,15 +469,16 @@ func (p *Player) NextSong(isManual bool) {
 			p.Intelligence(true)
 		}
 
+		var main = p.netease.MustMain()
 		if p.InPlayingMenu() {
-			if p.model.doubleColumn && p.curSongIndex%2 == 0 {
-				moveRight(p.model)
+			if main.IsDualColumn() && p.curSongIndex%2 == 0 {
+				p.netease.MustMain().MoveRight()
 			} else {
-				moveDown(p.model)
+				p.netease.MustMain().MoveDown()
 			}
 		} else if p.playingMenu != nil {
 			if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
-				bottomHook(p.model)
+				bottomHook(main)
 			}
 		}
 	}
@@ -495,15 +526,16 @@ func (p *Player) PreviousSong(isManual bool) {
 			p.Intelligence(true)
 		}
 
+		var main = p.netease.MustMain()
 		if p.InPlayingMenu() {
-			if p.model.doubleColumn && p.curSongIndex%2 == 0 {
-				moveUp(p.model)
+			if main.IsDualColumn() && p.curSongIndex%2 == 0 {
+				p.netease.MustMain().MoveUp()
 			} else {
-				moveLeft(p.model)
+				p.netease.MustMain().MoveLeft()
 			}
 		} else if p.playingMenu != nil {
 			if topHook := p.playingMenu.TopOutHook(); topHook != nil {
-				topHook(p.model)
+				topHook(main)
 			}
 		}
 	}
@@ -652,20 +684,24 @@ func (p *Player) updateLyric(songId int64) {
 }
 
 // Intelligence 智能/心动模式
-func (p *Player) Intelligence(appendMode bool) {
-	playlist, ok := p.model.menu.(*PlaylistDetailMenu)
+func (p *Player) Intelligence(appendMode bool) model.Page {
+	var (
+		main    = p.netease.MustMain()
+		curMenu = main.CurMenu()
+	)
+	playlist, ok := curMenu.(*PlaylistDetailMenu)
 	if !ok {
-		return
+		return nil
 	}
 
-	selectedIndex := p.model.menu.RealDataIndex(p.model.selectedIndex)
+	selectedIndex := curMenu.RealDataIndex(main.SelectedIndex())
 	if selectedIndex >= len(playlist.songs) {
-		return
+		return nil
 	}
 
-	if utils.CheckUserInfo(p.model.user) == utils.NeedLogin {
-		NeedLoginHandle(p.model, nil)
-		return
+	if utils.CheckUserInfo(p.netease.user) == utils.NeedLogin {
+		page, _ := p.netease.ToLoginPage(nil)
+		return page
 	}
 
 	intelligenceService := service.PlaymodeIntelligenceListService{
@@ -676,12 +712,13 @@ func (p *Player) Intelligence(appendMode bool) {
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := utils.CheckCode(code)
 	if codeType == utils.NeedLogin {
-		NeedLoginHandle(p.model, func(m *NeteaseModel, newMenu Menu, newTitle *MenuItem) {
+		page, _ := p.netease.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
 			p.Intelligence(appendMode)
+			return nil
 		})
-		return
+		return page
 	} else if codeType != utils.Success {
-		return
+		return nil
 	}
 	songs := utils.GetIntelligenceSongs(response)
 
@@ -698,6 +735,7 @@ func (p *Player) Intelligence(appendMode bool) {
 	p.playingMenuKey = "Intelligent"
 
 	_ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)
+	return nil
 }
 
 func (p *Player) UpVolume() {
@@ -745,7 +783,7 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlSeek:
 		p.Seek(signal.Duration)
 	case CtrlRerender:
-		p.model.Rerender(false)
+		p.netease.Rerender(false)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -13,8 +14,8 @@ import (
 )
 
 type AlbumNewMenu struct {
-	DefaultMenu
-	menus  []MenuItem
+	baseMenu
+	menus  []model.MenuItem
 	albums []structs.Album
 	area   string
 	offset int
@@ -22,12 +23,13 @@ type AlbumNewMenu struct {
 	total  int
 }
 
-func NewAlbumNewMenu(area string) *AlbumNewMenu {
+func NewAlbumNewMenu(base baseMenu, area string) *AlbumNewMenu {
 	return &AlbumNewMenu{
-		area:   area,
-		offset: 0,
-		limit:  50,
-		total:  -1,
+		baseMenu: base,
+		area:     area,
+		offset:   0,
+		limit:    50,
+		total:    -1,
 	}
 }
 
@@ -39,23 +41,23 @@ func (m *AlbumNewMenu) GetMenuKey() string {
 	return fmt.Sprintf("album_new_%s", m.area)
 }
 
-func (m *AlbumNewMenu) MenuViews() []MenuItem {
+func (m *AlbumNewMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumNewMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *AlbumNewMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.albums) < index {
 		return nil
 	}
 
-	return NewAlbumDetailMenu(m.albums[index].Id)
+	return NewAlbumDetailMenu(m.baseMenu, m.albums[index].Id)
 }
 
-func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *AlbumNewMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 
 		if len(m.menus) > 0 && len(m.albums) > 0 {
-			return true
+			return true, nil
 		}
 
 		newAlbumService := service.AlbumNewService{
@@ -66,7 +68,7 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
 		code, response := newAlbumService.AlbumNew()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		// 总数量
@@ -82,18 +84,18 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
-		return true
+		return true, nil
 	}
 }
 
-func (m *AlbumNewMenu) BottomOutHook() Hook {
+func (m *AlbumNewMenu) BottomOutHook() model.Hook {
 	if m.total != -1 && m.offset < m.total {
 		return nil
 	}
-	return func(model *NeteaseModel) bool {
+	return func(main *model.Main) (bool, model.Page) {
 		m.offset = m.offset + len(m.menus)
 		newAlbumService := service.AlbumNewService{
 			Area:   m.area,
@@ -103,7 +105,7 @@ func (m *AlbumNewMenu) BottomOutHook() Hook {
 		code, response := newAlbumService.AlbumNew()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		// 总数量
@@ -119,12 +121,12 @@ func (m *AlbumNewMenu) BottomOutHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
 		m.albums = append(m.albums, albums...)
 
-		return true
+		return true, nil
 	}
 }
 

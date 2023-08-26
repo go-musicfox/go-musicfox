@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -11,15 +12,16 @@ import (
 )
 
 type AlbumDetailMenu struct {
-	DefaultMenu
-	menus   []MenuItem
+	baseMenu
+	menus   []model.MenuItem
 	songs   []structs.Song
 	albumId int64
 }
 
-func NewAlbumDetailMenu(albumId int64) *AlbumDetailMenu {
+func NewAlbumDetailMenu(base baseMenu, albumId int64) *AlbumDetailMenu {
 	return &AlbumDetailMenu{
-		albumId: albumId,
+		baseMenu: base,
+		albumId:  albumId,
 	}
 }
 
@@ -35,12 +37,12 @@ func (m *AlbumDetailMenu) GetMenuKey() string {
 	return fmt.Sprintf("album_detail_%d", m.albumId)
 }
 
-func (m *AlbumDetailMenu) MenuViews() []MenuItem {
+func (m *AlbumDetailMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumDetailMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *AlbumDetailMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 
 		albumService := service.AlbumService{
 			ID: strconv.FormatInt(m.albumId, 10),
@@ -48,16 +50,16 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() Hook {
 		code, response := albumService.Album()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		m.songs = utils.GetSongsOfAlbum(response)
-		m.menus = GetViewFromSongs(m.songs)
+		m.menus = utils.GetViewFromSongs(m.songs)
 
-		return true
+		return true, nil
 	}
 }
 

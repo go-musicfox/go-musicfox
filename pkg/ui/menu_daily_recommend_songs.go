@@ -3,6 +3,7 @@ package ui
 import (
 	"time"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -10,14 +11,16 @@ import (
 )
 
 type DailyRecommendSongsMenu struct {
-	DefaultMenu
-	menus     []MenuItem
+	baseMenu
+	menus     []model.MenuItem
 	songs     []structs.Song
 	fetchTime time.Time
 }
 
-func NewDailyRecommendSongsMenu() *DailyRecommendSongsMenu {
-	return new(DailyRecommendSongsMenu)
+func NewDailyRecommendSongsMenu(baseMenu baseMenu) *DailyRecommendSongsMenu {
+	return &DailyRecommendSongsMenu{
+		baseMenu: baseMenu,
+	}
 }
 
 func (m *DailyRecommendSongsMenu) IsSearchable() bool {
@@ -32,35 +35,35 @@ func (m *DailyRecommendSongsMenu) GetMenuKey() string {
 	return "daily_songs"
 }
 
-func (m *DailyRecommendSongsMenu) MenuViews() []MenuItem {
+func (m *DailyRecommendSongsMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		now := time.Now()
 		if len(m.menus) > 0 && len(m.songs) > 0 && utils.IsSameDate(m.fetchTime, now) {
-			return true
+			return true, nil
 		}
 		recommendSongs := service.RecommendSongsService{}
 		code, response := recommendSongs.RecommendSongs()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.songs = utils.GetDailySongs(response)
-		m.menus = GetViewFromSongs(m.songs)
+		m.menus = utils.GetViewFromSongs(m.songs)
 		m.fetchTime = now
 
-		return true
+		return true, nil
 	}
 }
 

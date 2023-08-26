@@ -35,8 +35,8 @@ func init() {
 // Dlopen calls should be balanced with a Dlclose call.
 func Dlopen(path string, mode int) (uintptr, error) {
 	u := fnDlopen(path, mode)
-	if errStr := fnDlerror(); errStr != "" {
-		return 0, Dlerror{errStr}
+	if u == 0 {
+		return 0, Dlerror{fnDlerror()}
 	}
 	return u, nil
 }
@@ -47,8 +47,8 @@ func Dlopen(path string, mode int) (uintptr, error) {
 // when that library was loaded, Dlsym returns zero.
 func Dlsym(handle uintptr, name string) (uintptr, error) {
 	u := fnDlsym(handle, name)
-	if errStr := fnDlerror(); errStr != "" {
-		return 0, Dlerror{errStr}
+	if u == 0 {
+		return 0, Dlerror{fnDlerror()}
 	}
 	return u, nil
 }
@@ -61,6 +61,15 @@ func Dlclose(handle uintptr) error {
 		return Dlerror{fnDlerror()}
 	}
 	return nil
+}
+
+//go:linkname openLibrary openLibrary
+func openLibrary(name string) (uintptr, error) {
+	return Dlopen(name, RTLD_NOW|RTLD_GLOBAL)
+}
+
+func loadSymbol(handle uintptr, name string) (uintptr, error) {
+	return Dlsym(handle, name)
 }
 
 // these functions exist in dlfcn_stubs.s and are calling C functions linked to in dlfcn_GOOS.go

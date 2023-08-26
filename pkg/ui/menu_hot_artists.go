@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -8,13 +9,15 @@ import (
 )
 
 type HotArtistsMenu struct {
-	DefaultMenu
-	menus   []MenuItem
+	baseMenu
+	menus   []model.MenuItem
 	artists []structs.Artist
 }
 
-func NewHotArtistsMenu() *HotArtistsMenu {
-	return new(HotArtistsMenu)
+func NewHotArtistsMenu(base baseMenu) *HotArtistsMenu {
+	return &HotArtistsMenu{
+		baseMenu: base,
+	}
 }
 
 func (m *HotArtistsMenu) IsSearchable() bool {
@@ -25,22 +28,22 @@ func (m *HotArtistsMenu) GetMenuKey() string {
 	return "hot_artists"
 }
 
-func (m *HotArtistsMenu) MenuViews() []MenuItem {
+func (m *HotArtistsMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *HotArtistsMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *HotArtistsMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.artists) {
 		return nil
 	}
-	return NewArtistDetailMenu(m.artists[index].Id, m.artists[index].Name)
+	return NewArtistDetailMenu(m.baseMenu, m.artists[index].Id, m.artists[index].Name)
 }
 
-func (m *HotArtistsMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *HotArtistsMenu) BeforeEnterMenuHook() model.Hook {
+	return func(_ *model.Main) (bool, model.Page) {
 		// 不重复请求
 		if len(m.menus) > 0 && len(m.artists) > 0 {
-			return true
+			return true, nil
 		}
 
 		artistService := service.TopArtistsService{
@@ -49,14 +52,14 @@ func (m *HotArtistsMenu) BeforeEnterMenuHook() Hook {
 		code, response := artistService.TopArtists()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.artists = utils.GetArtistsOfTopArtists(response)
 		for _, artist := range m.artists {
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
 		}
 
-		return true
+		return true, nil
 	}
 }
 
