@@ -38,12 +38,16 @@ async function main() {
   if (argv.help) {
     printUsage();
   } else {
-    const size = await getFolderSizeBin(
-      argv.base,
-      argv.pretty,
-      { loose: argv.loose },
-    );
-    console.log(size);
+    try {
+      const size = await getFolderSizeBin(
+        argv.base,
+        argv.pretty,
+        { loose: argv.loose },
+      );
+      console.log(size);
+    } catch (error) {
+      console.error(error.message);
+    }
   }
 }
 
