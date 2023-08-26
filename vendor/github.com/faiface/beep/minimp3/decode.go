@@ -19,9 +19,9 @@ func Decode(rc io.ReadCloser) (s beep.StreamSeekCloser, format beep.Format, err 
 	if err != nil {
 		return nil, beep.Format{}, err
 	}
-	err = <-d.Started()
-	if err != nil {
-		return nil, beep.Format{}, err
+	res := <-d.Started()
+	if !res {
+		return nil, beep.Format{}, errors.New("ctx done")
 	}
 	format = beep.Format{
 		SampleRate:  beep.SampleRate(d.SampleRate),
