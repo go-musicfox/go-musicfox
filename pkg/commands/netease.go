@@ -5,12 +5,13 @@ import (
 	_ "net/http/pprof"
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/pkg/ui"
 	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/mattn/go-runewidth"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gookit/gcli/v2"
 )
 
@@ -31,18 +32,24 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	}
 
 	http.DefaultClient.Timeout = constants.AppHttpTimeout
-	neteaseModel := ui.NewNeteaseModel(configs.ConfigRegistry.StartupLoadingDuration)
+	runewidth.DefaultCondition.EastAsianWidth = false
 
-	var opts []tea.ProgramOption
-	if configs.ConfigRegistry.MainEnableMouseEvent {
-		opts = append(opts, tea.WithMouseCellMotion())
-	}
-	if configs.ConfigRegistry.MainAltScreen {
-		opts = append(opts, tea.WithAltScreen())
-	}
-	program := tea.ReplaceWithFoxfulRenderer(tea.NewProgram(neteaseModel, opts...))
-	neteaseModel.BindProgram(program)
+	var opts = model.DefaultOptions()
+	configs.ConfigRegistry.FillToModelOpts(opts)
 
-	_, err := program.Run()
-	return err
+	var (
+		netease      = ui.NewNetease(model.NewApp(opts))
+		eventHandler = ui.NewEventHandler(netease)
+	)
+	netease.App.With(
+		model.WithHook(netease.InitHook, netease.CloseHook),
+		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
+		func(options *model.Options) {
+			options.Components = append(options.Components, netease.Player())
+			options.KBControllers = append(options.KBControllers, eventHandler)
+			options.MouseControllers = append(options.MouseControllers, eventHandler)
+		},
+	)
+
+	return netease.Run()
 }

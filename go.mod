@@ -3,15 +3,15 @@ module github.com/go-musicfox/go-musicfox
 go 1.18
 
 require (
+	github.com/anhoder/foxful-cli v0.1.0
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.7.1
-	github.com/ebitengine/purego v0.3.2
+	github.com/ebitengine/purego v0.4.0
 	github.com/faiface/beep v1.1.0
 	github.com/fhs/gompd/v2 v2.3.0
-	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.3.0
 	github.com/go-musicfox/netease-music v1.4.1
@@ -19,11 +19,9 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.2.2
-	github.com/lithammer/fuzzysearch v1.1.8
-	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/markthree/go-get-folder-size v0.3.4
 	github.com/mattn/go-runewidth v0.0.14
-	github.com/muesli/termenv v0.15.1
+	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
@@ -39,6 +37,7 @@ require (
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 // indirect
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
+	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776 // indirect
 	github.com/forgoer/openssl v1.6.0 // indirect
 	github.com/go-flac/go-flac v1.0.0 // indirect
 	github.com/go-musicfox/requests v0.2.0 // indirect
@@ -51,6 +50,7 @@ require (
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect
@@ -63,6 +63,7 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/panjf2000/ants/v2 v2.8.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect

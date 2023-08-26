@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -14,8 +15,8 @@ import (
 const CurUser int64 = 0
 
 type UserPlaylistMenu struct {
-	DefaultMenu
-	menus     []MenuItem
+	baseMenu
+	menus     []model.MenuItem
 	playlists []structs.Playlist
 	userId    int64
 	offset    int
@@ -23,11 +24,12 @@ type UserPlaylistMenu struct {
 	hasMore   bool
 }
 
-func NewUserPlaylistMenu(userId int64) *UserPlaylistMenu {
+func NewUserPlaylistMenu(base baseMenu, userId int64) *UserPlaylistMenu {
 	return &UserPlaylistMenu{
-		userId: userId,
-		offset: 0,
-		limit:  100,
+		baseMenu: base,
+		userId:   userId,
+		offset:   0,
+		limit:    100,
 	}
 }
 
@@ -39,7 +41,7 @@ func (m *UserPlaylistMenu) GetMenuKey() string {
 	return fmt.Sprintf("user_playlist_%d", m.userId)
 }
 
-func (m *UserPlaylistMenu) MenuViews() []MenuItem {
+func (m *UserPlaylistMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
@@ -47,13 +49,14 @@ func (m *UserPlaylistMenu) Playlists() []structs.Playlist {
 	return m.playlists
 }
 
-func (m *UserPlaylistMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *UserPlaylistMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.playlists) < index {
 		return nil
 	}
-	return NewPlaylistDetailMenu(m.playlists[index].Id)
+	return NewPlaylistDetailMenu(m.baseMenu, m.playlists[index].Id)
 }
 
+// TODO optimize
 func getUserPlaylists(userId int64, limit int, offset int) (codeType utils.ResCode, playlists []structs.Playlist, hasMore bool) {
 	userPlaylists := service.UserPlaylistService{
 		Uid:    strconv.FormatInt(userId, 10),
@@ -67,13 +70,13 @@ func getUserPlaylists(userId int64, limit int, offset int) (codeType utils.ResCo
 	}
 
 	playlists = utils.GetPlaylists(response)
-	menus := make([]MenuItem, len(playlists))
+	menus := make([]model.MenuItem, len(playlists))
 	for i := range playlists {
-		menus[i] = MenuItem{Title: utils.ReplaceSpecialStr(playlists[i].Name)}
+		menus[i] = model.MenuItem{Title: utils.ReplaceSpecialStr(playlists[i].Name)}
 	}
 
 	// 是否有更多
-	var err error = nil
+	var err error
 	if hasMore, err = jsonparser.GetBoolean(response, "more"); err != nil {
 		hasMore = false
 	}
@@ -81,68 +84,71 @@ func getUserPlaylists(userId int64, limit int, offset int) (codeType utils.ResCo
 	return
 }
 
-func (m *UserPlaylistMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userId == CurUser && utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+		if m.userId == CurUser && utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		userId := m.userId
 		if m.userId == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = model.user.UserId
+			userId = m.netease.user.UserId
 		}
 
 		codeType, playlists, hasMore := getUserPlaylists(userId, m.limit, m.offset)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		m.playlists = playlists
-		var menus []MenuItem
+		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
-			menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.menus = menus
 		m.hasMore = hasMore
 
-		return true
+		return true, nil
 	}
 }
 
-func (m *UserPlaylistMenu) BottomOutHook() Hook {
+func (m *UserPlaylistMenu) BottomOutHook() model.Hook {
 	if !m.hasMore {
 		return nil
 	}
-	return func(model *NeteaseModel) bool {
+	return func(main *model.Main) (bool, model.Page) {
 		userId := m.userId
 		if m.userId == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = model.user.UserId
+			userId = m.netease.user.UserId
 		}
 
 		m.offset = m.offset + len(m.menus)
 		codeType, playlists, hasMore := getUserPlaylists(userId, m.limit, m.offset)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+				main.RefreshMenuList()
+				return nil
+			})
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		m.playlists = playlists
-		var menus []MenuItem
+		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
-			menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.menus = menus
 		m.hasMore = hasMore
 
-		return true
+		return true, nil
 	}
 }

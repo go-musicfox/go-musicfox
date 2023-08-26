@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/go-musicfox/pkg/commands"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
-	"github.com/go-musicfox/go-musicfox/pkg/ui"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -17,7 +17,7 @@ import (
 func runCLI() {
 	log.SetOutput(utils.LogWriter())
 
-	app := gcli.NewApp()
+	var app = gcli.NewApp()
 	app.Name = constants.AppName
 	app.Version = constants.AppVersion
 	app.Description = constants.AppDescription
@@ -28,9 +28,12 @@ func runCLI() {
 	// 加载config
 	utils.LoadIniConfig()
 
-	logo := utils.GetAlphaAscii(app.Name)
-	randomColor := ui.GetPrimaryColor()
-	logoColorful := ui.SetFgStyle(logo, randomColor)
+	util.PrimaryColor = configs.ConfigRegistry.MainPrimaryColor
+	var (
+		logo         = util.GetAlphaAscii(app.Name)
+		randomColor  = util.GetPrimaryColor()
+		logoColorful = util.SetFgStyle(logo, randomColor)
+	)
 
 	gcli.AppHelpTemplate = fmt.Sprintf(constants.AppHelpTemplate, logoColorful)
 	app.Logo.Text = logoColorful
@@ -42,7 +45,7 @@ func runCLI() {
 	neteaseutil.EnableLocalVip = configs.ConfigRegistry.UNMEnableLocalVip
 	neteaseutil.UnlockSoundEffects = configs.ConfigRegistry.UNMUnlockSoundEffects
 
-	playerCommand := commands.NewPlayerCommand()
+	var playerCommand = commands.NewPlayerCommand()
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
 	app.DefaultCommand(playerCommand.Name)

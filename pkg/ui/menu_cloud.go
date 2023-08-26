@@ -3,6 +3,7 @@ package ui
 import (
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -11,18 +12,19 @@ import (
 )
 
 type CloudMenu struct {
-	DefaultMenu
-	menus   []MenuItem
+	baseMenu
+	menus   []model.MenuItem
 	songs   []structs.Song
 	limit   int
 	offset  int
 	hasMore bool
 }
 
-func NewCloudMenu() *CloudMenu {
+func NewCloudMenu(base baseMenu) *CloudMenu {
 	return &CloudMenu{
-		limit:  100,
-		offset: 0,
+		baseMenu: base,
+		limit:    100,
+		offset:   0,
 	}
 }
 
@@ -38,20 +40,20 @@ func (m *CloudMenu) GetMenuKey() string {
 	return "could"
 }
 
-func (m *CloudMenu) MenuViews() []MenuItem {
+func (m *CloudMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *CloudMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		// 不重复请求
 		if len(m.menus) > 0 && len(m.songs) > 0 {
-			return true
+			return true, nil
 		}
 
 		cloudService := service.UserCloudService{
@@ -61,10 +63,10 @@ func (m *CloudMenu) BeforeEnterMenuHook() Hook {
 		code, response := cloudService.UserCloud()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
@@ -72,17 +74,17 @@ func (m *CloudMenu) BeforeEnterMenuHook() Hook {
 		}
 
 		m.songs = utils.GetSongsOfCloud(response)
-		m.menus = GetViewFromSongs(m.songs)
+		m.menus = utils.GetViewFromSongs(m.songs)
 
-		return true
+		return true, nil
 	}
 }
 
-func (m *CloudMenu) BottomOutHook() Hook {
+func (m *CloudMenu) BottomOutHook() model.Hook {
 	if !m.hasMore {
 		return nil
 	}
-	return func(model *NeteaseModel) bool {
+	return func(main *model.Main) (bool, model.Page) {
 		m.offset += m.limit
 
 		cloudService := service.UserCloudService{
@@ -92,10 +94,13 @@ func (m *CloudMenu) BottomOutHook() Hook {
 		code, response := cloudService.UserCloud()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+				main.RefreshMenuList()
+				return nil
+			})
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
@@ -103,12 +108,12 @@ func (m *CloudMenu) BottomOutHook() Hook {
 		}
 
 		songs := utils.GetSongsOfCloud(response)
-		menus := GetViewFromSongs(songs)
+		menus := utils.GetViewFromSongs(songs)
 
 		m.songs = append(m.songs, songs...)
 		m.menus = append(m.menus, menus...)
 
-		return true
+		return true, nil
 	}
 }
 

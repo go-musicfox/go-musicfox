@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -8,13 +9,15 @@ import (
 )
 
 type DjCategoryMenu struct {
-	DefaultMenu
-	menus      []MenuItem
+	baseMenu
+	menus      []model.MenuItem
 	categories []structs.DjCategory
 }
 
-func NewDjCategoryMenu() *DjCategoryMenu {
-	return &DjCategoryMenu{}
+func NewDjCategoryMenu(base baseMenu) *DjCategoryMenu {
+	return &DjCategoryMenu{
+		baseMenu: base,
+	}
 }
 
 func (m *DjCategoryMenu) IsSearchable() bool {
@@ -25,36 +28,36 @@ func (m *DjCategoryMenu) GetMenuKey() string {
 	return "dj_category"
 }
 
-func (m *DjCategoryMenu) MenuViews() []MenuItem {
+func (m *DjCategoryMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DjCategoryMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *DjCategoryMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.categories) {
 		return nil
 	}
 
-	return NewDjCategoryDetailMenu(m.categories[index].Id)
+	return NewDjCategoryDetailMenu(m.baseMenu, m.categories[index].Id)
 }
 
-func (m *DjCategoryMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *DjCategoryMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 
 		// 不重复请求
 		if len(m.menus) > 0 && len(m.categories) > 0 {
-			return true
+			return true, nil
 		}
 
 		djCateService := service.DjCatelistService{}
 		code, response := djCateService.DjCatelist()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		m.categories = utils.GetDjCategory(response)
-		m.menus = GetViewFromDjCate(m.categories)
+		m.menus = utils.GetViewFromDjCate(m.categories)
 
-		return true
+		return true, nil
 	}
 }

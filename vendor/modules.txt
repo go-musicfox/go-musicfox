@@ -1,3 +1,7 @@
+# github.com/anhoder/foxful-cli v0.1.0
+## explicit; go 1.20
+github.com/anhoder/foxful-cli/model
+github.com/anhoder/foxful-cli/util
 # github.com/atotto/clipboard v0.1.4
 ## explicit
 github.com/atotto/clipboard
@@ -46,7 +50,7 @@ github.com/cocoonlife/goflac
 # github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/ebitengine/purego v0.3.2
+# github.com/ebitengine/purego v0.4.0
 ## explicit; go 1.18
 github.com/ebitengine/purego
 github.com/ebitengine/purego/internal/abi
@@ -163,9 +167,6 @@ github.com/jfreymuth/vorbis
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/lithammer/fuzzysearch v1.1.8
-## explicit; go 1.15
-github.com/lithammer/fuzzysearch/fuzzy
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
@@ -218,7 +219,7 @@ github.com/muesli/reflow/ansi
 github.com/muesli/reflow/truncate
 github.com/muesli/reflow/wordwrap
 github.com/muesli/reflow/wrap
-# github.com/muesli/termenv v0.15.1
+# github.com/muesli/termenv v0.15.2
 ## explicit; go 1.17
 github.com/muesli/termenv
 # github.com/panjf2000/ants/v2 v2.8.0
@@ -231,6 +232,9 @@ github.com/pkg/errors
 # github.com/rivo/uniseg v0.4.4
 ## explicit; go 1.18
 github.com/rivo/uniseg
+# github.com/sahilm/fuzzy v0.1.0
+## explicit
+github.com/sahilm/fuzzy
 # github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/go-musicfox/lastfm-go v0.0.2
 ## explicit; go 1.19
 github.com/shkh/lastfm-go

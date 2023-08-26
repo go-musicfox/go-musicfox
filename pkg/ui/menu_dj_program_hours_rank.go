@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -8,13 +9,15 @@ import (
 )
 
 type DjProgramHoursRankMenu struct {
-	DefaultMenu
-	menus []MenuItem
+	baseMenu
+	menus []model.MenuItem
 	songs []structs.Song
 }
 
-func NewDjProgramHoursRankMenu() *DjProgramHoursRankMenu {
-	return &DjProgramHoursRankMenu{}
+func NewDjProgramHoursRankMenu(base baseMenu) *DjProgramHoursRankMenu {
+	return &DjProgramHoursRankMenu{
+		baseMenu: base,
+	}
 }
 
 func (m *DjProgramHoursRankMenu) IsSearchable() bool {
@@ -29,25 +32,24 @@ func (m *DjProgramHoursRankMenu) GetMenuKey() string {
 	return "dj_program_hour_rank"
 }
 
-func (m *DjProgramHoursRankMenu) MenuViews() []MenuItem {
+func (m *DjProgramHoursRankMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DjProgramHoursRankMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-
+func (m *DjProgramHoursRankMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		djProgramService := service.DjProgramToplistHoursService{
 			Limit: "100",
 		}
 		code, response := djProgramService.DjProgramToplistHours()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.songs = utils.GetSongsOfDjHoursRank(response)
-		m.menus = GetViewFromSongs(m.songs)
+		m.menus = utils.GetViewFromSongs(m.songs)
 
-		return true
+		return true, nil
 	}
 }
 
