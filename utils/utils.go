@@ -23,7 +23,7 @@ import (
 	songtag "github.com/frolovo22/tag"
 	"github.com/go-flac/flacpicture"
 	"github.com/go-musicfox/netease-music/service"
-	getFolderSize "github.com/markthree/go-get-folder-size/src"
+	foldersize "github.com/markthree/go-get-folder-size/src"
 	"github.com/pkg/errors"
 	"github.com/skip2/go-qrcode"
 )
@@ -435,7 +435,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 	}
 	var err error
 	cacheDir := GetCacheDir()
-	size, err := getFolderSize.Parallel(cacheDir)
+	size, err := foldersize.Invoke(cacheDir)
 	if err != nil {
 		errHandler(err)
 		return

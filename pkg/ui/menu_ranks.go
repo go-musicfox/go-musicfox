@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -10,13 +11,15 @@ import (
 )
 
 type RanksMenu struct {
-	DefaultMenu
-	menus []MenuItem
+	baseMenu
+	menus []model.MenuItem
 	ranks []structs.Rank
 }
 
-func NewRanksMenu() *RanksMenu {
-	return new(RanksMenu)
+func NewRanksMenu(base baseMenu) *RanksMenu {
+	return &RanksMenu{
+		baseMenu: base,
+	}
 }
 
 func (m *RanksMenu) IsSearchable() bool {
@@ -27,39 +30,39 @@ func (m *RanksMenu) GetMenuKey() string {
 	return "ranks"
 }
 
-func (m *RanksMenu) MenuViews() []MenuItem {
+func (m *RanksMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *RanksMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *RanksMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.ranks) {
 		return nil
 	}
 
-	return NewPlaylistDetailMenu(m.ranks[index].Id)
+	return NewPlaylistDetailMenu(m.baseMenu, m.ranks[index].Id)
 }
 
-func (m *RanksMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *RanksMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		if len(m.menus) > 0 && len(m.ranks) > 0 {
-			return true
+			return true, nil
 		}
 
 		rankListService := service.ToplistService{}
 		code, response := rankListService.Toplist()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
-		var menus []MenuItem
+		var menus []model.MenuItem
 		m.ranks = utils.GetRanks(response)
 		for _, rank := range m.ranks {
 			frequency := fmt.Sprintf("[%s]", rank.Frequency)
-			menus = append(menus, MenuItem{Title: utils.ReplaceSpecialStr(rank.Name), Subtitle: frequency})
+			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(rank.Name), Subtitle: frequency})
 		}
 		m.menus = menus
 
-		return true
+		return true, nil
 	}
 }

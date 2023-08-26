@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Ebitengine Authors
 
-//go:build darwin || linux
+//go:build darwin || linux || windows
 
 package purego
 
@@ -15,11 +15,9 @@ import (
 )
 
 // RegisterLibFunc is a wrapper around RegisterFunc that uses the C function returned from Dlsym(handle, name).
-// It panics if Dlsym fails.
-//
-// Windows does not support this function.
+// It panics if it can't find the name symbol.
 func RegisterLibFunc(fptr interface{}, handle uintptr, name string) {
-	sym, err := Dlsym(handle, name)
+	sym, err := loadSymbol(handle, name)
 	if err != nil {
 		panic(err)
 	}
@@ -67,8 +65,6 @@ func RegisterLibFunc(fptr interface{}, handle uintptr, name string) {
 // There are some limitations when using RegisterFunc on Linux. First, there is no support for function arguments.
 // Second, float32 and float64 arguments and return values do not work when CGO_ENABLED=1. Otherwise, Linux
 // has the same feature parity as Darwin.
-//
-// Windows does not support this function.
 func RegisterFunc(fptr interface{}, cfn uintptr) {
 	fn := reflect.ValueOf(fptr).Elem()
 	ty := fn.Type()
@@ -99,7 +95,7 @@ func RegisterFunc(fptr interface{}, cfn uintptr) {
 					stack++
 				}
 			case reflect.Float32, reflect.Float64:
-				if floats < 8 {
+				if floats < numOfFloats {
 					floats++
 				} else {
 					stack++
@@ -108,7 +104,8 @@ func RegisterFunc(fptr interface{}, cfn uintptr) {
 				panic("purego: unsupported kind " + arg.Kind().String())
 			}
 		}
-		if ints+stack > maxArgs || floats+stack > maxArgs {
+		sizeOfStack := maxArgs - numOfIntegerRegisters()
+		if stack > sizeOfStack {
 			panic("purego: too many arguments")
 		}
 	}
@@ -126,26 +123,52 @@ func RegisterFunc(fptr interface{}, cfn uintptr) {
 			}
 		}
 		var sysargs [maxArgs]uintptr
-		var stack = sysargs[numOfIntegerRegisters():]
-		var floats [8]float64
+		stack := sysargs[numOfIntegerRegisters():]
+		var floats [numOfFloats]uintptr
 		var numInts int
 		var numFloats int
 		var numStack int
-		addStack := func(x uintptr) {
-			stack[numStack] = x
-			numStack++
-		}
-		addInt := func(x uintptr) {
-			if numInts >= numOfIntegerRegisters() {
-				addStack(x)
-			} else {
-				sysargs[numInts] = x
-				numInts++
+		var addStack, addInt, addFloat func(x uintptr)
+		if runtime.GOARCH == "arm64" || runtime.GOOS != "windows" {
+			// Windows arm64 uses the same calling convention as macOS and Linux
+			addStack = func(x uintptr) {
+				stack[numStack] = x
+				numStack++
 			}
+			addInt = func(x uintptr) {
+				if numInts >= numOfIntegerRegisters() {
+					addStack(x)
+				} else {
+					sysargs[numInts] = x
+					numInts++
+				}
+			}
+			addFloat = func(x uintptr) {
+				if numFloats < len(floats) {
+					floats[numFloats] = x
+					numFloats++
+				} else {
+					addStack(x)
+				}
+			}
+		} else {
+			// On Windows amd64 the arguments are passed in the numbered registered.
+			// So the first int is in the first integer register and the first float
+			// is in the second floating register if there is already a first int.
+			// This is in contrast to how macOS and Linux pass arguments which
+			// tries to use as many registers as possible in the calling convention.
+			addStack = func(x uintptr) {
+				sysargs[numStack] = x
+				numStack++
+			}
+			addInt = addStack
+			addFloat = addStack
 		}
+
 		var keepAlive []interface{}
 		defer func() {
 			runtime.KeepAlive(keepAlive)
+			runtime.KeepAlive(args)
 		}()
 		for _, v := range args {
 			switch v.Kind() {
@@ -158,7 +181,7 @@ func RegisterFunc(fptr interface{}, cfn uintptr) {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				addInt(uintptr(v.Int()))
 			case reflect.Ptr, reflect.UnsafePointer, reflect.Slice:
-				keepAlive = append(keepAlive, v.Pointer())
+				// There is no need to keepAlive this pointer separately because it is kept alive in the args variable
 				addInt(v.Pointer())
 			case reflect.Func:
 				addInt(NewCallback(v.Interface()))
@@ -168,26 +191,30 @@ func RegisterFunc(fptr interface{}, cfn uintptr) {
 				} else {
 					addInt(0)
 				}
-			case reflect.Float32, reflect.Float64:
-				if numFloats < len(floats) {
-					floats[numFloats] = v.Float()
-					numFloats++
-				} else {
-					addStack(uintptr(math.Float64bits(v.Float())))
-				}
+			case reflect.Float32:
+				addFloat(uintptr(math.Float32bits(float32(v.Float()))))
+			case reflect.Float64:
+				addFloat(uintptr(math.Float64bits(v.Float())))
 			default:
 				panic("purego: unsupported kind: " + v.Kind().String())
 			}
 		}
 		// TODO: support structs
-		syscall := syscall9Args{
-			cfn,
-			sysargs[0], sysargs[1], sysargs[2], sysargs[3], sysargs[4], sysargs[5], sysargs[6], sysargs[7], sysargs[8],
-			floats[0], floats[1], floats[2], floats[3], floats[4], floats[5], floats[6], floats[7],
-			0, 0, 0}
-		runtime_cgocall(syscall9XABI0, unsafe.Pointer(&syscall))
-		r1, r2 := syscall.r1, syscall.r2
-
+		var r1, r2 uintptr
+		if runtime.GOARCH == "arm64" || runtime.GOOS != "windows" {
+			// Use the normal arm64 calling convention even on Windows
+			syscall := syscall9Args{
+				cfn,
+				sysargs[0], sysargs[1], sysargs[2], sysargs[3], sysargs[4], sysargs[5], sysargs[6], sysargs[7], sysargs[8],
+				floats[0], floats[1], floats[2], floats[3], floats[4], floats[5], floats[6], floats[7],
+				0, 0, 0,
+			}
+			runtime_cgocall(syscall9XABI0, unsafe.Pointer(&syscall))
+			r1, r2 = syscall.r1, syscall.r2
+		} else {
+			// This is a fallback for amd64, 386, and arm. Note this may not support floats
+			r1, r2, _ = syscall_syscall9X(cfn, sysargs[0], sysargs[1], sysargs[2], sysargs[3], sysargs[4], sysargs[5], sysargs[6], sysargs[7], sysargs[8])
+		}
 		if ty.NumOut() == 0 {
 			return nil
 		}
@@ -204,7 +231,8 @@ func RegisterFunc(fptr interface{}, cfn uintptr) {
 			// We take the address and then dereference it to trick go vet from creating a possible miss-use of unsafe.Pointer
 			v.SetPointer(*(*unsafe.Pointer)(unsafe.Pointer(&r1)))
 		case reflect.Ptr:
-			v = reflect.NewAt(outType, unsafe.Pointer(&r1)).Elem()
+			// It is safe to have the address of r1 not escape because it is immediately dereferenced with .Elem()
+			v = reflect.NewAt(outType, runtime_noescape(unsafe.Pointer(&r1))).Elem()
 		case reflect.Func:
 			// wrap this C function in a nicely typed Go function
 			v = reflect.New(outType)
@@ -229,6 +257,11 @@ func numOfIntegerRegisters() int {
 		return 8
 	case "amd64":
 		return 6
+	// TODO: figure out why 386 tests are not working
+	/*case "386":
+		return 0
+	case "arm":
+		return 4*/
 	default:
 		panic("purego: unknown GOARCH (" + runtime.GOARCH + ")")
 	}

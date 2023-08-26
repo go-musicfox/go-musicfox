@@ -3,6 +3,7 @@ package ui
 import (
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -11,19 +12,20 @@ import (
 )
 
 type DjSubListMenu struct {
-	DefaultMenu
-	menus  []MenuItem
+	baseMenu
+	menus  []model.MenuItem
 	radios []structs.DjRadio
 	limit  int
 	offset int
 	total  int
 }
 
-func NewDjSubListMenu() *DjSubListMenu {
+func NewDjSubListMenu(base baseMenu) *DjSubListMenu {
 	return &DjSubListMenu{
-		limit:  50,
-		offset: 0,
-		total:  -1,
+		baseMenu: base,
+		limit:    50,
+		offset:   0,
+		total:    -1,
 	}
 }
 
@@ -35,29 +37,29 @@ func (m *DjSubListMenu) GetMenuKey() string {
 	return "dj_sub"
 }
 
-func (m *DjSubListMenu) MenuViews() []MenuItem {
+func (m *DjSubListMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DjSubListMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *DjSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.radios) {
 		return nil
 	}
 
-	return NewDjRadioDetailMenu(m.radios[index].Id)
+	return NewDjRadioDetailMenu(m.baseMenu, m.radios[index].Id)
 }
 
-func (m *DjSubListMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		// 不重复请求
 		if len(m.menus) > 0 && len(m.radios) > 0 {
-			return true
+			return true, nil
 		}
 
 		djSublistService := service.DjSublistService{
@@ -67,10 +69,10 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() Hook {
 		code, response := djSublistService.DjSublist()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		if total, err := jsonparser.GetInt(response, "count"); err != nil {
@@ -78,23 +80,23 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() Hook {
 		}
 
 		m.radios = utils.GetDjRadios(response)
-		m.menus = GetViewFromDjRadios(m.radios)
+		m.menus = utils.GetViewFromDjRadios(m.radios)
 
-		return true
+		return true, nil
 	}
 }
 
-func (m *DjSubListMenu) BottomOutHook() Hook {
+func (m *DjSubListMenu) BottomOutHook() model.Hook {
 	if len(m.radios) >= m.total {
 		return nil
 	}
 
-	return func(model *NeteaseModel) bool {
+	return func(main *model.Main) (bool, model.Page) {
 		m.offset += m.limit
 
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		djSublistService := service.DjSublistService{
@@ -104,10 +106,10 @@ func (m *DjSubListMenu) BottomOutHook() Hook {
 		code, response := djSublistService.DjSublist()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		if total, err := jsonparser.GetInt(response, "count"); err != nil {
@@ -115,11 +117,11 @@ func (m *DjSubListMenu) BottomOutHook() Hook {
 		}
 
 		radios := utils.GetDjRadios(response)
-		menus := GetViewFromDjRadios(radios)
+		menus := utils.GetViewFromDjRadios(radios)
 
 		m.radios = append(m.radios, radios...)
 		m.menus = append(m.menus, menus...)
 
-		return true
+		return true, nil
 	}
 }

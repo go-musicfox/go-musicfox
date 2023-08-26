@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anhoder/foxful-cli/model"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	"github.com/go-musicfox/go-musicfox/pkg/lastfm"
@@ -20,61 +22,47 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
-	"github.com/mattn/go-runewidth"
 	"github.com/telanflow/cookiejar"
 )
 
-type NeteaseModel struct {
-	WindowWidth    int
-	WindowHeight   int
-	isListeningKey bool
-	program        *tea.Program
-	user           *structs.User
-	lastfm         *lastfm.Client
-	lastfmUser     *storage.LastfmUser
+type Netease struct {
+	user       *structs.User
+	lastfm     *lastfm.Client
+	lastfmUser *storage.LastfmUser
 
-	// startup
-	startup *StartupModel
+	*model.App
+	login  *LoginPage
+	search *SearchPage
 
-	// main ui
-	*MainUIModel
-
-	// login
-	loginModel *LoginModel
-
-	// search
-	searchModel *SearchModel
+	player *Player
 }
 
-// NewNeteaseModel get netease model
-func NewNeteaseModel(loadingDuration time.Duration) (m *NeteaseModel) {
-	m = new(NeteaseModel)
-	m.isListeningKey = !configs.ConfigRegistry.StartupShow
-	m.lastfm = lastfm.NewClient()
+func NewNetease(app *model.App) *Netease {
+	n := new(Netease)
+	n.lastfm = lastfm.NewClient()
+	n.player = NewPlayer(n)
+	n.login = NewLoginPage(n)
+	n.search = NewSearchPage(n)
+	n.App = app
 
-	// startup
-	m.startup = NewStartup()
-	m.startup.TotalDuration = loadingDuration
-
-	// main menu
-	m.MainUIModel = NewMainUIModel(m)
-
-	// login
-	m.loginModel = NewLogin()
-
-	// search
-	m.searchModel = NewSearch()
-
-	// 东亚
-	runewidth.DefaultCondition.EastAsianWidth = false
-
-	return
+	return n
 }
 
-func (m *NeteaseModel) Init() tea.Cmd {
+// ToLoginPage 需要登录的处理
+func (n *Netease) ToLoginPage(callback func(newMenu model.Menu, newTitle *model.MenuItem) model.Page) (model.Page, tea.Cmd) {
+	n.login.AfterLogin = callback
+	return n.login, tickLogin(time.Nanosecond)
+}
+
+// ToSearchPage 搜索
+func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
+	n.search.searchType = searchType
+	return n.search, tickSearch(time.Nanosecond)
+}
+
+func (n *Netease) InitHook(_ *model.App) {
 	config := configs.ConfigRegistry
 	projectDir := utils.GetLocalDataDir()
 
@@ -92,26 +80,27 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		// 获取用户信息
 		if jsonStr, err := table.GetByKVModel(storage.User{}); err == nil {
 			if user, err := structs.NewUserFromLocalJson(jsonStr); err == nil {
-				m.user = &user
+				n.user = &user
 			}
 		}
-		m.refreshMenuTitle() // 刷新界面用户名
+		// 刷新界面用户名
+		n.MustMain().RefreshMenuTitle()
 
 		// 获取lastfm用户信息
 		var lastfmUser storage.LastfmUser
 		if jsonStr, err := table.GetByKVModel(&lastfmUser); err == nil {
 			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
-				m.lastfmUser = &lastfmUser
-				m.lastfm.SetSession(lastfmUser.SessionKey)
+				n.lastfmUser = &lastfmUser
+				n.lastfm.SetSession(lastfmUser.SessionKey)
 			}
 		}
-		m.refreshMenuList()
+		n.MustMain().RefreshMenuList()
 
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
 			var playMode player.Mode
 			if err = json.Unmarshal(jsonStr, &playMode); err == nil {
-				m.player.mode = playMode
+				n.player.mode = playMode
 			}
 		}
 
@@ -119,7 +108,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.Volume{}); err == nil && len(jsonStr) > 0 {
 			var volume int
 			if err = json.Unmarshal(jsonStr, &volume); err == nil {
-				v, ok := m.player.Player.(storage.VolumeStorable)
+				v, ok := n.player.Player.(storage.VolumeStorable)
 				if ok {
 					v.SetVolume(volume)
 				}
@@ -130,7 +119,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if jsonStr, err := table.GetByKVModel(storage.PlayerSnapshot{}); err == nil && len(jsonStr) > 0 {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
-				p := m.player
+				p := n.player
 				p.curSongIndex = snapshot.CurSongIndex
 				p.playlist = snapshot.Playlist
 				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
@@ -138,7 +127,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
 		}
-		m.Rerender(false)
+		n.Rerender(false)
 
 		// 获取扩展信息
 		{
@@ -167,9 +156,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		}
 
 		// 刷新like list
-		if m.user != nil {
-			like_list.RefreshLikeList(m.user.UserId)
-			m.Rerender(false)
+		if n.user != nil {
+			like_list.RefreshLikeList(n.user.UserId)
+			n.Rerender(false)
 		}
 
 		// 签到
@@ -179,7 +168,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				_ = json.Unmarshal(jsonStr, &lastSignIn)
 			}
 			today, err := strconv.Atoi(time.Now().Format("20060102"))
-			if m.user != nil && err == nil && lastSignIn != today {
+			if n.user != nil && err == nil && lastSignIn != today {
 				// 手机签到
 				signInService := service.DailySigninService{}
 				signInService.Type = "0"
@@ -203,7 +192,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		}
 
 		// 刷新登录状态
-		if m.user != nil {
+		if n.user != nil {
 			refreshLoginService := service.LoginRefreshService{}
 			refreshLoginService.LoginRefresh()
 		}
@@ -212,9 +201,10 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		if config.StartupCheckUpdate {
 			if ok, newVersion := utils.CheckUpdate(); ok {
 				if runtime.GOOS == "windows" {
-					enterMenu(m, NewCheckUpdateMenu(),
-						&MenuItem{Title: "新版本: " + newVersion,
-							Subtitle: "当前版本: " + constants.AppVersion})
+					n.MustMain().EnterMenu(
+						NewCheckUpdateMenu(newBaseMenu(n)),
+						&model.MenuItem{Title: "新版本: " + newVersion, Subtitle: "当前版本: " + constants.AppVersion},
+					)
 				}
 
 				utils.Notify(utils.NotifyContent{
@@ -226,6 +216,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 		}
 
 		// 自动播放
+		// TODO optimize
 		if config.AutoPlay {
 			var (
 				notice   string // 错误通知文本
@@ -239,11 +230,11 @@ func (m *NeteaseModel) Init() tea.Cmd {
 					"singleLoop":  player.PmSingleLoop,
 					"random":      player.PmRandom,
 					"intelligent": player.PmIntelligent,
-					"last":        m.player.mode,
+					"last":        n.player.mode,
 				}
 			)
 
-			if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+			if utils.CheckUserInfo(n.user) == utils.NeedLogin {
 				notice = "账号未登录"
 				goto Complete
 			}
@@ -251,7 +242,7 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				getAll = true
 			}
 			if mode, ok := playmode[config.AutoPlayMode]; ok {
-				m.player.mode = mode
+				n.player.mode = mode
 			} else {
 				notice = fmt.Sprintf("无效的播放模式：%s", config.AutoPlayMode)
 				goto Complete
@@ -260,16 +251,16 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			case "dailyReco":
 				playlist, notice = getDailySongs()
 			case "like":
-				playlist, notice = getLikeSongs(m.user.UserId, getAll)
+				playlist, notice = getLikeSongs(n.user.UserId, getAll)
 			case "no":
-				playlist = m.player.playlist
+				playlist = n.player.playlist
 			default: // name:xxx
 				if !strings.HasPrefix(config.AutoPlayList, "name:") {
 					notice = fmt.Sprintf("歌单格式错误：%s", config.AutoPlayList)
 					goto Complete
 				}
 				name := config.AutoPlayList[5:]
-				playlist, notice = getPlaylistByName(m.user.UserId, name, getAll)
+				playlist, notice = getPlaylistByName(n.user.UserId, name, getAll)
 			}
 			if notice != "" {
 				goto Complete
@@ -277,8 +268,8 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			length = len(playlist)
 			if config.AutoPlayList == "no" {
 				// 保持原来状态
-				index = m.player.curSongIndex
-			} else if m.player.mode != player.PmRandom {
+				index = n.player.curSongIndex
+			} else if n.player.mode != player.PmRandom {
 				if config.AutoPlayOffset >= length || -config.AutoPlayOffset > length {
 					notice = fmt.Sprintf("无效的偏移量：%d", config.AutoPlayOffset)
 					goto Complete
@@ -289,9 +280,9 @@ func (m *NeteaseModel) Init() tea.Cmd {
 				// 随机播放
 				index = rand.Intn(length)
 			}
-			m.player.playlist = playlist
-			m.player.curSongIndex = index
-			_ = m.player.PlaySong(m.player.playlist[index], DurationNext)
+			n.player.playlist = playlist
+			n.player.curSongIndex = index
+			_ = n.player.PlaySong(n.player.playlist[index], DurationNext)
 		Complete:
 			if notice != "" {
 				utils.Notify(utils.NotifyContent{
@@ -301,14 +292,17 @@ func (m *NeteaseModel) Init() tea.Cmd {
 			}
 		}
 	})
-
-	if config.StartupShow {
-		return tickStartup(time.Nanosecond)
-	}
-
-	return tickMainUI(time.Nanosecond)
 }
 
+func (n *Netease) CloseHook(_ *model.App) {
+	n.player.Close()
+}
+
+func (n *Netease) Player() *Player {
+	return n.player
+}
+
+// TODO optimize
 func getDailySongs() (playlist []structs.Song, notice string) {
 	recommendSongs := service.RecommendSongsService{}
 	code, response := recommendSongs.RecommendSongs()
@@ -321,6 +315,7 @@ func getDailySongs() (playlist []structs.Song, notice string) {
 	return
 }
 
+// TODO optimize
 func getLikeSongs(userId int64, getAll bool) (playlist []structs.Song, notice string) {
 	var (
 		codeType  utils.ResCode
@@ -341,13 +336,14 @@ func getLikeSongs(userId int64, getAll bool) (playlist []structs.Song, notice st
 	return
 }
 
+// TODO optimize
 func getPlaylistByName(userId int64, playlistName string, getAll bool) (playlist []structs.Song, notice string) {
 	var (
 		playlistId int64
-		offset     int = 0
+		offset     = 0
 		codeType   utils.ResCode
 		playlists  []structs.Playlist
-		hasMore    bool = true
+		hasMore    bool
 	)
 	// 寻找歌单
 Loop:
@@ -376,84 +372,4 @@ Loop:
 	}
 	playlist = songs
 	return
-}
-
-func (m *NeteaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Make sure these keys always quit
-	switch msgWithType := msg.(type) {
-	case tea.KeyMsg:
-		k := msgWithType.String()
-		// 账号登录或搜索页输入q不退出
-		if m.pageType == PtMain && !m.inSearching && (k == "q" || k == "Q" || k == "ctrl+c") {
-			m.startup.quitting = true
-			m.Close()
-			return m, tea.Quit
-		}
-	case tea.WindowSizeMsg:
-		m.WindowHeight = msgWithType.Height
-		m.WindowWidth = msgWithType.Width
-	}
-
-	if _, ok := msg.(tea.WindowSizeMsg); ok {
-		m.MainUIModel.update(msg, m)
-	}
-
-	// Hand off the message and model to the appropriate update function for the
-	// appropriate view based on the current state.
-	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
-		return m.startup.update(msg, m)
-	}
-
-	switch m.pageType {
-	case PtLogin:
-		return updateLogin(msg, m)
-	case PtSearch:
-		return m.searchModel.update(msg, m)
-	}
-
-	return m.MainUIModel.update(msg, m)
-}
-
-func (m *NeteaseModel) View() string {
-	if m.startup.quitting || m.WindowWidth <= 0 || m.WindowHeight <= 0 {
-		return ""
-	}
-
-	if configs.ConfigRegistry.StartupShow && !m.startup.loaded {
-		return m.startup.view(m)
-	}
-
-	switch m.pageType {
-	case PtLogin:
-		return loginView(m)
-	case PtSearch:
-		return m.searchModel.view(m)
-	}
-
-	return m.MainUIModel.view(m)
-}
-
-func (m *NeteaseModel) BindProgram(program *tea.Program) {
-	m.program = program
-}
-
-func (m *NeteaseModel) Rerender(cleanScreen bool) {
-	if m.program == nil {
-		return
-	}
-	ticker := m.rerenderTicker(cleanScreen)
-	m.program.Send(ticker())
-}
-
-func (m *NeteaseModel) rerenderTicker(cleanScreen bool) tea.Cmd {
-	return func() tea.Msg {
-		if cleanScreen {
-			m.program.Send(tea.ClearScreen())
-		}
-		return MsgOfPageType(m.pageType)
-	}
-}
-
-func (m *NeteaseModel) Close() {
-	m.MainUIModel.Close()
 }

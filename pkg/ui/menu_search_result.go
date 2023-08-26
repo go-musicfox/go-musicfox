@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 	ds2 "github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
@@ -12,8 +13,8 @@ import (
 )
 
 type SearchResultMenu struct {
-	DefaultMenu
-	menus      []MenuItem
+	baseMenu
+	menus      []model.MenuItem
 	offset     int
 	searchType SearchType
 	keyword    string
@@ -30,8 +31,9 @@ var playableTypes = map[SearchType]bool{
 	StRadio:      false,
 }
 
-func NewSearchResultMenu(searchType SearchType) *SearchResultMenu {
+func NewSearchResultMenu(base baseMenu, searchType SearchType) *SearchResultMenu {
 	return &SearchResultMenu{
+		baseMenu:   base,
 		offset:     0,
 		searchType: searchType,
 	}
@@ -41,13 +43,13 @@ func (m *SearchResultMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *SearchResultMenu) BeforeBackMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-		if model.searchModel.wordsInput.Value() != "" {
-			model.searchModel.wordsInput.SetValue("")
+func (m *SearchResultMenu) BeforeBackMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		if m.netease.search.wordsInput.Value() != "" {
+			m.netease.search.wordsInput.SetValue("")
 		}
 
-		return true
+		return true, nil
 	}
 }
 
@@ -59,11 +61,11 @@ func (m *SearchResultMenu) GetMenuKey() string {
 	return fmt.Sprintf("search_result_%d_%s", m.searchType, m.keyword)
 }
 
-func (m *SearchResultMenu) MenuViews() []MenuItem {
+func (m *SearchResultMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *SearchResultMenu) SubMenu(_ *model.App, index int) model.Menu {
 	switch resultWithType := m.result.(type) {
 	case []ds2.Song:
 		return nil
@@ -71,34 +73,34 @@ func (m *SearchResultMenu) SubMenu(_ *NeteaseModel, index int) Menu {
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewAlbumDetailMenu(resultWithType[index].Id)
+		return NewAlbumDetailMenu(m.baseMenu, resultWithType[index].Id)
 	case []ds2.Playlist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewPlaylistDetailMenu(resultWithType[index].Id)
+		return NewPlaylistDetailMenu(m.baseMenu, resultWithType[index].Id)
 	case []ds2.Artist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewArtistDetailMenu(resultWithType[index].Id, resultWithType[index].Name)
+		return NewArtistDetailMenu(m.baseMenu, resultWithType[index].Id, resultWithType[index].Name)
 	case []ds2.User:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewUserPlaylistMenu(resultWithType[index].UserId)
+		return NewUserPlaylistMenu(m.baseMenu, resultWithType[index].UserId)
 	case []ds2.DjRadio:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewDjRadioDetailMenu(resultWithType[index].Id)
+		return NewDjRadioDetailMenu(m.baseMenu, resultWithType[index].Id)
 	}
 
 	return nil
 }
 
-func (m *SearchResultMenu) BottomOutHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *SearchResultMenu) BottomOutHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		var (
 			code     float64
 			response []byte
@@ -115,28 +117,28 @@ func (m *SearchResultMenu) BottomOutHook() Hook {
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
 			m.offset -= constants.SearchPageSize
-			return false
+			return false, nil
 		}
 
 		m.appendResult(response)
 		m.convertMenus()
-		return true
+		return true, nil
 	}
 }
 
-func (m *SearchResultMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-		if model.searchModel.wordsInput.Value() == "" {
+func (m *SearchResultMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		if m.netease.search.wordsInput.Value() == "" {
 			// 显示搜索页面
-			model.searchModel.SearchHandle(model, m.searchType)
-			return false
+			page, _ := m.netease.ToSearchPage(m.searchType)
+			return false, page
 		}
 
-		m.result = model.searchModel.result
-		m.searchType = model.searchModel.searchType
-		m.keyword = model.searchModel.wordsInput.Value()
+		m.result = m.netease.search.result
+		m.searchType = m.netease.search.searchType
+		m.keyword = m.netease.search.wordsInput.Value()
 		m.convertMenus()
-		return true
+		return true, nil
 	}
 }
 
@@ -178,17 +180,17 @@ func (m *SearchResultMenu) appendResult(response []byte) {
 func (m *SearchResultMenu) convertMenus() {
 	switch resultWithType := m.result.(type) {
 	case []ds2.Song:
-		m.menus = GetViewFromSongs(resultWithType)
+		m.menus = utils.GetViewFromSongs(resultWithType)
 	case []ds2.Album:
-		m.menus = GetViewFromAlbums(resultWithType)
+		m.menus = utils.GetViewFromAlbums(resultWithType)
 	case []ds2.Playlist:
-		m.menus = GetViewFromPlaylists(resultWithType)
+		m.menus = utils.GetViewFromPlaylists(resultWithType)
 	case []ds2.Artist:
-		m.menus = GetViewFromArtists(resultWithType)
+		m.menus = utils.GetViewFromArtists(resultWithType)
 	case []ds2.User:
-		m.menus = GetViewFromUsers(resultWithType)
+		m.menus = utils.GetViewFromUsers(resultWithType)
 	case []ds2.DjRadio:
-		m.menus = GetViewFromDjRadios(resultWithType)
+		m.menus = utils.GetViewFromDjRadios(resultWithType)
 	}
 }
 

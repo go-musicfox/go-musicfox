@@ -3,33 +3,47 @@ package ui
 import (
 	"fmt"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/configs"
 
 	"github.com/muesli/termenv"
 )
 
 type Loading struct {
-	model *NeteaseModel
+	netease   *Netease
+	menuTitle *model.MenuItem
 }
 
-func NewLoading(m *NeteaseModel) *Loading {
-	return &Loading{
-		model: m,
+func NewLoading(n *Netease, menuTitle ...*model.MenuItem) *Loading {
+	l := &Loading{netease: n}
+	if len(menuTitle) > 0 {
+		l.menuTitle = menuTitle[0]
 	}
+	return l
 }
 
 // 开始
 func (loading *Loading) start() {
-	termenv.DefaultOutput().MoveCursor(loading.model.menuTitleStartRow, 0)
+	var (
+		main      = loading.netease.App.MustMain()
+		subTitle  string
+		menuTitle *model.MenuItem
+	)
+	termenv.DefaultOutput().MoveCursor(main.MenuTitleStartRow(), 0)
 
-	var subTitle string
-	if loading.model.menuTitle.Subtitle != "" {
-		subTitle = loading.model.menuTitle.Subtitle + " " + configs.ConfigRegistry.MainLoadingText
+	if loading.menuTitle != nil {
+		menuTitle = loading.menuTitle
+	} else {
+		menuTitle = main.MenuTitle()
+	}
+
+	if menuTitle.Subtitle != "" {
+		subTitle = menuTitle.Subtitle + " " + configs.ConfigRegistry.MainLoadingText
 	} else {
 		subTitle = configs.ConfigRegistry.MainLoadingText
 	}
-	fmt.Print(loading.model.menuTitleView(loading.model, nil, &MenuItem{
-		Title:    loading.model.menuTitle.Title,
+	fmt.Print(main.MenuTitleView(loading.netease.App, nil, &model.MenuItem{
+		Title:    menuTitle.Title,
 		Subtitle: subTitle,
 	}))
 
@@ -38,12 +52,18 @@ func (loading *Loading) start() {
 
 // 完成
 func (loading *Loading) complete() {
-	termenv.DefaultOutput().MoveCursor(loading.model.menuTitleStartRow, 0)
+	var (
+		main      = loading.netease.App.MustMain()
+		menuTitle *model.MenuItem
+	)
+	termenv.DefaultOutput().MoveCursor(main.MenuTitleStartRow(), 0)
 
-	fmt.Print(loading.model.menuTitleView(loading.model, nil, &MenuItem{
-		Title:    loading.model.menuTitle.Title,
-		Subtitle: loading.model.menuTitle.Subtitle,
-	}))
+	if loading.menuTitle != nil {
+		menuTitle = loading.menuTitle
+	} else {
+		menuTitle = main.MenuTitle()
+	}
+	fmt.Print(main.MenuTitleView(loading.netease.App, nil, menuTitle))
 
 	termenv.DefaultOutput().MoveCursor(0, 0)
 }

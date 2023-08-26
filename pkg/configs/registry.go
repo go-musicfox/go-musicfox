@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anhoder/foxful-cli/model"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/go-musicfox/pkg/constants"
 
 	"github.com/go-musicfox/netease-music/service"
@@ -64,6 +66,34 @@ type Registry struct {
 	PlayerMpdConfigFile  string // mpd配置文件
 	PlayerMpdNetwork     string // mpd网络类型: tcp、unix
 	PlayerMpdAddr        string // mpd地址
+}
+
+func (r *Registry) FillToModelOpts(opts *model.Options) {
+	opts.StartupOptions.EnableStartup = r.StartupShow
+	opts.StartupOptions.LoadingDuration = r.StartupLoadingDuration
+	opts.StartupOptions.TickDuration = constants.StartupTickDuration
+	opts.StartupOptions.ProgressOutBounce = r.StartupProgressOutBounce
+	opts.StartupOptions.Welcome = r.StartupWelcome
+
+	opts.ProgressOptions.FirstFullChar = r.ProgressFirstFullChar
+	opts.ProgressOptions.FullChar = r.ProgressFullChar
+	opts.ProgressOptions.LastFullChar = r.ProgressLastFullChar
+	opts.ProgressOptions.FirstEmptyChar = r.ProgressFirstEmptyChar
+	opts.ProgressOptions.EmptyChar = r.ProgressEmptyChar
+	opts.ProgressOptions.LastEmptyChar = r.ProgressLastEmptyChar
+
+	opts.AppName = constants.AppName
+	opts.WhetherDisplayTitle = r.MainShowTitle
+	opts.LoadingText = r.MainLoadingText
+	opts.PrimaryColor = r.MainPrimaryColor
+	opts.DualColumn = r.MainDoubleColumn
+
+	if r.MainEnableMouseEvent {
+		opts.TeaOptions = append(opts.TeaOptions, tea.WithMouseCellMotion())
+	}
+	if r.MainAltScreen {
+		opts.TeaOptions = append(opts.TeaOptions, tea.WithAltScreen())
+	}
 }
 
 func NewRegistryWithDefault() *Registry {

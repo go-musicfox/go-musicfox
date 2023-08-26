@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -13,8 +14,8 @@ import (
 )
 
 type AlbumTopMenu struct {
-	DefaultMenu
-	menus   []MenuItem
+	baseMenu
+	menus   []model.MenuItem
 	albums  []structs.Album
 	area    string
 	offset  int
@@ -22,11 +23,12 @@ type AlbumTopMenu struct {
 	hasMore bool
 }
 
-func NewAlbumTopMenu(area string) *AlbumTopMenu {
+func NewAlbumTopMenu(base baseMenu, area string) *AlbumTopMenu {
 	return &AlbumTopMenu{
-		area:   area,
-		offset: 0,
-		limit:  50,
+		baseMenu: base,
+		area:     area,
+		offset:   0,
+		limit:    50,
 	}
 }
 
@@ -38,23 +40,23 @@ func (m *AlbumTopMenu) GetMenuKey() string {
 	return fmt.Sprintf("album_top_%s", m.area)
 }
 
-func (m *AlbumTopMenu) MenuViews() []MenuItem {
+func (m *AlbumTopMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumTopMenu) SubMenu(_ *NeteaseModel, index int) Menu {
+func (m *AlbumTopMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.albums) < index {
 		return nil
 	}
 
-	return NewAlbumDetailMenu(m.albums[index].Id)
+	return NewAlbumDetailMenu(m.baseMenu, m.albums[index].Id)
 }
 
-func (m *AlbumTopMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *AlbumTopMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 
 		if len(m.menus) > 0 && len(m.albums) > 0 {
-			return true
+			return true, nil
 		}
 
 		topAlbumService := service.TopAlbumService{
@@ -65,7 +67,7 @@ func (m *AlbumTopMenu) BeforeEnterMenuHook() Hook {
 		code, response := topAlbumService.TopAlbum()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		// 是否有更多数据
@@ -81,18 +83,18 @@ func (m *AlbumTopMenu) BeforeEnterMenuHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
-		return true
+		return true, nil
 	}
 }
 
-func (m *AlbumTopMenu) BottomOutHook() Hook {
+func (m *AlbumTopMenu) BottomOutHook() model.Hook {
 	if !m.hasMore {
 		return nil
 	}
-	return func(model *NeteaseModel) bool {
+	return func(main *model.Main) (bool, model.Page) {
 		m.offset = m.offset + len(m.menus)
 		topAlbumService := service.TopAlbumService{
 			Area:   m.area,
@@ -102,7 +104,7 @@ func (m *AlbumTopMenu) BottomOutHook() Hook {
 		code, response := topAlbumService.TopAlbum()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 
 		// 是否有更多数据
@@ -118,12 +120,12 @@ func (m *AlbumTopMenu) BottomOutHook() Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
 		}
 
 		m.albums = append(m.albums, albums...)
 
-		return true
+		return true, nil
 	}
 }
 

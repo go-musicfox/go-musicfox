@@ -5,6 +5,7 @@ bin/
 dist/
 .release-env
 go.work
+go.work.sum
 .vscode/
 .devenv/
 .envrc

@@ -32,9 +32,8 @@ const maxSamplesPerFrame = 1152 * 2
 
 // Decoder decode the mp3 stream by minimp3
 type Decoder struct {
-	data []byte
-
-	needFillChan  chan struct{}
+	readerLocker  *sync.Mutex
+	data          []byte
 	decoderLocker *sync.Mutex
 	decodedData   []byte
 	decode        C.mp3dec_t
@@ -45,7 +44,8 @@ type Decoder struct {
 	Channels      int
 	Kbps          int
 	Layer         int
-	err           error
+
+	originalEof bool // if the original reader is EOF, set this to true
 }
 
 // BufferSize Decoded data buffer size.
@@ -57,8 +57,8 @@ var WaitForDataDuration = time.Millisecond * 10
 // NewDecoder decode mp3 stream and get a Decoder for read the raw data to play.
 func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 	dec = new(Decoder)
-	dec.decoderLocker = &sync.Mutex{}
-	dec.needFillChan = make(chan struct{}, 1)
+	dec.readerLocker = new(sync.Mutex)
+	dec.decoderLocker = new(sync.Mutex)
 	dec.context, dec.contextCancel = context.WithCancel(context.Background())
 	dec.decode = C.mp3dec_t{}
 	C.mp3dec_init(&dec.decode)
@@ -70,26 +70,44 @@ func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 				return
 			default:
 			}
+			if len(dec.data) > BufferSize {
+				<-time.After(WaitForDataDuration)
+				continue
+			}
+			var data = make([]byte, 512)
+			var n int
+			n, err = reader.Read(data)
+
+			dec.readerLocker.Lock()
+			dec.data = append(dec.data, data[:n]...)
+			dec.readerLocker.Unlock()
+			if err == io.EOF {
+				dec.originalEof = true
+				break
+			}
+			if err != nil {
+				dec.originalEof = true
+				break
+			}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-dec.context.Done():
+				return
+			default:
+			}
 			if len(dec.decodedData) > BufferSize {
-				<-dec.needFillChan
+				<-time.After(WaitForDataDuration)
 				continue
 			}
 			var decoded = [maxSamplesPerFrame * 2]byte{}
 			var decodedLength = C.int(0)
 			var length = C.int(len(dec.data))
-			for len(dec.data) < maxSamplesPerFrame*2 {
-				var data = make([]byte, 512)
-				var n int
-				n, err = io.ReadFull(reader, data)
-				dec.err = err
-
-				dec.data = append(dec.data, data[:n]...)
-				if err != nil {
-					break
-				}
-			}
-			if err != nil && err != io.ErrUnexpectedEOF {
-				break
+			if len(dec.data) == 0 {
+				<-time.After(WaitForDataDuration)
+				continue
 			}
 			frameSize := C.decode(&dec.decode, &dec.info,
 				(*C.uchar)(unsafe.Pointer(&dec.data[0])),
@@ -103,35 +121,32 @@ func NewDecoder(reader io.Reader) (dec *Decoder, err error) {
 			dec.Channels = int(dec.info.channels)
 			dec.Kbps = int(dec.info.bitrate_kbps)
 			dec.Layer = int(dec.info.layer)
+			dec.readerLocker.Lock()
 			dec.decoderLocker.Lock()
 			dec.decodedData = append(dec.decodedData, decoded[:decodedLength]...)
 			if int(frameSize) <= len(dec.data) {
 				dec.data = dec.data[int(frameSize):]
 			}
 			dec.decoderLocker.Unlock()
+			dec.readerLocker.Unlock()
 		}
 	}()
 	return
 }
 
 // Started check the record mp3 stream started ot not.
-func (dec *Decoder) Started() (channel chan error) {
-	channel = make(chan error)
+func (dec *Decoder) Started() (channel chan bool) {
+	channel = make(chan bool)
 	go func() {
 		for {
 			select {
 			case <-dec.context.Done():
-				channel <- nil
-				return
+				channel <- false
 			default:
 			}
 			if len(dec.decodedData) != 0 {
-				channel <- nil
-				return
+				channel <- true
 			} else {
-				if dec.err != nil {
-					channel <- dec.err
-				}
 				<-time.After(time.Millisecond * 100)
 			}
 		}
@@ -141,15 +156,18 @@ func (dec *Decoder) Started() (channel chan error) {
 
 // Read read the raw stream
 func (dec *Decoder) Read(data []byte) (n int, err error) {
-	for len(dec.decodedData) == 0 {
+	for {
 		select {
-		case <-dec.context.Done():
-			return 0, io.EOF
-		default:
-		}
-		if dec.err == io.EOF {
+		case <-dec.context.Done(): // if the decoder is stopped, then here should return EOF
 			err = io.EOF
 			return
+		default:
+		}
+		if len(dec.data) == 0 && len(dec.decodedData) == 0 && dec.originalEof {
+			err = io.EOF
+			return
+		} else if len(dec.decodedData) > 0 {
+			break
 		}
 		<-time.After(WaitForDataDuration)
 	}
@@ -157,12 +175,6 @@ func (dec *Decoder) Read(data []byte) (n int, err error) {
 	defer dec.decoderLocker.Unlock()
 	n = copy(data, dec.decodedData[:])
 	dec.decodedData = dec.decodedData[n:]
-	if len(dec.decodedData) <= BufferSize {
-		select {
-		case dec.needFillChan <- struct{}{}:
-		default:
-		}
-	}
 	return
 }
 

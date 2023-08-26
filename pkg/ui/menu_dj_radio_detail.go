@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 
@@ -12,8 +13,8 @@ import (
 )
 
 type DjRadioDetailMenu struct {
-	DefaultMenu
-	menus     []MenuItem
+	baseMenu
+	menus     []model.MenuItem
 	songs     []structs.Song
 	djRadioId int64
 	limit     int
@@ -21,8 +22,9 @@ type DjRadioDetailMenu struct {
 	total     int
 }
 
-func NewDjRadioDetailMenu(djRadioId int64) *DjRadioDetailMenu {
+func NewDjRadioDetailMenu(base baseMenu, djRadioId int64) *DjRadioDetailMenu {
 	return &DjRadioDetailMenu{
+		baseMenu:  base,
 		djRadioId: djRadioId,
 		limit:     50,
 	}
@@ -40,12 +42,12 @@ func (m *DjRadioDetailMenu) GetMenuKey() string {
 	return fmt.Sprintf("dj_radio_detail_%d", m.djRadioId)
 }
 
-func (m *DjRadioDetailMenu) MenuViews() []MenuItem {
+func (m *DjRadioDetailMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *DjRadioDetailMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *DjRadioDetailMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		djProgramService := service.DjProgramService{
 			RID:    strconv.FormatInt(m.djRadioId, 10),
 			Limit:  strconv.Itoa(m.limit),
@@ -55,22 +57,22 @@ func (m *DjRadioDetailMenu) BeforeEnterMenuHook() Hook {
 		utils.Logger().Println(string(response))
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.songs = utils.GetSongsOfDjRadio(response)
 		if total, err := jsonparser.GetInt(response, "count"); err == nil {
 			m.total = int(total)
 		}
-		m.menus = GetViewFromSongs(m.songs)
+		m.menus = utils.GetViewFromSongs(m.songs)
 
-		return true
+		return true, nil
 	}
 }
 
-func (m *DjRadioDetailMenu) BottomOutHook() Hook {
-	return func(model *NeteaseModel) bool {
+func (m *DjRadioDetailMenu) BottomOutHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
 		if len(m.songs) >= m.total {
-			return true
+			return true, nil
 		}
 		offset := m.offset + m.limit
 		djProgramService := service.DjProgramService{
@@ -81,14 +83,14 @@ func (m *DjRadioDetailMenu) BottomOutHook() Hook {
 		code, response := djProgramService.DjProgram()
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		songs := utils.GetSongsOfDjRadio(response)
 		m.songs = append(m.songs, songs...)
-		m.menus = append(m.menus, GetViewFromSongs(songs)...)
+		m.menus = append(m.menus, utils.GetViewFromSongs(songs)...)
 		m.offset = offset
 
-		return true
+		return true, nil
 	}
 }
 

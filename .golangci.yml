@@ -13,8 +13,7 @@ run:
   tests: true
   # List of build tags, all linters use it.
   # Default: [].
-  build-tags:
-    - wireinject
+  build-tags: []
   # Which dirs to skip: issues from them won't be reported.
   # Can use regexp here: `generated.*`, regexp is applied on full path,
   # including the path prefix if one is set.

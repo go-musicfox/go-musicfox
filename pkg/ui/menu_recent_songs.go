@@ -1,19 +1,22 @@
 package ui
 
 import (
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/pkg/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/netease-music/service"
 )
 
 type RecentSongsMenu struct {
-	DefaultMenu
-	menus []MenuItem
+	baseMenu
+	menus []model.MenuItem
 	songs []structs.Song
 }
 
-func NewRecentSongsMenu() *RecentSongsMenu {
-	return new(RecentSongsMenu)
+func NewRecentSongsMenu(base baseMenu) *RecentSongsMenu {
+	return &RecentSongsMenu{
+		baseMenu: base,
+	}
 }
 
 func (m *RecentSongsMenu) IsSearchable() bool {
@@ -28,30 +31,30 @@ func (m *RecentSongsMenu) GetMenuKey() string {
 	return "recent_songs"
 }
 
-func (m *RecentSongsMenu) MenuViews() []MenuItem {
+func (m *RecentSongsMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *RecentSongsMenu) BeforeEnterMenuHook() Hook {
-	return func(model *NeteaseModel) bool {
-		if utils.CheckUserInfo(model.user) == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+func (m *RecentSongsMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		}
 
 		recentSongService := service.RecordRecentSongsService{}
 		code, response := recentSongService.RecordRecentSongs()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			NeedLoginHandle(model, enterMenu)
-			return false
+			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			return false, page
 		} else if codeType != utils.Success {
-			return false
+			return false, nil
 		}
 		m.songs = utils.GetRecentSongs(response)
-		m.menus = GetViewFromSongs(m.songs)
+		m.menus = utils.GetViewFromSongs(m.songs)
 
-		return true
+		return true, nil
 	}
 }
 
