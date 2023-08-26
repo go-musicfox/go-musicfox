@@ -141,7 +141,7 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, a *model.App) (bool, model.P
 	case "E":
 		// 追加到播放列表末尾
 		addSongToPlaylist(h.netease, false)
-	case "h", "U":
+	case "u", "U":
 		// 清除歌曲缓存
 		clearSongCache(h.netease)
 	case "r", "R":
