@@ -85,7 +85,7 @@ export async function getFolderSizeBin(
   });
 
   if (stderr) {
-    throw stderr;
+    throw new Error(stderr)
   }
 
   if (pretty) {
@@ -145,7 +145,7 @@ export function createGetFolderSizeBinIpc(
   go.stderr.on("data", (item: Buffer) => {
     const [base, ...error] = String(item).split(",");
     const { reject } = tasks.get(base);
-    reject(error.toString());
+    reject(new Error(error.toString()));
     tasks.delete(base);
   });
 

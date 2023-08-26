@@ -8,7 +8,7 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
-	github.com/charmbracelet/lipgloss v0.7.1
+	github.com/charmbracelet/lipgloss v0.8.0
 	github.com/ebitengine/purego v0.4.0
 	github.com/faiface/beep v1.1.0
 	github.com/fhs/gompd/v2 v2.3.0
@@ -19,15 +19,15 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.2.2
-	github.com/markthree/go-get-folder-size v0.3.4
-	github.com/mattn/go-runewidth v0.0.14
+	github.com/markthree/go-get-folder-size v0.5.0
+	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
-	github.com/tosone/minimp3 v1.0.1
+	github.com/tosone/minimp3 v1.0.2
 	go.etcd.io/bbolt v1.3.7
 )
 

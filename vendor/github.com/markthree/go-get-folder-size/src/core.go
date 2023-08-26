@@ -1,73 +1,98 @@
 package core
 
 import (
-	"fmt"
+	"io/fs"
 	"os"
 	"path"
-	"sync"
-	"sync/atomic"
-
-	"github.com/panjf2000/ants/v2"
 )
 
-var pool, _ = ants.NewPool(1000000)
+type EntrySizeChan chan int64
 
-func calc(folder string) (total int64, e error) {
+func ValuePromise[T any](ch chan T) (func(T), func() T) {
+	resolve := func(result T) {
+		ch <- result
+	}
+	value := func() T {
+		return <-ch
+	}
+	return resolve, value
+}
+
+func StatusPromise[T any](ch chan T, err chan error) (func(T), func(error), func() (T, error)) {
+	resolve := func(result T) {
+		ch <- result
+	}
+	reject := func(errValue error) {
+		err <- errValue
+	}
+	status := func() (T, error) {
+		select {
+		case value := <-ch:
+			return value, nil
+		case errValue := <-err:
+			var zero T
+			return zero, errValue
+		}
+	}
+	return resolve, reject, status
+}
+
+func Invoke(folder string) (size int64, e error) {
+	gracefulExit := func(err error) {
+		e = err
+		size = 0
+	}
+
 	entrys, err := os.ReadDir(folder)
 	if err != nil {
-		return 0, err
+		gracefulExit(err)
+		return
 	}
 	entrysLen := len(entrys)
 	if entrysLen == 0 {
-		return 0, nil
+		gracefulExit(nil)
+		return
 	}
-	var wg sync.WaitGroup
-	wg.Add(entrysLen)
+	errChan := make(chan error)
+	sizeChan := make(EntrySizeChan, entrysLen)
 
-	fileSize := int64(0)
+	resolve, reject, status := StatusPromise(sizeChan, errChan)
+
 	for i := 0; i < entrysLen; i++ {
-		entry := entrys[i]
-		if entry.IsDir() {
-			pool.Submit(func() {
-				defer wg.Done()
-				size, err := calc(path.Join(folder, entry.Name()))
+		go func(entry fs.DirEntry) {
+			if entry.IsDir() {
+				subFolderSize, err := Invoke(path.Join(folder, entry.Name()))
 				if err != nil {
-					panic(err)
+					reject(err)
+					return
 				}
-				atomic.AddInt64(&total, size)
-			})
-			continue
-		}
-		// Normal files
-		info, err := entry.Info()
-		if err != nil {
-			panic(err)
-		}
-		fileSize += info.Size()
-		wg.Done()
+				resolve(subFolderSize)
+				return
+			}
+
+			info, err := entry.Info()
+			if err != nil {
+				reject(err)
+				return
+			}
+			resolve(info.Size())
+		}(entrys[i])
 	}
-	wg.Wait()
-	total += fileSize
-	return total, nil
+
+	for i := 0; i < entrysLen; i++ {
+		newSize, newErr := status()
+		if newErr != nil {
+			gracefulExit(newErr)
+			return
+		}
+		size += newSize
+	}
+	return size, nil
 }
 
-// Parallel execution, fast enough
-func Parallel(folder string) (total int64, e error) {
-	// catch panic
-	defer func() {
-		if err := recover(); err != nil {
-			e = fmt.Errorf("%v", err)
-		}
-	}()
+func LooseInvoke(folder string) int64 {
+	size := int64(0)
 
-	total, err := calc(folder)
-	if err != nil {
-		return 0, err
-	}
-	return total, nil
-}
-
-func looseCalc(folder string) (total int64) {
 	entrys, err := os.ReadDir(folder)
 	if err != nil {
 		return 0
@@ -76,33 +101,26 @@ func looseCalc(folder string) (total int64) {
 	if entrysLen == 0 {
 		return 0
 	}
-	var wg sync.WaitGroup
-	wg.Add(entrysLen)
+	sizeChan := make(EntrySizeChan, entrysLen)
+	resolve, value := ValuePromise(sizeChan)
 
-	fileSize := int64(0)
 	for i := 0; i < entrysLen; i++ {
-		entry := entrys[i]
-
-		if entry.IsDir() {
-			pool.Submit(func() {
-				defer wg.Done()
-				size := looseCalc(path.Join(folder, entry.Name()))
-				atomic.AddInt64(&total, size)
-			})
-			continue
-		}
-		// Normal files
-		info, err := entry.Info()
-		if err == nil {
-			fileSize += info.Size()
-		}
-		wg.Done()
+		go func(entry fs.DirEntry) {
+			if entry.IsDir() {
+				subFolderSize := LooseInvoke(path.Join(folder, entry.Name()))
+				resolve(subFolderSize)
+				return
+			}
+			info, err := entry.Info()
+			if err != nil {
+				resolve(0)
+				return
+			}
+			resolve(info.Size())
+		}(entrys[i])
 	}
-	wg.Wait()
-	total += fileSize
-	return total
-}
-
-func LooseParallel(folder string) (total int64) {
-	return looseCalc(folder)
+	for i := 0; i < entrysLen; i++ {
+		size += value()
+	}
+	return size
 }
