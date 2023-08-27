@@ -1,5 +1,5 @@
 PACKAGE_NAME          := go-musicfox
-GOLANG_CROSS_VERSION  ?= v1.20.6
+GOLANG_CROSS_VERSION  ?= v1.21.0
 INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/pkg/constants
 LDFLAGS               := -s -w
 LASTFM_KEY            ?=
