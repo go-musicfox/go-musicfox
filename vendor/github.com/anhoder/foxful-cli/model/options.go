@@ -20,11 +20,12 @@ type Options struct {
 
 	TeaOptions []tea.ProgramOption // Tea program options
 
-	InitPage      InitPage
-	MainMenuTitle *MenuItem
-	Ticker        Ticker      // Ticker for render
-	MainMenu      Menu        // Entry menu of app
-	Components    []Component // Custom Extra components
+	InitPage        InitPage
+	MainMenuTitle   *MenuItem
+	Ticker          Ticker          // Ticker for render
+	MainMenu        Menu            // Entry menu of app
+	LocalSearchMenu LocalSearchMenu // Local search result menu
+	Components      []Component     // Custom Extra components
 
 	KBControllers    []KeyboardController
 	MouseControllers []MouseController

@@ -14,25 +14,21 @@ func (m searchableMenus) Len() int {
 	return len(m)
 }
 
-type LocalSearchMenu struct {
+type LocalSearchMenuImpl struct {
 	Menu
 	resItems fuzzy.Matches
 }
 
-func NewSearchMenu(originMenu Menu, search string) *LocalSearchMenu {
-	menu := &LocalSearchMenu{
-		Menu:     originMenu,
-		resItems: fuzzy.FindFrom(search, searchableMenus(originMenu.MenuViews())),
-	}
-
-	return menu
+func DefaultSearchMenu() *LocalSearchMenuImpl {
+	return &LocalSearchMenuImpl{}
 }
 
-func (m *LocalSearchMenu) IsLocatable() bool {
-	return false
+func (m *LocalSearchMenuImpl) Search(originMenu Menu, search string) {
+	m.Menu = originMenu
+	m.resItems = fuzzy.FindFrom(search, searchableMenus(originMenu.MenuViews()))
 }
 
-func (m *LocalSearchMenu) MenuViews() []MenuItem {
+func (m *LocalSearchMenuImpl) MenuViews() []MenuItem {
 	var (
 		items []MenuItem
 		menus = m.Menu.MenuViews()
@@ -52,7 +48,7 @@ func (m *LocalSearchMenu) MenuViews() []MenuItem {
 	return items
 }
 
-func (m *LocalSearchMenu) SubMenu(a *App, index int) Menu {
+func (m *LocalSearchMenuImpl) SubMenu(a *App, index int) Menu {
 	if index > len(m.resItems)-1 {
 		return nil
 	}
@@ -60,7 +56,7 @@ func (m *LocalSearchMenu) SubMenu(a *App, index int) Menu {
 	return m.Menu.SubMenu(a, m.resItems[index].Index)
 }
 
-func (m *LocalSearchMenu) RealDataIndex(index int) int {
+func (m *LocalSearchMenuImpl) RealDataIndex(index int) int {
 	if index > len(m.resItems)-1 {
 		return 0
 	}
@@ -68,10 +64,10 @@ func (m *LocalSearchMenu) RealDataIndex(index int) int {
 	return m.resItems[index].Index
 }
 
-func (m *LocalSearchMenu) BottomOutHook() Hook {
+func (m *LocalSearchMenuImpl) BottomOutHook() Hook {
 	return nil
 }
 
-func (m *LocalSearchMenu) TopOutHook() Hook {
+func (m *LocalSearchMenuImpl) TopOutHook() Hook {
 	return nil
 }
