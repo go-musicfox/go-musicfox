@@ -65,7 +65,7 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, a *model.App) (bool, model.P
 		return true, newPage, a.Tick(time.Nanosecond)
 	case "w", "W":
 		logout()
-		return true, main, tea.Quit
+		return true, nil, tea.Quit
 	case "-", "−", "ー": // half-width, full-width and katakana
 		player.DownVolume()
 	case "=", "＝":
