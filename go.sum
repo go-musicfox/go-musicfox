@@ -1,6 +1,6 @@
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/anhoder/foxful-cli v0.1.0 h1:lSaiqAsoB+/VebTedyl29QmNK+d4K+T0u4PHEv3Sbbk=
-github.com/anhoder/foxful-cli v0.1.0/go.mod h1:U03HgMRwkemXtB8dac2QorgJnDft0QdHP9b2qa4do8A=
+github.com/anhoder/foxful-cli v0.1.1 h1:9xxd09hdlYqLA1Q3b4a2DVB2iiL/9l2Yy9LzijPb3QU=
+github.com/anhoder/foxful-cli v0.1.1/go.mod h1:U03HgMRwkemXtB8dac2QorgJnDft0QdHP9b2qa4do8A=
 github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU=
 github.com/anhoder/gcli/v2 v2.3.5/go.mod h1:AOxm27rFzNDLpBrwbW1pAh3ofebpXOQk/9x009qC9y8=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=

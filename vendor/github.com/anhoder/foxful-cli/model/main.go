@@ -649,7 +649,12 @@ func (m *Main) mouseMsgHandle(msg tea.MouseMsg, a *App) (Page, tea.Cmd) {
 
 func (m *Main) searchMenuHandle() {
 	m.inSearching = false
-	m.EnterMenu(NewSearchMenu(m.menu, m.searchInput.Value()), &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
+	var searchMenu = m.options.LocalSearchMenu
+	if m.options.LocalSearchMenu == nil {
+		searchMenu = DefaultSearchMenu()
+	}
+	searchMenu.Search(m.menu, m.searchInput.Value())
+	m.EnterMenu(searchMenu, &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
 	m.searchInput.Blur()
 	m.searchInput.Reset()
 }

@@ -67,6 +67,11 @@ type Menu interface {
 	TopOutHook() Hook
 }
 
+type LocalSearchMenu interface {
+	Menu
+	Search(menu Menu, search string)
+}
+
 type DefaultMenu struct {
 }
 
