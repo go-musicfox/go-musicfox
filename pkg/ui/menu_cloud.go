@@ -47,7 +47,7 @@ func (m *CloudMenu) MenuViews() []model.MenuItem {
 func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
 			return false, page
 		}
 
@@ -63,7 +63,7 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
 			return false, page
 		} else if codeType != utils.Success {
 			return false, nil
@@ -94,7 +94,7 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+			page, _ := m.netease.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})

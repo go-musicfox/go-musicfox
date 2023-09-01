@@ -51,7 +51,7 @@ func NewNetease(app *model.App) *Netease {
 }
 
 // ToLoginPage 需要登录的处理
-func (n *Netease) ToLoginPage(callback func(newMenu model.Menu, newTitle *model.MenuItem) model.Page) (model.Page, tea.Cmd) {
+func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
 	n.login.AfterLogin = callback
 	return n.login, tickLogin(time.Nanosecond)
 }

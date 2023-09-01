@@ -88,7 +88,7 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
 		if m.userId == CurUser && utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
 			return false, page
 		}
 
@@ -100,7 +100,7 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 
 		codeType, playlists, hasMore := getUserPlaylists(userId, m.limit, m.offset)
 		if codeType == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
 			return false, page
 		} else if codeType != utils.Success {
 			return false, nil
@@ -132,7 +132,7 @@ func (m *UserPlaylistMenu) BottomOutHook() model.Hook {
 		m.offset = m.offset + len(m.menus)
 		codeType, playlists, hasMore := getUserPlaylists(userId, m.limit, m.offset)
 		if codeType == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+			page, _ := m.netease.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})
