@@ -71,7 +71,7 @@ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		codeType, songs := getSongsInPlaylist(m.playlistId, configs.ConfigRegistry.MainShowAllSongsOfPlaylist)
 		if codeType == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(main.EnterMenu)
+			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
 			return false, page
 		} else if codeType != utils.Success {
 			return false, nil
