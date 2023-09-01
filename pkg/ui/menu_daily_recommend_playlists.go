@@ -45,7 +45,7 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *model.App, index int) model.Men
 func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
+			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
@@ -59,7 +59,7 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := recommendPlaylists.RecommendResource()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuLoginCallback(main))
+			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != utils.Success {
 			return false, nil

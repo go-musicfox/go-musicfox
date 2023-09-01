@@ -452,11 +452,3 @@ func (l *LoginPage) loginSuccessHandle(n *Netease, userInfo []byte) model.Page {
 	}
 	return newPage
 }
-
-type LoginCallback func() model.Page
-
-func EnterMenuLoginCallback(main *model.Main) LoginCallback {
-	return func() model.Page {
-		return main.EnterMenu(nil, nil)
-	}
-}
