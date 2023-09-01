@@ -712,7 +712,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := utils.CheckCode(code)
 	if codeType == utils.NeedLogin {
-		page, _ := p.netease.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := p.netease.ToLoginPage(func() model.Page {
 			p.Intelligence(appendMode)
 			return nil
 		})

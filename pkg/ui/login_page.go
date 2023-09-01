@@ -54,7 +54,7 @@ type LoginPage struct {
 	qrLoginStep   int
 	qrLoginUniKey string
 	tips          string
-	AfterLogin    func(newMenu model.Menu, newTitle *model.MenuItem) model.Page
+	AfterLogin    LoginCallback
 }
 
 func NewLoginPage(netease *Netease) (login *LoginPage) {
@@ -448,7 +448,15 @@ func (l *LoginPage) loginSuccessHandle(n *Netease, userInfo []byte) model.Page {
 
 	var newPage model.Page
 	if l.AfterLogin != nil {
-		newPage = l.AfterLogin(nil, nil)
+		newPage = l.AfterLogin()
 	}
 	return newPage
+}
+
+type LoginCallback func() model.Page
+
+func EnterMenuLoginCallback(main *model.Main) LoginCallback {
+	return func() model.Page {
+		return main.EnterMenu(nil, nil)
+	}
 }

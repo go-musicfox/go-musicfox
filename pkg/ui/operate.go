@@ -31,7 +31,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			likePlayingSong(m, isLike)
 			return nil
 		})
@@ -48,7 +48,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+			page, _ := m.ToLoginPage(func() model.Page {
 				likePlayingSong(m, isLike)
 				return nil
 			})
@@ -149,7 +149,7 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 	songs := me.Songs()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			likeSelectedSong(m, isLike)
 			return nil
 		})
@@ -166,7 +166,7 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := utils.CheckCode(code)
 		if codeType == utils.NeedLogin {
-			page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+			page, _ := m.ToLoginPage(func() model.Page {
 				likeSelectedSong(m, isLike)
 				return nil
 			})
@@ -241,7 +241,7 @@ func trashPlayingSong(m *Netease) model.Page {
 	}
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			trashPlayingSong(m)
 			return nil
 		})
@@ -280,7 +280,7 @@ func trashSelectedSong(m *Netease) model.Page {
 	songs := me.Songs()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			trashSelectedSong(m)
 			return nil
 		})
@@ -501,7 +501,7 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 	defer loading.complete()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			collectSelectedPlaylist(m, isCollect)
 			return nil
 		})
@@ -613,7 +613,7 @@ func openAddSongToUserPlaylistMenu(m *Netease, isSelected, isAdd bool) model.Pag
 	defer loading.complete()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			openAddSongToUserPlaylistMenu(m, isSelected, isAdd)
 			return nil
 		})
@@ -661,7 +661,7 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 	defer loading.complete()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
-		page, _ := m.ToLoginPage(func(newMenu model.Menu, newTitle *model.MenuItem) model.Page {
+		page, _ := m.ToLoginPage(func() model.Page {
 			addSongToUserPlaylist(m, isAdd)
 			return nil
 		})
