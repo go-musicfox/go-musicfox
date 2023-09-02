@@ -50,19 +50,19 @@ func (m *LastfmAuth) BeforeEnterMenuHook() model.Hook {
 func (m *LastfmAuth) SubMenu(mod_el *model.App, _ int) model.Menu {
 	var err error
 
-	loading := NewLoading(m.netease)
-	loading.start()
+	loading := model.NewLoading(m.netease.MustMain())
+	loading.Start()
 
 	if m.netease.lastfmUser == nil {
 		m.netease.lastfmUser = &storage.LastfmUser{}
 	}
 	m.netease.lastfmUser.SessionKey, err = m.netease.lastfm.GetSession(m.token)
 	if err != nil {
-		loading.complete()
+		loading.Complete()
 		return NewLastfmRes(m.baseMenu, "授权", err, 1)
 	}
 	user, err := m.netease.lastfm.GetUserInfo(map[string]interface{}{})
-	loading.complete()
+	loading.Complete()
 	if err != nil {
 		return NewLastfmRes(m.baseMenu, "授权", err, 1)
 	}

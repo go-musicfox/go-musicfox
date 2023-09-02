@@ -155,7 +155,7 @@ func (d *defaultTicker) Start() error {
 		for {
 			select {
 			case <-d.stop:
-				break
+				return
 			case d.t = <-d.ticker.C:
 				// ignore data race at d.t
 				select {

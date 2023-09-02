@@ -1,9 +1,11 @@
 module github.com/go-musicfox/go-musicfox
 
-go 1.18
+go 1.21
+
+toolchain go1.21.0
 
 require (
-	github.com/anhoder/foxful-cli v0.1.1
+	github.com/anhoder/foxful-cli v0.1.2
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1

@@ -155,9 +155,9 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, a *model.App) (bool, model.P
 }
 
 func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {
-	loading := NewLoading(h.netease)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(h.netease.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var menu = h.netease.MustMain().CurMenu()
 	if _, ok := menu.(*AddToUserPlaylistMenu); ok {

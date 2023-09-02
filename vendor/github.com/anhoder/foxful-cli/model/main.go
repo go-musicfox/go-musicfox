@@ -676,14 +676,14 @@ func (m *Main) MoveUp() Page {
 	if m.isDualColumn {
 		if m.selectedIndex-2 < 0 && topHook != nil {
 			loading := NewLoading(m)
-			loading.start()
+			loading.Start()
 			if res, newPage = topHook(m); !res {
-				loading.complete()
+				loading.Complete()
 				return newPage
 			}
 			// update menu ui
 			m.menuList = m.menu.MenuViews()
-			loading.complete()
+			loading.Complete()
 		}
 		if m.selectedIndex-2 < 0 {
 			return nil
@@ -692,13 +692,13 @@ func (m *Main) MoveUp() Page {
 	} else {
 		if m.selectedIndex-1 < 0 && topHook != nil {
 			loading := NewLoading(m)
-			loading.start()
+			loading.Start()
 			if res, newPage = topHook(m); !res {
-				loading.complete()
+				loading.Complete()
 				return newPage
 			}
 			m.menuList = m.menu.MenuViews()
-			loading.complete()
+			loading.Complete()
 		}
 		if m.selectedIndex-1 < 0 {
 			return nil
@@ -720,13 +720,13 @@ func (m *Main) MoveDown() Page {
 	if m.isDualColumn {
 		if m.selectedIndex+2 > len(m.menuList)-1 && bottomHook != nil {
 			loading := NewLoading(m)
-			loading.start()
+			loading.Start()
 			if res, newPage = bottomHook(m); !res {
-				loading.complete()
+				loading.Complete()
 				return newPage
 			}
 			m.menuList = m.menu.MenuViews()
-			loading.complete()
+			loading.Complete()
 		}
 		if m.selectedIndex+2 > len(m.menuList)-1 {
 			return nil
@@ -735,13 +735,13 @@ func (m *Main) MoveDown() Page {
 	} else {
 		if m.selectedIndex+1 > len(m.menuList)-1 && bottomHook != nil {
 			loading := NewLoading(m)
-			loading.start()
+			loading.Start()
 			if res, newPage = bottomHook(m); !res {
-				loading.complete()
+				loading.Complete()
 				return newPage
 			}
 			m.menuList = m.menu.MenuViews()
-			loading.complete()
+			loading.Complete()
 		}
 		if m.selectedIndex+1 > len(m.menuList)-1 {
 			return nil
@@ -772,13 +772,13 @@ func (m *Main) MoveRight() Page {
 	)
 	if bottomHook := m.menu.BottomOutHook(); m.selectedIndex >= len(m.menuList)-1 && bottomHook != nil {
 		loading := NewLoading(m)
-		loading.start()
+		loading.Start()
 		if res, newPage = bottomHook(m); !res {
-			loading.complete()
+			loading.Complete()
 			return newPage
 		}
 		m.menuList = m.menu.MenuViews()
-		loading.complete()
+		loading.Complete()
 	}
 	if m.selectedIndex >= len(m.menuList)-1 {
 		return nil
@@ -819,12 +819,12 @@ func (m *Main) PrePage() Page {
 	)
 	if prePageHook := m.menu.BeforePrePageHook(); prePageHook != nil {
 		loading := NewLoading(m)
-		loading.start()
+		loading.Start()
 		if res, newPage = prePageHook(m); !res {
-			loading.complete()
+			loading.Complete()
 			return newPage
 		}
-		loading.complete()
+		loading.Complete()
 	}
 	if m.menuCurPage <= 1 {
 		return nil
@@ -840,12 +840,12 @@ func (m *Main) NextPage() Page {
 	)
 	if nextPageHook := m.menu.BeforeNextPageHook(); nextPageHook != nil {
 		loading := NewLoading(m)
-		loading.start()
+		loading.Start()
 		if res, newPage = nextPageHook(m); !res {
-			loading.complete()
+			loading.Complete()
 			return newPage
 		}
-		loading.complete()
+		loading.Complete()
 	}
 	if m.menuCurPage >= int(math.Ceil(float64(len(m.menuList))/float64(m.menuPageSize))) {
 		return nil
@@ -887,13 +887,13 @@ func (m *Main) EnterMenu(newMenu Menu, newTitle *MenuItem) Page {
 	)
 	if enterMenuHook := newMenu.BeforeEnterMenuHook(); enterMenuHook != nil {
 		loading := NewLoading(m)
-		loading.start()
+		loading.Start()
 		if res, newPage = enterMenuHook(m); !res {
-			loading.complete()
+			loading.Complete()
 			m.menuStack.Pop() // 压入的重新弹出
 			return newPage
 		}
-		loading.complete()
+		loading.Complete()
 	}
 	if newMenu != nil {
 		newMenu.FormatMenuItem(newTitle)
@@ -922,13 +922,13 @@ func (m *Main) BackMenu() Page {
 	)
 	if backMenuHook := m.menu.BeforeBackMenuHook(); backMenuHook != nil {
 		loading := NewLoading(m)
-		loading.start()
+		loading.Start()
 		if res, newPage = backMenuHook(m); !res {
-			loading.complete()
+			loading.Complete()
 			m.menuStack.Push(stackItem) // 弹出的重新压入
 			return newPage
 		}
-		loading.complete()
+		loading.Complete()
 	}
 	m.menu.FormatMenuItem(m.menuTitle) // 重新格式化
 
