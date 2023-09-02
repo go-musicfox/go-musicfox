@@ -405,9 +405,9 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
-	loading := NewLoading(p.netease)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(p.netease.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayerSnapshot{}, storage.PlayerSnapshot{
