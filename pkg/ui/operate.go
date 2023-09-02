@@ -22,9 +22,9 @@ import (
 
 // likePlayingSong like/unlike playing song
 func likePlayingSong(m *Netease, isLike bool) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if m.player.curSongIndex >= len(m.player.playlist) {
 		return nil
@@ -133,9 +133,9 @@ func logout() {
 
 // likeSelectedSong like/unlike selected song
 func likeSelectedSong(m *Netease, isLike bool) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -232,9 +232,9 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 
 // trashPlayingSong 标记为不喜欢
 func trashPlayingSong(m *Netease) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if m.player.curSongIndex >= len(m.player.playlist) {
 		return nil
@@ -264,9 +264,9 @@ func trashPlayingSong(m *Netease) model.Page {
 
 // trashSelectedSong 标记为不喜欢
 func trashSelectedSong(m *Netease) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -303,9 +303,9 @@ func trashSelectedSong(m *Netease) model.Page {
 
 // 下载当前音乐
 func downloadSelectedSong(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -321,9 +321,9 @@ func downloadSelectedSong(m *Netease) {
 }
 
 func downloadPlayingSong(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if m.player.curSongIndex >= len(m.player.playlist) {
 		return
@@ -333,9 +333,9 @@ func downloadPlayingSong(m *Netease) {
 }
 
 func albumOfPlayingSong(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -355,9 +355,9 @@ func albumOfPlayingSong(m *Netease) {
 }
 
 func albumOfSelectedSong(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -379,9 +379,9 @@ func albumOfSelectedSong(m *Netease) {
 }
 
 func artistOfPlayingSong(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -411,9 +411,9 @@ func artistOfPlayingSong(m *Netease) {
 }
 
 func artistOfSelectedSong(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -446,9 +446,9 @@ func artistOfSelectedSong(m *Netease) {
 }
 
 func openPlayingSongInWeb(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if m.player.curSongIndex >= len(m.player.playlist) {
 		return
@@ -459,9 +459,9 @@ func openPlayingSongInWeb(m *Netease) {
 }
 
 func openSelectedItemInWeb(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -496,9 +496,9 @@ func openSelectedItemInWeb(m *Netease) {
 
 // collectSelectedPlaylist 收藏选中歌单
 func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
@@ -560,9 +560,9 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 
 // addSongToPlaylist 添加歌曲到播放列表
 func addSongToPlaylist(m *Netease, addToNext bool) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -608,9 +608,9 @@ func addSongToPlaylist(m *Netease, addToNext bool) {
 
 // openAddSongToUserPlaylistMenu 打开添加歌曲到用户歌单菜单
 func openAddSongToUserPlaylistMenu(m *Netease, isSelected, isAdd bool) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
@@ -656,9 +656,9 @@ func openAddSongToUserPlaylistMenu(m *Netease, isSelected, isAdd bool) model.Pag
 
 // addSongToUserPlaylist 添加歌曲到用户歌单
 func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
@@ -736,9 +736,9 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 
 // 从播放列表删除选中歌曲,仅在当前播放列表界面有效
 func delSongFromPlaylist(m *Netease) model.Page {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		main = m.MustMain()
@@ -798,9 +798,9 @@ func delSongFromPlaylist(m *Netease) model.Page {
 }
 
 func clearSongCache(m *Netease) {
-	loading := NewLoading(m)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
 	err := utils.ClearMusicCache()
 	if err != nil {
 		utils.Notify(utils.NotifyContent{

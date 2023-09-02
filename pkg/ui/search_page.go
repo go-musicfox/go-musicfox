@@ -155,9 +155,9 @@ func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 		s.tips = util.SetFgStyle("关键词不得为空", termenv.ANSIBrightRed)
 		return s, nil
 	}
-	loading := NewLoading(s.netease, s.menuTitle)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(s.netease.MustMain(), s.menuTitle)
+	loading.Start()
+	defer loading.Complete()
 
 	var (
 		code     float64

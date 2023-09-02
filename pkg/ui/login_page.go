@@ -303,9 +303,9 @@ func (l *LoginPage) qrButtonTextByStep() string {
 }
 
 func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
-	loading := NewLoading(l.netease, l.menuTitle)
-	loading.start()
-	defer loading.complete()
+	loading := model.NewLoading(l.netease.MustMain(), l.menuTitle)
+	loading.Start()
+	defer loading.Complete()
 
 	switch l.index {
 	case submitIndex:
