@@ -141,7 +141,7 @@ func (m *UserPlaylistMenu) BottomOutHook() model.Hook {
 			return false, nil
 		}
 
-		m.playlists = playlists
+		m.playlists = append(m.playlists, playlists...)
 		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
 			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
