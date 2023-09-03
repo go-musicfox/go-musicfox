@@ -85,6 +85,5 @@ release-debug-shell:
     	-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
-    	-w /go/src/go-musicfox \
     	--entrypoint="/bin/bash" \
     	$(GORELEASER_IMAGE)
