@@ -48,6 +48,9 @@ func (t *LRCTimer) Start() {
 		transContent = t.transFile.FindByTimeMs(current.StartTimeMs)
 		isLast       = t.curIndex >= len(fragments)-1
 	)
+	for _, l := range t.listeners {
+		l(current.StartTimeMs, current.Content, transContent, isLast, t.curIndex)
+	}
 	for {
 		select {
 		case <-t.stop:
