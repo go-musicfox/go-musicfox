@@ -167,7 +167,7 @@ func NewPlayer(netease *Netease) *Player {
 func (p *Player) Update(_ tea.Msg, _ *model.App) {
 	var main = p.netease.MustMain()
 	// 播放器歌词
-	spaceHeight := p.netease.WindowHeight() - 4 - main.MenuBottomRow()
+	spaceHeight := p.netease.WindowHeight() - 5 - main.SearchBarBottomRow()
 	if spaceHeight < 4 || !configs.ConfigRegistry.MainShowLyric {
 		// 不显示歌词
 		p.showLyric = false
@@ -175,11 +175,11 @@ func (p *Player) Update(_ tea.Msg, _ *model.App) {
 		p.showLyric = true
 		if spaceHeight > 6 {
 			// 5行歌词
-			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 3
+			p.lyricStartRow = (p.netease.WindowHeight()-3+main.SearchBarBottomRow())/2 - 3
 			p.lyricLines = 5
 		} else {
 			// 3行歌词
-			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 2
+			p.lyricStartRow = (p.netease.WindowHeight()-3+main.SearchBarBottomRow())/2 - 2
 			p.lyricLines = 3
 		}
 	}
