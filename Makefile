@@ -1,6 +1,6 @@
 PACKAGE_NAME          := go-musicfox
 GOLANG_CROSS_VERSION  ?= v1.21.0
-INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/pkg/constants
+INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/internal/constants
 LDFLAGS               := -s -w
 LASTFM_KEY            ?=
 LASTFM_SECRET         ?=
@@ -85,6 +85,5 @@ release-debug-shell:
     	-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
-    	-w /go/src/go-musicfox \
     	--entrypoint="/bin/bash" \
     	$(GORELEASER_IMAGE)
