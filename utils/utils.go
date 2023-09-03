@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/pkg/configs"
-	"github.com/go-musicfox/go-musicfox/pkg/constants"
-	"github.com/go-musicfox/go-musicfox/pkg/structs"
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 
 	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/model"
-	ds "github.com/go-musicfox/go-musicfox/pkg/structs"
+	ds "github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
 // GetViewFromSongs 从歌曲列表获取View
