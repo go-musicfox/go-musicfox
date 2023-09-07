@@ -173,7 +173,7 @@ func (p *Player) Update(_ tea.Msg, _ *model.App) {
 		p.showLyric = false
 	} else {
 		p.showLyric = true
-		if spaceHeight > 6 {
+		if spaceHeight > 7 {
 			// 5行歌词
 			p.lyricStartRow = (p.netease.WindowHeight()-3+main.SearchBarBottomRow())/2 - 3
 			p.lyricLines = 5
