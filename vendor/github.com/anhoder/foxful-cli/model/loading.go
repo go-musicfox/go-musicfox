@@ -23,7 +23,7 @@ func (l *Loading) DisplayNotOnlyOnMain() {
 
 func (l *Loading) Start() {
 	if !l.displayNotOnlyOnMain {
-		if _, ok :=l.main.app.CurPage().(*Main); !ok {
+		if _, ok := l.main.app.CurPage().(*Main); !ok {
 			return
 		}
 	}
@@ -32,7 +32,7 @@ func (l *Loading) Start() {
 
 func (l *Loading) Complete() {
 	if !l.displayNotOnlyOnMain {
-		if _, ok :=l.main.app.CurPage().(*Main); !ok {
+		if _, ok := l.main.app.CurPage().(*Main); !ok {
 			return
 		}
 	}
