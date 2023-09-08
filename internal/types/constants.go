@@ -28,6 +28,9 @@ const AppDBName = "musicfox"
 const AppIniFile = "go-musicfox.ini"
 const AppPrimaryRandom = "random"
 const AppPrimaryColor = "#f90022"
+const SubmitText = "确认"
+const SearchPlaceholder = "搜索"
+const SearchResult = "搜索结果"
 const AppHttpTimeout = time.Second * 5
 
 const MainLoadingText = "[加载中...]"

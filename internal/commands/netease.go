@@ -37,6 +37,10 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	var opts = model.DefaultOptions()
 	configs.ConfigRegistry.FillToModelOpts(opts)
 
+	model.Submit = types.SubmitText
+	model.SearchPlaceholder = types.SearchPlaceholder
+	model.SearchResult = types.SearchResult
+
 	var (
 		netease      = ui.NewNetease(model.NewApp(opts))
 		eventHandler = ui.NewEventHandler(netease)
