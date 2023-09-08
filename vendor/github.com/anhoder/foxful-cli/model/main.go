@@ -73,7 +73,7 @@ func NewMain(app *App, options *Options) (m *Main) {
 		mouseCtrls:   options.MouseControllers,
 	}
 	m.menuList = m.menu.MenuViews()
-	m.searchInput.Placeholder = " 搜索"
+	m.searchInput.Placeholder = " " + SearchPlaceholder
 	m.searchInput.Prompt = util.GetFocusedPrompt()
 	m.searchInput.TextStyle = util.GetPrimaryFontStyle()
 	m.searchInput.CharLimit = 32
@@ -116,20 +116,20 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.isDualColumn = msg.Width >= 75 && m.options.DualColumn
 
-		// 菜单开始行、列
+		// menu start col, row
 		m.menuStartRow = msg.Height / 3
 		if !m.options.WhetherDisplayTitle && m.menuStartRow > 1 {
 			m.menuStartRow--
 		}
 		if m.isDualColumn {
 			m.menuStartColumn = (msg.Width - 60) / 2
-			m.menuBottomRow = m.menuStartRow + int(math.Ceil(float64(m.menuPageSize)/2)) + 1 // 1 为 search bar
+			m.menuBottomRow = m.menuStartRow + int(math.Ceil(float64(m.menuPageSize)/2)) + 1 // 1 for search bar
 		} else {
 			m.menuStartColumn = (msg.Width - 20) / 2
-			m.menuBottomRow = m.menuStartRow + m.menuPageSize + 1 // 1 为 search bar
+			m.menuBottomRow = m.menuStartRow + m.menuPageSize + 1 // 1 for search bar
 		}
 
-		// 菜单标题开始行、列
+		// menu title satrt col, row
 		m.menuTitleStartColumn = m.menuStartColumn
 		if m.options.WhetherDisplayTitle && m.menuStartRow > 2 {
 			if m.menuStartRow > 4 {
@@ -145,7 +145,7 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 			}
 		}
 
-		// 组件更新
+		// components
 		for _, component := range m.components {
 			if component == nil {
 				continue
@@ -166,7 +166,7 @@ func (m *Main) View(a *App) string {
 
 	var (
 		builder strings.Builder
-		top     int // 距离顶部的行数
+		top     int // num of rows from top
 	)
 
 	// title
@@ -357,7 +357,7 @@ func (m *Main) menuListView(a *App, top *int) string {
 		menuListBuilder.WriteString("\n")
 	}
 
-	// 补全空白
+	// fill blanks
 	if maxLines > lines {
 		var windowWidth = a.WindowWidth()
 		if windowWidth-m.menuStartColumn > 0 {
@@ -645,7 +645,7 @@ func (m *Main) searchMenuHandle() {
 		searchMenu = DefaultSearchMenu()
 	}
 	searchMenu.Search(m.menu, m.searchInput.Value())
-	m.EnterMenu(searchMenu, &MenuItem{Title: "搜索结果", Subtitle: m.searchInput.Value()})
+	m.EnterMenu(searchMenu, &MenuItem{Title: SearchResult, Subtitle: m.searchInput.Value()})
 	m.searchInput.Blur()
 	m.searchInput.Reset()
 }
@@ -881,7 +881,7 @@ func (m *Main) EnterMenu(newMenu Menu, newTitle *MenuItem) Page {
 		loading.Start()
 		if res, newPage = enterMenuHook(m); !res {
 			loading.Complete()
-			m.menuStack.Pop() // 压入的重新弹出
+			m.menuStack.Pop()
 			return newPage
 		}
 		loading.Complete()
@@ -916,12 +916,12 @@ func (m *Main) BackMenu() Page {
 		loading.Start()
 		if res, newPage = backMenuHook(m); !res {
 			loading.Complete()
-			m.menuStack.Push(stackItem) // 弹出的重新压入
+			m.menuStack.Push(stackItem)
 			return newPage
 		}
 		loading.Complete()
 	}
-	m.menu.FormatMenuItem(m.menuTitle) // 重新格式化
+	m.menu.FormatMenuItem(m.menuTitle)
 
 	stackMenu, ok := stackItem.(*menuStackItem)
 	if !ok {

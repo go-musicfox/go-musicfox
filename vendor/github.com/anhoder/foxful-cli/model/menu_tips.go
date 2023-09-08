@@ -11,7 +11,7 @@ type MenuTips struct {
 	originMenu *MenuItem
 }
 
-func NewMainTips(m *Main, originMenu *MenuItem) *MenuTips {
+func NewMenuTips(m *Main, originMenu *MenuItem) *MenuTips {
 	return &MenuTips{
 		main:       m,
 		originMenu: originMenu,
