@@ -1,13 +1,13 @@
 package storage
 
 import (
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type LastSignIn struct{}
 
 func (p LastSignIn) GetDbName() string {
-	return constants.AppDBName
+	return types.AppDBName
 }
 
 func (p LastSignIn) GetTableName() string {

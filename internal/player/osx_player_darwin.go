@@ -9,6 +9,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/avcore"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 )
 
@@ -22,9 +23,9 @@ type osxPlayer struct {
 	timer    *utils.Timer
 
 	volume    int
-	state     State
+	state     types.State
 	timeChan  chan time.Duration
-	stateChan chan State
+	stateChan chan types.State
 	musicChan chan UrlMusic
 
 	close chan struct{}
@@ -32,9 +33,9 @@ type osxPlayer struct {
 
 func NewOsxPlayer() Player {
 	p := &osxPlayer{
-		state:     Stopped,
+		state:     types.Stopped,
 		timeChan:  make(chan time.Duration),
-		stateChan: make(chan State),
+		stateChan: make(chan types.State),
 		musicChan: make(chan UrlMusic),
 		close:     make(chan struct{}),
 		volume:    100,
@@ -105,7 +106,7 @@ func (p *osxPlayer) listen() {
 	}
 }
 
-func (p *osxPlayer) setState(state State) {
+func (p *osxPlayer) setState(state types.State) {
 	p.state = state
 	select {
 	case p.stateChan <- state:
@@ -127,41 +128,41 @@ func (p *osxPlayer) CurMusic() UrlMusic {
 func (p *osxPlayer) Paused() {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if p.state != Playing {
+	if p.state != types.Playing {
 		return
 	}
 	p.player.Pause()
 	p.timer.Pause()
-	p.setState(Paused)
+	p.setState(types.Paused)
 }
 
 func (p *osxPlayer) Resume() {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if p.state == Playing {
+	if p.state == types.Playing {
 		return
 	}
 	go p.timer.Run()
 	p.player.Play()
-	p.setState(Playing)
+	p.setState(types.Playing)
 }
 
 func (p *osxPlayer) Stop() {
 	p.l.Lock()
 	defer p.l.Unlock()
-	if p.state == Stopped {
+	if p.state == types.Stopped {
 		return
 	}
 	p.player.Pause()
 	p.timer.Pause()
-	p.setState(Stopped)
+	p.setState(types.Stopped)
 }
 
 func (p *osxPlayer) Toggle() {
 	switch p.State() {
-	case Paused, Stopped:
+	case types.Paused, types.Stopped:
 		p.Resume()
-	case Playing:
+	case types.Playing:
 		p.Paused()
 	}
 }
@@ -200,11 +201,11 @@ func (p *osxPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *osxPlayer) State() State {
+func (p *osxPlayer) State() types.State {
 	return p.state
 }
 
-func (p *osxPlayer) StateChan() <-chan State {
+func (p *osxPlayer) StateChan() <-chan types.State {
 	return p.stateChan
 }
 

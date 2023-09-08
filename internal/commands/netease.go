@@ -7,7 +7,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/mattn/go-runewidth"
@@ -27,11 +27,11 @@ func NewPlayerCommand() *gcli.Command {
 func runPlayer(_ *gcli.Command, _ []string) error {
 	if GlobalOptions.PProfMode {
 		go utils.PanicRecoverWrapper(true, func() {
-			panic(http.ListenAndServe(":"+strconv.Itoa(configs.ConfigRegistry.MainPProfPort), nil))
+			panic(http.ListenAndServe(":"+strconv.Itoa(configs.ConfigRegistry.Main.PProfPort), nil))
 		})
 	}
 
-	http.DefaultClient.Timeout = constants.AppHttpTimeout
+	http.DefaultClient.Timeout = types.AppHttpTimeout
 	runewidth.DefaultCondition.EastAsianWidth = false
 
 	var opts = model.DefaultOptions()

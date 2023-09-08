@@ -2,23 +2,20 @@ package ui
 
 import (
 	"encoding/json"
-	"fmt"
-	"math/rand"
 	"os"
 	"path"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/go-musicfox/internal/automator"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
-	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
@@ -98,7 +95,7 @@ func (n *Netease) InitHook(_ *model.App) {
 
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
-			var playMode player.Mode
+			var playMode types.Mode
 			if err = json.Unmarshal(jsonStr, &playMode); err == nil {
 				n.player.mode = playMode
 			}
@@ -137,7 +134,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			)
 			jsonStr, _ := table.GetByKVModel(extInfo)
 			if len(jsonStr) != 0 {
-				if err := json.Unmarshal(jsonStr, &extInfo); err == nil && utils.CompareVersion(extInfo.StorageVersion, constants.AppVersion, true) {
+				if err := json.Unmarshal(jsonStr, &extInfo); err == nil && utils.CompareVersion(extInfo.StorageVersion, types.AppVersion, true) {
 					needUpdate = false
 				}
 			}
@@ -148,9 +145,9 @@ func (n *Netease) InitHook(_ *model.App) {
 				_ = os.RemoveAll(path.Join(localDir, "musicfox-notifier.app"))
 
 				// 删除旧logo
-				_ = os.Remove(path.Join(localDir, constants.DefaultNotifyIcon))
+				_ = os.Remove(path.Join(localDir, types.DefaultNotifyIcon))
 
-				extInfo.StorageVersion = constants.AppVersion
+				extInfo.StorageVersion = types.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)
 			}
 		}
@@ -162,7 +159,7 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		// 签到
-		if config.StartupSignIn {
+		if config.Startup.SignIn {
 			var lastSignIn int
 			if jsonStr, err := table.GetByKVModel(storage.LastSignIn{}); err == nil && len(jsonStr) > 0 {
 				_ = json.Unmarshal(jsonStr, &lastSignIn)
@@ -185,8 +182,8 @@ func (n *Netease) InitHook(_ *model.App) {
 				utils.Notify(utils.NotifyContent{
 					Title:   "签到成功",
 					Text:    "今日手机、PC端签到成功",
-					Url:     constants.AppGithubUrl,
-					GroupId: constants.GroupID,
+					Url:     types.AppGithubUrl,
+					GroupId: types.GroupID,
 				})
 			}
 		}
@@ -198,96 +195,31 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		// 检查更新
-		if config.StartupCheckUpdate {
+		if config.Startup.CheckUpdate {
 			if ok, newVersion := utils.CheckUpdate(); ok {
 				if runtime.GOOS == "windows" {
 					n.MustMain().EnterMenu(
 						NewCheckUpdateMenu(newBaseMenu(n)),
-						&model.MenuItem{Title: "新版本: " + newVersion, Subtitle: "当前版本: " + constants.AppVersion},
+						&model.MenuItem{Title: "新版本: " + newVersion, Subtitle: "当前版本: " + types.AppVersion},
 					)
 				}
 
 				utils.Notify(utils.NotifyContent{
 					Title: "发现新版本: " + newVersion,
 					Text:  "去看看呗",
-					Url:   constants.AppLatestReleases,
+					Url:   types.AppLatestReleases,
 				})
 			}
 		}
 
 		// 自动播放
-		// TODO optimize
-		if config.AutoPlay {
-			var (
-				notice   string // 错误通知文本
-				index    int    // 歌曲索引
-				length   int    // 歌单长度（用于获取歌曲索引）
-				getAll   bool   // 是否需要获取全部歌曲
-				playlist []structs.Song
-				playmode = map[string]player.Mode{
-					"listLoop":    player.PmListLoop,
-					"order":       player.PmOrder,
-					"singleLoop":  player.PmSingleLoop,
-					"random":      player.PmRandom,
-					"intelligent": player.PmIntelligent,
-					"last":        n.player.mode,
-				}
-			)
-
-			if utils.CheckUserInfo(n.user) == utils.NeedLogin {
-				notice = "账号未登录"
-				goto Complete
-			}
-			if config.AutoPlayOffset >= 1000 || config.AutoPlayOffset < 0 {
-				getAll = true
-			}
-			if mode, ok := playmode[config.AutoPlayMode]; ok {
-				n.player.mode = mode
-			} else {
-				notice = fmt.Sprintf("无效的播放模式：%s", config.AutoPlayMode)
-				goto Complete
-			}
-			switch config.AutoPlayList {
-			case "dailyReco":
-				playlist, notice = getDailySongs()
-			case "like":
-				playlist, notice = getLikeSongs(n.user.UserId, getAll)
-			case "no":
-				playlist = n.player.playlist
-			default: // name:xxx
-				if !strings.HasPrefix(config.AutoPlayList, "name:") {
-					notice = fmt.Sprintf("歌单格式错误：%s", config.AutoPlayList)
-					goto Complete
-				}
-				name := config.AutoPlayList[5:]
-				playlist, notice = getPlaylistByName(n.user.UserId, name, getAll)
-			}
-			if notice != "" {
-				goto Complete
-			}
-			length = len(playlist)
-			if config.AutoPlayList == "no" {
-				// 保持原来状态
-				index = n.player.curSongIndex
-			} else if n.player.mode != player.PmRandom {
-				if config.AutoPlayOffset >= length || -config.AutoPlayOffset > length {
-					notice = fmt.Sprintf("无效的偏移量：%d", config.AutoPlayOffset)
-					goto Complete
-				} else {
-					index = (config.AutoPlayOffset + length) % length // 无论offset正负都能工作
-				}
-			} else {
-				// 随机播放
-				index = rand.Intn(length)
-			}
-			n.player.playlist = playlist
-			n.player.curSongIndex = index
-			_ = n.player.PlaySong(n.player.playlist[index], DurationNext)
-		Complete:
-			if notice != "" {
+		if config.AutoPlayer.Enable {
+			autoPlayer := automator.NewAutoPlayer(n.user, n.player, config.AutoPlayer)
+			if err := autoPlayer.Start(); err != nil {
+				utils.Logger().Printf("自动播放失败: %v", err)
 				utils.Notify(utils.NotifyContent{
 					Title: "自动播放失败",
-					Text:  notice,
+					Text:  err.Error(),
 				})
 			}
 		}
@@ -300,76 +232,4 @@ func (n *Netease) CloseHook(_ *model.App) {
 
 func (n *Netease) Player() *Player {
 	return n.player
-}
-
-// TODO optimize
-func getDailySongs() (playlist []structs.Song, notice string) {
-	recommendSongs := service.RecommendSongsService{}
-	code, response := recommendSongs.RecommendSongs()
-	codeType := utils.CheckCode(code)
-	if codeType != utils.Success {
-		notice = "网络错误"
-		return
-	}
-	playlist = utils.GetDailySongs(response)
-	return
-}
-
-// TODO optimize
-func getLikeSongs(userId int64, getAll bool) (playlist []structs.Song, notice string) {
-	var (
-		codeType  utils.ResCode
-		playlists []structs.Playlist
-		songs     []structs.Song
-	)
-	codeType, playlists, _ = getUserPlaylists(userId, 1, 0)
-	if codeType != utils.Success {
-		notice = "网络错误"
-		return
-	}
-	codeType, songs = getSongsInPlaylist(playlists[0].Id, getAll)
-	if codeType != utils.Success {
-		notice = "网络错误"
-		return
-	}
-	playlist = songs
-	return
-}
-
-// TODO optimize
-func getPlaylistByName(userId int64, playlistName string, getAll bool) (playlist []structs.Song, notice string) {
-	var (
-		playlistId int64
-		offset     = 0
-		codeType   utils.ResCode
-		playlists  []structs.Playlist
-		hasMore    bool
-	)
-	// 寻找歌单
-Loop:
-	for {
-		codeType, playlists, hasMore = getUserPlaylists(userId, 30, offset)
-		if codeType != utils.Success {
-			notice = "网络错误"
-			return
-		}
-		offset += len(playlists)
-		for _, playlist := range playlists {
-			if playlist.Name == playlistName {
-				playlistId = playlist.Id
-				break Loop
-			}
-		}
-		if !hasMore {
-			notice = fmt.Sprintf("未找到歌单：%s", playlistName)
-			return
-		}
-	}
-	codeType, songs := getSongsInPlaylist(playlistId, getAll)
-	if codeType != utils.Success {
-		notice = "网络错误"
-		return
-	}
-	playlist = songs
-	return
 }

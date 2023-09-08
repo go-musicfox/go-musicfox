@@ -7,7 +7,7 @@ import (
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/go-musicfox/internal/commands"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -18,9 +18,9 @@ func runCLI() {
 	log.SetOutput(utils.LogWriter())
 
 	var app = gcli.NewApp()
-	app.Name = constants.AppName
-	app.Version = constants.AppVersion
-	app.Description = constants.AppDescription
+	app.Name = types.AppName
+	app.Version = types.AppVersion
+	app.Description = types.AppDescription
 	app.GOptsBinder = func(gf *gcli.Flags) {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")
 	}
@@ -28,22 +28,22 @@ func runCLI() {
 	// 加载config
 	utils.LoadIniConfig()
 
-	util.PrimaryColor = configs.ConfigRegistry.MainPrimaryColor
+	util.PrimaryColor = configs.ConfigRegistry.Main.PrimaryColor
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
 		randomColor  = util.GetPrimaryColor()
 		logoColorful = util.SetFgStyle(logo, randomColor)
 	)
 
-	gcli.AppHelpTemplate = fmt.Sprintf(constants.AppHelpTemplate, logoColorful)
+	gcli.AppHelpTemplate = fmt.Sprintf(types.AppHelpTemplate, logoColorful)
 	app.Logo.Text = logoColorful
 
 	// 更新netease配置
-	neteaseutil.UNMSwitch = configs.ConfigRegistry.UNMSwitch
-	neteaseutil.Sources = configs.ConfigRegistry.UNMSources
-	neteaseutil.SearchLimit = configs.ConfigRegistry.UNMSearchLimit
-	neteaseutil.EnableLocalVip = configs.ConfigRegistry.UNMEnableLocalVip
-	neteaseutil.UnlockSoundEffects = configs.ConfigRegistry.UNMUnlockSoundEffects
+	neteaseutil.UNMSwitch = configs.ConfigRegistry.UNM.Enable
+	neteaseutil.Sources = configs.ConfigRegistry.UNM.Sources
+	neteaseutil.SearchLimit = configs.ConfigRegistry.UNM.SearchLimit
+	neteaseutil.EnableLocalVip = configs.ConfigRegistry.UNM.EnableLocalVip
+	neteaseutil.UnlockSoundEffects = configs.ConfigRegistry.UNM.UnlockSoundEffects
 
 	var playerCommand = commands.NewPlayerCommand()
 	app.Add(playerCommand)

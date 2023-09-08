@@ -123,10 +123,10 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 		}
 		if m.isDualColumn {
 			m.menuStartColumn = (msg.Width - 60) / 2
-			m.menuBottomRow = m.menuStartRow + int(math.Ceil(float64(m.menuPageSize)/2)) - 1
+			m.menuBottomRow = m.menuStartRow + int(math.Ceil(float64(m.menuPageSize)/2)) + 1 // 1 为 search bar
 		} else {
 			m.menuStartColumn = (msg.Width - 20) / 2
-			m.menuBottomRow = m.menuStartRow + m.menuPageSize - 1
+			m.menuBottomRow = m.menuStartRow + m.menuPageSize + 1 // 1 为 search bar
 		}
 
 		// 菜单标题开始行、列
@@ -191,10 +191,8 @@ func (m *Main) View(a *App) string {
 	}
 
 	// search bar
-	if m.menu.IsSearchable() {
-		builder.WriteString("\n\n")
-		top += 2
-	}
+	builder.WriteString("\n\n")
+	top += 2
 
 	// components view
 	for _, component := range m.components {
@@ -227,13 +225,6 @@ func (m *Main) MenuStartColumn() int {
 
 func (m *Main) MenuStartRow() int {
 	return m.menuStartRow
-}
-
-func (m *Main) SearchBarBottomRow() int {
-	if m.menu.IsSearchable() {
-		return m.menuBottomRow + 2
-	}
-	return m.menuBottomRow
 }
 
 func (m *Main) MenuBottomRow() int {

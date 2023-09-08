@@ -10,10 +10,9 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
 	"github.com/skratchdot/open-golang/open"
 
-	"github.com/go-musicfox/go-musicfox/internal/constants"
-	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/buger/jsonparser"
@@ -88,8 +87,8 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		utils.Notify(utils.NotifyContent{
 			Title:   msg,
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
 		})
 		return nil
 	}
@@ -104,14 +103,14 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 			Title:   "已添加到我喜欢的歌曲",
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
 			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
 			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	}
 	return nil
@@ -125,8 +124,8 @@ func logout() {
 	utils.Notify(utils.NotifyContent{
 		Title:   "登出成功",
 		Text:    "已清理用户信息",
-		Url:     constants.AppGithubUrl,
-		GroupId: constants.GroupID,
+		Url:     types.AppGithubUrl,
+		GroupId: types.GroupID,
 	})
 	_ = os.Remove(path.Join(utils.GetLocalDataDir(), "cookie"))
 }
@@ -206,8 +205,8 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 		utils.Notify(utils.NotifyContent{
 			Title:   msg,
 			Text:    songs[selectedIndex].Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
 		})
 		return nil
 	}
@@ -217,14 +216,14 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 			Title:   "已添加到我喜欢的歌曲",
 			Text:    songs[selectedIndex].Name,
 			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
 			Text:    songs[selectedIndex].Name,
 			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	}
 	return nil
@@ -256,8 +255,8 @@ func trashPlayingSong(m *Netease) model.Page {
 	utils.Notify(utils.NotifyContent{
 		Title:   "已标记为不喜欢",
 		Text:    m.player.playlist[m.player.curSongIndex].Name,
-		Url:     constants.AppGithubUrl,
-		GroupId: constants.GroupID,
+		Url:     types.AppGithubUrl,
+		GroupId: types.GroupID,
 	})
 	return nil
 }
@@ -295,8 +294,8 @@ func trashSelectedSong(m *Netease) model.Page {
 	utils.Notify(utils.NotifyContent{
 		Title:   "已标记为不喜欢",
 		Text:    songs[selectedIndex].Name,
-		Url:     constants.AppGithubUrl,
-		GroupId: constants.GroupID,
+		Url:     types.AppGithubUrl,
+		GroupId: types.GroupID,
 	})
 	return nil
 }
@@ -534,8 +533,8 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 		utils.Notify(utils.NotifyContent{
 			Title:   msg,
 			Text:    playlists[main.SelectedIndex()].Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
 		})
 		return nil
 	}
@@ -544,15 +543,15 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已收藏歌单",
 			Text:    playlists[main.SelectedIndex()].Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title:   "已移除收藏歌单",
 			Text:    playlists[main.SelectedIndex()].Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
 		})
 	}
 	return nil
@@ -602,7 +601,7 @@ func addSongToPlaylist(m *Netease, addToNext bool) {
 		Title:   notifyTitle,
 		Text:    songs[selectedIndex].Name,
 		Url:     utils.WebUrlOfSong(songs[selectedIndex].Id),
-		GroupId: constants.GroupID,
+		GroupId: types.GroupID,
 	})
 }
 
@@ -699,8 +698,8 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 		utils.Notify(utils.NotifyContent{
 			Title:   msg,
 			Text:    me.song.Name,
-			Url:     constants.AppGithubUrl,
-			GroupId: constants.GroupID,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
 		})
 		main.BackMenu()
 		return nil
@@ -716,7 +715,7 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 		Title:   title,
 		Text:    me.song.Name,
 		Url:     utils.WebUrlOfPlaylist(playlist.Id),
-		GroupId: constants.GroupID,
+		GroupId: types.GroupID,
 	})
 	main.BackMenu()
 	switch mt := menu.(type) {
@@ -756,7 +755,7 @@ func delSongFromPlaylist(m *Netease) model.Page {
 	// 选中歌曲为当前播放歌曲时处理逻辑
 	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == me.Songs()[selectedIndex].Id {
 		// 防止用户快速删除当前播放歌曲导致错位
-		if m.player.State() >= player.Playing && m.player.playedTime.Seconds() < 2 {
+		if m.player.State() >= types.Playing && m.player.playedTime.Seconds() < 2 {
 			return nil
 		}
 		// 末尾歌曲删除向前退
@@ -806,13 +805,13 @@ func clearSongCache(m *Netease) {
 		utils.Notify(utils.NotifyContent{
 			Title:   "清除缓存失败",
 			Text:    err.Error(),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	} else {
 		utils.Notify(utils.NotifyContent{
 			Title:   "清除缓存成功",
 			Text:    "缓存已清除",
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	}
 }

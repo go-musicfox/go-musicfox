@@ -9,15 +9,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/fhs/gompd/v2/mpd"
 )
 
-var stateMapping = map[string]State{
-	"play":  Playing,
-	"pause": Paused,
-	"stop":  Stopped,
+var stateMapping = map[string]types.State{
+	"play":  types.Playing,
+	"pause": types.Paused,
+	"stop":  types.Stopped,
 }
 
 func mpdErrorHandler(err error, ignore bool) {
@@ -46,9 +47,9 @@ type mpdPlayer struct {
 	latestPlayTime time.Time //避免切歌时产生的stop信号造成影响
 
 	volume    int
-	state     State
+	state     types.State
 	timeChan  chan time.Duration
-	stateChan chan State
+	stateChan chan types.State
 	musicChan chan UrlMusic
 
 	close chan struct{}
@@ -96,9 +97,9 @@ func NewMpdPlayer(bin, configFile, network, address string) Player {
 		network:    network,
 		address:    address,
 		watcher:    watcher,
-		state:      Stopped,
+		state:      types.Stopped,
 		timeChan:   make(chan time.Duration),
-		stateChan:  make(chan State),
+		stateChan:  make(chan types.State),
 		musicChan:  make(chan UrlMusic),
 		close:      make(chan struct{}),
 	}
@@ -129,23 +130,23 @@ func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 	mpdErrorHandler(err, true)
 
 	state := stateMapping[status["state"]]
-	if subsystem == "player" && (state != Stopped || time.Since(p.latestPlayTime) >= time.Second*2) {
+	if subsystem == "player" && (state != types.Stopped || time.Since(p.latestPlayTime) >= time.Second*2) {
 		switch state {
-		case Playing:
+		case types.Playing:
 			if p.timer != nil {
 				go p.timer.Run()
 			}
-			p.setState(Playing)
-		case Paused:
+			p.setState(types.Playing)
+		case types.Paused:
 			if p.timer != nil {
 				p.timer.Pause()
 			}
-			p.setState(Paused)
-		case Stopped:
+			p.setState(types.Paused)
+		case types.Stopped:
 			if p.timer != nil {
 				p.timer.Stop()
 			}
-			p.setState(Stopped)
+			p.setState(types.Stopped)
 		}
 	}
 	if vol := status["volume"]; vol != "" {
@@ -267,7 +268,7 @@ func (p *mpdPlayer) watch() {
 	}
 }
 
-func (p *mpdPlayer) setState(state State) {
+func (p *mpdPlayer) setState(state types.State) {
 	p.state = state
 	select {
 	case p.stateChan <- state:
@@ -309,9 +310,9 @@ func (p *mpdPlayer) Stop() {
 
 func (p *mpdPlayer) Toggle() {
 	switch p.State() {
-	case Paused, Stopped:
+	case types.Paused, types.Stopped:
 		p.Resume()
-	case Playing:
+	case types.Playing:
 		p.Paused()
 	}
 }
@@ -337,11 +338,11 @@ func (p *mpdPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *mpdPlayer) State() State {
+func (p *mpdPlayer) State() types.State {
 	return p.state
 }
 
-func (p *mpdPlayer) StateChan() <-chan State {
+func (p *mpdPlayer) StateChan() <-chan types.State {
 	return p.stateChan
 }
 

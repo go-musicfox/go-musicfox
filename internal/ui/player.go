@@ -13,13 +13,13 @@ import (
 	"github.com/anhoder/foxful-cli/util"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/state_handler"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
 
@@ -80,7 +80,7 @@ type Player struct {
 	progressRamp      []string
 
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
-	mode         player.Mode
+	mode         types.Mode
 	stateHandler *state_handler.Handler
 	ctrl         chan CtrlSignal
 
@@ -90,7 +90,7 @@ type Player struct {
 func NewPlayer(netease *Netease) *Player {
 	p := &Player{
 		netease:           netease,
-		mode:              player.PmListLoop,
+		mode:              types.PmListLoop,
 		ctrl:              make(chan CtrlSignal),
 		lyricNowScrollBar: utils.NewXScrollBar(),
 	}
@@ -120,7 +120,7 @@ func NewPlayer(netease *Netease) *Player {
 				return
 			case s := <-p.Player.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				if s != player.Stopped {
+				if s != types.Stopped {
 					p.netease.Rerender(false)
 					break
 				}
@@ -151,7 +151,7 @@ func NewPlayer(netease *Netease) *Player {
 				}
 				if p.lrcTimer != nil {
 					select {
-					case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.ConfigRegistry.MainLyricOffset):
+					case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.ConfigRegistry.Main.LyricOffset):
 					default:
 					}
 				}
@@ -167,19 +167,19 @@ func NewPlayer(netease *Netease) *Player {
 func (p *Player) Update(_ tea.Msg, _ *model.App) {
 	var main = p.netease.MustMain()
 	// 播放器歌词
-	spaceHeight := p.netease.WindowHeight() - 5 - main.SearchBarBottomRow()
-	if spaceHeight < 4 || !configs.ConfigRegistry.MainShowLyric {
+	spaceHeight := p.netease.WindowHeight() - 5 - main.MenuBottomRow()
+	if spaceHeight < 3 || !configs.ConfigRegistry.Main.ShowLyric {
 		// 不显示歌词
 		p.showLyric = false
 	} else {
 		p.showLyric = true
-		if spaceHeight > 7 {
+		if spaceHeight >= 5 {
 			// 5行歌词
-			p.lyricStartRow = (p.netease.WindowHeight()-3+main.SearchBarBottomRow())/2 - 3
+			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 3
 			p.lyricLines = 5
 		} else {
 			// 3行歌词
-			p.lyricStartRow = (p.netease.WindowHeight()-3+main.SearchBarBottomRow())/2 - 2
+			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 2
 			p.lyricLines = 3
 		}
 	}
@@ -191,7 +191,7 @@ func (p *Player) View(a *model.App, main *model.Main) (view string, lines int) {
 	playerBuilder.WriteString(p.songView())
 	playerBuilder.WriteString("\n\n")
 	playerBuilder.WriteString(p.progressView())
-	return playerBuilder.String(), a.WindowHeight() - main.SearchBarBottomRow()
+	return playerBuilder.String(), a.WindowHeight() - main.MenuBottomRow()
 }
 
 // lyricView 歌词显示UI
@@ -202,16 +202,16 @@ func (p *Player) lyricView() string {
 	)
 
 	if !p.showLyric {
-		if endRow-main.SearchBarBottomRow() > 0 {
-			return strings.Repeat("\n", endRow-main.SearchBarBottomRow())
+		if endRow-main.MenuBottomRow() > 0 {
+			return strings.Repeat("\n", endRow-main.MenuBottomRow())
 		} else {
 			return ""
 		}
 	}
 
 	var lyricBuilder strings.Builder
-	if p.lyricStartRow > main.SearchBarBottomRow() {
-		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-main.SearchBarBottomRow()))
+	if p.lyricStartRow > main.MenuBottomRow() {
+		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-main.MenuBottomRow()))
 	}
 
 	var startCol int
@@ -236,7 +236,6 @@ func (p *Player) lyricView() string {
 				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
 				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
 			}
-
 			lyricBuilder.WriteString("\n")
 		}
 	// 5行歌词
@@ -274,10 +273,10 @@ func (p *Player) songView() string {
 	if main.MenuStartColumn()-4 > 0 {
 		prefixLen += 12
 		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()-4))
-		builder.WriteString(util.SetFgStyle(fmt.Sprintf("[%s] ", player.ModeName(p.mode)), termenv.ANSIBrightMagenta))
+		builder.WriteString(util.SetFgStyle(fmt.Sprintf("[%s] ", types.ModeName(p.mode)), termenv.ANSIBrightMagenta))
 		builder.WriteString(util.SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	}
-	if p.State() == player.Playing {
+	if p.State() == types.Playing {
 		builder.WriteString(util.SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
 	} else {
 		builder.WriteString(util.SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
@@ -436,7 +435,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		return nil
 	}
 
-	if configs.ConfigRegistry.MainShowLyric {
+	if configs.ConfigRegistry.Main.ShowLyric {
 		go p.updateLyric(song.Id)
 	}
 
@@ -454,7 +453,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
 		Icon:    utils.AddResizeParamForPicUrl(song.PicUrl, 60),
 		Url:     utils.WebUrlOfSong(song.Id),
-		GroupId: constants.GroupID,
+		GroupId: types.GroupID,
 	})
 
 	p.playErrCount = 0
@@ -462,10 +461,41 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	return nil
 }
 
+func (p *Player) StartPlay() {
+	if len(p.playlist) <= p.curSongIndex {
+		return
+	}
+	_ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)
+}
+
+func (p *Player) Mode() types.Mode {
+	return p.mode
+}
+
+func (p *Player) SetMode(mode types.Mode) {
+	p.mode = mode
+}
+
+func (p *Player) Playlist() []structs.Song {
+	return p.playlist
+}
+
+func (p *Player) SetPlaylist(playlist []structs.Song) {
+	p.playlist = playlist
+}
+
+func (p *Player) CurSongIndex() int {
+	return p.curSongIndex
+}
+
+func (p *Player) SetCurSongIndex(index int) {
+	p.curSongIndex = index
+}
+
 // NextSong 下一曲
 func (p *Player) NextSong(isManual bool) {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
-		if p.mode == player.PmIntelligent {
+		if p.mode == types.PmIntelligent {
 			p.Intelligence(true)
 		}
 
@@ -484,19 +514,19 @@ func (p *Player) NextSong(isManual bool) {
 	}
 
 	switch p.mode {
-	case player.PmListLoop, player.PmIntelligent:
+	case types.PmListLoop, types.PmIntelligent:
 		p.curSongIndex++
 		if p.curSongIndex > len(p.playlist)-1 {
 			p.curSongIndex = 0
 		}
-	case player.PmSingleLoop:
+	case types.PmSingleLoop:
 		if isManual && p.curSongIndex < len(p.playlist)-1 {
 			p.curSongIndex++
 		} else if isManual && p.curSongIndex >= len(p.playlist)-1 {
 			return
 		}
 		// else pass
-	case player.PmRandom:
+	case types.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
 		}
@@ -505,7 +535,7 @@ func (p *Player) NextSong(isManual bool) {
 		} else {
 			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
 		}
-	case player.PmOrder:
+	case types.PmOrder:
 		if p.curSongIndex >= len(p.playlist)-1 {
 			return
 		}
@@ -522,7 +552,7 @@ func (p *Player) NextSong(isManual bool) {
 // PreviousSong 上一曲
 func (p *Player) PreviousSong(isManual bool) {
 	if len(p.playlist) == 0 || p.curSongIndex >= len(p.playlist)-1 {
-		if p.mode == player.PmIntelligent {
+		if p.mode == types.PmIntelligent {
 			p.Intelligence(true)
 		}
 
@@ -541,19 +571,19 @@ func (p *Player) PreviousSong(isManual bool) {
 	}
 
 	switch p.mode {
-	case player.PmListLoop, player.PmIntelligent:
+	case types.PmListLoop, types.PmIntelligent:
 		p.curSongIndex--
 		if p.curSongIndex < 0 {
 			p.curSongIndex = len(p.playlist) - 1
 		}
-	case player.PmSingleLoop:
+	case types.PmSingleLoop:
 		if isManual && p.curSongIndex > 0 {
 			p.curSongIndex--
 		} else if isManual && p.curSongIndex <= 0 {
 			return
 		}
 		// else pass
-	case player.PmRandom:
+	case types.PmRandom:
 		if len(p.playlist)-1 < 0 {
 			return
 		}
@@ -562,7 +592,7 @@ func (p *Player) PreviousSong(isManual bool) {
 		} else {
 			p.curSongIndex = rand.Intn(len(p.playlist) - 1)
 		}
-	case player.PmOrder:
+	case types.PmOrder:
 		if p.curSongIndex <= 0 {
 			return
 		}
@@ -585,17 +615,17 @@ func (p *Player) Seek(duration time.Duration) {
 }
 
 // SetPlayMode 播放模式切换
-func (p *Player) SetPlayMode(playMode player.Mode) {
+func (p *Player) SetPlayMode(playMode types.Mode) {
 	if playMode > 0 {
 		p.mode = playMode
 	} else {
 		switch p.mode {
-		case player.PmListLoop, player.PmOrder, player.PmSingleLoop:
+		case types.PmListLoop, types.PmOrder, types.PmSingleLoop:
 			p.mode++
-		case player.PmRandom:
-			p.mode = player.PmListLoop
+		case types.PmRandom:
+			p.mode = types.PmListLoop
 		default:
-			p.mode = player.PmListLoop
+			p.mode = types.PmListLoop
 		}
 	}
 
@@ -674,7 +704,7 @@ func (p *Player) updateLyric(songId int64) {
 			lrcFile = file
 		}
 	}
-	if configs.ConfigRegistry.MainShowLyricTrans {
+	if configs.ConfigRegistry.Main.ShowLyricTrans {
 		if lrc, err := jsonparser.GetString(response, "tlyric", "lyric"); err == nil && lrc != "" {
 			if file, err := lyric.ReadTranslateLRC(strings.NewReader(lrc)); err == nil {
 				tranLRCFile = file
@@ -731,7 +761,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		p.playlistUpdateAt = time.Now()
 		p.curSongIndex = 0
 	}
-	p.mode = player.PmIntelligent
+	p.mode = types.PmIntelligent
 	p.playingMenuKey = "Intelligent"
 
 	_ = p.PlaySong(p.playlist[p.curSongIndex], DurationNext)

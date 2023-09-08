@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
@@ -156,6 +156,7 @@ func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 		return s, nil
 	}
 	loading := model.NewLoading(s.netease.MustMain(), s.menuTitle)
+	loading.DisplayNotOnlyOnMain()
 	loading.Start()
 	defer loading.Complete()
 
@@ -166,7 +167,7 @@ func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 	searchService := service.SearchService{
 		S:     s.wordsInput.Value(),
 		Type:  strconv.Itoa(int(s.searchType)),
-		Limit: strconv.Itoa(constants.SearchPageSize),
+		Limit: strconv.Itoa(types.SearchPageSize),
 	}
 	code, response = searchService.Search()
 
@@ -211,7 +212,7 @@ func (s *SearchPage) View(a *model.App) string {
 	)
 
 	// title
-	if configs.ConfigRegistry.MainShowTitle {
+	if configs.ConfigRegistry.Main.ShowTitle {
 		builder.WriteString(main.TitleView(a, &top))
 	} else {
 		top++

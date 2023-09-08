@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/json"
 
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type LastfmUser struct {
@@ -15,7 +15,7 @@ type LastfmUser struct {
 }
 
 func (u *LastfmUser) GetDbName() string {
-	return constants.AppDBName
+	return types.AppDBName
 }
 
 func (u *LastfmUser) GetTableName() string {

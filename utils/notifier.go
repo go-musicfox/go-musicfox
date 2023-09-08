@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 
 	"github.com/go-musicfox/notificator"
 	"github.com/pkg/errors"
@@ -116,19 +116,19 @@ type NotifyContent struct {
 }
 
 func Notify(content NotifyContent) {
-	if !configs.ConfigRegistry.MainShowNotify {
+	if !configs.ConfigRegistry.Main.ShowNotify {
 		return
 	}
 
 	notify := NewNotificator(notificator.Options{
-		AppName: constants.AppName,
+		AppName: types.AppName,
 	})
 
 	if runtime.GOOS != "darwin" {
 		localDir := GetLocalDataDir()
-		content.Icon = path.Join(localDir, configs.ConfigRegistry.MainNotifyIcon)
+		content.Icon = path.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
-			content.Icon = path.Join(localDir, constants.DefaultNotifyIcon)
+			content.Icon = path.Join(localDir, types.DefaultNotifyIcon)
 			// 写入logo文件
 			err = CopyFileFromEmbed("embed/logo.png", content.Icon)
 			if err != nil {

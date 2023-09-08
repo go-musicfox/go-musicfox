@@ -2,7 +2,7 @@ package ui
 
 import (
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 
 	"github.com/skratchdot/open-golang/open"
 )
@@ -80,7 +80,7 @@ func (m *HelpMenu) MenuViews() []model.MenuItem {
 
 func (m *HelpMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index == 0 {
-		_ = open.Start(constants.AppGithubUrl)
+		_ = open.Start(types.AppGithubUrl)
 	}
 	return nil
 }

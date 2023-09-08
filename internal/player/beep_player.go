@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/faiface/beep"
@@ -32,11 +32,11 @@ type beepPlayer struct {
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
 
-	state      State
+	state      types.State
 	ctrl       *beep.Ctrl
 	volume     *effects.Volume
 	timeChan   chan time.Duration
-	stateChan  chan State
+	stateChan  chan types.State
 	musicChan  chan UrlMusic
 	httpClient *http.Client
 
@@ -45,10 +45,10 @@ type beepPlayer struct {
 
 func NewBeepPlayer() Player {
 	p := &beepPlayer{
-		state: Stopped,
+		state: types.Stopped,
 
 		timeChan:  make(chan time.Duration),
-		stateChan: make(chan State),
+		stateChan: make(chan types.State),
 		musicChan: make(chan UrlMusic),
 		ctrl: &beep.Ctrl{
 			Paused: false,
@@ -143,7 +143,7 @@ func (p *beepPlayer) listen() {
 						return
 					}
 					// 除了MP3格式，其他格式无需重载
-					if p.curMusic.Type == Mp3 && configs.ConfigRegistry.PlayerBeepMp3Decoder != constants.BeepMiniMp3Decoder {
+					if p.curMusic.Type == Mp3 && configs.ConfigRegistry.Player.BeepMp3Decoder != types.BeepMiniMp3Decoder {
 						// 需再开一次文件，保证其指针变化，否则将概率导致 p.ctrl.Streamer = beep.Seq(……) 直接停止播放
 						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0666)
 						// 使用新的文件后需手动Seek到上次播放处
@@ -227,7 +227,7 @@ func (p *beepPlayer) CurMusic() UrlMusic {
 	return p.curMusic
 }
 
-func (p *beepPlayer) setState(state State) {
+func (p *beepPlayer) setState(state types.State) {
 	p.state = state
 	select {
 	case p.stateChan <- state:
@@ -236,12 +236,12 @@ func (p *beepPlayer) setState(state State) {
 }
 
 // State 当前状态
-func (p *beepPlayer) State() State {
+func (p *beepPlayer) State() types.State {
 	return p.state
 }
 
 // StateChan 状态发生变更
-func (p *beepPlayer) StateChan() <-chan State {
+func (p *beepPlayer) StateChan() <-chan types.State {
 	return p.stateChan
 }
 
@@ -265,10 +265,10 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
 	// minimp3未实现Seek
-	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.ConfigRegistry.PlayerBeepMp3Decoder == constants.BeepMiniMp3Decoder {
+	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.ConfigRegistry.Player.BeepMp3Decoder == types.BeepMiniMp3Decoder {
 		return
 	}
-	if p.state == Playing || p.state == Paused {
+	if p.state == types.Playing || p.state == types.Paused {
 		speaker.Lock()
 		newPos := p.curFormat.SampleRate.N(duration)
 
@@ -336,12 +336,12 @@ func (p *beepPlayer) SetVolume(volume int) {
 }
 
 func (p *beepPlayer) pausedNoLock() {
-	if p.state != Playing {
+	if p.state != types.Playing {
 		return
 	}
 	p.ctrl.Paused = true
 	p.timer.Pause()
-	p.setState(Paused)
+	p.setState(types.Paused)
 }
 
 // Paused 暂停播放
@@ -352,12 +352,12 @@ func (p *beepPlayer) Paused() {
 }
 
 func (p *beepPlayer) resumeNoLock() {
-	if p.state == Playing {
+	if p.state == types.Playing {
 		return
 	}
 	p.ctrl.Paused = false
 	go p.timer.Run()
-	p.setState(Playing)
+	p.setState(types.Playing)
 }
 
 // Resume 继续播放
@@ -368,12 +368,12 @@ func (p *beepPlayer) Resume() {
 }
 
 func (p *beepPlayer) stopNoLock() {
-	if p.state == Stopped {
+	if p.state == types.Stopped {
 		return
 	}
 	p.ctrl.Paused = true
 	p.timer.Pause()
-	p.setState(Stopped)
+	p.setState(types.Stopped)
 }
 
 // Stop 停止
@@ -386,9 +386,9 @@ func (p *beepPlayer) Stop() {
 // Toggle 切换状态
 func (p *beepPlayer) Toggle() {
 	switch p.State() {
-	case Paused, Stopped:
+	case types.Paused, types.Stopped:
 		p.Resume()
-	case Playing:
+	case types.Playing:
 		p.Paused()
 	}
 }

@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 
 	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"
@@ -41,14 +41,14 @@ func GetLocalDataDir() string {
 		if nil != err {
 			panic("未获取到本地数据目录：" + err.Error())
 		}
-		projectDir = path.Join(configDir, constants.AppLocalDataDir)
+		projectDir = path.Join(configDir, types.AppLocalDataDir)
 	}
 
 	// 如果 projectDir 不存在且未设置 MUSICFOX_ROOT 环境变量
 	// 则尝试从默认路径迁移配置
 	if !FileOrDirExists(projectDir) {
 		home, _ := os.UserHomeDir()
-		oldPath := path.Join(home, "."+constants.AppLocalDataDir)
+		oldPath := path.Join(home, "."+types.AppLocalDataDir)
 		if !FileOrDirExists(oldPath) {
 			_ = os.MkdirAll(projectDir, os.ModePerm)
 			return projectDir
@@ -97,7 +97,7 @@ func BinToID(bin []byte) uint64 {
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
 	projectDir := GetLocalDataDir()
-	configFile := path.Join(projectDir, constants.AppIniFile)
+	configFile := path.Join(projectDir, types.AppIniFile)
 	if !FileOrDirExists(configFile) {
 		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
 	}
@@ -106,7 +106,7 @@ func LoadIniConfig() {
 
 // CheckUpdate 检查更新
 func CheckUpdate() (bool, string) {
-	response, err := http.Get(constants.AppCheckUpdateUrl)
+	response, err := http.Get(types.AppCheckUpdateUrl)
 	if err != nil {
 		return false, ""
 	}
@@ -124,7 +124,7 @@ func CheckUpdate() (bool, string) {
 		return false, ""
 	}
 
-	return CompareVersion(tag, constants.AppVersion, false), tag
+	return CompareVersion(tag, types.AppVersion, false), tag
 }
 
 func CompareVersion(v1, v2 string, equal bool) bool {
@@ -188,7 +188,7 @@ func (e FileExistsError) Error() string {
 }
 
 func GetCacheDir() string {
-	cacheDir := configs.ConfigRegistry.MainCacheDir
+	cacheDir := configs.ConfigRegistry.Main.CacheDir
 	if cacheDir == "" {
 		cacheDir = path.Join(GetLocalDataDir(), "cache")
 	}
@@ -196,7 +196,7 @@ func GetCacheDir() string {
 }
 
 func GetDownloadDir() string {
-	downloadDir := configs.ConfigRegistry.MainDownloadDir
+	downloadDir := configs.ConfigRegistry.Main.DownloadDir
 	if downloadDir == "" {
 		downloadDir = path.Join(GetLocalDataDir(), "download")
 	}
@@ -246,7 +246,7 @@ func DownloadFile(url, filename, dirname string) error {
 func getCacheUri(songId int64) (uri string, ok bool) {
 	cacheDir := GetCacheDir()
 	if !FileOrDirExists(cacheDir) {
-		if configs.ConfigRegistry.MainCacheLimit != 0 {
+		if configs.ConfigRegistry.Main.CacheLimit != 0 {
 			_ = os.MkdirAll(cacheDir, os.ModePerm)
 		}
 		return
@@ -386,7 +386,7 @@ func DownloadMusic(song structs.Song) {
 		Title:   "👇🏻正在下载，请稍候...",
 		Text:    song.Name,
 		Url:     FileUrl(downloadDir),
-		GroupId: constants.GroupID,
+		GroupId: types.GroupID,
 	})
 
 	if _, ok := getCacheUri(song.Id); ok {
@@ -400,21 +400,21 @@ func DownloadMusic(song structs.Song) {
 			Title:   "✅下载完成",
 			Text:    song.Name,
 			Url:     FileUrl(downloadDir),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	case FileExistsError:
 		Notify(NotifyContent{
 			Title:   "🙅🏻‍文件已存在",
 			Text:    song.Name,
 			Url:     FileUrl(downloadDir),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 	default:
 		Notify(NotifyContent{
 			Title:   "❌下载失败",
 			Text:    err.Error(),
 			Url:     FileUrl(downloadDir),
-			GroupId: constants.GroupID,
+			GroupId: types.GroupID,
 		})
 		errHandler(err)
 	}
@@ -439,7 +439,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 		errHandler(err)
 		return
 	}
-	if configs.ConfigRegistry.MainCacheLimit != -1 && size > configs.ConfigRegistry.MainCacheLimit*1024*1024 {
+	if configs.ConfigRegistry.Main.CacheLimit != -1 && size > configs.ConfigRegistry.Main.CacheLimit*1024*1024 {
 		return
 	}
 	filename := fmt.Sprintf("%d-%d.%s", song.Id, priority[quality], musicType)
@@ -458,7 +458,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 
 func GetCacheUrl(songId int64) (url, musicType string, ok bool) {
 	url, ok = getCacheUri(songId)
-	if !ok || path.Base(url) < fmt.Sprintf("%d-%d", songId, priority[configs.ConfigRegistry.MainPlayerSongLevel]) {
+	if !ok || path.Base(url) < fmt.Sprintf("%d-%d", songId, priority[configs.ConfigRegistry.Main.PlayerSongLevel]) {
 		return
 	}
 	split := strings.Split(path.Base(url), ".")
@@ -491,7 +491,7 @@ var brMap = map[service.SongQualityLevel]string{
 }
 
 func GetSongUrl(song structs.Song) (url, musicType string, err error) {
-	if configs.ConfigRegistry.MainCacheLimit != 0 {
+	if configs.ConfigRegistry.Main.CacheLimit != 0 {
 		var ok bool
 		if url, musicType, ok = GetCacheUrl(song.Id); ok {
 			return
@@ -500,7 +500,7 @@ func GetSongUrl(song structs.Song) (url, musicType string, err error) {
 
 	urlService := service.SongUrlV1Service{
 		ID:      strconv.FormatInt(song.Id, 10),
-		Level:   configs.ConfigRegistry.MainPlayerSongLevel,
+		Level:   configs.ConfigRegistry.Main.PlayerSongLevel,
 		SkipUNM: true,
 	}
 	code, response := urlService.SongUrl()
@@ -537,7 +537,7 @@ func GetSongUrl(song structs.Song) (url, musicType string, err error) {
 		musicType = "mp3"
 	}
 	err = nil
-	if configs.ConfigRegistry.MainCacheLimit != 0 {
+	if configs.ConfigRegistry.Main.CacheLimit != 0 {
 		go CacheMusic(song, url, musicType, urlService.Level)
 	}
 	return

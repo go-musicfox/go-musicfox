@@ -2,7 +2,7 @@ package ui
 
 import (
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/skratchdot/open-golang/open"
@@ -37,7 +37,7 @@ func (m *CheckUpdateMenu) MenuViews() []model.MenuItem {
 
 func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu {
 	if m.hasUpdate {
-		_ = open.Start(constants.AppGithubUrl)
+		_ = open.Start(types.AppGithubUrl)
 	}
 	return nil
 }
