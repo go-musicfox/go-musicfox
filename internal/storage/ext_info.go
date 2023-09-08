@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type ExtInfo struct {
@@ -9,7 +9,7 @@ type ExtInfo struct {
 }
 
 func (e ExtInfo) GetDbName() string {
-	return constants.AppDBName
+	return types.AppDBName
 }
 
 func (e ExtInfo) GetTableName() string {

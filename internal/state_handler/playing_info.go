@@ -3,13 +3,13 @@ package state_handler
 import (
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/internal/player"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type PlayingInfo struct {
 	TotalDuration  time.Duration
 	PassedDuration time.Duration
-	State          player.State
+	State          types.State
 	Volume         int
 	TrackID        int64
 	PicUrl         string

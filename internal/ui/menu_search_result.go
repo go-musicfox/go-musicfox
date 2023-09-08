@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
 	ds2 "github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/go-musicfox/netease-music/service"
@@ -105,18 +105,18 @@ func (m *SearchResultMenu) BottomOutHook() model.Hook {
 			code     float64
 			response []byte
 		)
-		m.offset += constants.SearchPageSize
+		m.offset += types.SearchPageSize
 		searchService := service.SearchService{
 			S:      m.keyword,
 			Type:   strconv.Itoa(int(m.searchType)),
-			Limit:  strconv.Itoa(constants.SearchPageSize),
+			Limit:  strconv.Itoa(types.SearchPageSize),
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response = searchService.Search()
 
 		codeType := utils.CheckCode(code)
 		if codeType != utils.Success {
-			m.offset -= constants.SearchPageSize
+			m.offset -= types.SearchPageSize
 			return false, nil
 		}
 

@@ -5,8 +5,8 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
-	playerpkg "github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type EventHandler struct {
@@ -186,11 +186,11 @@ func (h *EventHandler) spaceKeyHandle() {
 			return
 		}
 		switch player.State() {
-		case playerpkg.Paused:
+		case types.Paused:
 			h.netease.player.Resume()
-		case playerpkg.Playing:
+		case types.Playing:
 			h.netease.player.Paused()
-		case playerpkg.Stopped:
+		case types.Stopped:
 			_ = player.PlaySong(player.playlist[player.curSongIndex], DurationNext)
 		}
 		return
@@ -198,9 +198,9 @@ func (h *EventHandler) spaceKeyHandle() {
 
 	if inPlayingMenu && songs[selectedIndex].Id == player.playlist[player.curSongIndex].Id {
 		switch player.State() {
-		case playerpkg.Paused:
+		case types.Paused:
 			player.Resume()
-		case playerpkg.Playing:
+		case types.Playing:
 			player.Paused()
 		}
 		return
@@ -217,7 +217,7 @@ func (h *EventHandler) spaceKeyHandle() {
 	player.playlist = newPlaylists
 
 	player.playlistUpdateAt = time.Now()
-	if player.mode == playerpkg.PmIntelligent {
+	if player.mode == types.PmIntelligent {
 		player.SetPlayMode(0)
 	}
 	_ = player.PlaySong(player.playlist[selectedIndex], DurationNext)
@@ -239,7 +239,7 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 			}
 			duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(w)
 			player.Seek(time.Second * time.Duration(duration))
-			if player.State() != playerpkg.Playing {
+			if player.State() != types.Playing {
 				player.Resume()
 			}
 		}

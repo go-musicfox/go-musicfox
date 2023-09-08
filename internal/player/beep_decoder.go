@@ -10,7 +10,7 @@ import (
 	"github.com/faiface/beep/vorbis"
 	"github.com/faiface/beep/wav"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/constants"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/pkg/errors"
 	minimp3pkg "github.com/tosone/minimp3"
 )
@@ -18,8 +18,8 @@ import (
 func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
 	switch t {
 	case Mp3:
-		switch configs.ConfigRegistry.PlayerBeepMp3Decoder {
-		case constants.BeepMiniMp3Decoder:
+		switch configs.ConfigRegistry.Player.BeepMp3Decoder {
+		case types.BeepMiniMp3Decoder:
 			minimp3pkg.BufferSize = 1024 * 50
 			streamer, format, err = minimp3.Decode(r)
 		default:

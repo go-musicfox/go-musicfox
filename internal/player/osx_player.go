@@ -4,6 +4,8 @@ package player
 
 import (
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type osxPlayer struct {
@@ -43,11 +45,11 @@ func (p *osxPlayer) TimeChan() <-chan time.Duration {
 	return nil
 }
 
-func (p *osxPlayer) State() State {
-	return Unknown
+func (p *osxPlayer) State() types.State {
+	return types.Unknown
 }
 
-func (p *osxPlayer) StateChan() <-chan State {
+func (p *osxPlayer) StateChan() <-chan types.State {
 	return nil
 }
 

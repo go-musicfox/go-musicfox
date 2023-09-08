@@ -8,7 +8,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/internal/player"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/prop"
@@ -34,13 +34,13 @@ const (
 	PlaybackStatusStopped PlaybackStatus = "Stopped"
 )
 
-func PlaybackStatusFromPlayer(state player.State) (PlaybackStatus, error) {
+func PlaybackStatusFromPlayer(state types.State) (PlaybackStatus, error) {
 	switch state {
-	case player.Playing:
+	case types.Playing:
 		return PlaybackStatusPlaying, nil
-	case player.Paused:
+	case types.Paused:
 		return PlaybackStatusPaused, nil
-	case player.Stopped:
+	case types.Stopped:
 		return PlaybackStatusStopped, nil
 	}
 	return "", errors.Errorf("unknown playback status: %d", state)

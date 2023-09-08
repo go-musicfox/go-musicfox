@@ -8,16 +8,16 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
-	"github.com/go-musicfox/go-musicfox/internal/player"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 )
 
-var stateMap = map[player.State]mediaplayer.MPNowPlayingPlaybackState{
-	player.Unknown:     mediaplayer.MPNowPlayingPlaybackStateUnknown,
-	player.Playing:     mediaplayer.MPNowPlayingPlaybackStatePlaying,
-	player.Paused:      mediaplayer.MPNowPlayingPlaybackStatePaused,
-	player.Stopped:     mediaplayer.MPNowPlayingPlaybackStateStopped,
-	player.Interrupted: mediaplayer.MPNowPlayingPlaybackStateInterrupted,
+var stateMap = map[types.State]mediaplayer.MPNowPlayingPlaybackState{
+	types.Unknown:     mediaplayer.MPNowPlayingPlaybackStateUnknown,
+	types.Playing:     mediaplayer.MPNowPlayingPlaybackStatePlaying,
+	types.Paused:      mediaplayer.MPNowPlayingPlaybackStatePaused,
+	types.Stopped:     mediaplayer.MPNowPlayingPlaybackStateStopped,
+	types.Interrupted: mediaplayer.MPNowPlayingPlaybackStateInterrupted,
 }
 
 type Handler struct {

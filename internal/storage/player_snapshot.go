@@ -3,8 +3,8 @@ package storage
 import (
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/internal/constants"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type PlayerSnapshot struct {
@@ -14,7 +14,7 @@ type PlayerSnapshot struct {
 }
 
 func (p PlayerSnapshot) GetDbName() string {
-	return constants.AppDBName
+	return types.AppDBName
 }
 
 func (p PlayerSnapshot) GetTableName() string {

@@ -201,7 +201,7 @@ func (l *LoginPage) View(a *model.App) string {
 	)
 
 	// title
-	if configs.ConfigRegistry.MainShowTitle {
+	if configs.ConfigRegistry.Main.ShowTitle {
 		builder.WriteString(mainPage.TitleView(a, &top))
 	} else {
 		top++
@@ -304,6 +304,7 @@ func (l *LoginPage) qrButtonTextByStep() string {
 
 func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 	loading := model.NewLoading(l.netease.MustMain(), l.menuTitle)
+	loading.DisplayNotOnlyOnMain()
 	loading.Start()
 	defer loading.Complete()
 
