@@ -14,6 +14,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 
 	"github.com/buger/jsonparser"
@@ -259,7 +260,7 @@ func (l *LoginPage) View(a *model.App) string {
 	builder.WriteString(btnBlank)
 	builder.WriteString(l.qrLoginButton)
 
-	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - runewidth.StringWidth(model.SubmitText) - runewidth.StringWidth(l.qrButtonTextByStep()) - len(btnBlank)
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - runewidth.StringWidth(types.SubmitText) - runewidth.StringWidth(l.qrButtonTextByStep()) - len(btnBlank)
 	if spaceLen > 0 {
 		builder.WriteString(strings.Repeat(" ", spaceLen))
 	}

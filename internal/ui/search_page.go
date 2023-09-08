@@ -269,7 +269,7 @@ func (s *SearchPage) View(a *model.App) string {
 		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()))
 	}
 	builder.WriteString(s.submitButton)
-	spaceLen := a.WindowWidth() - main.MenuStartColumn() - runewidth.StringWidth(model.SubmitText)
+	spaceLen := a.WindowWidth() - main.MenuStartColumn() - runewidth.StringWidth(types.SubmitText)
 	if spaceLen > 0 {
 		builder.WriteString(strings.Repeat(" ", spaceLen))
 	}
