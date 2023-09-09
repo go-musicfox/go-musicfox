@@ -2,7 +2,7 @@
 
 go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持各种音质级别、UnblockNeteaseMusic、Last.fm、MPRIS 和 macOS 交互响应（睡眠暂停、蓝牙耳机连接断开响应和菜单栏控制等）等功能特性。
 
-**Spotify版本--[Spotifox](https://github.com/go-musicfox/spotifox)**
+**另一个Spotify版 - [Spotifox](https://github.com/go-musicfox/spotifox)**
 
 > UI 基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) 进行了部分定制
 
