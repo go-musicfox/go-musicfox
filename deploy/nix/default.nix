@@ -23,7 +23,7 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/go-musicfox/go-musicfox/internal/constants.AppVersion=${version}"
+    "-X github.com/go-musicfox/go-musicfox/internal/types.AppVersion=${version}"
   ];
 
   nativeBuildInputs = [
