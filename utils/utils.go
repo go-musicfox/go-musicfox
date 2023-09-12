@@ -383,9 +383,9 @@ func DownloadMusic(song structs.Song) {
 
 	downloadDir := GetDownloadDir()
 	Notify(NotifyContent{
-		Title:   "👇🏻正在下载，请稍候...",
-		Text:    song.Name,
-		Url:     FileUrl(downloadDir),
+		Title: "👇🏻正在下载，请稍候...",
+		Text:  song.Name,
+		// Url:     FileUrl(downloadDir),
 		GroupId: types.GroupID,
 	})
 
@@ -397,23 +397,23 @@ func DownloadMusic(song structs.Song) {
 	switch err.(type) {
 	case nil:
 		Notify(NotifyContent{
-			Title:   "✅下载完成",
-			Text:    song.Name,
-			Url:     FileUrl(downloadDir),
+			Title: "✅下载完成",
+			Text:  song.Name,
+			// Url:     FileUrl(ownloadDir),
 			GroupId: types.GroupID,
 		})
 	case FileExistsError:
 		Notify(NotifyContent{
-			Title:   "🙅🏻‍文件已存在",
-			Text:    song.Name,
-			Url:     FileUrl(downloadDir),
+			Title: "🙅🏻‍文件已存在",
+			Text:  song.Name,
+			// Url:     FileUrl(downloadDir),
 			GroupId: types.GroupID,
 		})
 	default:
 		Notify(NotifyContent{
-			Title:   "❌下载失败",
-			Text:    err.Error(),
-			Url:     FileUrl(downloadDir),
+			Title: "❌下载失败",
+			Text:  err.Error(),
+			// Url:     FileUrl(downloadDir),
 			GroupId: types.GroupID,
 		})
 		errHandler(err)
