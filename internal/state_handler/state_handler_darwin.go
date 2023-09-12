@@ -124,8 +124,8 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 			if i := image.InitWithContentsOfURL(url); i.ID > 0 {
 				image = i
 				s.curArtwork = mediaplayer.MPMediaItemArtwork_alloc().InitWithImage(image)
+				defer image.Release()
 			}
-			defer image.Release()
 		}
 		s.l.Unlock()
 		if s.curArtwork.ID > 0 {
