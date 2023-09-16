@@ -85,5 +85,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: binary
+          name: dist_files
           path: dist/*.zip
