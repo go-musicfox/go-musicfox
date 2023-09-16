@@ -116,13 +116,13 @@ builds:
 archives:
   - id: musicfox
     builds:
-#      - go-musicfox-linux-amd64
-#      - go-musicfox-linux-arm64
-#      - go-musicfox-linux-arm
-#      - go-musicfox-windows-amd64
-#      - go-musicfox-windows-arm64
+      - go-musicfox-linux-amd64
+      - go-musicfox-linux-arm64
+      - go-musicfox-linux-arm
+      - go-musicfox-windows-amd64
+      - go-musicfox-windows-arm64
       - go-musicfox-darwin-amd64
-#      - go-musicfox-darwin-arm64
+      - go-musicfox-darwin-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
