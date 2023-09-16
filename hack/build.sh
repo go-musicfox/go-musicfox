@@ -16,6 +16,7 @@ INJECT_PACKAGE=${INJECT_PACKAGE:-"github.com/go-musicfox/go-musicfox/internal/ty
 LASTFM_KEY=${LASTFM_KEY:-""}
 LASTFM_SECRET=${LASTFM_SECRET:-""}
 BUILD_TARGET=${BUILD_TARGET:-""}
+BUILD_TAGS=${BUILD_TAGS:-""}
 
 if [[ "${ACTION}" = "build" ]]; then
     BUILD_TARGET="-o ${ROOT}/bin/musicfox"
@@ -33,5 +34,6 @@ LDFLAGS=${LDFLAGS}" -X ${INJECT_PACKAGE}.LastfmKey=${LASTFM_KEY}"
 LDFLAGS=${LDFLAGS}" -X ${INJECT_PACKAGE}.LastfmSecret=${LASTFM_SECRET}"
 
 CGO_ENABLED=1 GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} ${GOBINARY} ${ACTION} \
+         -tags "${BUILD_TAGS}" \
          -ldflags "${LDFLAGS}" ${BUILD_TARGET} \
          ${ROOT}/cmd/musicfox.go

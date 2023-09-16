@@ -44,7 +44,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		netease      = ui.NewNetease(model.NewApp(opts))
 		eventHandler = ui.NewEventHandler(netease)
 	)
-	eventHandler.RegisterGlobalKeys(opts)
+	eventHandler.RegisterGlobalHotkeys(opts)
 	netease.App.With(
 		model.WithHook(netease.InitHook, netease.CloseHook),
 		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),

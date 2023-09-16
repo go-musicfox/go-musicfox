@@ -60,6 +60,8 @@ builds:
       - windows
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
     env:
       - CC=/usr/local/mingw/bin/x86_64-w64-mingw32-gcc
       - CXX=/usr/local/mingw/bin/x86_64-w64-mingw32-g++
@@ -75,6 +77,8 @@ builds:
       - windows
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
     env:
       - CC=/usr/local/mingw/bin/aarch64-w64-mingw32-gcc
       - CXX=/usr/local/mingw/bin/aarch64-w64-mingw32-g++
@@ -90,6 +94,8 @@ builds:
       - darwin
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
@@ -102,19 +108,21 @@ builds:
       - darwin
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
     env:
       - CC=o64-clang
       - CXX=o64-clang++
 archives:
   - id: musicfox
     builds:
-      - go-musicfox-linux-amd64
-      - go-musicfox-linux-arm64
-      - go-musicfox-linux-arm
-      - go-musicfox-windows-amd64
-      - go-musicfox-windows-arm64
+#      - go-musicfox-linux-amd64
+#      - go-musicfox-linux-arm64
+#      - go-musicfox-linux-arm
+#      - go-musicfox-windows-amd64
+#      - go-musicfox-windows-arm64
       - go-musicfox-darwin-amd64
-      - go-musicfox-darwin-arm64
+#      - go-musicfox-darwin-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
