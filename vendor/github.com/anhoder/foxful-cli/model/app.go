@@ -1,12 +1,14 @@
 package model
 
 import (
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/anhoder/foxful-cli/util"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
+	"github.com/robotn/gohook"
 )
 
 type App struct {
@@ -38,8 +40,6 @@ func NewApp(options *Options) (a *App) {
 	return
 }
 
-type WithOption func(options *Options)
-
 func (a *App) With(w ...WithOption) *App {
 	for _, item := range w {
 		if item != nil {
@@ -47,20 +47,6 @@ func (a *App) With(w ...WithOption) *App {
 		}
 	}
 	return a
-}
-
-func WithHook(init, close func(a *App)) WithOption {
-	return func(opts *Options) {
-		opts.InitHook = init
-		opts.CloseHook = close
-	}
-}
-
-func WithMainMenu(mainMenu Menu, mainMenuTitle *MenuItem) WithOption {
-	return func(opts *Options) {
-		opts.MainMenu = mainMenu
-		opts.MainMenuTitle = mainMenuTitle
-	}
 }
 
 func (a *App) Init() tea.Cmd {
@@ -153,6 +139,22 @@ func (a *App) Run() error {
 		}
 		a.page = a.options.InitPage
 	}
+
+	if len(a.options.GlobalKeyHandlers) > 0 {
+		for global, handler := range a.options.GlobalKeyHandlers {
+			keys := strings.Split(global, "+")
+			hook.Register(hook.KeyDown, keys, func(e hook.Event) {
+				page := handler(e)
+				if page == nil {
+					page = a.page
+				}
+				a.program.Send(page.Msg())
+			})
+		}
+		s := hook.Start()
+		hook.Process(s)
+	}
+
 	a.program = tea.ReplaceWithFoxfulRenderer(tea.NewProgram(a, a.options.TeaOptions...))
 	_, err := a.program.Run()
 	return err

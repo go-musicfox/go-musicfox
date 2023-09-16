@@ -10,9 +10,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/mattn/go-runewidth"
-
 	"github.com/gookit/gcli/v2"
+	"github.com/mattn/go-runewidth"
 )
 
 func NewPlayerCommand() *gcli.Command {
@@ -45,6 +44,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		netease      = ui.NewNetease(model.NewApp(opts))
 		eventHandler = ui.NewEventHandler(netease)
 	)
+	eventHandler.RegisterGlobalKeys(opts)
 	netease.App.With(
 		model.WithHook(netease.InitHook, netease.CloseHook),
 		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
