@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/anhoder/foxful-cli v0.1.4
+	github.com/anhoder/foxful-cli v0.2.1
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
@@ -25,6 +25,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
+	github.com/robotn/gohook v0.41.0
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -65,16 +66,17 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.10.0 // indirect
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
-	golang.org/x/exp/shiny v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/image v0.8.0 // indirect
-	golang.org/x/mobile v0.0.0-20230531173138-3c911d8e3eda // indirect
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
+	golang.org/x/exp/shiny v0.0.0-20230905200255-921286631fa9 // indirect
+	golang.org/x/image v0.12.0 // indirect
+	golang.org/x/mobile v0.0.0-20230906132913-2077a3224571 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
-	golang.org/x/term v0.9.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/term v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 )
 
 replace (
@@ -86,5 +88,6 @@ replace (
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 	github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
+	github.com/robotn/gohook v0.41.0 => github.com/go-musicfox/gohook v0.41.1
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 )

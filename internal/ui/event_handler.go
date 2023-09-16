@@ -5,8 +5,55 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	hook "github.com/robotn/gohook"
+)
+
+type OperateType string
+
+const (
+	OperateTypeEnter                              = "enter"
+	OperateTypeCurPlaylist                        = "curPlaylist"
+	OperateTypeSpace                              = "space"
+	OperateTypeForwardFiveSec                     = "forwardFiveSec"
+	OperateTypeForwardTenSec                      = "forwardTenSec"
+	OperateTypeBackwardOneSec                     = "backwardOneSec"
+	OperateTypeBackwardFiveSec                    = "backwardFiceSec"
+	OperateTypePrevious                           = "previous"
+	OperateTypeNext                               = "next"
+	OperateTypeSwitchPlayMode                     = "switchPlayMode"
+	OperateTypeIntelligence                       = "intelligence"
+	OperateTypeLikePlayingSong                    = "likePlayingSong"
+	OperateTypeLikeSelectedSong                   = "likeSelectedSong"
+	OperateTypeDislikePlayingSong                 = "dislikePlayingSong"
+	OperateTypeDislikeSelectedSong                = "dislikeSelectedSong"
+	OperateTypeLogout                             = "logout"
+	OperateTypeDownVolume                         = "downVolume"
+	OperateTypeUpVolume                           = "upVolume"
+	OperateTypeDownloadPlayigSong                 = "downloadPlayingSong"
+	OperateTypeDownloadSelectedSong               = "downloadSelectedSong"
+	OperateTypeTrashPlayingSong                   = "trashPlayingSong"
+	OperateTypeTrashSelectedSong                  = "trashSelectedSong"
+	OperateTypeHelp                               = "help"
+	OperateTypeAddSelectedSongToUserPlaylist      = "addSelectedSongToUserPlaylist"
+	OperateTypeRemoveSelectedSongFromUserPlaylist = "removeSelectedSongFromUserPlaylist"
+	OperateTypeAddPlayingSongToUserPlaylist       = "addPlayingSongToUserPlaylist"
+	OperateTypeRemovePlayingSongFromUserPlaylist  = "removePlayingSongFromUserPlaylist"
+	OperateTypeOpenAlbumOfPlayingSong             = "openAlbumOfPlayingSong"
+	OperateTypeOpenAlbumOfSelectedSong            = "openAlbumOfSelectedSong"
+	OperateTypeOpenArtistOfPlayingSong            = "openArtistOfPlayingSong"
+	OperateTypeOpenArtistOfSelectedSong           = "openArtistOfSelectedSong"
+	OperateTypeOpenPlayingSongInWeb               = "openPlayingSongInWeb"
+	OperateTypeOpenSelectedItemInWeb              = "openSelectedItemInWeb"
+	OperateTypeCollectSelectedPlaylist            = "collectSelectedPlaylist"
+	OperateTypeDiscollectSelectedPlaylist         = "discollectSelectedPlaylist"
+	OperateTypeDelSongFromCurPlaylist             = "delSongFromCurPlaylist"
+	OperateTypeAddSongToNext                      = "addSongToNext"
+	OperateTypeAppendSongToCurPlaylist            = "appendSongToCurPlaylist "
+	OperateTypeClearSongCache                     = "clearSongCache "
+	OperateTypeRerender                           = "rerender "
 )
 
 type EventHandler struct {
@@ -19,17 +66,105 @@ func NewEventHandler(netease *Netease) *EventHandler {
 	}
 }
 
-func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, a *model.App) (bool, model.Page, tea.Cmd) {
+var keyOperateMapping = map[string]OperateType{
+	"enter":     OperateTypeEnter,
+	"c":         OperateTypeCurPlaylist,
+	"C":         OperateTypeCurPlaylist,
+	" ":         OperateTypeSpace,
+	"　":         OperateTypeSpace,
+	"v":         OperateTypeForwardFiveSec,
+	"V":         OperateTypeForwardTenSec,
+	"x":         OperateTypeBackwardOneSec,
+	"X":         OperateTypeBackwardFiveSec,
+	"[":         OperateTypePrevious,
+	"【":         OperateTypePrevious,
+	"]":         OperateTypeNext,
+	"】":         OperateTypeNext,
+	"p":         OperateTypeSwitchPlayMode,
+	"P":         OperateTypeIntelligence,
+	",":         OperateTypeLikePlayingSong,
+	"，":         OperateTypeLikePlayingSong,
+	".":         OperateTypeDislikePlayingSong,
+	"。":         OperateTypeDislikePlayingSong,
+	"w":         OperateTypeLogout,
+	"W":         OperateTypeLogout,
+	"=":         OperateTypeUpVolume,
+	"＝":         OperateTypeUpVolume,
+	"-":         OperateTypeDownVolume,
+	"−":         OperateTypeDownVolume,
+	"ー":         OperateTypeDownVolume,
+	"d":         OperateTypeDownloadPlayigSong,
+	"D":         OperateTypeDownloadSelectedSong,
+	"t":         OperateTypeTrashPlayingSong,
+	"T":         OperateTypeTrashSelectedSong,
+	"<":         OperateTypeLikeSelectedSong,
+	"〈":         OperateTypeLikeSelectedSong,
+	"＜":         OperateTypeLikeSelectedSong,
+	"《":         OperateTypeLikeSelectedSong,
+	"«":         OperateTypeLikeSelectedSong,
+	">":         OperateTypeDislikeSelectedSong,
+	"〉":         OperateTypeDislikeSelectedSong,
+	"＞":         OperateTypeDislikeSelectedSong,
+	"》":         OperateTypeDislikeSelectedSong,
+	"»":         OperateTypeDislikeSelectedSong,
+	"?":         OperateTypeHelp,
+	"？":         OperateTypeHelp,
+	"tab":       OperateTypeAddSelectedSongToUserPlaylist,
+	"shift+tab": OperateTypeRemoveSelectedSongFromUserPlaylist,
+	"`":         OperateTypeAddPlayingSongToUserPlaylist,
+	"~":         OperateTypeRemovePlayingSongFromUserPlaylist,
+	"～":         OperateTypeRemovePlayingSongFromUserPlaylist,
+	"a":         OperateTypeOpenAlbumOfPlayingSong,
+	"A":         OperateTypeOpenAlbumOfSelectedSong,
+	"s":         OperateTypeOpenArtistOfPlayingSong,
+	"S":         OperateTypeOpenArtistOfSelectedSong,
+	"o":         OperateTypeOpenPlayingSongInWeb,
+	"O":         OperateTypeOpenSelectedItemInWeb,
+	";":         OperateTypeCollectSelectedPlaylist,
+	":":         OperateTypeCollectSelectedPlaylist,
+	"：":         OperateTypeCollectSelectedPlaylist,
+	"；":         OperateTypeCollectSelectedPlaylist,
+	"'":         OperateTypeDiscollectSelectedPlaylist,
+	"\"":        OperateTypeDiscollectSelectedPlaylist,
+	"\\":        OperateTypeDelSongFromCurPlaylist,
+	"、":         OperateTypeDelSongFromCurPlaylist,
+	"e":         OperateTypeAddSongToNext,
+	"E":         OperateTypeAppendSongToCurPlaylist,
+	"u":         OperateTypeClearSongCache,
+	"U":         OperateTypeClearSongCache,
+	"r":         OperateTypeRerender,
+	"R":         OperateTypeRerender,
+}
+
+func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
+	if ot, ok := keyOperateMapping[msg.String()]; ok {
+		return h.handle(ot)
+	}
+
+	return false, nil, nil
+}
+
+func (h *EventHandler) RegisterGlobalKeys(opts *model.Options) {
+	opts.GlobalKeyHandlers = make(map[string]model.GlobalKeyHandler)
+	for global, operate := range configs.ConfigRegistry.GlobalKeys {
+		opts.GlobalKeyHandlers[global] = func(event hook.Event) model.Page {
+			_, page, _ := h.handle(OperateType(operate))
+			return page
+		}
+	}
+}
+
+func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 	var (
-		key    = msg.String()
 		player = h.netease.player
-		main   = a.MustMain()
+		app    = h.netease.App
+		main   = app.MustMain()
 		menu   = main.CurMenu()
 	)
-	switch key {
-	case "enter":
+	switch ot {
+	case OperateTypeEnter:
 		return h.enterKeyHandle()
-	case "c", "C":
+	case OperateTypeCurPlaylist:
 		if _, ok := menu.(*CurPlaylist); !ok {
 			var subTitle string
 			if !player.playlistUpdateAt.IsZero() {
@@ -38,115 +173,115 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, a *model.App) (bool, model.P
 			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.playlist), &model.MenuItem{Title: "当前播放列表", Subtitle: subTitle})
 			player.LocatePlayingSong()
 		}
-	case " ", "　":
+	case OperateTypeSpace:
 		h.spaceKeyHandle()
-	case "v":
+	case OperateTypeForwardFiveSec:
 		player.Seek(player.PassedTime() + time.Second*5)
-	case "V":
+	case OperateTypeForwardTenSec:
 		player.Seek(player.PassedTime() + time.Second*10)
-	case "x":
+	case OperateTypeBackwardOneSec:
 		player.Seek(player.PassedTime() - time.Second*1)
-	case "X":
+	case OperateTypeBackwardFiveSec:
 		player.Seek(player.PassedTime() - time.Second*5)
-	case "[", "【":
+	case OperateTypePrevious:
 		player.PreviousSong(true)
-	case "]", "】":
+	case OperateTypeNext:
 		player.NextSong(true)
-	case "p":
+	case OperateTypeSwitchPlayMode:
 		player.SetPlayMode(0)
-	case "P":
+	case OperateTypeIntelligence:
 		newPage := player.Intelligence(false)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case ",", "，":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeLikePlayingSong:
 		newPage := likePlayingSong(h.netease, true)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case ".", "。":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeDislikePlayingSong:
 		newPage := likePlayingSong(h.netease, false)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "w", "W":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeLogout:
 		logout()
 		return true, nil, tea.Quit
-	case "-", "−", "ー": // half-width, full-width and katakana
+	case OperateTypeDownVolume: // half-width, full-width and katakana
 		player.DownVolume()
-	case "=", "＝":
+	case OperateTypeUpVolume:
 		player.UpVolume()
-	case "d":
+	case OperateTypeDownloadPlayigSong:
 		downloadPlayingSong(h.netease)
-	case "D":
+	case OperateTypeDownloadSelectedSong:
 		downloadSelectedSong(h.netease)
-	case "t":
+	case OperateTypeTrashPlayingSong:
 		// trash playing song
 		newPage := trashPlayingSong(h.netease)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "T":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeTrashSelectedSong:
 		// trash selected song
 		newPage := trashSelectedSong(h.netease)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "<", "〈", "＜", "《", "«": // half-width, full-width, Japanese, Chinese and French
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeLikeSelectedSong: // half-width, full-width, Japanese, Chinese and French
 		// like selected song
 		newPage := likeSelectedSong(h.netease, true)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case ">", "〉", "＞", "》", "»":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeDislikeSelectedSong:
 		// unlike selected song
 		newPage := likeSelectedSong(h.netease, false)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "?", "？":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeHelp:
 		// 帮助
 		main.EnterMenu(NewHelpMenu(newBaseMenu(h.netease)), &model.MenuItem{Title: "帮助"})
-	case "tab":
+	case OperateTypeAddSelectedSongToUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, true, true)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "shift+tab":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeRemoveSelectedSongFromUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, true, false)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "`":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeAddPlayingSongToUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, false, true)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "~", "～":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeRemovePlayingSongFromUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, false, false)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "a":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeOpenAlbumOfPlayingSong:
 		// 当前歌曲所属专辑
 		albumOfPlayingSong(h.netease)
-	case "A":
+	case OperateTypeOpenAlbumOfSelectedSong:
 		// 选中歌曲所属专辑
 		albumOfSelectedSong(h.netease)
-	case "s":
+	case OperateTypeOpenArtistOfPlayingSong:
 		// 当前歌曲所属歌手
 		artistOfPlayingSong(h.netease)
-	case "S":
+	case OperateTypeOpenArtistOfSelectedSong:
 		// 选中歌曲所属歌手
 		artistOfSelectedSong(h.netease)
-	case "o":
+	case OperateTypeOpenPlayingSongInWeb:
 		// 网页打开当前歌曲
 		openPlayingSongInWeb(h.netease)
-	case "O":
+	case OperateTypeOpenSelectedItemInWeb:
 		// 网页打开选中项
 		openSelectedItemInWeb(h.netease)
-	case ";", ":", "：", "；":
+	case OperateTypeCollectSelectedPlaylist:
 		// 收藏选中歌单
 		newPage := collectSelectedPlaylist(h.netease, true)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "'", "\"":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeDiscollectSelectedPlaylist:
 		// 取消收藏选中歌单
 		newPage := collectSelectedPlaylist(h.netease, false)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "\\", "、":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeDelSongFromCurPlaylist:
 		// 从播放列表删除歌曲,仅在当前播放列表界面有效
 		newPage := delSongFromPlaylist(h.netease)
-		return true, newPage, a.Tick(time.Nanosecond)
-	case "e":
+		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeAddSongToNext:
 		// 追加到下一曲播放
 		addSongToPlaylist(h.netease, true)
-	case "E":
+	case OperateTypeAppendSongToCurPlaylist:
 		// 追加到播放列表末尾
 		addSongToPlaylist(h.netease, false)
-	case "u", "U":
+	case OperateTypeClearSongCache:
 		// 清除歌曲缓存
 		clearSongCache(h.netease)
-	case "r", "R":
+	case OperateTypeRerender:
 		// rerender
-		return true, main, a.RerenderCmd(true)
+		return true, main, app.RerenderCmd(true)
 	default:
 		return false, nil, nil
 	}

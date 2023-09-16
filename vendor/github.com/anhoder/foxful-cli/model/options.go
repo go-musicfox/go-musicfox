@@ -5,6 +5,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/util"
 	tea "github.com/charmbracelet/bubbletea"
+	hook "github.com/robotn/gohook"
 )
 
 type Options struct {
@@ -27,8 +28,9 @@ type Options struct {
 	LocalSearchMenu LocalSearchMenu // Local search result menu
 	Components      []Component     // Custom Extra components
 
-	KBControllers    []KeyboardController
-	MouseControllers []MouseController
+	GlobalKeyHandlers map[string]GlobalKeyHandler
+	KBControllers     []KeyboardController
+	MouseControllers  []MouseController
 
 	InitHook  func(a *App)
 	CloseHook func(a *App)
@@ -52,12 +54,14 @@ func DefaultOptions() *Options {
 			Welcome:           util.PkgName,
 		},
 		ProgressOptions: ProgressOptions{
-			FirstEmptyChar: '.',
-			EmptyChar:      '.',
-			LastEmptyChar:  '.',
-			FirstFullChar:  '#',
-			FullChar:       '#',
-			LastFullChar:   '#',
+			EmptyCharWhenFirst: '.',
+			EmptyChar:          '.',
+			EmptyCharWhenLast:  '.',
+			FirstEmptyChar:     '.',
+			FullCharWhenFirst:  '#',
+			FullChar:           '#',
+			FullCharWhenLast:   '#',
+			LastFullChar:       '#',
 		},
 		WhetherDisplayTitle: true,
 		DualColumn:          true,
@@ -65,5 +69,29 @@ func DefaultOptions() *Options {
 		LoadingText:         util.LoadingText,
 		PrimaryColor:        util.RandomColor,
 		MainMenu:            &DefaultMenu{},
+	}
+}
+
+type WithOption func(options *Options)
+
+func WithHook(init, close func(a *App)) WithOption {
+	return func(opts *Options) {
+		opts.InitHook = init
+		opts.CloseHook = close
+	}
+}
+
+func WithMainMenu(mainMenu Menu, mainMenuTitle *MenuItem) WithOption {
+	return func(opts *Options) {
+		opts.MainMenu = mainMenu
+		opts.MainMenuTitle = mainMenuTitle
+	}
+}
+
+type GlobalKeyHandler func(hook.Event) Page
+
+func WithGlobalKeyHandlers(m map[string]GlobalKeyHandler) WithOption {
+	return func(options *Options) {
+		options.GlobalKeyHandlers = m
 	}
 }

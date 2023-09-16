@@ -22,6 +22,7 @@ type Registry struct {
 	AutoPlayer AutoPlayerOptions
 	UNM        UNMOptions
 	Player     PlayerOptions
+	GlobalKeys map[string]string
 }
 
 func (r *Registry) FillToModelOpts(opts *model.Options) {
@@ -57,12 +58,14 @@ func NewRegistryWithDefault() *Registry {
 		},
 		Progress: ProgressOptions{
 			ProgressOptions: model.ProgressOptions{
-				FirstEmptyChar: []rune(types.ProgressEmptyChar)[0],
-				EmptyChar:      []rune(types.ProgressEmptyChar)[0],
-				LastEmptyChar:  []rune(types.ProgressEmptyChar)[0],
-				FirstFullChar:  []rune(types.ProgressFullChar)[0],
-				FullChar:       []rune(types.ProgressFullChar)[0],
-				LastFullChar:   []rune(types.ProgressFullChar)[0],
+				EmptyChar:          []rune(types.ProgressEmptyChar)[0],
+				EmptyCharWhenFirst: []rune(types.ProgressEmptyChar)[0],
+				EmptyCharWhenLast:  []rune(types.ProgressEmptyChar)[0],
+				FirstEmptyChar:     []rune(types.ProgressEmptyChar)[0],
+				FullChar:           []rune(types.ProgressFullChar)[0],
+				FullCharWhenFirst:  []rune(types.ProgressFullChar)[0],
+				FullCharWhenLast:   []rune(types.ProgressFullChar)[0],
+				LastFullChar:       []rune(types.ProgressFullChar)[0],
 			},
 		},
 		Main: MainOptions{
@@ -115,17 +118,23 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 
 	emptyChar := ini.String("progress.emptyChar", types.ProgressEmptyChar)
 	registry.Progress.EmptyChar = firstCharOrDefault(emptyChar, types.ProgressEmptyChar)
+	emptyCharWhenFirst := ini.String("progress.emptyCharWhenFirst", types.ProgressEmptyChar)
+	registry.Progress.EmptyCharWhenFirst = firstCharOrDefault(emptyCharWhenFirst, types.ProgressEmptyChar)
+	emptyCharWhenLast := ini.String("progress.emptyCharWhenLast", types.ProgressEmptyChar)
+	registry.Progress.EmptyCharWhenLast = firstCharOrDefault(emptyCharWhenLast, types.ProgressEmptyChar)
 	firstEmptyChar := ini.String("progress.firstEmptyChar", types.ProgressEmptyChar)
 	registry.Progress.FirstEmptyChar = firstCharOrDefault(firstEmptyChar, types.ProgressEmptyChar)
-	lastEmptyChar := ini.String("progress.lastEmptyChar", types.ProgressEmptyChar)
-	registry.Progress.LastEmptyChar = firstCharOrDefault(lastEmptyChar, types.ProgressEmptyChar)
+
+	registry.GlobalKeys = ini.StringMap("global_key")
 
 	fullChar := ini.String("progress.fullChar", types.ProgressFullChar)
 	registry.Progress.FullChar = firstCharOrDefault(fullChar, types.ProgressFullChar)
-	firstFullChar := ini.String("progress.firstFullChar", types.ProgressFullChar)
-	registry.Progress.FirstFullChar = firstCharOrDefault(firstFullChar, types.ProgressFullChar)
-	lastFullChar := ini.String("progress.lastFullChar", types.ProgressFullChar)
-	registry.Progress.LastFullChar = firstCharOrDefault(lastFullChar, types.ProgressFullChar)
+	fullCharWhenFirst := ini.String("progress.fullCharWhenFirst", types.ProgressFullChar)
+	registry.Progress.FullCharWhenFirst = firstCharOrDefault(fullCharWhenFirst, types.ProgressFullChar)
+	fullCharWhenLast := ini.String("progress.fullCharWhenLast", types.ProgressFullChar)
+	registry.Progress.FullCharWhenLast = firstCharOrDefault(fullCharWhenLast, types.ProgressFullChar)
+	lastFullChar := ini.String("progress.lastFullChar", types.ProgressEmptyChar)
+	registry.Progress.LastFullChar = firstCharOrDefault(lastFullChar, types.ProgressEmptyChar)
 
 	registry.Main.ShowTitle = ini.Bool("main.showTitle", true)
 	registry.Main.LoadingText = ini.String("main.loadingText", types.MainLoadingText)
