@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/binary"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -352,8 +354,28 @@ func SetSongTag(file *os.File, song structs.Song) {
 	}
 }
 
+var (
+	songNameTpl *template.Template
+	tplInitd    sync.Once
+)
+
 func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
-	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
+	tplInitd.Do(func() {
+		tpl := template.New("songName")
+		if configs.ConfigRegistry.Main.DownloadFileNameTpl != "" {
+			songNameTpl = template.Must(tpl.Parse(configs.ConfigRegistry.Main.DownloadFileNameTpl))
+		} else {
+			songNameTpl = template.Must(tpl.Parse("{{.SongName}}-{{.ArtistName}}.{{.SongType}}"))
+		}
+	})
+	var filenameBuilder strings.Builder
+	_ = songNameTpl.Execute(&filenameBuilder, map[string]string{
+		"SongName":   song.Name,
+		"ArtistName": song.ArtistName(),
+		"SongType":   musicType,
+	})
+	filename := filenameBuilder.String()
+
 	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
 	filename = strings.Replace(filename, "/", "_", -1)
 	filename = strings.Replace(filename, "\\", "_", -1)
