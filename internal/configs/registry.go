@@ -16,13 +16,13 @@ import (
 var ConfigRegistry *Registry
 
 type Registry struct {
-	Startup    StartupOptions
-	Progress   ProgressOptions
-	Main       MainOptions
-	AutoPlayer AutoPlayerOptions
-	UNM        UNMOptions
-	Player     PlayerOptions
-	GlobalKeys map[string]string
+	Startup       StartupOptions
+	Progress      ProgressOptions
+	Main          MainOptions
+	AutoPlayer    AutoPlayerOptions
+	UNM           UNMOptions
+	Player        PlayerOptions
+	GlobalHotkeys map[string]string
 }
 
 func (r *Registry) FillToModelOpts(opts *model.Options) {
@@ -125,7 +125,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	firstEmptyChar := ini.String("progress.firstEmptyChar", types.ProgressEmptyChar)
 	registry.Progress.FirstEmptyChar = firstCharOrDefault(firstEmptyChar, types.ProgressEmptyChar)
 
-	registry.GlobalKeys = ini.StringMap("global_key")
+	registry.GlobalHotkeys = ini.StringMap("global_hotkey")
 
 	fullChar := ini.String("progress.fullChar", types.ProgressFullChar)
 	registry.Progress.FullChar = firstCharOrDefault(fullChar, types.ProgressFullChar)

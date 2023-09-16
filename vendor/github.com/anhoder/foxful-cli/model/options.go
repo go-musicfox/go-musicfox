@@ -5,7 +5,6 @@ import (
 
 	"github.com/anhoder/foxful-cli/util"
 	tea "github.com/charmbracelet/bubbletea"
-	hook "github.com/robotn/gohook"
 )
 
 type Options struct {
@@ -88,10 +87,9 @@ func WithMainMenu(mainMenu Menu, mainMenuTitle *MenuItem) WithOption {
 	}
 }
 
-type GlobalKeyHandler func(hook.Event) Page
-
 func WithGlobalKeyHandlers(m map[string]GlobalKeyHandler) WithOption {
 	return func(options *Options) {
 		options.GlobalKeyHandlers = m
 	}
 }
+

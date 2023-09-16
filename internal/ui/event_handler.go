@@ -5,10 +5,8 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	hook "github.com/robotn/gohook"
 )
 
 type OperateType string
@@ -17,6 +15,7 @@ const (
 	OperateTypeEnter                              = "enter"
 	OperateTypeCurPlaylist                        = "curPlaylist"
 	OperateTypeSpace                              = "space"
+	OperateTypeToggle                             = "toggle"
 	OperateTypeForwardFiveSec                     = "forwardFiveSec"
 	OperateTypeForwardTenSec                      = "forwardTenSec"
 	OperateTypeBackwardOneSec                     = "backwardOneSec"
@@ -144,16 +143,6 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.P
 	return false, nil, nil
 }
 
-func (h *EventHandler) RegisterGlobalKeys(opts *model.Options) {
-	opts.GlobalKeyHandlers = make(map[string]model.GlobalKeyHandler)
-	for global, operate := range configs.ConfigRegistry.GlobalKeys {
-		opts.GlobalKeyHandlers[global] = func(event hook.Event) model.Page {
-			_, page, _ := h.handle(OperateType(operate))
-			return page
-		}
-	}
-}
-
 func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 	var (
 		player = h.netease.player
@@ -175,6 +164,12 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 		}
 	case OperateTypeSpace:
 		h.spaceKeyHandle()
+	case OperateTypeToggle:
+		if h.netease.player.State() == types.Stopped {
+			h.spaceKeyHandle()
+		} else {
+			h.netease.player.Toggle()
+		}
 	case OperateTypeForwardFiveSec:
 		player.Seek(player.PassedTime() + time.Second*5)
 	case OperateTypeForwardTenSec:
