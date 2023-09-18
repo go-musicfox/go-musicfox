@@ -319,7 +319,7 @@ $ musicfox
 
 ```ini
 [global_hotkey]
-# 格式：键=功能 (https://github.com/go-musicfox/go-musicfox/blob/bd131ed17c0c39a937914c1cb5b3d92eafffd17d/internal/ui/event_handler.go#L15)
+# 格式：键=功能 (https://github.com/go-musicfox/go-musicfox/blob/master/internal/ui/event_handler.go#L15)
 ctrl+shift+space=toggle
 ```
 
