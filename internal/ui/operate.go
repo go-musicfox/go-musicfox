@@ -797,21 +797,5 @@ func delSongFromPlaylist(m *Netease) model.Page {
 }
 
 func clearSongCache(m *Netease) {
-	loading := model.NewLoading(m.MustMain())
-	loading.Start()
-	defer loading.Complete()
-	err := utils.ClearMusicCache()
-	if err != nil {
-		utils.Notify(utils.NotifyContent{
-			Title:   "清除缓存失败",
-			Text:    err.Error(),
-			GroupId: types.GroupID,
-		})
-	} else {
-		utils.Notify(utils.NotifyContent{
-			Title:   "清除缓存成功",
-			Text:    "缓存已清除",
-			GroupId: types.GroupID,
-		})
-	}
+	m.MustMain().EnterMenu(NewClearSongCacheMenu(newBaseMenu(m), m), &model.MenuItem{Title: "清除缓存", Subtitle: "确定清除缓存"})
 }
