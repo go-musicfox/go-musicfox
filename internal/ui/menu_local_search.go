@@ -53,3 +53,7 @@ func (m *LocalSearchMenu) IsPlayable() bool {
 func (m *LocalSearchMenu) IsLocatable() bool {
 	return false
 }
+
+func (m *LocalSearchMenu) IsSearchable() bool {
+	return false
+}
