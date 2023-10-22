@@ -332,6 +332,8 @@ func (h *EventHandler) spaceKeyHandle() {
 			player.Resume()
 		case types.Playing:
 			player.Paused()
+		case types.Stopped:
+			_ = player.PlaySong(player.playlist[player.curSongIndex], DurationNext)
 		}
 		return
 	}
