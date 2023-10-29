@@ -4,6 +4,7 @@ package state_handler
 
 import (
 	"sync"
+	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
