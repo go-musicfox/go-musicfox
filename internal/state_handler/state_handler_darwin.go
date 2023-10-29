@@ -137,6 +137,9 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 	s.nowPlayingCenter.SetNowPlayingInfo(dic.NSDictionary)
 }
 
+func (s *Handler) SetPosition(time.Duration) {
+}
+
 func (s *Handler) Release() {
 	s.nowPlayingCenter.Release()
 	s.remoteCommandCenter.Release()

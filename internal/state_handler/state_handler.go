@@ -2,14 +2,19 @@
 
 package state_handler
 
+import "time"
+
 type Handler struct {
 }
 
-func NewHandler(_ Controller, _ PlayingInfo) *Handler {
+func NewHandler(Controller, PlayingInfo) *Handler {
 	return &Handler{}
 }
 
-func (s *Handler) SetPlayingInfo(_ PlayingInfo) {
+func (s *Handler) SetPosition(time.Duration) {
+}
+
+func (s *Handler) SetPlayingInfo(PlayingInfo) {
 }
 
 func (s *Handler) Release() {
