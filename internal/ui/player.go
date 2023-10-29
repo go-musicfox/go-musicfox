@@ -144,6 +144,7 @@ func NewPlayer(netease *Netease) *Player {
 			case duration := <-p.TimeChan():
 				// 200ms 为刷新间隔，刷新间隔修改时此处需要保持同步
 				p.playedTime += time.Millisecond * 200
+				p.stateHandler.SetPosition(p.playedTime)
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
 					lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
