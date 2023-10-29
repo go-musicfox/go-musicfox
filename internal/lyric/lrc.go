@@ -24,7 +24,7 @@ type LRCFile struct {
 func (f *LRCFile) AsText() string {
 	var builder strings.Builder
 
-	if f == nil {
+	if f == nil || len(f.fragments) == 0 {
 		return "暂无歌词~"
 	}
 
