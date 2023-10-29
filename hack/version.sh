@@ -27,7 +27,7 @@ fi
 echo AppVersion    "${VERSION}"
 echo GitRevision   "${GIT_REVISION}"
 echo User          "$(whoami)"
-if [[ ! `hostname -f` ]]; then
+if [[ ! `hostname -f 2> /dev/null` ]]; then
     echo Host          "$(cat /etc/hostname)"
 else
     echo Host          "$(hostname -f)"
