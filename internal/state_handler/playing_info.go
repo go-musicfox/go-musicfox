@@ -17,4 +17,5 @@ type PlayingInfo struct {
 	Artist         string
 	Album          string
 	AlbumArtist    string
+	AsText         string
 }

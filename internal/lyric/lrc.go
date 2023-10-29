@@ -21,6 +21,23 @@ type LRCFile struct {
 	fragments []LRCFragment
 }
 
+func (f *LRCFile) AsText() string {
+	var builder strings.Builder
+
+	if f == nil {
+		return "暂无歌词~"
+	}
+
+	for _, line := range f.fragments {
+		builder.WriteString(line.Content)
+		builder.WriteByte('\n')
+	}
+
+	res := builder.String()
+
+	return res[:len(res)-1]
+}
+
 type TranslateLRCFile struct {
 	fragments map[int64]string
 }

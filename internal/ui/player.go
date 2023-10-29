@@ -68,6 +68,8 @@ type Player struct {
 	playingMenu      Menu
 	playedTime       time.Duration // 已经播放的时长
 
+	lrcFile           *lyric.LRCFile
+	transLrcFile      *lyric.TranslateLRCFile
 	lrcTimer          *lyric.LRCTimer   // 歌词计时器
 	lyrics            [5]string         // 歌词信息，保留5行
 	showLyric         bool              // 显示歌词
@@ -435,9 +437,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		return nil
 	}
 
-	if configs.ConfigRegistry.Main.ShowLyric {
-		go p.updateLyric(song.Id)
-	}
+	go p.updateLyric(song.Id)
 
 	p.Player.Play(player.UrlMusic{
 		Url:  url,
@@ -677,20 +677,10 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 	}
 }
 
-// updateLyric 更新歌词UI
-func (p *Player) updateLyric(songId int64) {
-	p.lyrics = [5]string{}
-	if p.lrcTimer != nil {
-		p.lrcTimer.Stop()
-	}
-	lrcFile, _ := lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词~"))
-	tranLRCFile, _ := lyric.ReadTranslateLRC(strings.NewReader("[00:00.00]"))
-	defer func() {
-		p.lrcTimer = lyric.NewLRCTimer(lrcFile, tranLRCFile)
-		p.lrcTimer.AddListener(p.lyricListener)
-		p.lrcTimer.Start()
-	}()
-
+// getLyric 获取歌曲歌词
+func (p *Player) getLyric(songId int64) {
+	p.lrcFile, _ = lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词~"))
+	p.transLrcFile, _ = lyric.ReadTranslateLRC(strings.NewReader("[00:00.00]"))
 	lrcService := service.LyricService{
 		ID: strconv.FormatInt(songId, 10),
 	}
@@ -701,16 +691,34 @@ func (p *Player) updateLyric(songId int64) {
 
 	if lrc, err := jsonparser.GetString(response, "lrc", "lyric"); err == nil && lrc != "" {
 		if file, err := lyric.ReadLRC(strings.NewReader(lrc)); err == nil {
-			lrcFile = file
+			p.lrcFile = file
 		}
 	}
 	if configs.ConfigRegistry.Main.ShowLyricTrans {
 		if lrc, err := jsonparser.GetString(response, "tlyric", "lyric"); err == nil && lrc != "" {
 			if file, err := lyric.ReadTranslateLRC(strings.NewReader(lrc)); err == nil {
-				tranLRCFile = file
+				p.transLrcFile = file
 			}
 		}
 	}
+	if p.stateHandler != nil {
+		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	}
+}
+
+// updateLyric 更新歌词UI
+func (p *Player) updateLyric(songId int64) {
+	p.getLyric(songId)
+	if !configs.ConfigRegistry.Main.ShowLyric {
+		return
+	}
+	p.lyrics = [5]string{}
+	if p.lrcTimer != nil {
+		p.lrcTimer.Stop()
+	}
+	p.lrcTimer = lyric.NewLRCTimer(p.lrcFile, p.transLrcFile)
+	p.lrcTimer.AddListener(p.lyricListener)
+	p.lrcTimer.Start()
 }
 
 // Intelligence 智能/心动模式
@@ -830,5 +838,6 @@ func (p *Player) PlayingInfo() state_handler.PlayingInfo {
 		Album:          music.Album.Name,
 		Artist:         music.ArtistName(),
 		AlbumArtist:    music.Album.ArtistName(),
+		AsText:         p.lrcFile.AsText(),
 	}
 }
