@@ -86,6 +86,8 @@ type Player struct {
 	stateHandler *state_handler.Handler
 	ctrl         chan CtrlSignal
 
+	renderTicker *tickerByPlayer // renderTicker 用于渲染
+
 	player.Player // 播放器
 }
 
@@ -101,6 +103,8 @@ func NewPlayer(netease *Netease) *Player {
 
 	p.Player = player.NewPlayerFromConfig()
 	p.stateHandler = state_handler.NewHandler(p, p.PlayingInfo())
+
+	p.renderTicker = newTickerByPlayer(p)
 
 	// remote control
 	go utils.PanicRecoverWrapper(false, func() {
@@ -120,7 +124,7 @@ func NewPlayer(netease *Netease) *Player {
 			select {
 			case <-ctx.Done():
 				return
-			case s := <-p.Player.StateChan():
+			case s := <-p.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 				if s != types.Stopped {
 					p.netease.Rerender(false)
@@ -158,6 +162,12 @@ func NewPlayer(netease *Netease) *Player {
 					default:
 					}
 				}
+				if p.renderTicker != nil {
+					select {
+					case p.renderTicker.c <- time.Now():
+					default:
+					}
+				}
 
 				p.netease.Rerender(false)
 			}
@@ -168,7 +178,7 @@ func NewPlayer(netease *Netease) *Player {
 }
 
 func (p *Player) Update(_ tea.Msg, _ *model.App) {
-	var main = p.netease.MustMain()
+	main := p.netease.MustMain()
 	// 播放器歌词
 	spaceHeight := p.netease.WindowHeight() - 5 - main.MenuBottomRow()
 	if spaceHeight < 3 || !configs.ConfigRegistry.Main.ShowLyric {
@@ -272,7 +282,7 @@ func (p *Player) songView() string {
 		main    = p.netease.MustMain()
 	)
 
-	var prefixLen = 10
+	prefixLen := 10
 	if main.MenuStartColumn()-4 > 0 {
 		prefixLen += 12
 		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()-4))
@@ -344,18 +354,16 @@ func (p *Player) progressView() string {
 		times := util.SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
 		return progressView + " " + times + " "
 	}
-
 }
 
 // InPlayingMenu 是否处于正在播放的菜单中
 func (p *Player) InPlayingMenu() bool {
-	var key = p.netease.MustMain().CurMenu().GetMenuKey()
+	key := p.netease.MustMain().CurMenu().GetMenuKey()
 	return key == p.playingMenuKey || key == CurPlaylistKey
 }
 
 // CompareWithCurPlaylist 与当前播放列表对比，是否一致
 func (p *Player) CompareWithCurPlaylist(playlist []structs.Song) bool {
-
 	if len(playlist) != len(p.playlist) {
 		return false
 	}
@@ -392,7 +400,7 @@ func (p *Player) LocatePlayingSong() {
 		return
 	}
 
-	var pageDelta = p.curSongIndex/main.PageSize() - (main.CurPage() - 1)
+	pageDelta := p.curSongIndex/main.PageSize() - (main.CurPage() - 1)
 	if pageDelta > 0 {
 		for i := 0; i < pageDelta; i++ {
 			p.netease.MustMain().NextPage()
@@ -421,7 +429,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	p.playedTime = 0
 
 	p.LocatePlayingSong()
-	p.Player.Paused()
+	p.Paused()
 	url, musicType, err := utils.GetSongUrl(song)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
@@ -440,7 +448,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	go p.updateLyric(song.Id)
 
-	p.Player.Play(player.UrlMusic{
+	p.Play(player.UrlMusic{
 		Url:  url,
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
@@ -500,7 +508,7 @@ func (p *Player) NextSong(isManual bool) {
 			p.Intelligence(true)
 		}
 
-		var main = p.netease.MustMain()
+		main := p.netease.MustMain()
 		if p.InPlayingMenu() {
 			if main.IsDualColumn() && p.curSongIndex%2 == 0 {
 				p.netease.MustMain().MoveRight()
@@ -557,7 +565,7 @@ func (p *Player) PreviousSong(isManual bool) {
 			p.Intelligence(true)
 		}
 
-		var main = p.netease.MustMain()
+		main := p.netease.MustMain()
 		if p.InPlayingMenu() {
 			if main.IsDualColumn() && p.curSongIndex%2 == 0 {
 				p.netease.MustMain().MoveUp()
@@ -635,12 +643,13 @@ func (p *Player) SetPlayMode(playMode types.Mode) {
 }
 
 // Close 关闭
-func (p *Player) Close() {
+func (p *Player) Close() error {
 	p.cancel()
 	if p.stateHandler != nil {
 		p.stateHandler.Release()
 	}
 	p.Player.Close()
+	return nil
 }
 
 // lyricListener 歌词变更监听
@@ -808,13 +817,13 @@ func (p *Player) SetVolume(volume int) {
 func (p *Player) handleControlSignal(signal CtrlSignal) {
 	switch signal.Type {
 	case CtrlPaused:
-		p.Player.Paused()
+		p.Paused()
 	case CtrlResume:
-		p.Player.Resume()
+		p.Resume()
 	case CtrlStop:
-		p.Player.Stop()
+		p.Stop()
 	case CtrlToggle:
-		p.Player.Toggle()
+		p.Toggle()
 	case CtrlPrevious:
 		p.PreviousSong(true)
 	case CtrlNext:
@@ -841,4 +850,8 @@ func (p *Player) PlayingInfo() state_handler.PlayingInfo {
 		AlbumArtist:    music.Album.ArtistName(),
 		AsText:         p.lrcFile.AsText(),
 	}
+}
+
+func (p *Player) RenderTicker() model.Ticker {
+	return p.renderTicker
 }
