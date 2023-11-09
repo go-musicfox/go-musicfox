@@ -33,7 +33,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	http.DefaultClient.Timeout = types.AppHttpTimeout
 	runewidth.DefaultCondition.EastAsianWidth = false
 
-	var opts = model.DefaultOptions()
+	opts := model.DefaultOptions()
 	configs.ConfigRegistry.FillToModelOpts(opts)
 
 	model.Submit = types.SubmitText
@@ -45,7 +45,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		eventHandler = ui.NewEventHandler(netease)
 	)
 	eventHandler.RegisterGlobalHotkeys(opts)
-	netease.App.With(
+	netease.With(
 		model.WithHook(netease.InitHook, netease.CloseHook),
 		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
 		func(options *model.Options) {
@@ -53,6 +53,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.Components = append(options.Components, netease.Player())
 			options.KBControllers = append(options.KBControllers, eventHandler)
 			options.MouseControllers = append(options.MouseControllers, eventHandler)
+			options.Ticker = netease.Player().RenderTicker()
 		},
 	)
 
