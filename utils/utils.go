@@ -257,7 +257,8 @@ func getCacheUri(songId int64) (uri string, ok bool) {
 	if err != nil || len(files) == 0 {
 		return
 	}
-	for _, file := range files {
+	for i := len(files) - 1; i >= 0; i-- {
+		file := files[i]
 		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) {
 			uri = path.Join(cacheDir, file.Name())
 			ok = true
