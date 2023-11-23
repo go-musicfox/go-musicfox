@@ -257,7 +257,8 @@ func getCacheUri(songId int64) (uri string, ok bool) {
 	if err != nil || len(files) == 0 {
 		return
 	}
-	for _, file := range files {
+	for i := len(files) - 1; i >= 0; i-- {
+		file := files[i]
 		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) {
 			uri = path.Join(cacheDir, file.Name())
 			ok = true
@@ -481,6 +482,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 func GetCacheUrl(songId int64) (url, musicType string, ok bool) {
 	url, ok = getCacheUri(songId)
 	if !ok || path.Base(url) < fmt.Sprintf("%d-%d", songId, priority[configs.ConfigRegistry.Main.PlayerSongLevel]) {
+		ok = false
 		return
 	}
 	split := strings.Split(path.Base(url), ".")
