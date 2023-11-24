@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "name": "musicfox",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/musicfox.go",
+      "console": "integratedTerminal",
+      "env": {},
+      "args": []
+    }
+  ]
+}
