@@ -12,7 +12,7 @@ var importOnce sync.Once
 
 func importFramework() {
 	importOnce.Do(func() {
-		_, err := purego.Dlopen("AppKit.framework/AppKit", purego.RTLD_GLOBAL)
+		_, err := purego.Dlopen("/System/Library/Frameworks/AppKit.framework/AppKit", purego.RTLD_GLOBAL)
 		if err != nil {
 			panic(err)
 		}
@@ -34,6 +34,8 @@ type CGRect struct {
 	Size   CGSize
 }
 
-type NSPoint = CGPoint
-type NSRect = CGRect
-type NSSize = CGSize
+type (
+	NSPoint = CGPoint
+	NSRect  = CGRect
+	NSSize  = CGSize
+)

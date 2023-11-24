@@ -12,7 +12,7 @@ var importOnce sync.Once
 
 func importFramework() {
 	importOnce.Do(func() {
-		_, err := purego.Dlopen("AVFoundation.framework/AVFoundation", purego.RTLD_GLOBAL)
+		_, err := purego.Dlopen("/System/Library/Frameworks/AVFoundation.framework/AVFoundation", purego.RTLD_GLOBAL)
 		if err != nil {
 			panic(err)
 		}
