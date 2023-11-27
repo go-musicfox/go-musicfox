@@ -50,9 +50,9 @@ const (
 	OperateTypeDiscollectSelectedPlaylist         = "discollectSelectedPlaylist"
 	OperateTypeDelSongFromCurPlaylist             = "delSongFromCurPlaylist"
 	OperateTypeAddSongToNext                      = "addSongToNext"
-	OperateTypeAppendSongToCurPlaylist            = "appendSongToCurPlaylist "
-	OperateTypeClearSongCache                     = "clearSongCache "
-	OperateTypeRerender                           = "rerender "
+	OperateTypeAppendSongToCurPlaylist            = "appendSongToCurPlaylist"
+	OperateTypeClearSongCache                     = "clearSongCache"
+	OperateTypeRerender                           = "rerender"
 )
 
 type EventHandler struct {
