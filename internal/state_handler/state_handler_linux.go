@@ -288,10 +288,12 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 		newVolume := math.Max(0, float64(info.Volume)/100.0)
 		s.setProp("org.mpris.MediaPlayer2.Player", "Volume", dbus.MakeVariant(newVolume))
 	}()
-
 }
 
 func (s *Handler) SetPosition(duration time.Duration) {
+	if s.props == nil {
+		return
+	}
 	s.props.SetMust("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(duration)))
 }
 
