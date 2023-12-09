@@ -21,21 +21,28 @@ type LRCFile struct {
 	fragments []LRCFragment
 }
 
-func (f *LRCFile) AsText() string {
+func AsText(f *LRCFile, t *TranslateLRCFile) string {
 	var builder strings.Builder
 
 	if f == nil || len(f.fragments) == 0 {
-		return "暂无歌词~"
+		return "[00:00.00]暂无歌词~"
 	}
 
 	for _, line := range f.fragments {
+		flt := time.Duration(line.StartTimeMs*1e6) % (time.Second * 60)
+		it := time.Duration(line.StartTimeMs * 1e6)
+		builder.WriteString(fmt.Sprintf("[%02.0f:%05.2f]", it.Minutes(), flt.Seconds()))
 		builder.WriteString(line.Content)
+		if t != nil && t.fragments[line.StartTimeMs] != "" {
+			builder.WriteByte(' ')
+			builder.WriteByte('[')
+			builder.WriteString(t.fragments[line.StartTimeMs])
+			builder.WriteByte(']')
+		}
 		builder.WriteByte('\n')
 	}
 
-	res := builder.String()
-
-	return res[:len(res)-1]
+	return builder.String()[:builder.Len()-1]
 }
 
 type TranslateLRCFile struct {
