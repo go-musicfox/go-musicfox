@@ -31,7 +31,7 @@ func AsText(f *LRCFile, t *TranslateLRCFile) string {
 	for _, line := range f.fragments {
 		flt := time.Duration(line.StartTimeMs*1e6) % (time.Second * 60)
 		it := time.Duration(line.StartTimeMs * 1e6)
-		builder.WriteString(fmt.Sprintf("[%02.0f:%05.2f]", it.Minutes(), flt.Seconds()))
+		builder.WriteString(fmt.Sprintf("[%02d:%05.2f]", it/time.Minute, flt.Seconds()))
 		builder.WriteString(line.Content)
 		if t != nil && t.fragments[line.StartTimeMs] != "" {
 			builder.WriteByte(' ')
