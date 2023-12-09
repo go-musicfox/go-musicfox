@@ -679,7 +679,7 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 
 // getLyric 获取歌曲歌词
 func (p *Player) getLyric(songId int64) {
-	p.lrcFile, _ = lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词~"))
+	p.lrcFile, _ = lyric.ReadLRC(strings.NewReader("[00:00.00]暂无歌词~"))
 	p.transLrcFile, _ = lyric.ReadTranslateLRC(strings.NewReader("[00:00.00]"))
 	lrcService := service.LyricService{
 		ID: strconv.FormatInt(songId, 10),
@@ -838,6 +838,6 @@ func (p *Player) PlayingInfo() state_handler.PlayingInfo {
 		Album:          music.Album.Name,
 		Artist:         music.ArtistName(),
 		AlbumArtist:    music.Album.ArtistName(),
-		AsText:         p.lrcFile.AsText(),
+		AsText:         lyric.AsText(p.lrcFile, p.transLrcFile),
 	}
 }
