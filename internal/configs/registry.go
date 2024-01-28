@@ -113,7 +113,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Startup.ProgressOutBounce = ini.Bool("startup.progressOutBounce", true)
 	registry.Startup.LoadingDuration = time.Second * time.Duration(ini.Int("startup.loadingSeconds", types.StartupLoadingSeconds))
 	registry.Startup.Welcome = ini.String("startup.welcome", types.AppName)
-	registry.Startup.SignIn = ini.Bool("startup.signIn", true)
+	registry.Startup.SignIn = ini.Bool("startup.signIn", false)
 	registry.Startup.CheckUpdate = ini.Bool("startup.checkUpdate", true)
 
 	emptyChar := ini.String("progress.emptyChar", types.ProgressEmptyChar)
