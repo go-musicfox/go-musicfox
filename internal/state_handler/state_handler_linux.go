@@ -13,6 +13,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +26,7 @@ func (m *MediaPlayer2) properties() map[string]*prop.Prop {
 		"CanQuit":             newProp(true, nil),       // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanQuit
 		"CanRaise":            newProp(false, nil),      // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanRaise
 		"HasTrackList":        newProp(true, nil),       // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:HasTrackList
-		"Identity":            newProp("musicfox", nil),     // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:Identity
+		"Identity":            newProp(types.AppName, nil),     // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:Identity
 		"SupportedUriSchemes": newProp([]string{}, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedUriSchemes
 		"SupportedMimeTypes":  newProp([]string{}, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedMimeTypes
 	}
