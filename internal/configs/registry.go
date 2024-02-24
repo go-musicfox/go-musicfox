@@ -181,7 +181,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.AutoPlayer.Mode = PlayerModeFromAutoPlayModeString(ini.String("autoplay.playMode"))
 
 	// UNM
-	registry.UNM.Enable = ini.Bool("unm.switch", true)
+	registry.UNM.Enable = ini.Bool("unm.switch", false)
 
 	sourceStr := ini.String("unm.sources", "kuwo")
 	if sourceStr != "" {
