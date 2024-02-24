@@ -65,9 +65,11 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 			return false, nil
 		}
 		m.playlists = utils.GetDailyPlaylists(response)
+		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
 		}
+		m.menus = menus
 		m.fetchTime = now
 
 		return true, nil

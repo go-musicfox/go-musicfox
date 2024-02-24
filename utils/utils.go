@@ -378,8 +378,8 @@ func downloadMusic(url, musicType string, song structs.Song, downloadDir string)
 	filename := filenameBuilder.String()
 
 	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
-	filename = strings.Replace(filename, "/", "_", -1)
-	filename = strings.Replace(filename, "\\", "_", -1)
+	filename = strings.ReplaceAll(filename, "/", "_")
+	filename = strings.ReplaceAll(filename, "\\", "_")
 	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
