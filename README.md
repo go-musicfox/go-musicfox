@@ -347,6 +347,10 @@ ctrl+shift+space=toggle
 
 > 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
 
+## CHANGELOG
+
+See [CHANGELOG.md](./CHANGELOG.md)
+
 ## 相关项目
 
 1. [go-musicfox/bubbletea](https://github.com/go-musicfox/bubbletea)：基于 [bubbletea](https://github.com/charmbracelet/bubbletea) 进行部分定制

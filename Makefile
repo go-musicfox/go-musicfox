@@ -18,6 +18,10 @@ endif
 build:
 	./hack/build.sh build
 
+.PHONY: init
+init:
+	git config --local core.hooksPath githooks
+
 .PHONY: install
 install:
 	./hack/build.sh install
