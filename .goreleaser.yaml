@@ -129,6 +129,9 @@ archives:
     files:
       - none*
 
+changelog:
+  use: github-native
+
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
     repository:
