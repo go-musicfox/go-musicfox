@@ -1,0 +1,6 @@
+#!/bin/sh
+
+git-chglog -o CHANGELOG.md
+git add .
+
+exit 0;
