@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 type OperateType string
@@ -50,9 +51,11 @@ const (
 	OperateTypeDiscollectSelectedPlaylist         = "discollectSelectedPlaylist"
 	OperateTypeDelSongFromCurPlaylist             = "delSongFromCurPlaylist"
 	OperateTypeAddSongToNext                      = "addSongToNext"
-	OperateTypeAppendSongToCurPlaylist            = "appendSongToCurPlaylist "
-	OperateTypeClearSongCache                     = "clearSongCache "
-	OperateTypeRerender                           = "rerender "
+	OperateTypeAppendSongToCurPlaylist            = "appendSongToCurPlaylist"
+	OperateTypeClearSongCache                     = "clearSongCache"
+	OperateTypeRerender                           = "rerender"
+	OperateTypePageDown                           = "pageDown"
+	OperateTypePageUp                             = "pageUp"
 )
 
 type EventHandler struct {
@@ -133,6 +136,8 @@ var keyOperateMapping = map[string]OperateType{
 	"U":         OperateTypeClearSongCache,
 	"r":         OperateTypeRerender,
 	"R":         OperateTypeRerender,
+	"ctrl+d":    OperateTypePageDown,
+	"ctrl+u":    OperateTypePageUp,
 }
 
 func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
@@ -277,6 +282,20 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 	case OperateTypeRerender:
 		// rerender
 		return true, main, app.RerenderCmd(true)
+	case OperateTypePageDown:
+		oldPage := main.CurPage()
+		main.NextPage()
+		if oldPage != main.CurPage() {
+			curIndex := utils.Min(main.SelectedIndex()+main.PageSize(), len(menu.MenuViews())-1)
+			main.SetSelectedIndex(curIndex)
+		}
+	case OperateTypePageUp:
+		oldPage := main.CurPage()
+		main.PrePage()
+		if oldPage != main.CurPage() {
+			curIndex := utils.Max(main.SelectedIndex()-main.PageSize(), 0)
+			main.SetSelectedIndex(curIndex)
+		}
 	default:
 		return false, nil, nil
 	}
