@@ -88,7 +88,6 @@ var keyOperateMapping = map[string]OperateType{
 	"，":         OperateTypeLikePlayingSong,
 	".":         OperateTypeDislikePlayingSong,
 	"。":         OperateTypeDislikePlayingSong,
-	"w":         OperateTypeLogout,
 	"W":         OperateTypeLogout,
 	"=":         OperateTypeUpVolume,
 	"＝":         OperateTypeUpVolume,
