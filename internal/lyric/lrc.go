@@ -146,6 +146,12 @@ func readLRCLine(line string, lineNo int) (fragments []LRCFragment, err error) {
 }
 
 func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error) {
+	defer func() {
+		e := recover()
+		if e != nil {
+			err = errors.New(fmt.Sprint(e))
+		}
+	}()
 
 	var left = strings.Index(line, openChar)
 	var right = strings.Index(line, closeChar)
@@ -153,6 +159,11 @@ func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error
 		err = errors.New("brackets missing")
 		return
 	}
+	for left > right && right < len(line) {
+		line = line[right+1:]
+		right = strings.Index(line, closeChar)
+	}
+
 	timeStr := line[left+1 : right]
 	t := strings.Split(timeStr, ":")
 	if len(t) > 1 && t[0] != "" && t[1] != "" {
