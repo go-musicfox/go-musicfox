@@ -665,3 +665,21 @@ func FileOrDirExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
 }
+
+type ordinal interface {
+	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64
+}
+
+func Min[T ordinal](a, b T) T {
+	if a > b {
+		return b
+	}
+	return a
+}
+
+func Max[T ordinal](a, b T) T {
+	if a < b {
+		return b
+	}
+	return a
+}
