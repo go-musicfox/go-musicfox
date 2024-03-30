@@ -1,4 +1,37 @@
 
+<a name="v4.3.2"></a>
+## [v4.3.2](https://github.com/go-musicfox/go-musicfox/compare/v4.3.1...v4.3.2) (2024-03-30)
+
+### Feat
+
+* add goreleaser changelog
+* add CHANGELOG generator
+* update scoop config
+* add vscode launch config
+* foxful-cli ticker
+* update scoop config
+* page up and page down([#241](https://github.com/go-musicfox/go-musicfox/issues/241))
+* add goreleaser changelog
+* add CHANGELOG generator
+* update scoop config
+
+### Fix
+
+* fix faulty position
+* 每日推荐歌单
+* use `AppName` in `internal.types`
+* set mpris Identity an user-friendly name
+* linux dbus `s.props` is nil
+* cannot load framework in Mac Sonoma
+* panic when parse lrc([#240](https://github.com/go-musicfox/go-musicfox/issues/240))
+* fix faulty position
+
+### Optimize
+
+* 默认关闭签到功能
+* only `W` for logout([#215](https://github.com/go-musicfox/go-musicfox/issues/215))
+
+
 <a name="v4.3.1"></a>
 ## [v4.3.1](https://github.com/go-musicfox/go-musicfox/compare/v4.3.0...v4.3.1) (2024-02-24)
 
