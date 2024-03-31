@@ -453,6 +453,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
+	utils.Logger().Printf("Start play song, url: %s, type: %s, song: %v", url, musicType, song)
 
 	// 上报
 	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
