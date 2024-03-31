@@ -223,7 +223,7 @@ scoop install go-musicfox
 
 ### 手动编译
 
-需要 Go v1.13 及以上版本
+需要 Go v1.21 及以上版本
 
 ```sh
 $ git clone https://github.com/go-musicfox/go-musicfox
@@ -311,6 +311,8 @@ $ musicfox
 |        `;`/`:`        |     收藏选中歌单     |                               |
 |        `'`/`"`        |    取消收藏选中歌单    |                               |
 |        `u`/`U`        |     清除音乐缓存     |                               |
+|        `ctrl`+`u`        |     上一页     |                               |
+|        `ctrl`+`d`        |     下一页     |                               |
 
 
 #### 全局快捷键
