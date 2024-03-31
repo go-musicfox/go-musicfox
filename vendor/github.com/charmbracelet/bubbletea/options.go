@@ -3,6 +3,7 @@ package tea
 import (
 	"context"
 	"io"
+	"sync/atomic"
 
 	"github.com/muesli/termenv"
 )
@@ -76,7 +77,7 @@ func WithoutCatchPanics() ProgramOption {
 // This is mainly useful for testing.
 func WithoutSignals() ProgramOption {
 	return func(p *Program) {
-		p.ignoreSignals = true
+		atomic.StoreUint32(&p.ignoreSignals, 1)
 	}
 }
 
@@ -100,12 +101,22 @@ func WithAltScreen() ProgramOption {
 	}
 }
 
+// WithoutBracketedPaste starts the program with bracketed paste disabled.
+func WithoutBracketedPaste() ProgramOption {
+	return func(p *Program) {
+		p.startupOptions |= withoutBracketedPaste
+	}
+}
+
 // WithMouseCellMotion starts the program with the mouse enabled in "cell
 // motion" mode.
 //
 // Cell motion mode enables mouse click, release, and wheel events. Mouse
 // movement events are also captured if a mouse button is pressed (i.e., drag
 // events). Cell motion mode is better supported than all motion mode.
+//
+// This will try to enable the mouse in extended mode (SGR), if that is not
+// supported by the terminal it will fall back to normal mode (X10).
 //
 // To enable mouse cell motion once the program has already started running use
 // the EnableMouseCellMotion command. To disable the mouse when the program is
@@ -125,6 +136,9 @@ func WithMouseCellMotion() ProgramOption {
 // EnableMouseAllMotion is a special command that enables mouse click, release,
 // wheel, and motion events, which are delivered regardless of whether a mouse
 // button is pressed, effectively enabling support for hover interactions.
+//
+// This will try to enable the mouse in extended mode (SGR), if that is not
+// supported by the terminal it will fall back to normal mode (X10).
 //
 // Many modern terminals support this, but not all. If in doubt, use
 // EnableMouseCellMotion instead.
@@ -201,7 +215,7 @@ func WithFilter(filter func(Model, Msg) Msg) ProgramOption {
 	}
 }
 
-// WithMaxFPS sets a custom maximum FPS at which the renderer should run. If
+// WithFPS sets a custom maximum FPS at which the renderer should run. If
 // less than 1, the default value of 60 will be used. If over 120, the FPS
 // will be capped at 120.
 func WithFPS(fps int) ProgramOption {
