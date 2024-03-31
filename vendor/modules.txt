@@ -294,5 +294,4 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
