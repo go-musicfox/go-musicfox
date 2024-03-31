@@ -9,29 +9,32 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 )
 
+var (
+	class_AVPlayerHandler objc.Class
+	sel_handleFinish      = objc.RegisterName("handleFinish:")
+	_player               *osxPlayer
+)
+
 func init() {
 	var err error
-	class_AVPlayerHandler, err = objc.RegisterClass(&playerHandlerBinding{})
+	class_AVPlayerHandler, err = objc.RegisterClass(
+		"AVPlayerHandler",
+		objc.GetClass("NSObject"),
+		[]*objc.Protocol{},
+		[]objc.FieldDef{},
+		[]objc.MethodDef{
+			{
+				Cmd: sel_handleFinish,
+				Fn:  handleFinish,
+			},
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
 }
 
-var (
-	class_AVPlayerHandler objc.Class
-	_player               *osxPlayer
-)
-
-var (
-	sel_handleFinish = objc.RegisterName("handleFinish:")
-)
-
-type playerHandlerBinding struct {
-	//nolint:golint,unused
-	isa objc.Class `objc:"AVPlayerHandler : NSObject"`
-}
-
-func (playerHandlerBinding) HandleFinish(_ objc.SEL, event objc.ID) {
+func handleFinish(id objc.ID, cmd objc.SEL, event objc.ID) {
 	// 这里会出现两次通知
 	core.Autorelease(func() {
 		var item avcore.AVPlayerItem
@@ -43,15 +46,6 @@ func (playerHandlerBinding) HandleFinish(_ objc.SEL, event objc.ID) {
 			_player.Stop()
 		}
 	})
-}
-
-func (playerHandlerBinding) Selector(metName string) objc.SEL {
-	switch metName {
-	case "HandleFinish":
-		return sel_handleFinish
-	default:
-		return 0
-	}
 }
 
 type playerHandler struct {

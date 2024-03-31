@@ -50,10 +50,9 @@ github.com/cocoonlife/goflac
 # github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/ebitengine/purego v0.4.0
+# github.com/ebitengine/purego v0.6.1
 ## explicit; go 1.18
 github.com/ebitengine/purego
-github.com/ebitengine/purego/internal/abi
 github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
@@ -300,7 +299,7 @@ golang.org/x/mobile/internal/mobileinit
 # golang.org/x/sync v0.3.0
 ## explicit; go 1.17
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.15.0
+# golang.org/x/sys v0.18.0
 ## explicit; go 1.18
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
