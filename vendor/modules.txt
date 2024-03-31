@@ -50,6 +50,11 @@ github.com/cocoonlife/goflac
 # github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81
 ## explicit; go 1.13
 github.com/containerd/console
+# github.com/ebitengine/oto/v3 v3.1.0
+## explicit; go 1.18
+github.com/ebitengine/oto/v3
+github.com/ebitengine/oto/v3/internal/mux
+github.com/ebitengine/oto/v3/internal/oboe
 # github.com/ebitengine/purego v0.6.1
 ## explicit; go 1.18
 github.com/ebitengine/purego
@@ -57,16 +62,6 @@ github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
 github.com/ebitengine/purego/objc
-# github.com/faiface/beep v1.1.0 => github.com/go-musicfox/beep v1.2.4
-## explicit; go 1.14
-github.com/faiface/beep
-github.com/faiface/beep/effects
-github.com/faiface/beep/flac
-github.com/faiface/beep/minimp3
-github.com/faiface/beep/mp3
-github.com/faiface/beep/speaker
-github.com/faiface/beep/vorbis
-github.com/faiface/beep/wav
 # github.com/fhs/gompd/v2 v2.3.0
 ## explicit; go 1.11
 github.com/fhs/gompd/v2/mpd
@@ -139,6 +134,16 @@ github.com/gookit/goutil/timex
 ## explicit; go 1.18
 github.com/gookit/ini/v2
 github.com/gookit/ini/v2/parser
+# github.com/gopxl/beep v1.4.0 => ../beep_new
+## explicit; go 1.21
+github.com/gopxl/beep
+github.com/gopxl/beep/effects
+github.com/gopxl/beep/flac
+github.com/gopxl/beep/minimp3
+github.com/gopxl/beep/mp3
+github.com/gopxl/beep/speaker
+github.com/gopxl/beep/vorbis
+github.com/gopxl/beep/wav
 # github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 ## explicit; go 1.14
 github.com/hajimehoshi/go-mp3
@@ -150,10 +155,6 @@ github.com/hajimehoshi/go-mp3/internal/huffman
 github.com/hajimehoshi/go-mp3/internal/imdct
 github.com/hajimehoshi/go-mp3/internal/maindata
 github.com/hajimehoshi/go-mp3/internal/sideinfo
-# github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
-## explicit; go 1.13
-github.com/hajimehoshi/oto
-github.com/hajimehoshi/oto/internal/mux
 # github.com/icza/bitio v1.1.0
 ## explicit; go 1.13
 github.com/icza/bitio
@@ -270,32 +271,6 @@ go.etcd.io/bbolt
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 ## explicit; go 1.20
-# golang.org/x/exp/shiny v0.0.0-20230905200255-921286631fa9
-## explicit; go 1.18
-golang.org/x/exp/shiny/driver/gldriver
-golang.org/x/exp/shiny/driver/internal/drawer
-golang.org/x/exp/shiny/driver/internal/errscreen
-golang.org/x/exp/shiny/driver/internal/event
-golang.org/x/exp/shiny/driver/internal/lifecycler
-golang.org/x/exp/shiny/driver/internal/win32
-golang.org/x/exp/shiny/driver/internal/x11key
-golang.org/x/exp/shiny/screen
-# golang.org/x/image v0.12.0
-## explicit; go 1.12
-golang.org/x/image/math/f64
-# golang.org/x/mobile v0.0.0-20230906132913-2077a3224571
-## explicit; go 1.18
-golang.org/x/mobile/app
-golang.org/x/mobile/app/internal/callfn
-golang.org/x/mobile/event/key
-golang.org/x/mobile/event/lifecycle
-golang.org/x/mobile/event/mouse
-golang.org/x/mobile/event/paint
-golang.org/x/mobile/event/size
-golang.org/x/mobile/event/touch
-golang.org/x/mobile/geom
-golang.org/x/mobile/gl
-golang.org/x/mobile/internal/mobileinit
 # golang.org/x/sync v0.3.0
 ## explicit; go 1.17
 golang.org/x/sync/errgroup
@@ -319,4 +294,5 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
+# github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
