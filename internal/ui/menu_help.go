@@ -64,6 +64,8 @@ func NewHelpMenu(base baseMenu) *HelpMenu {
 			{Title: ";/:", Subtitle: "收藏选中歌单"},
 			{Title: "'/\"", Subtitle: "取消收藏选中歌单"},
 			{Title: "u/U", Subtitle: "清除音乐缓存"},
+			{Title: "ctrl+u", Subtitle: "上一页"},
+			{Title: "ctrl+d", Subtitle: "下一页"},
 		},
 	}
 
