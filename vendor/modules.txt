@@ -134,7 +134,7 @@ github.com/gookit/goutil/timex
 ## explicit; go 1.18
 github.com/gookit/ini/v2
 github.com/gookit/ini/v2/parser
-# github.com/gopxl/beep v1.4.0 => ../beep_new
+# github.com/gopxl/beep v1.4.0 => github.com/go-musicfox/beep v1.4.1
 ## explicit; go 1.21
 github.com/gopxl/beep
 github.com/gopxl/beep/effects
