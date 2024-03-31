@@ -82,7 +82,7 @@ replace (
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
-	github.com/gopxl/beep v1.4.0 => ../beep_new
+	github.com/gopxl/beep v1.4.0 => github.com/go-musicfox/beep v1.4.1
 	github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 	github.com/hajimehoshi/oto v1.0.1 => github.com/go-musicfox/oto v1.0.3
 	github.com/robotn/gohook v0.41.0 => github.com/go-musicfox/gohook v0.41.1
