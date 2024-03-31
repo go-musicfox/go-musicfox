@@ -13,18 +13,22 @@ import (
 //		       return tea.Batch(someCommand, someOtherCommand)
 //	    }
 func Batch(cmds ...Cmd) Cmd {
-	var validCmds []Cmd
+	var validCmds []Cmd //nolint:prealloc
 	for _, c := range cmds {
 		if c == nil {
 			continue
 		}
 		validCmds = append(validCmds, c)
 	}
-	if len(validCmds) == 0 {
+	switch len(validCmds) {
+	case 0:
 		return nil
-	}
-	return func() Msg {
-		return BatchMsg(validCmds)
+	case 1:
+		return validCmds[0]
+	default:
+		return func() Msg {
+			return BatchMsg(validCmds)
+		}
 	}
 }
 
@@ -168,5 +172,22 @@ func Sequentially(cmds ...Cmd) Cmd {
 			}
 		}
 		return nil
+	}
+}
+
+// setWindowTitleMsg is an internal message used to set the window title.
+type setWindowTitleMsg string
+
+// SetWindowTitle produces a command that sets the terminal title.
+//
+// For example:
+//
+//	func (m model) Init() Cmd {
+//	    // Set title.
+//	    return tea.SetWindowTitle("My App")
+//	}
+func SetWindowTitle(title string) Cmd {
+	return func() Msg {
+		return setWindowTitleMsg(title)
 	}
 }

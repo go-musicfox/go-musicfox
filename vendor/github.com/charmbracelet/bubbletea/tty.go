@@ -2,27 +2,18 @@ package tea
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
 
-	isatty "github.com/mattn/go-isatty"
-	localereader "github.com/mattn/go-localereader"
 	"github.com/muesli/cancelreader"
 	"golang.org/x/term"
 )
 
 func (p *Program) initTerminal() error {
-	err := p.initInput()
-	if err != nil {
+	if err := p.initInput(); err != nil {
 		return err
-	}
-
-	if p.console != nil {
-		err = p.console.SetRaw()
-		if err != nil {
-			return err
-		}
 	}
 
 	p.renderer.hideCursor()
@@ -33,34 +24,37 @@ func (p *Program) initTerminal() error {
 // Bubble Tea program.
 func (p *Program) restoreTerminalState() error {
 	if p.renderer != nil {
+		p.renderer.disableBracketedPaste()
 		p.renderer.showCursor()
-		p.renderer.disableMouseCellMotion()
-		p.renderer.disableMouseAllMotion()
+		p.disableMouse()
 
 		if p.renderer.altScreen() {
 			p.renderer.exitAltScreen()
 
 			// give the terminal a moment to catch up
-			time.Sleep(time.Millisecond * 10)
-		}
-	}
-
-	if p.console != nil {
-		err := p.console.Reset()
-		if err != nil {
-			return err
+			time.Sleep(time.Millisecond * 10) //nolint:gomnd
 		}
 	}
 
 	return p.restoreInput()
 }
 
+// restoreInput restores the tty input to its original state.
+func (p *Program) restoreInput() error {
+	if p.tty != nil && p.previousTtyState != nil {
+		if err := term.Restore(int(p.tty.Fd()), p.previousTtyState); err != nil {
+			return fmt.Errorf("error restoring console: %w", err)
+		}
+	}
+	return nil
+}
+
 // initCancelReader (re)commences reading inputs.
 func (p *Program) initCancelReader() error {
 	var err error
-	p.cancelReader, err = cancelreader.NewReader(p.input)
+	p.cancelReader, err = newInputReader(p.input)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating cancelreader: %w", err)
 	}
 
 	p.readLoopDone = make(chan struct{})
@@ -72,8 +66,7 @@ func (p *Program) initCancelReader() error {
 func (p *Program) readLoop() {
 	defer close(p.readLoopDone)
 
-	input := localereader.NewReader(p.cancelReader)
-	err := readInputs(p.ctx, p.msgs, input)
+	err := readInputs(p.ctx, p.msgs, p.cancelReader)
 	if !errors.Is(err, io.EOF) && !errors.Is(err, cancelreader.ErrCanceled) {
 		select {
 		case <-p.ctx.Done():
@@ -86,7 +79,7 @@ func (p *Program) readLoop() {
 func (p *Program) waitForReadLoop() {
 	select {
 	case <-p.readLoopDone:
-	case <-time.After(500 * time.Millisecond):
+	case <-time.After(500 * time.Millisecond): //nolint:gomnd
 		// The read loop hangs, which means the input
 		// cancelReader's cancel function has returned true even
 		// though it was not able to cancel the read.
@@ -99,7 +92,7 @@ var lastHeight, lastWidth int
 // via a WindowSizeMsg.
 func (p *Program) checkResize() {
 	f, ok := p.output.TTY().(*os.File)
-	if !ok || !isatty.IsTerminal(f.Fd()) {
+	if !ok || !term.IsTerminal(int(f.Fd())) {
 		// can't query window size
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -54,6 +55,7 @@ type Key struct {
 	Type  KeyType
 	Runes []rune
 	Alt   bool
+	Paste bool
 }
 
 // String returns a friendly string representation for a key. It's safe (and
@@ -63,15 +65,28 @@ type Key struct {
 //	fmt.Println(k)
 //	// Output: enter
 func (k Key) String() (str string) {
+	var buf strings.Builder
 	if k.Alt {
-		str += "alt+"
+		buf.WriteString("alt+")
 	}
 	if k.Type == KeyRunes {
-		str += string(k.Runes)
-		return str
+		if k.Paste {
+			// Note: bubbles/keys bindings currently do string compares to
+			// recognize shortcuts. Since pasted text should never activate
+			// shortcuts, we need to ensure that the binding code doesn't
+			// match Key events that result from pastes. We achieve this
+			// here by enclosing pastes in '[...]' so that the string
+			// comparison in Matches() fails in that case.
+			buf.WriteByte('[')
+		}
+		buf.WriteString(string(k.Runes))
+		if k.Paste {
+			buf.WriteByte(']')
+		}
+		return buf.String()
 	} else if s, ok := keyNames[k.Type]; ok {
-		str += s
-		return str
+		buf.WriteString(s)
+		return buf.String()
 	}
 	return ""
 }
@@ -538,38 +553,86 @@ func (u unknownCSISequenceMsg) String() string {
 
 var spaceRunes = []rune{' '}
 
-// readInputs reads keypress and mouse inputs from a TTY and produces messages
+// readAnsiInputs reads keypress and mouse inputs from a TTY and produces messages
 // containing information about the key or mouse events accordingly.
-func readInputs(ctx context.Context, msgs chan<- Msg, input io.Reader) error {
+func readAnsiInputs(ctx context.Context, msgs chan<- Msg, input io.Reader) error {
 	var buf [256]byte
 
+	var leftOverFromPrevIteration []byte
+loop:
 	for {
 		// Read and block.
 		numBytes, err := input.Read(buf[:])
 		if err != nil {
-			return err
+			return fmt.Errorf("error reading input: %w", err)
 		}
 		b := buf[:numBytes]
+		if leftOverFromPrevIteration != nil {
+			b = append(leftOverFromPrevIteration, b...)
+		}
+
+		// If we had a short read (numBytes < len(buf)), we're sure that
+		// the end of this read is an event boundary, so there is no doubt
+		// if we are encountering the end of the buffer while parsing a message.
+		// However, if we've succeeded in filling up the buffer, there may
+		// be more data in the OS buffer ready to be read in, to complete
+		// the last message in the input. In that case, we will retry with
+		// the left over data in the next iteration.
+		canHaveMoreData := numBytes == len(buf)
 
 		var i, w int
 		for i, w = 0, 0; i < len(b); i += w {
 			var msg Msg
-			w, msg = detectOneMsg(b[i:])
+			w, msg = detectOneMsg(b[i:], canHaveMoreData)
+			if w == 0 {
+				// Expecting more bytes beyond the current buffer. Try waiting
+				// for more input.
+				leftOverFromPrevIteration = make([]byte, 0, len(b[i:])+len(buf))
+				leftOverFromPrevIteration = append(leftOverFromPrevIteration, b[i:]...)
+				continue loop
+			}
+
 			select {
 			case msgs <- msg:
 			case <-ctx.Done():
-				return ctx.Err()
+				err := ctx.Err()
+				if err != nil {
+					err = fmt.Errorf("found context error while reading input: %w", err)
+				}
+				return err
 			}
 		}
+		leftOverFromPrevIteration = nil
 	}
 }
 
-var unknownCSIRe = regexp.MustCompile(`^\x1b\[[\x30-\x3f]*[\x20-\x2f]*[\x40-\x7e]`)
+var (
+	unknownCSIRe  = regexp.MustCompile(`^\x1b\[[\x30-\x3f]*[\x20-\x2f]*[\x40-\x7e]`)
+	mouseSGRRegex = regexp.MustCompile(`(\d+);(\d+);(\d+)([Mm])`)
+)
 
-func detectOneMsg(b []byte) (w int, msg Msg) {
+func detectOneMsg(b []byte, canHaveMoreData bool) (w int, msg Msg) {
 	// Detect mouse events.
-	if len(b) >= 6 && b[0] == '\x1b' && b[1] == '[' && b[2] == 'M' {
-		return 6, MouseMsg(parseX10MouseEvent(b))
+	// X10 mouse events have a length of 6 bytes
+	const mouseEventX10Len = 6
+	if len(b) >= mouseEventX10Len && b[0] == '\x1b' && b[1] == '[' {
+		switch b[2] {
+		case 'M':
+			return mouseEventX10Len, MouseMsg(parseX10MouseEvent(b))
+		case '<':
+			if matchIndices := mouseSGRRegex.FindSubmatchIndex(b[3:]); matchIndices != nil {
+				// SGR mouse events length is the length of the match plus the length of the escape sequence
+				mouseEventSGRLen := matchIndices[1] + 3
+				return mouseEventSGRLen, MouseMsg(parseSGRMouseEvent(b))
+			}
+		}
+	}
+
+	// Detect bracketed paste.
+	var foundbp bool
+	foundbp, w, msg = detectBracketedPaste(b)
+	if foundbp {
+		return
 	}
 
 	// Detect escape sequence and control characters other than NUL,
@@ -613,6 +676,15 @@ func detectOneMsg(b []byte) (w int, msg Msg) {
 			break
 		}
 	}
+	if i >= len(b) && canHaveMoreData {
+		// We have encountered the end of the input buffer. Alas, we can't
+		// be sure whether the data in the remainder of the buffer is
+		// complete (maybe there was a short read). Instead of sending anything
+		// dumb to the message channel, do a short read. The outer loop will
+		// handle this case by extending the buffer as necessary.
+		return 0, nil
+	}
+
 	// If we found at least one rune, we report the bunch of them as
 	// a single KeyRunes or KeySpace event.
 	if len(runes) > 0 {

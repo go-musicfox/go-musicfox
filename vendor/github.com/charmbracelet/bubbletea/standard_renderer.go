@@ -45,6 +45,9 @@ type standardRenderer struct {
 	// essentially whether or not we're using the full size of the terminal
 	altScreenActive bool
 
+	// whether or not we're currently using bracketed paste
+	bpActive bool
+
 	// renderer dimensions; usually the size of the window
 	width  int
 	height int
@@ -170,19 +173,18 @@ func (r *standardRenderer) flush() {
 	skipLines := make(map[int]struct{})
 	flushQueuedMessages := len(r.queuedMessageLines) > 0 && !r.altScreenActive
 
-	// Add any queued messages to this render
-	if flushQueuedMessages {
-		newLines = append(r.queuedMessageLines, newLines...)
-		r.queuedMessageLines = []string{}
-	}
-
 	// Clear any lines we painted in the last render.
 	if r.linesRendered > 0 {
 		for i := r.linesRendered - 1; i > 0; i-- {
-			// If the number of lines we want to render hasn't increased and
-			// new line is the same as the old line we can skip rendering for
-			// this line as a performance optimization.
-			if (len(newLines) <= len(oldLines)) && (len(newLines) > i && len(oldLines) > i) && (newLines[i] == oldLines[i]) {
+			// if we are clearing queued messages, we want to clear all lines, since
+			// printing messages allows for native terminal word-wrap, we
+			// don't have control over the queued lines
+			if flushQueuedMessages {
+				out.ClearLine()
+			} else if (len(newLines) <= len(oldLines)) && (len(newLines) > i && len(oldLines) > i) && (newLines[i] == oldLines[i]) {
+				// If the number of lines we want to render hasn't increased and
+				// new line is the same as the old line we can skip rendering for
+				// this line as a performance optimization.
 				skipLines[i] = struct{}{}
 			} else if _, exists := r.ignoreLines[i]; !exists {
 				out.ClearLine()
@@ -208,10 +210,18 @@ func (r *standardRenderer) flush() {
 
 	// Merge the set of lines we're skipping as a rendering optimization with
 	// the set of lines we've explicitly asked the renderer to ignore.
-	if r.ignoreLines != nil {
-		for k, v := range r.ignoreLines {
-			skipLines[k] = v
+	for k, v := range r.ignoreLines {
+		skipLines[k] = v
+	}
+
+	if flushQueuedMessages {
+		// Dump the lines we've queued up for printing
+		for _, line := range r.queuedMessageLines {
+			_, _ = out.WriteString(line)
+			_, _ = out.WriteString("\r\n")
 		}
+		// clear the queued message lines
+		r.queuedMessageLines = []string{}
 	}
 
 	// Paint new lines
@@ -396,6 +406,43 @@ func (r *standardRenderer) disableMouseAllMotion() {
 	defer r.mtx.Unlock()
 
 	r.out.DisableMouseAllMotion()
+}
+
+func (r *standardRenderer) enableMouseSGRMode() {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	r.out.EnableMouseExtendedMode()
+}
+
+func (r *standardRenderer) disableMouseSGRMode() {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	r.out.DisableMouseExtendedMode()
+}
+
+func (r *standardRenderer) enableBracketedPaste() {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	r.out.EnableBracketedPaste()
+	r.bpActive = true
+}
+
+func (r *standardRenderer) disableBracketedPaste() {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	r.out.DisableBracketedPaste()
+	r.bpActive = false
+}
+
+func (r *standardRenderer) bracketedPasteActive() bool {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	return r.bpActive
 }
 
 // setIgnoredLines specifies lines not to be touched by the standard Bubble Tea
