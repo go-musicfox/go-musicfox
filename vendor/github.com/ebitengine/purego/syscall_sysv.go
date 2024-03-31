@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Ebitengine Authors
 
-//go:build darwin || (!cgo && linux && (amd64 || arm64))
+//go:build darwin || freebsd || (linux && (amd64 || arm64))
 
 package purego
 
@@ -12,22 +12,22 @@ import (
 	"unsafe"
 )
 
-var syscall9XABI0 uintptr
+var syscall15XABI0 uintptr
 
-type syscall9Args struct {
-	fn, a1, a2, a3, a4, a5, a6, a7, a8, a9 uintptr
-	f1, f2, f3, f4, f5, f6, f7, f8         uintptr
-	r1, r2, err                            uintptr
+type syscall15Args struct {
+	fn, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15 uintptr
+	f1, f2, f3, f4, f5, f6, f7, f8                                       uintptr
+	r1, r2, err                                                          uintptr
 }
 
 //go:nosplit
-func syscall_syscall9X(fn, a1, a2, a3, a4, a5, a6, a7, a8, a9 uintptr) (r1, r2, err uintptr) {
-	args := syscall9Args{
-		fn, a1, a2, a3, a4, a5, a6, a7, a8, a9,
+func syscall_syscall15X(fn, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15 uintptr) (r1, r2, err uintptr) {
+	args := syscall15Args{
+		fn, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15,
 		a1, a2, a3, a4, a5, a6, a7, a8,
 		r1, r2, err,
 	}
-	runtime_cgocall(syscall9XABI0, unsafe.Pointer(&args))
+	runtime_cgocall(syscall15XABI0, unsafe.Pointer(&args))
 	return args.r1, args.r2, args.err
 }
 
@@ -37,12 +37,7 @@ func syscall_syscall9X(fn, a1, a2, a3, a4, a5, a6, a7, a8, a9 uintptr) (r1, r2, 
 // of uintptr. Only a limited number of callbacks may be created in a single Go process, and any memory allocated
 // for these callbacks is never released. At least 2000 callbacks can always be created. Although this function
 // provides similar functionality to windows.NewCallback it is distinct.
-//
-// NOTE: Linux is currently not supported and will panic if called.
 func NewCallback(fn interface{}) uintptr {
-	if runtime.GOOS == "linux" {
-		panic("purego: NewCallback not supported")
-	}
 	return compileCallback(fn)
 }
 
