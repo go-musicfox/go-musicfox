@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -378,8 +379,8 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 		player = h.netease.player
 		main   = a.MustMain()
 	)
-	switch msg.Type {
-	case tea.MouseLeft:
+	switch {
+	case msg.Button == tea.MouseButtonLeft && slices.Contains([]tea.MouseAction{tea.MouseActionPress, tea.MouseActionMotion}, msg.Action):
 		x, y := msg.X, msg.Y
 		w := len(player.progressRamp)
 		if y+1 == a.WindowHeight() && x+1 <= len(player.progressRamp) {
@@ -393,10 +394,14 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 				player.Resume()
 			}
 		}
-	case tea.MouseWheelDown:
+	case msg.Button == tea.MouseButtonWheelDown && msg.Action == tea.MouseActionPress:
 		player.DownVolume()
-	case tea.MouseWheelUp:
+	case msg.Button == tea.MouseButtonWheelUp && msg.Action == tea.MouseActionPress:
 		player.UpVolume()
+	case msg.Button == tea.MouseButtonWheelLeft && msg.Action == tea.MouseActionPress:
+		player.PreviousSong(true)
+	case msg.Button == tea.MouseButtonWheelRight && msg.Action == tea.MouseActionPress:
+		player.NextSong(true)
 	}
 
 	return true, main, a.Tick(time.Nanosecond)
