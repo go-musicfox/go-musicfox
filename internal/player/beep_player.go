@@ -108,7 +108,7 @@ func (p *beepPlayer) listen() {
 			if prevSongId != p.curMusic.Id || !utils.FileOrDirExists(cacheFile) {
 				ctx, cancel = context.WithCancel(context.Background())
 
-				// FIXME 先这样处理，暂时没想到更好的办法
+				// FIXME: 先这样处理，暂时没想到更好的办法
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
 					panic(err)
 				}
@@ -123,11 +123,12 @@ func (p *beepPlayer) listen() {
 					}
 				} else if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
 					p.stopNoLock()
-					continue
+					goto nextLoop
 				} else {
 					reader = resp.Body
 				}
 
+				// 边下载边播放
 				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 					defer func() {
 						if utils.Recover(true) {
@@ -172,7 +173,7 @@ func (p *beepPlayer) listen() {
 				if err = utils.WaitForNBytes(p.cacheReader, N, time.Millisecond*100, 50); err != nil {
 					utils.Logger().Printf("WaitForNBytes err: %+v", err)
 					p.stopNoLock()
-					continue
+					goto nextLoop
 				}
 			} else {
 				// 单曲循环以及歌单只有一首歌时不再请求网络
@@ -183,7 +184,7 @@ func (p *beepPlayer) listen() {
 
 			if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
 				p.stopNoLock()
-				break
+				goto nextLoop
 			}
 
 			if err = speaker.Init(p.curFormat.SampleRate, p.curFormat.SampleRate.N(time.Millisecond*200)); err != nil {
@@ -210,6 +211,8 @@ func (p *beepPlayer) listen() {
 			})
 			p.resumeNoLock()
 			prevSongId = p.curMusic.Id
+
+		nextLoop:
 			p.l.Unlock()
 		}
 	}

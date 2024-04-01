@@ -41,7 +41,7 @@ func (s NSString) InitWithUTF8String(utf8 string) NSString {
 }
 
 func (s NSString) String() string {
-	return string(unsafe.Slice((*byte)(unsafe.Pointer(s.Send(sel_UTF8String))), s.Send(macdriver.SEL_length)))
+	return string(unsafe.Slice((*byte)(unsafe.Pointer(s.Send(sel_UTF8String))), s.Send(macdriver.SEL_length))) //nolint:govet
 }
 
 func String(str string) NSString {
