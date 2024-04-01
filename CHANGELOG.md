@@ -4,6 +4,7 @@
 
 ### Chore
 
+* update CHANGELOG
 * mod tidy
 
 ### Feat
