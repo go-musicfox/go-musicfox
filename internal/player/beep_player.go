@@ -19,6 +19,11 @@ import (
 	"github.com/gopxl/beep/speaker"
 )
 
+const (
+	sampleRate       = beep.SampleRate(44100)
+	resampleQuiality = 4
+)
+
 type beepPlayer struct {
 	l sync.Mutex
 
@@ -84,6 +89,10 @@ func (p *beepPlayer) listen() {
 		}
 	)
 
+	if err = speaker.Init(sampleRate, sampleRate.N(time.Millisecond*200)); err != nil {
+		panic(err)
+	}
+
 	cacheFile := path.Join(utils.GetLocalDataDir(), "music_cache")
 	for {
 		select {
@@ -105,9 +114,9 @@ func (p *beepPlayer) listen() {
 				cancel()
 			}
 			p.reset()
-			if prevSongId != p.curMusic.Id || !utils.FileOrDirExists(cacheFile) {
-				ctx, cancel = context.WithCancel(context.Background())
+			ctx, cancel = context.WithCancel(context.Background())
 
+			if prevSongId != p.curMusic.Id || !utils.FileOrDirExists(cacheFile) {
 				// FIXME: 先这样处理，暂时没想到更好的办法
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
 					panic(err)
@@ -162,7 +171,7 @@ func (p *beepPlayer) listen() {
 							pos = 1
 						}
 						_ = p.curStreamer.Seek(pos)
-						p.ctrl.Streamer = beep.Seq(beep.StreamerFunc(p.streamer), beep.Callback(doneHandle))
+						p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 					}
 				}(ctx, p.cacheWriter, reader)
 
@@ -187,11 +196,9 @@ func (p *beepPlayer) listen() {
 				goto nextLoop
 			}
 
-			if err = speaker.Init(p.curFormat.SampleRate, p.curFormat.SampleRate.N(time.Millisecond*200)); err != nil {
-				panic(err)
-			}
+			utils.Logger().Printf("current song sample rate: %d", p.curFormat.SampleRate)
 
-			p.ctrl.Streamer = beep.Seq(beep.StreamerFunc(p.streamer), beep.Callback(doneHandle))
+			p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 			p.volume.Streamer = p.ctrl
 			speaker.Play(p.volume)
 
@@ -273,7 +280,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	}
 	if p.state == types.Playing || p.state == types.Paused {
 		speaker.Lock()
-		newPos := p.curFormat.SampleRate.N(duration)
+		newPos := sampleRate.N(duration)
 
 		if newPos < 0 {
 			newPos = 0
@@ -406,11 +413,10 @@ func (p *beepPlayer) Close() {
 	}
 	close(p.close)
 	speaker.Clear()
+	speaker.Close()
 }
 
 func (p *beepPlayer) reset() {
-	speaker.Clear()
-	speaker.Close()
 	// 关闭旧计时器
 	if p.timer != nil {
 		p.timer.Stop()
@@ -426,6 +432,7 @@ func (p *beepPlayer) reset() {
 		p.curStreamer = nil
 	}
 	p.cacheDownloaded = false
+	speaker.Clear()
 }
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
@@ -456,4 +463,11 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	}
 	p.resumeNoLock()
 	return
+}
+
+func (p *beepPlayer) resampleStreamer(old beep.SampleRate) beep.Streamer {
+	if old == sampleRate {
+		return beep.StreamerFunc(p.streamer)
+	}
+	return beep.Resample(resampleQuiality, old, sampleRate, beep.StreamerFunc(p.streamer))
 }
