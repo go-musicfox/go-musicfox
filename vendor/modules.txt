@@ -52,7 +52,7 @@ github.com/cocoonlife/goflac
 github.com/ebitengine/oto/v3
 github.com/ebitengine/oto/v3/internal/mux
 github.com/ebitengine/oto/v3/internal/oboe
-# github.com/ebitengine/purego v0.6.1
+# github.com/ebitengine/purego v0.7.0
 ## explicit; go 1.18
 github.com/ebitengine/purego
 github.com/ebitengine/purego/internal/cgo

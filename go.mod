@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.8.0
-	github.com/ebitengine/purego v0.6.1
+	github.com/ebitengine/purego v0.7.0
 	github.com/fhs/gompd/v2 v2.3.0
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.3.0
