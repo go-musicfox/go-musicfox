@@ -64,7 +64,7 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 #### 1. 通过 Homebrew 安装
 
 ```sh
-$ brew install anhoder/go-musicfox/go-musicfox
+$ brew install anhoder/go-musicfox/go-musicfox  // 指定`--head`使用master代码编译安装
 ```
 
 如果你之前安装过 musicfox，需要使用下列命令重新链接:
@@ -194,7 +194,7 @@ $ nix-shell -p go-musicfox
 #### 2. 通过 Homebrew 安装
 
 ```sh
-$ brew install anhoder/go-musicfox/go-musicfox
+$ brew install anhoder/go-musicfox/go-musicfox  // 指定`--head`使用master代码编译安装
 ```
 
 如果你之前安装过 musicfox，需要使用下列命令重新链接:
