@@ -20,6 +20,9 @@ func runCLI() {
 	var app = gcli.NewApp()
 	app.Name = types.AppName
 	app.Version = types.AppVersion
+	if types.BuildTags != "" {
+		app.Version += " [" + types.BuildTags + "]"
+	}
 	app.Description = types.AppDescription
 	app.GOptsBinder = func(gf *gcli.Flags) {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")

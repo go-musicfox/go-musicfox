@@ -151,7 +151,11 @@ brews:
     install: |
       system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/go-musicfox/go-musicfox \033[0m"
       if build.head?
-        system "make build GOBINARY=" + ENV["HOMEBREW_PREFIX"] + "/bin/go"
+        if OS.mac?
+          system "make build BUILD_TAGS='enable_global_hotkey' GOBINARY=" + ENV["HOMEBREW_PREFIX"] + "/bin/go"
+        else
+          system "make build GOBINARY=" + ENV["HOMEBREW_PREFIX"] + "/bin/go"
+        end
         bin.install 'bin/musicfox'
       else
         bin.install 'musicfox'
