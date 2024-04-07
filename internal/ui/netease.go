@@ -10,6 +10,10 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/netease-music/service"
+	"github.com/go-musicfox/netease-music/util"
+	"github.com/telanflow/cookiejar"
+
 	"github.com/go-musicfox/go-musicfox/internal/automator"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
@@ -18,10 +22,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
-
-	"github.com/go-musicfox/netease-music/service"
-	"github.com/go-musicfox/netease-music/util"
-	"github.com/telanflow/cookiejar"
 )
 
 type Netease struct {

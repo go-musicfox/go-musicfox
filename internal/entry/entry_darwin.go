@@ -4,6 +4,7 @@ package entry
 
 import (
 	"github.com/ebitengine/purego/objc"
+
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/utils"

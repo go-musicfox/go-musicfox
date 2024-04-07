@@ -9,11 +9,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-
 	"github.com/go-musicfox/notificator"
 	"github.com/pkg/errors"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type osxNotificator struct {

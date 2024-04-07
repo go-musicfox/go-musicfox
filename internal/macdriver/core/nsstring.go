@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/ebitengine/purego/objc"
+
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
 )
 

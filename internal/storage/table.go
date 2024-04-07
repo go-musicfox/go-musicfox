@@ -3,9 +3,10 @@ package storage
 import (
 	"encoding/json"
 
-	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
+
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 type IteratorCallback func(k, v []byte) error

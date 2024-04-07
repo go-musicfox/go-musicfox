@@ -17,6 +17,7 @@ require (
 	github.com/go-flac/flacpicture v0.3.0
 	github.com/go-musicfox/netease-music v1.4.1
 	github.com/go-musicfox/notificator v0.1.0
+	github.com/go-ole/go-ole v1.3.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.2.2
@@ -26,6 +27,7 @@ require (
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
 	github.com/robotn/gohook v0.41.0
+	github.com/saltosystems/winrt-go v0.0.0-20240320184339-289d313a74b7
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -71,7 +73,7 @@ require (
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )
@@ -85,5 +87,6 @@ replace (
 	github.com/gopxl/beep v1.4.0 => github.com/go-musicfox/beep v1.4.1
 	github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 	github.com/robotn/gohook v0.41.0 => github.com/go-musicfox/gohook v0.41.1
+	github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.0-alpha
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 )

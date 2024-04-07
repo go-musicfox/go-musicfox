@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
-
 	"github.com/gopxl/beep"
 	"github.com/gopxl/beep/effects"
 	"github.com/gopxl/beep/speaker"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 const (
@@ -158,7 +158,7 @@ func (p *beepPlayer) listen() {
 						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0666)
 						// 使用新的文件后需手动Seek到上次播放处
 						lastStreamer := p.curStreamer
-						defer lastStreamer.Close()
+						defer utils.Ignore(lastStreamer.Close())
 						pos := lastStreamer.Position()
 						if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, cacheReader); err != nil {
 							p.stopNoLock()
@@ -400,6 +400,8 @@ func (p *beepPlayer) Toggle() {
 		p.Resume()
 	case types.Playing:
 		p.Paused()
+	default:
+		p.Resume()
 	}
 }
 

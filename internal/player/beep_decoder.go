@@ -3,9 +3,6 @@ package player
 import (
 	"io"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-
 	"github.com/gopxl/beep"
 	"github.com/gopxl/beep/flac"
 	"github.com/gopxl/beep/minimp3"
@@ -14,6 +11,9 @@ import (
 	"github.com/gopxl/beep/wav"
 	"github.com/pkg/errors"
 	minimp3pkg "github.com/tosone/minimp3"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {

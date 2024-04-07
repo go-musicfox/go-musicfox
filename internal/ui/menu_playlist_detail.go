@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/netease"
 	"github.com/go-musicfox/go-musicfox/internal/structs"

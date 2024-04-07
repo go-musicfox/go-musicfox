@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ebitengine/purego"
+
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 )
 

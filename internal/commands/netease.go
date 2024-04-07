@@ -6,12 +6,13 @@ import (
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/gookit/gcli/v2"
+	"github.com/mattn/go-runewidth"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/gookit/gcli/v2"
-	"github.com/mattn/go-runewidth"
 )
 
 func NewPlayerCommand() *gcli.Command {

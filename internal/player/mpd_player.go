@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fhs/gompd/v2/mpd"
+
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/fhs/gompd/v2/mpd"
 )
 
 var stateMapping = map[string]types.State{
@@ -147,6 +147,7 @@ func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 				p.timer.Stop()
 			}
 			p.setState(types.Stopped)
+		default:
 		}
 	}
 	if vol := status["volume"]; vol != "" {
@@ -314,6 +315,8 @@ func (p *mpdPlayer) Toggle() {
 		p.Resume()
 	case types.Playing:
 		p.Paused()
+	default:
+		p.Resume()
 	}
 }
 

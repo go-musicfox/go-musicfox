@@ -5,10 +5,11 @@ import (
 	"path"
 
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/gookit/gcli/v2"
 	"github.com/muesli/termenv"
+
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 func NewConfigCommand() *gcli.Command {
