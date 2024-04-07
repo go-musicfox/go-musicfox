@@ -5,9 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
+
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 type LocalDB struct {

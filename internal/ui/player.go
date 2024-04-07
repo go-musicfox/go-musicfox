@@ -11,7 +11,12 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
+	"github.com/buger/jsonparser"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/go-musicfox/netease-music/service"
+	"github.com/mattn/go-runewidth"
+	"github.com/muesli/termenv"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
@@ -22,11 +27,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-musicfox/go-musicfox/utils/like_list"
-
-	"github.com/buger/jsonparser"
-	"github.com/go-musicfox/netease-music/service"
-	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 )
 
 // PlayDirection 下首歌的方向

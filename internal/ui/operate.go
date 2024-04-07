@@ -7,16 +7,15 @@ import (
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
+	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/buger/jsonparser"
-	"github.com/go-musicfox/netease-music/service"
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 )
 
 // likePlayingSong like/unlike playing song

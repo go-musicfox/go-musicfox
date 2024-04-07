@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+	lastfmgo "github.com/shkh/lastfm-go"
+
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/pkg/errors"
-	lastfmgo "github.com/shkh/lastfm-go"
 )
 
 type AuthInvalid struct {

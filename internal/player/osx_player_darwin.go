@@ -164,6 +164,8 @@ func (p *osxPlayer) Toggle() {
 		p.Resume()
 	case types.Playing:
 		p.Paused()
+	default:
+		p.Resume()
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/model"
+
 	ds "github.com/go-musicfox/go-musicfox/internal/structs"
 )
 

@@ -3,11 +3,12 @@ package automator
 import (
 	"math/rand"
 
+	"github.com/pkg/errors"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/netease"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/pkg/errors"
 )
 
 type AutoPlayerBackend interface {

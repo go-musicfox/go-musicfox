@@ -90,6 +90,9 @@ github.com/go-musicfox/notificator
 # github.com/go-musicfox/requests v0.2.0
 ## explicit; go 1.13
 github.com/go-musicfox/requests
+# github.com/go-ole/go-ole v1.3.0
+## explicit; go 1.12
+github.com/go-ole/go-ole
 # github.com/godbus/dbus/v5 v5.1.0
 ## explicit; go 1.12
 github.com/godbus/dbus/v5
@@ -240,6 +243,35 @@ github.com/robotn/gohook/hook/x11
 # github.com/sahilm/fuzzy v0.1.0
 ## explicit
 github.com/sahilm/fuzzy
+# github.com/saltosystems/winrt-go v0.0.0-20240320184339-289d313a74b7 => github.com/go-musicfox/winrt-go v0.1.0-alpha
+## explicit; go 1.18
+github.com/saltosystems/winrt-go/internal/delegate
+github.com/saltosystems/winrt-go/internal/kernel32
+github.com/saltosystems/winrt-go/windows/devices/enumeration
+github.com/saltosystems/winrt-go/windows/foundation
+github.com/saltosystems/winrt-go/windows/foundation/collections
+github.com/saltosystems/winrt-go/windows/foundation/numerics
+github.com/saltosystems/winrt-go/windows/graphics/directx
+github.com/saltosystems/winrt-go/windows/graphics/directx/direct3d11
+github.com/saltosystems/winrt-go/windows/media
+github.com/saltosystems/winrt-go/windows/media/audio
+github.com/saltosystems/winrt-go/windows/media/capture
+github.com/saltosystems/winrt-go/windows/media/capture/frames
+github.com/saltosystems/winrt-go/windows/media/casting
+github.com/saltosystems/winrt-go/windows/media/core
+github.com/saltosystems/winrt-go/windows/media/devices
+github.com/saltosystems/winrt-go/windows/media/devices/core
+github.com/saltosystems/winrt-go/windows/media/mediaproperties
+github.com/saltosystems/winrt-go/windows/media/playback
+github.com/saltosystems/winrt-go/windows/media/protection
+github.com/saltosystems/winrt-go/windows/media/render
+github.com/saltosystems/winrt-go/windows/media/streaming/adaptive
+github.com/saltosystems/winrt-go/windows/networking/backgroundtransfer
+github.com/saltosystems/winrt-go/windows/storage
+github.com/saltosystems/winrt-go/windows/storage/fileproperties
+github.com/saltosystems/winrt-go/windows/storage/streams
+github.com/saltosystems/winrt-go/windows/system
+github.com/saltosystems/winrt-go/windows/web/http
 # github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/go-musicfox/lastfm-go v0.0.2
 ## explicit; go 1.19
 github.com/shkh/lastfm-go
@@ -274,7 +306,7 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.18.0
+# golang.org/x/sys v0.19.0
 ## explicit; go 1.18
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
@@ -294,4 +326,5 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
+# github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.0-alpha
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2

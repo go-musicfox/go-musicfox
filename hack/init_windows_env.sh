@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# install linux dependency in docker
+# install windows dependency in docker
 
+set -o errexit
 set -o nounset
 set -o pipefail
+set -x
 
 BUILD_HOST=${BUILD_HOST:-"x86_64-linux-gnu"}
 BUILD_ARCH="x86_64"

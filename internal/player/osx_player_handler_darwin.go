@@ -4,6 +4,7 @@ package player
 
 import (
 	"github.com/ebitengine/purego/objc"
+
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/avcore"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"

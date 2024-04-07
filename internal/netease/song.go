@@ -3,9 +3,10 @@ package netease
 import (
 	"strconv"
 
+	"github.com/go-musicfox/netease-music/service"
+
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/go-musicfox/netease-music/service"
 )
 
 func FetchDailySongs() (playlist []structs.Song, err error) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ebitengine/purego/objc"
+
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"

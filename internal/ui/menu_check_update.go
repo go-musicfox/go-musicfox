@@ -2,10 +2,10 @@ package ui
 
 import (
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/skratchdot/open-golang/open"
+
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	"github.com/skratchdot/open-golang/open"
 )
 
 type CheckUpdateMenu struct {

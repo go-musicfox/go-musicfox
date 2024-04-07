@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/storage"
-
 	"github.com/skratchdot/open-golang/open"
+
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
 
 type Lastfm struct {

@@ -5,13 +5,13 @@ import (
 	"log"
 
 	"github.com/anhoder/foxful-cli/util"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
+	"github.com/gookit/gcli/v2"
+
 	"github.com/go-musicfox/go-musicfox/internal/commands"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
-
-	neteaseutil "github.com/go-musicfox/netease-music/util"
-	"github.com/gookit/gcli/v2"
 )
 
 func runCLI() {

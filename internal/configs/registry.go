@@ -7,10 +7,10 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/gookit/ini/v2"
+
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 var ConfigRegistry *Registry

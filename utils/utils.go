@@ -16,10 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-
 	"github.com/bogem/id3v2/v2"
 	"github.com/buger/jsonparser"
 	songtag "github.com/frolovo22/tag"
@@ -28,6 +24,10 @@ import (
 	foldersize "github.com/markthree/go-get-folder-size/src"
 	"github.com/pkg/errors"
 	"github.com/skip2/go-qrcode"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 //go:embed embed
@@ -220,13 +220,13 @@ func DownloadFile(url, filename, dirname string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer Ignore(resp.Body.Close())
 
 	f, err := os.CreateTemp("", filename)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(f.Name())
+	defer Ignore(os.Remove(f.Name()))
 
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
@@ -238,9 +238,9 @@ func DownloadFile(url, filename, dirname string) error {
 		// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 		srcFile, _ := os.Open(f.Name())
 		dstFile, _ := os.Create(targetFilename)
-		defer dstFile.Close()
+		defer Ignore(dstFile.Close())
 		_, _ = io.Copy(dstFile, srcFile)
-		srcFile.Close()
+		_ = srcFile.Close()
 	}
 	return nil
 }
@@ -296,16 +296,16 @@ func CopyCachedSong(song structs.Song) error {
 	if err != nil && (runtime.GOOS == "windows" || strings.HasSuffix(err.Error(), "invalid cross-device link")) {
 		// fix: 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
 		src, _ := os.Open(oldFilename)
-		defer src.Close()
+		defer Ignore(src.Close())
 		dst, _ := os.Create(targetFilename)
-		defer dst.Close()
+		defer Ignore(dst.Close())
 		_, _ = io.Copy(dst, src)
 	}
 	return nil
 }
 
 func SetSongTag(file *os.File, song structs.Song) {
-	defer file.Close()
+	defer Ignore(file.Close())
 	version := songtag.CheckVersion(file)
 	switch version {
 	case songtag.VersionID3v22, songtag.VersionID3v23, songtag.VersionID3v24:
@@ -315,7 +315,7 @@ func SetSongTag(file *os.File, song structs.Song) {
 		}
 		tag.SetDefaultEncoding(id3v2.EncodingUTF8)
 		if imgResp, err := http.Get(AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
-			defer imgResp.Body.Close()
+			defer Ignore(imgResp.Body.Close())
 			if data, err := io.ReadAll(imgResp.Body); err == nil {
 				tag.AddAttachedPicture(id3v2.PictureFrame{
 					Encoding:    id3v2.EncodingUTF8,
@@ -329,13 +329,13 @@ func SetSongTag(file *os.File, song structs.Song) {
 		tag.SetAlbum(song.Album.Name)
 		tag.SetArtist(song.ArtistName())
 		_ = tag.Save()
-		tag.Close()
+		_ = tag.Close()
 	default:
 		metadata, err := songtag.Read(file)
 		if err != nil {
 			return
 		}
-		defer metadata.Close()
+		defer Ignore(metadata.Close())
 		_ = metadata.SetAlbum(song.Album.Name)
 		_ = metadata.SetArtist(song.ArtistName())
 		_ = metadata.SetAlbumArtist(song.Album.ArtistName())
@@ -344,7 +344,7 @@ func SetSongTag(file *os.File, song structs.Song) {
 			return
 		}
 		if imgResp, err := http.Get(AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
-			defer imgResp.Body.Close()
+			defer Ignore(imgResp.Body.Close())
 			if data, err := io.ReadAll(imgResp.Body); err == nil {
 				img, _ := flacpicture.NewFromImageData(flacpicture.PictureTypeFrontCover, "cover", data, "image/jpeg")
 				_ = metadata.(*songtag.FLAC).SetFlacPicture(img)
@@ -577,12 +577,12 @@ func CopyFileFromEmbed(src, dst string) error {
 	if srcfd, err = embedDir.Open(src); err != nil {
 		return err
 	}
-	defer srcfd.Close()
+	defer Ignore(srcfd.Close())
 
 	if dstfd, err = os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0766); err != nil {
 		return err
 	}
-	defer dstfd.Close()
+	defer Ignore(dstfd.Close())
 
 	if _, err = io.Copy(dstfd, srcfd); err != nil {
 		return err

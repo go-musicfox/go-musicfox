@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
-
 	"github.com/buger/jsonparser"
 	"github.com/go-musicfox/netease-music/service"
+
+	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 type AlbumTopMenu struct {

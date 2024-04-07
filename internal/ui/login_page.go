@@ -8,23 +8,22 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/storage"
-	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
-
 	"github.com/buger/jsonparser"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/like_list"
 )
 
 const LoginPageType model.PageType = "login"

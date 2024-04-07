@@ -2,9 +2,9 @@ package ui
 
 import (
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-
 	"github.com/skratchdot/open-golang/open"
+
+	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 type HelpMenu struct {
