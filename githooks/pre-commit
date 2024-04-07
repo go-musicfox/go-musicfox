@@ -1,6 +1,7 @@
 #!/bin/sh
 
 git-chglog -o CHANGELOG.md
+make lint-fix
 git add .
 
 exit 0;
