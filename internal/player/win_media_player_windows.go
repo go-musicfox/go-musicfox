@@ -3,6 +3,7 @@
 package player
 
 import (
+	"fmt"
 	"sync"
 	"time"
 	"unsafe"
@@ -57,6 +58,7 @@ func NewWinMediaPlayer() Player {
 	foundation.NewTypedEventHandler(ole.NewGUID(playback.GUIDiMediaPlaybackSession), func(instance *foundation.TypedEventHandler, sender, args unsafe.Pointer) {
 
 	})
+	fmt.Println(playbackSession)
 	// eventReceivedGuid := winrt.ParameterizedInstanceGUID(
 	// 	foundation.GUIDTypedEventHandler,
 	// 	playback.SignatureMediaPlaybackSession,
