@@ -2,7 +2,6 @@
 
 # install windows dependency in docker
 
-set -o errexit
 set -o nounset
 set -o pipefail
 set -x
@@ -12,9 +11,9 @@ BUILD_ARCH="x86_64"
 
 # install mingw
 case $(uname -m) in
-    x86_64)  BUILD_ARCH=x86_64;;
-    aarch64) BUILD_ARCH=aarch64;;
-    arm64) BUILD_ARCH=aarch64;
+x86_64) BUILD_ARCH=x86_64 ;;
+aarch64) BUILD_ARCH=aarch64 ;;
+arm64) BUILD_ARCH=aarch64 ;;
 esac
 
 mingw="llvm-mingw-20230320-ucrt-ubuntu-18.04-${BUILD_ARCH}"
