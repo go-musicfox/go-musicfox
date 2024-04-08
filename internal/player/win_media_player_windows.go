@@ -10,7 +10,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-ole/go-ole"
-	winrt "github.com/saltosystems/winrt-go"
 	"github.com/saltosystems/winrt-go/windows/foundation"
 	"github.com/saltosystems/winrt-go/windows/media/core"
 	"github.com/saltosystems/winrt-go/windows/media/playback"
@@ -58,11 +57,11 @@ func NewWinMediaPlayer() Player {
 	foundation.NewTypedEventHandler(ole.NewGUID(playback.GUIDiMediaPlaybackSession), func(instance *foundation.TypedEventHandler, sender, args unsafe.Pointer) {
 
 	})
-	eventReceivedGuid := winrt.ParameterizedInstanceGUID(
-		foundation.GUIDTypedEventHandler,
-		playback.SignatureMediaPlaybackSession,
-	)
-	playbackSession.AddPlaybackStateChanged()
+	// eventReceivedGuid := winrt.ParameterizedInstanceGUID(
+	// 	foundation.GUIDTypedEventHandler,
+	// 	playback.SignatureMediaPlaybackSession,
+	// )
+	// playbackSession.AddPlaybackStateChanged()
 
 	// TODO: add 监听播放状态
 
