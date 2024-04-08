@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-set -o errexit
 set -o nounset
 set -o pipefail
 set -x
@@ -10,9 +9,9 @@ export GO111MODULE=auto
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 ACTION=${1:-build}
-BUILD_GOOS=${GOOS:-$(go env GOOS)}
-BUILD_GOARCH=${GOARCH:-$(go env GOARCH)}
 GOBINARY=${GOBINARY:-go}
+BUILD_GOOS=${GOOS:-$(${GOBINARY} env GOOS)}
+BUILD_GOARCH=${GOARCH:-$(${GOBINARY} env GOARCH)}
 LDFLAGS=${LDFLAGS:-""}
 INJECT_PACKAGE=${INJECT_PACKAGE:-"github.com/go-musicfox/go-musicfox/internal/types"}
 LASTFM_KEY=${LASTFM_KEY:-""}
