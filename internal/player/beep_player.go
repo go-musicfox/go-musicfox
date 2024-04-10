@@ -158,7 +158,7 @@ func (p *beepPlayer) listen() {
 						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0666)
 						// 使用新的文件后需手动Seek到上次播放处
 						lastStreamer := p.curStreamer
-						defer utils.Ignore(lastStreamer.Close())
+						defer func() { _ = lastStreamer.Close() }()
 						pos := lastStreamer.Position()
 						if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, cacheReader); err != nil {
 							p.stopNoLock()

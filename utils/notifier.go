@@ -39,7 +39,7 @@ func (o osxNotificator) getNotifierCmd() string {
 func (o osxNotificator) push(title, text, iconPath, redirectUrl, groupId string) *exec.Cmd {
 	cmdPath := o.getNotifierCmd()
 	if _, err := os.Stat(cmdPath); err == nil {
-		var args = []string{"-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath}
+		args := []string{"-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath}
 		if redirectUrl != "" {
 			args = append(args, "-open", redirectUrl)
 		}
@@ -48,8 +48,8 @@ func (o osxNotificator) push(title, text, iconPath, redirectUrl, groupId string)
 		}
 		return exec.Command(cmdPath, args...)
 	} else if notificator.CheckMacOSVersion() {
-		title = strings.Replace(title, `"`, `\"`, -1)
-		text = strings.Replace(text, `"`, `\"`, -1)
+		title = strings.ReplaceAll(title, `"`, `\"`)
+		text = strings.ReplaceAll(text, `"`, `\"`)
 
 		notification := fmt.Sprintf("display notification \"%s\" with title \"%s\" subtitle \"%s\"", text, o.appName, title)
 		return exec.Command("osascript", "-e", notification)
@@ -61,7 +61,7 @@ func (o osxNotificator) push(title, text, iconPath, redirectUrl, groupId string)
 func (o osxNotificator) pushCritical(title, text, iconPath, redirectUrl, groupId string) *exec.Cmd {
 	cmdPath := o.getNotifierCmd()
 	if _, err := os.Stat(cmdPath); err == nil {
-		var args = []string{"-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath}
+		args := []string{"-title", o.appName, "-message", text, "-subtitle", title, "-contentImage", iconPath}
 		if redirectUrl != "" {
 			args = append(args, "-open", redirectUrl)
 		}
