@@ -4,11 +4,6 @@ import (
 	"fmt"
 )
 
-func Ignore(err error) (caught bool) {
-	caught = err != nil
-	return
-}
-
 func Must(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("caught err: %v", err))
