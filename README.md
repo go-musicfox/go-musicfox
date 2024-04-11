@@ -223,14 +223,42 @@ scoop install go-musicfox
 
 ### 手动编译
 
-需要 Go v1.21 及以上版本
+注：需要 Go v1.21 及以上版本
+
+前往 [下载 Go ](https://go.dev/dl/)页面选择适合你的 Go 安装包体。
+
+#### 在 Linux 上编译
+
+Linux 需要 `libFLAC-dev` 开发套件
+
+请根据你的发行版，选择适合你的安装命令：
+
+* APT (Debian, Ubuntu)
+
+```sh
+$ sudo apt install -y libflac-dev
+```
+
+* pacman (Arch)
+
+```sh
+$ sudo pacman -S flac
+```
+
+* DNF (Fedora)
+
+```sh
+$ sudo dnf install flac-devel
+```
+
+其他发行版请根据相应文档寻找 `libflac-dev` 开发套件安装说明。
+
+#### 开始编译
 
 ```sh
 $ git clone https://github.com/go-musicfox/go-musicfox
 
 $ go mod download
-
-# Linux 编译前需要安装 flac
 
 $ make # 编译到 bin 目录下
 $ make install # 安装到 $GOPATH/bin下
@@ -255,6 +283,16 @@ $ musicfox
 > Linux 用户推荐使用 [Kitty](https://sw.kovidgoyal.net/kitty/)
 > 
 > Windows 用户推荐使用 [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701)，使用体验更佳
+
+- 如果在执行文件时遇到以下错误，说明你的操作系统内不包含 `libFLAC.so.8` 。
+
+  ```
+  ./musicfox: error while loading shared libraries: libFLAC.so.8: cannot open shared object file: No such file or directory
+  ```
+
+  例如 Ubuntu 23.10 及它的衍生版系列，`libFLAC.so.12` 已经将 `libFLAC.so.8` 替换。
+
+  遇到这种问题，你可以自行安装 `libflac8` （不推荐）或参照[手动编译](#手动编译)一节自行编译。
 
 ### 快捷键
 
