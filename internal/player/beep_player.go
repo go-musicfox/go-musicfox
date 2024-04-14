@@ -48,7 +48,7 @@ type beepPlayer struct {
 	close chan struct{}
 }
 
-func NewBeepPlayer() Player {
+func NewBeepPlayer() *beepPlayer {
 	p := &beepPlayer{
 		state: types.Stopped,
 

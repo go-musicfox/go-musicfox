@@ -55,7 +55,7 @@ type mpdPlayer struct {
 	close chan struct{}
 }
 
-func NewMpdPlayer(bin, configFile, network, address string) Player {
+func NewMpdPlayer(bin, configFile, network, address string) *mpdPlayer {
 	cmd := exec.Command(bin)
 	if configFile != "" {
 		cmd.Args = append(cmd.Args, configFile)

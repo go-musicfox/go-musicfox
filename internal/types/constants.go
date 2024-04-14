@@ -39,9 +39,10 @@ const MainPProfPort = 9876
 const DefaultNotifyIcon = "logo.png"
 const UNMDefaultSources = "kuwo"
 
-const BeepPlayer = "beep" // beep
-const MpdPlayer = "mpd"   // mpd
-const OsxPlayer = "osx"   // osx
+const BeepPlayer = "beep"          // beep
+const MpdPlayer = "mpd"            // mpd
+const OsxPlayer = "osx"            // osx
+const WinMediaPlayer = "win_media" // win media player
 
 const BeepGoMp3Decoder = "go-mp3"
 const BeepMiniMp3Decoder = "minimp3"

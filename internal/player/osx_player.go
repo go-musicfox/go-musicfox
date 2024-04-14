@@ -31,7 +31,7 @@ type osxPlayer struct {
 	close chan struct{}
 }
 
-func NewOsxPlayer() Player {
+func NewOsxPlayer() *osxPlayer {
 	p := &osxPlayer{
 		state:     types.Stopped,
 		timeChan:  make(chan time.Duration),
