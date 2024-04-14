@@ -52,6 +52,7 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 
 ![LyricsX](previews/lyricsX.gif)
 
+> [!IMPORTANT]
 > 需要满足以下条件：
 > 1. go-musicfox >= v3.7.7
 > 2. 下载和安装 [LyricsX 的 go-musicfox 的 fork 版本](https://github.com/go-musicfox/LyricsX/releases/latest)
@@ -272,27 +273,28 @@ $ musicfox
 
 ### 注意事项
 
-- **请务必使用等宽字体，或将配置项 `doubleColumn` 设为 `false`，否则双列显示排版可能会混乱**
-
-- **如果在使用时出现莫名奇妙的光标移动、切歌或暂停等现象，请将配置项 `enableMouseEvent` 设置为 `false`**
-
-- **本应用不对 macOS 原生终端和 Windows 的命令提示符（CMD）做兼容处理（[#99](https://github.com/go-musicfox/go-musicfox/issues/99)）**
-
-> macOS 用户推荐使用 [iTerm2](https://iterm2.com/) 或 [Kitty](https://sw.kovidgoyal.net/kitty/) 
+> [!IMPORTANT]
+> - **请务必使用等宽字体，或将配置项 `doubleColumn` 设为 `false`，否则双列显示排版可能会混乱**
 > 
-> Linux 用户推荐使用 [Kitty](https://sw.kovidgoyal.net/kitty/)
+> - **如果在使用时出现莫名奇妙的光标移动、切歌或暂停等现象，请将配置项 `enableMouseEvent` 设置为 `false`**
 > 
-> Windows 用户推荐使用 [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701)，使用体验更佳
-
-- 如果在执行文件时遇到以下错误，说明你的操作系统内不包含 `libFLAC.so.8` 。
-
-  ```
-  ./musicfox: error while loading shared libraries: libFLAC.so.8: cannot open shared object file: No such file or directory
-  ```
-
-  例如 Ubuntu 23.10 及它的衍生版系列，`libFLAC.so.12` 已经将 `libFLAC.so.8` 替换。
-
-  遇到这种问题，你可以自行安装 `libflac8` （不推荐）或参照[手动编译](#手动编译)一节自行编译。
+> - **本应用不对 macOS 原生终端和 Windows 的命令提示符（CMD）做兼容处理（[#99](https://github.com/go-musicfox/go-musicfox/issues/99)）**
+>   
+>   > macOS 用户推荐使用 [iTerm2](https://iterm2.com/) 或 [Kitty](https://sw.kovidgoyal.net/kitty/) 
+>   >
+>   > Linux 用户推荐使用 [Kitty](https://sw.kovidgoyal.net/kitty/)
+>   >
+>   > Windows 用户推荐使用 [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701)，使用体验更佳
+>
+> - 如果在执行文件时遇到以下错误，说明你的操作系统内不包含 `libFLAC.so.8` 。
+>   
+>   ```
+>   ./musicfox: error while loading shared libraries: libFLAC.so.8: cannot open shared object file: No such file or directory
+>   ```
+>   
+>   例如 Ubuntu 23.10 及它的衍生版系列，`libFLAC.so.12` 已经将 `libFLAC.so.8` 替换。
+>   
+>   遇到这种问题，你可以自行安装 `libflac8` （不推荐）或参照[手动编译](#手动编译)一节自行编译。
 
 ### 快捷键
 
@@ -382,9 +384,9 @@ ctrl+shift+space=toggle
 > Linux：`$XDG_CONFIG_HOME/go-musicfox` 或 `$HOME/.config/go-musicfox`
 > 
 > Windows：`%AppData%\go-musicfox`
-
+> 
 > 你可以通过设置 `MUSICFOX_ROOT` 环境变量来自定义用户配置的存储位置
-
+> 
 > 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
 
 ## CHANGELOG
