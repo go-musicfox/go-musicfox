@@ -11,7 +11,7 @@ import (
 type osxPlayer struct {
 }
 
-func NewOsxPlayer() Player {
+func NewOsxPlayer() *osxPlayer {
 	return &osxPlayer{}
 }
 

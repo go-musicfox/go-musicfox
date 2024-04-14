@@ -45,6 +45,8 @@ func NewPlayerFromConfig() Player {
 		player = NewMpdPlayer(registry.Player.MpdBin, registry.Player.MpdConfigFile, registry.Player.MpdNetwork, registry.Player.MpdAddr)
 	case types.OsxPlayer:
 		player = NewOsxPlayer()
+	case types.WinMediaPlayer:
+		player = NewWinMediaPlayer()
 	default:
 		panic("unknown player engine")
 	}
