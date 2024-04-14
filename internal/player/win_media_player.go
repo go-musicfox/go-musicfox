@@ -3,7 +3,6 @@
 package player
 
 import (
-	"fmt"
 	"sync"
 	"time"
 	"unsafe"
@@ -49,21 +48,19 @@ func NewWinMediaPlayer() Player {
 		volume:    100,
 	}
 
-	utils.Must(ole.CoInitialize(0))
+	utils.Must(ole.RoInitialize(1))
 
 	p.player = utils.Must1(playback.NewMediaPlayer())
 	utils.Must(p.player.SetVolume(float64(p.volume / 100.0)))
 	utils.Must(p.player.SetAudioCategory(playback.MediaPlayerAudioCategoryMedia))
-	playbackSession := utils.Must1(utils.Must1(p.player.GetBreakManager()).GetPlaybackSession())
-	foundation.NewTypedEventHandler(ole.NewGUID(playback.GUIDiMediaPlaybackSession), func(instance *foundation.TypedEventHandler, sender, args unsafe.Pointer) {
-
-	})
-	fmt.Println(playbackSession)
-	// eventReceivedGuid := winrt.ParameterizedInstanceGUID(
-	// 	foundation.GUIDTypedEventHandler,
-	// 	playback.SignatureMediaPlaybackSession,
-	// )
-	// playbackSession.AddPlaybackStateChanged()
+	//playbackSession := utils.Must1(p.player.GetPlaybackSession())
+	//defer playbackSession.Release()
+	//
+	//eventReceivedGuid := winrt.ParameterizedInstanceGUID(
+	//	foundation.GUIDTypedEventHandler,
+	//	playback.SignatureMediaPlaybackSession,
+	//)
+	//playbackSession.AddPlaybackStateChanged()
 
 	// TODO: add 监听播放状态
 
