@@ -62,8 +62,8 @@ github.com/go-musicfox/requests v0.2.0 h1:VIg9BmtTGw93ugmNPUcJXaL647C12W48g1RTPH
 github.com/go-musicfox/requests v0.2.0/go.mod h1:OqTmtUmkpkjyAnBHFEnmuO3OIvh1pTTGSNVtlAWKCMs=
 github.com/go-musicfox/tag v1.0.2 h1:reDl0/U4IHlA4eKQ4GsdCIXS6JrfHH8pub+YaZsjLlg=
 github.com/go-musicfox/tag v1.0.2/go.mod h1:Ywby7Ky0rK5j1mv30tIMb0Tskcn6fgC1dppRfDXjuwM=
-github.com/go-musicfox/winrt-go v0.1.0-alpha h1:wW6xkwl7g0VcUAaJVzHGVGAPJHnk1nt8R/rwpSZRnVY=
-github.com/go-musicfox/winrt-go v0.1.0-alpha/go.mod h1:CIltaIm7qaANUIvzr0Vmz71lmQMAIbGJ7cvgzX7FMfA=
+github.com/go-musicfox/winrt-go v0.1.0-beta h1:TxV3i/gi79R0m3IPF94FUVghaQr1t2rNAFfYxoM/ufw=
+github.com/go-musicfox/winrt-go v0.1.0-beta/go.mod h1:CIltaIm7qaANUIvzr0Vmz71lmQMAIbGJ7cvgzX7FMfA=
 github.com/go-ole/go-ole v1.3.0 h1:Dt6ye7+vXGIKZ7Xtk4s6/xVdGDQynvom7xCFEdWr6uE=
 github.com/go-ole/go-ole v1.3.0/go.mod h1:5LS6F96DhAwUc7C+1HLexzMXY1xGRSryjyPPKW6zv78=
 github.com/godbus/dbus/v5 v5.1.0 h1:4KLkAxT3aOY8Li4FRJe/KvhoNFFxo0m6fNuFUO8QJUk=

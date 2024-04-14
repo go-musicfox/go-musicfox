@@ -1,0 +1,10 @@
+FROM saltosystems/go-builder:2471083
+
+ENV PKGPATH github.com/saltosystems/winrt-go
+
+# include workspace .gitconfig in global .gitconfig
+RUN git config --global include.path "${GOPATH}/src/${PKGPATH}/.gitconfig"
+
+# copy current workspace
+COPY . ${GOPATH}/src/${PKGPATH}
+WORKDIR ${GOPATH}/src/${PKGPATH}
