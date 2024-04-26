@@ -186,8 +186,8 @@ func GetNewAlbums(data []byte) (albums []structs.Album) {
 	return
 }
 
-// GetSubAlbums 获取收藏专辑列表
-func GetSubAlbums(data []byte) (albums []structs.Album) {
+// GetAlbumsSublist 获取收藏专辑列表
+func GetAlbumsSublist(data []byte) (albums []structs.Album) {
 	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
 		if album, err := structs.NewAlbumFromAlbumJson(value); err == nil {
@@ -285,8 +285,8 @@ func GetArtistsOfTopArtists(data []byte) (list []structs.Artist) {
 	return
 }
 
-// GetArtistsOfTopArtists 获取收藏歌手
-func GetArtistsSubList(data []byte) (list []structs.Artist) {
+// GetArtistsSublist 获取收藏歌手
+func GetArtistsSublist(data []byte) (list []structs.Artist) {
 	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if artist, err := structs.NewArtist(value); err == nil {
 			list = append(list, artist)
