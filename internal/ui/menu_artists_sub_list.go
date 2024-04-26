@@ -64,7 +64,7 @@ func (m *ArtistsSubListMenu) BeforeEnterMenuHook() model.Hook {
 		if codeType != utils.Success {
 			return false, nil
 		}
-		m.artists = utils.GetArtistsSubList(response)
+		m.artists = utils.GetArtistsSublist(response)
 		for _, artist := range m.artists {
 			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
 		}
@@ -94,7 +94,7 @@ func (m *ArtistsSubListMenu) BottomOutHook() model.Hook {
 			m.total = int(total)
 		}
 
-		m.artists = utils.GetArtistsSubList(response)
+		m.artists = utils.GetArtistsSublist(response)
 		for _, artist := range m.artists {
 			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
 		}

@@ -68,7 +68,7 @@ func (m *AlbumSubListMenu) BeforeEnterMenuHook() model.Hook {
 			return false, nil
 		}
 
-		m.albums = utils.GetSubAlbums(response)
+		m.albums = utils.GetAlbumsSublist(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -104,7 +104,7 @@ func (m *AlbumSubListMenu) BottomOutHook() model.Hook {
 			m.total = int(total)
 		}
 
-		albums := utils.GetSubAlbums(response)
+		albums := utils.GetAlbumsSublist(response)
 
 		for _, album := range albums {
 			var artists []string
