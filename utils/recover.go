@@ -21,3 +21,20 @@ func PanicRecoverWrapper(ignorePanic bool, f func()) {
 	defer Recover(ignorePanic)
 	f()
 }
+
+func Go(f func(), ignorePanic ...bool) {
+	var ignore bool
+	if len(ignorePanic) > 0 {
+		ignore = ignorePanic[0]
+	}
+	go PanicRecoverWrapper(ignore, f)
+}
+
+func WaitGoStart(f func(), ignorePanic ...bool) {
+	var wait = make(chan struct{})
+	Go(func() {
+		Go(f, ignorePanic...)
+		wait <- struct{}{}
+	}, ignorePanic...)
+	<-wait
+}

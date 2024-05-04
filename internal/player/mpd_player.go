@@ -104,8 +104,8 @@ func NewMpdPlayer(bin, configFile, network, address string) *mpdPlayer {
 		close:      make(chan struct{}),
 	}
 
-	go utils.PanicRecoverWrapper(false, p.listen)
-	go utils.PanicRecoverWrapper(false, p.watch)
+	utils.WaitGoStart(p.listen)
+	utils.WaitGoStart(p.watch)
 
 	p.syncMpdStatus("")
 	return p
@@ -278,9 +278,11 @@ func (p *mpdPlayer) setState(state types.State) {
 }
 
 func (p *mpdPlayer) Play(music UrlMusic) {
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
 	select {
 	case p.musicChan <- music:
-	default:
+	case <-timer.C:
 	}
 }
 

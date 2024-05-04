@@ -19,7 +19,7 @@ func AppEntry() {
 
 	delegate := cocoa.DefaultAppDelegate()
 	delegate.RegisterDidFinishLaunchingCallback(func(_ objc.ID) {
-		go utils.PanicRecoverWrapper(false, func() {
+		utils.Go(func() {
 			core.Autorelease(func() {
 				runCLI()
 				app.Terminate(0)

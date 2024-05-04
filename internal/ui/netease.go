@@ -71,7 +71,7 @@ func (n *Netease) InitHook(_ *model.App) {
 	storage.DBManager = new(storage.LocalDBManager)
 
 	// 获取用户信息
-	go utils.PanicRecoverWrapper(false, func() {
+	utils.Go(func() {
 		table := storage.NewTable()
 
 		// 获取用户信息
@@ -227,7 +227,7 @@ func (n *Netease) InitHook(_ *model.App) {
 }
 
 func (n *Netease) CloseHook(_ *model.App) {
-	n.player.Close()
+	_ = n.player.Close()
 }
 
 func (n *Netease) Player() *Player {

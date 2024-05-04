@@ -51,7 +51,7 @@ func NewOsxPlayer() *osxPlayer {
 	cocoa.NSNotificationCenter_defaultCenter().
 		AddObserverSelectorNameObject(p.handler.ID, sel_handleFinish, core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
 
-	go utils.PanicRecoverWrapper(false, p.listen)
+	utils.WaitGoStart(p.listen)
 
 	return p
 }
@@ -115,9 +115,11 @@ func (p *osxPlayer) setState(state types.State) {
 }
 
 func (p *osxPlayer) Play(music UrlMusic) {
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
 	select {
 	case p.musicChan <- music:
-	default:
+	case <-timer.C:
 	}
 }
 
