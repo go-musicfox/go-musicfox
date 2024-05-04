@@ -107,7 +107,7 @@ func NewPlayer(netease *Netease) *Player {
 	p.renderTicker = newTickerByPlayer(p)
 
 	// remote control
-	go utils.PanicRecoverWrapper(false, func() {
+	utils.WaitGoStart(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -119,7 +119,7 @@ func NewPlayer(netease *Netease) *Player {
 	})
 
 	// 状态监听
-	go utils.PanicRecoverWrapper(false, func() {
+	utils.WaitGoStart(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -142,7 +142,7 @@ func NewPlayer(netease *Netease) *Player {
 	})
 
 	// 时间监听
-	go utils.PanicRecoverWrapper(false, func() {
+	utils.WaitGoStart(func() {
 		for {
 			select {
 			case <-ctx.Done():

@@ -26,9 +26,9 @@ func NewPlayerCommand() *gcli.Command {
 
 func runPlayer(_ *gcli.Command, _ []string) error {
 	if GlobalOptions.PProfMode {
-		go utils.PanicRecoverWrapper(true, func() {
+		utils.Go(func() {
 			panic(http.ListenAndServe(":"+strconv.Itoa(configs.ConfigRegistry.Main.PProfPort), nil))
-		})
+		}, true)
 	}
 
 	http.DefaultClient.Timeout = types.AppHttpTimeout

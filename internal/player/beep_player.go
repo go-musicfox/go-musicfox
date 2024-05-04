@@ -66,7 +66,7 @@ func NewBeepPlayer() *beepPlayer {
 		close:      make(chan struct{}),
 	}
 
-	go utils.PanicRecoverWrapper(false, p.listen)
+	utils.WaitGoStart(p.listen)
 
 	return p
 }
@@ -227,9 +227,11 @@ func (p *beepPlayer) listen() {
 
 // Play 播放音乐
 func (p *beepPlayer) Play(music UrlMusic) {
+	timer := time.NewTimer(time.Second)
+	defer timer.Stop()
 	select {
 	case p.musicChan <- music:
-	default:
+	case <-timer.C:
 	}
 }
 
