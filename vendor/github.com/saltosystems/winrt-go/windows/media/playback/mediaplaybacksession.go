@@ -6,6 +6,7 @@
 package playback
 
 import (
+	"math"
 	"syscall"
 	"unsafe"
 
@@ -904,8 +905,8 @@ func (v *iMediaPlaybackSession) GetPlaybackRate() (float64, error) {
 func (v *iMediaPlaybackSession) SetPlaybackRate(value float64) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetPlaybackRate,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float64
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(value)), // in float64
 	)
 
 	if hr != 0 {
@@ -1277,10 +1278,10 @@ func (v *iMediaPlaybackSession2) IsSupportedPlaybackRateRange(rate1 float64, rat
 	var out bool
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().IsSupportedPlaybackRateRange,
-		uintptr(unsafe.Pointer(v)),    // this
-		uintptr(rate1),                // in float64
-		uintptr(rate2),                // in float64
-		uintptr(unsafe.Pointer(&out)), // out bool
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(rate1)), // in float64
+		uintptr(math.Float64bits(rate2)), // in float64
+		uintptr(unsafe.Pointer(&out)),    // out bool
 	)
 
 	if hr != 0 {

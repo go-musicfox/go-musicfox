@@ -6,6 +6,7 @@
 package media
 
 import (
+	"math"
 	"syscall"
 	"unsafe"
 
@@ -925,8 +926,8 @@ func (v *iSystemMediaTransportControls2) GetPlaybackRate() (float64, error) {
 func (v *iSystemMediaTransportControls2) SetPlaybackRate(value float64) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetPlaybackRate,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float64
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(value)), // in float64
 	)
 
 	if hr != 0 {
