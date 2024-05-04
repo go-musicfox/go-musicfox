@@ -6,6 +6,7 @@
 package playback
 
 import (
+	"math"
 	"syscall"
 	"unsafe"
 
@@ -970,8 +971,8 @@ func (v *iMediaPlayer) GetPlaybackRate() (float64, error) {
 func (v *iMediaPlayer) SetPlaybackRate(value float64) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetPlaybackRate,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float64
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(value)), // in float64
 	)
 
 	if hr != 0 {
@@ -999,8 +1000,8 @@ func (v *iMediaPlayer) GetVolume() (float64, error) {
 func (v *iMediaPlayer) SetVolume(value float64) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetVolume,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float64
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(value)), // in float64
 	)
 
 	if hr != 0 {
@@ -1765,8 +1766,8 @@ func (v *iMediaPlayer3) GetAudioBalance() (float64, error) {
 func (v *iMediaPlayer3) SetAudioBalance(value float64) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetAudioBalance,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float64
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(value)), // in float64
 	)
 
 	if hr != 0 {

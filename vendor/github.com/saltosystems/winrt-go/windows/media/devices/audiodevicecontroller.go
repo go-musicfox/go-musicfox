@@ -6,6 +6,7 @@
 package devices
 
 import (
+	"math"
 	"syscall"
 	"unsafe"
 
@@ -123,8 +124,8 @@ func (v *iAudioDeviceController) GetMuted() (bool, error) {
 func (v *iAudioDeviceController) SetVolumePercent(value float32) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetVolumePercent,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float32
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float32bits(value)), // in float32
 	)
 
 	if hr != 0 {

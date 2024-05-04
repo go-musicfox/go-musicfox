@@ -50,7 +50,6 @@ func NewPlayerFromConfig() Player {
 	default:
 		panic("unknown player engine")
 	}
-	_ = player
 
-	return NewWinMediaPlayer()
+	return player
 }

@@ -6,6 +6,7 @@
 package playback
 
 import (
+	"math"
 	"syscall"
 	"unsafe"
 
@@ -192,8 +193,8 @@ func (v *iMediaPlaybackSphericalVideoProjection) GetHorizontalFieldOfViewInDegre
 func (v *iMediaPlaybackSphericalVideoProjection) SetHorizontalFieldOfViewInDegrees(value float64) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetHorizontalFieldOfViewInDegrees,
-		uintptr(unsafe.Pointer(v)), // this
-		uintptr(value),             // in float64
+		uintptr(unsafe.Pointer(v)),       // this
+		uintptr(math.Float64bits(value)), // in float64
 	)
 
 	if hr != 0 {
