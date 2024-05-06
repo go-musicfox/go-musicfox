@@ -243,7 +243,7 @@ github.com/robotn/gohook/hook/x11
 # github.com/sahilm/fuzzy v0.1.0
 ## explicit
 github.com/sahilm/fuzzy
-# github.com/saltosystems/winrt-go v0.0.0-20240320184339-289d313a74b7 => github.com/go-musicfox/winrt-go v0.1.0
+# github.com/saltosystems/winrt-go v0.0.0-20240320184339-289d313a74b7 => github.com/go-musicfox/winrt-go v0.1.2
 ## explicit; go 1.18
 github.com/saltosystems/winrt-go
 github.com/saltosystems/winrt-go/internal/delegate
@@ -327,5 +327,5 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.0
+# github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.2
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2

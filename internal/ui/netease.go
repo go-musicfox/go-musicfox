@@ -202,6 +202,7 @@ func (n *Netease) InitHook(_ *model.App) {
 						NewCheckUpdateMenu(newBaseMenu(n)),
 						&model.MenuItem{Title: "新版本: " + newVersion, Subtitle: "当前版本: " + types.AppVersion},
 					)
+					n.Rerender(false)
 				}
 
 				utils.Notify(utils.NotifyContent{
