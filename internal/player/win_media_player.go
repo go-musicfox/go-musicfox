@@ -42,6 +42,16 @@ var (
 		playback.SignatureMediaPlayer,
 		playback.SignatureMediaPlayerFailedEventArgs,
 	)
+	nextEventGUID = winrt.ParameterizedInstanceGUID(
+		foundation.GUIDTypedEventHandler,
+		playback.SignatureMediaPlaybackCommandManager,
+		playback.SignatureMediaPlaybackCommandManagerNextReceivedEventArgs,
+	)
+	previousEventGUID = winrt.ParameterizedInstanceGUID(
+		foundation.GUIDTypedEventHandler,
+		playback.SignatureMediaPlaybackCommandManager,
+		playback.SignatureMediaPlaybackCommandManagerPreviousReceivedEventArgs,
+	)
 )
 
 type winMediaPlayer struct {
@@ -85,12 +95,22 @@ func (p *winMediaPlayer) buildWinPlayer() {
 	Must(p.player.SetAudioCategory(playback.MediaPlayerAudioCategoryMedia))
 
 	smtc := Must1(p.player.GetSystemMediaTransportControls())
+	defer smtc.Release()
 	Must(smtc.SetIsEnabled(true))
 	Must(smtc.SetIsPauseEnabled(true))
 	Must(smtc.SetIsPlayEnabled(true))
 	Must(smtc.SetIsNextEnabled(true))
 	Must(smtc.SetIsPreviousEnabled(true))
-	defer smtc.Release()
+
+	cmdManager := Must1(p.player.GetCommandManager())
+	defer cmdManager.Release()
+	Must(cmdManager.SetIsEnabled(true))
+	next := Must1(cmdManager.GetNextBehavior())
+	defer next.Release()
+	Must(next.SetEnablingRule(playback.MediaCommandEnablingRuleAlways))
+	previous := Must1(cmdManager.GetPreviousBehavior())
+	defer previous.Release()
+	Must(previous.SetEnablingRule(playback.MediaCommandEnablingRuleAlways))
 
 	//playbackSession := Must1(p.player.GetPlaybackSession())
 	//defer playbackSession.Release()
