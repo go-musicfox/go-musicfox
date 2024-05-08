@@ -2,6 +2,8 @@ package ui
 
 import (
 	"log"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -391,6 +393,9 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 		path, err := utils.GenQRCode("qrcode.png", url)
 		if err != nil {
 			return errHandler(err)
+		}
+		if runtime.GOOS == "windows" {
+			path = filepath.FromSlash(path)
 		}
 		_ = open.Start(path)
 		l.tips = util.SetFgStyle("请扫描二维码(MUSICFOX_ROOT/qrcode.png)登录后，点击「继续」", termenv.ANSIBrightRed)
