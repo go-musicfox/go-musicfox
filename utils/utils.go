@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	filepathPkg "path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -625,6 +626,7 @@ func GenQRCode(filename, content string) (string, error) {
 	if err := qrcode.WriteFile(content, qrcode.Medium, 256, filepath); err != nil {
 		return "", err
 	}
+	filepath = filepathPkg.FromSlash(filepath)
 	return filepath, nil
 }
 
