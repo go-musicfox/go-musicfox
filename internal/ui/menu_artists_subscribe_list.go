@@ -5,13 +5,13 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/go-musicfox/netease-music/service"
 )
 
-type ArtistsSubListMenu struct {
+type ArtistsSubscribeListMenu struct {
 	baseMenu
 	menus   []model.MenuItem
 	artists []structs.Artist
@@ -20,8 +20,8 @@ type ArtistsSubListMenu struct {
 	total   int
 }
 
-func NewArtistsSubListMenu(base baseMenu) *ArtistsSubListMenu {
-	return &ArtistsSubListMenu{
+func NewArtistsSubscribeListMenu(base baseMenu) *ArtistsSubscribeListMenu {
+	return &ArtistsSubscribeListMenu{
 		baseMenu: base,
 		offset:   0,
 		limit:    50,
@@ -29,26 +29,26 @@ func NewArtistsSubListMenu(base baseMenu) *ArtistsSubListMenu {
 	}
 }
 
-func (m *ArtistsSubListMenu) IsSearchable() bool {
+func (m *ArtistsSubscribeListMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *ArtistsSubListMenu) GetMenuKey() string {
+func (m *ArtistsSubscribeListMenu) GetMenuKey() string {
 	return "artists_sub_list"
 }
 
-func (m *ArtistsSubListMenu) MenuViews() []model.MenuItem {
+func (m *ArtistsSubscribeListMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *ArtistsSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
+func (m *ArtistsSubscribeListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.artists) {
 		return nil
 	}
 	return NewArtistDetailMenu(m.baseMenu, m.artists[index].Id, m.artists[index].Name)
 }
 
-func (m *ArtistsSubListMenu) BeforeEnterMenuHook() model.Hook {
+func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 不重复请求
 		if len(m.menus) > 0 && len(m.artists) > 0 {
@@ -61,7 +61,10 @@ func (m *ArtistsSubListMenu) BeforeEnterMenuHook() model.Hook {
 		}
 		code, response := artistService.ArtistSublist()
 		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		if codeType == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			return false, page
+		} else if codeType != utils.Success {
 			return false, nil
 		}
 		m.artists = utils.GetArtistsSublist(response)
@@ -73,7 +76,7 @@ func (m *ArtistsSubListMenu) BeforeEnterMenuHook() model.Hook {
 	}
 }
 
-func (m *ArtistsSubListMenu) BottomOutHook() model.Hook {
+func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
 	if m.total != -1 && m.offset < m.total {
 		return nil
 	}
@@ -85,7 +88,10 @@ func (m *ArtistsSubListMenu) BottomOutHook() model.Hook {
 		}
 		code, response := artistService.ArtistSublist()
 		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		if codeType == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			return false, page
+		} else if codeType != utils.Success {
 			return false, nil
 		}
 
@@ -103,6 +109,6 @@ func (m *ArtistsSubListMenu) BottomOutHook() model.Hook {
 	}
 }
 
-func (m *ArtistsSubListMenu) Artists() []structs.Artist {
+func (m *ArtistsSubscribeListMenu) Artists() []structs.Artist {
 	return m.artists
 }
