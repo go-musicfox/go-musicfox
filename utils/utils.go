@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
-	filepathPkg "path/filepath"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -44,14 +44,14 @@ func GetLocalDataDir() string {
 		if nil != err {
 			panic("未获取到本地数据目录：" + err.Error())
 		}
-		projectDir = path.Join(configDir, types.AppLocalDataDir)
+		projectDir = filepath.Join(configDir, types.AppLocalDataDir)
 	}
 
 	// 如果 projectDir 不存在且未设置 MUSICFOX_ROOT 环境变量
 	// 则尝试从默认路径迁移配置
 	if !FileOrDirExists(projectDir) {
 		home, _ := os.UserHomeDir()
-		oldPath := path.Join(home, "."+types.AppLocalDataDir)
+		oldPath := filepath.Join(home, "."+types.AppLocalDataDir)
 		if !FileOrDirExists(oldPath) {
 			_ = os.MkdirAll(projectDir, os.ModePerm)
 			return projectDir
@@ -100,7 +100,7 @@ func BinToID(bin []byte) uint64 {
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
 	projectDir := GetLocalDataDir()
-	configFile := path.Join(projectDir, types.AppIniFile)
+	configFile := filepath.Join(projectDir, types.AppIniFile)
 	if !FileOrDirExists(configFile) {
 		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
 	}
@@ -193,7 +193,7 @@ func (e FileExistsError) Error() string {
 func GetCacheDir() string {
 	cacheDir := configs.ConfigRegistry.Main.CacheDir
 	if cacheDir == "" {
-		cacheDir = path.Join(GetLocalDataDir(), "cache")
+		cacheDir = filepath.Join(GetLocalDataDir(), "cache")
 	}
 	return cacheDir
 }
@@ -201,13 +201,13 @@ func GetCacheDir() string {
 func GetDownloadDir() string {
 	downloadDir := configs.ConfigRegistry.Main.DownloadDir
 	if downloadDir == "" {
-		downloadDir = path.Join(GetLocalDataDir(), "download")
+		downloadDir = filepath.Join(GetLocalDataDir(), "download")
 	}
 	return downloadDir
 }
 
 func DownloadFile(url, filename, dirname string) error {
-	targetFilename := path.Join(dirname, filename)
+	targetFilename := filepath.Join(dirname, filename)
 	if !FileOrDirExists(dirname) {
 		_ = os.MkdirAll(dirname, os.ModePerm)
 	}
@@ -261,7 +261,7 @@ func getCacheUri(songId int64) (uri string, ok bool) {
 	for i := len(files) - 1; i >= 0; i-- {
 		file := files[i]
 		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) {
-			uri = path.Join(cacheDir, file.Name())
+			uri = filepath.Join(cacheDir, file.Name())
 			ok = true
 			return
 		}
@@ -288,7 +288,7 @@ func CopyCachedSong(song structs.Song) error {
 	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
 	filename = strings.Replace(filename, "/", "_", -1)
 	filename = strings.Replace(filename, "\\", "_", -1)
-	targetFilename := path.Join(downloadDir, filename)
+	targetFilename := filepath.Join(downloadDir, filename)
 
 	if _, err := os.Stat(targetFilename); err == nil {
 		return FileExistsError{path: targetFilename}
@@ -385,7 +385,7 @@ func downloadMusic(url, musicType string, song structs.Song, downloadDir string)
 	if err != nil {
 		return err
 	}
-	file, _ := os.OpenFile(path.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
+	file, _ := os.OpenFile(filepath.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
 	SetSongTag(file, song)
 	return nil
 }
@@ -472,7 +472,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 		errHandler(err)
 		return
 	}
-	file, err := os.OpenFile(path.Join(cacheDir, filename), os.O_RDWR, os.ModePerm)
+	file, err := os.OpenFile(filepath.Join(cacheDir, filename), os.O_RDWR, os.ModePerm)
 	if err != nil {
 		return
 	}
@@ -604,8 +604,8 @@ func CopyDirFromEmbed(src, dst string) error {
 		return err
 	}
 	for _, fd := range fds {
-		srcfp := path.Join(src, fd.Name())
-		dstfp := path.Join(dst, fd.Name())
+		srcfp := filepath.Join(src, fd.Name())
+		dstfp := filepath.Join(dst, fd.Name())
 
 		if fd.IsDir() {
 			if err = CopyDirFromEmbed(srcfp, dstfp); err != nil {
@@ -622,12 +622,11 @@ func CopyDirFromEmbed(src, dst string) error {
 
 func GenQRCode(filename, content string) (string, error) {
 	localDir := GetLocalDataDir()
-	filepath := path.Join(localDir, filename)
-	if err := qrcode.WriteFile(content, qrcode.Medium, 256, filepath); err != nil {
+	qrcodePath := filepath.Join(localDir, filename)
+	if err := qrcode.WriteFile(content, qrcode.Medium, 256, qrcodePath); err != nil {
 		return "", err
 	}
-	filepath = filepathPkg.FromSlash(filepath)
-	return filepath, nil
+	return qrcodePath, nil
 }
 
 func WebUrlOfPlaylist(playlistId int64) string {

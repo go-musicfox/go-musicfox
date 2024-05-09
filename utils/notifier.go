@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -23,7 +23,7 @@ type osxNotificator struct {
 
 func (o osxNotificator) getNotifierCmd() string {
 	localDir := GetLocalDataDir()
-	notifierPath := path.Join(localDir, "musicfox-notifier.app")
+	notifierPath := filepath.Join(localDir, "musicfox-notifier.app")
 	if _, err := os.Stat(notifierPath); os.IsNotExist(err) {
 		err = CopyDirFromEmbed("embed/musicfox-notifier.app", notifierPath)
 		if err != nil {
@@ -126,9 +126,9 @@ func Notify(content NotifyContent) {
 
 	if runtime.GOOS != "darwin" {
 		localDir := GetLocalDataDir()
-		content.Icon = path.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
+		content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
-			content.Icon = path.Join(localDir, types.DefaultNotifyIcon)
+			content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)
 			// 写入logo文件
 			err = CopyFileFromEmbed("embed/logo.png", content.Icon)
 			if err != nil {
