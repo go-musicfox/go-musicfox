@@ -4,7 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 var (
@@ -23,7 +23,7 @@ func Logger() *log.Logger {
 
 	dir := GetLocalDataDir()
 	var err error
-	logWriter, err = os.OpenFile(path.Join(dir, "musicfox.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	logWriter, err = os.OpenFile(filepath.Join(dir, "musicfox.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
 		return log.Default()
 	}
