@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -93,7 +93,7 @@ func (p *beepPlayer) listen() {
 		panic(err)
 	}
 
-	cacheFile := path.Join(utils.GetLocalDataDir(), "music_cache")
+	cacheFile := filepath.Join(utils.GetLocalDataDir(), "music_cache")
 	for {
 		select {
 		case <-p.close:

@@ -3,7 +3,7 @@ package ui
 import (
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -126,7 +126,7 @@ func logout() {
 		Url:     types.AppGithubUrl,
 		GroupId: types.GroupID,
 	})
-	_ = os.Remove(path.Join(utils.GetLocalDataDir(), "cookie"))
+	_ = os.Remove(filepath.Join(utils.GetLocalDataDir(), "cookie"))
 }
 
 // likeSelectedSong like/unlike selected song
