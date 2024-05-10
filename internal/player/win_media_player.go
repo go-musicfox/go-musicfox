@@ -79,7 +79,7 @@ func NewWinMediaPlayer() *winMediaPlayer {
 }
 
 func (p *winMediaPlayer) buildWinPlayer() {
-	Must(ole.RoInitialize(1))
+	_ = ole.RoInitialize(1)
 	p.player = Must1(playback.NewMediaPlayer())
 	Must(p.player.SetVolume(float64(p.volume / 100.0)))
 	Must(p.player.SetAudioCategory(playback.MediaPlayerAudioCategoryMedia))
