@@ -69,7 +69,7 @@ func (v *IVectorView) IndexOf(value unsafe.Pointer) (uint32, bool, error) {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().IndexOf,
 		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in unsafe.Pointer
+		uintptr(value),                  // in unsafe.Pointer
 		uintptr(unsafe.Pointer(&index)), // out uint32
 		uintptr(unsafe.Pointer(&out)),   // out bool
 	)

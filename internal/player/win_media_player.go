@@ -7,15 +7,15 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/go-musicfox/go-musicfox/internal/types"
-	. "github.com/go-musicfox/go-musicfox/utils"
 	"github.com/go-ole/go-ole"
 	"github.com/saltosystems/winrt-go"
 	"github.com/saltosystems/winrt-go/windows/foundation"
-	"github.com/saltosystems/winrt-go/windows/media"
 	"github.com/saltosystems/winrt-go/windows/media/core"
 	"github.com/saltosystems/winrt-go/windows/media/playback"
-	"github.com/saltosystems/winrt-go/windows/storage/streams"
+
+	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	. "github.com/go-musicfox/go-musicfox/utils"
 )
 
 const (
@@ -41,16 +41,6 @@ var (
 		foundation.GUIDTypedEventHandler,
 		playback.SignatureMediaPlayer,
 		playback.SignatureMediaPlayerFailedEventArgs,
-	)
-	nextEventGUID = winrt.ParameterizedInstanceGUID(
-		foundation.GUIDTypedEventHandler,
-		playback.SignatureMediaPlaybackCommandManager,
-		playback.SignatureMediaPlaybackCommandManagerNextReceivedEventArgs,
-	)
-	previousEventGUID = winrt.ParameterizedInstanceGUID(
-		foundation.GUIDTypedEventHandler,
-		playback.SignatureMediaPlaybackCommandManager,
-		playback.SignatureMediaPlaybackCommandManagerPreviousReceivedEventArgs,
 	)
 )
 
@@ -94,86 +84,73 @@ func (p *winMediaPlayer) buildWinPlayer() {
 	Must(p.player.SetVolume(float64(p.volume / 100.0)))
 	Must(p.player.SetAudioCategory(playback.MediaPlayerAudioCategoryMedia))
 
-	smtc := Must1(p.player.GetSystemMediaTransportControls())
-	defer smtc.Release()
-	Must(smtc.SetIsEnabled(true))
-	Must(smtc.SetIsPauseEnabled(true))
-	Must(smtc.SetIsPlayEnabled(true))
-	Must(smtc.SetIsNextEnabled(true))
-	Must(smtc.SetIsPreviousEnabled(true))
-
 	cmdManager := Must1(p.player.GetCommandManager())
 	defer cmdManager.Release()
-	Must(cmdManager.SetIsEnabled(true))
-	next := Must1(cmdManager.GetNextBehavior())
-	defer next.Release()
-	Must(next.SetEnablingRule(playback.MediaCommandEnablingRuleAlways))
-	previous := Must1(cmdManager.GetPreviousBehavior())
-	defer previous.Release()
-	Must(previous.SetEnablingRule(playback.MediaCommandEnablingRuleAlways))
+	Must(cmdManager.SetIsEnabled(false))
 
-	//playbackSession := Must1(p.player.GetPlaybackSession())
-	//defer playbackSession.Release()
+	control.SMTC = Must1(p.player.GetSystemMediaTransportControls())
 
-	// FIXME: windows callback有内存GC问题，暂时没找到原因
+	playbackSession := Must1(p.player.GetPlaybackSession())
+	defer playbackSession.Release()
+
 	// state changed
-	//stateHandler := foundation.NewTypedEventHandler(
-	//	ole.NewGUID(playbackSessionEventGUID),
-	//	func(h *foundation.TypedEventHandler, sender, _ unsafe.Pointer) {
-	//		session := (*playback.MediaPlaybackSession)(sender)
-	//		switch Must1(session.GetPlaybackState()) {
-	//		case playback.MediaPlaybackStatePlaying:
-	//			p.Resume()
-	//			p.setState(types.Playing)
-	//		case playback.MediaPlaybackStatePaused:
-	//			p.Paused()
-	//			p.setState(types.Paused)
-	//		}
-	//	},
-	//)
-	//defer stateHandler.Release()
-	//Must1(playbackSession.AddPlaybackStateChanged(stateHandler))
-	//
+	stateHandler := foundation.NewTypedEventHandler(
+		ole.NewGUID(playbackSessionEventGUID),
+		func(h *foundation.TypedEventHandler, sender, _ unsafe.Pointer) {
+			session := (*playback.MediaPlaybackSession)(sender)
+			switch Must1(session.GetPlaybackState()) {
+			case playback.MediaPlaybackStatePlaying:
+				p.Resume()
+				p.setState(types.Playing)
+			case playback.MediaPlaybackStatePaused:
+				p.Paused()
+				p.setState(types.Paused)
+			}
+		},
+	)
+	defer stateHandler.Release()
+	Must1(playbackSession.AddPlaybackStateChanged(stateHandler))
+
 	// current state changed(old version)
-	//curStateHandler := foundation.NewTypedEventHandler(
-	//	ole.NewGUID(playerEventGUID),
-	//	func(_ *foundation.TypedEventHandler, sender, _ unsafe.Pointer) {
-	//		player := (*playback.MediaPlayer)(sender)
-	//		switch Must1(player.GetCurrentState()) {
-	//		case playback.MediaPlayerStatePlaying:
-	//			p.Resume()
-	//			p.setState(types.Playing)
-	//		case playback.MediaPlayerStatePaused:
-	//			p.Paused()
-	//			p.setState(types.Paused)
-	//		case playback.MediaPlayerStateStopped:
-	//			p.Stop()
-	//			p.setState(types.Stopped)
-	//		}
-	//	},
-	//)
-	//defer curStateHandler.Release()
-	//Must1(p.player.AddCurrentStateChanged(curStateHandler))
-	//
-	//// finished
-	//finishedHandler := foundation.NewTypedEventHandler(
-	//	ole.NewGUID(playerEventGUID),
-	//	func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
-	//		p.Stop()
-	//		p.setState(types.Stopped)
-	//	},
-	//)
-	//defer finishedHandler.Release()
-	//failedHandler := foundation.NewTypedEventHandler(
-	//	ole.NewGUID(playerFailedEventGUID),
-	//	func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
-	//		p.Stop()
-	//		p.setState(types.Stopped)
-	//	},
-	//)
-	//defer failedHandler.Release()
-	//Must1(p.player.AddMediaEnded(finishedHandler))
-	//Must1(p.player.AddMediaFailed(failedHandler))
+	curStateHandler := foundation.NewTypedEventHandler(
+		ole.NewGUID(playerEventGUID),
+		func(_ *foundation.TypedEventHandler, sender, _ unsafe.Pointer) {
+			player := (*playback.MediaPlayer)(sender)
+			switch Must1(player.GetCurrentState()) {
+			case playback.MediaPlayerStatePlaying:
+				p.Resume()
+				p.setState(types.Playing)
+			case playback.MediaPlayerStatePaused:
+				p.Paused()
+				p.setState(types.Paused)
+			case playback.MediaPlayerStateStopped:
+				p.Stop()
+				p.setState(types.Stopped)
+			}
+		},
+	)
+	defer curStateHandler.Release()
+	Must1(p.player.AddCurrentStateChanged(curStateHandler))
+
+	// finished
+	finishedHandler := foundation.NewTypedEventHandler(
+		ole.NewGUID(playerEventGUID),
+		func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
+			p.Stop()
+			p.setState(types.Stopped)
+		},
+	)
+	defer finishedHandler.Release()
+	failedHandler := foundation.NewTypedEventHandler(
+		ole.NewGUID(playerFailedEventGUID),
+		func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
+			p.Stop()
+			p.setState(types.Stopped)
+		},
+	)
+	defer failedHandler.Release()
+	Must1(p.player.AddMediaEnded(finishedHandler))
+	Must1(p.player.AddMediaFailed(failedHandler))
 }
 
 // listen 开始监听
@@ -212,24 +189,7 @@ func (p *winMediaPlayer) listen() {
 
 			uri = Must1(foundation.UriCreateUri(p.curMusic.Url))
 			mediaSource = Must1(core.MediaSourceCreateFromUri(uri))
-			playbackItem = Must1(playback.MediaPlaybackItemCreate(mediaSource))
-			props := Must1(playbackItem.GetDisplayProperties())
-			Must(props.SetType(media.MediaPlaybackTypeMusic))
-			imgUri := Must1(foundation.UriCreateUri(p.curMusic.PicUrl))
-			stream := Must1(streams.RandomAccessStreamReferenceCreateFromUri(imgUri))
-			Must(props.SetThumbnail(stream))
-			musicProps := Must1(props.GetMusicProperties())
-			Must(musicProps.SetTitle(p.curMusic.Name))
-			Must(musicProps.SetArtist(p.curMusic.ArtistName()))
-			Must(musicProps.SetAlbumTitle(p.curMusic.Album.Name))
-			Must(musicProps.SetAlbumArtist(p.curMusic.Album.ArtistName()))
-			Must(playbackItem.ApplyDisplayProperties(props))
-			Must(p.player.SetSource((*playback.IMediaPlaybackSource)(unsafe.Pointer(playbackItem))))
-
-			imgUri.Release()
-			stream.Release()
-			musicProps.Release()
-			props.Release()
+			Must(p.player.SetSource((*playback.IMediaPlaybackSource)(unsafe.Pointer(mediaSource))))
 
 			// 计时器
 			p.timer = NewTimer(Options{
@@ -249,17 +209,6 @@ func (p *winMediaPlayer) listen() {
 					select {
 					case p.timeChan <- curTime:
 					default:
-					}
-
-					// FIXME: windows callback有内存GC问题，暂时没找到原因，先直接获取
-					switch Must1(session.GetPlaybackState()) {
-					case playback.MediaPlaybackStatePlaying:
-						p.setState(types.Playing)
-					case playback.MediaPlaybackStatePaused:
-						p.setState(types.Paused)
-						if curTime.Seconds() >= p.curMusic.Duration.Seconds()-5 {
-							p.Stop()
-						}
 					}
 				},
 			})
@@ -297,8 +246,6 @@ func (p *winMediaPlayer) Paused() {
 	}
 	Must(p.player.Pause())
 	p.timer.Pause()
-
-	p.setState(types.Paused)
 }
 
 func (p *winMediaPlayer) Resume() {
@@ -309,8 +256,6 @@ func (p *winMediaPlayer) Resume() {
 	}
 	go p.timer.Run()
 	Must(p.player.Play())
-
-	p.setState(types.Playing)
 }
 
 func (p *winMediaPlayer) Stop() {
@@ -321,8 +266,6 @@ func (p *winMediaPlayer) Stop() {
 	}
 	Must(p.player.Pause())
 	p.timer.Pause()
-
-	p.setState(types.Stopped)
 }
 
 func (p *winMediaPlayer) Toggle() {
@@ -340,6 +283,7 @@ func (p *winMediaPlayer) Seek(duration time.Duration) {
 	p.l.Lock()
 	defer p.l.Unlock()
 	session := Must1(p.player.GetPlaybackSession())
+	defer session.Release()
 	Must(session.SetPosition(foundation.TimeSpan{Duration: duration.Milliseconds() * TicksPerMillisecond}))
 	if p.timer != nil {
 		p.timer.SetPassed(duration)
@@ -352,6 +296,7 @@ func (p *winMediaPlayer) PassedTime() time.Duration {
 	}
 	var curTime time.Duration
 	session := Must1(p.player.GetPlaybackSession())
+	defer session.Release()
 	t := Must1(session.GetPosition())
 	if t.Duration <= 0 {
 		return curTime

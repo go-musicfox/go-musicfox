@@ -498,8 +498,8 @@ func (v *iMediaStreamSource) GetMediaProtectionManager() (*protection.MediaProte
 func (v *iMediaStreamSource) SetDuration(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetDuration,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -556,8 +556,8 @@ func (v *iMediaStreamSource) GetCanSeek() (bool, error) {
 func (v *iMediaStreamSource) SetBufferTime(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetBufferTime,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -585,9 +585,9 @@ func (v *iMediaStreamSource) GetBufferTime() (foundation.TimeSpan, error) {
 func (v *iMediaStreamSource) SetBufferedRange(startOffset foundation.TimeSpan, endOffset foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetBufferedRange,
-		uintptr(unsafe.Pointer(v)),            // this
-		uintptr(unsafe.Pointer(&startOffset)), // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(&endOffset)),   // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)),    // this
+		uintptr(startOffset.Duration), // in foundation.TimeSpan
+		uintptr(endOffset.Duration),   // in foundation.TimeSpan
 	)
 
 	if hr != 0 {

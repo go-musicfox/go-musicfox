@@ -637,10 +637,10 @@ func MediaPlaybackItemCreateWithStartTime(source *core.MediaSource, startTime fo
 	var out *MediaPlaybackItem
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().MediaPlaybackItemCreateWithStartTime,
-		0,                                   // this is a static func, so there's no this
-		uintptr(unsafe.Pointer(source)),     // in core.MediaSource
-		uintptr(unsafe.Pointer(&startTime)), // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(&out)),       // out MediaPlaybackItem
+		0,                               // this is a static func, so there's no this
+		uintptr(unsafe.Pointer(source)), // in core.MediaSource
+		uintptr(startTime.Duration),     // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(&out)),   // out MediaPlaybackItem
 	)
 
 	if hr != 0 {
@@ -660,11 +660,11 @@ func MediaPlaybackItemCreateWithStartTimeAndDurationLimit(source *core.MediaSour
 	var out *MediaPlaybackItem
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().MediaPlaybackItemCreateWithStartTimeAndDurationLimit,
-		0,                                       // this is a static func, so there's no this
-		uintptr(unsafe.Pointer(source)),         // in core.MediaSource
-		uintptr(unsafe.Pointer(&startTime)),     // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(&durationLimit)), // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(&out)),           // out MediaPlaybackItem
+		0,                               // this is a static func, so there's no this
+		uintptr(unsafe.Pointer(source)), // in core.MediaSource
+		uintptr(startTime.Duration),     // in foundation.TimeSpan
+		uintptr(durationLimit.Duration), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(&out)),   // out MediaPlaybackItem
 	)
 
 	if hr != 0 {

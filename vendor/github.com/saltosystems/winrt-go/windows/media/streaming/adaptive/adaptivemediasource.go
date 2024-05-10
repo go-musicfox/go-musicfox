@@ -335,8 +335,8 @@ func (v *iAdaptiveMediaSource) GetDesiredLiveOffset() (foundation.TimeSpan, erro
 func (v *iAdaptiveMediaSource) SetDesiredLiveOffset(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetDesiredLiveOffset,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -526,8 +526,8 @@ func (v *iAdaptiveMediaSource) GetInboundBitsPerSecondWindow() (foundation.TimeS
 func (v *iAdaptiveMediaSource) SetInboundBitsPerSecondWindow(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetInboundBitsPerSecondWindow,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {

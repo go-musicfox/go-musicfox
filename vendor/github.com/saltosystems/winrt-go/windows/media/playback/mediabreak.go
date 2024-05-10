@@ -223,10 +223,10 @@ func MediaBreakCreateWithPresentationPosition(insertionMethod MediaBreakInsertio
 	var out *MediaBreak
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().MediaBreakCreateWithPresentationPosition,
-		0,                        // this is a static func, so there's no this
-		uintptr(insertionMethod), // in MediaBreakInsertionMethod
-		uintptr(unsafe.Pointer(&presentationPosition)), // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(&out)),                  // out MediaBreak
+		0,                                      // this is a static func, so there's no this
+		uintptr(insertionMethod),               // in MediaBreakInsertionMethod
+		uintptr(presentationPosition.Duration), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(&out)),          // out MediaBreak
 	)
 
 	if hr != 0 {

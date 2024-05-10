@@ -21,7 +21,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
-	"github.com/go-musicfox/go-musicfox/internal/state_handler"
+	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -83,7 +83,7 @@ type Player struct {
 
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
 	mode         types.Mode
-	stateHandler *state_handler.Handler
+	stateHandler *control.RemoteControl
 	ctrl         chan CtrlSignal
 
 	renderTicker *tickerByPlayer // renderTicker 用于渲染
@@ -102,7 +102,7 @@ func NewPlayer(netease *Netease) *Player {
 	ctx, p.cancel = context.WithCancel(context.Background())
 
 	p.Player = player.NewPlayerFromConfig()
-	p.stateHandler = state_handler.NewHandler(p, p.PlayingInfo())
+	p.stateHandler = control.NewRemoteControl(p, p.PlayingInfo())
 
 	p.renderTicker = newTickerByPlayer(p)
 
@@ -524,7 +524,7 @@ func (p *Player) NextSong(isManual bool) {
 	}
 
 	switch p.mode {
-	case types.PmListLoop, types.PmIntelligent:
+	case types.PmListLoop, types.PmIntelligent, types.PmUnknown:
 		p.curSongIndex++
 		if p.curSongIndex > len(p.playlist)-1 {
 			p.curSongIndex = 0
@@ -581,7 +581,7 @@ func (p *Player) PreviousSong(isManual bool) {
 	}
 
 	switch p.mode {
-	case types.PmListLoop, types.PmIntelligent:
+	case types.PmListLoop, types.PmIntelligent, types.PmUnknown:
 		p.curSongIndex--
 		if p.curSongIndex < 0 {
 			p.curSongIndex = len(p.playlist) - 1
@@ -836,9 +836,9 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	}
 }
 
-func (p *Player) PlayingInfo() state_handler.PlayingInfo {
+func (p *Player) PlayingInfo() control.PlayingInfo {
 	music := p.curSong
-	return state_handler.PlayingInfo{
+	return control.PlayingInfo{
 		TotalDuration:  music.Duration,
 		PassedDuration: p.PassedTime(),
 		State:          p.State(),

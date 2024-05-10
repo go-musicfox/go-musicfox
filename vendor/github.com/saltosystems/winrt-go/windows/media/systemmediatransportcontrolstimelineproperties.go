@@ -141,8 +141,8 @@ func (v *iSystemMediaTransportControlsTimelineProperties) GetStartTime() (founda
 func (v *iSystemMediaTransportControlsTimelineProperties) SetStartTime(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetStartTime,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -170,8 +170,8 @@ func (v *iSystemMediaTransportControlsTimelineProperties) GetEndTime() (foundati
 func (v *iSystemMediaTransportControlsTimelineProperties) SetEndTime(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetEndTime,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -199,8 +199,8 @@ func (v *iSystemMediaTransportControlsTimelineProperties) GetMinSeekTime() (foun
 func (v *iSystemMediaTransportControlsTimelineProperties) SetMinSeekTime(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetMinSeekTime,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -228,8 +228,8 @@ func (v *iSystemMediaTransportControlsTimelineProperties) GetMaxSeekTime() (foun
 func (v *iSystemMediaTransportControlsTimelineProperties) SetMaxSeekTime(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetMaxSeekTime,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -257,8 +257,8 @@ func (v *iSystemMediaTransportControlsTimelineProperties) GetPosition() (foundat
 func (v *iSystemMediaTransportControlsTimelineProperties) SetPosition(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetPosition,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {

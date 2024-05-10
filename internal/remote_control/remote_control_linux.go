@@ -1,6 +1,6 @@
 //go:build linux
 
-package state_handler
+package remote_control
 
 import (
 	"fmt"
@@ -10,25 +10,25 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/godbus/dbus/v5/prop"
-	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/pkg/errors"
 )
 
 type MediaPlayer2 struct {
-	*Handler
+	*RemoteControl
 }
 
 func (m *MediaPlayer2) properties() map[string]*prop.Prop {
 	return map[string]*prop.Prop{
-		"CanQuit":             newProp(true, nil),       // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanQuit
-		"CanRaise":            newProp(false, nil),      // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanRaise
-		"HasTrackList":        newProp(true, nil),       // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:HasTrackList
-		"Identity":            newProp(types.AppName, nil),     // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:Identity
-		"SupportedUriSchemes": newProp([]string{}, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedUriSchemes
-		"SupportedMimeTypes":  newProp([]string{}, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedMimeTypes
+		"CanQuit":             newProp(true, nil),          // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanQuit
+		"CanRaise":            newProp(false, nil),         // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanRaise
+		"HasTrackList":        newProp(true, nil),          // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:HasTrackList
+		"Identity":            newProp(types.AppName, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:Identity
+		"SupportedUriSchemes": newProp([]string{}, nil),    // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedUriSchemes
+		"SupportedMimeTypes":  newProp([]string{}, nil),    // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedMimeTypes
 	}
 }
 
@@ -39,7 +39,7 @@ func (m *MediaPlayer2) Quit() *dbus.Error {
 	return nil
 }
 
-type Handler struct {
+type RemoteControl struct {
 	player Controller
 	name   string
 	dbus   *dbus.Conn
@@ -47,41 +47,41 @@ type Handler struct {
 	once   sync.Once
 }
 
-func NewHandler(p Controller, nowInfo PlayingInfo) *Handler {
-	handler := &Handler{
+func NewRemoteControl(p Controller, nowInfo PlayingInfo) *RemoteControl {
+	ctrl := &RemoteControl{
 		player: p,
 		name:   fmt.Sprintf("org.mpris.MediaPlayer2.musicfox.instance%d", os.Getpid()),
 	}
 
 	var err error
-	if handler.dbus, err = dbus.SessionBus(); err != nil {
+	if ctrl.dbus, err = dbus.SessionBus(); err != nil {
 		log.Default().Printf("[MPRIS] init dbus error: %+v", err)
-		return handler
+		return ctrl
 	}
 
-	mp2 := &MediaPlayer2{Handler: handler}
-	_ = handler.dbus.Export(mp2, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2")
+	mp2 := &MediaPlayer2{RemoteControl: ctrl}
+	_ = ctrl.dbus.Export(mp2, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2")
 
-	mprisPlayer := &Player{Handler: handler}
+	mprisPlayer := &Player{RemoteControl: ctrl}
 	mprisPlayer.createStatus(nowInfo)
-	_ = handler.dbus.Export(mprisPlayer, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player")
+	_ = ctrl.dbus.Export(mprisPlayer, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player")
 
-	_ = handler.dbus.Export(introspect.NewIntrospectable(handler.IntrospectNode()), "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Introspectable")
+	_ = ctrl.dbus.Export(introspect.NewIntrospectable(ctrl.IntrospectNode()), "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Introspectable")
 
-	handler.props, _ = prop.Export(handler.dbus, "/org/mpris/MediaPlayer2", map[string]map[string]*prop.Prop{
+	ctrl.props, _ = prop.Export(ctrl.dbus, "/org/mpris/MediaPlayer2", map[string]map[string]*prop.Prop{
 		"org.mpris.MediaPlayer2":        mp2.properties(),
 		"org.mpris.MediaPlayer2.Player": mprisPlayer.props,
 	})
 
-	_, err = handler.dbus.RequestName(handler.name, dbus.NameFlagReplaceExisting)
+	_, err = ctrl.dbus.RequestName(ctrl.name, dbus.NameFlagReplaceExisting)
 	if err != nil {
 		log.Default().Printf("[MPRIS] dbus request name error: %+v", err)
 	}
 
-	return handler
+	return ctrl
 }
 
-func (s *Handler) IntrospectNode() *introspect.Node {
+func (s *RemoteControl) IntrospectNode() *introspect.Node {
 	return &introspect.Node{
 		Name: s.name,
 		Interfaces: []introspect.Interface{
@@ -269,7 +269,7 @@ func (s *Handler) IntrospectNode() *introspect.Node {
 	}
 }
 
-func (s *Handler) SetPlayingInfo(info PlayingInfo) {
+func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 	if s.props == nil {
 		return
 	}
@@ -291,14 +291,14 @@ func (s *Handler) SetPlayingInfo(info PlayingInfo) {
 	}()
 }
 
-func (s *Handler) SetPosition(duration time.Duration) {
+func (s *RemoteControl) SetPosition(duration time.Duration) {
 	if s.props == nil {
 		return
 	}
 	s.props.SetMust("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(duration)))
 }
 
-func (s *Handler) setProp(iface, name string, value dbus.Variant) {
+func (s *RemoteControl) setProp(iface, name string, value dbus.Variant) {
 	if s.props == nil {
 		return
 	}
@@ -307,7 +307,7 @@ func (s *Handler) setProp(iface, name string, value dbus.Variant) {
 	}
 }
 
-func (s *Handler) Release() {
+func (s *RemoteControl) Release() {
 	_ = s.dbus.Close()
 }
 

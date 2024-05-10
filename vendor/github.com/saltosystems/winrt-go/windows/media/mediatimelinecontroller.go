@@ -253,8 +253,8 @@ func (v *iMediaTimelineController) GetPosition() (foundation.TimeSpan, error) {
 func (v *iMediaTimelineController) SetPosition(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetPosition,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
