@@ -10,6 +10,7 @@ import (
 	"github.com/saltosystems/winrt-go"
 	"github.com/saltosystems/winrt-go/windows/foundation"
 	"github.com/saltosystems/winrt-go/windows/media"
+	"github.com/saltosystems/winrt-go/windows/media/playback"
 	"github.com/saltosystems/winrt-go/windows/storage/streams"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -23,7 +24,8 @@ const (
 )
 
 var (
-	SMTC *media.SystemMediaTransportControls
+	SMTC     *media.SystemMediaTransportControls
+	__player *playback.MediaPlayer // Note: Do not use it!!! useless player, just for get smtc
 
 	buttonPressedEventGUID = winrt.ParameterizedInstanceGUID(
 		foundation.GUIDTypedEventHandler,
@@ -46,12 +48,11 @@ type RemoteControl struct {
 }
 
 func NewRemoteControl(p Controller, _ PlayingInfo) *RemoteControl {
+	_ = ole.RoInitialize(1)
+
 	if SMTC == nil {
-		var err error
-		SMTC, err = media.SystemMediaTransportControlsGetForCurrentView()
-		if err != nil {
-			Logger().Println("[ERROR] failed to get SystemMediaTransportControls:" + err.Error())
-		}
+		__player = Must1(playback.NewMediaPlayer())
+		SMTC = Must1(__player.GetSystemMediaTransportControls())
 	}
 
 	c := &RemoteControl{
