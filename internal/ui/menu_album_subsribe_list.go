@@ -13,7 +13,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils"
 )
 
-type AlbumSubListMenu struct {
+type AlbumSubscribeListMenu struct {
 	baseMenu
 	menus  []model.MenuItem
 	albums []structs.Album
@@ -22,8 +22,8 @@ type AlbumSubListMenu struct {
 	total  int
 }
 
-func NewAlbumSubListMenu(base baseMenu) *AlbumSubListMenu {
-	return &AlbumSubListMenu{
+func NewAlbumSubscribeListMenu(base baseMenu) *AlbumSubscribeListMenu {
+	return &AlbumSubscribeListMenu{
 		baseMenu: base,
 		offset:   0,
 		limit:    50,
@@ -31,19 +31,19 @@ func NewAlbumSubListMenu(base baseMenu) *AlbumSubListMenu {
 	}
 }
 
-func (m *AlbumSubListMenu) IsSearchable() bool {
+func (m *AlbumSubscribeListMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *AlbumSubListMenu) GetMenuKey() string {
+func (m *AlbumSubscribeListMenu) GetMenuKey() string {
 	return "album_sub_list"
 }
 
-func (m *AlbumSubListMenu) MenuViews() []model.MenuItem {
+func (m *AlbumSubscribeListMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
+func (m *AlbumSubscribeListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.albums) < index {
 		return nil
 	}
@@ -51,9 +51,8 @@ func (m *AlbumSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	return NewAlbumDetailMenu(m.baseMenu, m.albums[index].Id)
 }
 
-func (m *AlbumSubListMenu) BeforeEnterMenuHook() model.Hook {
+func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-
 		if len(m.menus) > 0 && len(m.albums) > 0 {
 			return true, nil
 		}
@@ -64,7 +63,10 @@ func (m *AlbumSubListMenu) BeforeEnterMenuHook() model.Hook {
 		}
 		code, response := albumService.AlbumSublist()
 		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		if codeType == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			return false, page
+		} else if codeType != utils.Success {
 			return false, nil
 		}
 
@@ -83,7 +85,7 @@ func (m *AlbumSubListMenu) BeforeEnterMenuHook() model.Hook {
 	}
 }
 
-func (m *AlbumSubListMenu) BottomOutHook() model.Hook {
+func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 	if m.total != -1 && m.offset < m.total {
 		return nil
 	}
@@ -95,7 +97,10 @@ func (m *AlbumSubListMenu) BottomOutHook() model.Hook {
 		}
 		code, response := newAlbumService.AlbumSublist()
 		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		if codeType == utils.NeedLogin {
+			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			return false, page
+		} else if codeType != utils.Success {
 			return false, nil
 		}
 
@@ -121,6 +126,6 @@ func (m *AlbumSubListMenu) BottomOutHook() model.Hook {
 	}
 }
 
-func (m *AlbumSubListMenu) Albums() []structs.Album {
+func (m *AlbumSubscribeListMenu) Albums() []structs.Album {
 	return m.albums
 }

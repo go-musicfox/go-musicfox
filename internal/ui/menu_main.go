@@ -36,7 +36,7 @@ func NewMainMenu(netease *Netease) *MainMenu {
 			NewDailyRecommendSongsMenu(base),
 			NewDailyRecommendPlaylistMenu(base),
 			NewUserPlaylistMenu(base, CurUser),
-			NewUserCollectMenu(base),
+			NewUserCollectionMenu(base),
 			NewPersonalFmMenu(base),
 			NewAlbumListMenu(base),
 			NewSearchTypeMenu(base),
@@ -55,7 +55,7 @@ func NewMainMenu(netease *Netease) *MainMenu {
 }
 
 func (m *MainMenu) FormatMenuItem(item *model.MenuItem) {
-	var subtitle = "[未登录]"
+	subtitle := "[未登录]"
 	if m.netease.user != nil {
 		subtitle = "[" + m.netease.user.Nickname + "]"
 	}

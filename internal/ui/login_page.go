@@ -136,7 +136,8 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 		}
 
 		// 当focus在button上时，左右按键的特殊处理
-		if s == "left" || s == "right" {
+		switch s {
+		case "left", "right":
 			if l.index < submitIndex {
 				return l.updateLoginInputs(msg)
 			}
@@ -145,9 +146,9 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			} else if s == "right" && l.index == submitIndex {
 				l.index++
 			}
-		} else if s == "up" || s == "shift+tab" {
+		case "up", "shift+tab":
 			l.index--
-		} else {
+		default:
 			l.index++
 		}
 
@@ -255,7 +256,7 @@ func (l *LoginPage) View(a *model.App) string {
 	}
 	builder.WriteString(l.submitButton)
 
-	var btnBlank = "    "
+	btnBlank := "    "
 	builder.WriteString(btnBlank)
 	builder.WriteString(l.qrLoginButton)
 
