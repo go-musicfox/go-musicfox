@@ -464,8 +464,8 @@ func (v *iMseSourceBuffer) GetTimestampOffset() (foundation.TimeSpan, error) {
 func (v *iMseSourceBuffer) SetTimestampOffset(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetTimestampOffset,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -493,8 +493,8 @@ func (v *iMseSourceBuffer) GetAppendWindowStart() (foundation.TimeSpan, error) {
 func (v *iMseSourceBuffer) SetAppendWindowStart(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetAppendWindowStart,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -592,9 +592,9 @@ func (v *iMseSourceBuffer) Abort() error {
 func (v *iMseSourceBuffer) Remove(start foundation.TimeSpan, end *foundation.IReference) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().Remove,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&start)), // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(end)),    // in foundation.IReference
+		uintptr(unsafe.Pointer(v)),   // this
+		uintptr(start.Duration),      // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(end)), // in foundation.IReference
 	)
 
 	if hr != 0 {

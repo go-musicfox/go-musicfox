@@ -1,6 +1,6 @@
 //go:build linux
 
-package state_handler
+package remote_control
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 // Player is a DBus object satisfying the `org.mpris.MediaPlayer2.Player` interface.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html
 type Player struct {
-	*Handler
+	*RemoteControl
 
 	props map[string]*prop.Prop
 }

@@ -9,7 +9,7 @@ include .go-builder/Makefile
 prepare: $(prepare_targets)
 
 .PHONY: sanity-check
-sanity-check: $(sanity_check_targets)
+sanity-check: $(sanity_check_targets) check-generated
 
 .PHONY: build
 build: $(build_targets)
@@ -27,6 +27,11 @@ clean: $(clean_targets)
 gen-files:
 	rm -rf $(CURDIR)/windows
 	go generate github.com/saltosystems/winrt-go/...
+
+.PHONY: check-generated
+check-generated: export WINRT_GO_GEN_VALIDATE=1
+check-generated:
+	 go generate github.com/saltosystems/winrt-go/...
 
 .PHONY: go-test
 go-test:

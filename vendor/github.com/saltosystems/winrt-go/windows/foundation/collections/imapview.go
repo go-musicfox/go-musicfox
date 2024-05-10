@@ -37,7 +37,7 @@ func (v *IMapView) Lookup(key unsafe.Pointer) (unsafe.Pointer, error) {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().Lookup,
 		uintptr(unsafe.Pointer(v)),    // this
-		uintptr(unsafe.Pointer(&key)), // in unsafe.Pointer
+		uintptr(key),                  // in unsafe.Pointer
 		uintptr(unsafe.Pointer(&out)), // out unsafe.Pointer
 	)
 
@@ -68,7 +68,7 @@ func (v *IMapView) HasKey(key unsafe.Pointer) (bool, error) {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().HasKey,
 		uintptr(unsafe.Pointer(v)),    // this
-		uintptr(unsafe.Pointer(&key)), // in unsafe.Pointer
+		uintptr(key),                  // in unsafe.Pointer
 		uintptr(unsafe.Pointer(&out)), // out bool
 	)
 

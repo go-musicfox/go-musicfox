@@ -809,8 +809,8 @@ func (v *iMediaPlayer) GetPosition() (foundation.TimeSpan, error) {
 func (v *iMediaPlayer) SetPosition(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetPosition,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {
@@ -1941,8 +1941,8 @@ func (v *iMediaPlayer3) GetTimelineControllerPositionOffset() (foundation.TimeSp
 func (v *iMediaPlayer3) SetTimelineControllerPositionOffset(value foundation.TimeSpan) error {
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().SetTimelineControllerPositionOffset,
-		uintptr(unsafe.Pointer(v)),      // this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(v)), // this
+		uintptr(value.Duration),    // in foundation.TimeSpan
 	)
 
 	if hr != 0 {

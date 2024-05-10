@@ -136,9 +136,9 @@ func PlaybackMediaMarkerCreateFromTime(value foundation.TimeSpan) (*PlaybackMedi
 	var out *PlaybackMediaMarker
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().PlaybackMediaMarkerCreateFromTime,
-		0,                               // this is a static func, so there's no this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
-		uintptr(unsafe.Pointer(&out)),   // out PlaybackMediaMarker
+		0,                             // this is a static func, so there's no this
+		uintptr(value.Duration),       // in foundation.TimeSpan
+		uintptr(unsafe.Pointer(&out)), // out PlaybackMediaMarker
 	)
 
 	if hr != 0 {
@@ -166,11 +166,11 @@ func PlaybackMediaMarkerCreate(value foundation.TimeSpan, mediaMarketType string
 	}
 	hr, _, _ := syscall.SyscallN(
 		v.VTable().PlaybackMediaMarkerCreate,
-		0,                               // this is a static func, so there's no this
-		uintptr(unsafe.Pointer(&value)), // in foundation.TimeSpan
-		uintptr(mediaMarketTypeHStr),    // in string
-		uintptr(textHStr),               // in string
-		uintptr(unsafe.Pointer(&out)),   // out PlaybackMediaMarker
+		0,                             // this is a static func, so there's no this
+		uintptr(value.Duration),       // in foundation.TimeSpan
+		uintptr(mediaMarketTypeHStr),  // in string
+		uintptr(textHStr),             // in string
+		uintptr(unsafe.Pointer(&out)), // out PlaybackMediaMarker
 	)
 
 	if hr != 0 {

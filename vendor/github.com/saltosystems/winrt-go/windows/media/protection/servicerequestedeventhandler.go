@@ -43,21 +43,29 @@ var releaseChannelsServiceRequestedEventHandler = &serviceRequestedEventHandlerR
 }
 
 func NewServiceRequestedEventHandler(iid *ole.GUID, callback ServiceRequestedEventHandlerCallback) *ServiceRequestedEventHandler {
+	// create type instance
 	size := unsafe.Sizeof(*(*ServiceRequestedEventHandler)(nil))
 	instPtr := kernel32.Malloc(size)
 	inst := (*ServiceRequestedEventHandler)(instPtr)
 
+	// get the callbacks for the VTable
 	callbacks := delegate.RegisterCallbacks(instPtr, inst)
 
+	// the VTable should also be allocated in the heap
+	sizeVTable := unsafe.Sizeof(*(*ServiceRequestedEventHandlerVtbl)(nil))
+	vTablePtr := kernel32.Malloc(sizeVTable)
+
+	inst.RawVTable = (*interface{})(vTablePtr)
+
+	vTable := (*ServiceRequestedEventHandlerVtbl)(vTablePtr)
+	vTable.IUnknownVtbl = ole.IUnknownVtbl{
+		QueryInterface: callbacks.QueryInterface,
+		AddRef:         callbacks.AddRef,
+		Release:        callbacks.Release,
+	}
+	vTable.Invoke = callbacks.Invoke
+
 	// Initialize all properties: the malloc may contain garbage
-	inst.RawVTable = (*interface{})(unsafe.Pointer(&ServiceRequestedEventHandlerVtbl{
-		IUnknownVtbl: ole.IUnknownVtbl{
-			QueryInterface: callbacks.QueryInterface,
-			AddRef:         callbacks.AddRef,
-			Release:        callbacks.Release,
-		},
-		Invoke: callbacks.Invoke,
-	}))
 	inst.IID = *iid // copy contents
 	inst.Mutex = sync.Mutex{}
 	inst.refs = 0
@@ -123,6 +131,7 @@ func (instance *ServiceRequestedEventHandler) Release() uint64 {
 		// https://github.com/golang/go/issues/55015
 		releaseChannelsServiceRequestedEventHandler.release(instancePtr)
 
+		kernel32.Free(unsafe.Pointer(instance.RawVTable))
 		kernel32.Free(instancePtr)
 	}
 	return rem
