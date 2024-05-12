@@ -30,6 +30,9 @@ type Notificator struct {
 }
 
 func (n Notificator) Push(urgency string, title string, text string, iconPath string, redirectUrl string) error {
+	if n.notifier == nil {
+		return nil
+	}
 	icon := n.defaultIcon
 
 	if iconPath != "" {
@@ -41,7 +44,6 @@ func (n Notificator) Push(urgency string, title string, text string, iconPath st
 	}
 
 	return n.notifier.push(title, text, icon, redirectUrl).Run()
-
 }
 
 type osxNotificator struct {
@@ -50,7 +52,6 @@ type osxNotificator struct {
 }
 
 func (o osxNotificator) push(title string, text string, iconPath string, redirectUrl string) *exec.Cmd {
-
 	// Checks if terminal-notifier exists, and is accessible.
 
 	// if terminal-notifier exists, use it.
@@ -75,7 +76,6 @@ func (o osxNotificator) push(title string, text string, iconPath string, redirec
 
 // Causes the notification to stick around until clicked.
 func (o osxNotificator) pushCritical(title string, text string, iconPath string, redirectUrl string) *exec.Cmd {
-
 	// same function as above...
 	if CheckTermNotif() {
 		// timeout set to 30 seconds, to show the importance of the notification
@@ -90,7 +90,6 @@ func (o osxNotificator) pushCritical(title string, text string, iconPath string,
 	}
 
 	return exec.Command("growlnotify", "-n", o.AppName, "--image", iconPath, "-m", title, "--url", redirectUrl)
-
 }
 
 type linuxNotificator struct {
@@ -118,18 +117,15 @@ func (w windowsNotificator) pushCritical(title string, text string, iconPath str
 }
 
 func New(o Options) *Notificator {
-
 	var Notifier notifier
 
 	switch runtime.GOOS {
-
 	case "darwin":
 		Notifier = osxNotificator{AppName: o.AppName, Sender: o.OSXSender}
 	case "linux":
 		Notifier = linuxNotificator{AppName: o.AppName}
 	case "windows":
 		Notifier = windowsNotificator{}
-
 	}
 
 	return &Notificator{notifier: Notifier, defaultIcon: o.DefaultIcon}
