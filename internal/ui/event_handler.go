@@ -51,8 +51,8 @@ const (
 	OperateTypeCollectSelectedPlaylist            = "collectSelectedPlaylist"
 	OperateTypeDiscollectSelectedPlaylist         = "discollectSelectedPlaylist"
 	OperateTypeDelSongFromCurPlaylist             = "delSongFromCurPlaylist"
-	OperateTypeAddSongToNext                      = "addSongToNext"
-	OperateTypeAppendSongToCurPlaylist            = "appendSongToCurPlaylist"
+	OperateTypeAppendSongsToNext                  = "appendSongsToNext"
+	OperateTypeAppendSongsAfterCurPlaylist        = "appendSongsAfterCurPlaylist"
 	OperateTypeClearSongCache                     = "clearSongCache"
 	OperateTypeRerender                           = "rerender"
 )
@@ -129,8 +129,8 @@ var keyOperateMapping = map[string]OperateType{
 	"\"":        OperateTypeDiscollectSelectedPlaylist,
 	"\\":        OperateTypeDelSongFromCurPlaylist,
 	"、":         OperateTypeDelSongFromCurPlaylist,
-	"e":         OperateTypeAddSongToNext,
-	"E":         OperateTypeAppendSongToCurPlaylist,
+	"e":         OperateTypeAppendSongsToNext,
+	"E":         OperateTypeAppendSongsAfterCurPlaylist,
 	"u":         OperateTypeClearSongCache,
 	"U":         OperateTypeClearSongCache,
 	"r":         OperateTypeRerender,
@@ -267,12 +267,12 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 		// 从播放列表删除歌曲,仅在当前播放列表界面有效
 		newPage := delSongFromPlaylist(h.netease)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeAddSongToNext:
+	case OperateTypeAppendSongsToNext:
 		// 追加到下一曲播放
-		addSongToPlaylist(h.netease, true)
-	case OperateTypeAppendSongToCurPlaylist:
+		appendSongsToCurPlaylist(h.netease, true)
+	case OperateTypeAppendSongsAfterCurPlaylist:
 		// 追加到播放列表末尾
-		addSongToPlaylist(h.netease, false)
+		appendSongsToCurPlaylist(h.netease, false)
 	case OperateTypeClearSongCache:
 		// 清除歌曲缓存
 		clearSongCache(h.netease)
@@ -291,7 +291,7 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 	loading.Start()
 	defer loading.Complete()
 
-	var menu = h.netease.MustMain().CurMenu()
+	menu := h.netease.MustMain().CurMenu()
 	if _, ok := menu.(*AddToUserPlaylistMenu); ok {
 		addSongToUserPlaylist(h.netease, menu.(*AddToUserPlaylistMenu).action)
 		return true, h.netease.MustMain(), h.netease.Tick(time.Nanosecond)
@@ -346,7 +346,7 @@ func (h *EventHandler) spaceKeyHandle() {
 		player.playingMenu = me
 	}
 
-	var newPlaylists = make([]structs.Song, len(songs))
+	newPlaylists := make([]structs.Song, len(songs))
 	copy(newPlaylists, songs)
 	player.playlist = newPlaylists
 

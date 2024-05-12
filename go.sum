@@ -56,8 +56,8 @@ github.com/go-musicfox/lastfm-go v0.0.2 h1:S/jXVK/bSi9JGZGm7ynQWY3nQ8gvMzbpHf2yK
 github.com/go-musicfox/lastfm-go v0.0.2/go.mod h1:QAs3ciul8v40zzwgDPDVq12CSACAIZUHXSSeBJLCdQE=
 github.com/go-musicfox/netease-music v1.4.1 h1:rRmAhZX4SA++CN3OrVXUXgpqb/Jl0Fg8Liqa6Cl1H7g=
 github.com/go-musicfox/netease-music v1.4.1/go.mod h1:9xh9+QfU8OE20VvG+hO6gNuAoGXpRv+gfQ7OygfDA3k=
-github.com/go-musicfox/notificator v0.1.1 h1:UPSAVs8OG2RvEx6TXIUyY8c3tKah/TVhlHrUjorIEp8=
-github.com/go-musicfox/notificator v0.1.1/go.mod h1:1FtZ3LEbv/I+EnrHOagRI2e3CwltRFhda6xLR3kOViI=
+github.com/go-musicfox/notificator v0.1.2 h1:rJbJr2bbdqYX+wkPJuAszWxO4lXXE7EvwXgUZErOVhY=
+github.com/go-musicfox/notificator v0.1.2/go.mod h1:1FtZ3LEbv/I+EnrHOagRI2e3CwltRFhda6xLR3kOViI=
 github.com/go-musicfox/requests v0.2.0 h1:VIg9BmtTGw93ugmNPUcJXaL647C12W48g1RTPHahdCU=
 github.com/go-musicfox/requests v0.2.0/go.mod h1:OqTmtUmkpkjyAnBHFEnmuO3OIvh1pTTGSNVtlAWKCMs=
 github.com/go-musicfox/tag v1.0.2 h1:reDl0/U4IHlA4eKQ4GsdCIXS6JrfHH8pub+YaZsjLlg=
