@@ -6,15 +6,18 @@ set -o nounset
 set -o pipefail
 set -x
 
-if GIT_REVISION=$(git rev-parse HEAD 2>/dev/null); then
-	if ! git diff-index --quiet HEAD --; then
-		GIT_REVISION=${GIT_REVISION}"-dev"
-	fi
-else
-	GIT_REVISION=unknown
-fi
+RELEASE_TAG=${RELEASE_TAG:-$(git describe --tags --always --dirty=-dev || echo "")}
+GIT_REVISION=${GIT_REVISION:-""}
 
-RELEASE_TAG=$(git describe --tags --always --dirty=-dev || echo "")
+if [[ -z "${GIT_REVISION}" ]]; then
+  if GIT_REVISION=$(git rev-parse HEAD 2>/dev/null); then
+    if ! git diff-index --quiet HEAD --; then
+      GIT_REVISION=${GIT_REVISION}"-dev"
+    fi
+  else
+    GIT_REVISION=unknown
+  fi
+fi
 
 VERSION="0.0.0-${GIT_REVISION}"
 if [[ -n "${RELEASE_TAG}" ]]; then
