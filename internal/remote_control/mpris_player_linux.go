@@ -188,7 +188,7 @@ func MapFromPlayingInfo(info PlayingInfo) MetadataMap {
 
 	m.nonEmptyString("xesam:album", info.Album)
 	m.nonEmptyString("xesam:title", info.Name)
-	m.nonEmptyString("xesam:asText", info.AsText)
+	m.nonEmptyString("xesam:asText", info.LRCText)
 	m.nonEmptySlice("xesam:albumArtist", []string{info.AlbumArtist})
 	m.nonEmptySlice("xesam:artist", []string{info.Artist})
 

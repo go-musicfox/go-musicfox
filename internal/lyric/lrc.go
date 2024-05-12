@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 // Parses an LRC file
@@ -45,7 +47,7 @@ func (f *LRCFile) AsText(t ...*TranslateLRCFile) string {
 	var builder strings.Builder
 	for _, line := range f.fragments {
 		at := time.Duration(line.StartTimeMs) * time.Millisecond
-		builder.WriteString(fmt.Sprintf("[%02d:%05.2f]", int(at.Minutes()), at.Seconds()))
+		builder.WriteString(fmt.Sprintf("[%02d:%05.2f]", at/time.Minute, (at % time.Minute).Seconds()))
 		builder.WriteString(line.Content)
 		if trans != nil && trans.fragments[line.StartTimeMs] != "" {
 			builder.WriteString(" [")
@@ -55,6 +57,8 @@ func (f *LRCFile) AsText(t ...*TranslateLRCFile) string {
 		builder.WriteString("\n")
 	}
 	f.text = builder.String()
+
+	utils.Logger().Println(f.text)
 
 	return f.text
 }
