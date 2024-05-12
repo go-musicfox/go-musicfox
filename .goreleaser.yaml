@@ -9,9 +9,10 @@ builds:
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-      - CFLAGS=-I/usr/x86_64-linux-gnu/include:$CFLAGS
-      - CPPFLAGS=-I/usr/x86_64-linux-gnu/include:$CPPFLAGS
-      - LDFLAGS=-L/usr/x86_64-linux-gnu/lib:$LDFLAGS
+      - CFLAGS="-I/usr/x86_64-linux-gnu/include $CFLAGS"
+      - CPPFLAGS="-I/usr/x86_64-linux-gnu/include $CPPFLAGS"
+      - LDFLAGS="-L/usr/x86_64-linux-gnu/lib $LDFLAGS"
+      - CGO_LDFLAGS="-L/usr/x86_64-linux-gnu/lib $CGO_LDFLAGS"
       - PKG_CONFIG_PATH=/usr/x86_64-linux-gnu/lib/pkgconfig:$PKG_CONFIG_PATH
     goarch:
       - amd64
@@ -29,9 +30,10 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-      - CFLAGS=-I/usr/aarch64-linux-gnu/include:$CFLAGS
-      - CPPFLAGS=-I/usr/aarch64-linux-gnu/include:$CPPFLAGS
-      - LDFLAGS=-L/usr/aarch64-linux-gnu/lib:$LDFLAGS
+      - CFLAGS="-I/usr/aarch64-linux-gnu/include $CFLAGS"
+      - CPPFLAGS="-I/usr/aarch64-linux-gnu/include $CPPFLAGS"
+      - LDFLAGS="-L/usr/aarch64-linux-gnu/lib $LDFLAGS"
+      - CGO_LDFLAGS="-L/usr/aarch64-linux-gnu/lib $CGO_LDFLAGS"
       - PKG_CONFIG_PATH=/usr/aarch64-linux-gnu/lib/pkgconfig:$PKG_CONFIG_PATH
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
@@ -45,9 +47,10 @@ builds:
     env:
       - CC=arm-linux-gnueabi-gcc
       - CXX=arm-linux-gnueabi-g++
-      - CFLAGS=-I/usr/arm-linux-gnueabi/include:$CFLAGS
-      - CPPFLAGS=-I/usr/arm-linux-gnueabi/include:$CPPFLAGS
-      - LDFLAGS=-L/usr/arm-linux-gnueabi/lib:$LDFLAGS
+      - CFLAGS="-I/usr/arm-linux-gnueabi/include $CFLAGS"
+      - CPPFLAGS="-I/usr/arm-linux-gnueabi/include $CPPFLAGS"
+      - LDFLAGS="-L/usr/arm-linux-gnueabi/lib $LDFLAGS"
+      - CGO_LDFLAGS="-L/usr/arm-linux-gnueabi/lib $CGO_LDFLAGS"
       - PKG_CONFIG_PATH=/usr/arm-linux-gnueabi/lib/pkgconfig:$PKG_CONFIG_PATH
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
@@ -65,9 +68,10 @@ builds:
     env:
       - CC=/usr/local/mingw/bin/x86_64-w64-mingw32-gcc
       - CXX=/usr/local/mingw/bin/x86_64-w64-mingw32-g++
-      - CFLAGS=-I/usr/local/mingw/x86_64-w64-mingw32/include:$CFLAGS
-      - CPPFLAGS=-I/usr/local/mingw/x86_64-w64-mingw32/include:$CPPFLAGS
-      - LDFLAGS=-L/usr/local/mingw/x86_64-w64-mingw32/lib:$LDFLAGS
+      - CFLAGS="-I/usr/local/mingw/x86_64-w64-mingw32/include $CFLAGS"
+      - CPPFLAGS="-I/usr/local/mingw/x86_64-w64-mingw32/include $CPPFLAGS"
+      - LDFLAGS="-L/usr/local/mingw/x86_64-w64-mingw32/lib $LDFLAGS"
+      - CGO_LDFLAGS="-L/usr/local/mingw/x86_64-w64-mingw32/lib $CGO_LDFLAGS"
   - id: go-musicfox-windows-arm64
     main: ./cmd/musicfox.go
     binary: musicfox
@@ -82,9 +86,10 @@ builds:
     env:
       - CC=/usr/local/mingw/bin/aarch64-w64-mingw32-gcc
       - CXX=/usr/local/mingw/bin/aarch64-w64-mingw32-g++
-      - CFLAGS=-I/usr/local/mingw/aarch64-w64-mingw32/include:$CFLAGS
-      - CPPFLAGS=-I/usr/local/mingw/aarch64-w64-mingw32/include:$CPPFLAGS
-      - LDFLAGS=-L/usr/local/mingw/aarch64-w64-mingw32/lib:$LDFLAGS
+      - CFLAGS="-I/usr/local/mingw/aarch64-w64-mingw32/include $CFLAGS"
+      - CPPFLAGS="-I/usr/local/mingw/aarch64-w64-mingw32/include $CPPFLAGS"
+      - LDFLAGS="-L/usr/local/mingw/aarch64-w64-mingw32/lib $LDFLAGS"
+      - CGO_LDFLAGS="-L/usr/local/mingw/aarch64-w64-mingw32/lib $CGO_LDFLAGS"
   - id: go-musicfox-darwin-arm64
     main: ./cmd/musicfox.go
     binary: musicfox

@@ -1,4 +1,5 @@
 PACKAGE_NAME          := go-musicfox
+PACKAGE_ROOT          := $(shell pwd)
 GOLANG_CROSS_VERSION  ?= v1.22.0
 INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/internal/types
 LDFLAGS               := -s -w
@@ -16,7 +17,7 @@ endif
 
 .PHONY: build
 build:
-	./hack/build.sh build
+	$(PACKAGE_ROOT)/hack/build.sh build
 
 .PHONY: init
 init:
@@ -24,11 +25,11 @@ init:
 
 .PHONY: install
 install:
-	./hack/build.sh install
+	$(PACKAGE_ROOT)/hack/build.sh install
 
 .PHONY: scoop-config-gen
 scoop-config-gen:
-	./hack/scoop_gen.sh
+	$(PACKAGE_ROOT)/hack/scoop_gen.sh
 
 .PHONY: lint
 lint:
@@ -37,6 +38,12 @@ lint:
 .PHONY: lint-fix
 lint-fix:
 	golangci-lint run --fix -v
+
+.PHONY: test
+test:
+	go test ./internal/... ./utils/... \
+		-coverpkg=./internal/...,./utils/... \
+		-covermode=atomic -coverprofile=coverage.txt
 
 .PHONY: sysroot-pack
 sysroot-pack:
