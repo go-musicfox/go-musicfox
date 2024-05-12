@@ -4,6 +4,8 @@ package avcore
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -37,7 +39,9 @@ func TestAVPlayer(t *testing.T) {
 	}
 	defer player.Release()
 
-	file := core.String("./testdata/a.mp3")
+	_, path, _, _ := runtime.Caller(0)
+	uri := "/" + filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(path)))), "testdata", "a.map3")
+	file := core.String(uri)
 	defer file.Release()
 	url := core.NSURL_fileURLWithPath(file)
 	defer url.Release()

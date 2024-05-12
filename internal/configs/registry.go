@@ -95,8 +95,11 @@ func NewRegistryWithDefault() *Registry {
 		},
 	}
 
-	if runtime.GOOS == "darwin" {
+	switch runtime.GOOS {
+	case "darwin":
 		registry.Player.Engine = types.OsxPlayer
+	case "windows":
+		registry.Player.Engine = types.WinMediaPlayer
 	}
 
 	return registry
@@ -164,8 +167,11 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.CacheLimit = ini.Int64("main.cacheLimit", 0)
 
 	defaultPlayer := types.BeepPlayer
-	if runtime.GOOS == "darwin" {
+	switch runtime.GOOS {
+	case "darwin":
 		defaultPlayer = types.OsxPlayer
+	case "windows":
+		defaultPlayer = types.WinMediaPlayer
 	}
 	registry.Player.Engine = ini.String("player.engine", defaultPlayer)
 	registry.Player.BeepMp3Decoder = ini.String("player.beepMp3Decoder", types.BeepGoMp3Decoder)

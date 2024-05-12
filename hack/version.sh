@@ -6,12 +6,8 @@ set -o nounset
 set -o pipefail
 set -x
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-GIT_REVISION=$(git rev-parse HEAD 2>/dev/null)
-if [[ $? == 0 ]]; then
-	git diff-index --quiet HEAD --
-	if [[ $? != 0 ]]; then
+if GIT_REVISION=$(git rev-parse HEAD 2>/dev/null); then
+	if ! git diff-index --quiet HEAD --; then
 		GIT_REVISION=${GIT_REVISION}"-dev"
 	fi
 else

@@ -20,7 +20,7 @@ BUILD_TARGET=${BUILD_TARGET:-""}
 BUILD_TAGS=${BUILD_TAGS:-""}
 
 if [[ "${ACTION}" = "build" ]]; then
-	BUILD_TARGET="-o ${ROOT}/bin/musicfox"
+	BUILD_TARGET="${ROOT}/bin/musicfox"
 fi
 
 VERSION_INFO=$(mktemp)
@@ -35,7 +35,7 @@ LDFLAGS=${LDFLAGS}" -X ${INJECT_PACKAGE}.LastfmKey=${LASTFM_KEY}"
 LDFLAGS=${LDFLAGS}" -X ${INJECT_PACKAGE}.LastfmSecret=${LASTFM_SECRET}"
 LDFLAGS=${LDFLAGS}" -X ${INJECT_PACKAGE}.BuildTags=${BUILD_TAGS}"
 
-CGO_ENABLED=1 GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} ${GOBINARY} ${ACTION} \
+CGO_ENABLED=1 GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} ${GOBINARY} "${ACTION}" \
 	-tags "${BUILD_TAGS}" \
-	-ldflags "${LDFLAGS}" ${BUILD_TARGET} \
-	${ROOT}/cmd/musicfox.go
+	-ldflags "${LDFLAGS}" -o "${BUILD_TARGET}" \
+	"${ROOT}/cmd/musicfox.go"

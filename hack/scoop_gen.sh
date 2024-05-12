@@ -12,7 +12,7 @@ TAG="$(git describe --tags --abbrev=0)"
 
 if [[ -z "$TAG" ]]; then
 	echo "TAG is empty"
-	exit -1
+	exit 1
 fi
 
 SCOOP_VERSION=${TAG#refs/tags/}
@@ -25,5 +25,5 @@ $(<"$ROOT"/deploy/scoop/go-musicfox.json.tpl)
 EOF
 " >"$ROOT"/deploy/scoop/go-musicfox.json
 
-echo $SCOOP_VERSION $SCOOP_HASH
+echo "$SCOOP_VERSION" "$SCOOP_HASH"
 cat "$ROOT"/deploy/scoop/go-musicfox.json

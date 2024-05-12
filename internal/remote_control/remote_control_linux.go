@@ -308,6 +308,9 @@ func (s *RemoteControl) setProp(iface, name string, value dbus.Variant) {
 }
 
 func (s *RemoteControl) Release() {
+	if s.dbus == nil {
+		return
+	}
 	_ = s.dbus.Close()
 }
 

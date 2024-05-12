@@ -18,7 +18,7 @@ esac
 
 mingw="llvm-mingw-20230320-ucrt-ubuntu-18.04-${BUILD_ARCH}"
 
-cd /tmp
+cd /tmp || exit 1
 rm -rf "${mingw}.tar.xz" "${mingw}" /usr/local/mingw
 wget "https://github.com/mstorsjo/llvm-mingw/releases/download/20230320/${mingw}.tar.xz"
 tar -xf "${mingw}.tar.xz"
