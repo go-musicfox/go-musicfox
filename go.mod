@@ -16,7 +16,7 @@ require (
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.3.0
 	github.com/go-musicfox/netease-music v1.4.1
-	github.com/go-musicfox/notificator v0.1.1
+	github.com/go-musicfox/notificator v0.1.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4

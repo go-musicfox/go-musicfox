@@ -62,8 +62,8 @@ func (o osxNotificator) push(title string, text string, iconPath string, redirec
 		}
 		return exec.Command("terminal-notifier", "-title", o.AppName, "-message", text, "-subtitle", title, "-contentImage", iconPath, "-sender", o.Sender)
 	} else if CheckMacOSVersion() {
-		title = strings.Replace(title, `"`, `\"`, -1)
-		text = strings.Replace(text, `"`, `\"`, -1)
+		title = strings.ReplaceAll(title, `"`, `\"`)
+		text = strings.ReplaceAll(text, `"`, `\"`)
 
 		notification := fmt.Sprintf("display notification \"%s\" with title \"%s\" subtitle \"%s\"", text, o.AppName, title)
 		return exec.Command("osascript", "-e", notification)
@@ -122,7 +122,7 @@ func New(o Options) *Notificator {
 	switch runtime.GOOS {
 	case "darwin":
 		Notifier = osxNotificator{AppName: o.AppName, Sender: o.OSXSender}
-	case "linux":
+	case "linux", "android":
 		Notifier = linuxNotificator{AppName: o.AppName}
 	case "windows":
 		Notifier = windowsNotificator{}

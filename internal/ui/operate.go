@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -516,7 +517,7 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 	}
 	playlists := me.Playlists()
 
-	var t = "1"
+	t := "1"
 	if !isCollect {
 		t = "0"
 	}
@@ -556,36 +557,53 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 	return nil
 }
 
-// addSongToPlaylist 添加歌曲到播放列表
-func addSongToPlaylist(m *Netease, addToNext bool) {
+// appendSongsToCurPlaylist 添加歌曲到播放列表
+func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 	loading := model.NewLoading(m.MustMain())
 	loading.Start()
 	defer loading.Complete()
 
 	var (
-		main = m.MustMain()
-		menu = main.CurMenu()
+		main          = m.MustMain()
+		menu          = main.CurMenu()
+		selectedIndex = menu.RealDataIndex(main.SelectedIndex())
+		subMenu       = menu.SubMenu(m.App, selectedIndex)
+		appendSongs   []structs.Song
+		notifyURL     string
 	)
-	me, ok := menu.(SongsMenu)
-	selectedIndex := menu.RealDataIndex(main.SelectedIndex())
-	if !ok || selectedIndex >= len(me.Songs()) {
+
+	sm, isSongsMenu := menu.(SongsMenu)
+	subSm, subIsSongsMenu := subMenu.(SongsMenu)
+	switch {
+	case isSongsMenu: // 当前菜单是 SongMenu
+		if selectedIndex >= len(sm.Songs()) {
+			return
+		}
+		song := sm.Songs()[selectedIndex]
+		appendSongs = append(appendSongs, song)
+		notifyURL = utils.WebUrlOfSong(song.Id)
+	case subIsSongsMenu: // 选中项菜单是 SongsMenu
+		// 触发 BeforeEnterMenuHook 获取歌曲
+		if ok, _ := subSm.BeforeEnterMenuHook()(m.Main()); !ok {
+			return
+		}
+		appendSongs = subSm.Songs()
+	default:
 		return
 	}
-	songs := me.Songs()
 
 	var notifyTitle string
 	if addToNext && len(m.player.playlist) > 0 {
 		// 添加为下一曲
 		targetIndex := m.player.curSongIndex + 1
-		m.player.playlist = append(m.player.playlist, structs.Song{})
-		copy(m.player.playlist[targetIndex+1:], m.player.playlist[targetIndex:])
-		m.player.playlist[targetIndex] = songs[selectedIndex]
-		notifyTitle = "已添加为下一曲播放"
+		m.player.playlist = slices.Concat(m.player.playlist[:targetIndex], appendSongs, m.player.playlist[targetIndex:])
+		notifyTitle = "已添加到下一曲"
 	} else {
 		// 添加到播放列表末尾
-		m.player.playlist = append(m.player.playlist, songs[selectedIndex])
+		m.player.playlist = append(m.player.playlist, appendSongs...)
 		notifyTitle = "已添加到播放列表末尾"
 	}
+
 	// 替换播放中数据，避免数据错乱
 	m.player.playingMenu = nil
 	m.player.playingMenuKey += "modified"
@@ -598,8 +616,8 @@ func addSongToPlaylist(m *Netease, addToNext bool) {
 
 	utils.Notify(utils.NotifyContent{
 		Title:   notifyTitle,
-		Text:    songs[selectedIndex].Name,
-		Url:     utils.WebUrlOfSong(songs[selectedIndex].Id),
+		Text:    menu.MenuViews()[selectedIndex].Title,
+		Url:     notifyURL,
 		GroupId: types.GroupID,
 	})
 }
