@@ -849,7 +849,7 @@ func (p *Player) PlayingInfo() control.PlayingInfo {
 		Album:          music.Album.Name,
 		Artist:         music.ArtistName(),
 		AlbumArtist:    music.Album.ArtistName(),
-		AsText:         p.lrcFile.AsText(),
+		AsText:         p.lrcFile.AsText(p.transLrcFile),
 	}
 }
 

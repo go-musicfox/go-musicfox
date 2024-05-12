@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -19,23 +20,43 @@ import (
 
 type LRCFile struct {
 	fragments []LRCFragment
+
+	text string
+	l    sync.Mutex
 }
 
-func (f *LRCFile) AsText() string {
-	var builder strings.Builder
-
+func (f *LRCFile) AsText(t ...*TranslateLRCFile) string {
 	if f == nil || len(f.fragments) == 0 {
-		return "暂无歌词~"
+		return "[00:00.00]暂无歌词~"
 	}
 
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	if f.text != "" {
+		return f.text
+	}
+
+	var trans *TranslateLRCFile
+	if len(t) > 0 {
+		trans = t[0]
+	}
+
+	var builder strings.Builder
 	for _, line := range f.fragments {
+		at := time.Duration(line.StartTimeMs) * time.Millisecond
+		builder.WriteString(fmt.Sprintf("[%02d:%05.2f]", int(at.Minutes()), at.Seconds()))
 		builder.WriteString(line.Content)
-		builder.WriteByte('\n')
+		if trans != nil && trans.fragments[line.StartTimeMs] != "" {
+			builder.WriteString(" [")
+			builder.WriteString(trans.fragments[line.StartTimeMs])
+			builder.WriteString("]")
+		}
+		builder.WriteString("\n")
 	}
+	f.text = builder.String()
 
-	res := builder.String()
-
-	return res[:len(res)-1]
+	return f.text
 }
 
 type TranslateLRCFile struct {
@@ -153,8 +174,8 @@ func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error
 		}
 	}()
 
-	var left = strings.Index(line, openChar)
-	var right = strings.Index(line, closeChar)
+	left := strings.Index(line, openChar)
+	right := strings.Index(line, closeChar)
 	if left < 0 || right < 0 {
 		err = errors.New("brackets missing")
 		return
@@ -173,7 +194,7 @@ func parseLRCTime(line, openChar, closeChar string) (tm time.Duration, err error
 			err = errors.New("format error")
 			return
 		}
-		var milliseconds = minutes*60000 + int(math.Floor(seconds*1000))
+		milliseconds := minutes*60000 + int(math.Floor(seconds*1000))
 		tm = time.Duration(milliseconds) * time.Millisecond
 		return
 	}
