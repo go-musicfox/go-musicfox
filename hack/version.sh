@@ -34,7 +34,6 @@ if [[ -z "${GIT_REVISION}" ]]; then
 		fetch_remote_git_info
 		GIT_REVISION=$(echo "$GIT_REMOTE_INFO" | grep -w "refs/tags/${GIT_TAG}" | tail -n 1 | awk '{print $1}')
 	fi
-
 fi
 
 VERSION="0.0.0-${GIT_REVISION}"
