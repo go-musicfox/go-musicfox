@@ -224,7 +224,7 @@ scoop install go-musicfox
 
 ### 手动编译
 
-注：需要 Go v1.21 及以上版本
+注：需要 Go v1.22 及以上版本
 
 前往 [下载 Go ](https://go.dev/dl/)页面选择适合你的 Go 安装包体。
 
