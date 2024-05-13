@@ -17,7 +17,7 @@ type ArtistsSubscribeListMenu struct {
 	artists []structs.Artist
 	offset  int
 	limit   int
-	total   int
+	hasMore bool
 }
 
 func NewArtistsSubscribeListMenu(base baseMenu) *ArtistsSubscribeListMenu {
@@ -25,7 +25,6 @@ func NewArtistsSubscribeListMenu(base baseMenu) *ArtistsSubscribeListMenu {
 		baseMenu: base,
 		offset:   0,
 		limit:    50,
-		total:    -1,
 	}
 }
 
@@ -67,6 +66,12 @@ func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 		} else if codeType != utils.Success {
 			return false, nil
 		}
+
+		// 是否有更多数据
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
+		}
+
 		m.artists = utils.GetArtistsSublist(response)
 		for _, artist := range m.artists {
 			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
@@ -77,7 +82,7 @@ func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 }
 
 func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
-	if m.total != -1 && m.offset < m.total {
+	if !m.hasMore {
 		return nil
 	}
 	return func(main *model.Main) (bool, model.Page) {
@@ -95,9 +100,9 @@ func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
 			return false, nil
 		}
 
-		// 总数量
-		if total, err := jsonparser.GetInt(response, "total"); err == nil {
-			m.total = int(total)
+		// 是否有更多数据
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
 		}
 
 		m.artists = utils.GetArtistsSublist(response)
