@@ -3,6 +3,7 @@
 package remote_control
 
 import (
+	"sync"
 	"time"
 	"unsafe"
 
@@ -45,6 +46,9 @@ var (
 type RemoteControl struct {
 	p    Controller
 	smtc *media.SystemMediaTransportControls
+
+	lastPlayingInfo  PlayingInfo
+	lastPlayingInfoL sync.Mutex
 }
 
 func NewRemoteControl(p Controller, _ PlayingInfo) *RemoteControl {
@@ -101,10 +105,10 @@ func (c *RemoteControl) SetPosition(pos time.Duration) {
 	if c.smtc == nil {
 		return
 	}
-	timelineProps := Must1(media.NewSystemMediaTransportControlsTimelineProperties())
-	defer timelineProps.Release()
-	Must(timelineProps.SetPosition(foundation.TimeSpan{Duration: pos.Milliseconds() * TicksPerMillisecond}))
-	Must(c.smtc.UpdateTimelineProperties(timelineProps))
+	c.lastPlayingInfoL.Lock()
+	c.lastPlayingInfo.PassedDuration = pos
+	c.lastPlayingInfoL.Unlock()
+	c.setTimelineProps(c.lastPlayingInfo)
 }
 
 func (c *RemoteControl) SetPlayingInfo(info PlayingInfo) {
@@ -130,18 +134,25 @@ func (c *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 	Must(musicProps.SetAlbumArtist(info.AlbumArtist))
 	Must(updater.Update())
 
-	timelineProps := Must1(media.NewSystemMediaTransportControlsTimelineProperties())
-	defer timelineProps.Release()
-	Must(timelineProps.SetStartTime(foundation.TimeSpan{}))
-	Must(timelineProps.SetMinSeekTime(foundation.TimeSpan{}))
-	Must(timelineProps.SetPosition(foundation.TimeSpan{Duration: info.PassedDuration.Milliseconds() * TicksPerMillisecond}))
-	Must(timelineProps.SetMaxSeekTime(foundation.TimeSpan{Duration: info.TotalDuration.Milliseconds() * TicksPerMillisecond}))
-	Must(timelineProps.SetEndTime(foundation.TimeSpan{Duration: info.TotalDuration.Milliseconds() * TicksPerMillisecond}))
-	Must(c.smtc.UpdateTimelineProperties(timelineProps))
+	c.lastPlayingInfoL.Lock()
+	c.lastPlayingInfo = info
+	c.lastPlayingInfoL.Unlock()
+	c.setTimelineProps(info)
 }
 
 func (c *RemoteControl) Release() {
 	if c.smtc != nil {
 		c.smtc.Release()
 	}
+}
+
+func (c *RemoteControl) setTimelineProps(info PlayingInfo) {
+	timelineProps := Must1(media.NewSystemMediaTransportControlsTimelineProperties())
+	defer timelineProps.Release()
+	Must(timelineProps.SetStartTime(foundation.TimeSpan{}))
+	Must(timelineProps.SetEndTime(foundation.TimeSpan{Duration: info.TotalDuration.Milliseconds() * TicksPerMillisecond}))
+	Must(timelineProps.SetMinSeekTime(foundation.TimeSpan{}))
+	Must(timelineProps.SetMaxSeekTime(foundation.TimeSpan{Duration: info.TotalDuration.Milliseconds() * TicksPerMillisecond}))
+	Must(timelineProps.SetPosition(foundation.TimeSpan{Duration: info.PassedDuration.Milliseconds() * TicksPerMillisecond}))
+	Must(c.smtc.UpdateTimelineProperties(timelineProps))
 }
