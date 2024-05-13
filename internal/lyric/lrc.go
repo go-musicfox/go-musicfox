@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
-	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 // Parses an LRC file
@@ -57,8 +55,6 @@ func (f *LRCFile) AsText(t ...*TranslateLRCFile) string {
 		builder.WriteString("\n")
 	}
 	f.text = builder.String()
-
-	utils.Logger().Println(f.text)
 
 	return f.text
 }
