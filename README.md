@@ -192,6 +192,12 @@ $ nix-shell -p go-musicfox
 
 从 [void-packages-zh](https://github.com/voidlinux-zh-association/void-packages-zh#readme) 安装。
 
+##### Termux(Android)
+
+```sh
+$ apt install go-musicfox
+```
+
 #### 2. 通过 Homebrew 安装
 
 ```sh
