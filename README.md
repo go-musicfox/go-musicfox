@@ -4,17 +4,18 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 
 > UI 基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) 进行了部分定制
 
-![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total)
+![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total) ![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
 
-![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
-
-<p><img src="previews/logo.png" alt="logo" width="512"/></p>
+<p><img src="previews/logo.png" alt="logo" width="256"/></p>
 
 ([The icon](https://github.com/go-musicfox/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
 
 ------------------------------
+<details>
+<summary>
 
 ## 预览
+</summary>
 
 #### 1. 启动
 
@@ -58,9 +59,18 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 > 2. 下载和安装 [LyricsX 的 go-musicfox 的 fork 版本](https://github.com/go-musicfox/LyricsX/releases/latest)
 > 3. 在 LyricsX 设置中，打开`使用系统正在播放的应用`
 
+</details>
+<details>
+<summary>
+
 ## 安装
+</summary>
+
+<details>
+<summary>
 
 ### macOS
+</summary>
 
 #### 1. 通过 Homebrew 安装
 
@@ -78,11 +88,21 @@ $ brew unlink musicfox && brew link --overwrite go-musicfox
 
 在 [Release](https://github.com/go-musicfox/go-musicfox/releases/latest) 下载 macOS 的可执行文件。
 
+</details>
+
+<details>
+<summary>
+  
 ### Linux
+</summary>
 
 #### 1. 使用发行版软件包（推荐）
 
+<details>
+<summary>
+  
 ##### Arch Linux
+</summary>
 
 ###### 从 [AUR](https://aur.archlinux.org/) 安装
 
@@ -98,8 +118,13 @@ $ paru -S go-musicfox-bin # 下载安装预编译好的二进制
 ```sh
 # pacman -S go-musicfox
 ```
+</details>
+
+<details>
+<summary>
 
 ##### Gentoo Linux
+</summary>
 
 ###### 从 [gentoo-zh Overlay](https://github.com/microcai/gentoo-zh) 安装
 
@@ -109,11 +134,17 @@ $ emerge --sync
 $ emerge -a media-sound/go-musicfox
 ```
 
-##### NixOS
+</details>
 
 <details>
 <summary>
-<b>1. flake support</b>
+
+##### NixOS
+</summary>
+
+<details>
+<summary>
+1. flake support
 </summary>
 下面是一个在nixos配置中使用它的例子
 
@@ -155,7 +186,7 @@ $ nix run github:go-musicfox/go-musicfox
 </details>
 <details>
 <summary>
-<b>2. 配置 configuration.nix 或使用 Home Manager（推荐）</b>
+2. 配置 configuration.nix 或使用 Home Manager（推荐）
 </summary>
 
 ```nix
@@ -173,7 +204,7 @@ home.packages = [
 </details>
 <details>
 <summary>
-<b>3. 从 <a href="https://search.nixos.org/packages?channel=unstable&show=go-musicfox&from=0&size=50&sort=relevance&type=packages&query=go-musicfox">Nixpkgs </a>安装</b>
+3. 从 <a href="https://search.nixos.org/packages?channel=unstable&show=go-musicfox&from=0&size=50&sort=relevance&type=packages&query=go-musicfox">Nixpkgs </a>安装
 </summary>
 安装到本地 profile：
 
@@ -188,16 +219,29 @@ $ nix-shell -p go-musicfox
 ```
 </details>
 
+</details>
+
+<details>
+<summary>
+
 ##### Void Linux
+</summary>
 
 从 [void-packages-zh](https://github.com/voidlinux-zh-association/void-packages-zh#readme) 安装。
 
+</details>
+
+<details>
+<summary>
+  
 ##### Termux(Android)
+</summary>
 
 ```sh
 $ apt install go-musicfox
 ```
-
+</details>
+  
 #### 2. 通过 Homebrew 安装
 
 ```sh
@@ -214,7 +258,13 @@ $ brew unlink musicfox && brew link --overwrite go-musicfox
 
 在 [Release](https://github.com/go-musicfox/go-musicfox/releases/latest) 下载 Linux 的可执行文件。
 
+</details>
+
+<details>
+<summary>
+
 ### Windows
+</summary>
 
 #### 1. 通过 scoop 安装
 
@@ -228,7 +278,13 @@ scoop install go-musicfox
 
 在 [Release](https://github.com/go-musicfox/go-musicfox/releases/latest) 下载 Windows 的可执行文件。
 
+</details>
+
+<details>
+<summary>
+  
 ### 手动编译
+</summary>
 
 注：需要 Go v1.22 及以上版本
 
@@ -271,38 +327,51 @@ $ make # 编译到 bin 目录下
 $ make install # 安装到 $GOPATH/bin下
 ```
 
+</details>
+</details>
+<details>
+<summary>
+
 ## 使用
+</summary>
 
 ```sh
 $ musicfox
 ```
 
+<details>
+<summary>
+  
 ### 注意事项
+</summary>
 
-> [!IMPORTANT]
-> - **请务必使用等宽字体，或将配置项 `doubleColumn` 设为 `false`，否则双列显示排版可能会混乱**
-> 
-> - **如果在使用时出现莫名奇妙的光标移动、切歌或暂停等现象，请将配置项 `enableMouseEvent` 设置为 `false`**
-> 
-> - **本应用不对 macOS 原生终端和 Windows 的命令提示符（CMD）做兼容处理（[#99](https://github.com/go-musicfox/go-musicfox/issues/99)）**
->   
->   > macOS 用户推荐使用 [iTerm2](https://iterm2.com/) 或 [Kitty](https://sw.kovidgoyal.net/kitty/) 
->   >
->   > Linux 用户推荐使用 [Kitty](https://sw.kovidgoyal.net/kitty/)
->   >
->   > Windows 用户推荐使用 [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701)，使用体验更佳
->
-> - 如果在执行文件时遇到以下错误，说明你的操作系统内不包含 `libFLAC.so.8` 。
->   
->   ```
->   ./musicfox: error while loading shared libraries: libFLAC.so.8: cannot open shared object file: No such file or directory
->   ```
->   
->   例如 Ubuntu 23.10 及它的衍生版系列，`libFLAC.so.12` 已经将 `libFLAC.so.8` 替换。
->   
->   遇到这种问题，你可以自行安装 `libflac8` （不推荐）或参照[手动编译](#手动编译)一节自行编译。
+- **请务必使用等宽字体，或将配置项 `doubleColumn` 设为 `false`，否则双列显示排版可能会混乱**
+- **如果在使用时出现莫名奇妙的光标移动、切歌或暂停等现象，请将配置项 `enableMouseEvent` 设置为 `false`** 
+- **本应用不对 macOS 原生终端和 Windows 的命令提示符（CMD）做兼容处理（[#99](https://github.com/go-musicfox/go-musicfox/issues/99)）**   
+  > macOS 用户推荐使用 [iTerm2](https://iterm2.com/) 或 [Kitty](https://sw.kovidgoyal.net/kitty/) 
+  >
+  > Linux 用户推荐使用 [Kitty](https://sw.kovidgoyal.net/kitty/)
+  >
+  > Windows 用户推荐使用 [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701)，使用体验更佳
+- 如果在执行文件时遇到以下错误，说明你的操作系统内不包含 `libFLAC.so.8`：
+  ```
+  ./musicfox: error while loading shared libraries: libFLAC.so.8: cannot open shared object file: No such file or directory
+  ```
+  例如 Ubuntu 23.10 及它的衍生版系列，`libFLAC.so.12` 已经将 `libFLAC.so.8` 替换。
+  
+  遇到这种问题，你可以：
+  * 找到已安装的新版 `libFLAC.so`，将其软链为`libFLAC.so.8`: `ln -s /xxx/libFLAC.so /xxx/libFLAC.so.8` （**推荐**）
+  * 自行安装 `libflac8` （不推荐）
+  * 参照[手动编译](#手动编译)一节自行编译。
 
+  > 这里之所以使用 FLAC8，主要是为了兼容大部分系统，因为FLAC是向前兼容的（也就是说 `≥ 8` 的FLAC都可以使用）
+
+</details>
+<details>
+<summary>
+  
 ### 快捷键
+</summary>
 
 #### 应用内快捷键
 
@@ -379,7 +448,13 @@ ctrl+shift+space=toggle
 > BUILD_TAGS=enable_global_hotkey make build
 > ```
 
+</details>
+</details>
+<details>
+<summary>
+  
 ## 配置文件
+</summary>
 
 配置文件路径为用户配置目录下的 `go-musicfox.ini` 文件，详细可参见[配置示例](./utils/embed/go-musicfox.ini)。
 
@@ -395,16 +470,31 @@ ctrl+shift+space=toggle
 > 
 > 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
 
+</details>
+<details>
+<summary>
+
 ## CHANGELOG
+</summary>
 
 See [CHANGELOG.md](./CHANGELOG.md)
 
+</details>
+<details>
+<summary>
+
 ## 相关项目
+</summary>
 
 1. [go-musicfox/bubbletea](https://github.com/go-musicfox/bubbletea)：基于 [bubbletea](https://github.com/charmbracelet/bubbletea) 进行部分定制
 2. [go-musicfox/netease-music](https://github.com/go-musicfox/netease-music)：fork 自 [NeteaseCloudMusicApiWithGo](https://github.com/sirodeneko/NeteaseCloudMusicApiWithGo) ，在原项目的基础上去除 API 功能，只保留 service 和 util 作为一个独立的包，方便在其他 Go 项目中调用
 
+</details>
+<details>
+<summary>
+
 ## 感谢
+</summary>
 
 感谢以下项目及其贡献者们（但不限于）：
 
@@ -418,5 +508,7 @@ See [CHANGELOG.md](./CHANGELOG.md)
 
 感谢 [JetBrains Open Source](https://www.jetbrains.com/zh-cn/opensource/?from=archery) 为项目提供免费的 IDE 授权    
 [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" width="200"/>](https://www.jetbrains.com/opensource/)
+
+</details>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=go-musicfox/go-musicfox&type=Date)](https://star-history.com/#go-musicfox/go-musicfox&Date)
