@@ -440,6 +440,12 @@ func (p *beepPlayer) reset() {
 }
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
+	defer func() {
+		if err := recover(); err != nil {
+			utils.Logger().Printf("streamer panic: %+v", err)
+			p.Stop()
+		}
+	}()
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
 	err := p.curStreamer.Err()
