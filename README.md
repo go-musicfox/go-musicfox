@@ -123,6 +123,21 @@ $ paru -S go-musicfox-bin # 下载安装预编译好的二进制
 <details>
 <summary>
 
+##### Fedora Linux
+</summary>
+
+###### 从 [Copr](https://copr.fedorainfracloud.org/coprs/poesty/go-musicfox/) 安装。
+
+```sh
+$ sudo dnf copr enable poesty/go-musicfox
+$ sudo dnf install go-musicfox
+```
+
+</details>
+
+<details>
+<summary>
+
 ##### Gentoo Linux
 </summary>
 
