@@ -31,6 +31,10 @@ install:
 scoop-config-gen:
 	$(PACKAGE_ROOT)/hack/scoop_gen.sh
 
+.PHONY: changelog-gen
+changelog-gen:
+	$(PACKAGE_ROOT)/hack/changelog_gen.sh
+
 .PHONY: lint
 lint:
 	golangci-lint run -v

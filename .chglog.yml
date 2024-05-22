@@ -1,0 +1,5 @@
+debug: false
+conventional-commits: false
+exclude-merge-commits: true
+owner: "go-musicfox"
+package-name: "go-musicfox"
