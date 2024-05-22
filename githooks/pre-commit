@@ -1,7 +1,8 @@
 #!/bin/sh
 
-git-chglog -o CHANGELOG.md
+# go install github.com/goreleaser/chglog/cmd/chglog@latest
+# chglog format --template repo >CHANGELOG.md
 make lint-fix
 git add .
 
-exit 0;
+exit 0

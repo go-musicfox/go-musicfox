@@ -1,0 +1,5702 @@
+- semver: 4.4.1
+  date: 2024-05-13T20:56:59+08:00
+  packager: go-musicfox
+  changes:
+    - commit: d233096ef3eb0f97e8b7ce5cc5dca6ab6b79904f
+      note: 'chore: rm useless log'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3e262fbdf037c55fc9602b203cfad5916125367d
+      note: 'feat: update version.sh & fix windows control'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6211e0cdb657bfaf1fa9f3837bac0ceb0f5055af
+      note: 'fix: subscribe_list unresponsive'
+      author:
+        name: recreators01
+        email: recreators01@outlook.com
+      committer:
+        name: recreators01
+        email: recreators01@outlook.com
+    - commit: 9e007943b8a20091b9ef4f2ca63a64b906c79990
+      note: 'ci: support env `RELEASE_TAG`,`GIT_REVISION`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 37263a0ff04ff4fa0d7699757aa4c4f45edba162
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.4.0
+  date: 2024-05-12T20:25:35+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ff135fa2c456e5f2ef9090d1665564aaffab7786
+      note: 'chore: rename playing info `AsText`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5837b0dcb37e4b90c28ef27932effdee9ad215f8
+      note: 'feat: append all songs of playlist to now playing list (#232)'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 0edfcf8be949e90ce216d453c7f45cb8f6bd51ad
+      note: 'feat: impl xesam:asText (#202)'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: c71521e471b90f38ed8e21396276f2ce45cb2b9c
+      note: 'fix: notificator panic'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 54f8cb448f94618bdb23c1a14d5187026efc5e68
+      note: 'refactor: project layout & fix some bugs'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: f0892131a521e46759b8016c6ec0379e80b97422
+      note: 'chore: format'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 72bd99b5c3562d5f228a0e2ad6136fec6fa23871
+      note: 'fix(remote_control): linux mpris'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 63a229d836a94649b743e21861391651568d4b37
+      note: 'fix: smtc with beep'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 87d2136776c3e1f88c935f30ae20d700155c28ff
+      note: 'feat: media player & smtc'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 20e63a88d757906a8a2267b094361832d2fdae33
+      note: 'chore: optimize for ambiguity'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 71acf30ec3dd43918b2059f51169b995f8170518
+      note: 'update: path.Join to filepath.Join'
+      author:
+        name: zhifengle
+        email: zhifengle@gmail.com
+      committer:
+        name: zhifengle
+        email: zhifengle@gmail.com
+    - commit: e095c7762004a17944ed864d153ff26bfbe7ad94
+      note: 'update: change to utils'
+      author:
+        name: 22earth
+        email: zhifengle@gmail.com
+      committer:
+        name: 22earth
+        email: zhifengle@gmail.com
+    - commit: abf1a06a30e0eb08b8ba514fe7fe961748ee2537
+      note: 'fix: opening the QR code image fails when the MUSICFOX_ROOT environment variable is set in Windows'
+      author:
+        name: 22earth
+        email: zhifengle@gmail.com
+      committer:
+        name: 22earth
+        email: zhifengle@gmail.com
+    - commit: 17b5ffc4903ecdfe7e2785f600fb1e76148e7cf4
+      note: 'optimize: media player command manager'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c5939128724e04f4c6e07e1709da0db3dc9ddd2b
+      note: 'feat: add win media player #246'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fcf7686f16fcd2b9a55ab89d63c8368f8783b515
+      note: 'fix: upgrade deps'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6e45899e5aaf208b7ed8744568bd17cf0fe811a6
+      note: 'feat: update win media player'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b9a2c5c10d939e6fec673114e2abc863ea922271
+      note: 'mod: 函数名和注释'
+      author:
+        name: recreators01
+        email: recreators01@outlook.com
+      committer:
+        name: recreators01
+        email: recreators01@outlook.com
+    - commit: 894b18eb43a2160cc29b57ce734aab11803d0a56
+      note: 'feat: #196'
+      author:
+        name: recreators01
+        email: recreators01@outlook.com
+      committer:
+        name: recreators01
+        email: recreators01@outlook.com
+    - commit: 87db3fac30f98d266682db1beed617fca20b1d4e
+      note: 'feat(keys): #248'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: ca23f4537d2833c243e7ff9b6762f182d6187196
+      note: 'feat: perfect windows media player'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 3ba594b8065b3d3fea43ff607b7776a3a6915cf2
+      note: 'feat: update win player'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0a20706659744c3af901ddb06a9b66951dd08686
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: cde265be804163278b8d2fa4dd1ed1c2ee7e87b0
+      note: update readme for linux building and troubleshooting
+      author:
+        name: soloopooo
+        email: soloopooo@foxmail.com
+      committer:
+        name: soloopooo
+        email: soloopooo@foxmail.com
+    - commit: 3a72db2ec32687eadb0bb51f1f2fff7fa380588e
+      note: 'fix: defer ignore'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 508b580f48cd6fefdac9ea054f368daef43e566e
+      note: 'chore(player): comment uncompleted code'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bd03d1deb27ea723d19e7978f7acbe0bd753ecb4
+      note: 'chore(player): comment uncompleted code'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f3728b5d109956d82c46e59b1db03fcb520c1170
+      note: 'ci(build): update build sh'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: e97e0f12beccdd2bc323545a2dec954f40b4642e
+      note: 'ci: add lint'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: da4d48b8b652867e4ebbc0b5639c3502f44d7ae8
+      note: 'feat(player): add windows media player'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: f9afd6c4702469a484666f7c7cb30ca3a817240c
+      note: 'feat(version): add build tags to version'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: ebf90e81fc27124e927d9e6d5592d78f56fec7ad
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 19396a78f1b3d91f5a36bd9f4329cf3e4368b4fa
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 0e7cfbf5569e40043c2a33c0f9cf2fa241f04775
+      note: |-
+        fix(beep): panic when player
+        chore(deps): update purego to v0.7.0
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: bfaa5cf29c34d71396e98f23b7b3779d05692831
+      note: 'fix(beep): fix deadlock'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 3533798888fbfdda809848e5444850a71908a925
+      note: 'feat(homebrew): add --head install'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 312413caca49485724d9eab99a814f9ca77550f0
+      note: 'upgrade: upgrade bubbletea to latest'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 78bbf4705da713064073f8d09a01555baa987484
+      note: 'chore(log): add debug log'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ac8502832d726a118fecfc2c1fae0946f4530d17
+      note: 'chore(mod): rm useless dep'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a250ead954ced205df429f2cfc0b678606575c8e
+      note: 'chore(mod): tidy go mod'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0024f5e64f8ff64321a54e152651806c17852e91
+      note: 'refactor(beep): update beep to latest (with `oto`)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4042f0955a509f5eb9c70492c43c6fbc6c5d9472
+      note: 'docs(keymap): update keymap doc'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 45fa4e179a48d91aa87ba3e358f721c2967d312d
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.3.3
+  date: 2024-03-31T22:12:26+08:00
+  packager: go-musicfox
+  changes:
+    - commit: e6d65829236d289cff2fd79556b7082ab2e02847
+      note: 'chore: update CHANGELOG'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7a8ccbc38e5229a1e225be75caf59b5e359099bf
+      note: 'fix(macdriver): upgrade `purego` to fix stuck in macOS'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c64c4853b5f3661e1d95ea27ff4b4d6c152816a0
+      note: 'chore: mod tidy'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d0190a11434b69ee5d3f0ac3456867f73c350924
+      note: 'docs(CHANGELOG): update CHANGELOG'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2d1c24062229803c8fe1f7e5732758e8a80a6f1a
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.3.2
+  date: 2024-03-30T18:07:44+08:00
+  packager: go-musicfox
+  changes:
+    - commit: b49d35359151adcf69d16424ddb982d7186aa28c
+      note: 'feat: add goreleaser changelog'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1aa26469de1166523823719bbbd236028d033d8a
+      note: 'feat: add CHANGELOG generator'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bd705ea233fb612dce82161abdf5121ccdceeb40
+      note: update goreleaser
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8d017e01d32a8b3a3c2f325060f85db0d2a0f63e
+      note: 'fix: fix faulty position'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a92a0f416b8af3c2e5961f121558dab1300774b7
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: eac333fca09c8368c55b8302baf0663ffd917ba3
+      note: 'fix: 每日推荐歌单'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9ec40ea819498ddf441660d197782189700d1f62
+      note: 'fix: use `AppName` in `internal.types`'
+      author:
+        name: poly000
+        email: 34085039+poly000@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5541b1f4fd50c6a3d0f8fae8de89c13d405229b9
+      note: 'fix: set mpris Identity an user-friendly name'
+      author:
+        name: poly000
+        email: 34085039+poly000@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 75ea70d7f7c0354194d8f9e5c9d4c11841872c7d
+      note: 'optimize: 默认关闭签到功能'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 64a8f7978eb56e9d2d7c292650b224d278148e4b
+      note: |-
+        build(deps): bump golang.org/x/crypto from 0.10.0 to 0.17.0
+
+        Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.10.0 to 0.17.0.
+        - [Commits](https://github.com/golang/crypto/compare/v0.10.0...v0.17.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/crypto
+          dependency-type: indirect
+        ...
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ff4628880fcd9482126161b9195a2eea29a011a0
+      note: 'fix: linux dbus `s.props` is nil'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b6f63984227aa185c85c767f3eb96ad3557830c5
+      note: 'fix: cannot load framework in Mac Sonoma'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6654436a55f7103e1d333b111d2f98102ce0f110
+      note: 'feat: add vscode launch config'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4130389e53ad05c7200ceb046a1d91415ba6aa01
+      note: 'fix(utils): music cache priority'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: da33abbbd3dea161013a8fc73fc052eb0a7d80cb
+      note: 'fix(utils): music cache priority'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d58523525202fa5bb76c41e7b84b7c9b20cf5c11
+      note: 'feat: foxful-cli ticker'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fcb134144bcac1aa0c814f173212eff0cbf61575
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 605d9c817245d4070005ceec3534b8dcd83e6961
+      note: 'optimize: only `W` for logout(#215)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 65bb595079b7d9fbb5d1437ceb05189b4ff9f1d2
+      note: 'fix: panic when parse lrc(#240)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ff95dd3d53927a2d5214a3162ba90fe2d3e853b0
+      note: 'feat: page up and page down(#241)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 957e33462ec028a7e241bd6094050c5ed5602aaf
+      note: 'feat: add goreleaser changelog'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: e8e723e8ff20cadeff289e0c3598d1fd0f27c453
+      note: 'feat: add CHANGELOG generator'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: a31ceea7e3bf1290f36703f09b446a7b5543c645
+      note: update goreleaser
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fb7e4865a39c9537f3868d62dae7c8690a9ca8c4
+      note: 'fix: fix faulty position'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: poly000
+        email: 1348292515@qq.com
+    - commit: c0a7513ea6776c7df89bdf59f00479daa4aab01f
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.3.1
+  date: 2024-02-24T21:03:52+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 608f2d672c65bf29ddaac993d9ac74ba5067f906
+      note: 'fix: 每日推荐歌单'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6d4fe1a39fa8158b29265570d3294401b4239b0e
+      note: 'fix: use `AppName` in `internal.types`'
+      author:
+        name: poly000
+        email: 34085039+poly000@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a44d0c2ec7506b33f092fe5a4158265372639ff7
+      note: 'fix: set mpris Identity an user-friendly name'
+      author:
+        name: poly000
+        email: 34085039+poly000@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 3a49acc4eabfc48672c4ab203759233db29f6cc3
+      note: 'optimize: 默认关闭签到功能'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1e05b6a93cad1ea641b675414de5fe62f61881bc
+      note: |-
+        build(deps): bump golang.org/x/crypto from 0.10.0 to 0.17.0
+
+        Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.10.0 to 0.17.0.
+        - [Commits](https://github.com/golang/crypto/compare/v0.10.0...v0.17.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/crypto
+          dependency-type: indirect
+        ...
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: af433e0255da555b69e9f8cef5ca638f112f47e2
+      note: 'fix: linux dbus `s.props` is nil'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: cd2f4b9ba9ab0c5ddc415fe23ccfddd7224e5eff
+      note: Update event_handler.go
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 3892ffa3d73e5d2ba52ace8a376600cff7d841b8
+      note: 'fix: cannot load framework in Mac Sonoma'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 31d0122ba5fdedd2c314bf02bac8f52a1a4d9587
+      note: 'feat: add vscode launch config'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 041c9f067842302a09ccf60b8c5dae6302d9741c
+      note: 'fix(utils): music cache priority'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 4ceb7d93b7b1dbe779e19ff31c1efe3a3a1c2eb0
+      note: 'fix(utils): music cache priority'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 7368a25b1d2d92167c73849b186be2bc190ff789
+      note: 'feat: foxful-cli ticker'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 9810f20781364824ac725b283e3568cab91f0628
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.3.0
+  date: 2023-10-30T08:57:24+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 9bf9b11d72e13b613ddf03622b02ed08a8c58b31
+      note: 'fix: missing import'
+      author:
+        name: imxyy_soope_
+        email: 103114856+imxyy1soope1@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fd1c6190afc19d8bb44b20ee1818ec34fb2e1b1a
+      note: 'improvement(build): omit `hostname` error message in `version.sh`'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 4692ee47c4e88d65d5e3f51ad06fa5a885d6de68
+      note: 'fix(lyric): fix panic when no lyric'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 4ba8d3fad2a147546bf59bdaab5986a052430af0
+      note: 'feat(player): provide xseam:asText for mpris'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: b69ae5dcae085f83a52be547845b3c42b9a0b045
+      note: 'fix(state_handler): update playing position every 200ms'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: f1158cd2f01faf023d9100aa5fac9090f4ffb4c3
+      note: fix iss203
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 6d18b6ec232e0f120c6e117ff8a45036dd386909
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.2.1
+  date: 2023-10-08T21:06:11+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ab0862e87a7769932d4613fceef8f069698c8a43
+      note: 'fix: #199'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 55807f5bb3fac6c693363509c8cbd7f881d093f5
+      note: 'feat: add confirm menu when clear song cache'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: a6dea5744ee45c118bd27ba1c3204ab6fbf605dd
+      note: Update go-musicfox.ini
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 65a41ffc30d45caa8e8cd66b333334fd10e54b3e
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a24af5d46b87f9461eb21a5bb6ccdd27f5241bcd
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.2.0
+  date: 2023-09-17T21:25:51+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 9b1db07a2dd7eeae52b3993045f6daa13abced95
+      note: 'fix: register global_key'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 12607463836e5b42507a9345bf3f385fd6e53d00
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7c2a102fff5bdcfb9c56aa3e0a0f1c6a5fd9270a
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d9dfe6ed74ebdeb4449fcb7dcbe501215c541fd1
+      note: 'fix: global hotkey build'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9632ffc9afa4ef3daea27c36513b4bdb3b7a50c5
+      note: 'feat: 自定义下载文件名格式(#193)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f7cb76f62ca86db99d44f7938e11d7f1446843cd
+      note: |-
+        feat: 进度条配置优化 & 支持全局快捷键
+
+        进度条配置优化(#166, 配置项有变更)
+        支持全局快捷键(#118)
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e1f735c4ddf0ea6a981f1707cb42a28011037cf1
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.7
+  date: 2023-09-12T22:55:48+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 8c5d65b91221e3624995c22915153754b1d9dda2
+      note: 'fix: err'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9a99ba17ac257dac8328ecbdeddd75689d572a53
+      note: 'fix: mac notification'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 977d5cb5713afe7900cf2984b2e81c1d49108864
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1c7f344b2d5167c3d25590dec4cc3826df7a473b
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 94cc971ebe3571ba5034476117899a834609b52b
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 47622d9f586754f78baac3b1e1e4619bee8e42f5
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e10495a9ae07d446199214c621fea78133f0aa08
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c0059834e7160a9d1146e94ead272dada90ec633
+      note: 'fix: inject'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3eaf9d3fba60fff044677371c7cfb6af278d62d8
+      note: 'fix: err'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9161738e2ce83e62c726016dff0d1b4091fdd011
+      note: update foxful-cli
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bd131ed17c0c39a937914c1cb5b3d92eafffd17d
+      note: refactor
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ac0c7e77d5d9054df9d2a3cacd397e62ad7dcdf5
+      note: 'fix: lyrics view'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 046d731562e0c61dacd9fea59e2faffe3e18c9bc
+      note: 'refactor: pkg => internal'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3b6aaef87fc6d665de579648c336e562df2c4188
+      note: 'optimize: lyrics'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b16ebae86bdd4f20d0bbefd1a2d049be20fca80c
+      note: 'fix: player view'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fa4a98427a951a4f9b2efa5bdf470cdf5a985195
+      note: optimize
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d65862fbebde3e18c92ec1197e832acd0fc58bcc
+      note: 'fix: playlists'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c80fb9905e6aca2b99d82c856cb44b52780e2c18
+      note: 'optimize: loading'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8765c96d2b2623231a969555c9de59cb639f8aaa
+      note: 'optimize: login callback'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b959aa491ba03899384cb8b762f181d2cc6cab35
+      note: 'optimize: login callback'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a84e25cf5ac305969804144eaf2f2bbe558cdb4d
+      note: 'fix: w not quit'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1c85e032bde2e10068175b635ead7ffb62f2eaee
+      note: 'fix: #183'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7940c6527d34e14f6bea53fe79f2dd4a5ac5f618
+      note: Update Makefile
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 4ed85894caefe5fec3622fc77dc6ae00bf04ec40
+      note: Update release.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 520c0313085b04c39f631b59b1405aecd3171c56
+      note: 'fix: beep minimp3 err'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 43f517f66252b8ae40af7e2846eef176a70629d8
+      note: 'fix: key'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 80e7d6fab1e62e6122c81f6ddf1b83cbdb0717f8
+      note: update depend
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b134daeaa40c2753acfc1a48594d7101cbf4344c
+      note: refactor by foxful-cli
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 06645142a895655190bfec9452e9409b149a9d13
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0840bf5880765a670fea3bc84cd9ff6c48cfb2cf
+      note: add patch
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 786fe827e090ace0b69cb2a79b1a208147aa7968
+      note: gitignore
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a6af3bb6f5a467773128595750b017001426c7f0
+      note: 'fix(utils): 当无法正常下载音乐且开启缓存时panic'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: cf50bfe1ea2584dbfa5d736e2bc7228a5cff4fd0
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.6
+  date: 2023-08-21T09:21:30+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 6fdef846140caeb8bc1a7cb272f753d1fff41baa
+      note: 'fix: lyric'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 267dc7105d813b1bf841b65f8f5aaea00ac99549
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.5
+  date: 2023-08-20T13:52:08+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ae6eb437bac6d1be20ac80ed171a830b3863059f
+      note: 'fix: #167'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a6cbb3f6c02443ebc34620783f6f45e967acf1ba
+      note: 'fix(player): 修复了当mpd repeat为true时不能自动切歌的问题'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 8373239ac66d9d3498754b5f67453ed543c8278e
+      note: 'feat: golang-lint'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 755a8f37189d364886172e08c0b9d3a03d843aeb
+      note: 'feat: golang-lint'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4706f989dc3c2826258095ed21206d4e3854c826
+      note: 'optimize: replace github.com/boltdb/bolt => go.etcd.io/bbolt'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4db9962b9c6dd2a642416585d983efd972cff775
+      note: 'fix: 修复播放列表切片越界的问题'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 025fa87b5489c9052ef08af4bba40da7e8e755ef
+      note: 'fix: #171'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: e02eb30995489426ebaf8f567b9c141806eec49d
+      note: 'docs(README): 新增快捷键项目，对齐MarkDown表格'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: 441013183c78835e63596609fea54f457118117c
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.4
+  date: 2023-07-16T11:20:58+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 57eab0e4db53023d066d05685f5a1e67cad50924
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1a6280ae7d99c1d32c191467c68c6e9ffccc635b
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 94fe01d3ef4ff26e57f8239d7fc7d9954a2fadf8
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7abe38ac08609ce0188fb49b1627a52e888314dd
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7981c4a6d92a29ca78f4006e0ccae3c3547fd209
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a486aa95d0f61f87b86d4df7e25e343904dcd15f
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ecb634c7ecc23637d28575d63d09e5e3fe41f586
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6161d8d73feb04956a0a3873d01dac05a146b20a
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3dcf05345a6cf427282484ca41ad5cadbba8a9b7
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e5faa4ef9b459e17cfdc47164c1977fb9b397e23
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 64026757c693eef850be2cea446dece78f5fd4ff
+      note: 'fix: actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: db934eaadf223c6b0db5e9b0b30ef32536e66a48
+      note: 'fix: winget'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f1bf252e529cbff1a6e3daa7b83cb8677d5dafab
+      note: 'fix: winget'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 932046da35a7ca4e5aba1d0ce82afc3cb3259508
+      note: 'feat: 模糊搜索本地歌单'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: cd3fe90c257a35d07eb0ab2c0a6f80792daa483c
+      note: 'fix: #158 setting FLAC file will not halt; use tmp file'
+      author:
+        name: Yu-Fu Fu
+        email: yufu@yfu.tw
+      committer:
+        name: Yu-Fu Fu
+        email: yufu@yfu.tw
+    - commit: e5ab571f98d5211cefd6feb71cc0be8d2d1dea29
+      note: 'feat: 添加了下载歌曲失败时的通知提醒'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: 7ae9c9a574f79f432e364575ec50a4f54194a354
+      note: 'fix(utils.go): 修复了下载未缓存文件时文件名错误的问题'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: 0b9c850c5ddf9cf34f69f6429993896910a82858
+      note: 'fix: #149 again'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 6a02f9effa0c77587a1d8d876bce2a1b1f3050ca
+      note: 'feat: add winget'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7923b2dacd28bb10ff2a46a4a2b61710ae6fd74f
+      note: 'fix: error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ae9f57d8623dd87c7a9458022d588ea905dec790
+      note: 'fix: #151 #152'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 610d8de409b6984e5541aa4ce78de94294b5d6ce
+      note: 'feat: 增加winget配置（待测试）'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b56e8838d6b98a25514d7f18f9b12fbdc9d40989
+      note: 'fix: #149'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 6f831c4fcbeca5572a555db56a6044838eff233e
+      note: 'fix: 添加清除音乐缓存在帮助目录的条目'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: f9444422a620bd1f77580ad207e21040c9b28945
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.3
+  date: 2023-07-11T21:33:23+08:00
+  packager: go-musicfox
+  changes:
+    - commit: f062a07bfb6ef424b958457afb4b2ea828e86dcd
+      note: 'fix: 兼容#147'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2f32ac5b3a26da012b0938b581aa76e0fba2d149
+      note: 'feat: mpd volume日志'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6d5f3c1045452195b5d7384f72a93d65f2fea47b
+      note: 'fix: #143'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5e07e445417a49bef02112c15cb3e0de3b5d8bb3
+      note: 'fix: panic'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1fd8bfb676140cd8fa8ca09aa7e62dccef88df56
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 61392e40d1f8d3c5abe0a77f508d1d54e74f3faf
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6ae05a5433194ae9319b02868baae18f7cd64cd9
+      note: 'fix: bcef056后无法构建'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: b4e431ef7de121b2bbb795591105124624145f0c
+      note: 'feat: 优化ctrl'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b864a819bdb2a23ed137a90e98c3a2a0157b2e95
+      note: 'add: Windows 检查更新提示'
+      author:
+        name: kyle
+        email: 1531763162@qq.com
+      committer:
+        name: kyle
+        email: 1531763162@qq.com
+    - commit: 7ce4c6516e1428e660a7490f17f6ed9c9e266cd4
+      note: 'fix: 在播放模式为单曲循环时手动切换歌曲'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: a7ec978aca3e9ac58bfbdcf896d95afdb65cf286
+      note: |-
+        fix:
+         - 当临时文件系统和目标下载位置不在同一磁盘时无法下载文件
+         - 将log输出至logfile
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: 8ae13370912b3355d8e9b6647a69edc5a6df93b7
+      note: 'feat: 将歌曲添加至歌单'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: d4fb743522112b6af578dda2792b350019e68a18
+      note: 'fix: mac图片错误时panic'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 73d68982755d15692d92eabce4aa719bd303118e
+      note: 'feat: update pkg'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a0b80e23eb71caf4e62d7430cfdb55f73ad1ac89
+      note: 'fix: 歌单详情'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e9fc158abaa646cfb57b7467febd72dba58f444b
+      note: optimized code
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d1e07ba05418c4e50caba3cd48ab9543bca160ab
+      note: optimized code
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 581171d21c3f0cb74e2717eeb085ffffb31f119d
+      note: refactor
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 09c399c4d47cda38dcac7737807a3d31af09a773
+      note: 'feat: #128'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a19d67233fa0c1fb4238b9591c4ef2430de0f48a
+      note: 'Enhancement: Send music info to mpd'
+      author:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy1soope1
+        email: 3516554684@qq.com
+    - commit: a5098fe0614a5fe83196222cbc0c26feb7868d40
+      note: 'fix: like song'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 089afb5696b28d319c391c2deafdb38dc63f7fe5
+      note: 'fix: like selected song'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2f4395da8dac4444bda34eae8d00ecbfb6dba84a
+      note: 'feat: update dep'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3c86fd2a2acf90d9445e78fab3e9b20f0070058e
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c1605dc710cd2810f5412524ef9c567c50f5dc5f
+      note: 'feat: 配置命令优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cc8c4813cfdaeefac9c07124b36962ee013141d9
+      note: |-
+        chore: Move dir:`nix` to `deploy/nix`
+
+        chore: Move dir:`nix` to `deploy/nix`
+      author:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+      committer:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+    - commit: b987dae7baf840044be836b85cd7055bd88abeb9
+      note: Add flake support
+      author:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+      committer:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+    - commit: 275ce3cc9c75a581660afba85d0bc151119c08b2
+      note: Add flake support
+      author:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+      committer:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+    - commit: 341d5936a8385e78a4712d04739f97aa952e635f
+      note: 'fix: stack overflow'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b559ba7e7f9ccdd5e0c623461839c8233ee52023
+      note: 'fix: 从播放列表删除选中歌曲'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: eadf75009dafd0428157789c849a36038a4b2c34
+      note: 'feat: 从播放列表删除选中歌曲'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 524a011cab430e7ff584c00320bff8899a9cb624
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.2
+  date: 2023-06-06T21:37:13+08:00
+  packager: go-musicfox
+  changes:
+    - commit: b35c884dc703e999558aca5ce5935d3a2f431d41
+      note: fix 逻辑错误，修复后续Access is denied错误
+      author:
+        name: kyle
+        email: 1531763162@qq.com
+      committer:
+        name: kyle
+        email: 1531763162@qq.com
+    - commit: ccf4885c898d7cad40b4631d27d4829c92ecf4e7
+      note: 'fix: 修复配置文件目录问题'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 0e7d86cea14a9f26337815e7da0b9848d3b02be4
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 634a2854f4bc99b4e60eaf9fc8eacfebb52fa4df
+      note: |-
+        fix: package name
+
+        fix: package name
+
+        fix: package name
+
+        fix: package name
+      author:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+      committer:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+    - commit: 7bfab6b542528fbf1b7dace69fb1e4a7c3fa3935
+      note: |-
+        feat: Add flake support
+
+        feat: Add flake support
+      author:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+      committer:
+        name: Ruixi-rebirth
+        email: ruixirebirth@gmail.com
+    - commit: f8f091adfe2d17be9b46cf8f8f1e05c7134f8b21
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.1
+  date: 2023-05-27T21:58:44+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 6bb739e142a8d57583aaa473d4943c6f9746cda6
+      note: 'fix: 报错'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c2dff1f8d904ace4b8ff75052a93c330758ea6aa
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.1.0
+  date: 2023-05-24T18:15:53+08:00
+  packager: go-musicfox
+  changes:
+    - commit: df5a60538f6cfc7980c596bcb4c785b70d8f6cf7
+      note: 'feat: support #85'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0c8f5d1ba95c6913f4b7028cdfa6d111d2e335d0
+      note: 'feat: update README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 398796e3d0b60cdddd1d3f47e6282da01b4dbfb1
+      note: |-
+        refactor: polish README.md
+
+        Comply with (ruanyf/document-style-guide)[https://github.com/ruanyf/document-style-guide]
+      author:
+        name: WhiredPlanck
+        email: whiredplanck@outlook.com
+      committer:
+        name: WhiredPlanck
+        email: whiredplanck@outlook.com
+    - commit: e97019be621fba2e6c68f200c4899617f1cf648f
+      note: |-
+        feat: support the base dir specifications of the platforms (#107)
+
+        Utilize the `UserConfigDir` method from os in the standard library to compose the full default config path on multiple platforms
+      author:
+        name: WhiredPlanck
+        email: whiredplanck@outlook.com
+      committer:
+        name: WhiredPlanck
+        email: whiredplanck@outlook.com
+    - commit: d63897e3554358a3757903b2deb2e9c97c2dc7a5
+      note: 'fix: #105'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: eacd328437bc2e7177dad29b5d365beea62470f1
+      note: Fix typo in UI
+      author:
+        name: Eddie Wu
+        email: 18080998d@connect.polyu.hk
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fe9e5bcaf6072cecdb837e3970b11c596c3bbfff
+      note: Update player.go
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a254a2ed977e5359eee85e31c056669e78b3ede2
+      note: 'fix: 播放结束上报网易云'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: b11b8d3bc2e287207913fa08ddf6ccd9943324b3
+      note: 'add: 播放结束上报网易云'
+      author:
+        name: kyle
+        email: 1531763162@qq.com
+      committer:
+        name: kyle
+        email: 1531763162@qq.com
+    - commit: eb24d0afdee540d764df0b279a5f2bae72fffa07
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.6
+  date: 2023-05-02T13:27:01+08:00
+  packager: go-musicfox
+  changes:
+    - commit: db429bd9a1504cb56d29d0dc1c0251bc6a14b36f
+      note: 'fix: 快退会将秒数退为负数'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 7552594acebcff405608442582d59f1f68f6868c
+      note: 'feat: 配置'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5a4e66adc8a29f8d7cb89cf68479ce39806ee93b
+      note: 'feat: update Readme'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d53cb82b74740285f5071e077720d3fb9496120a
+      note: 'feat: 自定义通知logo(linux/windows)'
+      author:
+        name: ston
+        email: ston.jia@qq.com
+      committer:
+        name: ston
+        email: ston.jia@qq.com
+    - commit: a294bde6e8fa5704e7be845c6583c223ca49edc5
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e4ee2f8ac0e96415507bd7b08936914fcb82ccd6
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.5
+  date: 2023-04-22T00:22:28+08:00
+  packager: go-musicfox
+  changes:
+    - commit: db1363993c6d91f534feadddb0d0c47d325224ba
+      note: 'feat: 更新issue template'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f30f1164b27ab6cee6781ac85e15f9c146ddf6f2
+      note: 'feat: 更新issue template'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 42873ce2f6129410f1c43981cbacf9910973a4bc
+      note: 'feat: 更新issue template'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f3d6a4c5dfca7970630dd215b2b9e7b4aec4ae4f
+      note: 'feat: 更新issue template'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 30aadf890e6eb1bde075ca37a652685c3d3680dd
+      note: 'feat: 更新issue template'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5a52eb903bfc2b8ca12efb789b58919aa4b820c8
+      note: Update issue templates
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7721c8e70e6f4e0f3272b6c17fd5f1f3ef86e5b6
+      note: 'feat: 更新go-mp3'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 15616a2c80ff9d96573099097aac7845a0f6622b
+      note: 'feat: 更新go-mp3'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7ae8df35a4cfc4246f89d31023544c0bed8446a7
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.4
+  date: 2023-04-20T22:54:52+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 4e89aa4133de29ce5c226b1d7f5746f00e9439fd
+      note: 'fix: oto linux panic'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f2b22b7526805c9bfebf7490f9cd778fed3c1325
+      note: 'feat: 更新libflac'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f0fa2b033167f1aa134b8e80d77ba3c50ceb5960
+      note: 'feat: 优化libflac'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3bdc9ceddceb932d6c55aa26891f572285fc9634
+      note: 'feat: 增加等待次数'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5cdbbdce51010c4ee027f9ddbe66c1ec8fbc44dd
+      note: 'feat: 优化beep_player因网速慢切歌问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 68664d2dc4207e16de58e2a00860cf38ccbe9669
+      note: 'fix: 渐变色'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: be73b15958b2ef40b7e37477d00b71c55f33ac96
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.3
+  date: 2023-04-14T23:35:42+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 6f621c9db8ab134e78bfc71f3743e2e64476bf2a
+      note: 'feat: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: dc9d43607531ed871b9ffe1f9141a15b095d540d
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bad968eecb44db0e058172c5350e7e54c52efaa5
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a62fac1e62991ab72fcd690cf8cec0355e4553e0
+      note: 'feat: 配置进度条'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8dde7614f682971a3c7465c85f584ff9522463ac
+      note: 'fix: panic: slice bounds out of range [:33] with capacity 32'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d920d28dce8fe0f21c493ad9186dbb17d76a78d2
+      note: 'feat: 增加鼠标配置'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c78f3a77844b3e71757f824686eea0f1d2fd7794
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.2
+  date: 2023-04-12T12:37:25+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ff81a020613653930ba42492391f86e8fbc489fd
+      note: 'feat: minimp3优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 938cb857765e91e7249323875fdc339c7cb60252
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 90352f20e3aa9f0b7e7582ed794b77759e12b74c
+      note: 'feat: 代码优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9fc95e058e88a6a18e5186c79d75155d894c9c50
+      note: 'fix: 重载后概率导致当前歌曲停止 && Position()偶尔panic'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 8dedbdc3ed4ab4c9c65454458b7d7bf26c05f453
+      note: 'feat: 增加构建'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: eff985194d8ecc12f1c3401360bf812b44b0453e
+      note: 'feat: update libflac'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b45ce39a80ee9bb7d70376965c91776786adae64
+      note: 'feat: 登陆后更新like list'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ca56c329287f09bf6cf744123b72394115a0413c
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.1
+  date: 2023-04-10T18:58:55+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 36bb8bc03f8094ab83a37d022cc98d20a7bb294a
+      note: 'feat: 增加linux arm64及windows arm64构建'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 865964855ae0ee254b58c2c693f9e12b1ccd58a7
+      note: 'fix: goreleaser'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e909d21aa198b02599ac769f24dbeaf88d59f4b0
+      note: 'feat: goreleaser调试'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 012a8a6abe0b4846d8649b5242b4f0c9aacacb87
+      note: 'feat: goreleaser调试'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 73034d577b1f6066370fa147bd233fd236d4cdb3
+      note: 'feat: goreleaser调试'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 15e3d25cfb2302ea2e12fb512852fcd68673acc8
+      note: 'feat: goreleaser优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5adfce23683f40be2aecc12997c44980b3c7e7d4
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 03d53a174c72642f049bd0d07737ac9340ec233c
+      note: 'feat: goreleaser调试'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 89e2a81958beb029dcc4bfd7661ef55924482681
+      note: 'feat: goreleaser调试'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e993081a237a727b2a3435af52d014476ac64ebf
+      note: 'feat: rm c'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3c68521139ed05f400c404109aec2facb6b406e7
+      note: 'feat: osx进度精确到毫秒'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 103d2adf0b432c11c204fa680dba380d85bf98e7
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 4.0.0
+  date: 2023-04-09T11:45:48+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 4c5a7476bc013e7c9d7282a2243fd23e2a1a79cb
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: baa29575cddf9bc631a5ae27409365e1617655b7
+      note: 'fix: OSX内存问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 910e7271143456ec6b6a9ebca67094cc53d4a96c
+      note: 'feat: purego'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f5a9b8a682e13b50f4d3425402a77073560f8df1
+      note: 'fix: 内存泄露'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 488573ffa63655c582456a13b798a1144a1ecc57
+      note: 'feat: 单曲循环以及歌单只有一首歌时不再请求网络'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: dd4ca178a1ae98e179888a0225496e5a2b429e55
+      note: 'feat: purego替换'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b3168dbcd3ac7162c6b12663e7b0417dddcc9f9e
+      note: 'feat: 替换为purego'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7a3ac39789832a5ad014f1f52c223c2b54648a90
+      note: 'feat: purego替换'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d3aff7f85f379334ae735ee1a48b57b78f1e876a
+      note: 'feat: purego替换'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9b7fbd1bb0d6424481b9533d169b34144e0cabdc
+      note: 'feat: 增加数字操作 & 优化代码'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b082145c026d17f0d4eddd635ccb30d93728e2fb
+      note: 'feat: 喜欢标识'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 95505334a91d703171356766d2a6d80a2374d647
+      note: 'add: purego'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 426ff0349b2d60db126bc57100923b47efe3f9b0
+      note: 'feat: osx时间进度更换'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 26dfe05f65da3029b838790a4bc5cffbb54325d6
+      note: 'feat: 添加最近播放功能 https://github.com/go-musicfox/go-musicfox/issues/63'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f5fd60f44ce5c1eed01267a3857816e76ff48106
+      note: 'feat: 显示是否为喜欢歌曲 https://github.com/go-musicfox/go-musicfox/issues/58'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9f9d45f41ea41aa337c958582e790efbfee42df4
+      note: 'fix: 加载中标题截断问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a73af781b9033d04d045dd5c81fff940a305dd64
+      note: 'fix: 歌词到最后一行时拖动进度条无法正常更新'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 54cfd0309a0790ec093c0c19774d383a0cc4bed1
+      note: 'fix: 修复窗口大小变化导致副标题栏截断问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0a04861a35ed0d0ca7a269476a5c318ee9199828
+      note: 'feat: 单列歌词显示优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a5b658e276f4c6a4aaf9fc2b08a9c5f97d7896d5
+      note: 'feat: 代码优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ed20f51ce2aa21744653655653e986ffd8710117
+      note: 'feat: 代码优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f7fa96c249bcc2b3f2825daf93f9d6a637a91bce
+      note: 'feat: 代码优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9b4d42f402078a64f3393fb29fa1625361033654
+      note: 'update: Readme'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 9a4858569018eeda572fc4407cd0f04673f55b3b
+      note: 'add: 鼠标事件'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 8aad39fd53de79b63055117f0a991a95eeec82e5
+      note: 'fixme: beep FLAC格式(其他未测)跳转卡顿'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 6784362d5ca4bbb3bb6258510dcbca0f41eee370
+      note: 'feat: 滚动歌词'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 151198362209279cca0177c84a7eac6d287d3c78
+      note: 'feat: 副标题滚动优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ba0d7e3723e57a5e6b55d337c856dd6890099f8d
+      note: update bubbletea
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 535f9009568d8cb315d01a9f874da6f2706fa420
+      note: update README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 33267d356c125775fb0e4b93e3b1de77c6fad326
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.7.7
+  date: 2023-03-26T14:56:47+08:00
+  packager: go-musicfox
+  changes:
+    - commit: edf883df7ad7521d90a184464957abfad60910b0
+      note: update README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4b1df028c4d707af508d296934bd47f95bbd532d
+      note: 'feat: LyricsX对接优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 547c7ccd001509b0b60e41de900729614983b41d
+      note: 'feat: 移除延迟补偿'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fb6ee77adabf469dafb4f2ed11af71017012df4e
+      note: 'feat: 更新脚本'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b166c8a1396ed7cfc3a62fe154e6c17c03048ef3
+      note: 'feat: 优化github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e9f746b5218d246474abbb38562ab5dd2b0d38bf
+      note: 'feat: 优化github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3ad6ae670399d11b4107d3e33885023010c4247c
+      note: 'feat: scoop配置'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: dd36ce7584e92ba10753677d86a32a55a2f2e7ad
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.7.6
+  date: 2023-03-25T12:24:11+08:00
+  packager: go-musicfox
+  changes:
+    - commit: c6f040d4b154659921edf12ac4fbca8d086158ea
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 34f0b8b426a0c79bf307de339f84d90a1e90a375
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1723222853b57d4cfa3c974ccbb966e19d31eec7
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5770a3aa97a9be5d51ba7c52cc8748dc4ee41e9a
+      note: |-
+        Update go-musicfox.json
+
+        Update to v3.7.6.
+        Fix "Can't shim 'go-musicfox_3.7.5_windows_amd64/musicfox.exe': File doesn't exist".
+      author:
+        name: Xin Mu
+        email: zeng5360@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: f5e7dafb5aa7da9bcfb53215f20f55fcc16e5016
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a96daea6c9eb942ee1cbedefbda4eba0d09f5332
+      note: 'fix: github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6587359add5995aa3991525d38e1d62a713cfcf7
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f2e00afe64e54cd18de451571a11a91c6149d6c2
+      note: 'feat: 测试'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5be610c018403880e23f67df5d2412c167d7459f
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 922cd36e53535cba2e80d13eced6716aca73e015
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0f7ba73758ad1ccdeb2495a93aa0292871eae7c1
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ad99636661b7bb7a6a5aece8aa9ea31c4fd67380
+      note: 'fix: error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0d2dc64f17bd8ff81c06ab910bda34c85dc388a5
+      note: 'fix: error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 180bfe25541db2d220b9f553f28826c898c2a5b9
+      note: 'fix: error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ba603fdd8f7155ea2f5fbfaebb570cd20c3d04f9
+      note: 'feat: 更新github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5faf267fd8ab1e691a53de15bb9c9f4674cb5021
+      note: |-
+        Update go-musicfox.json
+
+        配置文件存放在data文件夹中，持久化data文件夹，并设置环境变量MUSICFOX_ROOT为此文件夹路径；增加检查更新参数。
+      author:
+        name: Xin Mu
+        email: zeng5360@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 5617c83b4a4e3e4ef888f0487a1cafb8a9f611ca
+      note: 'feat: 代码优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3af02c8d069f7c9f773f922d189af3d98d8ae2d7
+      note: 'fix: 报错优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3e8eb432817923e650ebcc9a1825db58e1860afd
+      note: 'update: macdriver'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f4918861b89268290b0103a82b68c7428aa23802
+      note: 'feat: 优化mac control'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d0184c5f867c4d771e5c85ff57d6622bc373b318
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b1406501fa173b2dc0d3597e0ee09864a296ff3c
+      note: 'fix: Windows下载的BUG'
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: 17d558c5b33229f84db3cb759f997e791a591644
+      note: add 歌曲列表菜单副标题内容超出显示宽度时滚动显示
+      author:
+        name: Kyle
+        email: 1531763162@qq.com
+      committer:
+        name: Kyle
+        email: 1531763162@qq.com
+    - commit: f067d76ded39d8fa3b9f1174f460659c1ab743e1
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e9d05fb027cf32317ec60ed4e9bdbb4160b23649
+      note: 'update: README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 18281219651030269d9060c73d01f4a45aeceb67
+      note: 'update: README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 26308eab2d187142844fdfaad7a61b82e8dc50b3
+      note: 'feat: scoop调整'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fe982b8597e69dc78916f4df7068e396c368a764
+      note: Scoop update for go-musicfox version v3.7.5
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.7.5
+  date: 2023-03-19T23:49:01+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 4a2b6fb1d1059cbb403ec9d8612457bf3ad999c3
+      note: 'feat: 进度优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9944d5d3fbb8999b3964c2bd3c8f9fdca5e22522
+      note: 'fix: 修复近期因代码优化引入的mac端内存和带宽占用高的问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 35e408216e789a5ca3e94a6b1375e6e3533c5b6a
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 50d2b5d33e6bd175ebd7eca59f416926913ff81c
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: deffa16b4f41275ded2b4a78541b4bb3847e7457
+      note: 'fix: mac osx player memory leak'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 891ead872c07a0bd3f596774430bbd54954bc1fa
+      note: 'feat: 增加Scoop支持'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e9e14e02106a3951e0bb068905ee03af71d8c17a
+      note: 'feat: add build script'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 19169a395b5252c506fe6f10b5b29930728c1cce
+      note: 'feat: update build'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4ba4a0f2104a9f2f177882ba347d2c80ad9622b0
+      note: 修改NixOS安装方式
+      author:
+        name: Aleksana
+        email: me@aleksana.moe
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 3.7.4
+  date: 2023-03-12T15:19:26+08:00
+  packager: go-musicfox
+  changes:
+    - commit: f04fcebcee0d9cba67b3802d949dfc541239079f
+      note: 'fix: UNM'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.7.3
+  date: 2023-03-09T23:05:12+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0ea6da260755d003ac097ef9266921c476b0211c
+      note: 'fix: ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 41a91741949b1adebe2a86751f8d661bb6ade1de
+      note: 'fix: gitlab action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a707d6f6faa52c16debd115044d6f0da98f89768
+      note: 'fix: gitlab-ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c1cacb70ae4facf039b58349974aaace16ba4b23
+      note: 'fix: gitlab-ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2c289054aadb8d353599f9b96958a4d4ea945b4a
+      note: 'fix: gitlab-ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ce78b506c7053507961297e31353b50c2818f2d3
+      note: 'fix: gitlab-ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f6fc0341effcf9d00cdda62801c93260225b557e
+      note: 'update: go mod'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d858d406c44929a5dcac09b751d5f06c0defe250
+      note: |-
+        build(deps): bump github.com/gookit/goutil from 0.5.2 to 0.6.0
+
+        Bumps [github.com/gookit/goutil](https://github.com/gookit/goutil) from 0.5.2 to 0.6.0.
+        - [Release notes](https://github.com/gookit/goutil/releases)
+        - [Commits](https://github.com/gookit/goutil/compare/v0.5.2...v0.6.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: github.com/gookit/goutil
+          dependency-type: indirect
+        ...
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9b95b0f105e1ffe815148badf0cb7fe64909a931
+      note: 'fix: timer leak'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 81600ccebd3e26ec0af232e43d9e02a975198dae
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1230a08d00a88766e0ee2d9820f58840426ce855
+      note: 添加了 Void Linux 的安装方式
+      author:
+        name: xiarenfan
+        email: 117075325+xiarenfan@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ebf399629a19975aeb91d5b149755030043e4d60
+      note: 'feat: mpris使用高分辨率封面'
+      author:
+        name: Sakari
+        email: sk308269317@outlook.com
+      committer:
+        name: Sakari
+        email: sk308269317@outlook.com
+    - commit: 4bdb26d94c5bc50bfae7843d88eb32e2bec892a6
+      note: 'feat: mpris封面显示'
+      author:
+        name: Sakari
+        email: sk308269317@outlook.com
+      committer:
+        name: Sakari
+        email: sk308269317@outlook.com
+    - commit: 4505ca35ababf05f182effdc35812eedf5805929
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 3.7.2
+  date: 2023-02-19T22:09:25+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 7ed5207e507b953c35db2aebc11ea34b256e7e96
+      note: 'fix: 包升级'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0c79ec0b183e166a1f2bd84122cdf40422fc40b6
+      note: 'fix: 包升级'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.7.1
+  date: 2023-02-14T21:46:13+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 44a6fc979b7baec42180465cdc710463a31d4e41
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a5339f530bc4d4b8b1f1cfffd9aafdd15487f2a2
+      note: 'fix: 歌词显示'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.7.0
+  date: 2023-02-11T21:37:00+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ef71d38d1a3f040a19ec48f5a2bea6c7987e30c1
+      note: 'feat: 更新版本号'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 393af8778c2c947ca6077fa3a2ebdf6cce4ae5ca
+      note: 'feat: 增加歌词翻译'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bfb7854c41a53e9973359c8f3400e508a4de881e
+      note: 'fix: archlinux报错'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 03e6f67aca545a00421329d36e09224ce0174ae5
+      note: 'feat: 代码结构优化 & 更新README及帮助菜单'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 17e8dccc705db69c6eac0065ba54b4b9c4f9b596
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 49e9fd2d236d533e00cf82535b0a74aa3398f5b4
+      note: 'feat: 增加快捷键'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 32e267398a3c2b703e8ae66243ed9faa4d98ec35
+      note: 'feat: 电台分页优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f9eb14e8eec520af40680b79f432987f8ebff890
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f1a47ab395b8479d03ba2c691ccf7341488e0eb5
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7002706f6a0da3a8b372fdfac3e716b5c282ebce
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: dfd874f6d2ad8041cb08293fc7f98becd6fa1ea8
+      note: 添加NUR安装方式
+      author:
+        name: Aleksana
+        email: me@aleksana.moe
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 870b9e1ff05831ecbf3741506b95e4abaef7dcca
+      note: 'feat: 预览图更新'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.6.1
+  date: 2023-01-11T21:57:07+08:00
+  packager: go-musicfox
+  changes:
+    - commit: df236764fefbfa015b07a8e242ef92f596e7133b
+      note: 'fix: beep音量调整'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 27822c11d6857354b80f3de586bb7cefc2ab3917
+      note: 'feat: 调试CGO内存问题'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 179557b413630879902365cfbcf8da9b76accac7
+      note: 'feat: 测试cgo内存泄露'
+      author:
+        name: anhoder
+        email: anhoder@imac.local
+      committer:
+        name: anhoder
+        email: anhoder@imac.local
+    - commit: e85509e6cdd55ad61599774565dc5609f249693d
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 591d1185a42d8fb5c08baae7dd2e15a495f40a86
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7770cb363ca076c7cab476f67d7035c2235c8193
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9e4581cccf914b334dbfa1e395481f8be9649216
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6c6510609ef1582381fc2bb6568f282502e044fe
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.6.0
+  date: 2022-12-24T11:35:19+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 427806f9457d69897cf02dd1a8d35fb02a8be615
+      note: "feat: 增加音量\U0001F50A显示"
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 59cf9255c4932b263ead9ae28178698d2648c37a
+      note: 'feat: 下载增加tag信息'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 620633d194ff2d7554b1a7a1096e26947cf7ee75
+      note: 'feat: 下载增加tag'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 82def2b3e7d791ae06d240afd7a693ab9519fa19
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b5c74e5863bd4b467f5b1193d0979bfc97104477
+      note: 'fix: 双行且奇数列表个数时G跳转位置错误'
+      author:
+        name: ston
+        email: 2424284164@qq.com
+      committer:
+        name: ston
+        email: 2424284164@qq.com
+    - commit: 2b2eb5e16bfcbc3ca9910636533fd219ddc08d0a
+      note: 'feat: 菜单更新'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d76b10a122fa86deb7494cb43941e23b1f4aaf05
+      note: 'feat: 帮助菜单更新'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b9cd338953cb32fec0a2b73ccb009c4755507ee6
+      note: 'feat: 菜单'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 19de53c47d6e1ece9afe8e6334f366b707fc9cb9
+      note: |-
+        feat: 增加了g和G的键位绑定支持
+
+        1
+      author:
+        name: ston
+        email: 2424284164@qq.com
+      committer:
+        name: ston
+        email: 2424284164@qq.com
+    - commit: fd4d3dfd9d5097c51a737789844bb0d7576cadd1
+      note: 'feat: 搜索分页'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f361aa6e3d3922991ae7c6ee9ff74b7144ef4210
+      note: 'feat: 增加配置获取歌单下所有歌曲'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.5.4
+  date: 2022-12-22T21:15:58+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 6d66a58a7c211e24b95179c2f509e19ae0d00b65
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: de7e324ecf513ea14b7471510d3aa9d0e59a45a2
+      note: 'fix: 登录回车问题'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: d3b3610dd47e341193e408d229ed5fea843b8b8e
+      note: 'feat: 增加扫码登录'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 53ce2babffca12135ff2be7186fd8cca4db41f8d
+      note: 'feat: 修复登录问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.5.3
+  date: 2022-12-19T23:37:52+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 088ee2493593e9730e09929f0cb369dcf2d5e7f7
+      note: update logo
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1c5a69cd9bbb1a7c259a382a4cba4ec8f0749caf
+      note: update logo
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 767b6737766ac6080d18bc4afcdaa9d058bc71d6
+      note: 'feat: 更新icon'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+- semver: 3.5.2
+  date: 2022-12-18T12:22:30+08:00
+  packager: go-musicfox
+  changes:
+    - commit: f6814d0a2454d01075ef32fc1208a45966852c4e
+      note: 'feat: 接口报460问题'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+- semver: 3.5.1
+  date: 2022-12-18T00:11:45+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0f15ef3b1816863aa45f6d66ade17ac8e02bffd3
+      note: update logo
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.5.0
+  date: 2022-12-17T17:18:15+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0a290bdad456530546f595b6c862ce3fb941c875
+      note: update README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6943d67890f5c6931a7ce4e65e275254ea282917
+      note: 'feat: 更新logo、增加beep mp3解码器（默认go-mp3，其他可选项minimp3）'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e69b14e16ae01bdd8e3f232657bbd59170c0c6f0
+      note: 'feat: 更新icon'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 651cb91c747df4336800b366a7afaae3b286934b
+      note: Update README.md
+      author:
+        name: Eddie Wu
+        email: 18080998d@connect.polyu.hk
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a1d523dad45a7e47e8ab38e3cde0f3aaeea6d9bf
+      note: Fix libFLAC.so.8 dependency in AUR
+      author:
+        name: Eddie Wu
+        email: 18080998d@connect.polyu.hk
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d97440c3f2181b4631f2b18e2ead1b8468fe0aea
+      note: 'stash: 下载'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ff57f3b5dfb91503d71281757cd33fa18fa3ad5c
+      note: 'feat: 优化Mac退出'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e8f0d48366f8dddd2b850be3befde71399888d0a
+      note: 优化
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 46d4598b6b665fc1bd7069d8d60935e99fb39a92
+      note: 'feat: 生成默认配置文件及通知优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d10498fce1d6b36b7d7ae0eb6a3c7014d5456cae
+      note: 'feat: 支持指定下载目录'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c99782111aded7a79eacc050c26f36cf5c43f597
+      note: 'feat: 增加config命令查看配置文件路径'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 85e78ea1cd35e7fb4a8f44b431a0cd694e4db24a
+      note: 'feat: Mac通知优化，不再依赖外部'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1fc3bec97b9944715a9871f37cb3ced2464bc836
+      note: 'feat: 登录增加国家码支持，格式:+86 18299999999，默认国内'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 35493d8ca78fa6601ce793b6f7834393a6344a3d
+      note: 'feat: 增加日志信息'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.4.2
+  date: 2022-12-02T22:55:41+08:00
+  packager: go-musicfox
+  changes:
+    - commit: d8c87c2741979667c7efbff750a98ff590e23c11
+      note: 'fix: 无权限自动切歌'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 5ca509ea251d6251df469906f8df91f76a39a5df
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ac2b1ad4b08936cafb0bbf3a0a712c8771b3cbed
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 3.4.1
+  date: 2022-11-30T23:53:34+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 4746e3a17a3873232103d282c277f5c22cb8c29f
+      note: 'feat: 优化及修复bug'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+- semver: 3.4.0
+  date: 2022-11-28T20:35:29+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 43d64111318f4f5eba67d669c35bae43f6967c8d
+      note: 'feat: 下载优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8047928b63824258da8acba072c63541348dff19
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d9bc884c9c10a81e64a79da0a43c52961b4d0996
+      note: 'feat: 下载'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.3.3
+  date: 2022-11-27T23:19:19+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 42ab228926da7c98597db4efcac5bc350ab58924
+      note: 'fix: 当前播放列表重复进入问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.3.2
+  date: 2022-11-17T09:33:47+08:00
+  packager: go-musicfox
+  changes:
+    - commit: dd1dd7de75e423190ba7157d7b4f02ab1d6e24ee
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ffc8a4d17a5e7e510c1d94ca283d85159d917658
+      note: 'feat: 更新获取歌曲URL接口'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.3.1
+  date: 2022-11-14T18:37:40+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 78f21af94a4678706cf5a0fe44d024b50fa0786d
+      note: 'feat: 兼容'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0be4cec030c2b1539f18e511e7c3613f2c68cfd0
+      note: 'fix: stop'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.3.0
+  date: 2022-11-14T16:36:34+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 4d6504d61b3ea7cedeea29c3b1a16ad68504c50a
+      note: 'feat: linux接入mpris'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 59691d63e7372a2a95c358027ddcce95461df938
+      note: 'feat: 优化linux通知'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a7ae4eb21f3966a44a6362fcae5ab7023d6154b6
+      note: 'update: Linux通知优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 31b2753ca9d54a0c1f9d6c29994f8c5f66796082
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 96151a1f78d36fe3838f99a0602bccb8b3928695
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a8f992299fc449d9963bd721195701e9011314b0
+      note: |-
+        修改Arch和Gentoo的安装方式
+
+        最近musicfox的更新中新增的flac依赖导致二进制包不再可直接用于Arch和Gentoo，因此更换为自己编译的非bin版本
+      author:
+        name: ston
+        email: 2424284164@qq.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 3.2.2
+  date: 2022-10-07T20:30:28+08:00
+  packager: go-musicfox
+  changes:
+    - commit: bb8efeacde57cf5f3d702ff9c1be1311e9759255
+      note: 'update: 优化搜索'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.2.1
+  date: 2022-10-06T10:54:19+08:00
+  packager: go-musicfox
+  changes:
+    - commit: e679a657e6a8fa4ea2de5c291c58c46388dde842
+      note: 'update: 帮助'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.2.0
+  date: 2022-10-05T19:26:31+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 7d64fdc0b6889cf294ae0049c7d02f9d3f111356
+      note: 'feat: 搜索'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c96d4073f2b685f4e59db02193eeade526114cd1
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8e2a1ccd8d0c20009bc69cd4b5f494ce1cf0fbe2
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c1d15cff96499ca0101c0024b095f477df4d28dc
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c936298226fb1d8290f9052e4e1d6d3c805fd1f4
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4aa0bbf4fca7d3fea911b93648c86ca3784cdbd6
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cb1b24a7af5b037d4cd279b78cf445f09fdf8d2e
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c0e57f8344ce695e0c2e27f41b85c5974e5ba72a
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0c6d0cebe899473226e2812de3ca805b694fb63d
+      note: update github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e5ca7bdd3b5e0a2c13d8911661524f0b367ed00c
+      note: update flac
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a030698aa224fa8a8257d46c1650362e9d96dd33
+      note: update flac
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8e20def6ccb287aedfa29d2896b4992611453f36
+      note: fix github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3fcc1eef4e8ce57209186d0a2bac1aa3b192c0fb
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: db0398a3cca3abe6069782046ede939fca95dc1c
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e599de821821cf003e7163e4472b8f91a4a62cd1
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 08634ff102e45ab707d157db0e03090a621da63e
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6a8c38348fd06de4ecb5cc16a230de196616a118
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 66e0c4bbf093ff1479ae4cb749df6382a88f7049
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1f5c6cc3e1eac5d0a14adbc1636e3ce5d80c4fa2
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6821a120787519882f8dfb6878571f05f32f1751
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 49636fcaacb61c357d6541dfe39193b24b68553f
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a6f1b69a75a0d25dfb6cc8e765c258267ca169a3
+      note: Update .goreleaser.yaml
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 76fedcc76cea360d0c8547d1d7462beedbbb2c7c
+      note: fix github action
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 23f7f1ba6953af5e039d963a17928205a413a5ba
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1d3ff9ac981106ac80d465283d26536bb79be5e7
+      note: 'feat: 使用libflac解析无损音质'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.1.1
+  date: 2022-10-03T18:32:34+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 16a61e176971a74f2a744e9f156b0acd22d02da7
+      note: 'fix: 私人FM解析问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 3.1.0
+  date: 2022-10-03T09:40:50+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 220ba8658512c9992085bdabc977e6797bf800ab
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bd351a7692dfa99c4aee16dddbf29f34f8e71b49
+      note: 'feat: 「添加到喜欢」功能优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 21a3a9551afe3b0cfa61212a2e6150a189ae516a
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 369b4ebc25379e3945cc875d4793d4a0cef9805a
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: bbf8cd0536470c6b9baa2265629918905ba43a37
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 0b6fc1bb160f5ff8a2e688b0726e17f42c2b3b8d
+      note: 'feat: UNM优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 353e310b705f5d1a5d8c8a3591c1ec3f1cc43878
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 50ff212cb2a5cbbf41130ac64885c7eb41cf693e
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c407ea2e85e497c832b700e7bf569aea902914cd
+      note: 'feat: 播放列表'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 709f2bf1d1cef1e24f528dacf565b17a5fd00072
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 947084ef63b1fdc47f14da90d3f5be5f55350f6f
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1b2a13ff9d7cf8513bdef1c29783e87a021030db
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 3.0.2
+  date: 2022-09-27T13:02:49+08:00
+  packager: go-musicfox
+  changes:
+    - commit: b0388799e9c3741f04ac5308973e47fbff6a45ab
+      note: 'fix: linux报错'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 00e880237f7c022dbcdc213fe79930ad675c416e
+      note: update mac优化
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e2420b10c88d23c6c9178e826cb11c7da5f525a2
+      note: update runewidth
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3355ef35db8f8cf111bb1a88f1cd45219384e3f1
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 8bfc23736bc6fe20d0c2e40bf59388a35452d5b7
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9f4b3521bd084a51f2adda376def97c312216840
+      note: Update README.md
+      author:
+        name: ston
+        email: 2424284164@qq.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9e5741345c655f5d2d9fae32e68d0b99dc14f86c
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ec05da90deff0c9d0602f5f88157ef60353d28e9
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 27923ed20ae14465f233f09440508cc7b139e37c
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 3.0.1
+  date: 2022-09-25T20:05:52+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0fa74c4b5067db9f177c39a627d34ea0c45e57ab
+      note: fix gitlab cd
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 072fe53e2e345645eb681eb3740b020452303ac0
+      note: fix gitlab cd
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4746e0c32e6c2105d8da07151e5bf5edb5e32e35
+      note: fix gitlab cd
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 253265f950c3420b0f332f2bff1a90c983486148
+      note: fix gitlab cd
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 70fbb9468cb9bc79c50c2b18abb56cc1dceac420
+      note: fix
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fe70de3626397851d6a1741001f9451c9c280db1
+      note: update gitlab-ci
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4bba56b7054f57d4955c5582828c1f1508dec4f1
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fcf8a94dc42c470786afe05124a87493955b4706
+      note: update README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 16a95cfad8e3cd55870b86bb73f08fd2d0cf5478
+      note: 'feat: 优化windows resize'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 34bfbbb4ba443f7aecc8e7a336d5609c679122da
+      note: 'feat: 优化windows resize'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6b893d0a4cccaaaf0dfaac90c3403150d8506729
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f1e9cf858bf5a3148d4e80b23ebf34c966089c19
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cf4e94cd93c572ea80ee446b87dd658583d61d46
+      note: 'feat: 增加Lastfm'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e2f9416dc8bea08766946a4c7c0f4ba3225ca9e1
+      note: 'feat: mac增加睡眠回调'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 35196707ec48b662ec819c5e4a8d1bbd1971dd34
+      note: update
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 04816c260b7f3e83b51a21ddf7142a73b2881dbd
+      note: 'feat: 增加当前播放列表'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5e635394a5dbfe6a9b371fa953fd4758054cad2b
+      note: fix warning
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 42bd4aa8f85117bab83b3167b0801ea7b920ae1c
+      note: 'fix: 内存泄露'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0555332d008c2b1b1905b6aca01080c7d97e424e
+      note: fix
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0cfd27f536145e0771d22a29c0bae1bbc87baaa3
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 849e6aec9c40150272e66182aa9da48318a8b39e
+      note: "feat: 记住音量\U0001F50A"
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 620da236c609ec497a5d3d2be9a6d7075d93eb8e
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 29c140186d97a65a99028f17c9803fed5468d704
+      note: fix bug
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 09add3fdb5e8cad69b731a908bd4ed448cb59b35
+      note: add. AVPlayer
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3072a983748cb3f30dbeee1cdd31882bf12bf15a
+      note: 'feat: 优化seek'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 36e3a54342b3594b0a31d36a82c910905118120a
+      note: fix
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fce6af62354216edfea906d53654b4dbe883f04d
+      note: 'feat: 优化'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 19a719d6334e23c0f0fd2e8236c4b89e63e4eb44
+      note: 'feat: 增加artwork'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 6f7581a0dd79bdaaaed6b6db4ed0a9e9753b70f4
+      note: 'feat: support mpd player'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c19c9fcfcfbb307c6dfe5fcbe8a9c9a492d7613a
+      note: update. minimp3
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 39141a64dbbcd015e02882d68785c53f77b341d7
+      note: fix player listen
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: ce68115578cf707c622354ad5378bce4d1b3c95b
+      note: 'fix: remote center'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 709d24b8ab8212e15151c0aed396d49aa46cefd1
+      note: fix timer error when next song
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6bb44b4dbdf573b875cf83ba5b225acbf32c75d1
+      note: fix some bugs
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 1a1970a8f040b7d317f0d34dce67c053aab0cc2a
+      note: update go version
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 495b2f4e8ca4c8784618b8f19ca1902571f0e403
+      note: fix gc panic and data race
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c86a6b7a29b275b20afc35f21330b56b915d1559
+      note: 'feat: vendor'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4c89701ef8d5dbf8a07dcb0b3ac1525c66fd46e5
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 01680c729521fb92b5ef3e181f3007a743c96105
+      note: refactor
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: afbb71bd5dba0c28d12e589832ab905ff12b6db1
+      note: 'feat: github ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b3d1893e5b2846fb38de2fa529de56e04af045a2
+      note: 'feat: github ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cccdfcf75f98758b6d77d28f4d3a96e571465948
+      note: test
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: d03017767af2d7b00144e90502a78cb6121c9c39
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 63f295974a4badf00600083183eb0796d5998a6d
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bafca22bdbd3d74f3dbe9be7a7bfcc52c1dfd2d4
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3a90d8e17656b90d4ee4eb1b243614d6954639db
+      note: update
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 82de75ea3ea67daa5e67a3e277f53a535ad7848f
+      note: stash
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 79468b65550ba624a34d6618fd842089ec90946b
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 13fc960425d3771505ff7d98b66b3f50aee702b6
+      note: 'update: 增加配置 notifySender'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bab4dd88d0c2da8652707b39819887c3fb369756
+      note: 'update: 增加环境变量MUSICFOX_ROOT 及 通知logo'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5c6a7f704d2cd9c9584b4db49f90d9260cba7d0e
+      note: 'update: 通知icon'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f688d7698db34731ad6337e5817f26e1f4e9980d
+      note: 'fix: 依赖为可选项'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 316918646b473552accdd307e826d25a72952a44
+      note: update
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 3f9b0a77ef3f05983d58b52ba1dbf8d33789d94e
+      note: update
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: de29c1f3fc54b1de6501a407705a59082101e499
+      note: update. github ci
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f31178f74b542b89f9d0d0b7c6e0e55b17ca9d23
+      note: 'feat: version reject'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 31d840a871b3e5b47cb9d912192048766d431681
+      note: refactor
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 2.2.1
+  date: 2022-07-17T21:06:18+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 7d74f6e746bc738cfbd48595cc4c22c805e7f640
+      note: 'fix: 版本'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8246036d48ede80adcdbcd71ff7e1c8d0097824e
+      note: 'fix: 修复登录问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b6099d40a4989ee7491935d6706ce09b9bbf6d96
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e66c4c13e7d405674883c20c167d4ce7aee5341f
+      note: update. README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 2.2.0
+  date: 2022-05-29T21:53:44+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 71e01613f5fdbef0c163f5bdabbd76cea090f4d3
+      note: fix. homebrew install
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+- semver: 2.1.1
+  date: 2022-05-29T21:24:52+08:00
+  packager: go-musicfox
+  changes:
+    - commit: c6a50a676512a0346aa1154f347e68d375467292
+      note: feat. update ignore
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3dcf0fd36c4ecd9e8742cc025ddecf9fdd2c1b54
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: aa0ceb4a678aab7539ea5da099fca2ce07a1fd1f
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bab2a7052656dc227c6877b15b7b93f6f2243792
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1fdef76be0a81598059dc8d04fe115950c014242
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9288c38f0c15b36dd9e766684d13df2c2e37fcf8
+      note: 'feat: workflow'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c798602402344b934550f06ac671cb7643ff805c
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c2001718d3ef1f18d73e53a61b0f05dcd724ff10
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a6fd45db4f079acf58ae53d64b82eb3056646843
+      note: 'feat: update github-action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b68aa0147a40303cfd74039aa630bd6f59966d25
+      note: feat. github workflow
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7894ef7002067d4640a7c95a9448d4fa30a33e46
+      note: feat. goreleaser
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: af631bb192fba39b761c43a6d7052c79ad8774cc
+      note: 'feat: goreleaser'
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+    - commit: 23fada7c1940369b82a026a17c3463594d0e2c43
+      note: Update build.yml
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6f1db5924d9dcc12a9a057b0f6a8bc35d7beb8fc
+      note: Update build.yml
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a3b1be3f74b419e5cfd3187ac77311904d3c4049
+      note: Update build.yml
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 383aa190ee18830ced9e20b935c4b13cf7fbae6e
+      note: Update build.yml
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7f7969ed87bcf6f1b8dead8f59baa5006b96513d
+      note: Create build.yml
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9ea08db090aba0050badf63ddce1c6e69cb445f5
+      note: feat. 更新版本
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: afd418d5ff04b19b60b2c7a19ea837bea175e2db
+      note: feat. update README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fcab6963a48799fccb363734d12f265fdc2db2ce
+      note: feat. 配置变更
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 359fdb9700ff91c3aa915f98c1e578ec34840c56
+      note: feat. 音乐缓存到文件
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d88eed7377644756abeaaa9f61304dbb2b73f379
+      note: update. 支持更多符号
+      author:
+        name: cloudwindy
+        email: 49033775+cloudwindy@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a2ee9db13e4f7e46a420e7c1bcfe7ef850f9242b
+      note: |-
+        update. 允许全角符号 resolve #9
+
+        允许用户输入全角符号
+      author:
+        name: cloudwindy
+        email: 49033775+cloudwindy@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c857c30dd529254ebe7bcece81178cd566eb760a
+      note: |-
+        Update README.md
+
+        增加了Arch AUR的安装方式
+      author:
+        name: Lizard3545
+        email: 2424284164@qq.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 10dd13755bd32ef3c01717534b40599f2d6370f6
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ed658d3ee3c664d5a162b3c787861956568a17b4
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e97021c3f2e520877b8762a32dbd2b0680600666
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d08c947cb7037a80080c7eba12e7f3529aee96f4
+      note: update. 检查更新
+      author:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+      committer:
+        name: anhoder
+        email: anhoderai@xiaoman.cn
+- semver: 2.1.0
+  date: 2021-07-18T22:59:34+08:00
+  packager: go-musicfox
+  changes:
+    - commit: c39ff78254b84d5cc4365172fde7d2ac8ba628c0
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 37f77b295310c513649f2eb5d713eff48cd6572a
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a37fe73e4ee82e3614b721fd008e3c87f552589f
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e68e7a6060402bddfd5de3f7d5185d366ac7ffdf
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a04930eab95d82644ad22d2274f34bccf8fd3901
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 71ea30720836493d23e5319656e83d928abd4004
+      note: update. 增加通知
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 87afd8d9edd0e48f6e0d26c3d5c42f9d1dee7896
+      note: update. 增加歌词显示、签到配置
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: aa040a0cfc6c77a7cb791c6496adb169c30b5aa4
+      note: update. 新增主题色设置
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 05818093de304ab33f54dd7b2045626b7146e926
+      note: update. 新增欢迎语配置
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cd2c717d7bc8e89e461392568fbdbae37b359d34
+      note: update. 新增配置
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4d361222ac3a091f5ce7d90bdd83f65013cc6ca2
+      note: add. linux
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9f446a53e3a12d03daad5c1a22c554c455fd710c
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 2.0.1
+  date: 2021-05-14T16:28:58+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 33b8743c34efec3aada593256efa3ab7b9ce3b99
+      note: fix. 若干Bug
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7809d33a0795d67d8b521e40cfab4c2917bc27b6
+      note: fix. 若干Bug
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7efe8526e0301124cb513f42ce71e04489403581
+      note: fix. 私人FM
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b0dcf420d14cc2e8336e9fe18cd8732a450f2b9b
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1abdb4476dc33aed9a7c012c88b7bcd4fd5dd196
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 05ccf84dafa2ea3d87fd2b57ff07b16135e7ac38
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 8b0073bb7b75850fbf61492e9591ce9cc360aaaf
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7a65b17e7093792a13f3d58f81f4f95d451848bd
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e767050377b7f67761859a8b525ae7135dcf8e57
+      note: Update README.md
+      author:
+        name: anhoder
+        email: alan1766447919@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+- semver: 2.0.0
+  date: 2021-05-14T13:25:42+08:00
+  packager: go-musicfox
+  changes:
+    - commit: f7049608ee0352178ebe49d8a2efdbac567833eb
+      note: update.
+      author:
+        name: Alan
+        email: alan@anhoder.local
+      committer:
+        name: Alan
+        email: alan@anhoder.local
+    - commit: 94fef1e4e990862a3c13984d6db6cd1f43483e87
+      note: add. README
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f20493d3a374634db76d4ee3e08f1fd0cedf4a3d
+      note: add. 版本更新
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a638338f17f5e6c92486bf147eff7a7c1629482d
+      note: add. 主播电台
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2ecf6525047731d41be9fcba9601106c962e6d71
+      note: add. 帮助
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 186f777a3a10a740c4fcf0840e05b9abe145102d
+      note: add. 电台、精选歌单
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a241b1a825957bd73bdae8393e2c009b7db2d0df
+      note: complete. 搜索
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1de84fe1b0290421bcae567972629c3169bc3999
+      note: add. so many
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2cf8d6a529a5d1af56d0017954da80223adc3681
+      note: add. 专辑菜单; fix. 播放
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: dbf5d9d1de8ab6a6f8400dfd3b0c83583ff0dafe
+      note: fix. 若干Bug
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 76b9057bbaf1e062197f5378420365280f6cc4fb
+      note: fix. 播放列表显示Bug
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 46c6c8521631680e366c2fd7f1be6f755ba3d3cb
+      note: add. 播放模式、同步到本地
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 57e97f3f1921884ccc182c256a5e43a73506e784
+      note: add. 心动模式
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d75e07efbca44865891a103d0bcb39fa4ed4aa89
+      note: fix. 登录UI
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ac5073bd2948c79bb3be336d19ce5cc6377a5f5d
+      note: fix. ui
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f7cd2801fdf2bfd61fd64bd51bbb0e8aba2e84c4
+      note: update. ui
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 162bc54abbe0298d8c92c937115f48de8c2343f6
+      note: update. ui
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b9e5c3d03d2bf18ffbe4cf526600a9bd8d76af7a
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f27aec1926713792210fcf855c3303348a502c4b
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7377cba51381bc9a3214751250c53073730d5928
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2f294b34f0fdf87a45d443f5dc962c52298e5734
+      note: update. 歌词更新
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 668b1162b0a73141e836c2dc5f7760d2714260c6
+      note: add. 歌词
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5791f08eed5f5ea5238bd8dd76b202b939f204a8
+      note: update. fm下一曲
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e3dbf3c3506b1b763d9b0b87ece4948870238e9a
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5ed6ebec7177a200a356cb4a447ef23befbb8beb
+      note: update. 菜单
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fb7276e41c7fc4e571b9b267d49d5bec6f72777d
+      note: update. flac
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 170f4e0c5a41778cac6f5528d32e4ce08ea34f0a
+      note: add. 用户登录信息、用户歌单
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 432ef9863eb4415b32e9dc63f05a81594d785674
+      note: add. 每日推荐歌单
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8c02d6d6b4ba4d137ec4bc9ecfb89626ef6a39d2
+      note: update. 上下曲
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4fe70924f5b59ccab462ed569c76cb0006498923
+      note: fix. 菜单未对齐
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d99e0ebedbbe74644a756d8066d8da62fb223017
+      note: fix. 菜单未对齐
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ea1c325ef6fdad4866aeadbc3066038f4d7f289f
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 60db5fc6351a593ac9420d4cdbb20e552896c841
+      note: add.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9a0db97c2b94794648e9631001801f19ae1c137a
+      note: fix. 协程泄漏
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0764b3165c855f30efa993950c081c2e24807fc0
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bda5547ca971e2a6a3c541be32945f702c2b9f91
+      note: add. player
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9e40ce641a05d1295026ddc38c77e71381c095d2
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 53957dd81485e68c09a1816a1f0a919bae2cb319
+      note: add. 每日推荐
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9998e4b9466df12a5df791f89159515f3554c421
+      note: add. 登录校验
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8026bbf17b39aa06a100fb1391be63ae6d8a8f39
+      note: update. 菜单
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4d7b25ee564d5f3b74b7404b4fd789f556d78bc8
+      note: update. 依赖
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ca37b30bfca5942c89ac33778b489be7c53907fc
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: edb9090ccb2aa5590e1ff88f50f589c3b7cf6511
+      note: update. 优化
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 006b9579903085e8fd65c0bfb03e34ff2e952285
+      note: update. 优化菜单UI
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: df12338a73412bbdb114e6f2760ffd39562f5d7d
+      note: fix. 清屏
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7f4dd0e7e55b3a2c8202d4ae32d2cf32f37acd19
+      note: add. 菜单返回
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ff71c9368b4fa577d0d3ea405f32d23b1d2ea792
+      note: update. menu
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: af42f3fe6e6ccf1c3de8c8e03a51969e3548d3a0
+      note: add. enter menu
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2feb5e29e1e8c04f228b610f6e4eecc9c4f0c6b4
+      note: update. 优化UI
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 21e40b9942c9410598b2ecbef7c7d5d1ca414bf2
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 75cb6d42f7ebba17f859bf6ffa4cd9ddb3b3e30e
+      note: update. menu
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 78109d2f1c47fc44ad9ee263ea6e3b94db134f36
+      note: fix. 菜单翻页
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f9045565d448a110b1fc688c5f91100341ebbf09
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b777678e2f673f3e254fec381188f1a79ae4f4e7
+      note: add. loading
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f149dea2837a6fed0199704a4d3d83a1c29063b6
+      note: update. menu
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7dc4c52aae0ffa5aa7ea53d72f7c541f561cc6b3
+      note: update. menu
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 94aa1475d18c5b0e91c335acd931e675a549d534
+      note: update. tab => space
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2d38b5ad24681a2188ac825929a979dac62889ee
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cfc4d2f2c490f7d0ad84c9cfe015c29006b74412
+      note: update
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4b13fd80f63e4cbac5f48221a5d6f5669e4a159f
+      note: add. title
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2d4604c204d7fd2452da33f47e044005368bc460
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5bbd513df5af1de28d928f27b59ca72c79f2a0e4
+      note: update.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9cc6421e320bcdca76f1149d369f84496678382f
+      note: add. menu interface
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 899f713aaaa2978900d397c2d2cdd94917a3594d
+      note: update. progress width
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fa46a64e9d34adaaa4b1cb1eaa931d7a32d5d636
+      note: reformat
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 937f64cf00ffaf023539a55c69900a042ede4105
+      note: add. main ui entry
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: eee62ff6835850c1ab2e3e7306c720fccc1e8ea4
+      note: complete. startup ui
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 32c2e5f2ea0924b40eb0677faf7325687aaa45d0
+      note: update. start up
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6454db4c1e8bb100a38048e834495ff09bdd9cd0
+      note: init
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 241a85e855789e82a9918736d44ef0cedd2f68b1
+      note: init
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com

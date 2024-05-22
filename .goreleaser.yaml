@@ -2,6 +2,7 @@ env:
   - GO111MODULE=on
   - CGO_ENABLED=1
   - HOMEBREW_NAME=go-musicfox
+
 builds:
   - id: go-musicfox-linux-amd64
     main: ./cmd/musicfox.go
@@ -118,6 +119,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
+
 archives:
   - id: musicfox
     builds:
@@ -134,8 +136,54 @@ archives:
     files:
       - none*
 
+nfpms:
+  - id: go-musicfox
+    package_name: go-musicfox
+    builds:
+      - go-musicfox-linux-amd64
+      - go-musicfox-linux-arm64
+      - go-musicfox-linux-arm
+    maintainer: anhoder <anhoder@88.com>
+    description: A music player for netease music in terminal.
+    vendor: go-musicfox
+    homepage: https://github.com/go-musicfox/go-musicfox
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
+      - archlinux
+    dependencies:
+      - flac
+    contents:
+      - src: "{{ .ArtifactPath }}"
+        dst: /usr/local/bin/musicfox
+    overrides:
+      deb:
+        dependencies:
+          - flac
+          - libasound2-dev
+
 changelog:
-  use: github-native
+  use: git
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Optimize"
+      regexp: '^.*?optimize(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "Docs"
+      regexp: ".*docs.*"
+      order: 3
+    - title: "CI"
+      regexp: '(.*build.*)|(^ci(\([[:word:]]+\))??!?:.+$)'
+      order: 4
+    - title: Others
+      order: 999
 
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
@@ -224,7 +272,13 @@ release:
   github:
     owner: go-musicfox
     name: go-musicfox
+  extra_files:
+    - glob: ./dist/*.apk
+    - glob: ./dist/*.deb
+    - glob: ./dist/*.pkg.tar.zst
+    - glob: ./dist/*.rpm
   discussion_category_name: General
   prerelease: auto
   mode: replace
   draft: false
+  include_meta: false
