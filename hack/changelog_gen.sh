@@ -10,5 +10,7 @@ if ! command -v chglog >/dev/null 2>&1; then
 	go install github.com/goreleaser/chglog/cmd/chglog@latest
 fi
 
+GOPATH=$(go env GOPATH)
+
 "$GOPATH/bin/chglog" init
 "$GOPATH/bin/chglog" format --template repo >CHANGELOG.md
