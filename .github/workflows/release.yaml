@@ -48,7 +48,7 @@ jobs:
         run: |-
           echo -e "HOMEBREW_TAP_TOKEN=${{secrets.ACCESS_TOKEN}}\nGITHUB_TOKEN=${{secrets.ACCESS_TOKEN}}\nLASTFM_KEY=${{secrets.LASTFM_KEY}}\nLASTFM_SECRET=${{secrets.LASTFM_SECRET}}" >> .release-env
 
-      - if: github.ref == 'refs/heads/master' || startsWith(github.ref,'refs/heads/feature/')
+      - if: "!startsWith(github.ref,'refs/tags/v')"
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
         run: |-
           make release-dry-run GORELEASER_SKIP_VALIDATE=true
