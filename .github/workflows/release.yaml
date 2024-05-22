@@ -34,7 +34,7 @@ jobs:
       - name: Setup go...
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.21.0'
+          go-version: "^1.22.0"
 
       - name: branch name
         id: branch_name
@@ -47,16 +47,16 @@ jobs:
 
       - if: github.ref == 'refs/heads/master' || startsWith(github.ref,'refs/heads/feature/')
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
-        run: |- 
+        run: |-
           make release-dry-run GORELEASER_SKIP_VALIDATE=true
           make scoop-config-gen
 
-#      - if: startsWith(github.ref,'refs/tags/v')
-#        name: release dry-run
-#        run: |-
-#          make release-dry-run
-#        env:
-#          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
+      #      - if: startsWith(github.ref,'refs/tags/v')
+      #        name: release dry-run
+      #        run: |-
+      #          make release-dry-run
+      #        env:
+      #          RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
         name: release publish
@@ -67,13 +67,14 @@ jobs:
           RELEASE_TAG: ${{ steps.branch_name.outputs.RELEASE_TAG }}
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
-        name: Generate scoop config and commit
+        name: Generate scoop config and changelog, commit
         run: |-
           make scoop-config-gen
+          make changelog-gen
           git config --global user.email "anhoder@88.com"
           git config --global user.name "anhoder"
           git add .
-          git commit -m "feat: update scoop config" || true
+          git commit -m "chore: update scoop config & changelog" || true
 
       - if: startsWith(github.ref,'refs/tags/v') && github.repository == 'go-musicfox/go-musicfox'
         name: Push scoop config
