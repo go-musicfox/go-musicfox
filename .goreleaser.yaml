@@ -281,4 +281,3 @@ release:
   prerelease: auto
   mode: replace
   draft: false
-  include_meta: false
