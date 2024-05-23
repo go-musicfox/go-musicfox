@@ -255,6 +255,7 @@ $ nix-shell -p go-musicfox
 ```sh
 $ apt install go-musicfox
 ```
+> 如果遇到卡顿，请切换到mpd播放引擎
 </details>
   
 #### 2. 通过 Homebrew 安装
