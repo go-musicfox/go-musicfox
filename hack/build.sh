@@ -21,6 +21,7 @@ BUILD_TAGS=${BUILD_TAGS:-""}
 
 if [[ "${ACTION}" = "build" ]]; then
 	BUILD_TARGET="${ROOT}/bin/musicfox"
+	TARGET_FLAG="-o ${BUILD_TARGET}"
 fi
 
 VERSION_INFO=$(mktemp)
@@ -37,5 +38,5 @@ LDFLAGS=${LDFLAGS}" -X ${INJECT_PACKAGE}.BuildTags=${BUILD_TAGS}"
 
 CGO_ENABLED=1 GOOS=${BUILD_GOOS} GOARCH=${BUILD_GOARCH} ${GOBINARY} "${ACTION}" \
 	-tags "${BUILD_TAGS}" \
-	-ldflags "${LDFLAGS}" -o "${BUILD_TARGET}" \
+	-ldflags "${LDFLAGS}"  ${TARGET_FLAG} \
 	"${ROOT}/cmd/musicfox.go"
