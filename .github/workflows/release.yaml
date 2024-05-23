@@ -89,7 +89,3 @@ jobs:
           name: dist_files
           path: |
             dist/*.zip
-            dist/*.apk
-            dist/*.deb
-            dist/*.pkg.tar.zst
-            dist/*.rpm
