@@ -138,6 +138,21 @@ $ sudo dnf install go-musicfox
 <details>
 <summary>
 
+##### Debian系发行版（Ubuntu、Deepin、UOS等）
+</summary>
+
+###### 从 [星火商店](https://spark-app.store/) 安装。
+
+```sh
+$ sudo aptss install go-musicfox  //二进制包部署，同步较慢
+$ sudo aptss install go-musicfox-git  //从源码编译，请保持网络通畅
+```
+
+</details>
+
+<details>
+<summary>
+
 ##### Gentoo Linux
 </summary>
 
