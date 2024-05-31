@@ -523,6 +523,8 @@ func GetSongUrl(song structs.Song) (url, musicType string, err error) {
 		}
 	}
 
+	Logger().Printf("[GetSongUrl] id: %d, level: %s", song.Id, configs.ConfigRegistry.Main.PlayerSongLevel)
+
 	urlService := service.SongUrlV1Service{
 		ID:      strconv.FormatInt(song.Id, 10),
 		Level:   configs.ConfigRegistry.Main.PlayerSongLevel,

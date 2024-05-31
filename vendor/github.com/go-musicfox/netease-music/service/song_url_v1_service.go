@@ -14,11 +14,14 @@ const (
 	Exhigh   SongQualityLevel = "exhigh"
 	Lossless SongQualityLevel = "lossless"
 	Hires    SongQualityLevel = "hires"
+	JYEffect SongQualityLevel = "jyeffect"
+	Sky      SongQualityLevel = "sky"
+	JYMaster SongQualityLevel = "jymaster"
 )
 
 func (level SongQualityLevel) IsValid() bool {
 	switch level {
-	case Standard, Higher, Exhigh, Lossless, Hires:
+	case Standard, Higher, Exhigh, Lossless, Hires, JYEffect, Sky, JYMaster:
 		return true
 	default:
 		return false
@@ -27,13 +30,12 @@ func (level SongQualityLevel) IsValid() bool {
 
 type SongUrlV1Service struct {
 	ID         string           `json:"id" form:"id"`
-	Level      SongQualityLevel `json:"level" form:"level"` // standard,higher,exhigh,lossless,hires
+	Level      SongQualityLevel `json:"level" form:"level"` // standard, exhigh, lossless, hires, jyeffect(高清环绕声), sky(沉浸环绕声), jymaster(超清母带) 进行音质判断
 	EncodeType string           `json:"encodeType" form:"encodeType"`
 	SkipUNM    bool
 }
 
 func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
-
 	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
 
 	options := &util.Options{
@@ -48,6 +50,9 @@ func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
 		service.Level = Higher
 	}
 	data["level"] = string(service.Level)
+	if service.Level == Sky {
+		data["immerseType"] = "c51"
+	}
 	data["encodeType"] = service.EncodeType
 
 	code, reBody, _ := util.CreateRequest("POST", `https://interface.music.163.com/eapi/song/enhance/player/url/v1`, data, options)
