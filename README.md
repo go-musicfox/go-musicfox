@@ -330,7 +330,9 @@ Linux 需要 `libFLAC-dev` 开发套件
 * APT (Debian, Ubuntu)
 
 ```sh
-$ sudo apt install -y libflac-dev
+$ sudo apt install software-properties-common build-essential
+$ sudo add-apt-repository ppa:longsleep/golang-backports //ubuntu默认go语言版本为1.18，需要更新到1.21
+$ sudo apt install libflac-dev libasound2-dev golang-go
 ```
 
 * pacman (Arch)
@@ -351,9 +353,7 @@ $ sudo dnf install flac-devel
 
 ```sh
 $ git clone https://github.com/go-musicfox/go-musicfox
-
 $ go mod download
-
 $ make # 编译到 bin 目录下
 $ make install # 安装到 $GOPATH/bin下
 ```
