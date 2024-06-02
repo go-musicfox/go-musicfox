@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"github.com/cnsilvan/UnblockNeteaseMusic/network"
@@ -22,7 +24,7 @@ import (
 type KuWo struct{}
 
 const (
-	SearchSongURL = "http://kuwo.cn/api/www/search/searchMusicBykeyWord?key=%s&pn=1&rn=30"
+	SearchSongURL = "http://search.kuwo.cn/r.s?&correct=1&stype=comprehensive&encoding=utf8&rformat=json&mobi=1&show_copyright_off=1&searchapi=6&all=%s"
 )
 
 var blockSongUrl = map[string]json.Number{
@@ -44,128 +46,121 @@ func (m *KuWo) SearchSong(song common.SearchSong) (songs []*common.Song) {
 			if len(word) != 0 {
 				keyWord = fmt.Sprintf("%s %s", song.Name, word)
 			}
+			keyWord = strings.ReplaceAll(keyWord, " - ", " ")
 			// key, value := getTokenInfo(keyWord)
-			header := make(http.Header, 4)
-			header["referer"] = append(header["referer"], "http://www.kuwo.cn/search/list?key="+url.QueryEscape(keyWord))
-			header["cookie"] = append(header["cookie"], "Hm_Iuvt_cdb524f42f0cer9b268e4v7y734w5esq24=fppPsMdS6XRFXthpMGPXycmTsm3Ny8xr")
-			header["secret"] = append(header["secret"], "46c96f9b8ab640394da88016b1ed67db57a66c474e041c18b0283cdd53ce101d0465c8a8")
+
 			searchUrl := fmt.Sprintf(SearchSongURL, url.QueryEscape(keyWord))
-			result, err := base.Fetch(searchUrl, nil, header, true)
+			result, err := base.FetchV2(searchUrl, nil, nil, true)
 			if err != nil {
-				log.Println(err)
+				slog.Error("kuwo fetch error", slog.Any("error", err))
 				return
 			}
-			data, ok := result["data"].(common.MapType)
-			if ok {
-				list, ok := data["list"].([]interface{})
-				if ok && len(list) > 0 {
-					listLength := len(list)
-					maxIndex := listLength/2 + 1
-					if maxIndex > 5 {
-						maxIndex = 5
-					}
-					for index, matched := range list {
-						if index >= maxIndex { //kuwo list order by score default
-							break
-						}
-						kuWoSong, ok := matched.(common.MapType)
-						if ok {
-							rid, ok := kuWoSong["rid"].(json.Number)
-							rids := ""
-							if !ok {
-								rids, ok = kuWoSong["rid"].(string)
-							} else {
-								rids = rid.String()
-							}
-							if ok {
-								songResult := &common.Song{}
-								singerName := html.UnescapeString(kuWoSong["artist"].(string))
-								songName := html.UnescapeString(kuWoSong["name"].(string))
-								//musicSlice := strings.Split(musicrid, "_")
-								//musicId := musicSlice[len(musicSlice)-1]
-								songResult.PlatformUniqueKey = kuWoSong
-								songResult.PlatformUniqueKey["UnKeyWord"] = song.Keyword
-								songResult.Source = "kuwo"
-								songResult.PlatformUniqueKey["header"] = header
-								songResult.PlatformUniqueKey["musicId"] = rids
-								songResult.Id = rids
-								if len(songResult.Id) > 0 {
-									songResult.Id = string(common.KuWoTag) + songResult.Id
-								}
-								songResult.Name = songName
-								songResult.Artist = singerName
-								songResult.AlbumName = html.UnescapeString(kuWoSong["album"].(string))
-								songResult.Artist = strings.ReplaceAll(singerName, " ", "")
-								songResult.MatchScore, ok = base.CalScore(song, songName, singerName, index, maxIndex)
-								if !ok {
-									continue
-								}
-								// protect slice thread safe
-								lock.Lock()
-								songs = append(songs, songResult)
-								lock.Unlock()
-							}
-						}
+
+			abslist := gjson.GetBytes(result, "content.1.musicpage.abslist").Array()
+			listLength := len(abslist)
+			maxIndex := listLength/2 + 1
+			if maxIndex > 5 {
+				maxIndex = 5
+			}
+			for i, item := range abslist {
+				res := &common.Song{
+					Name: item.Get("SONGNAME").String(),
+					// Duration:  time.Duration(item.Get("DURATION").Int()) * time.Second,
+					AlbumName: html.UnescapeString(item.Get("ALBUM").String()),
+					Artist:    strings.ReplaceAll(html.UnescapeString(item.Get("ARTIST").String()), " ", ""),
+					Source:    "kuwo",
+				}
+
+				var songId string
+				if t := strings.Split(item.Get("MUSICRID").String(), "_"); len(t) < 2 {
+					continue
+				} else {
+					songId = t[1]
+					res.Id = string(common.KuWoTag) + songId
+				}
+
+				res.PlatformUniqueKey = make(map[string]any)
+				for k, v := range item.Map() {
+					switch {
+					case v.IsArray():
+						res.PlatformUniqueKey[k] = v.Array()
+					case v.IsObject():
+						res.PlatformUniqueKey[k] = v.Map()
+					case v.IsBool():
+						res.PlatformUniqueKey[k] = v.Bool()
+					default:
+						res.PlatformUniqueKey[k] = v.String()
 					}
 				}
+				res.PlatformUniqueKey["UnKeyWord"] = song.Keyword
+				res.PlatformUniqueKey["musicId"] = songId
+
+				var ok bool
+				res.MatchScore, ok = base.CalScore(song, res.Name, res.Artist, i, maxIndex)
+				if !ok {
+					continue
+				}
+
+				// protect slice thread safe
+				lock.Lock()
+				songs = append(songs, res)
+				lock.Unlock()
 			}
 		}(v)
 	}
 	wg.Wait()
 	return base.AfterSearchSong(song, songs)
 }
+
 func (m *KuWo) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *common.Song {
-	if id, ok := song.PlatformUniqueKey["musicId"]; ok {
-		if musicId, ok := id.(string); ok {
-			if httpHeader, ok := song.PlatformUniqueKey["header"]; ok {
-				if header, ok := httpHeader.(http.Header); ok {
-					header["user-agent"] = append(header["user-agent"], "okhttp/3.10.0")
-					format := "flac|mp3"
-					br := ""
-					switch searchSong.Quality {
-					case common.Standard:
-						format = "mp3"
-						br = "&br=128kmp3"
-					case common.Higher:
-						format = "mp3"
-						br = "&br=192kmp3"
-					case common.ExHigh:
-						format = "mp3"
-					case common.Lossless:
-						format = "flac|mp3"
-					default:
-						format = "flac|mp3"
-					}
+	musicId, ok := song.PlatformUniqueKey["musicId"].(string)
+	if !ok {
+		return song
+	}
+	header := http.Header{
+		"User-Agent": []string{"okhttp/3.10.0"},
+	}
+	format := "flac|mp3"
+	br := ""
+	switch searchSong.Quality {
+	case common.Standard:
+		format = "mp3"
+		br = "&br=128kmp3"
+	case common.Higher:
+		format = "mp3"
+		br = "&br=192kmp3"
+	case common.ExHigh:
+		format = "mp3"
+	case common.Lossless:
+		format = "flac|mp3"
+	default:
+		format = "flac|mp3"
+	}
 
-					clientRequest := network.ClientRequest{
-						Method:               http.MethodGet,
-						ForbiddenEncodeQuery: true,
-						RemoteUrl:            "http://mobi.kuwo.cn/mobi.s?f=kuwo&q=" + base64.StdEncoding.EncodeToString(Encrypt([]byte("corp=kuwo&p2p=1&type=convert_url2&sig=0&format="+format+"&rid="+musicId+br))),
-						Header:               header,
-						Proxy:                true,
-					}
-					resp, err := network.Request(&clientRequest)
-					if err != nil {
-						log.Println(err)
-						return song
-					}
-					defer resp.Body.Close()
-					body, err := network.GetResponseBody(resp, false)
-					reg := regexp.MustCompile(`http[^\s$"]+`)
-					address := string(body)
-					params := reg.FindStringSubmatch(address)
-					if len(params) > 0 {
-						if duration, ok := blockSongUrl[filepath.Base(params[0])]; ok && song.PlatformUniqueKey["duration"].(json.Number) == duration {
-							log.Println(song.PlatformUniqueKey["UnKeyWord"].(string) + "，该歌曲酷我版权保护")
-							return song
-						}
-						song.Url = params[0]
-						return song
-					}
-
-				}
-			}
+	clientRequest := network.ClientRequest{
+		Method:               http.MethodGet,
+		ForbiddenEncodeQuery: true,
+		RemoteUrl:            "http://mobi.kuwo.cn/mobi.s?f=kuwo&q=" + base64.StdEncoding.EncodeToString(Encrypt([]byte("corp=kuwo&source=kwplayer_ar_5.1.0.0_B_jiakong_vh.apk&p2p=1&type=convert_url2&sig=0&format="+format+"&rid="+musicId+br))),
+		Header:               header,
+		Proxy:                true,
+	}
+	resp, err := network.Request(&clientRequest)
+	if err != nil {
+		slog.Error("kuwo request error", slog.Any("error", err))
+		return song
+	}
+	defer resp.Body.Close()
+	body, _ := network.GetResponseBody(resp, false)
+	reg := regexp.MustCompile(`http[^\s$"]+`)
+	address := string(body)
+	params := reg.FindStringSubmatch(address)
+	if len(params) > 0 {
+		if duration, ok := blockSongUrl[filepath.Base(params[0])]; ok && song.PlatformUniqueKey["duration"].(json.Number) == duration {
+			slog.Warn(song.PlatformUniqueKey["UnKeyWord"].(string) + "，该歌曲酷我版权保护")
+			return song
 		}
+		song.Url = params[0]
+		return song
 	}
 	return song
 }

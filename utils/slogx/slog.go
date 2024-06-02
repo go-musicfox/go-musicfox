@@ -2,6 +2,7 @@ package slogx
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ func init() {
 
 	logger := slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{AddSource: true}))
 
+	log.SetOutput(f)
 	slog.SetDefault(logger)
 }
 

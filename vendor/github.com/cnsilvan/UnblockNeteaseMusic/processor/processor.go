@@ -6,14 +6,16 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/text/width"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/cache"
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
@@ -22,7 +24,6 @@ import (
 	"github.com/cnsilvan/UnblockNeteaseMusic/processor/crypto"
 	"github.com/cnsilvan/UnblockNeteaseMusic/provider"
 	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
-	"golang.org/x/text/width"
 )
 
 var (
@@ -89,15 +90,21 @@ type Netease struct {
 func RequestBefore(request *http.Request) *Netease {
 	netease := &Netease{Path: request.URL.Path}
 
-	if request.Method == http.MethodPost && (strings.Contains(netease.Path, "/eapi/") || strings.Contains(netease.Path, "/api/linux/forward")) {
-		if *config.BlockAds && (strings.Contains(netease.Path, "api/ad/") || strings.Contains(netease.Path, "api/clientlog/upload") || strings.Contains(netease.Path, "api/feedback/weblog")) {
+	if request.Method == http.MethodPost && (strings.HasPrefix(netease.Path, "/eapi/") || netease.Path == "/api/linux/forward") {
+		if *config.BlockAds && (strings.Contains(netease.Path, "api/ad/")) {
 			return nil
 		}
+
+		if strings.Contains(netease.Path, "stream") || strings.Contains(netease.Path, "/eapi/cloud/upload/check") {
+			// look living/cloudupload eapi can not be decrypted
+			return nil
+		}
+
 		request.Header.Del("x-napm-retry")
-		request.Header.Set("X-Real-IP", "118.66.66.66")
-		//request.Header.Set("Accept-Encoding", "gzip, deflate")
-		requestBody, _ := ioutil.ReadAll(request.Body)
-		requestHold := ioutil.NopCloser(bytes.NewBuffer(requestBody))
+		request.Header.Set("X-Real-IP", "118.88.88.88")
+		request.Header.Set("Accept-Encoding", "gzip, deflate") // https://blog.csdn.net/u013022222/article/details/51707352
+		requestBody, _ := io.ReadAll(request.Body)
+		requestHold := io.NopCloser(bytes.NewBuffer(requestBody))
 		request.Body = requestHold
 		pad := make([]byte, 0)
 		reg := regexp.MustCompile(`%0+$`)
@@ -109,8 +116,7 @@ func RequestBefore(request *http.Request) *Netease {
 			requestBodyH := make([]byte, len(requestBody))
 			length, _ := hex.Decode(requestBodyH, requestBody[8:len(requestBody)-len(pad)])
 			decryptECBBytes, _ := crypto.AesDecryptECB(requestBodyH[:length], []byte(linuxApiKey))
-			var result common.MapType
-			result = utils.ParseJson(decryptECBBytes)
+			result := utils.ParseJson(decryptECBBytes)
 			urlM, ok := result["url"].(string)
 			if ok {
 				netease.Path = urlM
@@ -131,19 +137,20 @@ func RequestBefore(request *http.Request) *Netease {
 		netease.Path = strings.ReplaceAll(netease.Path, "https://music.163.com", "")
 		netease.Path = strings.ReplaceAll(netease.Path, "http://music.163.com", "")
 		netease.Path = utils.ReplaceAll(netease.Path, `\/\d*$`, "")
-	} else if strings.Index(netease.Path, "/weapi/") == 0 || strings.Index(netease.Path, "/api/") == 0 {
-		request.Header.Set("X-Real-IP", "118.66.66.66")
+	} else if strings.HasPrefix(netease.Path, "/weapi/") || strings.HasPrefix(netease.Path, "/api/") {
+		request.Header.Set("X-Real-IP", "118.88.88.88")
 		netease.Web = true
 		netease.Path = utils.ReplaceAll(netease.Path, `^\/weapi\/`, "/api/")
 		netease.Path = utils.ReplaceAll(netease.Path, `\?.+$`, "")
 		netease.Path = utils.ReplaceAll(netease.Path, `\/\d*$`, "")
-	} else if strings.Contains(netease.Path, "package") {
-
 	}
+	// else if strings.Contains(netease.Path, "package") {
+	// }
 	unifiedMusicQuality(netease)
 	searchOtherPlatform(netease)
 	return netease
 }
+
 func Request(request *http.Request, remoteUrl string) (*http.Response, error) {
 	clientRequest := network.ClientRequest{
 		Method:    request.Method,
@@ -155,19 +162,18 @@ func Request(request *http.Request, remoteUrl string) (*http.Response, error) {
 	}
 	return network.Request(&clientRequest)
 }
-func RequestAfter(request *http.Request, response *http.Response, netease *Netease) {
-	pass := false
+
+func RequestAfter(request *http.Request, response *http.Response, netease *Netease) (pass bool) {
 	if _, ok := Path[netease.Path]; ok {
 		pass = true
 	}
 	if pass && response.StatusCode == 200 {
-
 		encode := response.Header.Get("Content-Encoding")
 		enableGzip := false
 		if len(encode) > 0 && (strings.Contains(encode, "gzip") || strings.Contains(encode, "deflate")) {
 			enableGzip = true
 		}
-		body, _ := ioutil.ReadAll(response.Body)
+		body, _ := io.ReadAll(response.Body)
 		response.Body.Close()
 		tmpBody := make([]byte, len(body))
 		copy(tmpBody, body)
@@ -183,9 +189,9 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 			result := utils.ParseJson(decryptECBBytes)
 			netease.Encrypted = false
 			if result == nil {
-				decryptECBBytes, encrypted := crypto.AesDecryptECB(decryptECBBytes, []byte(aeskey))
+				b, encrypted := crypto.AesDecryptECB(decryptECBBytes, []byte(aeskey))
 				netease.Encrypted = encrypted
-				result = utils.ParseJson(decryptECBBytes)
+				result = utils.ParseJson(b)
 			}
 			netease.JsonBody = result
 
@@ -198,18 +204,18 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 
 			logResponse(netease)
 
-			if strings.EqualFold(netease.Path, "/api/osx/version") ||
-				strings.EqualFold(netease.Path, "/api/pc/upgrade/get") {
+			switch {
+			case strings.EqualFold(netease.Path, "/api/osx/version") || strings.EqualFold(netease.Path, "/api/pc/upgrade/get"):
 				modified = disableUpdate(netease)
-			} else if strings.Contains(netease.Path, "/usertool/sound/") {
+			case strings.Contains(netease.Path, "/usertool/sound/"):
 				modified = unblockSoundEffects(netease.JsonBody)
-			} else if strings.Contains(netease.Path, "/batch") {
+			case strings.Contains(netease.Path, "/batch"):
 				modified = localVIP(netease)
 				for key, resp := range netease.JsonBody {
 					if strings.Contains(key, "/usertool/sound/") {
 						modified = unblockSoundEffects(resp.(map[string]interface{}))
 					} else if *config.BlockAds && strings.Contains(key, "api/ad/") {
-						log.Println("block Ad has been triggered(" + key + ").")
+						slog.Info("block Ad has been triggered", slog.String("key", key))
 						resp = &common.MapType{}
 						modified = true
 					} else if *config.BlockAds && strings.EqualFold(key, "/api/v2/banner/get") {
@@ -220,7 +226,7 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 								if banner["adid"] == nil {
 									newInfo = append(newInfo, banner)
 								} else {
-									log.Println("block banner Ad has been triggered.")
+									slog.Info("block banner Ad has been triggered.")
 									modified = true
 								}
 							}
@@ -228,13 +234,13 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 						info.(common.MapType)["banners"] = newInfo
 					}
 				}
-			} else if !netease.Web && (code == "401" || code == "512") && strings.Contains(netease.Path, "manipulate") {
+			case !netease.Web && (code == "401" || code == "512") && strings.Contains(netease.Path, "manipulate"):
 				modified = tryCollect(netease, request)
-			} else if !netease.Web && (code == "401" || code == "512") && strings.EqualFold(netease.Path, "/api/song/like") {
+			case !netease.Web && (code == "401" || code == "512") && strings.EqualFold(netease.Path, "/api/song/like"):
 				modified = tryLike(netease, request)
-			} else if strings.Contains(netease.Path, "url") {
+			case strings.Contains(netease.Path, "url"):
 				modified = tryMatch(netease)
-			} else {
+			default:
 				modified = tryAddOtherPlatformResult(netease)
 			}
 
@@ -247,15 +253,15 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 				modifiedJson, _ := json.Marshal(netease.JsonBody)
 				// log.Println(netease)
 				if *config.LogWebTraffic {
-					log.Println("modified =>\n" + string(modifiedJson))
+					slog.Info("modified => " + string(modifiedJson))
 				}
 				if netease.Encrypted {
 					modifiedJson = crypto.AesEncryptECB(modifiedJson, []byte(aeskey))
 				}
-				response.Body = ioutil.NopCloser(bytes.NewBuffer(modifiedJson))
+				response.Body = io.NopCloser(bytes.NewBuffer(modifiedJson))
 			} else {
 				// log.Println("NotNeedRepackage")
-				responseHold := ioutil.NopCloser(bytes.NewBuffer(tmpBody))
+				responseHold := io.NopCloser(bytes.NewBuffer(tmpBody))
 				response.Body = responseHold
 			}
 
@@ -266,12 +272,14 @@ func RequestAfter(request *http.Request, response *http.Response, netease *Netea
 			// 	"\nrequestMethod: " + request.Method +
 			// 	"\nrequestUserAgent: " + request.UserAgent())
 		} else {
-			responseHold := ioutil.NopCloser(bytes.NewBuffer(tmpBody))
+			responseHold := io.NopCloser(bytes.NewBuffer(tmpBody))
 			response.Body = responseHold
 		}
-	} else {
-		// log.Println("Not Process: " + netease.Path)
 	}
+	// else {
+	// log.Println("Not Process: " + netease.Path)
+	// }
+	return
 }
 
 func disableUpdate(netease *Netease) bool {
@@ -281,12 +289,12 @@ func disableUpdate(netease *Netease) bool {
 	modified := false
 	jsonBody := netease.JsonBody
 	if value, ok := jsonBody["updateFiles"]; ok {
-		switch value.(type) {
+		switch v := value.(type) {
 		case common.SliceType:
-			if len(value.(common.SliceType)) > 0 {
+			if len(v) > 0 {
 				modified = true
 				jsonBody["updateFiles"] = make(common.SliceType, 0)
-				log.Println("disable update has been triggered.")
+				slog.Info("disable update has been triggered.")
 			}
 		default:
 		}
@@ -303,7 +311,7 @@ func logResponse(netease *Netease) {
 		jsonBody := netease.JsonBody
 		modifiedJson, _ := json.Marshal(jsonBody)
 		sep := "===================================\n"
-		log.Println(sep + reqUrl + " => \n" + string(modifiedJson) + "\n")
+		slog.Info(sep + reqUrl + " => \n" + string(modifiedJson) + "\n")
 	}
 }
 
@@ -313,7 +321,7 @@ func localVIP(netease *Netease) bool {
 	}
 	modified := false
 	if utils.Exist("/api/music-vip-membership/client/vip/info", netease.JsonBody) {
-		log.Println("localVIP has been triggered.")
+		slog.Info("localVIP has been triggered.")
 		modified = true
 		info := netease.JsonBody["/api/music-vip-membership/client/vip/info"]
 		expireTime, _ := info.(common.MapType)["data"].(common.MapType)["now"].(json.Number).Int64()
@@ -326,6 +334,7 @@ func localVIP(netease *Netease) bool {
 	}
 	return modified
 }
+
 func unblockSoundEffects(jsonBody map[string]interface{}) bool {
 	if !*config.UnlockSoundEffects {
 		return false
@@ -333,20 +342,20 @@ func unblockSoundEffects(jsonBody map[string]interface{}) bool {
 	// JsonBody,_ := json.Marshal(jsonBody)
 	modified := false
 	if value, ok := jsonBody["data"]; ok {
-		switch value.(type) {
+		switch v := value.(type) {
 		case common.SliceType:
-			if len(value.(common.SliceType)) > 0 {
+			if len(v) > 0 {
 				modified = true
-				for _, data := range value.(common.SliceType) {
+				for _, data := range v {
 					if datum, ok := data.(common.MapType); ok {
 						datum["type"] = 1
 					}
 				}
 			}
 		case common.MapType:
-			if utils.Exist("type", value.(common.MapType)) {
+			if utils.Exist("type", v) {
 				modified = true
-				value.(common.MapType)["type"] = 1
+				v["type"] = 1
 			}
 		default:
 		}
@@ -355,11 +364,10 @@ func unblockSoundEffects(jsonBody map[string]interface{}) bool {
 	// log.Println("netease.JsonBody: " + string(JsonBody))
 	// log.Println("netease.modifiedJson: " + string(modifiedJson))
 	if modified {
-		log.Println("unblockSoundEffects has been triggered.")
+		slog.Info("unblockSoundEffects has been triggered.")
 	}
 
 	return modified
-
 }
 
 func tryCollect(netease *Netease, request *http.Request) bool {
@@ -374,7 +382,7 @@ func tryCollect(netease *Netease, request *http.Request) bool {
 			if err == nil {
 				trackId = result[0].(string)
 			} else {
-				log.Println(err)
+				slog.Error("parse err", slog.String("error", fmt.Sprintf("%+v", err)))
 				return false
 			}
 
@@ -389,7 +397,7 @@ func tryCollect(netease *Netease, request *http.Request) bool {
 			Host:      "music.163.com",
 			RemoteUrl: "http://" + proxyRemoteHost + "/api/playlist/manipulate/tracks",
 			Header:    request.Header,
-			Body:      ioutil.NopCloser(bytes.NewBufferString("trackIds=[" + trackId + "," + trackId + "]&pid=" + pid + "&op=" + op)),
+			Body:      io.NopCloser(bytes.NewBufferString("trackIds=[" + trackId + "," + trackId + "]&pid=" + pid + "&op=" + op)),
 			Proxy:     true,
 		}
 		resp, err := network.Request(&clientRequest)
@@ -406,6 +414,7 @@ func tryCollect(netease *Netease, request *http.Request) bool {
 	}
 	return modified
 }
+
 func tryLike(netease *Netease, request *http.Request) bool {
 	// log.Println("try like")
 	modified := false
@@ -446,7 +455,7 @@ func tryLike(netease *Netease, request *http.Request) bool {
 				pid := jsonBody["playlist"].(common.SliceType)[0].(common.MapType)["id"].(json.Number).String()
 				clientRequest.Method = http.MethodPost
 				clientRequest.RemoteUrl = "http://" + proxyRemoteHost + "/api/playlist/manipulate/tracks"
-				clientRequest.Body = ioutil.NopCloser(bytes.NewBufferString("trackIds=[" + trackId + "," + trackId + "]&pid=" + pid + "&op=add"))
+				clientRequest.Body = io.NopCloser(bytes.NewBufferString("trackIds=[" + trackId + "," + trackId + "]&pid=" + pid + "&op=add"))
 				resp, err = network.Request(&clientRequest)
 				if err != nil {
 					return modified
@@ -470,41 +479,40 @@ func tryLike(netease *Netease, request *http.Request) bool {
 
 	return modified
 }
+
 func tryMatch(netease *Netease) bool {
 	modified := false
 	jsonBody := netease.JsonBody
-	if value, ok := jsonBody["data"]; ok {
-		switch value.(type) {
-		case common.SliceType:
-			if strings.Contains(netease.Path, "download") {
-				for index, data := range value.(common.SliceType) {
-					if index == 0 {
-						modified = searchGreySong(data.(common.MapType), netease) || modified
-						break
-					}
+	switch value := jsonBody["data"].(type) {
+	case common.SliceType:
+		if strings.Contains(netease.Path, "download") {
+			for index, data := range value {
+				if index == 0 {
+					modified = searchGreySong(data.(common.MapType), netease) || modified
+					break
 				}
-			} else {
-				modified = searchGreySongs(value.(common.SliceType), netease) || modified
 			}
-		case common.MapType:
-			modified = searchGreySong(value.(common.MapType), netease) || modified
-		default:
+		} else {
+			modified = searchGreySongs(value, netease) || modified
 		}
+	case common.MapType:
+		modified = searchGreySong(value, netease) || modified
 	}
 	// modifiedJson, _ := json.Marshal(jsonBody)
 	// log.Println(string(modifiedJson))
 	return modified
 }
+
 func searchGreySongs(data common.SliceType, netease *Netease) bool {
 	modified := false
 	for _, value := range data {
-		switch value.(type) {
-		case common.MapType:
-			modified = searchGreySong(value.(common.MapType), netease) || modified
+		if v, ok := value.(common.MapType); ok {
+			modified = searchGreySong(v, netease) || modified
 		}
 	}
 	return modified
 }
+
 func searchGreySong(data common.MapType, netease *Netease) bool {
 	modified := false
 	if data["url"] == nil || data["freeTrialInfo"] != nil {
@@ -524,7 +532,7 @@ func searchGreySong(data common.MapType, netease *Netease) bool {
 				if songType == "mp3" || songType == "flac" || songType == "ape" || songType == "wav" || songType == "aac" || songType == "mp4" {
 					data["type"] = songType
 				} else {
-					log.Println("unrecognized format:", songType)
+					slog.Info("unrecognized format", slog.String("songType", songType))
 					if song.Br > 320000 {
 						data["type"] = "flac"
 					} else {
@@ -548,7 +556,7 @@ func searchGreySong(data common.MapType, netease *Netease) bool {
 			data["fee"] = 8                   // web
 			uri, err := url.Parse(song.Url)
 			if err != nil {
-				log.Println("url.Parse error:", song.Url)
+				slog.Info("url.Parse error", slog.String("url", song.Url))
 				data["url"] = song.Url
 			} else {
 				if *config.EndPoint {
@@ -582,12 +590,13 @@ func searchGreySong(data common.MapType, netease *Netease) bool {
 				go calculateSongMd5(searchMusic, song.Url)
 			}
 		}
-	} else {
-
 	}
+	// else {
+	// }
 	// log.Println(utils.ToJson(data))
 	return modified
 }
+
 func calculateSongMd5(music common.SearchMusic, songUrl string) string {
 	songMd5 := ""
 	clientRequest := network.ClientRequest{
@@ -596,7 +605,7 @@ func calculateSongMd5(music common.SearchMusic, songUrl string) string {
 	}
 	resp, err := network.Request(&clientRequest)
 	if err != nil {
-		log.Println(err)
+		slog.Error("request error", slog.String("error", fmt.Sprintf("%+v", err)))
 		return songMd5
 	}
 	defer resp.Body.Close()
@@ -604,7 +613,7 @@ func calculateSongMd5(music common.SearchMusic, songUrl string) string {
 	h := md5.New()
 	_, err = io.Copy(h, r)
 	if err != nil {
-		log.Println(err)
+		slog.Error("copy error", slog.String("error", fmt.Sprintf("%+v", err)))
 		return songMd5
 	}
 	songMd5 = hex.EncodeToString(h.Sum(nil))
@@ -612,15 +621,16 @@ func calculateSongMd5(music common.SearchMusic, songUrl string) string {
 	// log.Println("calculateSongMd5 songId:", songId, ",songUrl:", songUrl, ",md5:", songMd5)
 	return songMd5
 }
+
 func processSliceJson(jsonSlice common.SliceType) bool {
 	needModify := false
 	for _, value := range jsonSlice {
-		switch value.(type) {
+		switch v := value.(type) {
 		case common.MapType:
-			needModify = processMapJson(value.(common.MapType)) || needModify
+			needModify = processMapJson(v) || needModify
 
 		case common.SliceType:
-			needModify = processSliceJson(value.(common.SliceType)) || needModify
+			needModify = processSliceJson(v) || needModify
 
 		default:
 			// log.Printf("index(%T):%v\n", index, index)
@@ -629,33 +639,34 @@ func processSliceJson(jsonSlice common.SliceType) bool {
 	}
 	return needModify
 }
+
 func processMapJson(jsonMap common.MapType) bool {
 	needModify := false
 	if utils.Exists([]string{"st", "subp", "pl", "dl"}, jsonMap) {
-		if v, _ := jsonMap["st"]; v.(json.Number).String() != "0" {
+		if v := jsonMap["st"]; v.(json.Number).String() != "0" {
 			// open gray song
 			jsonMap["st"] = 0
 			needModify = true
 		}
-		if v, _ := jsonMap["subp"]; v.(json.Number).String() != "1" {
+		if v := jsonMap["subp"]; v.(json.Number).String() != "1" {
 			jsonMap["subp"] = 1
 			needModify = true
 		}
-		if v, _ := jsonMap["pl"]; v.(json.Number).String() == "0" {
+		if v := jsonMap["pl"]; v.(json.Number).String() == "0" {
 			jsonMap["pl"] = 320000
 			needModify = true
 		}
-		if v, _ := jsonMap["dl"]; v.(json.Number).String() == "0" {
+		if v := jsonMap["dl"]; v.(json.Number).String() == "0" {
 			jsonMap["dl"] = 320000
 			needModify = true
 		}
 	}
 	for _, value := range jsonMap {
-		switch value.(type) {
+		switch v := value.(type) {
 		case common.MapType:
-			needModify = processMapJson(value.(common.MapType)) || needModify
+			needModify = processMapJson(v) || needModify
 		case common.SliceType:
-			needModify = processSliceJson(value.(common.SliceType)) || needModify
+			needModify = processSliceJson(v) || needModify
 		default:
 			// if key == "fee" {
 			//	fee := "0"
@@ -677,33 +688,35 @@ func processMapJson(jsonMap common.MapType) bool {
 	return needModify
 }
 
+var qualityMap = map[string]common.MusicQuality{
+	"standard": common.Standard,
+	"higher":   common.Higher,
+	"exhigh":   common.ExHigh,
+	"lossless": common.Lossless,
+	"hires":    common.Hires,
+	"jyeffect": common.JYEffect,
+	"sky":      common.Sky,
+	"jymaster": common.JYMaster,
+}
+
 func unifiedMusicQuality(netease *Netease) {
 	// log.Println(fmt.Sprintf("%+v\n", utils.ToJson(netease.Params)))
 	netease.MusicQuality = common.Lossless
 	if !*config.ForceBestQuality {
-		if levelParam, ok := netease.Params["level"]; ok {
-			if level, ok := levelParam.(string); ok {
-				level = strings.ToLower(level)
-				if strings.Contains(level, "lossless") {
-					netease.MusicQuality = common.Lossless
-				} else if strings.Contains(level, "exhigh") {
-					netease.MusicQuality = common.ExHigh
-				} else if strings.Contains(level, "higher") {
-					netease.MusicQuality = common.Higher
-				} else if strings.Contains(level, "standard") {
-					netease.MusicQuality = common.Standard
-				}
+		if level, ok := netease.Params["level"].(string); ok {
+			if q, o := qualityMap[strings.ToLower(level)]; o {
+				netease.MusicQuality = q
 			}
 		} else if brParam, ok := netease.Params["br"]; ok {
 			if br, ok := brParam.(string); ok {
-				br = strings.ToLower(br)
-				if strings.Contains(br, "999000") {
+				switch strings.ToLower(br) {
+				case "999000":
 					netease.MusicQuality = common.Lossless
-				} else if strings.Contains(br, "320000") {
+				case "320000":
 					netease.MusicQuality = common.ExHigh
-				} else if strings.Contains(br, "192000") {
+				case "192000":
 					netease.MusicQuality = common.Higher
-				} else if strings.Contains(br, "128000") {
+				case "128000":
 					netease.MusicQuality = common.Standard
 				}
 			}
@@ -711,6 +724,7 @@ func unifiedMusicQuality(netease *Netease) {
 		// log.Println(fmt.Sprintf("%+v\n", utils.ToJson(netease.MusicQuality)))
 	}
 }
+
 func generateEndpoint(netease *Netease) string {
 	protocol := "https"
 	endPoint := "://music.163.com/unblockmusic/"
@@ -718,9 +732,9 @@ func generateEndpoint(netease *Netease) string {
 		header := make(map[string]interface{})
 		if headerStr, ok := headerParam.(string); ok {
 			header = utils.ParseJson([]byte(headerStr))
-		} else if header, ok = headerParam.(map[string]interface{}); ok {
-
 		}
+		// else if header, ok = headerParam.(map[string]interface{}); ok {
+		// }
 		if len(header) > 0 {
 			if headerValue, ok := header["os"]; ok {
 				if os, ok := headerValue.(string); ok && strings.Contains(strings.ToLower(os), "pc") {
@@ -739,6 +753,7 @@ func generateEndpoint(netease *Netease) string {
 	// log.Println(fmt.Sprintf("%+v\n", utils.ToJson(netease.EndPoint)))
 	return netease.EndPoint
 }
+
 func searchOtherPlatform(netease *Netease) *Netease {
 	// log.Println(utils.ToJson(netease))
 	if *config.SearchLimit > 0 && Path[netease.Path] == 2 {
@@ -770,27 +785,23 @@ func searchOtherPlatform(netease *Netease) *Netease {
 				if i, err := offsetJson.Int64(); err == nil {
 					offset = i
 				}
-
 			} else if offsetS, ok := paramsMap["offset"].(string); ok {
 				// just offset=0
 				if i, err := strconv.ParseInt(offsetS, 10, 64); err == nil {
 					offset = i
 				}
-
 			}
 			if offset == 0 {
 				if searchS, ok := paramsMap["s"].(string); ok {
 					netease.SearchKey = searchS
-
 				} else if searchS, ok := paramsMap["keyword"].(string); ok {
 					netease.SearchKey = searchS
-
 				}
 			}
 
 		}
 		if len(netease.SearchKey) > 0 {
-			var ch = make(chan []*common.Song, 1)
+			ch := make(chan []*common.Song, 1)
 			netease.SearchTaskChan = ch
 			go utils.PanicWrapper(func() {
 				trySearch(netease, ch)
@@ -799,10 +810,12 @@ func searchOtherPlatform(netease *Netease) *Netease {
 	}
 	return netease
 }
+
 func trySearch(netease *Netease, ch chan []*common.Song) {
 	ch <- provider.SearchSongFromAllSource(common.SearchSong{Keyword: netease.SearchKey, Limit: *config.SearchLimit, OrderBy: common.PlatformDefault})
 	// log.Println(utils.ToJson(songs))
 }
+
 func tryAddOtherPlatformResult(netease *Netease) bool {
 	modified := false
 	if *config.SearchLimit <= 0 {
@@ -825,7 +838,6 @@ func tryAddOtherPlatformResult(netease *Netease) bool {
 					orginalSongsKey = "songs"
 
 				}
-
 			}
 		} else if jBody, ok := netease.JsonBody["data"].(common.MapType); ok { // android 综合
 			if result, ok := jBody["complete"].(common.MapType); ok {
@@ -834,9 +846,7 @@ func tryAddOtherPlatformResult(netease *Netease) bool {
 						orginalMap = s
 						orginalSongsKey = "songs"
 					}
-
 				}
-
 			}
 		} else if jBody, ok := netease.JsonBody["result"].(common.MapType); ok {
 			if neteaseSongs, ok = jBody["songs"].(common.SliceType); ok { // android&ios 单曲
@@ -848,7 +858,6 @@ func tryAddOtherPlatformResult(netease *Netease) bool {
 					orginalSongsKey = "songs"
 				}
 			}
-
 		}
 		if orginalMap != nil && len(orginalSongsKey) > 0 && neteaseSongs != nil && len(neteaseSongs) > 0 {
 			if template, ok := neteaseSongs[0].(common.MapType); ok {
@@ -857,7 +866,7 @@ func tryAddOtherPlatformResult(netease *Netease) bool {
 					var copySong common.MapType
 					err := utils.ParseJsonV4(bytes.NewBufferString(utils.ToJson(template)), &copySong)
 					if err != nil {
-						log.Println(err)
+						slog.Error("parse error", slog.String("error", fmt.Sprintf("%+v", err)))
 						continue
 					}
 					source := "来自block"
@@ -910,7 +919,7 @@ func tryAddOtherPlatformResult(netease *Netease) bool {
 						}
 						songSelfId, err := strconv.ParseInt(idS, 10, 64)
 						if err != nil {
-							log.Println(err.Error())
+							slog.Error("parse error", slog.String("error", fmt.Sprintf("%+v", err)))
 							continue
 						} else {
 							cache.PutSong(common.SearchMusic{Id: idS, Quality: common.Standard}, song)
@@ -929,7 +938,6 @@ func tryAddOtherPlatformResult(netease *Netease) bool {
 				orginalMap[orginalSongsKey] = newSongs
 
 			}
-
 		}
 
 	}

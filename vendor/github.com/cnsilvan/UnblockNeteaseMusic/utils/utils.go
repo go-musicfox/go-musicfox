@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cnsilvan/UnblockNeteaseMusic/cookiestxt"
-	"golang.org/x/text/unicode/norm"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,6 +22,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cnsilvan/UnblockNeteaseMusic/cookiestxt"
+	"golang.org/x/text/unicode/norm"
+
 	"golang.org/x/text/width"
 )
 
@@ -33,9 +34,10 @@ func UnGzipV2(gzipData io.Reader) (io.Reader, error) {
 		log.Println("UnGzipV2 error:", err)
 		return gzipData, err
 	}
-	//defer r.Close()
+	// defer r.Close()
 	return r, nil
 }
+
 func UnGzip(gzipData []byte) ([]byte, error) {
 	r, err := gzip.NewReader(bytes.NewReader(gzipData))
 	if err != nil {
@@ -43,7 +45,7 @@ func UnGzip(gzipData []byte) ([]byte, error) {
 		return gzipData, err
 	}
 	defer r.Close()
-	var decryptECBBytes = gzipData
+	decryptECBBytes := gzipData
 	decryptECBBytes, err = ioutil.ReadAll(r)
 	if err != nil {
 		log.Println("UnGzip")
@@ -51,14 +53,17 @@ func UnGzip(gzipData []byte) ([]byte, error) {
 	}
 	return decryptECBBytes, nil
 }
+
 func LogInterface(i interface{}) string {
 	return fmt.Sprintf("%+v", i)
 }
+
 func ReplaceAll(str string, expr string, replaceStr string) string {
 	reg := regexp.MustCompile(expr)
 	str = reg.ReplaceAllString(str, replaceStr)
 	return str
 }
+
 func ParseJson(data []byte) map[string]interface{} {
 	var result map[string]interface{}
 	d := json.NewDecoder(bytes.NewReader(data))
@@ -66,6 +71,7 @@ func ParseJson(data []byte) map[string]interface{} {
 	d.Decode(&result)
 	return result
 }
+
 func ParseJsonV2(reader io.Reader) map[string]interface{} {
 	var result map[string]interface{}
 	d := json.NewDecoder(reader)
@@ -73,16 +79,19 @@ func ParseJsonV2(reader io.Reader) map[string]interface{} {
 	d.Decode(&result)
 	return result
 }
+
 func ParseJsonV3(data []byte, dest interface{}) error {
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
 	return d.Decode(dest)
 }
+
 func ParseJsonV4(reader io.Reader, dest interface{}) error {
 	d := json.NewDecoder(reader)
 	d.UseNumber()
 	return d.Decode(dest)
 }
+
 func PanicWrapper(f func()) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -103,6 +112,7 @@ func ToJson(object interface{}) string {
 	}
 	return result.String()
 }
+
 func Exists(keys []string, h map[string]interface{}) bool {
 	for _, key := range keys {
 		if !Exist(key, h) {
@@ -111,10 +121,12 @@ func Exists(keys []string, h map[string]interface{}) bool {
 	}
 	return true
 }
+
 func Exist(key string, h map[string]interface{}) bool {
 	_, ok := h[key]
 	return ok
 }
+
 func GetCurrentPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
@@ -133,11 +145,13 @@ func GetCurrentPath() (string, error) {
 	}
 	return path[0 : i+1], nil
 }
+
 func MD5(data []byte) string {
 	h := md5.New()
 	h.Write(data)
 	return hex.EncodeToString(h.Sum(nil))
 }
+
 func GenRandomBytes(size int) (blk []byte, err error) {
 	blk = make([]byte, size)
 	_, err = rand.Read(blk)
@@ -155,7 +169,7 @@ func CalMatchScoresV2(beMatchedData string, beSplitedData string, matchType stri
 		beMatchedData = orginData
 
 	}
-	//log.Printf("1:orginData:%s,beMatchedData:%s,beSplitedData:%s\n",orginData,beMatchedData,beSplitedData)
+	// log.Printf("1:orginData:%s,beMatchedData:%s,beSplitedData:%s\n",orginData,beMatchedData,beSplitedData)
 	var keyword []string
 	if matchType == "songName" {
 		keyword = ParseSongNameKeyWord(beSplitedData)
@@ -166,12 +180,12 @@ func CalMatchScoresV2(beMatchedData string, beSplitedData string, matchType stri
 	for _, key := range keyword {
 		beMatchedData = strings.Replace(beMatchedData, key, "", 1)
 	}
-	//log.Printf("2:orginData:%s,beMatchedData:%s,beSplitedData:%s\n",orginData,beMatchedData,beSplitedData)
+	// log.Printf("2:orginData:%s,beMatchedData:%s,beSplitedData:%s\n",orginData,beMatchedData,beSplitedData)
 	if beMatchedData == orginData {
 		return 0.0
 	}
-	//beMatchedData = ReplaceAll(beMatchedData, "[`~!@#$%^&*()_\\-+=|{}':;',\\[\\]\\\\.<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]", "")
-	//beMatchedData = strings.ReplaceAll(beMatchedData, " ", "")
+	// beMatchedData = ReplaceAll(beMatchedData, "[`~!@#$%^&*()_\\-+=|{}':;',\\[\\]\\\\.<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]", "")
+	// beMatchedData = strings.ReplaceAll(beMatchedData, " ", "")
 	score = 1 - (float32(len(beMatchedData)) / (float32(len(orginData))))
 	return score
 }
@@ -186,14 +200,16 @@ func CalMatchScores(beMatchedData string, keyword []string) float32 {
 	if beMatchedData == orginData {
 		return 0.0
 	}
-	//beMatchedData = ReplaceAll(beMatchedData, "[`~!@#$%^&*()_\\-+=|{}':;',\\[\\]\\\\.<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]", "")
-	//beMatchedData = strings.ReplaceAll(beMatchedData, " ", "")
+	// beMatchedData = ReplaceAll(beMatchedData, "[`~!@#$%^&*()_\\-+=|{}':;',\\[\\]\\\\.<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]", "")
+	// beMatchedData = strings.ReplaceAll(beMatchedData, " ", "")
 	score = 1 - (float32(len(beMatchedData)) / (float32(len(orginData))))
 	return score
 }
 
-var leftPairedSymbols = width.Narrow.String("(（《<[{「【『\"'")
-var rightPairedSymbols = width.Narrow.String(")）》>]}」】』\"'")
+var (
+	leftPairedSymbols  = width.Narrow.String("(（《<[{「【『\"'")
+	rightPairedSymbols = width.Narrow.String(")）》>]}」】』\"'")
+)
 
 func parsePairedSymbols(data string, sub string, substr []string, keyword map[string]int) string {
 	data = strings.TrimSpace(data)
@@ -234,6 +250,7 @@ func parsePairedSymbols(data string, sub string, substr []string, keyword map[st
 	}
 	return data
 }
+
 func parseKeyWord(data string, substr []string, keyword map[string]int) {
 	if len(data) == 0 {
 		return
@@ -253,7 +270,6 @@ func parseKeyWord(data string, substr []string, keyword map[string]int) {
 				}
 				data = strings.ReplaceAll(data, sub, "")
 			}
-
 		}
 	}
 	data = strings.TrimSpace(data)
@@ -278,8 +294,9 @@ func (a ByLenSort) Less(i, j int) bool {
 func (a ByLenSort) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
+
 func ParseSongNameKeyWord(data string) []string {
-	var keyword = make(map[string]int)
+	keyword := make(map[string]int)
 	if len(data) > 0 {
 		data = width.Narrow.String(strings.ToUpper(data))
 		substr := []string{"(", "[", "{", "<", "《", "「", "【", "『", "+", "/", ":", ",", "｡", " "}
@@ -289,14 +306,15 @@ func ParseSongNameKeyWord(data string) []string {
 		parseKeyWord(data, substr, keyword)
 	}
 	keys := make([]string, 0, len(keyword))
-	for k, _ := range keyword {
+	for k := range keyword {
 		keys = append(keys, k)
 	}
 	sort.Sort(ByLenSort(keys))
 	return keys
 }
+
 func ParseSingerKeyWord(data string) []string {
-	var keyword = make(map[string]int)
+	keyword := make(map[string]int)
 	if len(data) > 0 {
 		data = strings.TrimSpace(strings.ToUpper(data))
 		substr := []string{"、", ",", " ", "､"}
@@ -304,7 +322,7 @@ func ParseSingerKeyWord(data string) []string {
 
 	}
 	keys := make([]string, 0, len(keyword))
-	for k, _ := range keyword {
+	for k := range keyword {
 		keys = append(keys, k)
 	}
 	sort.Sort(ByLenSort(keys))
@@ -336,7 +354,7 @@ func ParseCookies(file string) []*http.Cookie {
 }
 
 func Combination(WordList []string) (result []string) {
-	if WordList == nil || len(WordList) == 0 {
+	if len(WordList) == 0 {
 		return []string{
 			"",
 		}

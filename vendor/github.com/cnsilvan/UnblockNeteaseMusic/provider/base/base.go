@@ -2,6 +2,7 @@ package base
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -18,6 +19,31 @@ func PreSearchSong(song common.SearchSong) common.SearchSong {
 	song.ArtistsName = strings.ToUpper(song.ArtistsName)
 	return song
 }
+
+func FetchV2(url string, cookies []*http.Cookie, header http.Header, proxy bool) (result []byte, err error) {
+	clientRequest := network.ClientRequest{
+		Method:    http.MethodGet,
+		RemoteUrl: url,
+		Cookies:   cookies,
+		Header:    header,
+		Proxy:     proxy,
+	}
+	resp, err := network.Request(&clientRequest)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = errors.New("StatusCode :" + strconv.Itoa(resp.StatusCode))
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := network.StealResponseBody(resp)
+	if err != nil {
+		return nil, err
+	}
+	return io.ReadAll(body)
+}
+
 func Fetch(url string, cookies []*http.Cookie, header http.Header, proxy bool) (result map[string]interface{}, err error) {
 	clientRequest := network.ClientRequest{
 		Method:    http.MethodGet,
@@ -42,6 +68,7 @@ func Fetch(url string, cookies []*http.Cookie, header http.Header, proxy bool) (
 	result = utils.ParseJsonV2(body)
 	return result, nil
 }
+
 func CalScore(song common.SearchSong, songName string, singerName string, index int, maxIndex int) (float32, bool) {
 	if song.OrderBy == common.MatchedScoreDesc {
 		if strings.Contains(songName, "伴奏") && !strings.Contains(song.Keyword, "伴奏") {
@@ -72,11 +99,12 @@ func CalScore(song common.SearchSong, songName string, singerName string, index 
 		}
 		songMatchScore := songNameSores*0.55 + artistsNameSores*0.35 + 0.1*float32(maxIndex-index)/float32(maxIndex)
 		return songMatchScore, true
-	} else if song.OrderBy == common.PlatformDefault {
-
 	}
+	// else if song.OrderBy == common.PlatformDefault {
+	// }
 	return 0, true
 }
+
 func AfterSearchSong(song common.SearchSong, songs []*common.Song) []*common.Song {
 	if song.OrderBy == common.MatchedScoreDesc && len(songs) > 1 {
 		sort.Sort(common.SongSlice(songs))
