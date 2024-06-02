@@ -44,7 +44,7 @@ require (
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776 // indirect
 	github.com/forgoer/openssl v1.6.0 // indirect
 	github.com/go-flac/go-flac v1.0.0 // indirect
-	github.com/go-musicfox/requests v0.2.1 // indirect
+	github.com/go-musicfox/requests v0.2.2 // indirect
 	github.com/gomodule/redigo v1.8.9 // indirect
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/gookit/goutil v0.6.10 // indirect
