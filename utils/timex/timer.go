@@ -1,4 +1,4 @@
-package utils
+package timex
 
 import (
 	"sync"

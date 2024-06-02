@@ -9,7 +9,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 )
 
 func NewConfigCommand() *gcli.Command {
@@ -17,7 +17,7 @@ func NewConfigCommand() *gcli.Command {
 		Name:   "config",
 		UseFor: "Print configuration file to be loaded",
 		Func: func(_ *gcli.Command, _ []string) error {
-			var configPath = util.SetFgStyle(filepath.Join(utils.GetLocalDataDir(), types.AppIniFile), termenv.ANSICyan)
+			var configPath = util.SetFgStyle(filepath.Join(app.DataRootDir(), types.AppIniFile), termenv.ANSICyan)
 			fmt.Printf("Loaded Configuration File:\n\t%s\n", configPath)
 			return nil
 		},

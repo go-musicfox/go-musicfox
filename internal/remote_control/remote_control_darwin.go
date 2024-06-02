@@ -10,7 +10,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 )
 
 var stateMap = map[types.State]mediaplayer.MPNowPlayingPlaybackState{
@@ -112,7 +112,7 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 	setKV(core.String(mediaplayer.MPMediaItemPropertyAlbumArtist), core.String(info.AlbumArtist).NSObject)
 
 	if info.PicUrl != "" {
-		picUrl := utils.AddResizeParamForPicUrl(info.PicUrl, 60)
+		picUrl := app.AddResizeParamForPicUrl(info.PicUrl, 60)
 		s.l.Lock()
 		if s.curArtworkUrl != picUrl {
 			var lastArtwork = s.curArtwork

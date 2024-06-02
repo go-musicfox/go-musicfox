@@ -8,25 +8,25 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
-func FetchUserPlaylists(userId int64, limit int, offset int) (codeType utils.ResCode, playlists []structs.Playlist, hasMore bool) {
+func FetchUserPlaylists(userId int64, limit int, offset int) (codeType _struct.ResCode, playlists []structs.Playlist, hasMore bool) {
 	userPlaylists := service.UserPlaylistService{
 		Uid:    strconv.FormatInt(userId, 10),
 		Limit:  strconv.Itoa(limit),
 		Offset: strconv.Itoa(offset),
 	}
 	code, response := userPlaylists.UserPlaylist()
-	codeType = utils.CheckCode(code)
-	if codeType != utils.Success {
+	codeType = _struct.CheckCode(code)
+	if codeType != _struct.Success {
 		return
 	}
 
-	playlists = utils.GetPlaylists(response)
+	playlists = _struct.GetPlaylists(response)
 	menus := make([]model.MenuItem, len(playlists))
 	for i := range playlists {
-		menus[i] = model.MenuItem{Title: utils.ReplaceSpecialStr(playlists[i].Name)}
+		menus[i] = model.MenuItem{Title: _struct.ReplaceSpecialStr(playlists[i].Name)}
 	}
 
 	// 是否有更多
@@ -42,7 +42,7 @@ func FetchUserPlaylistByName(userId int64, playlistName string, getAll bool) (so
 	var (
 		playlistId int64
 		offset     = 0
-		codeType   utils.ResCode
+		codeType   _struct.ResCode
 		playlists  []structs.Playlist
 		hasMore    bool
 	)
@@ -50,7 +50,7 @@ func FetchUserPlaylistByName(userId int64, playlistName string, getAll bool) (so
 Loop:
 	for {
 		codeType, playlists, hasMore = FetchUserPlaylists(userId, 30, offset)
-		if codeType != utils.Success {
+		if codeType != _struct.Success {
 			err = NetworkErr
 			return
 		}
@@ -67,7 +67,7 @@ Loop:
 		}
 	}
 	codeType, songs = FetchSongsOfPlaylist(playlistId, getAll)
-	if codeType != utils.Success {
+	if codeType != _struct.Success {
 		err = NetworkErr
 		return
 	}

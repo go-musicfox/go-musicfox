@@ -10,7 +10,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type AlbumNewMenu struct {
@@ -66,8 +66,8 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := newAlbumService.AlbumNew()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -76,7 +76,7 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() model.Hook {
 			m.total = int(total)
 		}
 
-		m.albums = utils.GetNewAlbums(response)
+		m.albums = _struct.GetNewAlbums(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -84,7 +84,7 @@ func (m *AlbumNewMenu) BeforeEnterMenuHook() model.Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
 		}
 
 		return true, nil
@@ -103,8 +103,8 @@ func (m *AlbumNewMenu) BottomOutHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := newAlbumService.AlbumNew()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -113,7 +113,7 @@ func (m *AlbumNewMenu) BottomOutHook() model.Hook {
 			m.total = int(total)
 		}
 
-		albums := utils.GetNewAlbums(response)
+		albums := _struct.GetNewAlbums(response)
 
 		for _, album := range albums {
 			var artists []string
@@ -121,7 +121,7 @@ func (m *AlbumNewMenu) BottomOutHook() model.Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
 		}
 
 		m.albums = append(m.albums, albums...)

@@ -8,7 +8,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type CloudMenu struct {
@@ -46,7 +47,7 @@ func (m *CloudMenu) MenuViews() []model.MenuItem {
 
 func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
@@ -61,11 +62,11 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 			Limit:  strconv.Itoa(m.limit),
 		}
 		code, response := cloudService.UserCloud()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -73,8 +74,8 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		m.songs = utils.GetSongsOfCloud(response)
-		m.menus = utils.GetViewFromSongs(m.songs)
+		m.songs = _struct.GetSongsOfCloud(response)
+		m.menus = menux.GetViewFromSongs(m.songs)
 
 		return true, nil
 	}
@@ -92,14 +93,14 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 			Limit:  strconv.Itoa(m.limit),
 		}
 		code, response := cloudService.UserCloud()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -107,8 +108,8 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		songs := utils.GetSongsOfCloud(response)
-		menus := utils.GetViewFromSongs(songs)
+		songs := _struct.GetSongsOfCloud(response)
+		menus := menux.GetViewFromSongs(songs)
 
 		m.songs = append(m.songs, songs...)
 		m.menus = append(m.menus, menus...)

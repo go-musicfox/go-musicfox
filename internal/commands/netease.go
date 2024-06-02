@@ -12,7 +12,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
 )
 
 func NewPlayerCommand() *gcli.Command {
@@ -26,7 +26,7 @@ func NewPlayerCommand() *gcli.Command {
 
 func runPlayer(_ *gcli.Command, _ []string) error {
 	if GlobalOptions.PProfMode {
-		utils.Go(func() {
+		errorx.Go(func() {
 			panic(http.ListenAndServe(":"+strconv.Itoa(configs.ConfigRegistry.Main.PProfPort), nil))
 		}, true)
 	}

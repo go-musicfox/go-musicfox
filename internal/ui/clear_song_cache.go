@@ -4,7 +4,8 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
+	"github.com/go-musicfox/go-musicfox/utils/storagex"
 )
 
 type ClearSongCacheMenu struct {
@@ -37,15 +38,15 @@ func (m *ClearSongCacheMenu) SubMenu(_ *model.App, index int) model.Menu {
 	loading := model.NewLoading(m.netease.MustMain())
 	loading.Start()
 	defer loading.Complete()
-	err := utils.ClearMusicCache()
+	err := storagex.ClearMusicCache()
 	if err != nil {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "清除缓存失败",
 			Text:    err.Error(),
 			GroupId: types.GroupID,
 		})
 	} else {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "清除缓存成功",
 			Text:    "缓存已清除",
 			GroupId: types.GroupID,

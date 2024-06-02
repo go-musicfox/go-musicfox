@@ -9,7 +9,8 @@ import (
 
 	ds2 "github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type SearchResultMenu struct {
@@ -18,7 +19,7 @@ type SearchResultMenu struct {
 	offset     int
 	searchType SearchType
 	keyword    string
-	result     interface{}
+	result     any
 }
 
 var playableTypes = map[SearchType]bool{
@@ -114,8 +115,8 @@ func (m *SearchResultMenu) BottomOutHook() model.Hook {
 		}
 		code, response = searchService.Search()
 
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			m.offset -= types.SearchPageSize
 			return false, nil
 		}
@@ -145,32 +146,32 @@ func (m *SearchResultMenu) BeforeEnterMenuHook() model.Hook {
 func (m *SearchResultMenu) appendResult(response []byte) {
 	switch m.searchType {
 	case StSingleSong, StLyric:
-		appendSongs := utils.GetSongsOfSearchResult(response)
+		appendSongs := _struct.GetSongsOfSearchResult(response)
 		songs, _ := m.result.([]ds2.Song)
 		songs = append(songs, appendSongs...)
 		m.result = songs
 	case StAlbum:
-		appendAlbums := utils.GetAlbumsOfSearchResult(response)
+		appendAlbums := _struct.GetAlbumsOfSearchResult(response)
 		albums, _ := m.result.([]ds2.Album)
 		albums = append(albums, appendAlbums...)
 		m.result = albums
 	case StSinger:
-		appendArtists := utils.GetArtistsOfSearchResult(response)
+		appendArtists := _struct.GetArtistsOfSearchResult(response)
 		artists, _ := m.result.([]ds2.Artist)
 		artists = append(artists, appendArtists...)
 		m.result = artists
 	case StPlaylist:
-		appendPlaylists := utils.GetPlaylistsOfSearchResult(response)
+		appendPlaylists := _struct.GetPlaylistsOfSearchResult(response)
 		playlists, _ := m.result.([]ds2.Playlist)
 		playlists = append(playlists, appendPlaylists...)
 		m.result = playlists
 	case StUser:
-		appendUsers := utils.GetUsersOfSearchResult(response)
+		appendUsers := _struct.GetUsersOfSearchResult(response)
 		users, _ := m.result.([]ds2.User)
 		users = append(users, appendUsers...)
 		m.result = users
 	case StRadio:
-		appendDjRadios := utils.GetDjRadiosOfSearchResult(response)
+		appendDjRadios := _struct.GetDjRadiosOfSearchResult(response)
 		djRadios, _ := m.result.([]ds2.DjRadio)
 		djRadios = append(djRadios, appendDjRadios...)
 		m.result = djRadios
@@ -180,17 +181,17 @@ func (m *SearchResultMenu) appendResult(response []byte) {
 func (m *SearchResultMenu) convertMenus() {
 	switch resultWithType := m.result.(type) {
 	case []ds2.Song:
-		m.menus = utils.GetViewFromSongs(resultWithType)
+		m.menus = menux.GetViewFromSongs(resultWithType)
 	case []ds2.Album:
-		m.menus = utils.GetViewFromAlbums(resultWithType)
+		m.menus = menux.GetViewFromAlbums(resultWithType)
 	case []ds2.Playlist:
-		m.menus = utils.GetViewFromPlaylists(resultWithType)
+		m.menus = menux.GetViewFromPlaylists(resultWithType)
 	case []ds2.Artist:
-		m.menus = utils.GetViewFromArtists(resultWithType)
+		m.menus = menux.GetViewFromArtists(resultWithType)
 	case []ds2.User:
-		m.menus = utils.GetViewFromUsers(resultWithType)
+		m.menus = menux.GetViewFromUsers(resultWithType)
 	case []ds2.DjRadio:
-		m.menus = utils.GetViewFromDjRadios(resultWithType)
+		m.menus = menux.GetViewFromDjRadios(resultWithType)
 	}
 }
 

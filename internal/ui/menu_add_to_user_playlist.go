@@ -9,7 +9,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type AddToUserPlaylistMenu struct {
@@ -58,7 +58,7 @@ func (m *AddToUserPlaylistMenu) SubMenu(_ *model.App, _ int) model.Menu {
 func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userId == CurUser && utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if m.userId == CurUser && _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
@@ -75,18 +75,18 @@ func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := userPlaylists.UserPlaylist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
 		var menus []model.MenuItem
-		m.playlists = utils.GetPlaylists(response)
+		m.playlists = _struct.GetPlaylists(response)
 		for _, playlist := range m.playlists {
-			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.menus = menus
 
@@ -117,17 +117,17 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := userPlaylists.UserPlaylist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(nil)
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
-		list := utils.GetPlaylists(response)
+		list := _struct.GetPlaylists(response)
 		for _, playlist := range list {
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
 		}
 
 		m.playlists = append(m.playlists, list...)

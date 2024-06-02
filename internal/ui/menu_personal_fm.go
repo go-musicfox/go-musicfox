@@ -7,7 +7,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type PersonalFmMenu struct {
@@ -47,14 +48,14 @@ func (m *PersonalFmMenu) BeforeEnterMenuHook() model.Hook {
 
 		personalFm := service.PersonalFmService{}
 		code, response := personalFm.PersonalFm()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
 		// 响应中获取数据
-		m.songs = utils.GetFmSongs(response)
-		m.menus = utils.GetViewFromSongs(m.songs)
+		m.songs = _struct.GetFmSongs(response)
+		m.menus = menux.GetViewFromSongs(m.songs)
 
 		return true, nil
 	}
@@ -64,12 +65,12 @@ func (m *PersonalFmMenu) BottomOutHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		personalFm := service.PersonalFmService{}
 		code, response := personalFm.PersonalFm()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
-		songs := utils.GetFmSongs(response)
-		menus := utils.GetViewFromSongs(songs)
+		songs := _struct.GetFmSongs(response)
+		menus := menux.GetViewFromSongs(songs)
 
 		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)
