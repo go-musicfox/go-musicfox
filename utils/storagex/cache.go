@@ -19,6 +19,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
+	"github.com/go-musicfox/go-musicfox/utils/mathx"
 )
 
 func getCacheUri(songId int64) (uri string, ok bool) {
@@ -127,7 +128,7 @@ func PlayableUrlSong(song structs.Song) (url, musicType string, err error) {
 	}
 
 	if size, _ := jsonparser.GetInt(response, "data", "[0]", "size"); size != 0 {
-		slog.Info("music size", slog.Int64("size", size))
+		slog.Info("music size", slog.String("size", mathx.FormatBytes(size)))
 	}
 
 	url, _ = jsonparser.GetString(response, "data", "[0]", "url")
