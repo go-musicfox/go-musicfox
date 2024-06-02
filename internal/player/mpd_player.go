@@ -2,6 +2,7 @@ package player
 
 import (
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"path"
 	"strconv"
@@ -12,7 +13,9 @@ import (
 	"github.com/fhs/gompd/v2/mpd"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
+	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 var stateMapping = map[string]types.State{
@@ -26,7 +29,7 @@ func mpdErrorHandler(err error, ignore bool) {
 		return
 	}
 
-	utils.Logger().Printf("[ERROR] mpdPlayer, err: %+v", err)
+	slog.Error("mpdPlayer caught err", slogx.Error(err))
 	if !ignore {
 		panic(err)
 	}
@@ -43,7 +46,7 @@ type mpdPlayer struct {
 
 	curMusic       UrlMusic
 	curSongId      int
-	timer          *utils.Timer
+	timer          *timex.Timer
 	latestPlayTime time.Time //避免切歌时产生的stop信号造成影响
 
 	volume    int
@@ -67,7 +70,7 @@ func NewMpdPlayer(bin, configFile, network, address string) *mpdPlayer {
 		killCmd.Args = append(killCmd.Args, "--kill")
 		output, err := killCmd.CombinedOutput()
 		if err != nil {
-			utils.Logger().Printf("[WARNIG] MPD kill失败:%s, 详情:\n%s", err, output)
+			slog.Warn("MPD kill失败", slogx.Error(err), slogx.Bytes("detail", output))
 		}
 	}
 
@@ -104,8 +107,8 @@ func NewMpdPlayer(bin, configFile, network, address string) *mpdPlayer {
 		close:      make(chan struct{}),
 	}
 
-	utils.WaitGoStart(p.listen)
-	utils.WaitGoStart(p.watch)
+	errorx.WaitGoStart(p.listen)
+	errorx.WaitGoStart(p.watch)
 
 	p.syncMpdStatus("")
 	return p
@@ -225,7 +228,7 @@ func (p *mpdPlayer) listen() {
 			mpdErrorHandler(err, false)
 
 			// 计时器
-			p.timer = utils.NewTimer(utils.Options{
+			p.timer = timex.NewTimer(timex.Options{
 				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
 				OnRun:          func(started bool) {},

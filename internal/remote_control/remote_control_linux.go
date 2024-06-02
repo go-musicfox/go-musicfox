@@ -314,7 +314,7 @@ func (s *RemoteControl) Release() {
 	_ = s.dbus.Close()
 }
 
-func newProp(value interface{}, cb func(*prop.Change) *dbus.Error) *prop.Prop {
+func newProp(value any, cb func(*prop.Change) *dbus.Error) *prop.Prop {
 	return &prop.Prop{
 		Value:    value,
 		Writable: true,

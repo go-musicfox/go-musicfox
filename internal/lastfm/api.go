@@ -2,6 +2,7 @@ package lastfm
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/pkg/errors"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 type AuthInvalid struct {
@@ -35,18 +36,19 @@ func (c *Client) errorHandle(e error) (bool, error) {
 	if e == nil {
 		return false, nil
 	}
-	if lastfmErr, ok := e.(*lastfmgo.LastfmError); ok {
+	var lastfmErr *lastfmgo.LastfmError
+	if errors.As(e, &lastfmErr) {
 		switch lastfmErr.Code {
 		case 9: // invalid session key
 			return false, AuthInvalid{lastfmErr}
 		case 11, 16: // server error
 			return true, e
 		default:
-			utils.Logger().Printf("[ERROR] Lastfm request err: %+v", lastfmErr)
+			slog.Error("Lastfm request failed", slogx.Error(lastfmErr))
 			return false, e
 		}
 	}
-	utils.Logger().Printf("[ERROR] Lastfm other err: %+v", e)
+	slog.Error("Lastfm other err", slogx.Error(e))
 	return false, e
 }
 
@@ -81,7 +83,7 @@ func (c *Client) GetSession(token string) (sessionKey string, err error) {
 	return
 }
 
-func (c *Client) UpdateNowPlaying(args map[string]interface{}) error {
+func (c *Client) UpdateNowPlaying(args map[string]any) error {
 	if c.api == nil {
 		return errors.New("lastfm key或secret为空")
 	}
@@ -98,7 +100,7 @@ func (c *Client) UpdateNowPlaying(args map[string]interface{}) error {
 	return err
 }
 
-func (c *Client) Scrobble(args map[string]interface{}) error {
+func (c *Client) Scrobble(args map[string]any) error {
 	if c.api == nil {
 		return errors.New("lastfm key或secret为空")
 	}
@@ -115,7 +117,7 @@ func (c *Client) Scrobble(args map[string]interface{}) error {
 	return err
 }
 
-func (c *Client) GetUserInfo(args map[string]interface{}) (lastfmgo.UserGetInfo, error) {
+func (c *Client) GetUserInfo(args map[string]any) (lastfmgo.UserGetInfo, error) {
 	if c.api == nil {
 		return lastfmgo.UserGetInfo{}, errors.New("lastfm key或secret为空")
 	}
@@ -143,7 +145,7 @@ func Report(client *Client, phase ReportPhase, song structs.Song, passedTime tim
 	switch phase {
 	case ReportPhaseStart:
 		go func(song structs.Song) {
-			_ = client.UpdateNowPlaying(map[string]interface{}{
+			_ = client.UpdateNowPlaying(map[string]any{
 				"artist":   song.ArtistName(),
 				"track":    song.Name,
 				"album":    song.Album.Name,
@@ -155,7 +157,7 @@ func Report(client *Client, phase ReportPhase, song structs.Song, passedTime tim
 		passedSeconds := passedTime.Seconds()
 		if passedSeconds >= duration/2 {
 			go func(song structs.Song, passed time.Duration) {
-				_ = client.Scrobble(map[string]interface{}{
+				_ = client.Scrobble(map[string]any{
 					"artist":    song.ArtistName(),
 					"track":     song.Name,
 					"album":     song.Album.Name,

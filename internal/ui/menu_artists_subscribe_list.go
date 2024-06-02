@@ -8,7 +8,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type ArtistsSubscribeListMenu struct {
@@ -59,11 +59,11 @@ func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := artistService.ArtistSublist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -72,9 +72,9 @@ func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		m.artists = utils.GetArtistsSublist(response)
+		m.artists = _struct.GetArtistsSublist(response)
 		for _, artist := range m.artists {
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(artist.Name)})
 		}
 
 		return true, nil
@@ -92,11 +92,11 @@ func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := artistService.ArtistSublist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -105,9 +105,9 @@ func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		m.artists = utils.GetArtistsSublist(response)
+		m.artists = _struct.GetArtistsSublist(response)
 		for _, artist := range m.artists {
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(artist.Name)})
 		}
 
 		return true, nil

@@ -10,7 +10,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type AlbumSubscribeListMenu struct {
@@ -61,11 +61,11 @@ func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := albumService.AlbumSublist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -74,7 +74,7 @@ func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		m.albums = utils.GetAlbumsSublist(response)
+		m.albums = _struct.GetAlbumsSublist(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -82,7 +82,7 @@ func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
 		}
 
 		return true, nil
@@ -100,11 +100,11 @@ func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := newAlbumService.AlbumSublist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -113,7 +113,7 @@ func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		albums := utils.GetAlbumsSublist(response)
+		albums := _struct.GetAlbumsSublist(response)
 
 		for _, album := range albums {
 			var artists []string
@@ -121,7 +121,7 @@ func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
 		}
 
 		m.albums = append(m.albums, albums...)

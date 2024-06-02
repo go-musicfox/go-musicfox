@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -20,8 +21,12 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
+	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/likelist"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
+	"github.com/go-musicfox/go-musicfox/utils/version"
 )
 
 type Netease struct {
@@ -61,7 +66,7 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 
 func (n *Netease) InitHook(_ *model.App) {
 	config := configs.ConfigRegistry
-	projectDir := utils.GetLocalDataDir()
+	projectDir := app.DataRootDir()
 
 	// 全局文件Jar
 	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(projectDir, "cookie"), nil)
@@ -71,7 +76,7 @@ func (n *Netease) InitHook(_ *model.App) {
 	storage.DBManager = new(storage.LocalDBManager)
 
 	// 获取用户信息
-	utils.Go(func() {
+	errorx.Go(func() {
 		table := storage.NewTable()
 
 		// 获取用户信息
@@ -134,18 +139,16 @@ func (n *Netease) InitHook(_ *model.App) {
 			)
 			jsonStr, _ := table.GetByKVModel(extInfo)
 			if len(jsonStr) != 0 {
-				if err := json.Unmarshal(jsonStr, &extInfo); err == nil && utils.CompareVersion(extInfo.StorageVersion, types.AppVersion, true) {
+				if err := json.Unmarshal(jsonStr, &extInfo); err == nil && version.CompareVersion(extInfo.StorageVersion, types.AppVersion, true) {
 					needUpdate = false
 				}
 			}
 			if needUpdate {
-				localDir := utils.GetLocalDataDir()
-
 				// 删除旧notifier
-				_ = os.RemoveAll(filepath.Join(localDir, "musicfox-notifier.app"))
+				_ = os.RemoveAll(filepath.Join(projectDir, "musicfox-notifier.app"))
 
 				// 删除旧logo
-				_ = os.Remove(filepath.Join(localDir, types.DefaultNotifyIcon))
+				_ = os.Remove(filepath.Join(projectDir, types.DefaultNotifyIcon))
 
 				extInfo.StorageVersion = types.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)
@@ -154,7 +157,7 @@ func (n *Netease) InitHook(_ *model.App) {
 
 		// 刷新like list
 		if n.user != nil {
-			like_list.RefreshLikeList(n.user.UserId)
+			likelist.RefreshLikeList(n.user.UserId)
 			n.Rerender(false)
 		}
 
@@ -179,7 +182,7 @@ func (n *Netease) InitHook(_ *model.App) {
 
 				_ = table.SetByKVModel(storage.LastSignIn{}, today)
 
-				utils.Notify(utils.NotifyContent{
+				notify.Notify(notify.NotifyContent{
 					Title:   "签到成功",
 					Text:    "今日手机、PC端签到成功",
 					Url:     types.AppGithubUrl,
@@ -189,14 +192,14 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		// 刷新登录状态
-		if n.user != nil {
-			refreshLoginService := service.LoginRefreshService{}
-			refreshLoginService.LoginRefresh()
-		}
+		// if n.user != nil {
+		// 	refreshLoginService := service.LoginRefreshService{}
+		// 	refreshLoginService.LoginRefresh()
+		// }
 
 		// 检查更新
 		if config.Startup.CheckUpdate {
-			if ok, newVersion := utils.CheckUpdate(); ok {
+			if ok, newVersion := version.CheckUpdate(); ok {
 				if runtime.GOOS == "windows" {
 					n.MustMain().EnterMenu(
 						NewCheckUpdateMenu(newBaseMenu(n)),
@@ -205,7 +208,7 @@ func (n *Netease) InitHook(_ *model.App) {
 					n.Rerender(false)
 				}
 
-				utils.Notify(utils.NotifyContent{
+				notify.Notify(notify.NotifyContent{
 					Title: "发现新版本: " + newVersion,
 					Text:  "去看看呗",
 					Url:   types.AppLatestReleases,
@@ -217,8 +220,8 @@ func (n *Netease) InitHook(_ *model.App) {
 		if config.AutoPlayer.Enable {
 			autoPlayer := automator.NewAutoPlayer(n.user, n.player, config.AutoPlayer)
 			if err := autoPlayer.Start(); err != nil {
-				utils.Logger().Printf("自动播放失败: %v", err)
-				utils.Notify(utils.NotifyContent{
+				slog.Error("自动播放失败", slogx.Error(err))
+				notify.Notify(notify.NotifyContent{
 					Title: "自动播放失败",
 					Text:  err.Error(),
 				})

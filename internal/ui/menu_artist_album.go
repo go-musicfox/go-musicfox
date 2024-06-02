@@ -8,7 +8,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type ArtistAlbumMenu struct {
@@ -54,13 +55,13 @@ func (m *ArtistAlbumMenu) BeforeEnterMenuHook() model.Hook {
 			Limit:  "50",
 		}
 		code, response := artistAlbumService.ArtistAlbum()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
-		m.albums = utils.GetArtistHotAlbums(response)
-		m.menus = utils.GetViewFromAlbums(m.albums)
+		m.albums = _struct.GetArtistHotAlbums(response)
+		m.menus = menux.GetViewFromAlbums(m.albums)
 
 		return true, nil
 	}

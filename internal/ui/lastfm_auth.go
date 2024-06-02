@@ -1,11 +1,12 @@
 package ui
 
 import (
+	"log/slog"
+
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/storage"
-	"github.com/go-musicfox/go-musicfox/utils"
 )
 
 type LastfmAuth struct {
@@ -42,7 +43,7 @@ func (m *LastfmAuth) BeforeEnterMenuHook() model.Hook {
 		if m.url != "" {
 			_ = open.Start(m.url)
 		}
-		utils.Logger().Println("[lastfm] auth url: " + m.url)
+		slog.Info("lastfm auth url", slog.String("url", m.url))
 		return true, nil
 	}
 }
@@ -61,7 +62,7 @@ func (m *LastfmAuth) SubMenu(mod_el *model.App, _ int) model.Menu {
 		loading.Complete()
 		return NewLastfmRes(m.baseMenu, "授权", err, 1)
 	}
-	user, err := m.netease.lastfm.GetUserInfo(map[string]interface{}{})
+	user, err := m.netease.lastfm.GetUserInfo(map[string]any{})
 	loading.Complete()
 	if err != nil {
 		return NewLastfmRes(m.baseMenu, "授权", err, 1)

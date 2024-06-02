@@ -5,7 +5,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/version"
 )
 
 type CheckUpdateMenu struct {
@@ -44,7 +44,7 @@ func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu {
 
 func (m *CheckUpdateMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		m.hasUpdate, _ = utils.CheckUpdate()
+		m.hasUpdate, _ = version.CheckUpdate()
 		return true, nil
 	}
 }

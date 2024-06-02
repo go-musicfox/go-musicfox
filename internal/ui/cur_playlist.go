@@ -4,7 +4,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
 )
 
 const CurPlaylistKey = "cur_playlist"
@@ -19,7 +19,7 @@ func NewCurPlaylist(base baseMenu, songs []structs.Song) *CurPlaylist {
 	return &CurPlaylist{
 		baseMenu: base,
 		songs:    songs,
-		menus:    utils.GetViewFromSongs(songs),
+		menus:    menux.GetViewFromSongs(songs),
 	}
 }
 
@@ -54,7 +54,7 @@ func (m *CurPlaylist) BottomOutHook() model.Hook {
 		}
 		res, page := hook(main)
 		m.songs = m.netease.player.playlist
-		m.menus = utils.GetViewFromSongs(m.songs)
+		m.menus = menux.GetViewFromSongs(m.songs)
 		return res, page
 	}
 }

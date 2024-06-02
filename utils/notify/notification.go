@@ -1,4 +1,4 @@
-package utils
+package notify
 
 import (
 	"fmt"
@@ -14,6 +14,8 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/filex"
 )
 
 type osxNotificator struct {
@@ -22,10 +24,10 @@ type osxNotificator struct {
 }
 
 func (o osxNotificator) getNotifierCmd() string {
-	localDir := GetLocalDataDir()
+	localDir := app.DataRootDir()
 	notifierPath := filepath.Join(localDir, "musicfox-notifier.app")
 	if _, err := os.Stat(notifierPath); os.IsNotExist(err) {
-		err = CopyDirFromEmbed("embed/musicfox-notifier.app", notifierPath)
+		err = filex.CopyDirFromEmbed("embed/musicfox-notifier.app", notifierPath)
 		if err != nil {
 			log.Printf("copy musicfox-notifier.app failed, err: %+v", errors.WithStack(err))
 		}
@@ -125,12 +127,12 @@ func Notify(content NotifyContent) {
 	})
 
 	if runtime.GOOS != "darwin" {
-		localDir := GetLocalDataDir()
+		localDir := app.DataRootDir()
 		content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
 			content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)
 			// 写入logo文件
-			err = CopyFileFromEmbed("embed/logo.png", content.Icon)
+			err = filex.CopyFileFromEmbed("embed/logo.png", content.Icon)
 			if err != nil {
 				log.Printf("copy logo.png failed, err: %+v", errors.WithStack(err))
 			}

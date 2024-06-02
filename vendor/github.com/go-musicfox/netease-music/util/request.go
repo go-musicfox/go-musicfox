@@ -13,11 +13,21 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/cnsilvan/UnblockNeteaseMusic/processor"
 	"github.com/go-musicfox/requests"
+)
+
+const (
+	iosAppVersion = "9.0.65"
+)
+
+var (
+	globalDeviceId string
+	deviceIdOnce   sync.Once
 )
 
 type Options struct {
@@ -30,33 +40,14 @@ type Options struct {
 }
 
 func chooseUserAgent(ua string) string {
-	userAgentList := []string{
-		"Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1",
-		"Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1",
-		"Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Mobile Safari/537.36",
-		"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Mobile Safari/537.36",
-		"Mozilla/5.0 (Linux; Android 5.1.1; Nexus 6 Build/LYZ28E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Mobile Safari/537.36",
-		"Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_2 like Mac OS X) AppleWebKit/603.2.4 (KHTML, like Gecko) Mobile/14F89;GameHelper",
-		"Mozilla/5.0 (iPhone; CPU iPhone OS 10_0 like Mac OS X) AppleWebKit/602.1.38 (KHTML, like Gecko) Version/10.0 Mobile/14A300 Safari/602.1",
-		"Mozilla/5.0 (iPad; CPU OS 10_0 like Mac OS X) AppleWebKit/602.1.38 (KHTML, like Gecko) Version/10.0 Mobile/14A300 Safari/602.1",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:46.0) Gecko/20100101 Firefox/46.0",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/603.2.4 (KHTML, like Gecko) Version/10.1.1 Safari/603.2.4",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:46.0) Gecko/20100101 Firefox/46.0",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/13.10586",
+	userAgentList := map[string]string{
+		"mobile": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
+		"pc":     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
 	}
-
-	rand.Seed(time.Now().UnixNano())
-	index := 0
-	if ua == "" {
-		index = rand.Intn(len(userAgentList))
-	} else if ua == "mobile" {
-		index = rand.Intn(8)
-	} else {
-		index = rand.Intn(7) + 7
+	if ua == "mobile" {
+		return userAgentList["mobile"]
 	}
-	return userAgentList[index]
+	return userAgentList["pc"]
 }
 
 var cookieJar http.CookieJar
@@ -65,12 +56,31 @@ func SetGlobalCookieJar(jar http.CookieJar) {
 	cookieJar = jar
 }
 
+func CookieValueByName(cookies []*http.Cookie, name string, fallback string) string {
+	var cookie *http.Cookie
+	for _, v := range cookies {
+		if v.Name == name {
+			cookie = v
+			break
+		}
+	}
+	if cookie == nil || cookie.Value == "" {
+		return fallback
+	}
+	return cookie.Value
+}
+
 func CreateRequest(method, url string, data map[string]string, options *Options) (resCode float64, resResp []byte, resCookies []*http.Cookie) {
 	defer func() {
 		if resCode != 200 {
 			log.Printf("url: %s, method: %s, reqData: %#v, reqOptions: %+v, resCode: %f, resResp: %s, resCookies: %#v", url, method, data, options, resCode, resResp, resCookies)
 		}
 	}()
+
+	deviceIdOnce.Do(func() {
+		idx := rand.Intn(len(deviceIds) - 1)
+		globalDeviceId = deviceIds[idx]
+	})
 
 	if cookieJar == nil {
 		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
@@ -81,10 +91,34 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 	}
 	req := requests.Requests()
 
+	var (
+		os          = CookieValueByName(options.Cookies, "os", "ios")
+		appver      = CookieValueByName(options.Cookies, "appver", Ternary(os != "pc", iosAppVersion, ""))
+		osver       = CookieValueByName(options.Cookies, "osver", "17.4.1")
+		deviceId    = CookieValueByName(options.Cookies, "deviceId", globalDeviceId)
+		versionCode = CookieValueByName(options.Cookies, "versioncode", "140")
+		mobileName  = CookieValueByName(options.Cookies, "mobilename", "")
+		buildver    = CookieValueByName(options.Cookies, "buildver", strconv.FormatInt(time.Now().Unix(), 10))
+		resolution  = CookieValueByName(options.Cookies, "resolution", "1920x1080")
+		channel     = CookieValueByName(options.Cookies, "channel", "")
+		musicU      = CookieValueByName(options.Cookies, "MUSIC_U", "")
+		musicA      = CookieValueByName(options.Cookies, "MUSIC_A", "")
+		csrfToken   = CookieValueByName(options.Cookies, "__csrf", "")
+	)
+
 	req.Client.Jar = cookieJar
 	req.Header.Set("User-Agent", chooseUserAgent(options.Ua))
-	csrfToken := ""
-	musicU := ""
+	req.Header.Set("os", os)
+	req.Header.Set("appver", appver)
+
+	options.Cookies = append(options.Cookies,
+		&http.Cookie{Name: "__remember_me", Value: "true"},
+		&http.Cookie{Name: "os", Value: os},
+		&http.Cookie{Name: "appver", Value: appver},
+	)
+	if musicU != "" {
+		options.Cookies = append(options.Cookies, &http.Cookie{Name: "_ntes_nuid", Value: hex.EncodeToString([]byte(RandStringRunes(16)))})
+	}
 
 	if method == "POST" {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -92,22 +126,12 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 	if strings.Contains(url, "music.163.com") {
 		req.Header.Set("Referer", "https://music.163.com")
 	}
-	if options.Cookies != nil {
-		for _, cookie := range options.Cookies {
-			req.SetCookie(cookie)
-			if cookie.Name == "__csrf" {
-				csrfToken = cookie.Value
-			}
-			if cookie.Name == "MUSIC_U" {
-				musicU = cookie.Value
-				cookieNuid := &http.Cookie{Name: "_ntes_nuid", Value: hex.EncodeToString([]byte(RandStringRunes(16)))}
-				req.SetCookie(cookieNuid)
-			}
-		}
+	for _, cookie := range options.Cookies {
+		req.SetCookie(cookie)
 	}
 
-	if musicU == "" {
-		req.SetCookie(&http.Cookie{Name: "MUSIC_A", Value: ""})
+	if strings.Contains(url, "login") {
+		options.Cookies = append(options.Cookies, &http.Cookie{Name: "NMTID", Value: hex.EncodeToString([]byte(RandStringRunes(16)))})
 	}
 
 	if options.Crypto == "weapi" {
@@ -131,17 +155,24 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		}
 		rand.Seed(time.Now().UnixNano())
 		header := map[string]string{
-			"osver":       "",
-			"deviceId":    "",
-			"mobilename":  "",
-			"appver":      "6.1.1",
-			"versioncode": "140",
-			"buildver":    strconv.FormatInt(time.Now().Unix(), 10),
-			"resolution":  "1920x1080",
-			"os":          "android",
-			"channel":     "",
+			"osver":       osver,
+			"deviceId":    deviceId,
+			"appver":      appver,
+			"versioncode": versionCode,
+			"mobilename":  mobileName,
+			"buildver":    buildver,
+			"resolution":  resolution,
+			"__csrf":      csrfToken,
+			"os":          os,
+			"channel":     channel,
 			"requestId":   strconv.FormatInt(time.Now().Unix()*1000, 10) + strconv.Itoa(rand.Intn(1000)),
-			"MUSIC_U":     musicU,
+		}
+
+		if musicU != "" {
+			header["MUSIC_U"] = musicU
+		}
+		if musicA != "" {
+			header["MUSIC_A"] = musicA
 		}
 
 		for key, value := range header {

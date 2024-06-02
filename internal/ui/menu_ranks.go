@@ -7,7 +7,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type RanksMenu struct {
@@ -50,16 +50,16 @@ func (m *RanksMenu) BeforeEnterMenuHook() model.Hook {
 
 		rankListService := service.ToplistService{}
 		code, response := rankListService.Toplist()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
 		var menus []model.MenuItem
-		m.ranks = utils.GetRanks(response)
+		m.ranks = _struct.GetRanks(response)
 		for _, rank := range m.ranks {
 			frequency := fmt.Sprintf("[%s]", rank.Frequency)
-			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(rank.Name), Subtitle: frequency})
+			menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(rank.Name), Subtitle: frequency})
 		}
 		m.menus = menus
 

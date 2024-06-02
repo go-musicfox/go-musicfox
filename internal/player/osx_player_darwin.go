@@ -10,7 +10,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 type osxPlayer struct {
@@ -20,7 +21,7 @@ type osxPlayer struct {
 	handler *playerHandler
 
 	curMusic UrlMusic
-	timer    *utils.Timer
+	timer    *timex.Timer
 
 	volume    int
 	state     types.State
@@ -51,7 +52,7 @@ func NewOsxPlayer() *osxPlayer {
 	cocoa.NSNotificationCenter_defaultCenter().
 		AddObserverSelectorNameObject(p.handler.ID, sel_handleFinish, core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
 
-	utils.WaitGoStart(p.listen)
+	errorx.WaitGoStart(p.listen)
 
 	return p
 }
@@ -77,7 +78,7 @@ func (p *osxPlayer) listen() {
 				p.player.ReplaceCurrentItemWithPlayerItem(item)
 
 				// 计时器
-				p.timer = utils.NewTimer(utils.Options{
+				p.timer = timex.NewTimer(timex.Options{
 					Duration:       8760 * time.Hour,
 					TickerInternal: 500 * time.Millisecond,
 					OnRun:          func(started bool) {},

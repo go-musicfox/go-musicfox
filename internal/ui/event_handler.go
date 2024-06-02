@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/mathx"
 )
 
 type OperateType string
@@ -287,14 +287,14 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 		oldPage := main.CurPage()
 		main.NextPage()
 		if oldPage != main.CurPage() {
-			curIndex := utils.Min(main.SelectedIndex()+main.PageSize(), len(menu.MenuViews())-1)
+			curIndex := mathx.Min(main.SelectedIndex()+main.PageSize(), len(menu.MenuViews())-1)
 			main.SetSelectedIndex(curIndex)
 		}
 	case OperateTypePageUp:
 		oldPage := main.CurPage()
 		main.PrePage()
 		if oldPage != main.CurPage() {
-			curIndex := utils.Max(main.SelectedIndex()-main.PageSize(), 0)
+			curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
 			main.SetSelectedIndex(curIndex)
 		}
 	default:

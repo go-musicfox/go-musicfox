@@ -1,4 +1,4 @@
-package like_list
+package likelist
 
 import (
 	"strconv"
