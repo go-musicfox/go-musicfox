@@ -1,8 +1,12 @@
 package provider
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/cache"
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
@@ -11,11 +15,6 @@ import (
 	"github.com/cnsilvan/UnblockNeteaseMusic/provider/kuwo"
 	"github.com/cnsilvan/UnblockNeteaseMusic/provider/migu"
 	"github.com/cnsilvan/UnblockNeteaseMusic/provider/qq"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 )
@@ -23,7 +22,7 @@ import (
 type Provider interface {
 	SearchSong(song common.SearchSong) (songs []*common.Song)
 	GetSongUrl(searchSong common.SearchMusic, song *common.Song) *common.Song
-	//search&get url
+	// search&get url
 	ParseSong(searchSong common.SearchSong) *common.Song
 }
 
@@ -35,6 +34,7 @@ func Init() {
 		providers[source] = NewProvider(source)
 	}
 }
+
 func NewProvider(kind string) Provider {
 	switch kind {
 	case "kuwo":
@@ -49,12 +49,12 @@ func NewProvider(kind string) Provider {
 		return &kuwo.KuWo{}
 	}
 }
+
 func GetProvider(kind string) Provider {
 	if p, ok := providers[kind]; ok {
 		return p
 	}
 	return NewProvider(kind)
-
 }
 
 func UpdateCacheMd5(music common.SearchMusic, md5 string) {
@@ -63,21 +63,22 @@ func UpdateCacheMd5(music common.SearchMusic, md5 string) {
 		cache.PutSong(music, song)
 	}
 }
+
 func Find(music common.SearchMusic) common.Song {
-	log.Println(fmt.Sprintf("find song info :%+v", music))
+	slog.Info("find song info", slog.Any("music", music))
 	if song, ok := cache.GetSong(music); ok {
 		if len(song.Url) > 0 {
-			log.Println("hit cache:", utils.ToJson(song))
+			slog.Info("hit cache:" + utils.ToJson(song))
 			if checkCache(song) {
 				return *song
 			} else if strings.Index(music.Id, string(common.StartTag)) == 0 {
-				log.Println("but cache invalid")
+				slog.Info("but cache invalid")
 			} else {
 				cache.Delete(music)
-				log.Println("but cache invalid")
+				slog.Info("but cache invalid")
 			}
 		}
-		//log.Println("search:", utils.ToJson(song))
+		// log.Println("search:", utils.ToJson(song))
 		if strings.Index(music.Id, string(common.StartTag)) == 0 {
 			now := time.Now()
 			var re *common.Song
@@ -89,11 +90,10 @@ func Find(music common.SearchMusic) common.Song {
 				re = calculateSongInfo(GetProvider("migu").GetSongUrl(music, song))
 			} else if strings.Index(music.Id, string(common.QQTag)) == 0 {
 				re = calculateSongInfo(GetProvider("qq").GetSongUrl(music, song))
-			} else {
-
 			}
-			log.Println("consumed:", time.Since(now))
-			log.Println(utils.ToJson(re))
+			// else {
+			// }
+			slog.Info("consumed", slog.Any("time", time.Since(now)), slog.Any("json", utils.ToJson(re)))
 			if re != nil && len(re.Url) > 0 {
 				cache.PutSong(music, re)
 				return *re
@@ -117,13 +117,13 @@ func Find(music common.SearchMusic) common.Song {
 	if resp.StatusCode == 200 {
 		body, err2 := network.StealResponseBody(resp)
 		if err2 != nil {
-			log.Println("GetResponseBody fail")
+			slog.Info("GetResponseBody fail")
 			return songT
 		}
 		oJson := utils.ParseJsonV2(body)
 		if songs, ok := oJson["songs"].(common.SliceType); ok && len(songs) > 0 {
 			song := songs[0]
-			var searchSong = make(common.MapType, 8)
+			searchSong := make(common.MapType, 8)
 			searchSong["songId"] = songT.Id
 			var artists []string
 			switch song.(type) {
@@ -149,7 +149,6 @@ func Find(music common.SearchMusic) common.Song {
 						searchSong["artists"].(common.SliceType)[index].(common.MapType)["name"], ok = value.(common.MapType)["name"]
 						artists[index], ok = value.(common.MapType)["name"].(string)
 					}
-
 				}
 			default:
 
@@ -161,9 +160,9 @@ func Find(music common.SearchMusic) common.Song {
 			searchSong["artistsName"] = strings.Join(artists, " ")
 			searchSong["artistList"] = artists
 			searchSong["keyword"] = searchSong["name"].(string) + " " + searchSong["artistsName"].(string)
-			log.Println("search song:" + searchSong["keyword"].(string))
+			slog.Info("search song:" + searchSong["keyword"].(string))
 			songT = *parseSongFn(searchSong, music)
-			log.Println(utils.ToJson(songT))
+			slog.Info(utils.ToJson(songT))
 			return songT
 
 		} else {
@@ -186,7 +185,7 @@ func parseSongFn(key common.MapType, music common.SearchMusic) *common.Song {
 	}
 	searchArtistList := key["artistList"].([]string)
 	key["musicQuality"] = music.Quality
-	var ch = make(chan *common.Song)
+	ch := make(chan *common.Song)
 	now := time.Now()
 	searchSong := common.SearchSong{
 		Keyword: searchKeyword, Name: searchSongName,
@@ -195,11 +194,10 @@ func parseSongFn(key common.MapType, music common.SearchMusic) *common.Song {
 		ArtistList: searchArtistList,
 	}
 	songs := getSongFromAllSource(searchSong, ch)
-	log.Println("consumed:", time.Since(now))
+	slog.Info("consumed", slog.Any("time", time.Since(now)))
 	result := &common.Song{}
 	result.Size = 0
 	for _, song := range songs {
-
 		if song.MatchScore > result.MatchScore {
 			result = song
 		} else if song.MatchScore == result.MatchScore && song.Size > result.Size {
@@ -215,7 +213,6 @@ func parseSongFn(key common.MapType, music common.SearchMusic) *common.Song {
 		}
 	}
 	return result
-
 }
 
 func getSongFromAllSource(key common.SearchSong, ch chan *common.Song) []*common.Song {
@@ -230,7 +227,7 @@ func getSongFromAllSource(key common.SearchSong, ch chan *common.Song) []*common
 	}
 	for {
 		select {
-		case song, _ := <-ch:
+		case song := <-ch:
 			if len(song.Url) > 0 {
 				songs = append(songs, song)
 			}
@@ -257,7 +254,7 @@ func SearchSongFromAllSource(key common.SearchSong) []*common.Song {
 	}
 	for {
 		select {
-		case song, _ := <-ch:
+		case song := <-ch:
 			songs = append(songs, song...)
 			sum--
 			if sum <= 0 {
@@ -268,6 +265,7 @@ func SearchSongFromAllSource(key common.SearchSong) []*common.Song {
 		}
 	}
 }
+
 func calculateSongInfo(song *common.Song) *common.Song {
 	if len(song.Url) > 0 {
 		if len(song.Md5) > 0 && song.Br > 0 && song.Size > 0 {
@@ -291,7 +289,7 @@ func calculateSongInfo(song *common.Song) *common.Song {
 		}
 		resp, err := network.Request(&clientRequest)
 		if err != nil {
-			log.Println("processSong fail:", err)
+			slog.Error("processSong fail", slog.Any("error", err))
 			return song
 		}
 		defer resp.Body.Close()
@@ -318,11 +316,11 @@ func calculateSongInfo(song *common.Song) *common.Song {
 				song.Size, _ = strconv.ParseInt(size, 10, 64)
 			}
 			if song.Br == 0 {
-				//log.Println(utils.LogInterface(resp.Header))
+				// log.Println(utils.LogInterface(resp.Header))
 				if resp.Header.Get("content-length") == "8192" || resp.ContentLength == 8192 {
 					body, err := network.GetResponseBody(resp, false)
 					if err != nil {
-						log.Println("song GetResponseBody error:", err)
+						slog.Error("song GetResponseBody error", slog.Any("error", err))
 						return song
 					}
 					bitrate := decodeBitrate(body)
@@ -337,6 +335,7 @@ func calculateSongInfo(song *common.Song) *common.Song {
 	}
 	return song
 }
+
 func decodeBitrate(data []byte) int {
 	bitRateMap := map[int]map[int][]int{
 		0: {
@@ -356,21 +355,21 @@ func decodeBitrate(data []byte) int {
 		},
 	}
 
-	var pointer = 0
+	pointer := 0
 	if strings.EqualFold(string(data[0:4]), "fLaC") {
 		return 999
 	}
 	if strings.EqualFold(string(data[0:3]), "ID3") {
 		pointer = 6
-		var size = 0
+		size := 0
 		for index, value := range data[pointer : pointer+4] {
 			size = size + int((value&0x7f)<<(7*(3-index)))
 		}
 		pointer = 10 + size
 	}
 
-	for i := 0; i < len(data); i++ { //fix migu mp3
-		if data[pointer] != 0xff { //fail
+	for i := 0; i < len(data); i++ { // fix migu mp3
+		if data[pointer] != 0xff { // fail
 			pointer = pointer + 1
 			continue
 		} else {
@@ -395,6 +394,7 @@ func decodeBitrate(data []byte) int {
 	}
 	return 0
 }
+
 func checkCache(song *common.Song) bool {
 	header := make(http.Header, 1)
 	header["range"] = append(header["range"], "bytes=0-1")
@@ -407,7 +407,7 @@ func checkCache(song *common.Song) bool {
 	}
 	resp, err := network.Request(&clientRequest)
 	if err != nil {
-		log.Println("checkCache fail:", err)
+		slog.Error("checkCache fail", slog.Any("error", err))
 		return false
 	}
 	defer resp.Body.Close()

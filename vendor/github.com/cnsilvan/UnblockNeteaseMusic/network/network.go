@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"crypto/tls"
-	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 )
@@ -42,7 +43,6 @@ func init() {
 	httpClient = &http.Client{
 		Transport: tr,
 	}
-
 }
 
 type ClientRequest struct {
@@ -58,7 +58,7 @@ type ClientRequest struct {
 }
 
 func Request(clientRequest *ClientRequest) (*http.Response, error) {
-	//log.Println("remoteUrl:" + clientRequest.RemoteUrl)
+	// log.Println("remoteUrl:" + clientRequest.RemoteUrl)
 	method := clientRequest.Method
 	remoteUrl := clientRequest.RemoteUrl
 	host := clientRequest.Host
@@ -77,7 +77,7 @@ func Request(clientRequest *ClientRequest) (*http.Response, error) {
 		return resp, nil
 	}
 	if !clientRequest.ForbiddenEncodeQuery {
-		request.URL.RawQuery = strings.Replace(request.URL.Query().Encode(), "+", "%20", -1)
+		request.URL.RawQuery = strings.ReplaceAll(request.URL.Query().Encode(), "+", "%20")
 	}
 	if len(host) > 0 {
 		request.Host = host
@@ -91,7 +91,7 @@ func Request(clientRequest *ClientRequest) (*http.Response, error) {
 		}
 	}
 
-	if proxy { //keep headers&cookies for Direct
+	if proxy { // keep headers&cookies for Direct
 		if header != nil {
 			request.Header = header
 		}
@@ -146,14 +146,14 @@ func Request(clientRequest *ClientRequest) (*http.Response, error) {
 	// }
 	resp, err = client.Do(request)
 	if err != nil {
-		//log.Println(request.Method, request.URL.String(), host)
+		// log.Println(request.Method, request.URL.String(), host)
 		log.Printf("http.Client.Do fail:%v\n", err)
 		return resp, err
 	}
 
 	return resp, err
-
 }
+
 func StealResponseBody(resp *http.Response) (io.Reader, error) {
 	encode := resp.Header.Get("Content-Encoding")
 	enableGzip := false
@@ -170,8 +170,8 @@ func StealResponseBody(resp *http.Response) (io.Reader, error) {
 		return body, err
 	}
 	return resp.Body, nil
-
 }
+
 func GetResponseBody(resp *http.Response, keepBody bool) ([]byte, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

@@ -5,29 +5,33 @@ import (
 	"time"
 )
 
-type MapType = map[string]interface{}
-type SliceType = []interface{}
-type Song struct {
-	Id                string
-	Size              int64
-	Br                int
-	Url               string
-	Md5               string
-	Name              string
-	Artist            string
-	AlbumName         string
-	MatchScore        float32
-	Source            string
-	PlatformUniqueKey MapType `json:"-"`
-}
+type (
+	MapType   = map[string]interface{}
+	SliceType = []interface{}
+	Song      struct {
+		Id                string
+		Size              int64
+		Br                int
+		Url               string
+		Md5               string
+		Name              string
+		Artist            string
+		AlbumName         string
+		MatchScore        float32
+		Source            string
+		PlatformUniqueKey MapType `json:"-"`
+	}
+)
 type SongSlice []*Song
 
 func (a SongSlice) Len() int {
 	return len(a)
 }
+
 func (a SongSlice) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
+
 func (a SongSlice) Less(i, j int) bool {
 	return a[j].MatchScore < a[i].MatchScore
 }
@@ -65,6 +69,10 @@ const (
 	Higher
 	ExHigh
 	Lossless
+	Hires
+	JYEffect
+	Sky
+	JYMaster
 )
 
 type SearchMusic struct {
