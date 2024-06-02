@@ -26,8 +26,8 @@ github.com/charmbracelet/bubbletea
 # github.com/charmbracelet/lipgloss v0.8.0
 ## explicit; go 1.17
 github.com/charmbracelet/lipgloss
-# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.2
-## explicit; go 1.16
+# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.3
+## explicit; go 1.22
 github.com/cnsilvan/UnblockNeteaseMusic/cache
 github.com/cnsilvan/UnblockNeteaseMusic/common
 github.com/cnsilvan/UnblockNeteaseMusic/config
@@ -80,7 +80,7 @@ github.com/go-flac/flacpicture
 # github.com/go-flac/go-flac v1.0.0
 ## explicit; go 1.12
 github.com/go-flac/go-flac
-# github.com/go-musicfox/netease-music v1.4.3
+# github.com/go-musicfox/netease-music v1.4.4
 ## explicit; go 1.18
 github.com/go-musicfox/netease-music/service
 github.com/go-musicfox/netease-music/util
@@ -287,6 +287,15 @@ github.com/skratchdot/open-golang/open
 # github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 ## explicit
 github.com/telanflow/cookiejar
+# github.com/tidwall/gjson v1.17.1
+## explicit; go 1.12
+github.com/tidwall/gjson
+# github.com/tidwall/match v1.1.1
+## explicit; go 1.15
+github.com/tidwall/match
+# github.com/tidwall/pretty v1.2.1
+## explicit; go 1.16
+github.com/tidwall/pretty
 # github.com/tosone/minimp3 v1.0.2
 ## explicit; go 1.18
 github.com/tosone/minimp3
@@ -327,5 +336,6 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
+# github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.3
 # github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.4
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2

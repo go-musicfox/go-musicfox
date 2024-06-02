@@ -223,14 +223,15 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		response := resp.R
 		defer response.Body.Close()
 
-		processor.RequestAfter(request, response, netease)
-		resp.ReloadContent()
+		if replaced := processor.RequestAfter(request, response, netease); replaced {
+			resp.ReloadContent()
+		}
 	}
 
 	resCookies = resp.Cookies()
 
 	resResp = resp.Content()
-	//fmt.Println(string(body))
+	// fmt.Println(string(body))
 	b := bytes.NewReader(resResp)
 	var out bytes.Buffer
 	r, err := zlib.NewReader(b)
