@@ -7,7 +7,9 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
+	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 type DailyRecommendSongsMenu struct {
@@ -41,26 +43,26 @@ func (m *DailyRecommendSongsMenu) MenuViews() []model.MenuItem {
 
 func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
 		now := time.Now()
-		if len(m.menus) > 0 && len(m.songs) > 0 && utils.IsSameDate(m.fetchTime, now) {
+		if len(m.menus) > 0 && len(m.songs) > 0 && timex.IsSameDate(m.fetchTime, now) {
 			return true, nil
 		}
 		recommendSongs := service.RecommendSongsService{}
 		code, response := recommendSongs.RecommendSongs()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
-		m.songs = utils.GetDailySongs(response)
-		m.menus = utils.GetViewFromSongs(m.songs)
+		m.songs = _struct.GetDailySongs(response)
+		m.menus = menux.GetViewFromSongs(m.songs)
 		m.fetchTime = now
 
 		return true, nil

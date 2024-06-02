@@ -1,8 +1,6 @@
 package service
 
 import (
-	"net/http"
-
 	"github.com/go-musicfox/netease-music/util"
 )
 
@@ -36,11 +34,8 @@ type SongUrlV1Service struct {
 }
 
 func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
-	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
-
 	options := &util.Options{
 		Crypto:  "eapi",
-		Cookies: []*http.Cookie{cookiesOS},
 		Url:     "/api/song/enhance/player/url/v1",
 		SkipUNM: service.SkipUNM,
 	}
@@ -52,6 +47,9 @@ func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
 	data["level"] = string(service.Level)
 	if service.Level == Sky {
 		data["immerseType"] = "c51"
+	}
+	if service.EncodeType == "" {
+		service.EncodeType = "flac"
 	}
 	data["encodeType"] = service.EncodeType
 

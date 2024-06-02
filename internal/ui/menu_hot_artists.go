@@ -5,7 +5,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type HotArtistsMenu struct {
@@ -50,13 +50,13 @@ func (m *HotArtistsMenu) BeforeEnterMenuHook() model.Hook {
 			Limit: "80",
 		}
 		code, response := artistService.TopArtists()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
-		m.artists = utils.GetArtistsOfTopArtists(response)
+		m.artists = _struct.GetArtistsOfTopArtists(response)
 		for _, artist := range m.artists {
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(artist.Name)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(artist.Name)})
 		}
 
 		return true, nil

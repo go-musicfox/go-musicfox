@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/netease"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 const CurUser int64 = 0
@@ -57,7 +57,7 @@ func (m *UserPlaylistMenu) SubMenu(_ *model.App, index int) model.Menu {
 func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userId == CurUser && utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if m.userId == CurUser && _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
@@ -69,17 +69,17 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 		}
 
 		codeType, playlists, hasMore := netease.FetchUserPlaylists(userId, m.limit, m.offset)
-		if codeType == utils.NeedLogin {
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
 		m.playlists = playlists
 		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
-			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.menus = menus
 		m.hasMore = hasMore
@@ -101,20 +101,20 @@ func (m *UserPlaylistMenu) BottomOutHook() model.Hook {
 
 		m.offset = m.offset + len(m.menus)
 		codeType, playlists, hasMore := netease.FetchUserPlaylists(userId, m.limit, m.offset)
-		if codeType == utils.NeedLogin {
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
 		m.playlists = append(m.playlists, playlists...)
 		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
-			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.menus = menus
 		m.hasMore = hasMore

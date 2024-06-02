@@ -13,7 +13,7 @@ require (
 	github.com/fhs/gompd/v2 v2.3.0
 	github.com/frolovo22/tag v0.0.2
 	github.com/go-flac/flacpicture v0.3.0
-	github.com/go-musicfox/netease-music v1.4.1
+	github.com/go-musicfox/netease-music v1.4.3
 	github.com/go-musicfox/notificator v0.1.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/godbus/dbus/v5 v5.1.0
@@ -44,7 +44,7 @@ require (
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776 // indirect
 	github.com/forgoer/openssl v1.6.0 // indirect
 	github.com/go-flac/go-flac v1.0.0 // indirect
-	github.com/go-musicfox/requests v0.2.0 // indirect
+	github.com/go-musicfox/requests v0.2.1 // indirect
 	github.com/gomodule/redigo v1.8.9 // indirect
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/gookit/goutil v0.6.10 // indirect
@@ -81,11 +81,12 @@ replace (
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.2
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
+	// github.com/go-musicfox/netease-music => ../netease-music
+	// github.com/go-musicfox/requests => ../requests
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/gopxl/beep v1.4.0 => github.com/go-musicfox/beep v1.4.1
 	github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 	github.com/robotn/gohook v0.41.0 => github.com/go-musicfox/gohook v0.41.1
 	github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.4
-	//github.com/saltosystems/winrt-go => ../winrt-go
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 )

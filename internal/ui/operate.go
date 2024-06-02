@@ -15,8 +15,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
+	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/likelist"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	"github.com/go-musicfox/go-musicfox/utils/netease"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
+	"github.com/go-musicfox/go-musicfox/utils/storagex"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 // likePlayingSong like/unlike playing song
@@ -29,7 +34,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		return nil
 	}
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			likePlayingSong(m, isLike)
 			return nil
@@ -45,14 +50,14 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 			Offset: strconv.Itoa(0),
 		}
 		code, response := userPlaylists.UserPlaylist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.ToLoginPage(func() model.Page {
 				likePlayingSong(m, isLike)
 				return nil
 			})
 			return page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return nil
 		}
 		var err error
@@ -84,7 +89,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		if msg == "" {
 			msg = "加入或移出歌单失败"
 		}
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   msg,
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
 			Url:     types.AppGithubUrl,
@@ -94,22 +99,22 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 	}
 
 	go func() {
-		like_list.RefreshLikeList(m.user.UserId)
+		likelist.RefreshLikeList(m.user.UserId)
 		m.Rerender(false)
 	}()
 
 	if isLike {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "已添加到我喜欢的歌曲",
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
-			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
+			Url:     netease.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	} else {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
 			Text:    m.player.playlist[m.player.curSongIndex].Name,
-			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
+			Url:     netease.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	}
@@ -121,13 +126,13 @@ func logout() {
 	table := storage.NewTable()
 	_ = table.DeleteByKVModel(storage.User{})
 	(&storage.LastfmUser{}).Clear()
-	utils.Notify(utils.NotifyContent{
+	notify.Notify(notify.NotifyContent{
 		Title:   "登出成功",
 		Text:    "已清理用户信息",
 		Url:     types.AppGithubUrl,
 		GroupId: types.GroupID,
 	})
-	_ = os.Remove(filepath.Join(utils.GetLocalDataDir(), "cookie"))
+	_ = os.Remove(filepath.Join(app.DataRootDir(), "cookie"))
 }
 
 // likeSelectedSong like/unlike selected song
@@ -147,7 +152,7 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 	}
 	songs := me.Songs()
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			likeSelectedSong(m, isLike)
 			return nil
@@ -163,14 +168,14 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 			Offset: strconv.Itoa(0),
 		}
 		code, response := userPlaylists.UserPlaylist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.ToLoginPage(func() model.Page {
 				likeSelectedSong(m, isLike)
 				return nil
 			})
 			return page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return nil
 		}
 		var err error
@@ -202,7 +207,7 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 		if msg == "" {
 			msg = "加入或移出歌单失败"
 		}
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   msg,
 			Text:    songs[selectedIndex].Name,
 			Url:     types.AppGithubUrl,
@@ -212,17 +217,17 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 	}
 
 	if isLike {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "已添加到我喜欢的歌曲",
 			Text:    songs[selectedIndex].Name,
-			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
+			Url:     netease.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	} else {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
 			Text:    songs[selectedIndex].Name,
-			Url:     utils.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
+			Url:     netease.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	}
@@ -239,7 +244,7 @@ func trashPlayingSong(m *Netease) model.Page {
 		return nil
 	}
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			trashPlayingSong(m)
 			return nil
@@ -252,7 +257,7 @@ func trashPlayingSong(m *Netease) model.Page {
 	}
 	trashService.FmTrash()
 
-	utils.Notify(utils.NotifyContent{
+	notify.Notify(notify.NotifyContent{
 		Title:   "已标记为不喜欢",
 		Text:    m.player.playlist[m.player.curSongIndex].Name,
 		Url:     types.AppGithubUrl,
@@ -278,7 +283,7 @@ func trashSelectedSong(m *Netease) model.Page {
 	}
 	songs := me.Songs()
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			trashSelectedSong(m)
 			return nil
@@ -291,7 +296,7 @@ func trashSelectedSong(m *Netease) model.Page {
 	}
 	trashService.FmTrash()
 
-	utils.Notify(utils.NotifyContent{
+	notify.Notify(notify.NotifyContent{
 		Title:   "已标记为不喜欢",
 		Text:    songs[selectedIndex].Name,
 		Url:     types.AppGithubUrl,
@@ -316,7 +321,7 @@ func downloadSelectedSong(m *Netease) {
 		return
 	}
 	songs := me.Songs()
-	go utils.DownloadMusic(songs[selectedIndex])
+	go storagex.DownloadMusic(songs[selectedIndex])
 }
 
 func downloadPlayingSong(m *Netease) {
@@ -328,7 +333,7 @@ func downloadPlayingSong(m *Netease) {
 		return
 	}
 
-	go utils.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+	go storagex.DownloadMusic(m.player.playlist[m.player.curSongIndex])
 }
 
 func albumOfPlayingSong(m *Netease) {
@@ -454,7 +459,7 @@ func openPlayingSongInWeb(m *Netease) {
 	}
 	curSong := m.player.playlist[m.player.curSongIndex]
 
-	_ = open.Start(utils.WebUrlOfSong(curSong.Id))
+	_ = open.Start(netease.WebUrlOfSong(curSong.Id))
 }
 
 func openSelectedItemInWeb(m *Netease) {
@@ -470,25 +475,25 @@ func openSelectedItemInWeb(m *Netease) {
 
 	// 打开歌曲
 	if songMenu, ok := menu.(SongsMenu); ok && selectedIndex < len(songMenu.Songs()) {
-		_ = open.Start(utils.WebUrlOfSong(songMenu.Songs()[selectedIndex].Id))
+		_ = open.Start(netease.WebUrlOfSong(songMenu.Songs()[selectedIndex].Id))
 		return
 	}
 
 	// 打开歌单
 	if playlistMenu, ok := menu.(PlaylistsMenu); ok && selectedIndex < len(playlistMenu.Playlists()) {
-		_ = open.Start(utils.WebUrlOfPlaylist(playlistMenu.Playlists()[selectedIndex].Id))
+		_ = open.Start(netease.WebUrlOfPlaylist(playlistMenu.Playlists()[selectedIndex].Id))
 		return
 	}
 
 	// 打开专辑
 	if albumMenu, ok := menu.(AlbumsMenu); ok && selectedIndex < len(albumMenu.Albums()) {
-		_ = open.Start(utils.WebUrlOfAlbum(albumMenu.Albums()[selectedIndex].Id))
+		_ = open.Start(netease.WebUrlOfAlbum(albumMenu.Albums()[selectedIndex].Id))
 		return
 	}
 
 	// 打开歌手
 	if artistMenu, ok := menu.(ArtistsMenu); ok && selectedIndex < len(artistMenu.Artists()) {
-		_ = open.Start(utils.WebUrlOfArtist(artistMenu.Artists()[selectedIndex].Id))
+		_ = open.Start(netease.WebUrlOfArtist(artistMenu.Artists()[selectedIndex].Id))
 		return
 	}
 }
@@ -499,7 +504,7 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 	loading.Start()
 	defer loading.Complete()
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			collectSelectedPlaylist(m, isCollect)
 			return nil
@@ -530,7 +535,7 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 		if msg == "" {
 			msg = "收藏歌单或移除歌单失败"
 		}
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   msg,
 			Text:    playlists[main.SelectedIndex()].Name,
 			Url:     types.AppGithubUrl,
@@ -540,14 +545,14 @@ func collectSelectedPlaylist(m *Netease, isCollect bool) model.Page {
 	}
 
 	if isCollect {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "已收藏歌单",
 			Text:    playlists[main.SelectedIndex()].Name,
 			Url:     types.AppGithubUrl,
 			GroupId: types.GroupID,
 		})
 	} else {
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   "已移除收藏歌单",
 			Text:    playlists[main.SelectedIndex()].Name,
 			Url:     types.AppGithubUrl,
@@ -581,7 +586,7 @@ func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 		}
 		song := sm.Songs()[selectedIndex]
 		appendSongs = append(appendSongs, song)
-		notifyURL = utils.WebUrlOfSong(song.Id)
+		notifyURL = netease.WebUrlOfSong(song.Id)
 	case subIsSongsMenu: // 选中项菜单是 SongsMenu
 		// 触发 BeforeEnterMenuHook 获取歌曲
 		if ok, _ := subSm.BeforeEnterMenuHook()(m.Main()); !ok {
@@ -610,11 +615,11 @@ func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 
 	if curPlaylist, ok := menu.(*CurPlaylist); ok {
 		curPlaylist.songs = m.player.playlist
-		curPlaylist.menus = utils.GetViewFromSongs(m.player.playlist)
+		curPlaylist.menus = menux.GetViewFromSongs(m.player.playlist)
 		main.RefreshMenuList()
 	}
 
-	utils.Notify(utils.NotifyContent{
+	notify.Notify(notify.NotifyContent{
 		Title:   notifyTitle,
 		Text:    menu.MenuViews()[selectedIndex].Title,
 		Url:     notifyURL,
@@ -628,7 +633,7 @@ func openAddSongToUserPlaylistMenu(m *Netease, isSelected, isAdd bool) model.Pag
 	loading.Start()
 	defer loading.Complete()
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			openAddSongToUserPlaylistMenu(m, isSelected, isAdd)
 			return nil
@@ -676,7 +681,7 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 	loading.Start()
 	defer loading.Complete()
 
-	if utils.CheckUserInfo(m.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(m.user) == _struct.NeedLogin {
 		page, _ := m.ToLoginPage(func() model.Page {
 			addSongToUserPlaylist(m, isAdd)
 			return nil
@@ -712,7 +717,7 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 		} else if msg == "" && !isAdd {
 			msg = "从歌单中删除失败"
 		}
-		utils.Notify(utils.NotifyContent{
+		notify.Notify(notify.NotifyContent{
 			Title:   msg,
 			Text:    me.song.Name,
 			Url:     types.AppGithubUrl,
@@ -728,10 +733,10 @@ func addSongToUserPlaylist(m *Netease, isAdd bool) model.Page {
 	} else {
 		title = "已从歌单「" + playlist.Name + "」中删除"
 	}
-	utils.Notify(utils.NotifyContent{
+	notify.Notify(notify.NotifyContent{
 		Title:   title,
 		Text:    me.song.Name,
-		Url:     utils.WebUrlOfPlaylist(playlist.Id),
+		Url:     netease.WebUrlOfPlaylist(playlist.Id),
 		GroupId: types.GroupID,
 	})
 	main.BackMenu()
@@ -789,7 +794,7 @@ func delSongFromPlaylist(m *Netease) model.Page {
 	// 以下2行 为防止切片越界
 	m.player.playlist = append(m.player.playlist[:selectedIndex], m.player.playlist[selectedIndex+1:]...)
 	songs := m.player.playlist
-	me.menus = utils.GetViewFromSongs(songs)
+	me.menus = menux.GetViewFromSongs(songs)
 	me.songs = songs
 	// 更新当前歌曲下标
 	if selectedIndex < m.player.curSongIndex {

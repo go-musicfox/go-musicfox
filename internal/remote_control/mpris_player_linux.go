@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/prop"
 	"github.com/pkg/errors"
@@ -152,7 +152,7 @@ func (p *Player) PlayPause() *dbus.Error {
 	return nil
 }
 
-type MetadataMap map[string]interface{}
+type MetadataMap map[string]any
 
 func (m *MetadataMap) nonEmptyString(field, value string) {
 	if value != "" {
@@ -183,7 +183,7 @@ func MapFromPlayingInfo(info PlayingInfo) MetadataMap {
 	m := &MetadataMap{
 		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/mpd/Tracks/%d", info.TrackID)),
 		"mpris:length":  info.TotalDuration / time.Microsecond,
-		"mpris:artUrl":  utils.AddResizeParamForPicUrl(info.PicUrl, 1024),
+		"mpris:artUrl":  app.AddResizeParamForPicUrl(info.PicUrl, 1024),
 	}
 
 	m.nonEmptyString("xesam:album", info.Album)

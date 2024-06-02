@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 )
 
 type IteratorCallback func(k, v []byte) error
@@ -66,14 +66,14 @@ func (table *table) IncrAdd(model Model, data IDSetter) (id uint64, err error) {
 		}
 
 		// Persist bytes to users bucket.
-		return bucket.Put(utils.IDToBin(id), buf)
+		return bucket.Put(app.IDToBin(id), buf)
 	})
 
 	return id, err
 }
 
 // Set edit one line
-func (table *table) Set(model Model, key []byte, data interface{}) (err error) {
+func (table *table) Set(model Model, key []byte, data any) (err error) {
 	localDB, err := DBManager.GetDBFromCache(model)
 	if err != nil {
 		return
@@ -99,12 +99,12 @@ func (table *table) Set(model Model, key []byte, data interface{}) (err error) {
 }
 
 // SetByID edit one line by ID
-func (table *table) SetByID(model Model, ID uint64, data interface{}) error {
-	return table.Set(model, utils.IDToBin(ID), data)
+func (table *table) SetByID(model Model, ID uint64, data any) error {
+	return table.Set(model, app.IDToBin(ID), data)
 }
 
 // SetByKVModel edit one line by KVModel
-func (table *table) SetByKVModel(model KVModel, data interface{}) error {
+func (table *table) SetByKVModel(model KVModel, data any) error {
 	return table.Set(model, []byte(model.GetKey()), data)
 }
 
@@ -130,7 +130,7 @@ func (table *table) Delete(model Model, key []byte) (err error) {
 
 // DeleteByID delete one line by ID
 func (table *table) DeleteByID(model Model, ID uint64) error {
-	return table.Delete(model, utils.IDToBin(ID))
+	return table.Delete(model, app.IDToBin(ID))
 }
 
 // DeleteByKVModel delete one line by KVModel
@@ -160,7 +160,7 @@ func (table *table) Get(model Model, key []byte) (value []byte, err error) {
 
 // GetByID 通过ID获取value
 func (table *table) GetByID(model Model, ID uint64) ([]byte, error) {
-	return table.Get(model, utils.IDToBin(ID))
+	return table.Get(model, app.IDToBin(ID))
 }
 
 // GetByKVModel 通过KVModel获取value

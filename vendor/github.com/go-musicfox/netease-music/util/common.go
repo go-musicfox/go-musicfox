@@ -16,3 +16,25 @@ func RandStringRunes(n int) string {
 	}
 	return string(b)
 }
+
+func StringOr(a, b string, others ...string) string {
+	if a != "" {
+		return a
+	}
+	if b != "" {
+		return b
+	}
+	for _, v := range others {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func Ternary[T any](cond bool, a, b T) T {
+	if cond {
+		return a
+	}
+	return b
+}

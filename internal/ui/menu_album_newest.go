@@ -8,7 +8,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type AlbumNewestMenu struct {
@@ -52,12 +52,12 @@ func (m *AlbumNewestMenu) BeforeEnterMenuHook() model.Hook {
 
 		albumService := service.AlbumNewestService{}
 		code, response := albumService.AlbumNewest()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
-		m.albums = utils.GetNewAlbums(response)
+		m.albums = _struct.GetNewAlbums(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -65,7 +65,7 @@ func (m *AlbumNewestMenu) BeforeEnterMenuHook() model.Hook {
 				artists = append(artists, artist.Name)
 			}
 			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-			m.menus = append(m.menus, model.MenuItem{Title: utils.ReplaceSpecialStr(album.Name), Subtitle: utils.ReplaceSpecialStr(artistsStr)})
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
 		}
 
 		return true, nil

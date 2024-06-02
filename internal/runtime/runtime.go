@@ -2,10 +2,12 @@
 
 package runtime
 
-import "github.com/go-musicfox/go-musicfox/utils"
+import (
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
+)
 
 func Run(f func()) {
-	defer utils.Recover(false)
+	defer errorx.Recover(false)
 
 	f()
 }

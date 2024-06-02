@@ -9,7 +9,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjRadioDetailMenu struct {
@@ -54,16 +55,15 @@ func (m *DjRadioDetailMenu) BeforeEnterMenuHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := djProgramService.DjProgram()
-		utils.Logger().Println(string(response))
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
-		m.songs = utils.GetSongsOfDjRadio(response)
+		m.songs = _struct.GetSongsOfDjRadio(response)
 		if total, err := jsonparser.GetInt(response, "count"); err == nil {
 			m.total = int(total)
 		}
-		m.menus = utils.GetViewFromSongs(m.songs)
+		m.menus = menux.GetViewFromSongs(m.songs)
 
 		return true, nil
 	}
@@ -81,13 +81,13 @@ func (m *DjRadioDetailMenu) BottomOutHook() model.Hook {
 			Offset: strconv.Itoa(offset),
 		}
 		code, response := djProgramService.DjProgram()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
-		songs := utils.GetSongsOfDjRadio(response)
+		songs := _struct.GetSongsOfDjRadio(response)
 		m.songs = append(m.songs, songs...)
-		m.menus = append(m.menus, utils.GetViewFromSongs(songs)...)
+		m.menus = append(m.menus, menux.GetViewFromSongs(songs)...)
 		m.offset = offset
 
 		return true, nil

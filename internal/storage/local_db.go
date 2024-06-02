@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 )
 
 type LocalDB struct {
@@ -17,7 +17,7 @@ type LocalDB struct {
 
 // NewLocalDB 创建本地数据库
 func NewLocalDB(dbName string) (*LocalDB, error) {
-	projectPath := utils.GetLocalDataDir()
+	projectPath := app.DataRootDir()
 
 	dbDir := fmt.Sprintf("%s/db", projectPath)
 	if _, err := os.Stat(dbDir); err != nil {
@@ -46,7 +46,7 @@ type LocalDBManager struct {
 }
 
 // GetDBFromCache 从缓存中获取 LocalDB
-func (dm *LocalDBManager) GetDBFromCache(db interface{}) (localDB *LocalDB, err error) {
+func (dm *LocalDBManager) GetDBFromCache(db any) (localDB *LocalDB, err error) {
 	var dbName string
 	switch dbWithType := db.(type) {
 	case []byte:

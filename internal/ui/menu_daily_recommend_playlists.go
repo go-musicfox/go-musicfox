@@ -7,7 +7,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
+	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 type DailyRecommendPlaylistsMenu struct {
@@ -44,30 +45,30 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *model.App, index int) model.Men
 
 func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
 		// 不重复请求
 		now := time.Now()
-		if len(m.menus) > 0 && len(m.playlists) > 0 && utils.IsSameDate(m.fetchTime, now) {
+		if len(m.menus) > 0 && len(m.playlists) > 0 && timex.IsSameDate(m.fetchTime, now) {
 			return true, nil
 		}
 
 		recommendPlaylists := service.RecommendResourceService{}
 		code, response := recommendPlaylists.RecommendResource()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
-		m.playlists = utils.GetDailyPlaylists(response)
+		m.playlists = _struct.GetDailyPlaylists(response)
 		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
-			menus = append(menus, model.MenuItem{Title: utils.ReplaceSpecialStr(playlist.Name)})
+			menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
 		}
 		m.menus = menus
 		m.fetchTime = now

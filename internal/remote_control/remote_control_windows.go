@@ -15,7 +15,7 @@ import (
 	"github.com/saltosystems/winrt-go/windows/storage/streams"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	. "github.com/go-musicfox/go-musicfox/utils"
+	. "github.com/go-musicfox/go-musicfox/utils/errorx"
 )
 
 const (

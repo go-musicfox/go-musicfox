@@ -2,6 +2,7 @@ package ui
 
 import (
 	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -22,8 +23,10 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
+	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/likelist"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 const LoginPageType model.PageType = "login"
@@ -354,15 +357,15 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 		code, response = loginService.LoginCellphone()
 	}
 
-	codeType := utils.CheckCode(code)
+	codeType := _struct.CheckCode(code)
 	switch codeType {
-	case utils.UnknownError:
+	case _struct.UnknownError:
 		l.tips = util.SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
 		return l, tickLogin(time.Nanosecond)
-	case utils.NetworkError:
+	case _struct.NetworkError:
 		l.tips = util.SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
 		return l, tickLogin(time.Nanosecond)
-	case utils.Success:
+	case _struct.Success:
 		l.tips = ""
 		if newPage := l.loginSuccessHandle(l.netease, response); newPage != nil {
 			return newPage, l.netease.Tick(time.Nanosecond)
@@ -382,14 +385,14 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 		errHandler := func(err error) (model.Page, tea.Cmd) {
 			l.tips = util.SetFgStyle("生成二维码失败，请稍候再试", termenv.ANSIBrightRed)
 			if err != nil {
-				utils.Logger().Printf("生成二维码失败, %+v", err)
+				slog.Error("生成二维码失败", slogx.Error(err))
 			}
 			return l, nil
 		}
 		if code != 200 || url == "" {
 			return errHandler(errors.Errorf("code: %f, resp: %s", code, string(resp)))
 		}
-		path, err := utils.GenQRCode("qrcode.png", url)
+		path, err := app.GenQRCode("qrcode.png", url)
 		if err != nil {
 			return errHandler(err)
 		}
@@ -404,7 +407,7 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 	errHandler := func(err error) (model.Page, tea.Cmd) {
 		l.tips = util.SetFgStyle("校验二维码失败，请稍候再试", termenv.ANSIBrightRed)
 		if err != nil {
-			utils.Logger().Printf("生成二维码失败 %+v", err)
+			slog.Error("生成二维码失败", slogx.Error(err))
 		}
 		return l, nil
 	}
@@ -446,7 +449,7 @@ func (l *LoginPage) loginSuccessHandle(n *Netease, userInfo []byte) model.Page {
 	_ = table.SetByKVModel(storage.User{}, user)
 
 	// 更新like list
-	go like_list.RefreshLikeList(user.UserId)
+	go likelist.RefreshLikeList(user.UserId)
 
 	var newPage model.Page
 	if l.AfterLogin != nil {

@@ -1,4 +1,4 @@
-package utils
+package menux
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 
 	ds "github.com/go-musicfox/go-musicfox/internal/structs"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 // GetViewFromSongs 从歌曲列表获取View
@@ -17,7 +18,7 @@ func GetViewFromSongs(songs []ds.Song) []model.MenuItem {
 		for _, artist := range song.Artists {
 			artists = append(artists, artist.Name)
 		}
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(song.Name), Subtitle: ReplaceSpecialStr(strings.Join(artists, ","))})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(song.Name), Subtitle: _struct.ReplaceSpecialStr(strings.Join(artists, ","))})
 	}
 
 	return menus
@@ -32,7 +33,7 @@ func GetViewFromAlbums(albums []ds.Album) []model.MenuItem {
 			artists = append(artists, artist.Name)
 		}
 		artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(album.Name), Subtitle: ReplaceSpecialStr(artistsStr)})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
 	}
 
 	return menus
@@ -42,7 +43,7 @@ func GetViewFromAlbums(albums []ds.Album) []model.MenuItem {
 func GetViewFromPlaylists(playlists []ds.Playlist) []model.MenuItem {
 	var menus []model.MenuItem
 	for _, playlist := range playlists {
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(playlist.Name)})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
 	}
 
 	return menus
@@ -52,7 +53,7 @@ func GetViewFromPlaylists(playlists []ds.Playlist) []model.MenuItem {
 func GetViewFromArtists(artists []ds.Artist) []model.MenuItem {
 	var menus []model.MenuItem
 	for _, artist := range artists {
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(artist.Name)})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(artist.Name)})
 	}
 
 	return menus
@@ -62,7 +63,7 @@ func GetViewFromArtists(artists []ds.Artist) []model.MenuItem {
 func GetViewFromUsers(users []ds.User) []model.MenuItem {
 	var menus []model.MenuItem
 	for _, user := range users {
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(user.Nickname)})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(user.Nickname)})
 	}
 
 	return menus
@@ -76,7 +77,7 @@ func GetViewFromDjRadios(radios []ds.DjRadio) []model.MenuItem {
 		if radio.Dj.Nickname != "" {
 			dj = fmt.Sprintf("[%s]", radio.Dj.Nickname)
 		}
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(radio.Name), Subtitle: ReplaceSpecialStr(dj)})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(radio.Name), Subtitle: _struct.ReplaceSpecialStr(dj)})
 	}
 
 	return menus
@@ -86,7 +87,7 @@ func GetViewFromDjRadios(radios []ds.DjRadio) []model.MenuItem {
 func GetViewFromDjCate(categories []ds.DjCategory) []model.MenuItem {
 	var menus []model.MenuItem
 	for _, category := range categories {
-		menus = append(menus, model.MenuItem{Title: ReplaceSpecialStr(category.Name)})
+		menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(category.Name)})
 	}
 
 	return menus
