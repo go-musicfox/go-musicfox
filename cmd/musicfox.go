@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/anhoder/foxful-cli/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -12,7 +11,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/filex"
+	_ "github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 func main() {
@@ -20,8 +20,6 @@ func main() {
 }
 
 func musicfox() {
-	log.SetOutput(utils.LogWriter())
-
 	app := gcli.NewApp()
 	app.Name = types.AppName
 	app.Version = types.AppVersion
@@ -34,7 +32,7 @@ func musicfox() {
 	}
 
 	// 加载config
-	utils.LoadIniConfig()
+	filex.LoadIniConfig()
 
 	util.PrimaryColor = configs.ConfigRegistry.Main.PrimaryColor
 	var (

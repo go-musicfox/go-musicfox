@@ -5,7 +5,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type RecentSongsMenu struct {
@@ -38,22 +39,22 @@ func (m *RecentSongsMenu) MenuViews() []model.MenuItem {
 
 func (m *RecentSongsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
 		recentSongService := service.RecordRecentSongsService{}
 		code, response := recentSongService.RecordRecentSongs()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
-		m.songs = utils.GetRecentSongs(response)
-		m.menus = utils.GetViewFromSongs(m.songs)
+		m.songs = _struct.GetRecentSongs(response)
+		m.menus = menux.GetViewFromSongs(m.songs)
 
 		return true, nil
 	}

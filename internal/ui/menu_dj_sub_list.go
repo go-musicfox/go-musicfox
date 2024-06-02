@@ -8,7 +8,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjSubListMenu struct {
@@ -52,7 +53,7 @@ func (m *DjSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
 func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 
-		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
@@ -67,11 +68,11 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := djSublistService.DjSublist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -79,8 +80,8 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 			m.total = int(total)
 		}
 
-		m.radios = utils.GetDjRadios(response)
-		m.menus = utils.GetViewFromDjRadios(m.radios)
+		m.radios = _struct.GetDjRadios(response)
+		m.menus = menux.GetViewFromDjRadios(m.radios)
 
 		return true, nil
 	}
@@ -94,7 +95,7 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		m.offset += m.limit
 
-		if utils.CheckUserInfo(m.netease.user) == utils.NeedLogin {
+		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
@@ -104,11 +105,11 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := djSublistService.DjSublist()
-		codeType := utils.CheckCode(code)
-		if codeType == utils.NeedLogin {
+		codeType := _struct.CheckCode(code)
+		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		} else if codeType != utils.Success {
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -116,8 +117,8 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 			m.total = int(total)
 		}
 
-		radios := utils.GetDjRadios(response)
-		menus := utils.GetViewFromDjRadios(radios)
+		radios := _struct.GetDjRadios(response)
+		menus := menux.GetViewFromDjRadios(radios)
 
 		m.radios = append(m.radios, radios...)
 		m.menus = append(m.menus, menus...)

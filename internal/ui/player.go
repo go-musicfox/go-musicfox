@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"strconv"
@@ -25,8 +26,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
-	"github.com/go-musicfox/go-musicfox/utils/like_list"
+	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/likelist"
+	"github.com/go-musicfox/go-musicfox/utils/netease"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
+	"github.com/go-musicfox/go-musicfox/utils/storagex"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 // PlayDirection 下首歌的方向
@@ -70,12 +76,12 @@ type Player struct {
 
 	lrcFile           *lyric.LRCFile
 	transLrcFile      *lyric.TranslateLRCFile
-	lrcTimer          *lyric.LRCTimer   // 歌词计时器
-	lyrics            [5]string         // 歌词信息，保留5行
-	showLyric         bool              // 显示歌词
-	lyricStartRow     int               // 歌词开始行
-	lyricLines        int               // 歌词显示行数，3或5
-	lyricNowScrollBar *utils.XScrollBar // 当前歌词滚动
+	lrcTimer          *lyric.LRCTimer // 歌词计时器
+	lyrics            [5]string       // 歌词信息，保留5行
+	showLyric         bool            // 显示歌词
+	lyricStartRow     int             // 歌词开始行
+	lyricLines        int             // 歌词显示行数，3或5
+	lyricNowScrollBar *app.XScrollBar // 当前歌词滚动
 
 	// 播放进度条
 	progressLastWidth float64
@@ -91,12 +97,12 @@ type Player struct {
 	player.Player // 播放器
 }
 
-func NewPlayer(netease *Netease) *Player {
+func NewPlayer(n *Netease) *Player {
 	p := &Player{
-		netease:           netease,
+		netease:           n,
 		mode:              types.PmListLoop,
 		ctrl:              make(chan CtrlSignal),
-		lyricNowScrollBar: utils.NewXScrollBar(),
+		lyricNowScrollBar: app.NewXScrollBar(),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
@@ -107,7 +113,7 @@ func NewPlayer(netease *Netease) *Player {
 	p.renderTicker = newTickerByPlayer(p)
 
 	// remote control
-	utils.WaitGoStart(func() {
+	errorx.WaitGoStart(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -119,7 +125,7 @@ func NewPlayer(netease *Netease) *Player {
 	})
 
 	// 状态监听
-	utils.WaitGoStart(func() {
+	errorx.WaitGoStart(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -134,7 +140,7 @@ func NewPlayer(netease *Netease) *Player {
 				lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
 				if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
-					utils.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
+					netease.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
 				}
 				p.NextSong(false)
 			}
@@ -142,7 +148,7 @@ func NewPlayer(netease *Netease) *Player {
 	})
 
 	// 时间监听
-	utils.WaitGoStart(func() {
+	errorx.WaitGoStart(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -296,7 +302,7 @@ func (p *Player) songView() string {
 	}
 
 	if p.curSong.Id > 0 {
-		if like_list.IsLikeSong(p.curSong.Id) {
+		if likelist.IsLikeSong(p.curSong.Id) {
 			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIRed))
 		} else {
 			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIWhite))
@@ -430,7 +436,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	p.LocatePlayingSong()
 	p.Paused()
-	url, musicType, err := utils.GetSongUrl(song)
+	url, musicType, err := storagex.PlayableUrlSong(song)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
@@ -453,16 +459,16 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
-	utils.Logger().Printf("Start play song, url: %s, type: %s, song: %v", url, musicType, song)
+	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	// 上报
 	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
 
-	go utils.Notify(utils.NotifyContent{
+	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
-		Icon:    utils.AddResizeParamForPicUrl(song.PicUrl, 60),
-		Url:     utils.WebUrlOfSong(song.Id),
+		Icon:    app.AddResizeParamForPicUrl(song.PicUrl, 60),
+		Url:     netease.WebUrlOfSong(song.Id),
 		GroupId: types.GroupID,
 	})
 
@@ -748,7 +754,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		return nil
 	}
 
-	if utils.CheckUserInfo(p.netease.user) == utils.NeedLogin {
+	if _struct.CheckUserInfo(p.netease.user) == _struct.NeedLogin {
 		page, _ := p.netease.ToLoginPage(nil)
 		return page
 	}
@@ -759,17 +765,17 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		StartMusicId: strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
 	}
 	code, response := intelligenceService.PlaymodeIntelligenceList()
-	codeType := utils.CheckCode(code)
-	if codeType == utils.NeedLogin {
+	codeType := _struct.CheckCode(code)
+	if codeType == _struct.NeedLogin {
 		page, _ := p.netease.ToLoginPage(func() model.Page {
 			p.Intelligence(appendMode)
 			return nil
 		})
 		return page
-	} else if codeType != utils.Success {
+	} else if codeType != _struct.Success {
 		return nil
 	}
-	songs := utils.GetIntelligenceSongs(response)
+	songs := _struct.GetIntelligenceSongs(response)
 
 	if appendMode {
 		p.playlist = append(p.playlist, songs...)

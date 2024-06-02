@@ -7,6 +7,8 @@ import (
 	"time"
 	"unsafe"
 
+	. "github.com/go-musicfox/go-musicfox/utils/errorx"
+	. "github.com/go-musicfox/go-musicfox/utils/timex"
 	"github.com/go-ole/go-ole"
 	"github.com/saltosystems/winrt-go"
 	"github.com/saltosystems/winrt-go/windows/foundation"
@@ -15,7 +17,6 @@ import (
 
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	. "github.com/go-musicfox/go-musicfox/utils"
 )
 
 const (

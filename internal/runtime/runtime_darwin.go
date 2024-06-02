@@ -7,11 +7,11 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
 )
 
 func Run(f func()) {
-	defer utils.Recover(false)
+	defer errorx.Recover(false)
 
 	app := cocoa.NSApp()
 	app.SetActivationPolicy(cocoa.NSApplicationActivationPolicyProhibited)
@@ -19,7 +19,7 @@ func Run(f func()) {
 
 	delegate := cocoa.DefaultAppDelegate()
 	delegate.RegisterDidFinishLaunchingCallback(func(_ objc.ID) {
-		utils.Go(func() {
+		errorx.Go(func() {
 			core.Autorelease(func() {
 				f()
 				app.Terminate(0)

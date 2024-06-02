@@ -16,7 +16,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type SearchType uint32
@@ -51,7 +51,7 @@ type SearchPage struct {
 	submitButton string
 	tips         string
 	searchType   SearchType
-	result       interface{}
+	result       any
 }
 
 func NewSearchPage(netease *Netease) (search *SearchPage) {
@@ -172,31 +172,31 @@ func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 	}
 	code, response = searchService.Search()
 
-	codeType := utils.CheckCode(code)
+	codeType := _struct.CheckCode(code)
 	switch codeType {
-	case utils.UnknownError:
+	case _struct.UnknownError:
 		s.tips = util.SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
 		return s, tickSearch(time.Nanosecond)
-	case utils.NetworkError:
+	case _struct.NetworkError:
 		s.tips = util.SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
 		return s, tickSearch(time.Nanosecond)
-	case utils.Success:
+	case _struct.Success:
 		s.result = response
 		switch s.searchType {
 		case StSingleSong:
-			s.result = utils.GetSongsOfSearchResult(response)
+			s.result = _struct.GetSongsOfSearchResult(response)
 		case StAlbum:
-			s.result = utils.GetAlbumsOfSearchResult(response)
+			s.result = _struct.GetAlbumsOfSearchResult(response)
 		case StSinger:
-			s.result = utils.GetArtistsOfSearchResult(response)
+			s.result = _struct.GetArtistsOfSearchResult(response)
 		case StPlaylist:
-			s.result = utils.GetPlaylistsOfSearchResult(response)
+			s.result = _struct.GetPlaylistsOfSearchResult(response)
 		case StUser:
-			s.result = utils.GetUsersOfSearchResult(response)
+			s.result = _struct.GetUsersOfSearchResult(response)
 		case StLyric:
-			s.result = utils.GetSongsOfSearchResult(response)
+			s.result = _struct.GetSongsOfSearchResult(response)
 		case StRadio:
-			s.result = utils.GetDjRadiosOfSearchResult(response)
+			s.result = _struct.GetDjRadiosOfSearchResult(response)
 		}
 		s.netease.MustMain().EnterMenu(nil, nil)
 	}

@@ -1,13 +1,14 @@
-package utils
+package errorx
 
 import (
+	"log/slog"
 	"runtime/debug"
 )
 
 func Recover(ignore bool) (hasCaught bool) {
 	err := recover()
 	if err != nil {
-		Logger().Printf("catch panic, err: %+v, stack: %s", err, debug.Stack())
+		slog.Error("catch panic", slog.Any("error", err), slog.Any("stack", debug.Stack()))
 		if ignore {
 			hasCaught = true
 			return

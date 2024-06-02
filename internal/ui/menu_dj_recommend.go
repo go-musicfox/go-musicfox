@@ -5,7 +5,8 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjRecommendMenu struct {
@@ -49,13 +50,13 @@ func (m *DjRecommendMenu) BeforeEnterMenuHook() model.Hook {
 
 		djRecommendService := service.DjRecommendService{}
 		code, response := djRecommendService.DjRecommend()
-		codeType := utils.CheckCode(code)
-		if codeType != utils.Success {
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
-		m.radios = utils.GetDjRadios(response)
-		m.menus = utils.GetViewFromDjRadios(m.radios)
+		m.radios = _struct.GetDjRadios(response)
+		m.menus = menux.GetViewFromDjRadios(m.radios)
 
 		return true, nil
 	}

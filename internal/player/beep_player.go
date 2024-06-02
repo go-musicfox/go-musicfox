@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,7 +17,12 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils"
+	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/filex"
+	"github.com/go-musicfox/go-musicfox/utils/iox"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
+	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 const (
@@ -28,7 +34,7 @@ type beepPlayer struct {
 	l sync.Mutex
 
 	curMusic UrlMusic
-	timer    *utils.Timer
+	timer    *timex.Timer
 
 	cacheReader     *os.File
 	cacheWriter     *os.File
@@ -66,7 +72,7 @@ func NewBeepPlayer() *beepPlayer {
 		close:      make(chan struct{}),
 	}
 
-	utils.WaitGoStart(p.listen)
+	errorx.WaitGoStart(p.listen)
 
 	return p
 }
@@ -93,7 +99,7 @@ func (p *beepPlayer) listen() {
 		panic(err)
 	}
 
-	cacheFile := filepath.Join(utils.GetLocalDataDir(), "music_cache")
+	cacheFile := filepath.Join(app.DataRootDir(), "music_cache")
 	for {
 		select {
 		case <-p.close:
@@ -116,7 +122,7 @@ func (p *beepPlayer) listen() {
 			p.reset()
 			ctx, cancel = context.WithCancel(context.Background())
 
-			if prevSongId != p.curMusic.Id || !utils.FileOrDirExists(cacheFile) {
+			if prevSongId != p.curMusic.Id || !filex.FileOrDirExists(cacheFile) {
 				// FIXME: 先这样处理，暂时没想到更好的办法
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
 					panic(err)
@@ -140,11 +146,11 @@ func (p *beepPlayer) listen() {
 				// 边下载边播放
 				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
 					defer func() {
-						if utils.Recover(true) {
+						if errorx.Recover(true) {
 							p.Stop()
 						}
 					}()
-					_, _ = utils.CopyClose(ctx, cacheWFile, read)
+					_, _ = iox.CopyClose(ctx, cacheWFile, read)
 					p.cacheDownloaded = true
 					p.l.Lock()
 					defer p.l.Unlock()
@@ -179,8 +185,8 @@ func (p *beepPlayer) listen() {
 				if p.curMusic.Type == Flac {
 					N *= 4
 				}
-				if err = utils.WaitForNBytes(p.cacheReader, N, time.Millisecond*100, 50); err != nil {
-					utils.Logger().Printf("WaitForNBytes err: %+v", err)
+				if err = iox.WaitForNBytes(p.cacheReader, N, time.Millisecond*100, 50); err != nil {
+					slog.Error("WaitForNBytes err", slogx.Error(err))
 					p.stopNoLock()
 					goto nextLoop
 				}
@@ -196,14 +202,14 @@ func (p *beepPlayer) listen() {
 				goto nextLoop
 			}
 
-			utils.Logger().Printf("current song sample rate: %d", p.curFormat.SampleRate)
+			slog.Info("current song sample rate", slog.Int("sample_rate", int(p.curFormat.SampleRate)))
 
 			p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 			p.volume.Streamer = p.ctrl
 			speaker.Play(p.volume)
 
 			// 计时器
-			p.timer = utils.NewTimer(utils.Options{
+			p.timer = timex.NewTimer(timex.Options{
 				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
 				OnRun:          func(started bool) {},
@@ -293,7 +299,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 		if p.curStreamer != nil {
 			err := p.curStreamer.Seek(newPos)
 			if err != nil {
-				utils.Logger().Printf("seek error: %+v", err)
+				slog.Error("seek error", slogx.Error(err))
 			}
 		}
 		if p.timer != nil {
@@ -442,7 +448,7 @@ func (p *beepPlayer) reset() {
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
-			utils.Logger().Printf("streamer panic: %+v", err)
+			slog.Error("streamer panic", slogx.Error(err))
 			p.Stop()
 		}
 	}()
@@ -461,7 +467,7 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 				return
 			}
 		}
-		utils.ResetError(p.curStreamer)
+		errorx.ResetError(p.curStreamer)
 
 		select {
 		case <-time.After(time.Second * 5):
