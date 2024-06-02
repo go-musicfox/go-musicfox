@@ -165,7 +165,7 @@ nfpms:
           - libasound2-dev
 
 changelog:
-  use: github-native
+  use: git
   groups:
     - title: Features
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
