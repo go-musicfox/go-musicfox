@@ -1,0 +1,8 @@
+[Desktop Entry]
+Icon=musicfox
+Exec=musicfox
+Type=Application
+Terminal=true
+Categories=AudioVideo;Audio;
+Keywords=music;musicfox;netease
+StartupNotify=true
