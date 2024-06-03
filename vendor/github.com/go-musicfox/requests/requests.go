@@ -310,8 +310,14 @@ func (resp *Response) Content() []byte {
 }
 
 func (resp *Response) ReloadContent() []byte {
+	content := resp.content
 	resp.content = nil
-	return resp.Content()
+	b := resp.Content()
+	if len(b) == 0 {
+		// reload content failed
+		resp.content = content
+	}
+	return resp.content
 }
 
 func (resp *Response) Text() string {

@@ -3,7 +3,6 @@ package mathx
 import (
 	"fmt"
 	"math"
-	"strconv"
 )
 
 type ordinal interface {
@@ -24,16 +23,19 @@ func Max[T ordinal](a, b T) T {
 	return a
 }
 
-// FormatBytes returns a string representing the size in bytes with a suffix.
 func FormatBytes(size int64) string {
-	const unit = 1000
-	if size < unit {
+	base := int64(1024)
+	if size < base {
 		return fmt.Sprintf("%d B", size)
 	}
-	s := float64(size)
-	units := []string{"kB", "MB", "GB", "TB", "PB", "EB"}
 
-	e := math.Floor(math.Log10(s/unit) / math.Log10(unit))
-	n := s / math.Pow(unit, e)
-	return strconv.FormatFloat(n, 'f', -1, 64) + " " + units[int(e)]
+	orders := []string{"", "KB", "MB", "GB", "TB", "PB", "EB"}
+	exp := int(math.Floor(math.Log2(float64(size)) / 10))
+	if exp >= len(orders) {
+		exp = len(orders) - 1
+	}
+
+	suffix := orders[exp]
+	value := float64(size) / math.Pow(float64(base), float64(exp))
+	return fmt.Sprintf("%.2f %s", value, suffix)
 }
