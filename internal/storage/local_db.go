@@ -17,8 +17,7 @@ type LocalDB struct {
 
 // NewLocalDB 创建本地数据库
 func NewLocalDB(dbName string) (*LocalDB, error) {
-	projectPath := app.DataRootDir()
-
+	projectPath := app.CacheDir()
 	dbDir := fmt.Sprintf("%s/db", projectPath)
 	if _, err := os.Stat(dbDir); err != nil {
 		_ = os.MkdirAll(dbDir, 0755)

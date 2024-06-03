@@ -66,7 +66,7 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 
 func (n *Netease) InitHook(_ *model.App) {
 	config := configs.ConfigRegistry
-	projectDir := app.DataRootDir()
+	projectDir := app.CacheDir()
 
 	// 全局文件Jar
 	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(projectDir, "cookie"), nil)

@@ -132,7 +132,7 @@ func logout() {
 		Url:     types.AppGithubUrl,
 		GroupId: types.GroupID,
 	})
-	_ = os.Remove(filepath.Join(app.DataRootDir(), "cookie"))
+	_ = os.Remove(filepath.Join(app.CacheDir(), "cookie"))
 }
 
 // likeSelectedSong like/unlike selected song

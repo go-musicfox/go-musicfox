@@ -38,15 +38,37 @@ func DataRootDir() string {
 func CacheDir() string {
 	cacheDir := configs.ConfigRegistry.Main.CacheDir
 	if cacheDir == "" {
-		cacheDir = filepath.Join(DataRootDir(), "cache")
+		cache, err := os.UserCacheDir()
+		if nil != err {
+			panic("未获取到本地缓存目录：" + err.Error())
+		}
+		cacheDir = filepath.Join(cache, types.AppLocalDataDir)
+	}
+	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
+		_ = os.MkdirAll(cacheDir, os.ModePerm)
 	}
 	return cacheDir
 }
-
+func TmpDir() string {
+	tmpDir := os.TempDir()
+	tmpDir = filepath.Join(tmpDir, types.AppLocalDataDir, os.Getenv("USER"))
+	if _, err := os.Stat(tmpDir); os.IsNotExist(err) {
+		_ = os.MkdirAll(tmpDir, 0600)
+	}
+	return tmpDir
+}
 func DownloadDir() string {
 	downloadDir := configs.ConfigRegistry.Main.DownloadDir
 	if downloadDir == "" {
-		downloadDir = filepath.Join(DataRootDir(), "download")
+		download, err := os.UserCacheDir()
+		if nil != err {
+			panic("未获取到本地下载目录：" + err.Error())
+			// 			但是这个error不可能被触发
+		}
+		downloadDir = filepath.Join(download, types.AppLocalDataDir, "download")
+	}
+	if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
+		_ = os.MkdirAll(downloadDir, os.ModePerm)
 	}
 	return downloadDir
 }
