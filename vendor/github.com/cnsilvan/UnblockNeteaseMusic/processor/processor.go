@@ -163,7 +163,8 @@ func Request(request *http.Request, remoteUrl string) (*http.Response, error) {
 	return network.Request(&clientRequest)
 }
 
-func RequestAfter(request *http.Request, response *http.Response, netease *Netease) (pass bool) {
+func RequestAfter(request *http.Request, response *http.Response, netease *Netease) {
+	var pass bool
 	if _, ok := Path[netease.Path]; ok {
 		pass = true
 	}
