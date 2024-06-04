@@ -2,11 +2,12 @@ package service
 
 import (
 	"bytes"
-	"github.com/buger/jsonparser"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/buger/jsonparser"
 )
 
 type PlaylistTrackAllService struct {
@@ -66,7 +67,7 @@ func (service *PlaylistTrackAllService) AllTracks() (float64, []byte) {
 	}
 	wg.Wait()
 
-	var bf = bytes.NewBufferString("[")
+	bf := bytes.NewBufferString("[")
 	for i, track := range tracks {
 		if track == nil {
 			continue
