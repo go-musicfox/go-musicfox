@@ -40,8 +40,8 @@ github.com/go-flac/flacpicture v0.3.0 h1:LkmTxzFLIynwfhHiZsX0s8xcr3/u33MzvV89u+z
 github.com/go-flac/flacpicture v0.3.0/go.mod h1:DPbrzVYQ3fJcvSgLFp9HXIrEQEdfdk/+m0nQCzwodZI=
 github.com/go-flac/go-flac v1.0.0 h1:6qI9XOVLcO50xpzm3nXvO31BgDgHhnr/p/rER/K/doY=
 github.com/go-flac/go-flac v1.0.0/go.mod h1:WnZhcpmq4u1UdZMNn9LYSoASpWOCMOoxXxcWEHSzkW8=
-github.com/go-musicfox/UnblockNeteaseMusic v0.1.3 h1:HdviImB2KcnIU/nt5MBeYTEltYsWb2Qd3tMIXNNBtc4=
-github.com/go-musicfox/UnblockNeteaseMusic v0.1.3/go.mod h1:TL7BG8IFdOr6YcOitWUyzYk86us7RtJ15ynHzTnTNEc=
+github.com/go-musicfox/UnblockNeteaseMusic v0.1.5 h1:F+4cXK2mm11WwaYQzYjkGsDPhlhlluQEFiByxNzNxfU=
+github.com/go-musicfox/UnblockNeteaseMusic v0.1.5/go.mod h1:pVYgfO6pvT/Jn7LWH4yd0WUUoVxfBh3H2ACNKgQyFEw=
 github.com/go-musicfox/beep v1.4.1 h1:1U7nnypAez/OgEBy+Kf9pnxL4ZYBk4OFASGKIi5nhuU=
 github.com/go-musicfox/beep v1.4.1/go.mod h1:FLIgNbvzfm53Fe9yu6PEeEGbdFiA6ubejExj5dp2ctI=
 github.com/go-musicfox/bubbletea v0.25.0-foxful h1:HRvsptwgdgK7ltKFfddIcgRQezMA9Gagi0QD8hlMkFo=
@@ -54,12 +54,12 @@ github.com/go-musicfox/gohook v0.41.1 h1:fyJl2/EJrvttJPIgNlwv1UgO1XqX3AiqnkpIhaN
 github.com/go-musicfox/gohook v0.41.1/go.mod h1:FedpuAkVqzM5t67L5fcf3hSSCUDO9cM5YkWCw1U+nuc=
 github.com/go-musicfox/lastfm-go v0.0.2 h1:S/jXVK/bSi9JGZGm7ynQWY3nQ8gvMzbpHf2yKZ9ge+g=
 github.com/go-musicfox/lastfm-go v0.0.2/go.mod h1:QAs3ciul8v40zzwgDPDVq12CSACAIZUHXSSeBJLCdQE=
-github.com/go-musicfox/netease-music v1.4.4 h1:Hua7gBzUNLcyDvJOkMs9BVt0EDe1SuRCOfIE0tcApUM=
-github.com/go-musicfox/netease-music v1.4.4/go.mod h1:mME3QA+WdgVaSrmBczlYWOgzW8Hlyq+gI62kGnrd+mM=
+github.com/go-musicfox/netease-music v1.4.5 h1:5wTmvKc+7aevFOTouQdIwbhYK5OPVza868SqJgG1GhM=
+github.com/go-musicfox/netease-music v1.4.5/go.mod h1:ZqIVZ5RvzlHPHrxtfhsj2Aa8eNEfYYs/rWOgstLcigA=
 github.com/go-musicfox/notificator v0.1.2 h1:rJbJr2bbdqYX+wkPJuAszWxO4lXXE7EvwXgUZErOVhY=
 github.com/go-musicfox/notificator v0.1.2/go.mod h1:1FtZ3LEbv/I+EnrHOagRI2e3CwltRFhda6xLR3kOViI=
-github.com/go-musicfox/requests v0.2.2 h1:ZGufZ2z/6U6i45mx+mDeFRV4JfpYy2tBDUg6eGYlAso=
-github.com/go-musicfox/requests v0.2.2/go.mod h1:OqTmtUmkpkjyAnBHFEnmuO3OIvh1pTTGSNVtlAWKCMs=
+github.com/go-musicfox/requests v0.2.3 h1:30hUisj05ZP4U81Re3/CuI3/x+9dljsIEL6DR+pS56w=
+github.com/go-musicfox/requests v0.2.3/go.mod h1:OqTmtUmkpkjyAnBHFEnmuO3OIvh1pTTGSNVtlAWKCMs=
 github.com/go-musicfox/tag v1.0.2 h1:reDl0/U4IHlA4eKQ4GsdCIXS6JrfHH8pub+YaZsjLlg=
 github.com/go-musicfox/tag v1.0.2/go.mod h1:Ywby7Ky0rK5j1mv30tIMb0Tskcn6fgC1dppRfDXjuwM=
 github.com/go-musicfox/winrt-go v0.1.4 h1:xg+7VKsIozGK8S4X4zNQ/3HNhg5yHWYaTE+Zs4jySaU=
