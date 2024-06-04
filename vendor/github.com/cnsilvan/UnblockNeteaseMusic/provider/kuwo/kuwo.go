@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tidwall/gjson"
+	"github.com/buger/jsonparser"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"github.com/cnsilvan/UnblockNeteaseMusic/network"
@@ -56,7 +56,14 @@ func (m *KuWo) SearchSong(song common.SearchSong) (songs []*common.Song) {
 				return
 			}
 
-			abslist := gjson.GetBytes(result, "content.1.musicpage.abslist").Array()
+			var abslist [][]byte
+			_, _ = jsonparser.ArrayEach(result, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+				if err != nil {
+					return
+				}
+				abslist = append(abslist, value)
+			}, "content", "[1]", "musicpage", "abslist")
+
 			listLength := len(abslist)
 			maxIndex := listLength/2 + 1
 			if maxIndex > 5 {
@@ -64,15 +71,14 @@ func (m *KuWo) SearchSong(song common.SearchSong) (songs []*common.Song) {
 			}
 			for i, item := range abslist {
 				res := &common.Song{
-					Name: item.Get("SONGNAME").String(),
-					// Duration:  time.Duration(item.Get("DURATION").Int()) * time.Second,
-					AlbumName: html.UnescapeString(item.Get("ALBUM").String()),
-					Artist:    strings.ReplaceAll(html.UnescapeString(item.Get("ARTIST").String()), " ", ""),
+					Name:      utils.StringFromJSON(item, "SONGNAME"),
+					AlbumName: html.UnescapeString(utils.StringFromJSON(item, "ALBUM")),
+					Artist:    strings.ReplaceAll(html.UnescapeString(utils.StringFromJSON(item, "ARTIST")), " ", ""),
 					Source:    "kuwo",
 				}
 
 				var songId string
-				if t := strings.Split(item.Get("MUSICRID").String(), "_"); len(t) < 2 {
+				if t := strings.Split(utils.StringFromJSON(item, "MUSICRID"), "_"); len(t) < 2 {
 					continue
 				} else {
 					songId = t[1]
@@ -80,18 +86,22 @@ func (m *KuWo) SearchSong(song common.SearchSong) (songs []*common.Song) {
 				}
 
 				res.PlatformUniqueKey = make(map[string]any)
-				for k, v := range item.Map() {
-					switch {
-					case v.IsArray():
-						res.PlatformUniqueKey[k] = v.Array()
-					case v.IsObject():
-						res.PlatformUniqueKey[k] = v.Map()
-					case v.IsBool():
-						res.PlatformUniqueKey[k] = v.Bool()
+				_ = jsonparser.ObjectEach(item, func(key, value []byte, dataType jsonparser.ValueType, offset int) error {
+					k := string(key)
+					switch dataType {
+					case jsonparser.String:
+						res.PlatformUniqueKey[k], _ = jsonparser.ParseString(value)
+					case jsonparser.Number:
+						res.PlatformUniqueKey[k], _ = jsonparser.ParseFloat(value)
+					case jsonparser.Object, jsonparser.Array:
+						res.PlatformUniqueKey[k] = string(value)
+					case jsonparser.Boolean:
+						res.PlatformUniqueKey[k], _ = jsonparser.ParseBoolean(value)
+					case jsonparser.Null:
 					default:
-						res.PlatformUniqueKey[k] = v.String()
 					}
-				}
+					return nil
+				})
 				res.PlatformUniqueKey["UnKeyWord"] = song.Keyword
 				res.PlatformUniqueKey["musicId"] = songId
 

@@ -7,9 +7,11 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/buger/jsonparser"
 	"github.com/tidwall/gjson"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/provider/base"
+	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 )
@@ -35,7 +37,13 @@ func (m *Migu) SearchSong(song common.SearchSong) (songs []*common.Song) {
 		return songs
 	}
 
-	list := gjson.GetBytes(result, "musics").Array()
+	var list [][]byte
+	jsonparser.ArrayEach(result, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+		if err != nil {
+			return
+		}
+		list = append(list, value)
+	}, "musics")
 	listLength := len(list)
 	maxIndex := listLength/2 + 1
 	if maxIndex > 10 {
@@ -43,7 +51,7 @@ func (m *Migu) SearchSong(song common.SearchSong) (songs []*common.Song) {
 	}
 
 	for index, matched := range list {
-		if matched.Get("copyrightId").String() == "" {
+		if utils.StringFromJSON(matched, "copyrightId") == "" {
 			continue
 		}
 
@@ -51,28 +59,32 @@ func (m *Migu) SearchSong(song common.SearchSong) (songs []*common.Song) {
 			break
 		}
 		songResult := &common.Song{}
-		songResult.Artist = strings.ReplaceAll(matched.Get("singerName").String(), " ", "")
-		songResult.Name = matched.Get("songName").String()
-		songResult.AlbumName = matched.Get("albumName").String()
+		songResult.Artist = strings.ReplaceAll(utils.StringFromJSON(matched, "singerName"), " ", "")
+		songResult.Name = utils.StringFromJSON(matched, "songName")
+		songResult.AlbumName = utils.StringFromJSON(matched, "albumName")
 		songResult.Source = "migu"
-		songResult.Id = matched.Get("id").String()
+		songResult.Id = utils.StringFromJSON(matched, "id")
 		if len(songResult.Id) > 0 {
 			songResult.Id = string(common.MiGuTag) + songResult.Id
 		}
 
 		songResult.PlatformUniqueKey = make(map[string]any)
-		for k, v := range matched.Map() {
-			switch {
-			case v.IsArray():
-				songResult.PlatformUniqueKey[k] = v.Array()
-			case v.IsObject():
-				songResult.PlatformUniqueKey[k] = v.Map()
-			case v.IsBool():
-				songResult.PlatformUniqueKey[k] = v.Bool()
+		_ = jsonparser.ObjectEach(matched, func(key, value []byte, dataType jsonparser.ValueType, offset int) error {
+			k := string(key)
+			switch dataType {
+			case jsonparser.String:
+				songResult.PlatformUniqueKey[k], _ = jsonparser.ParseString(value)
+			case jsonparser.Number:
+				songResult.PlatformUniqueKey[k], _ = jsonparser.ParseFloat(value)
+			case jsonparser.Object, jsonparser.Array:
+				songResult.PlatformUniqueKey[k] = string(value)
+			case jsonparser.Boolean:
+				songResult.PlatformUniqueKey[k], _ = jsonparser.ParseBoolean(value)
+			case jsonparser.Null:
 			default:
-				songResult.PlatformUniqueKey[k] = v.String()
 			}
-		}
+			return nil
+		})
 		songResult.PlatformUniqueKey["UnKeyWord"] = song.Keyword
 
 		var ok bool
@@ -91,9 +103,20 @@ func (m *Migu) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *com
 	if !ok {
 		return song
 	}
-	types := []string{"ZQ24", "SQ", "HQ", "PQ"}
+	types := []string{"PQ"}
+	switch searchSong.Quality {
+	case common.Standard:
+		types = []string{"PQ"}
+	case common.Higher:
+		types = []string{"SQ", "PQ"}
+	case common.ExHigh:
+		types = []string{"HQ", "SQ", "PQ"}
+	case common.Lossless:
+		types = []string{"ZQ24", "HQ", "SQ", "PQ"}
+	default:
+		types = []string{"ZQ24", "HQ", "SQ", "PQ"}
+	}
 	urlChan := make(chan string, len(types))
-	defer close(urlChan)
 
 	for _, formatType := range types {
 		go func(song *common.Song, formatType string) {
@@ -104,6 +127,7 @@ func (m *Migu) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *com
 				urlChan <- ""
 				return
 			}
+
 			urlChan <- gjson.GetBytes(res, "data.url").String()
 		}(song, formatType)
 	}
@@ -111,18 +135,18 @@ func (m *Migu) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *com
 	i := 0
 	for u := range urlChan {
 		i++
-		if u == "" {
+		if u == "" || song.Url != "" {
 			continue
 		}
 
 		if strings.HasPrefix(u, "http") {
 			song.Url = u
-			return song
+			continue
 		}
 
 		if strings.HasPrefix(u, "//") {
 			song.Url = "http:" + u
-			return song
+			continue
 		}
 
 		if i >= len(types) {

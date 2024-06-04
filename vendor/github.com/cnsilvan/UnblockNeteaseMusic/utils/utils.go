@@ -22,8 +22,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cnsilvan/UnblockNeteaseMusic/cookiestxt"
+	"github.com/buger/jsonparser"
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/cnsilvan/UnblockNeteaseMusic/cookiestxt"
 
 	"golang.org/x/text/width"
 )
@@ -371,4 +373,9 @@ func Combination(WordList []string) (result []string) {
 		result = append(result, WordList[0]+" "+v)
 	}
 	return result
+}
+
+func StringFromJSON(b []byte, keys ...string) string {
+	s, _ := jsonparser.GetString(b, keys...)
+	return s
 }
