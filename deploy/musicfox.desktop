@@ -1,0 +1,15 @@
+[Desktop Entry]
+Icon=musicfox
+Exec=musicfox --verbose 0
+Name=go-musicfox
+Name[zh_CN]=go-musicfox
+GenericName=golang-musicfox
+GenericName[zh_CN]=golang-musicfox
+Type=Application
+Comment=go-musicfox
+Comment[zh_CN]=网易云音乐命令行客户端
+Terminal=true
+Categories=AudioVideo;Audio;
+Keywords=music;musicfox;netease
+StartupNotify=false
+StartupWMClass=musicfox
