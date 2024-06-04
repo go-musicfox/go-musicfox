@@ -223,9 +223,8 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		response := resp.R
 		defer response.Body.Close()
 
-		if replaced := processor.RequestAfter(request, response, netease); replaced {
-			resp.ReloadContent()
-		}
+		processor.RequestAfter(request, response, netease)
+		resp.ReloadContent()
 	}
 
 	resCookies = resp.Cookies()
