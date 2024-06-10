@@ -50,14 +50,14 @@ type winMediaPlayer struct {
 
 	player *playback.MediaPlayer
 
-	curMusic UrlMusic
+	curMusic URLMusic
 	timer    *Timer
 
 	volume    int
 	state     types.State
 	timeChan  chan time.Duration
 	stateChan chan types.State
-	musicChan chan UrlMusic
+	musicChan chan URLMusic
 
 	close chan struct{}
 }
@@ -67,7 +67,7 @@ func NewWinMediaPlayer() *winMediaPlayer {
 		state:     types.Stopped,
 		timeChan:  make(chan time.Duration),
 		stateChan: make(chan types.State),
-		musicChan: make(chan UrlMusic),
+		musicChan: make(chan URLMusic),
 		close:     make(chan struct{}),
 		volume:    100,
 	}
@@ -188,7 +188,7 @@ func (p *winMediaPlayer) listen() {
 			p.Paused()
 			reset()
 
-			uri = Must1(foundation.UriCreateUri(p.curMusic.Url))
+			uri = Must1(foundation.UriCreateUri(p.curMusic.URL))
 			mediaSource = Must1(core.MediaSourceCreateFromUri(uri))
 			Must(p.player.SetSource((*playback.IMediaPlaybackSource)(unsafe.Pointer(mediaSource))))
 
@@ -226,7 +226,7 @@ func (p *winMediaPlayer) setState(state types.State) {
 	}
 }
 
-func (p *winMediaPlayer) Play(music UrlMusic) {
+func (p *winMediaPlayer) Play(music URLMusic) {
 	timer := time.NewTimer(time.Second)
 	defer timer.Stop()
 	select {
@@ -235,7 +235,7 @@ func (p *winMediaPlayer) Play(music UrlMusic) {
 	}
 }
 
-func (p *winMediaPlayer) CurMusic() UrlMusic {
+func (p *winMediaPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 

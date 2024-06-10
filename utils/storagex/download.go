@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -113,7 +112,7 @@ func DownloadMusic(song structs.Song) {
 		err error
 	)
 
-	url, musicType, err := PlayableUrlSong(song)
+	url, musicType, err := PlayableURLSong(song)
 	if err != nil {
 		errHandler(err)
 		return
@@ -127,7 +126,7 @@ func DownloadMusic(song structs.Song) {
 		GroupId: types.GroupID,
 	})
 
-	if _, ok := getCacheUri(song.Id); ok {
+	if fpath := tryFindCache(song.Id); fpath != "" {
 		err = CopyCachedSong(song)
 	} else {
 		err = downloadMusic(url, musicType, song, downloadDir)
@@ -192,18 +191,6 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 	}
 	SetSongTag(file, song)
 	slog.Info("缓存歌曲成功", slog.String("file", filename))
-}
-
-func GetCacheUrl(songId int64) (url, musicType string, ok bool) {
-	url, ok = getCacheUri(songId)
-	if !ok || path.Base(url) < fmt.Sprintf("%d-%d", songId, priority[configs.ConfigRegistry.Main.PlayerSongLevel]) {
-		ok = false
-		return
-	}
-	split := strings.Split(path.Base(url), ".")
-	musicType = split[len(split)-1]
-	ok = true
-	return
 }
 
 func ClearMusicCache() error {

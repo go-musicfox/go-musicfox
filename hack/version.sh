@@ -50,4 +50,4 @@ if [[ ! $(hostname -f 2>/dev/null) ]]; then
 else
 	echo Host "$(hostname -f)"
 fi
-echo Time "$(date '+%Y-%m-%dT%T')"$()
+echo Time "$(date '+%Y-%m-%dT%T')"

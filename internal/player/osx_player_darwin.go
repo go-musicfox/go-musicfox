@@ -20,14 +20,14 @@ type osxPlayer struct {
 	player  *avcore.AVPlayer
 	handler *playerHandler
 
-	curMusic UrlMusic
+	curMusic URLMusic
 	timer    *timex.Timer
 
 	volume    int
 	state     types.State
 	timeChan  chan time.Duration
 	stateChan chan types.State
-	musicChan chan UrlMusic
+	musicChan chan URLMusic
 
 	close chan struct{}
 }
@@ -37,7 +37,7 @@ func NewOsxPlayer() *osxPlayer {
 		state:     types.Stopped,
 		timeChan:  make(chan time.Duration),
 		stateChan: make(chan types.State),
-		musicChan: make(chan UrlMusic),
+		musicChan: make(chan URLMusic),
 		close:     make(chan struct{}),
 		volume:    100,
 	}
@@ -74,7 +74,7 @@ func (p *osxPlayer) listen() {
 					p.timer = nil
 				}
 
-				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.Url)))
+				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.URL)))
 				p.player.ReplaceCurrentItemWithPlayerItem(item)
 
 				// 计时器
@@ -94,9 +94,9 @@ func (p *osxPlayer) listen() {
 							curTime = time.Duration(t.Value/int64(t.Timescale)) * time.Second
 						})
 						select {
-						//osx_player存在一点延迟
+						// osx_player存在一点延迟
 						case p.timeChan <- curTime + time.Millisecond*800:
-						//case p.timeChan <- p.timer.Passed():
+						// case p.timeChan <- p.timer.Passed():
 						default:
 						}
 					},
@@ -115,7 +115,7 @@ func (p *osxPlayer) setState(state types.State) {
 	}
 }
 
-func (p *osxPlayer) Play(music UrlMusic) {
+func (p *osxPlayer) Play(music URLMusic) {
 	timer := time.NewTimer(time.Second)
 	defer timer.Stop()
 	select {
@@ -124,7 +124,7 @@ func (p *osxPlayer) Play(music UrlMusic) {
 	}
 }
 
-func (p *osxPlayer) CurMusic() UrlMusic {
+func (p *osxPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 
