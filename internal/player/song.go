@@ -19,8 +19,8 @@ var SongTypeMapping = map[string]SongType{
 	"flac": Flac,
 }
 
-type UrlMusic struct {
-	Url  string
-	Type SongType
+type URLMusic struct {
+	URL string
 	structs.Song
+	Type SongType
 }

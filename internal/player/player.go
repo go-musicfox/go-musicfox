@@ -9,8 +9,8 @@ import (
 )
 
 type Player interface {
-	Play(music UrlMusic)
-	CurMusic() UrlMusic
+	Play(music URLMusic)
+	CurMusic() URLMusic
 	Paused()
 	Resume()
 	Stop()

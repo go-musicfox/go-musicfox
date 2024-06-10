@@ -44,16 +44,16 @@ type mpdPlayer struct {
 	watcher *mpd.Watcher
 	l       sync.Mutex
 
-	curMusic       UrlMusic
+	curMusic       URLMusic
 	curSongId      int
 	timer          *timex.Timer
-	latestPlayTime time.Time //避免切歌时产生的stop信号造成影响
+	latestPlayTime time.Time // 避免切歌时产生的stop信号造成影响
 
 	volume    int
 	state     types.State
 	timeChan  chan time.Duration
 	stateChan chan types.State
-	musicChan chan UrlMusic
+	musicChan chan URLMusic
 
 	close chan struct{}
 }
@@ -66,7 +66,7 @@ func NewMpdPlayer(bin, configFile, network, address string) *mpdPlayer {
 
 	// 启动前kill
 	{
-		var killCmd = *cmd
+		killCmd := *cmd
 		killCmd.Args = append(killCmd.Args, "--kill")
 		output, err := killCmd.CombinedOutput()
 		if err != nil {
@@ -103,7 +103,7 @@ func NewMpdPlayer(bin, configFile, network, address string) *mpdPlayer {
 		state:      types.Stopped,
 		timeChan:   make(chan time.Duration),
 		stateChan:  make(chan types.State),
-		musicChan:  make(chan UrlMusic),
+		musicChan:  make(chan URLMusic),
 		close:      make(chan struct{}),
 	}
 
@@ -170,9 +170,7 @@ func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 
 // listen 开始监听
 func (p *mpdPlayer) listen() {
-	var (
-		err error
-	)
+	var err error
 
 	for {
 		select {
@@ -196,18 +194,14 @@ func (p *mpdPlayer) listen() {
 			}
 
 			var (
-				url     string
-				isCache bool
+				url     = p.curMusic.URL
+				isLocal = strings.HasPrefix(p.curMusic.URL, "file://")
 			)
-			if strings.HasPrefix(p.curMusic.Url, "http") {
-				url = p.curMusic.Url
-				isCache = false
-			} else {
-				url = path.Base(p.curMusic.Url)
-				isCache = true
+			if isLocal {
+				url = path.Base(p.curMusic.URL)
 			}
 
-			if isCache {
+			if isLocal {
 				_, err = p.client().Rescan(url)
 				mpdErrorHandler(err, false)
 				for {
@@ -244,7 +238,7 @@ func (p *mpdPlayer) listen() {
 
 			err = p.client().PlayID(p.curSongId)
 			mpdErrorHandler(err, false)
-			if !isCache {
+			if !isLocal {
 				// Doing this because github.com/fhs/gompd/v2/mpd hasn't implement "addtagid" yet
 				command := "addtagid %d %s %s"
 				err = p.client().Command(command, p.curSongId, "artist", p.curMusic.ArtistName()).OK()
@@ -280,7 +274,7 @@ func (p *mpdPlayer) setState(state types.State) {
 	}
 }
 
-func (p *mpdPlayer) Play(music UrlMusic) {
+func (p *mpdPlayer) Play(music URLMusic) {
 	timer := time.NewTimer(time.Second)
 	defer timer.Stop()
 	select {
@@ -289,7 +283,7 @@ func (p *mpdPlayer) Play(music UrlMusic) {
 	}
 }
 
-func (p *mpdPlayer) CurMusic() UrlMusic {
+func (p *mpdPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 

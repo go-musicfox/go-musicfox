@@ -436,7 +436,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	p.LocatePlayingSong()
 	p.Paused()
-	url, musicType, err := storagex.PlayableUrlSong(song)
+	url, musicType, err := storagex.PlayableURLSong(song)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
@@ -454,8 +454,8 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 
 	go p.updateLyric(song.Id)
 
-	p.Play(player.UrlMusic{
-		Url:  url,
+	p.Play(player.URLMusic{
+		URL:  url,
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})

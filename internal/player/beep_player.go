@@ -33,7 +33,7 @@ const (
 type beepPlayer struct {
 	l sync.Mutex
 
-	curMusic UrlMusic
+	curMusic URLMusic
 	timer    *timex.Timer
 
 	cacheReader     *os.File
@@ -48,7 +48,7 @@ type beepPlayer struct {
 	volume     *effects.Volume
 	timeChan   chan time.Duration
 	stateChan  chan types.State
-	musicChan  chan UrlMusic
+	musicChan  chan URLMusic
 	httpClient *http.Client
 
 	close chan struct{}
@@ -60,7 +60,7 @@ func NewBeepPlayer() *beepPlayer {
 
 		timeChan:  make(chan time.Duration),
 		stateChan: make(chan types.State),
-		musicChan: make(chan UrlMusic),
+		musicChan: make(chan URLMusic),
 		ctrl: &beep.Ctrl{
 			Paused: false,
 		},
@@ -131,12 +131,12 @@ func (p *beepPlayer) listen() {
 					panic(err)
 				}
 
-				if !strings.HasPrefix(p.curMusic.Url, "http") {
-					reader, err = os.Open(p.curMusic.Url)
+				if strings.HasPrefix(p.curMusic.URL, "file://") {
+					reader, err = os.Open(strings.TrimPrefix(p.curMusic.URL, "file://"))
 					if err != nil {
 						panic(err)
 					}
-				} else if resp, err = p.httpClient.Get(p.curMusic.Url); err != nil {
+				} else if resp, err = p.httpClient.Get(p.curMusic.URL); err != nil {
 					p.stopNoLock()
 					goto nextLoop
 				} else {
@@ -181,7 +181,7 @@ func (p *beepPlayer) listen() {
 					}
 				}(ctx, p.cacheWriter, reader)
 
-				var N = 512
+				N := 512
 				if p.curMusic.Type == Flac {
 					N *= 4
 				}
@@ -232,7 +232,7 @@ func (p *beepPlayer) listen() {
 }
 
 // Play 播放音乐
-func (p *beepPlayer) Play(music UrlMusic) {
+func (p *beepPlayer) Play(music URLMusic) {
 	timer := time.NewTimer(time.Second)
 	defer timer.Stop()
 	select {
@@ -241,7 +241,7 @@ func (p *beepPlayer) Play(music UrlMusic) {
 	}
 }
 
-func (p *beepPlayer) CurMusic() UrlMusic {
+func (p *beepPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 
@@ -460,7 +460,7 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	}
 	p.pausedNoLock()
 
-	var retry = 4
+	retry := 4
 	for !ok && retry > 0 {
 		if p.curMusic.Type == Flac {
 			if err = p.curStreamer.Seek(pos); err != nil {

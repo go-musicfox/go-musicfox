@@ -8,18 +8,17 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
-type winMediaPlayer struct {
-}
+type winMediaPlayer struct{}
 
 func NewWinMediaPlayer() *winMediaPlayer {
 	return &winMediaPlayer{}
 }
 
-func (p *winMediaPlayer) Play(_ UrlMusic) {
+func (p *winMediaPlayer) Play(_ URLMusic) {
 }
 
-func (p *winMediaPlayer) CurMusic() UrlMusic {
-	return UrlMusic{}
+func (p *winMediaPlayer) CurMusic() URLMusic {
+	return URLMusic{}
 }
 
 func (p *winMediaPlayer) Paused() {

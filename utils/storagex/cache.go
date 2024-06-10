@@ -22,7 +22,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/mathx"
 )
 
-func getCacheUri(songId int64) (uri string, ok bool) {
+func tryFindCache(songId int64) (fpath string) {
 	cacheDir := app.CacheDir()
 	if !filex.FileOrDirExists(cacheDir) {
 		if configs.ConfigRegistry.Main.CacheLimit != 0 {
@@ -30,6 +30,7 @@ func getCacheUri(songId int64) (uri string, ok bool) {
 		}
 		return
 	}
+	// TODO: refactor this, read subdir to to improve performance
 	files, err := os.ReadDir(cacheDir)
 	if err != nil || len(files) == 0 {
 		return
@@ -37,8 +38,7 @@ func getCacheUri(songId int64) (uri string, ok bool) {
 	for i := len(files) - 1; i >= 0; i-- {
 		file := files[i]
 		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) {
-			uri = filepath.Join(cacheDir, file.Name())
-			ok = true
+			fpath = filepath.Join(cacheDir, file.Name())
 			return
 		}
 	}
@@ -54,16 +54,16 @@ func CopyCachedSong(song structs.Song) error {
 	if !filex.FileOrDirExists(cacheDir) {
 		_ = os.MkdirAll(cacheDir, os.ModePerm)
 	}
-	oldFilename, ok := getCacheUri(song.Id)
-	if !ok {
+	oldFilename := tryFindCache(song.Id)
+	if oldFilename == "" {
 		return errors.New("cache file not exists")
 	}
 	split := strings.Split(path.Base(oldFilename), ".")
 	musicType := split[len(split)-1]
 	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
 	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
-	filename = strings.Replace(filename, "/", "_", -1)
-	filename = strings.Replace(filename, "\\", "_", -1)
+	filename = strings.ReplaceAll(filename, "/", "_")
+	filename = strings.ReplaceAll(filename, "\\", "_")
 	targetFilename := filepath.Join(downloadDir, filename)
 
 	if _, err := os.Stat(targetFilename); err == nil {
@@ -81,10 +81,20 @@ func CopyCachedSong(song structs.Song) error {
 	return nil
 }
 
-func PlayableUrlSong(song structs.Song) (url, musicType string, err error) {
+func GetCacheURL(songID int64) (fpath, musicType string) {
+	fpath = tryFindCache(songID)
+	if fpath == "" || path.Base(fpath) < fmt.Sprintf("%d-%d", songID, priority[configs.ConfigRegistry.Main.PlayerSongLevel]) {
+		return
+	}
+	split := strings.Split(path.Base(fpath), ".")
+	musicType = split[len(split)-1]
+	fpath = "file://" + fpath
+	return
+}
+
+func PlayableURLSong(song structs.Song) (url, musicType string, err error) {
 	if configs.ConfigRegistry.Main.CacheLimit != 0 {
-		var ok bool
-		if url, musicType, ok = GetCacheUrl(song.Id); ok {
+		if url, musicType = GetCacheURL(song.Id); url != "" {
 			return
 		}
 	}
