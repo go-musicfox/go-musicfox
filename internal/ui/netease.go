@@ -192,10 +192,10 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		// 刷新登录状态
-		// if n.user != nil {
-		// 	refreshLoginService := service.LoginRefreshService{}
-		// 	refreshLoginService.LoginRefresh()
-		// }
+		if n.user != nil {
+			refreshLoginService := service.LoginRefreshService{}
+			refreshLoginService.LoginRefresh()
+		}
 
 		// 检查更新
 		if config.Startup.CheckUpdate {
