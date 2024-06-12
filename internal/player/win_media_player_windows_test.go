@@ -17,8 +17,8 @@ func TestWinMediaPlayer_Play(t *testing.T) {
 	uri := "file:///" + filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(path))), "testdata", "a.mp3")
 
 	player := NewWinMediaPlayer()
-	player.Play(UrlMusic{
-		Url:  uri,
+	player.Play(URLMusic{
+		URL:  uri,
 		Type: Flac,
 		Song: structs.Song{
 			Id:       1,

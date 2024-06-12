@@ -15,11 +15,11 @@ func NewOsxPlayer() *osxPlayer {
 	return &osxPlayer{}
 }
 
-func (p *osxPlayer) Play(_ UrlMusic) {
+func (p *osxPlayer) Play(_ URLMusic) {
 }
 
-func (p *osxPlayer) CurMusic() UrlMusic {
-	return UrlMusic{}
+func (p *osxPlayer) CurMusic() URLMusic {
+	return URLMusic{}
 }
 
 func (p *osxPlayer) Paused() {
