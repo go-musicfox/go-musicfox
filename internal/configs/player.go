@@ -7,4 +7,5 @@ type PlayerOptions struct {
 	MpdConfigFile  string // mpd配置文件
 	MpdNetwork     string // mpd网络类型: tcp、unix
 	MpdAddr        string // mpd地址
+	MpdAutoStart   bool   // mpd自动启动
 }
