@@ -42,7 +42,13 @@ func NewPlayerFromConfig() Player {
 		if err := cmd.Run(); err != nil {
 			panic(err)
 		}
-		player = NewMpdPlayer(registry.Player.MpdBin, registry.Player.MpdConfigFile, registry.Player.MpdNetwork, registry.Player.MpdAddr)
+		player = NewMpdPlayer(&MpdConfig{
+			Bin:        registry.Player.MpdBin,
+			ConfigFile: registry.Player.MpdConfigFile,
+			Network:    registry.Player.MpdNetwork,
+			Address:    registry.Player.MpdAddr,
+			AutoStart:  registry.Player.MpdAutoStart,
+		})
 	case types.OsxPlayer:
 		player = NewOsxPlayer()
 	case types.WinMediaPlayer:
