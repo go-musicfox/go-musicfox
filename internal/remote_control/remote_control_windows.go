@@ -119,11 +119,13 @@ func (c *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 
 	updater := Must1(c.smtc.GetDisplayUpdater())
 	defer updater.Release()
-	imgUri := Must1(foundation.UriCreateUri(info.PicUrl))
-	defer imgUri.Release()
-	stream := Must1(streams.RandomAccessStreamReferenceCreateFromUri(imgUri))
-	defer stream.Release()
-	Must(updater.SetThumbnail(stream))
+	if info.PicUrl != "" {
+		imgUri := Must1(foundation.UriCreateUri(info.PicUrl))
+		defer imgUri.Release()
+		stream := Must1(streams.RandomAccessStreamReferenceCreateFromUri(imgUri))
+		defer stream.Release()
+		Must(updater.SetThumbnail(stream))
+	}
 	Must(updater.SetType(media.MediaPlaybackTypeMusic))
 
 	musicProps := Must1(updater.GetMusicProperties())
