@@ -1,4 +1,11 @@
 
+4.5.1
+=============
+2024-06-12
+
+* fix: scrobble report (#256) (524aaa16)
+* chore: update scoop config & changelog (1bdc9fcb)
+
 4.5.0
 =============
 2024-06-12

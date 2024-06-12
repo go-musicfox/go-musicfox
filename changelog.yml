@@ -1,3 +1,23 @@
+- semver: 4.5.1
+  date: 2024-06-12T23:32:53+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 524aaa160e6e2907fd8ab60a3e316eaf7bd7bc43
+      note: 'fix: scrobble report (#256)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1bdc9fcb10f268a2f886b40c57380de4845852d0
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.0
   date: 2024-06-12T23:16:37+08:00
   packager: go-musicfox
