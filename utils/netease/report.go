@@ -12,7 +12,7 @@ func ReportSongEnd(songID int64, sourceID int64, passedTime time.Duration) {
 	playendService := service.ScrobbleService{
 		ID:       strconv.FormatInt(songID, 10),
 		Sourceid: strconv.FormatInt(sourceID, 10),
-		Time:     int64(passedTime),
+		Time:     int64(passedTime.Seconds()),
 	}
 	code, response := playendService.Scrobble()
 	if code != 200 {
