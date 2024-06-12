@@ -1,3 +1,332 @@
+- semver: 4.5.0
+  date: 2024-06-12T23:16:37+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0c095bef9721a354206c333b07a1bdae416a1e31
+      note: 'fix: goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f3e2c534b93c7158a32ee6aee95e21c951f4c0eb
+      note: 'fix: download failed(#274)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9fea879a383a6aaab9ccffdba1216e24d4bf767f
+      note: 'fix: `UrlMusic`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8ebe8180cade6994e93711b18ed89b3be63492c4
+      note: 'fix: panic nil ptr'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b667fbf48947b291d6f9eeac1723124edef51336
+      note: 'feat(mpd): add config item `MpdAutoStart` to contrl whether mpd should be started'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 048092f3123f0efcdf57b07e6f35c80924bdba97
+      note: 'fix: refresh login'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e7803c526596592466d61b82759f533dab20f0a3
+      note: 'chore: update cache'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9bfd4572c8ef880ad94d986303fcac22fc275349
+      note: 'chore: fix homebrew'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 10211c282a9f980b2d5a2ece226daaaa9c6364ad
+      note: Update go-musicfox.ini
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c64747ba9f0407862dd17b91ef54d3e176ecd6f6
+      note: 'chore: add linux desktop file'
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7ee81e1f635eece7fed42d8e965d6378ec81cf28
+      note: 'docs: 更新了ubuntu编译问题'
+      author:
+        name: xmb505
+        email: 530060699@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8a26c13e69ba14cb622bca21b7fc0ea75df41dbc
+      note: 'docs: 更新了debian系发行版安装方法'
+      author:
+        name: xmb505
+        email: 530060699@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3228d5557554bc9d99eb06e9b0470332ab57dca6
+      note: 'chore: update deps'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0b6f4946217ce0ff9d968801c33170e716ef913e
+      note: 新建了desktop
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+    - commit: 67777c6baae7436a94c59cd2606b448b861177dc
+      note: 'fix: unm request'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fb60658599b6abec2382bebcf6fd6f39514b4cd8
+      note: Update go-musicfox.ini
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e59fff1c9c3c1ce3b1329ea87795cba46e2435c8
+      note: 'fix: UNM `migu`, `kuwo`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b33cf3cceba3a8e4beb3f48309f03936f4debd10
+      note: 'chore: optimize log'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 69b19b159e4d6093e60f4a7bc32af5b8e6008547
+      note: 'chore: fix ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 97ab6a9ba0f13df0566c82b8c1f3552ac2e82f30
+      note: chore:add ci when pr
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3fc84ec2df6b9042d5dbcabb8729a22d0945f2ab
+      note: 'chore: mod tidy & vendor'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b958058879190ed8b4a1bab1e82d79344df8957f
+      note: 'feat: support more level & refactor `utils` package'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1fab47bbfc79647c047453830cbe78b1c55a6bdb
+      note: 'feat: add more song level'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7aa5eed32ffb63e6d8ab3b8ebd50684854abc858
+      note: 更新了ubuntu编译问题
+      author:
+        name: xmb505
+        email: 530060699@qq.com
+      committer:
+        name: xmb505
+        email: 530060699@qq.com
+    - commit: 690c0250f2dbfc1a7b821fa7eb63760bb27a0a6b
+      note: 更新了debian系发行版安装方法
+      author:
+        name: xmb505
+        email: 530060699@qq.com
+      committer:
+        name: xmb505
+        email: 530060699@qq.com
+    - commit: 7939738e9acfc3e926fd3caef9fc314cd825948b
+      note: 'fix: make install error'
+      author:
+        name: yafeng-Soong
+        email: 397655952@qq.com
+      committer:
+        name: yafeng-Soong
+        email: 397655952@qq.com
+    - commit: cb36711833ffadea74b89f6f0a453f7b96f03356
+      note: 'docs: update README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 0be2e7716d6af50195774f4e73bdc18fcc66517d
+      note: 'ci: update release.yaml'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 52e6f51b515767b8b1f5ca6602420f281ebd9468
+      note: 'ci: update release.yaml'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 96f4c1f1a6a3e42747b686147b8fe8429cb3a205
+      note: 'ci: fix branch match'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f28c965f960b7dce0f3776abd6b9c0661792e057
+      note: |-
+        update ci (#269)
+
+        * ci: fix `GOPATH: unbound variable`
+
+        * ci: run ci on pr
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 20ba1bea9b2f1d3b4d2f704626996357aabed4e8
+      note: 'ci: rm unsupported option (#268)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7d3d4e5c6800b37e552f141eaa407eed152e8522
+      note: 'ci: upload more artifacts'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 95b4a30e57adc991291beca2d3d05cda2923e290
+      note: 'ci: add deb, rpm...'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e7912bb0c07eef13641ac76d36e62c2f3bcf9b07
+      note: Update README.md
+      author:
+        name: Jadeiin
+        email: 92222981+Jadeiin@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: b1f69a4ea1809edbbdfc0f83a487a8470d97acd5
+      note: Update README.md
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 328f4e26c3005d6450d295e11c4e7c361aee85b5
+      note: 'optimize: catch panic in beep player'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5e7a47025070add195bf883bd685135b390a913d
+      note: 'doc: add termux install'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 98ea6dce51a778546bc4ab244c964892d2d4a480
+      note: 'chore: update README & go.mod'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 96d27b77daade1f3e1e60aa01d03b66ed28f16e8
+      note: 'feat: update scoop config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.4.1
   date: 2024-05-13T20:56:59+08:00
   packager: go-musicfox

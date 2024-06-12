@@ -1,4 +1,49 @@
 
+4.5.0
+=============
+2024-06-12
+
+* fix: goreleaser config (0c095bef)
+* fix: download failed(#274) (f3e2c534)
+* fix: `UrlMusic` (9fea879a)
+* fix: panic nil ptr (8ebe8180)
+* feat(mpd): add config item `MpdAutoStart` to contrl whether mpd should be started (b667fbf4)
+* fix: refresh login (048092f3)
+* chore: update cache (e7803c52)
+* chore: fix homebrew (9bfd4572)
+* Update go-musicfox.ini (10211c28)
+* chore: add linux desktop file (c64747ba)
+* docs: 更新了ubuntu编译问题 (7ee81e1f)
+* docs: 更新了debian系发行版安装方法 (8a26c13e)
+* chore: update deps (3228d555)
+* 新建了desktop (0b6f4946)
+* fix: unm request (67777c6b)
+* Update go-musicfox.ini (fb606585)
+* fix: UNM `migu`, `kuwo` (e59fff1c)
+* chore: optimize log (b33cf3cc)
+* chore: fix ci (69b19b15)
+* chore:add ci when pr (97ab6a9b)
+* chore: mod tidy & vendor (3fc84ec2)
+* feat: support more level & refactor `utils` package (b9580588)
+* feat: add more song level (1fab47bb)
+* 更新了ubuntu编译问题 (7aa5eed3)
+* 更新了debian系发行版安装方法 (690c0250)
+* fix: make install error (7939738e)
+* docs: update README (cb367118)
+* ci: update release.yaml (0be2e771)
+* ci: update release.yaml (52e6f51b)
+* ci: fix branch match (96f4c1f1)
+* update ci (#269) (f28c965f)
+* ci: rm unsupported option (#268) (20ba1bea)
+* ci: upload more artifacts (7d3d4e5c)
+* ci: add deb, rpm... (95b4a30e)
+* Update README.md (e7912bb0)
+* Update README.md (b1f69a4e)
+* optimize: catch panic in beep player (328f4e26)
+* doc: add termux install (5e7a4702)
+* chore: update README & go.mod (98ea6dce)
+* feat: update scoop config (96d27b77)
+
 4.4.1
 =============
 2024-05-13
