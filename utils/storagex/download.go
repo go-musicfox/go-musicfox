@@ -92,14 +92,15 @@ func downloadMusic(url, musicType string, song structs.Song, downloadDir string)
 	filename := filenameBuilder.String()
 
 	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
-	filename = strings.ReplaceAll(filename, "/", "_")
-	filename = strings.ReplaceAll(filename, "\\", "_")
+	replacer := strings.NewReplacer("/", "_", "\\", "_", "*", "_")
+	filename = replacer.Replace(filename)
 	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
 	}
 	file, _ := os.OpenFile(filepath.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
 	SetSongTag(file, song)
+	slog.Info("下载歌曲成功", slog.String("file", filename))
 	return nil
 }
 
@@ -262,7 +263,10 @@ func SetSongTag(file *os.File, song structs.Song) {
 				_ = metadata.(*songtag.FLAC).SetFlacPicture(img)
 			}
 		}
-		_ = metadata.SaveFile(file.Name() + "-tmp")
-		_ = os.Rename(file.Name()+"-tmp", file.Name())
+		filename := file.Name()
+		_ = metadata.SaveFile(filename + "-tmp")
+		_ = file.Close()
+		_ = os.Remove(filename)
+		_ = os.Rename(filename+"-tmp", filename)
 	}
 }
