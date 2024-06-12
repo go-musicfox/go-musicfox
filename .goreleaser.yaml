@@ -273,11 +273,6 @@ release:
   github:
     owner: go-musicfox
     name: go-musicfox
-  extra_files:
-    - glob: ./dist/*.apk
-    - glob: ./dist/*.deb
-    - glob: ./dist/*.pkg.tar.zst
-    - glob: ./dist/*.rpm
   discussion_category_name: General
   prerelease: auto
   mode: replace
