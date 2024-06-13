@@ -65,3 +65,7 @@ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() model.Hook {
 func (m *PlaylistDetailMenu) Songs() []structs.Song {
 	return m.songs
 }
+
+func (m *PlaylistDetailMenu) PlaylistId() int64 {
+	return m.playlistId
+}

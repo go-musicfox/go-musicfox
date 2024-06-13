@@ -72,7 +72,6 @@ type Player struct {
 	curSong          structs.Song   // 当前歌曲信息（防止播放列表发生变动后，歌曲信息不匹配）
 	playingMenuKey   string         // 正在播放的菜单Key
 	playingMenu      Menu
-	playedTime       time.Duration // 已经播放的时长
 
 	lrcFile           *lyric.LRCFile
 	transLrcFile      *lyric.TranslateLRCFile
@@ -139,8 +138,12 @@ func NewPlayer(n *Netease) *Player {
 				// 上报lastfm
 				lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
-				if p.CurMusic().Duration.Seconds()-p.playedTime.Seconds() < 20 {
-					netease.ReportSongEnd(p.curSong.Id, p.PlayingInfo().TrackID, p.PassedTime())
+				if p.CurMusic().Duration.Seconds()-p.PassedTime().Seconds() < 20 {
+					sourceId := p.CurMusic().Album.Id
+					if m, ok := p.playingMenu.(*PlaylistDetailMenu); ok {
+						sourceId = m.PlaylistId()
+					}
+					netease.ReportSongEnd(p.curSong.Id, sourceId, p.PassedTime())
 				}
 				p.NextSong(false)
 			}
@@ -154,8 +157,6 @@ func NewPlayer(n *Netease) *Player {
 			case <-ctx.Done():
 				return
 			case duration := <-p.TimeChan():
-				// 200ms 为刷新间隔，刷新间隔修改时此处需要保持同步
-				p.playedTime += time.Millisecond * 200
 				p.stateHandler.SetPosition(p.PassedTime())
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					// 上报
@@ -432,7 +433,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		PlaylistUpdateAt: p.playlistUpdateAt,
 	})
 	p.curSong = song
-	p.playedTime = 0
 
 	p.LocatePlayingSong()
 	p.Paused()

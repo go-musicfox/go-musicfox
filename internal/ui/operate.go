@@ -777,7 +777,7 @@ func delSongFromPlaylist(m *Netease) model.Page {
 	// 选中歌曲为当前播放歌曲时处理逻辑
 	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == me.Songs()[selectedIndex].Id {
 		// 防止用户快速删除当前播放歌曲导致错位
-		if m.player.State() >= types.Playing && m.player.playedTime.Seconds() < 2 {
+		if m.player.State() >= types.Playing && m.player.PassedTime().Seconds() < 2 {
 			return nil
 		}
 		// 末尾歌曲删除向前退
