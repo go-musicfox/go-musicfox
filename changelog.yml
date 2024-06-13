@@ -1,3 +1,39 @@
+- semver: 4.5.2
+  date: 2024-06-13T12:52:48+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 4f0c51670965b0340a6cdc248b87e44cc8094328
+      note: 'docs: gen CHANGELOG'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1447fc3406a288aa2908ecf428f1a39c5220752c
+      note: 'optimize: rm useless field `playedTime`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c8494bf953a43824b780a83b2c5ba4926defbcf7
+      note: 'chore: rm winget'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5bf7aa290c071c8e9d96de1130c3ec35fed06bd9
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.1
   date: 2024-06-13T12:42:37+08:00
   packager: go-musicfox

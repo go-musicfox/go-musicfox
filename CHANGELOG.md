@@ -1,4 +1,13 @@
 
+4.5.2
+=============
+2024-06-13
+
+* docs: gen CHANGELOG (4f0c5167)
+* optimize: rm useless field `playedTime` (1447fc34)
+* chore: rm winget (c8494bf9)
+* chore: update scoop config & changelog (5bf7aa29)
+
 4.5.1
 =============
 2024-06-13
