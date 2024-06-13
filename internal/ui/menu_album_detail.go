@@ -44,7 +44,6 @@ func (m *AlbumDetailMenu) MenuViews() []model.MenuItem {
 
 func (m *AlbumDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-
 		albumService := service.AlbumService{
 			ID: strconv.FormatInt(m.albumId, 10),
 		}
@@ -66,4 +65,8 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() model.Hook {
 
 func (m *AlbumDetailMenu) Songs() []structs.Song {
 	return m.songs
+}
+
+func (m *AlbumDetailMenu) AlbumId() int64 {
+	return m.albumId
 }
