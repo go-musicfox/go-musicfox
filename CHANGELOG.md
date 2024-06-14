@@ -1,4 +1,12 @@
 
+4.5.3
+=============
+2024-06-14
+
+* feat: upgrade netease pkg (02bb4074)
+* feat: scrobble (1f85c06f)
+* chore: update scoop config & changelog (8933591a)
+
 4.5.2
 =============
 2024-06-13

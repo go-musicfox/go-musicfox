@@ -1,3 +1,31 @@
+- semver: 4.5.3
+  date: 2024-06-14T20:39:46+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 02bb40744023442b4e05bd4a724b6de1f886a20a
+      note: 'feat: upgrade netease pkg'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1f85c06fc39f04165ae19babd9932c73980e3bd6
+      note: 'feat: scrobble'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8933591a74fc30ebdddbe4c8b2ad8df469841aad
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.2
   date: 2024-06-13T12:52:48+08:00
   packager: go-musicfox
