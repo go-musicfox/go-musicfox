@@ -135,16 +135,6 @@ func NewPlayer(n *Netease) *Player {
 					p.netease.Rerender(false)
 					break
 				}
-				// 上报lastfm
-				lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
-				// 自动切歌且播放时间不少于(实际歌曲时间-20)秒时，才上报至网易云
-				if p.CurMusic().Duration.Seconds()-p.PassedTime().Seconds() < 20 {
-					sourceId := p.CurMusic().Album.Id
-					if m, ok := p.playingMenu.(*PlaylistDetailMenu); ok {
-						sourceId = m.PlaylistId()
-					}
-					netease.ReportSongEnd(p.curSong.Id, sourceId, p.PassedTime())
-				}
 				p.NextSong(false)
 			}
 		}
@@ -159,8 +149,6 @@ func NewPlayer(n *Netease) *Player {
 			case duration := <-p.TimeChan():
 				p.stateHandler.SetPosition(p.PassedTime())
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
-					// 上报
-					lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
 					p.NextSong(false)
 				}
 				if p.lrcTimer != nil {
@@ -422,6 +410,10 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
+	if song.Id != p.curSong.Id {
+		p.reportEnd() // 上一首播放结束
+	}
+
 	loading := model.NewLoading(p.netease.MustMain())
 	loading.Start()
 	defer loading.Complete()
@@ -461,8 +453,8 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	})
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
-	// 上报
-	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
+	// 上报开始播放
+	p.reportStart()
 
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
@@ -651,6 +643,9 @@ func (p *Player) SetPlayMode(playMode types.Mode) {
 
 // Close 关闭
 func (p *Player) Close() error {
+	// 退出前上报
+	p.reportEnd()
+
 	p.cancel()
 	if p.stateHandler != nil {
 		p.stateHandler.Release()
@@ -861,4 +856,70 @@ func (p *Player) PlayingInfo() control.PlayingInfo {
 
 func (p *Player) RenderTicker() model.Ticker {
 	return p.renderTicker
+}
+
+func (p *Player) buildNeteaseReportService() *service.ReportService {
+	svc := &service.ReportService{
+		ID:      p.curSong.Id,
+		Alg:     p.curSong.Alg,
+		Type:    "song",
+		Time:    int64(p.PassedTime().Seconds()),
+		EndType: "playend",
+	}
+
+	switch m := p.playingMenu.(type) {
+	case *PlaylistDetailMenu:
+		svc.SourceType = "list"
+		svc.SourceId = strconv.FormatInt(m.PlaylistId(), 10)
+	case *AlbumDetailMenu:
+		svc.SourceType = "album"
+		svc.SourceId = strconv.FormatInt(m.AlbumId(), 10)
+	case *DailyRecommendSongsMenu:
+		svc.SourceType = "dailySongRecommend"
+	case *PersonalFmMenu:
+		svc.SourceType = "userfm"
+	case *DjRecommendMenu:
+		svc.Type = "dj"
+	case nil:
+		if p.curSong.Album.Id != 0 {
+			svc.SourceType = "album"
+			svc.SourceId = strconv.FormatInt(p.curSong.Album.Id, 10)
+		}
+	}
+
+	if p.curSong.Duration.Seconds()-p.PassedTime().Seconds() > 10 {
+		svc.EndType = "ui"
+	}
+
+	return svc
+}
+
+func (p *Player) reportStart() {
+	p.buildNeteaseReportService().Playstart()
+	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.curSong, p.PassedTime())
+}
+
+func (p *Player) reportEnd() {
+	// 播放时间不少于20秒时，才上报
+	if p.PassedTime().Seconds() < 20 {
+		return
+	}
+
+	svc := p.buildNeteaseReportService()
+	switch {
+	case math.Abs(p.curSong.Duration.Seconds()-p.PassedTime().Seconds()) <= 10:
+		// 播放结束
+		svc.EndType = "playend"
+	case time.Since(p.playlistUpdateAt).Seconds() <= 5:
+		// 更换了歌单
+		svc.EndType = "interrupt"
+	default:
+		svc.EndType = "ui"
+	}
+	svc.Playend()
+
+	// 播放过一半, 上报lastfm
+	if p.PassedTime().Seconds() >= p.curSong.Duration.Seconds()/2 {
+		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong, p.PassedTime())
+	}
 }

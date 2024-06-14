@@ -97,3 +97,7 @@ func (m *DjRadioDetailMenu) BottomOutHook() model.Hook {
 func (m *DjRadioDetailMenu) Songs() []structs.Song {
 	return m.songs
 }
+
+func (m *DjRadioDetailMenu) DjRadioId() int64 {
+	return m.djRadioId
+}

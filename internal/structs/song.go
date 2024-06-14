@@ -11,6 +11,7 @@ import (
 type Song struct {
 	Id       int64         `json:"id"`
 	Name     string        `json:"name"`
+	Alg      string        `json:"alg"` // 每日推荐，私人FM回传使用
 	Duration time.Duration `json:"duration"`
 	Artists  []Artist      `json:"artists"`
 	Album    `json:"album"`
@@ -39,6 +40,9 @@ func NewSongFromShortNameSongsJson(json []byte) (Song, error) {
 
 	if name, err := jsonparser.GetString(json, "name"); err == nil {
 		song.Name = name
+	}
+	if alg, err := jsonparser.GetString(json, "alg"); err == nil {
+		song.Alg = alg
 	}
 	if duration, err := jsonparser.GetInt(json, "dt"); err == nil {
 		song.Duration = time.Millisecond * time.Duration(duration)
@@ -74,6 +78,9 @@ func NewSongFromFmJson(json []byte) (Song, error) {
 
 	if name, err := jsonparser.GetString(json, "name"); err == nil {
 		song.Name = name
+	}
+	if alg, err := jsonparser.GetString(json, "alg"); err == nil {
+		song.Alg = alg
 	}
 	if duration, err := jsonparser.GetInt(json, "duration"); err == nil {
 		song.Duration = time.Millisecond * time.Duration(duration)
