@@ -38,7 +38,14 @@ func DataRootDir() string {
 func CacheDir() string {
 	cacheDir := configs.ConfigRegistry.Main.CacheDir
 	if cacheDir == "" {
-		cacheDir = filepath.Join(DataRootDir(), "cache")
+		cache, err := os.UserCacheDir()
+		if nil != err {
+			panic("未获取到本地缓存目录：" + err.Error())
+		}
+		cacheDir = filepath.Join(cache, types.AppLocalDataDir)
+	}
+	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
+		_ = os.MkdirAll(cacheDir, os.ModePerm)
 	}
 	return cacheDir
 }
