@@ -487,7 +487,7 @@ ctrl+shift+space=toggle
 ## 配置文件
 </summary>
 
-配置文件路径为用户配置目录下的 `go-musicfox.ini` 文件，详细可参见[配置示例](./utils/embed/go-musicfox.ini)。
+配置文件路径为用户配置目录下的 `go-musicfox.ini` 文件，详细可参见[配置示例](./utils/filex/embed/go-musicfox.ini)。
 
 > 用户配置目录路径：
 > 
