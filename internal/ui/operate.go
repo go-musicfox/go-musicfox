@@ -621,7 +621,7 @@ func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 
 	notify.Notify(notify.NotifyContent{
 		Title:   notifyTitle,
-		Text:    menu.MenuViews()[selectedIndex].Title,
+		Text:    menu.MenuViews()[main.SelectedIndex()].Title,
 		Url:     notifyURL,
 		GroupId: types.GroupID,
 	})
