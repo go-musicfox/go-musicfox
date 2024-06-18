@@ -12,7 +12,7 @@ jobs:
   noResponse:
     runs-on: ubuntu-latest
     steps:
-      - uses: MBilalShafi/no-response@v0.0.6
+      - uses: MBilalShafi/no-response-add-label@v0.0.6
         with:
           token: ${{ github.token }}
           daysUntilClose: 7
