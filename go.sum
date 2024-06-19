@@ -40,8 +40,8 @@ github.com/go-flac/flacpicture v0.3.0 h1:LkmTxzFLIynwfhHiZsX0s8xcr3/u33MzvV89u+z
 github.com/go-flac/flacpicture v0.3.0/go.mod h1:DPbrzVYQ3fJcvSgLFp9HXIrEQEdfdk/+m0nQCzwodZI=
 github.com/go-flac/go-flac v1.0.0 h1:6qI9XOVLcO50xpzm3nXvO31BgDgHhnr/p/rER/K/doY=
 github.com/go-flac/go-flac v1.0.0/go.mod h1:WnZhcpmq4u1UdZMNn9LYSoASpWOCMOoxXxcWEHSzkW8=
-github.com/go-musicfox/UnblockNeteaseMusic v0.1.5 h1:F+4cXK2mm11WwaYQzYjkGsDPhlhlluQEFiByxNzNxfU=
-github.com/go-musicfox/UnblockNeteaseMusic v0.1.5/go.mod h1:pVYgfO6pvT/Jn7LWH4yd0WUUoVxfBh3H2ACNKgQyFEw=
+github.com/go-musicfox/UnblockNeteaseMusic v0.1.6 h1:odwpAD5qfPTnipKR69TT5CNQkNit2pMzPb5IhxoHQHY=
+github.com/go-musicfox/UnblockNeteaseMusic v0.1.6/go.mod h1:pVYgfO6pvT/Jn7LWH4yd0WUUoVxfBh3H2ACNKgQyFEw=
 github.com/go-musicfox/beep v1.4.1 h1:1U7nnypAez/OgEBy+Kf9pnxL4ZYBk4OFASGKIi5nhuU=
 github.com/go-musicfox/beep v1.4.1/go.mod h1:FLIgNbvzfm53Fe9yu6PEeEGbdFiA6ubejExj5dp2ctI=
 github.com/go-musicfox/bubbletea v0.25.0-foxful h1:HRvsptwgdgK7ltKFfddIcgRQezMA9Gagi0QD8hlMkFo=

@@ -26,7 +26,7 @@ github.com/charmbracelet/bubbletea
 # github.com/charmbracelet/lipgloss v0.8.0
 ## explicit; go 1.17
 github.com/charmbracelet/lipgloss
-# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.5
+# github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 => github.com/go-musicfox/UnblockNeteaseMusic v0.1.6
 ## explicit; go 1.22
 github.com/cnsilvan/UnblockNeteaseMusic/cache
 github.com/cnsilvan/UnblockNeteaseMusic/common
@@ -336,6 +336,6 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.5
+# github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.6
 # github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.4
 # github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2

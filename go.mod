@@ -81,7 +81,7 @@ require (
 
 replace (
 	github.com/charmbracelet/bubbletea v0.25.0 => github.com/go-musicfox/bubbletea v0.25.0-foxful
-	github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.5
+	github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.6
 	// github.com/cnsilvan/UnblockNeteaseMusic => ../UnblockNeteaseMusic
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2

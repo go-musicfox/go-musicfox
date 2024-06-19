@@ -31,7 +31,7 @@ func (m *Migu) SearchSong(song common.SearchSong) (songs []*common.Song) {
 
 	result, err := base.FetchV2(
 		"https://m.music.migu.cn/migu/remoting/scr_search_tag?keyword="+url.QueryEscape(song.Keyword)+"&type=2&rows=20&pgc=1",
-		nil, header, true)
+		nil, header.Clone(), true)
 	if err != nil {
 		log.Println(err)
 		return songs
@@ -119,9 +119,10 @@ func (m *Migu) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *com
 	urlChan := make(chan string, len(types))
 
 	for _, formatType := range types {
-		go func(song *common.Song, formatType string) {
+		h := header.Clone()
+		go func(formatType string) {
 			url := "https://app.c.nf.migu.cn/MIGUM2.0/strategy/listen-url/v2.4?netType=01&resourceType=2&songId=" + songId + "&toneFlag=" + formatType
-			res, err := base.FetchV2(url, nil, header, true)
+			res, err := base.FetchV2(url, nil, h, true)
 			if err != nil {
 				slog.Error("migu request error", slog.Any("error", err))
 				urlChan <- ""
@@ -129,7 +130,7 @@ func (m *Migu) GetSongUrl(searchSong common.SearchMusic, song *common.Song) *com
 			}
 
 			urlChan <- gjson.GetBytes(res, "data.url").String()
-		}(song, formatType)
+		}(formatType)
 	}
 
 	i := 0
