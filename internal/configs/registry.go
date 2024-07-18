@@ -180,6 +180,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Player.MpdNetwork = ini.String("player.mpdNetwork", "")
 	registry.Player.MpdAddr = ini.String("player.mpdAddr", "")
 	registry.Player.MpdAutoStart = ini.Bool("player.mpdAutoStart", true)
+	registry.Player.MaxPlayErrCount = ini.Int("player.maxPlayErrCount", types.MaxPlayErrCount)
 
 	// Auto play
 	registry.AutoPlayer.Enable = ini.Bool("autoplay.autoPlay", false)
