@@ -8,5 +8,5 @@ type PlayerOptions struct {
 	MpdNetwork      string // mpd网络类型: tcp、unix
 	MpdAddr         string // mpd地址
 	MpdAutoStart    bool   // mpd自动启动
-	MaxPlayErrCount int    // mpd自动启动
+	MaxPlayErrCount int    // 最大错误重试次数
 }
