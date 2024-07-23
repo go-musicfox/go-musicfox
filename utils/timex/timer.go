@@ -10,7 +10,7 @@ type Options struct {
 	Duration       time.Duration
 	Passed         time.Duration
 	TickerInternal time.Duration
-	OnPaused       func()
+	OnPause        func()
 	OnDone         func(stopped bool)
 	OnTick         func()
 	OnRun          func(started bool)
@@ -101,7 +101,7 @@ func (t *Timer) Pause() {
 	t.pushDone()
 	t.passed += time.Since(t.lastTick)
 	t.lastTick = time.Now()
-	t.options.OnPaused()
+	t.options.OnPause()
 }
 
 // Stop finishes the timer.
