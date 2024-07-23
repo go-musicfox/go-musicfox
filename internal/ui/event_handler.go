@@ -336,16 +336,16 @@ func (h *EventHandler) spaceKeyHandle() {
 
 	selectedIndex := menu.RealDataIndex(main.SelectedIndex())
 	if me, ok := menu.(Menu); !ok || !me.IsPlayable() || len(songs) == 0 || selectedIndex > len(songs)-1 {
-		if player.curSongIndex > len(player.playlist)-1 {
+		if player.curSong.index > len(player.playlist)-1 {
 			return
 		}
 		switch player.State() {
 		case types.Paused:
 			h.netease.player.Resume()
 		case types.Playing:
-			h.netease.player.Paused()
+			h.netease.player.Pause()
 		case types.Stopped:
-			_ = player.PlaySong(player.playlist[player.curSongIndex], DurationNext)
+			_ = player.PlaySong(player.curSong, DurationNext)
 		}
 		return
 	}
@@ -355,14 +355,14 @@ func (h *EventHandler) spaceKeyHandle() {
 		case types.Paused:
 			player.Resume()
 		case types.Playing:
-			player.Paused()
+			player.Pause()
 		case types.Stopped:
-			_ = player.PlaySong(player.playlist[player.curSongIndex], DurationNext)
+			_ = player.PlaySong(player.curSong, DurationNext)
 		}
 		return
 	}
 
-	player.curSongIndex = selectedIndex
+	player.curSong.index = selectedIndex
 	player.playingMenuKey = menu.GetMenuKey()
 	if me, ok := menu.(Menu); ok {
 		player.playingMenu = me
@@ -376,7 +376,13 @@ func (h *EventHandler) spaceKeyHandle() {
 	if player.mode == types.PmIntelligent {
 		player.SetPlayMode(0)
 	}
+<<<<<<< HEAD
 	_ = player.PlaySong(player.playlist[selectedIndex], DurationNext)
+=======
+	if !isSameSong {
+		_ = player.PlaySong(newSong(selectedIndex, player.playlist[selectedIndex], nil, nil), DurationNext)
+	}
+>>>>>>> 7e066dd (feat: better random play)
 }
 
 func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {

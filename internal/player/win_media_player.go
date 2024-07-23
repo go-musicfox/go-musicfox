@@ -21,7 +21,7 @@ func (p *winMediaPlayer) CurMusic() URLMusic {
 	return URLMusic{}
 }
 
-func (p *winMediaPlayer) Paused() {
+func (p *winMediaPlayer) Pause() {
 }
 
 func (p *winMediaPlayer) Resume() {

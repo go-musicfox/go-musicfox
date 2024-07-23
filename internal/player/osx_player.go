@@ -22,7 +22,7 @@ func (p *osxPlayer) CurMusic() URLMusic {
 	return URLMusic{}
 }
 
-func (p *osxPlayer) Paused() {
+func (p *osxPlayer) Pause() {
 }
 
 func (p *osxPlayer) Resume() {

@@ -31,7 +31,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 	loading.Start()
 	defer loading.Complete()
 
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.curSong.index >= len(m.player.playlist) {
 		return nil
 	}
 
@@ -78,7 +78,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		op = "del"
 	}
 	likeService := service.PlaylistTracksService{
-		TrackIds: []string{strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10)},
+		TrackIds: []string{strconv.FormatInt(m.player.playlist[m.player.curSong.index].Id, 10)},
 		Op:       op,
 		Pid:      strconv.FormatInt(m.user.MyLikePlaylistID, 10),
 	}
@@ -92,7 +92,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		}
 		notify.Notify(notify.NotifyContent{
 			Title:   msg,
-			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Text:    m.player.playlist[m.player.curSong.index].Name,
 			Url:     types.AppGithubUrl,
 			GroupId: types.GroupID,
 		})
@@ -107,14 +107,14 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 	if isLike {
 		notify.Notify(notify.NotifyContent{
 			Title:   "已添加到我喜欢的歌曲",
-			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Text:    m.player.playlist[m.player.curSong.index].Name,
 			Url:     netease.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	} else {
 		notify.Notify(notify.NotifyContent{
 			Title:   "已从我喜欢的歌曲移除",
-			Text:    m.player.playlist[m.player.curSongIndex].Name,
+			Text:    m.player.playlist[m.player.curSong.index].Name,
 			Url:     netease.WebUrlOfPlaylist(m.user.MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
@@ -241,7 +241,7 @@ func trashPlayingSong(m *Netease) model.Page {
 	loading.Start()
 	defer loading.Complete()
 
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.curSong.index >= len(m.player.playlist) {
 		return nil
 	}
 
@@ -254,13 +254,13 @@ func trashPlayingSong(m *Netease) model.Page {
 	}
 
 	trashService := service.FmTrashService{
-		SongID: strconv.FormatInt(m.player.playlist[m.player.curSongIndex].Id, 10),
+		SongID: strconv.FormatInt(m.player.playlist[m.player.curSong.index].Id, 10),
 	}
 	trashService.FmTrash()
 
 	notify.Notify(notify.NotifyContent{
 		Title:   "已标记为不喜欢",
-		Text:    m.player.playlist[m.player.curSongIndex].Name,
+		Text:    m.player.playlist[m.player.curSong.index].Name,
 		Url:     types.AppGithubUrl,
 		GroupId: types.GroupID,
 	})
@@ -330,11 +330,11 @@ func downloadPlayingSong(m *Netease) {
 	loading.Start()
 	defer loading.Complete()
 
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.curSong.index >= len(m.player.playlist) {
 		return
 	}
 
-	go storagex.DownloadMusic(m.player.playlist[m.player.curSongIndex])
+	go storagex.DownloadMusic(m.player.playlist[m.player.curSong.index])
 }
 
 func albumOfPlayingSong(m *Netease) {
@@ -346,11 +346,11 @@ func albumOfPlayingSong(m *Netease) {
 		main = m.MustMain()
 		menu = main.CurMenu()
 	)
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.curSong.index >= len(m.player.playlist) {
 		return
 	}
 
-	curSong := m.player.playlist[m.player.curSongIndex]
+	curSong := m.player.playlist[m.player.curSong.index]
 	// 避免重复进入
 	if detail, ok := menu.(*AlbumDetailMenu); ok && detail.albumId == curSong.Album.Id {
 		return
@@ -392,10 +392,10 @@ func artistOfPlayingSong(m *Netease) {
 		main = m.MustMain()
 		menu = main.CurMenu()
 	)
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.curSong.index >= len(m.player.playlist) {
 		return
 	}
-	curSong := m.player.playlist[m.player.curSongIndex]
+	curSong := m.player.playlist[m.player.curSong.index]
 	artistCount := len(curSong.Artists)
 	if artistCount <= 0 {
 		return
@@ -455,10 +455,10 @@ func openPlayingSongInWeb(m *Netease) {
 	loading.Start()
 	defer loading.Complete()
 
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.curSong.index >= len(m.player.playlist) {
 		return
 	}
-	curSong := m.player.playlist[m.player.curSongIndex]
+	curSong := m.player.playlist[m.player.curSong.index]
 
 	_ = open.Start(netease.WebUrlOfSong(curSong.Id))
 }
@@ -601,7 +601,7 @@ func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 	var notifyTitle string
 	if addToNext && len(m.player.playlist) > 0 {
 		// 添加为下一曲
-		targetIndex := m.player.curSongIndex + 1
+		targetIndex := m.player.curSong.index + 1
 		m.player.playlist = slices.Concat(m.player.playlist[:targetIndex], appendSongs, m.player.playlist[targetIndex:])
 		notifyTitle = "已添加到下一曲"
 	} else {
@@ -665,7 +665,7 @@ func openAddSongToUserPlaylistMenu(m *Netease, isSelected, isAdd bool) model.Pag
 	if isSelected {
 		song = menu.(SongsMenu).Songs()[menu.RealDataIndex(main.SelectedIndex())]
 	} else {
-		song = m.player.curSong
+		song = m.player.curSong.Song
 	}
 	if isAdd {
 		subtitle = "将「" + song.Name + "」加入歌单"
@@ -776,21 +776,32 @@ func delSongFromPlaylist(m *Netease) model.Page {
 		return nil
 	}
 	// 选中歌曲为当前播放歌曲时处理逻辑
-	if m.player.curSongIndex == selectedIndex && m.player.curSong.Id == me.Songs()[selectedIndex].Id {
+	if m.player.curSong.index == selectedIndex && m.player.curSong.Id == me.Songs()[selectedIndex].Id {
 		// 防止用户快速删除当前播放歌曲导致错位
 		if m.player.State() >= types.Playing && m.player.PassedTime().Seconds() < 2 {
 			return nil
 		}
+		if m.player.curSong.randomPrev != nil {
+			m.player.curSong.randomPrev.randomNext = nil
+		} else if m.player.curSong.randomNext != nil {
+			m.player.curSong.randomNext.randomPrev = nil
+		}
 		// 末尾歌曲删除向前退
-		if m.player.curSongIndex+1 >= len(m.player.playlist) {
-			m.player.curSongIndex = len(m.player.playlist) - 1
+		if m.player.curSong.index+1 >= len(m.player.playlist) {
+			m.player.curSong.index = len(m.player.playlist) - 1
 			// 不在只剩一个歌曲的情况下重新播放歌曲
 			if len(m.player.playlist) > 1 {
 				m.player.PreviousSong(false)
 			}
 		} else {
-			_ = m.player.PlaySong(m.player.playlist[m.player.curSongIndex+1], DurationNext)
+			index := m.player.curSong.index + 1
+			_ = m.player.PlaySong(newSong(index, m.player.playlist[index], m.player.curSong.randomPrev, m.player.curSong.randomNext), DurationNext)
 		}
+	}
+	if m.player.curSong.randomPrev != nil && m.player.curSong.randomPrev.index == selectedIndex {
+		m.player.curSong.randomPrev = nil
+	} else if m.player.curSong.randomNext != nil && m.player.curSong.randomNext.index == selectedIndex {
+		m.player.curSong.randomNext = nil
 	}
 	// 以下2行 为防止切片越界
 	m.player.playlist = append(m.player.playlist[:selectedIndex], m.player.playlist[selectedIndex+1:]...)
@@ -798,8 +809,8 @@ func delSongFromPlaylist(m *Netease) model.Page {
 	me.menus = menux.GetViewFromSongs(songs)
 	me.songs = songs
 	// 更新当前歌曲下标
-	if selectedIndex < m.player.curSongIndex {
-		m.player.curSongIndex = m.player.curSongIndex - 1
+	if selectedIndex < m.player.curSong.index {
+		m.player.curSong.index = m.player.curSong.index - 1
 	}
 	// 更新游标位置
 	if main.SelectedIndex() >= len(me.Songs()) {
