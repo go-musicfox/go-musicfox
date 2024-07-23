@@ -82,7 +82,7 @@ func (p *osxPlayer) listen() {
 					Duration:       8760 * time.Hour,
 					TickerInternal: 500 * time.Millisecond,
 					OnRun:          func(started bool) {},
-					OnPaused:       func() {},
+					OnPause:        func() {},
 					OnDone:         func(stopped bool) {},
 					OnTick: func() {
 						var curTime time.Duration
