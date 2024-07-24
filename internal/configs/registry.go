@@ -161,6 +161,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.EnableMouseEvent = ini.Bool("main.enableMouseEvent", true)
 	registry.Main.DualColumn = ini.Bool("main.doubleColumn", true)
 	registry.Main.DownloadDir = ini.String("main.downloadDir", "")
+	registry.Main.DownloadLyricDir = ini.String("main.downloadLyricDir", "")
 	registry.Main.DownloadFileNameTpl = ini.String("main.downloadFileNameTpl", "")
 	registry.Main.ShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)
 	registry.Main.CacheDir = ini.String("main.cacheDir", "")

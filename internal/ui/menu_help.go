@@ -19,7 +19,7 @@ func NewHelpMenu(base baseMenu) *HelpMenu {
 			{Title: "进来给个star⭐️呗~"},
 			{Title: "SPACE", Subtitle: "播放/暂停"},
 			{Title: "h/H/LEFT", Subtitle: "左"},
-			{Title: "l/L/RIGHT", Subtitle: "右"},
+			{Title: "l/RIGHT", Subtitle: "右"},
 			{Title: "k/K/UP", Subtitle: "上"},
 			{Title: "j/J/DOWN", Subtitle: "下"},
 			{Title: "g", Subtitle: "上移到顶部"},

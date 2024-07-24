@@ -20,6 +20,7 @@ type MainOptions struct {
 	DualColumn             bool                     // 是否双列显示
 	DownloadDir            string                   // 指定下载目录
 	DownloadFileNameTpl    string                   // 下载文件名模板
+	DownloadLyricDir       string                   // 指定歌词文件下载目录
 	ShowAllSongsOfPlaylist bool                     // 显示歌单下所有歌曲
 	CacheDir               string                   // 指定缓存目录
 	CacheLimit             int64                    // 缓存大小（以MB为单位），0为不使用缓存，-1为不限制，默认为0
