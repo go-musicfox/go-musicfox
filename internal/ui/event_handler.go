@@ -140,7 +140,7 @@ var keyOperateMapping = map[string]OperateType{
 	"R":         OperateTypeRerender,
 	"ctrl+d":    OperateTypePageDown,
 	"ctrl+u":    OperateTypePageUp,
-	"L":         OperateTypeDownloadLrc,
+	"ctrl+l":    OperateTypeDownloadLrc,
 }
 
 func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
