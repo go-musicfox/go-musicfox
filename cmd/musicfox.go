@@ -11,11 +11,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
 	_ "github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 func main() {
+	go ui.RunTray()
 	runtime.Run(musicfox)
 }
 
