@@ -1,8 +1,6 @@
 package automator
 
 import (
-	"math/rand"
-
 	"github.com/pkg/errors"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -78,8 +76,6 @@ func (p *AutoPlayer) Start() error {
 	case p.options.Playlist == configs.AutoPlayerPlaylistNo:
 		// 保持原来状态
 		index = p.backend.CurSongIndex()
-	case p.options.Mode == types.PmRandom:
-		index = rand.Intn(length)
 	default:
 		if p.options.Offset >= length || -p.options.Offset > length {
 			return errors.Errorf("无效的偏移量：%d", p.options.Offset)

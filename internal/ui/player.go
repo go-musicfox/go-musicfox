@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -61,31 +60,17 @@ const (
 	CtrlRerender CtrlType = "Rerender"
 )
 
-type Song struct {
-	randomNext, randomPrev *Song
-	index                  int
-	structs.Song
-}
-
-func newSong(index int, song structs.Song, next, prev *Song) *Song {
-	return &Song{
-		randomNext: next,
-		randomPrev: prev,
-		index:      index,
-		Song:       song,
-	}
-}
-
 // Player 网易云音乐播放器
 type Player struct {
 	netease *Netease
 	cancel  context.CancelFunc
 
-	playlist         []structs.Song // 歌曲列表
-	playlistUpdateAt time.Time      // 播放列表更新时间
-	curSong          *Song          // 当前歌曲
-	playingMenuKey   string         // 正在播放的菜单Key
-	playingMenu      Menu
+	playlistUpdateAt time.Time   // 播放列表更新时间
+	songManager      songManager // 歌曲管理器
+	// TODO: 将心动模式单独抽象出来，减少耦合
+	intelligent    bool   // 是否处于心动模式
+	playingMenuKey string // 正在播放的菜单Key
+	playingMenu    Menu
 
 	lrcFile           *lyric.LRCFile
 	transLrcFile      *lyric.TranslateLRCFile
@@ -101,7 +86,6 @@ type Player struct {
 	progressRamp      []string
 
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
-	mode         types.Mode
 	stateHandler *control.RemoteControl
 	ctrl         chan CtrlSignal
 
@@ -113,14 +97,12 @@ type Player struct {
 func NewPlayer(n *Netease) *Player {
 	p := &Player{
 		netease:           n,
-		mode:              types.PmListLoop,
+		songManager:       &listLoopSongManager{},
 		ctrl:              make(chan CtrlSignal),
 		lyricNowScrollBar: app.NewXScrollBar(),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
-
-	p.curSong = newSong(0, structs.Song{}, nil, nil)
 
 	p.Player = player.NewPlayerFromConfig()
 	p.stateHandler = control.NewRemoteControl(p, p.PlayingInfo())
@@ -297,7 +279,15 @@ func (p *Player) songView() string {
 	if main.MenuStartColumn()-4 > 0 {
 		prefixLen += 12
 		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()-4))
-		builder.WriteString(util.SetFgStyle(fmt.Sprintf("[%s] ", types.ModeName(p.mode)), termenv.ANSIBrightMagenta))
+		{
+			var msg string
+			if p.intelligent {
+				msg = "心动"
+			} else {
+				msg = p.songManager.modeName()
+			}
+			builder.WriteString(util.SetFgStyle(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta))
+		}
 		builder.WriteString(util.SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
 	}
 	if p.State() == types.Playing {
@@ -306,22 +296,22 @@ func (p *Player) songView() string {
 		builder.WriteString(util.SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
 	}
 
-	if p.curSong.Id > 0 {
-		if likelist.IsLikeSong(p.curSong.Id) {
+	if p.CurSongIndex() > 0 {
+		if likelist.IsLikeSong(p.CurSong().Id) {
 			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIRed))
 		} else {
 			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIWhite))
 		}
 	}
 
-	if p.curSong.index < len(p.playlist) {
+	if p.CurSongIndex() < len(p.Playlist()) {
 		// 按剩余长度截断字符串
-		truncateSong := runewidth.Truncate(p.curSong.Name, p.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
+		truncateSong := runewidth.Truncate(p.CurSong().Name, p.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
 		builder.WriteString(util.SetFgStyle(truncateSong, util.GetPrimaryColor()))
 		builder.WriteString(" ")
 
 		var artists strings.Builder
-		for i, v := range p.curSong.Artists {
+		for i, v := range p.CurSong().Artists {
 			if i != 0 {
 				artists.WriteString(",")
 			}
@@ -330,7 +320,7 @@ func (p *Player) songView() string {
 		}
 
 		// 按剩余长度截断字符串
-		remainLen := p.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(p.curSong.Name)
+		remainLen := p.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(p.CurSong().Name)
 		truncateArtists := runewidth.Truncate(
 			runewidth.FillRight(artists.String(), remainLen),
 			remainLen, "")
@@ -375,13 +365,13 @@ func (p *Player) InPlayingMenu() bool {
 
 // CompareWithCurPlaylist 与当前播放列表对比，是否一致
 func (p *Player) CompareWithCurPlaylist(playlist []structs.Song) bool {
-	if len(playlist) != len(p.playlist) {
+	if len(playlist) != len(p.Playlist()) {
 		return false
 	}
 
 	// 如果前20个一致，则认为相同
 	for i := 0; i < 20 && i < len(playlist); i++ {
-		if playlist[i].Id != p.playlist[i].Id {
+		if playlist[i].Id != p.Playlist()[i].Id {
 			return false
 		}
 	}
@@ -411,7 +401,7 @@ func (p *Player) LocatePlayingSong() {
 		return
 	}
 
-	pageDelta := p.curSong.index/main.PageSize() - (main.CurPage() - 1)
+	pageDelta := p.CurSongIndex()/main.PageSize() - (main.CurPage() - 1)
 	if pageDelta > 0 {
 		for i := 0; i < pageDelta; i++ {
 			p.netease.MustMain().NextPage()
@@ -421,12 +411,12 @@ func (p *Player) LocatePlayingSong() {
 			p.netease.MustMain().PrePage()
 		}
 	}
-	main.SetSelectedIndex(p.curSong.index)
+	main.SetSelectedIndex(p.CurSongIndex())
 }
 
 // PlaySong 播放歌曲
-func (p *Player) PlaySong(song *Song, direction PlayDirection) error {
-	if song.Id != p.curSong.Id {
+func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
+	if song.Id != p.CurSong().Id {
 		p.reportEnd() // 上一首播放结束
 	}
 
@@ -436,15 +426,14 @@ func (p *Player) PlaySong(song *Song, direction PlayDirection) error {
 
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayerSnapshot{}, storage.PlayerSnapshot{
-		CurSongIndex:     p.curSong.index,
-		Playlist:         p.playlist,
+		CurSongIndex:     p.CurSongIndex(),
+		Playlist:         p.Playlist(),
 		PlaylistUpdateAt: p.playlistUpdateAt,
 	})
-	p.curSong = song
 
 	p.LocatePlayingSong()
 	p.Pause()
-	url, musicType, err := storagex.PlayableURLSong(song.Song)
+	url, musicType, err := storagex.PlayableURLSong(song)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
@@ -464,7 +453,7 @@ func (p *Player) PlaySong(song *Song, direction PlayDirection) error {
 
 	p.Play(player.URLMusic{
 		URL:  url,
-		Song: song.Song,
+		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
@@ -486,42 +475,45 @@ func (p *Player) PlaySong(song *Song, direction PlayDirection) error {
 }
 
 func (p *Player) StartPlay() {
-	if len(p.playlist) <= p.curSong.index {
+	if len(p.Playlist()) <= p.CurSongIndex() {
 		return
 	}
-	_ = p.PlaySong(p.curSong, DurationNext)
+	_ = p.PlaySong(p.CurSong(), DurationNext)
 }
 
 func (p *Player) Mode() types.Mode {
-	return p.mode
-}
-
-func (p *Player) SetMode(mode types.Mode) {
-	p.mode = mode
+	return p.songManager.mode()
 }
 
 func (p *Player) Playlist() []structs.Song {
-	return p.playlist
+	return p.songManager.getPlaylist()
 }
 
 func (p *Player) SetPlaylist(playlist []structs.Song) {
-	p.playlist = playlist
+	p.songManager.setPlaylist(playlist)
 }
 
 func (p *Player) CurSongIndex() int {
-	return p.curSong.index
+	return p.songManager.getCurSongIndex()
+}
+
+func (p *Player) CurSong() structs.Song {
+	if len(p.Playlist()) == 0 {
+		return structs.Song{}
+	}
+	return p.Playlist()[p.CurSongIndex()]
 }
 
 func (p *Player) SetCurSongIndex(index int) {
-	p.curSong = newSong(index, p.playlist[index], nil, nil)
+	p.songManager.setCurSongIndex(index)
 }
 
 // NextSong 下一曲
-func (p *Player) NextSong(isManual bool) {
-	var song *Song
-	index := p.curSong.index
-	if len(p.playlist) == 0 || index >= len(p.playlist)-1 {
-		if p.mode == types.PmIntelligent {
+func (p *Player) NextSong(manual bool) {
+	index := p.CurSongIndex()
+	playlistLen := len(p.Playlist())
+	if playlistLen == 0 || index >= playlistLen-1 {
+		if p.Mode() == types.PmIntelligent {
 			p.Intelligence(true)
 		}
 
@@ -539,55 +531,17 @@ func (p *Player) NextSong(isManual bool) {
 		}
 	}
 
-	switch p.mode {
-	case types.PmListLoop, types.PmIntelligent, types.PmUnknown:
-		index++
-		if index > len(p.playlist)-1 {
-			index = 0
-		}
-	case types.PmSingleLoop:
-		if isManual && index < len(p.playlist)-1 {
-			index++
-		} else if isManual && index >= len(p.playlist)-1 {
-			return
-		}
-		// else pass
-	case types.PmRandom:
-		if len(p.playlist) < 1 {
-			return
-		}
-		if len(p.playlist) == 1 {
-			index = 0
-		} else {
-			song = p.curSong.randomNext
-			if song == nil {
-				index = rand.Intn(len(p.playlist) - 1)
-				song = newSong(index, p.playlist[index], nil, p.curSong)
-				p.curSong.randomNext = song
-			}
-			goto play
-		}
-	case types.PmOrder:
-		if index >= len(p.playlist)-1 {
-			return
-		}
-		index++
-	}
-
-	if index > len(p.playlist)-1 {
-		return
-	}
-	song = newSong(index, p.playlist[index], nil, nil)
-play:
-	_ = p.PlaySong(song, DurationNext)
+	p.songManager.nextSong(manual).IfSome(func(song structs.Song) {
+		_ = p.PlaySong(song, DurationNext)
+	})
 }
 
 // PreviousSong 上一曲
-func (p *Player) PreviousSong(isManual bool) {
-	var song *Song
-	index := p.curSong.index
-	if len(p.playlist) == 0 || index >= len(p.playlist)-1 {
-		if p.mode == types.PmIntelligent {
+func (p *Player) PreviousSong(manual bool) {
+	index := p.CurSongIndex()
+	playlistLen := len(p.Playlist())
+	if playlistLen == 0 || index >= playlistLen-1 {
+		if p.Mode() == types.PmIntelligent {
 			p.Intelligence(true)
 		}
 
@@ -605,48 +559,9 @@ func (p *Player) PreviousSong(isManual bool) {
 		}
 	}
 
-	switch p.mode {
-	case types.PmListLoop, types.PmIntelligent, types.PmUnknown:
-		index--
-		if index < 0 {
-			index = len(p.playlist) - 1
-		}
-	case types.PmSingleLoop:
-		if isManual && index > 0 {
-			index--
-		} else if isManual && index <= 0 {
-			return
-		}
-		// else pass
-	case types.PmRandom:
-		if len(p.playlist)-1 < 0 {
-			return
-		}
-		if len(p.playlist) == 0 {
-			index = 0
-		} else {
-			song = p.curSong.randomPrev
-			if song == nil {
-				index = rand.Intn(len(p.playlist) - 1)
-				song = newSong(index, p.playlist[index], p.curSong, nil)
-				p.curSong.randomPrev = song
-			}
-			goto play
-		}
-	case types.PmOrder:
-		if index <= 0 {
-			return
-		}
-		index--
-	}
-
-	if index < 0 {
-		return
-	}
-	song = newSong(index, p.playlist[index], nil, nil)
-play:
-	slog.Warn("song", slog.Any("song", song))
-	_ = p.PlaySong(song, DurationPrev)
+	p.songManager.prevSong(manual).IfSome(func(song structs.Song) {
+		_ = p.PlaySong(song, DurationNext)
+	})
 }
 
 func (p *Player) Seek(duration time.Duration) {
@@ -657,23 +572,49 @@ func (p *Player) Seek(duration time.Duration) {
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
-// SetPlayMode 播放模式切换
-func (p *Player) SetPlayMode(playMode types.Mode) {
-	if playMode > 0 {
-		p.mode = playMode
-	} else {
-		switch p.mode {
-		case types.PmListLoop, types.PmOrder, types.PmSingleLoop:
-			p.mode++
-		case types.PmRandom:
-			p.mode = types.PmListLoop
-		default:
-			p.mode = types.PmListLoop
-		}
+// SetMode 设置播放模式
+func (p *Player) SetMode(playMode types.Mode) {
+	switch playMode {
+	case types.PmIntelligent:
+		p.intelligent = true
+		ordered := p.songManager.ordered()
+		p.songManager = &ordered
+	case types.PmOrdered:
+		p.intelligent = false
+		ordered := p.songManager.ordered()
+		p.songManager = &ordered
+	case types.PmSingleLoop:
+		p.intelligent = false
+		single := p.songManager.singleLoop()
+		p.songManager = &single
+	case types.PmListRandom:
+		p.intelligent = false
+		random := p.songManager.listRandom()
+		p.songManager = &random
+	case types.PmInfRandom:
+		p.intelligent = false
+		random := p.songManager.infRandom()
+		p.songManager = &random
+	case types.PmListLoop:
+		fallthrough
+	default:
+		p.intelligent = false
+		list := p.songManager.listLoop()
+		p.songManager = &list
 	}
 
 	table := storage.NewTable()
-	_ = table.SetByKVModel(storage.PlayMode{}, p.mode)
+	_ = table.SetByKVModel(storage.PlayMode{}, playMode)
+}
+
+// SwitchMode 顺序切换播放模式
+func (p *Player) SwitchMode() {
+	mode := p.Mode()
+	mode = (mode + 1) % types.NormalPmLength
+	p.SetMode(mode)
+
+	table := storage.NewTable()
+	_ = table.SetByKVModel(storage.PlayMode{}, p.Mode())
 }
 
 // Close 关闭
@@ -807,19 +748,20 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	}
 	songs := _struct.GetIntelligenceSongs(response)
 
+	var song structs.Song
 	if appendMode {
-		p.playlist = append(p.playlist, songs...)
+		p.SetPlaylist(append(p.Playlist(), songs...))
 		p.playlistUpdateAt = time.Now()
-		p.curSong.index++
+		song = p.songManager.nextSong(true).Unwrap()
 	} else {
-		p.playlist = append([]structs.Song{playlist.songs[selectedIndex]}, songs...)
+		p.SetPlaylist(append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
 		p.playlistUpdateAt = time.Now()
-		p.curSong.index = 0
+		song = p.Playlist()[0]
 	}
-	p.mode = types.PmIntelligent
+	p.SetMode(types.PmIntelligent)
 	p.playingMenuKey = "Intelligent"
 
-	_ = p.PlaySong(p.curSong, DurationNext)
+	_ = p.PlaySong(song, DurationNext)
 	return nil
 }
 
@@ -873,7 +815,7 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 }
 
 func (p *Player) PlayingInfo() control.PlayingInfo {
-	song := p.curSong
+	song := p.CurSong()
 	return control.PlayingInfo{
 		TotalDuration:  song.Duration,
 		PassedDuration: p.PassedTime(),
@@ -895,8 +837,8 @@ func (p *Player) RenderTicker() model.Ticker {
 
 func (p *Player) buildNeteaseReportService() *service.ReportService {
 	svc := &service.ReportService{
-		ID:      p.curSong.Id,
-		Alg:     p.curSong.Alg,
+		ID:      p.CurSong().Id,
+		Alg:     p.CurSong().Alg,
 		Type:    "song",
 		Time:    int64(p.PassedTime().Seconds()),
 		EndType: "playend",
@@ -916,13 +858,13 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 	case *DjRecommendMenu:
 		svc.Type = "dj"
 	case nil:
-		if p.curSong.Album.Id != 0 {
+		if p.CurSong().Album.Id != 0 {
 			svc.SourceType = "album"
-			svc.SourceId = strconv.FormatInt(p.curSong.Album.Id, 10)
+			svc.SourceId = strconv.FormatInt(p.CurSong().Album.Id, 10)
 		}
 	}
 
-	if p.curSong.Duration.Seconds()-p.PassedTime().Seconds() > 10 {
+	if p.CurSong().Duration.Seconds()-p.PassedTime().Seconds() > 10 {
 		svc.EndType = "ui"
 	}
 
@@ -931,7 +873,7 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 
 func (p *Player) reportStart() {
 	p.buildNeteaseReportService().Playstart()
-	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.curSong.Song, p.PassedTime())
+	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.CurSong(), p.PassedTime())
 }
 
 func (p *Player) reportEnd() {
@@ -942,7 +884,7 @@ func (p *Player) reportEnd() {
 
 	svc := p.buildNeteaseReportService()
 	switch {
-	case math.Abs(p.curSong.Duration.Seconds()-p.PassedTime().Seconds()) <= 10:
+	case math.Abs(p.CurSong().Duration.Seconds()-p.PassedTime().Seconds()) <= 10:
 		// 播放结束
 		svc.EndType = "playend"
 	case time.Since(p.playlistUpdateAt).Seconds() <= 5:
@@ -954,7 +896,7 @@ func (p *Player) reportEnd() {
 	svc.Playend()
 
 	// 播放过一半, 上报lastfm
-	if p.PassedTime().Seconds() >= p.curSong.Duration.Seconds()/2 {
-		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.curSong.Song, p.PassedTime())
+	if p.PassedTime().Seconds() >= p.CurSong().Duration.Seconds()/2 {
+		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.CurSong(), p.PassedTime())
 	}
 }
