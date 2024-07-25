@@ -22,6 +22,7 @@ require (
 	github.com/gopxl/beep v1.4.0
 	github.com/markthree/go-get-folder-size v0.5.0
 	github.com/mattn/go-runewidth v0.0.15
+	github.com/moznion/go-optional v0.12.0
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
 	github.com/robotn/gohook v0.41.0

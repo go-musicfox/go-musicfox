@@ -74,7 +74,7 @@ func (m *PersonalFmMenu) BottomOutHook() model.Hook {
 
 		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)
-		m.netease.player.playlist = m.songs
+		m.netease.player.SetPlaylist(m.songs)
 		m.netease.player.playlistUpdateAt = time.Now()
 
 		return true, nil
