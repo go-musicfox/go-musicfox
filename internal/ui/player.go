@@ -296,7 +296,7 @@ func (p *Player) songView() string {
 		builder.WriteString(util.SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
 	}
 
-	if p.CurSongIndex() > 0 {
+	if p.CurSong().Id > 0 {
 		if likelist.IsLikeSong(p.CurSong().Id) {
 			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIRed))
 		} else {
