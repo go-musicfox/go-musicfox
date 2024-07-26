@@ -47,6 +47,8 @@ const WinMediaPlayer = "win_media" // win media player
 const BeepGoMp3Decoder = "go-mp3"
 const BeepMiniMp3Decoder = "minimp3"
 
+const MaxPlayErrCount = 3
+
 const SearchPageSize = 100
 
 const AppHelpTemplate = `%s

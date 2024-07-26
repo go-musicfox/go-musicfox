@@ -58,6 +58,7 @@ const (
 	OperateTypeRerender                           = "rerender"
 	OperateTypePageDown                           = "pageDown"
 	OperateTypePageUp                             = "pageUp"
+	OperateTypeDownloadLrc                        = "downloadLrc"
 )
 
 type EventHandler struct {
@@ -139,6 +140,7 @@ var keyOperateMapping = map[string]OperateType{
 	"R":         OperateTypeRerender,
 	"ctrl+d":    OperateTypePageDown,
 	"ctrl+u":    OperateTypePageUp,
+	"ctrl+l":    OperateTypeDownloadLrc,
 }
 
 func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
@@ -297,6 +299,8 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 			curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
 			main.SetSelectedIndex(curIndex)
 		}
+	case OperateTypeDownloadLrc:
+		DownLoadLrc(h.netease)
 	default:
 		return false, nil, nil
 	}

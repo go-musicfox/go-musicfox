@@ -437,7 +437,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
-		if p.playErrCount >= 3 {
+		if p.playErrCount >= configs.ConfigRegistry.Player.MaxPlayErrCount {
 			return nil
 		}
 		switch direction {
