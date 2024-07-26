@@ -2,7 +2,6 @@ package tray
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 func RunTray() {
 	onExit := func() {
 		now := time.Now()
-		ioutil.WriteFile(fmt.Sprintf(`on_exit_%d.txt`, now.UnixNano()), []byte(now.String()), 0644)
+		os.WriteFile(fmt.Sprintf(`on_exit_%d.txt`, now.UnixNano()), []byte(now.String()), 0644)
 	}
 
 	systray.Run(onReady, onExit)
@@ -40,7 +39,7 @@ func onReady() {
 
 	conn, err := dbus.SessionBus()
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	var bus_name string = fmt.Sprintf("org.mpris.MediaPlayer2.musicfox.instance%d", os.Getpid())
@@ -49,7 +48,7 @@ func onReady() {
 	callDbus := func(dbus_method string) {
 		call := player.Call("org.mpris.MediaPlayer2.Player."+dbus_method, 0)
 		if call.Err != nil {
-			panic(call.Err)
+			return
 		}
 	}
 
