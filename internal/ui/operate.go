@@ -808,10 +808,10 @@ func DownLoadLrc(m *Netease) {
 	loading.Start()
 	defer loading.Complete()
 
-	if m.player.curSongIndex >= len(m.player.playlist) {
+	if m.player.CurSongIndex() >= len(m.player.Playlist()) {
 		return
 	}
-	curSong := m.player.playlist[m.player.curSongIndex]
+	curSong := m.player.CurSong()
 	//utils.DownloadLrc(curSong)
 	lrcService := service.LyricService{
 		ID: strconv.FormatInt(curSong.Id, 10),
