@@ -415,7 +415,7 @@ func (p *Player) LocatePlayingSong() {
 }
 
 // PlaySong 播放歌曲
-func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
+func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	if song.Id != p.CurSong().Id {
 		p.reportEnd() // 上一首播放结束
 	}
@@ -438,7 +438,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		p.progressRamp = []string{}
 		p.playErrCount++
 		if p.playErrCount >= configs.ConfigRegistry.Player.MaxPlayErrCount {
-			return nil
+			return
 		}
 		switch direction {
 		case DurationPrev:
@@ -446,7 +446,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 		case DurationNext:
 			p.NextSong(false)
 		}
-		return nil
+		return
 	}
 
 	go p.updateLyric(song.Id)
@@ -470,15 +470,13 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) error {
 	})
 
 	p.playErrCount = 0
-
-	return nil
 }
 
 func (p *Player) StartPlay() {
 	if len(p.Playlist()) <= p.CurSongIndex() {
 		return
 	}
-	_ = p.PlaySong(p.CurSong(), DurationNext)
+	p.PlaySong(p.CurSong(), DurationNext)
 }
 
 func (p *Player) Mode() types.Mode {
@@ -490,7 +488,7 @@ func (p *Player) Playlist() []structs.Song {
 }
 
 func (p *Player) InitSongManager(index int, playlist []structs.Song) {
-    p.songManager.init(index, playlist)
+	p.songManager.init(index, playlist)
 }
 
 func (p *Player) CurSongIndex() int {
@@ -528,7 +526,7 @@ func (p *Player) NextSong(manual bool) {
 	}
 
 	p.songManager.nextSong(manual).IfSome(func(song structs.Song) {
-		_ = p.PlaySong(song, DurationNext)
+		p.PlaySong(song, DurationNext)
 	})
 }
 
@@ -556,7 +554,7 @@ func (p *Player) PreviousSong(manual bool) {
 	}
 
 	p.songManager.prevSong(manual).IfSome(func(song structs.Song) {
-		_ = p.PlaySong(song, DurationNext)
+		p.PlaySong(song, DurationNext)
 	})
 }
 
@@ -746,7 +744,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 
 	var song structs.Song
 	if appendMode {
-        p.songManager.init(p.CurSongIndex(), append(p.Playlist(), songs...))
+		p.songManager.init(p.CurSongIndex(), append(p.Playlist(), songs...))
 		p.playlistUpdateAt = time.Now()
 		song = p.songManager.nextSong(true).Unwrap()
 	} else {
@@ -757,7 +755,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	p.SetMode(types.PmIntelligent)
 	p.playingMenuKey = "Intelligent"
 
-	_ = p.PlaySong(song, DurationNext)
+	p.PlaySong(song, DurationNext)
 	return nil
 }
 
