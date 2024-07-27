@@ -602,11 +602,11 @@ func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 	if addToNext && len(m.player.Playlist()) > 0 {
 		// 添加为下一曲
 		targetIndex := m.player.CurSongIndex() + 1
-		m.player.SetPlaylist(slices.Concat(m.player.Playlist()[:targetIndex], appendSongs, m.player.Playlist()[targetIndex:]))
+		m.player.songManager.init(m.player.CurSongIndex(), slices.Concat(m.player.Playlist()[:targetIndex], appendSongs, m.player.Playlist()[targetIndex:]))
 		notifyTitle = "已添加到下一曲"
 	} else {
 		// 添加到播放列表末尾
-		m.player.SetPlaylist(append(m.player.Playlist(), appendSongs...))
+		m.player.songManager.init(m.player.CurSongIndex(), append(m.player.Playlist(), appendSongs...))
 		notifyTitle = "已添加到播放列表末尾"
 	}
 

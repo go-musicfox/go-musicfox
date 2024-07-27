@@ -13,9 +13,8 @@ type AutoPlayerBackend interface {
 	Mode() types.Mode
 	SetMode(mode types.Mode)
 	Playlist() []structs.Song
-	SetPlaylist(playlist []structs.Song)
 	CurSongIndex() int
-	SetCurSongIndex(index int)
+	InitSongManager(index int, playlist []structs.Song)
 	StartPlay()
 }
 
@@ -83,8 +82,7 @@ func (p *AutoPlayer) Start() error {
 		index = (p.options.Offset + length) % length // 无论offset正负都能工作
 	}
 	p.backend.SetMode(mode)
-	p.backend.SetPlaylist(songs)
-	p.backend.SetCurSongIndex(index)
+	p.backend.InitSongManager(index, songs)
 	p.backend.StartPlay()
 	return nil
 }
