@@ -362,15 +362,14 @@ func (h *EventHandler) spaceKeyHandle() {
 		return
 	}
 
-	player.SetCurSongIndex(selectedIndex)
+	newPlaylist := make([]structs.Song, len(songs))
+	copy(newPlaylist, songs)
+	player.songManager.init(selectedIndex, newPlaylist)
+
 	player.playingMenuKey = menu.GetMenuKey()
 	if me, ok := menu.(Menu); ok {
 		player.playingMenu = me
 	}
-
-	newPlaylist := make([]structs.Song, len(songs))
-	copy(newPlaylist, songs)
-	player.SetPlaylist(newPlaylist)
 
 	player.playlistUpdateAt = time.Now()
 	if player.Mode() == types.PmIntelligent {

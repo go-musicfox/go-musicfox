@@ -489,8 +489,8 @@ func (p *Player) Playlist() []structs.Song {
 	return p.songManager.getPlaylist()
 }
 
-func (p *Player) SetPlaylist(playlist []structs.Song) {
-	p.songManager.setPlaylist(playlist)
+func (p *Player) InitSongManager(index int, playlist []structs.Song) {
+    p.songManager.init(index, playlist)
 }
 
 func (p *Player) CurSongIndex() int {
@@ -502,10 +502,6 @@ func (p *Player) CurSong() structs.Song {
 		return structs.Song{}
 	}
 	return p.Playlist()[p.CurSongIndex()]
-}
-
-func (p *Player) SetCurSongIndex(index int) {
-	p.songManager.setCurSongIndex(index)
 }
 
 // NextSong 下一曲
@@ -750,11 +746,11 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 
 	var song structs.Song
 	if appendMode {
-		p.SetPlaylist(append(p.Playlist(), songs...))
+        p.songManager.init(p.CurSongIndex(), append(p.Playlist(), songs...))
 		p.playlistUpdateAt = time.Now()
 		song = p.songManager.nextSong(true).Unwrap()
 	} else {
-		p.SetPlaylist(append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
+		p.songManager.init(p.CurSongIndex(), append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
 		p.playlistUpdateAt = time.Now()
 		song = p.Playlist()[0]
 	}

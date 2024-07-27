@@ -122,8 +122,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
 				p := n.player
-				p.SetPlaylist(snapshot.Playlist)
-				p.SetCurSongIndex(snapshot.CurSongIndex)
+                p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
 				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
