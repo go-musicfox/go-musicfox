@@ -173,10 +173,10 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 	case OperateTypeSpace:
 		h.spaceKeyHandle()
 	case OperateTypeToggle:
-		if h.netease.player.State() == types.Stopped {
+		if player.State() == types.Stopped {
 			h.spaceKeyHandle()
 		} else {
-			h.netease.player.Toggle()
+			player.Toggle()
 		}
 	case OperateTypeForwardFiveSec:
 		player.Seek(player.PassedTime() + time.Second*5)
@@ -325,10 +325,10 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 func (h *EventHandler) spaceKeyHandle() {
 	var (
 		songs         []structs.Song
-		inPlayingMenu = h.netease.player.InPlayingMenu()
 		main          = h.netease.MustMain()
 		menu          = main.CurMenu()
 		player        = h.netease.player
+		inPlayingMenu = player.InPlayingMenu()
 	)
 	if me, ok := menu.(SongsMenu); ok {
 		songs = me.Songs()
@@ -341,11 +341,11 @@ func (h *EventHandler) spaceKeyHandle() {
 		}
 		switch player.State() {
 		case types.Paused:
-			h.netease.player.Resume()
+			player.Resume()
 		case types.Playing:
-			h.netease.player.Pause()
+			player.Pause()
 		case types.Stopped:
-			_ = player.PlaySong(player.CurSong(), DurationNext)
+			player.StartPlay()
 		}
 		return
 	}
@@ -357,7 +357,7 @@ func (h *EventHandler) spaceKeyHandle() {
 		case types.Playing:
 			player.Pause()
 		case types.Stopped:
-			_ = player.PlaySong(player.CurSong(), DurationNext)
+			player.StartPlay()
 		}
 		return
 	}
