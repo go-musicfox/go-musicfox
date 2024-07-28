@@ -22,7 +22,6 @@ require (
 	github.com/gopxl/beep v1.4.0
 	github.com/markthree/go-get-folder-size v0.5.0
 	github.com/mattn/go-runewidth v0.0.15
-	github.com/moznion/go-optional v0.12.0
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
 	github.com/robotn/gohook v0.41.0
@@ -67,6 +66,7 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/rivo/uniseg v0.4.6 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

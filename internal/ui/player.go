@@ -525,7 +525,7 @@ func (p *Player) NextSong(manual bool) {
 		}
 	}
 
-	p.songManager.nextSong(manual).IfSome(func(song structs.Song) {
+	p.songManager.nextSong(manual).ifSome(func(song structs.Song) {
 		p.PlaySong(song, DurationNext)
 	})
 }
@@ -553,7 +553,7 @@ func (p *Player) PreviousSong(manual bool) {
 		}
 	}
 
-	p.songManager.prevSong(manual).IfSome(func(song structs.Song) {
+	p.songManager.prevSong(manual).ifSome(func(song structs.Song) {
 		p.PlaySong(song, DurationNext)
 	})
 }
@@ -746,7 +746,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	if appendMode {
 		p.songManager.init(p.CurSongIndex(), append(p.Playlist(), songs...))
 		p.playlistUpdateAt = time.Now()
-		song = p.songManager.nextSong(true).Unwrap()
+		song = p.songManager.nextSong(true).unwrap()
 	} else {
 		p.songManager.init(p.CurSongIndex(), append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
 		p.playlistUpdateAt = time.Now()
