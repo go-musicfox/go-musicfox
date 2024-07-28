@@ -11,6 +11,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/osx"
 )
 
 var stateMap = map[types.State]mediaplayer.MPNowPlayingPlaybackState{
@@ -111,7 +112,8 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 	setKV(core.String(mediaplayer.MPMediaItemPropertyArtist), core.String(info.Artist).NSObject)
 	setKV(core.String(mediaplayer.MPMediaItemPropertyAlbumArtist), core.String(info.AlbumArtist).NSObject)
 
-	if info.PicUrl != "" {
+	osVersion := osx.OsVersion()
+	if info.PicUrl != "" && osVersion.Major > 10 { // NOTE: 老版本会报错，暂时不设置图片
 		picUrl := app.AddResizeParamForPicUrl(info.PicUrl, 60)
 		s.l.Lock()
 		if s.curArtworkUrl != picUrl {
