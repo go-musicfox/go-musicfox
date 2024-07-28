@@ -776,7 +776,7 @@ func delSongFromPlaylist(m *Netease) model.Page {
 		return nil
 	}
 
-	m.player.songManager.delSong(selectedIndex).IfSome(func(song structs.Song) { m.player.PlaySong(song, DurationNext) })
+	m.player.songManager.delSong(selectedIndex).ifSome(func(song structs.Song) { m.player.PlaySong(song, DurationNext) })
 	songs := m.player.Playlist()
 	me.menus = menux.GetViewFromSongs(songs)
 	me.songs = songs

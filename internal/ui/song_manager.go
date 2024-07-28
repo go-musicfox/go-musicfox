@@ -3,19 +3,36 @@ package ui
 import (
 	"math/rand"
 
-	. "github.com/moznion/go-optional"
-
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+type optionalSong []structs.Song
+
+func some(song structs.Song) optionalSong {
+	return optionalSong([]structs.Song{song})
+}
+
+func (o optionalSong) unwrap() structs.Song {
+	if o != nil {
+		return ([]structs.Song)(o)[0]
+	}
+	panic("unwrap() called on an empty value")
+}
+
+func (o optionalSong) ifSome(f func(structs.Song)) {
+	if o != nil {
+		f(o.unwrap())
+	}
+}
+
 type songManager interface {
 	getPlaylist() []structs.Song
-    init(index int, playlist []structs.Song)
+	init(index int, playlist []structs.Song)
 	getCurSongIndex() int
-	nextSong(manual bool) Option[structs.Song]
-	prevSong(manual bool) Option[structs.Song]
-	delSong(index int) Option[structs.Song]
+	nextSong(manual bool) optionalSong
+	prevSong(manual bool) optionalSong
+	delSong(index int) optionalSong
 
 	ordered() orderedSongManager
 	infRandom() infRandomSongManager
@@ -41,35 +58,35 @@ func (m *orderedSongManager) getCurSongIndex() int {
 }
 
 func (m *orderedSongManager) init(index int, playlist []structs.Song) {
-    m.index = index
-    m.playlist = playlist
+	m.index = index
+	m.playlist = playlist
 }
 
-func (m *orderedSongManager) nextSong(_ bool) Option[structs.Song] {
+func (m *orderedSongManager) nextSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 || m.index == len(m.playlist)-1 {
 		return nil
 	}
 	m.index++
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *orderedSongManager) prevSong(_ bool) Option[structs.Song] {
+func (m *orderedSongManager) prevSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 || m.index == 0 {
 		return nil
 	}
 	m.index--
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *orderedSongManager) delSong(index int) (song Option[structs.Song]) {
+func (m *orderedSongManager) delSong(index int) (song optionalSong) {
 	if index == m.index {
 		if index == len(m.playlist)-1 {
 			if len(m.playlist) > 1 {
-				song = Some(m.playlist[index-1])
+				song = some(m.playlist[index-1])
 				m.index--
 			}
 		} else {
-			song = Some(m.playlist[index+1])
+			song = some(m.playlist[index+1])
 			m.index++
 		}
 	} else if index < m.index {
@@ -145,25 +162,25 @@ func (m *infRandomSongManager) getCurSongIndex() int {
 }
 
 func (m *infRandomSongManager) init(index int, playlist []structs.Song) {
-    m.playlist = playlist
-    m.curSong = &randomSong {
-        index: index,
-        next: nil,
-        prev: nil,
-    }
+	m.playlist = playlist
+	m.curSong = &randomSong{
+		index: index,
+		next:  nil,
+		prev:  nil,
+	}
 }
 
-func (m *infRandomSongManager) nextSong(_ bool) Option[structs.Song] {
+func (m *infRandomSongManager) nextSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 {
 		return nil
 	} else if len(m.playlist) == 1 {
-		return Some(m.playlist[0])
+		return some(m.playlist[0])
 	}
 	var index int
 	if m.curSong != nil && m.curSong.next != nil {
 		index = m.curSong.next.index
 		m.curSong = m.curSong.next
-		return Some(m.playlist[index])
+		return some(m.playlist[index])
 	}
 	index = rand.Intn(len(m.playlist) - 1)
 	for index == m.curSong.index {
@@ -178,20 +195,20 @@ func (m *infRandomSongManager) nextSong(_ bool) Option[structs.Song] {
 		m.curSong.next = &randSong
 	}
 	m.curSong = &randSong
-	return Some(m.playlist[index])
+	return some(m.playlist[index])
 }
 
-func (m *infRandomSongManager) prevSong(_ bool) Option[structs.Song] {
+func (m *infRandomSongManager) prevSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 {
 		return nil
 	} else if len(m.playlist) == 1 {
-		return Some(m.playlist[0])
+		return some(m.playlist[0])
 	}
 	var index int
 	if m.curSong != nil && m.curSong.prev != nil {
 		index = m.curSong.prev.index
 		m.curSong = m.curSong.prev
-		return Some(m.playlist[index])
+		return some(m.playlist[index])
 	}
 	index = rand.Intn(len(m.playlist) - 1)
 	for index == m.curSong.index {
@@ -206,18 +223,18 @@ func (m *infRandomSongManager) prevSong(_ bool) Option[structs.Song] {
 		m.curSong.prev = &randSong
 	}
 	m.curSong = &randSong
-	return Some(m.playlist[index])
+	return some(m.playlist[index])
 }
 
-func (m *infRandomSongManager) delSong(index int) (song Option[structs.Song]) {
+func (m *infRandomSongManager) delSong(index int) (song optionalSong) {
 	if index == m.curSong.index {
 		if index == len(m.playlist)-1 {
 			if len(m.playlist) > 1 {
-				song = Some(m.playlist[index-1])
+				song = some(m.playlist[index-1])
 				m.curSong.index--
 			}
 		} else {
-			song = Some(m.playlist[index+1])
+			song = some(m.playlist[index+1])
 			m.curSong.index++
 		}
 	} else {
@@ -322,38 +339,38 @@ func (m *listRandomSongManager) getCurSongIndex() int {
 }
 
 func (m *listRandomSongManager) init(index int, playlist []structs.Song) {
-    m.index = index
-    m.playlist = playlist
-    m.shuffle()
+	m.index = index
+	m.playlist = playlist
+	m.shuffle()
 }
 
-func (m *listRandomSongManager) nextSong(_ bool) Option[structs.Song] {
+func (m *listRandomSongManager) nextSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 || m._index == len(m.playlist)-1 {
 		return nil
 	}
 	m._index++
 	m.index = m.order[m._index]
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *listRandomSongManager) prevSong(_ bool) Option[structs.Song] {
+func (m *listRandomSongManager) prevSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 || m._index == 0 {
 		return nil
 	}
 	m._index--
 	m.index = m.order[m._index]
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *listRandomSongManager) delSong(index int) (song Option[structs.Song]) {
+func (m *listRandomSongManager) delSong(index int) (song optionalSong) {
 	if index == m.index {
 		if index == len(m.playlist)-1 {
 			if len(m.playlist) > 1 {
-				song = Some(m.playlist[index-1])
+				song = some(m.playlist[index-1])
 				m.index--
 			}
 		} else {
-			song = Some(m.playlist[index+1])
+			song = some(m.playlist[index+1])
 			m.index++
 		}
 		m.shuffle()
@@ -422,47 +439,47 @@ func (m *singleLoopSongManager) getCurSongIndex() int {
 }
 
 func (m *singleLoopSongManager) init(index int, playlist []structs.Song) {
-    m.index = index
-    m.playlist = playlist
+	m.index = index
+	m.playlist = playlist
 }
 
-func (m *singleLoopSongManager) nextSong(manual bool) Option[structs.Song] {
+func (m *singleLoopSongManager) nextSong(manual bool) optionalSong {
 	if len(m.playlist) == 0 {
 		return nil
 	}
 	if !manual {
-		return Some(m.playlist[m.index])
+		return some(m.playlist[m.index])
 	}
 	if m.index == len(m.playlist)-1 {
 		return nil
 	}
 	m.index++
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *singleLoopSongManager) prevSong(manual bool) Option[structs.Song] {
+func (m *singleLoopSongManager) prevSong(manual bool) optionalSong {
 	if len(m.playlist) == 0 {
 		return nil
 	}
 	if !manual {
-		return Some(m.playlist[m.index])
+		return some(m.playlist[m.index])
 	}
 	if m.index == 0 {
 		return nil
 	}
 	m.index--
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *singleLoopSongManager) delSong(index int) (song Option[structs.Song]) {
+func (m *singleLoopSongManager) delSong(index int) (song optionalSong) {
 	if index == m.index {
 		if index == len(m.playlist)-1 {
 			if len(m.playlist) > 1 {
-				song = Some(m.playlist[index-1])
+				song = some(m.playlist[index-1])
 				m.index--
 			}
 		} else {
-			song = Some(m.playlist[index+1])
+			song = some(m.playlist[index+1])
 			m.index++
 		}
 	} else if index < m.index {
@@ -532,35 +549,35 @@ func (m *listLoopSongManager) getCurSongIndex() int {
 }
 
 func (m *listLoopSongManager) init(index int, playlist []structs.Song) {
-    m.index = index
-    m.playlist = playlist
+	m.index = index
+	m.playlist = playlist
 }
 
-func (m *listLoopSongManager) nextSong(_ bool) Option[structs.Song] {
+func (m *listLoopSongManager) nextSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 {
 		return nil
 	}
 	m.index = (m.index + 1) % len(m.playlist)
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *listLoopSongManager) prevSong(_ bool) Option[structs.Song] {
+func (m *listLoopSongManager) prevSong(_ bool) optionalSong {
 	if len(m.playlist) == 0 {
 		return nil
 	}
 	m.index = (m.index - 1 + len(m.playlist)) % len(m.playlist)
-	return Some(m.playlist[m.index])
+	return some(m.playlist[m.index])
 }
 
-func (m *listLoopSongManager) delSong(index int) (song Option[structs.Song]) {
+func (m *listLoopSongManager) delSong(index int) (song optionalSong) {
 	if index == m.index {
 		if index == len(m.playlist)-1 {
 			if len(m.playlist) > 1 {
-				song = Some(m.playlist[index-1])
+				song = some(m.playlist[index-1])
 				m.index--
 			}
 		} else {
-			song = Some(m.playlist[index+1])
+			song = some(m.playlist[index+1])
 			m.index++
 		}
 	} else if index < m.index {
