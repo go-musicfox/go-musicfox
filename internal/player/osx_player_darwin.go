@@ -65,7 +65,7 @@ func (p *osxPlayer) listen() {
 			return
 		case p.curMusic = <-p.musicChan:
 			core.Autorelease(func() {
-				p.Paused()
+				p.Pause()
 				if p.timer != nil {
 					p.timer.SetPassed(0)
 				}
@@ -82,7 +82,7 @@ func (p *osxPlayer) listen() {
 					Duration:       8760 * time.Hour,
 					TickerInternal: 500 * time.Millisecond,
 					OnRun:          func(started bool) {},
-					OnPaused:       func() {},
+					OnPause:        func() {},
 					OnDone:         func(stopped bool) {},
 					OnTick: func() {
 						var curTime time.Duration
@@ -128,7 +128,7 @@ func (p *osxPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 
-func (p *osxPlayer) Paused() {
+func (p *osxPlayer) Pause() {
 	p.l.Lock()
 	defer p.l.Unlock()
 	if p.state != types.Playing {
@@ -166,7 +166,7 @@ func (p *osxPlayer) Toggle() {
 	case types.Paused, types.Stopped:
 		p.Resume()
 	case types.Playing:
-		p.Paused()
+		p.Pause()
 	default:
 		p.Resume()
 	}

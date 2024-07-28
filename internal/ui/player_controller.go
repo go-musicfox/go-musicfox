@@ -5,7 +5,7 @@ import (
 )
 
 // Deprecated: Only remote_control.Handler can call this method, others please use Player instead.
-func (p *Player) CtrlPaused() {
+func (p *Player) CtrlPause() {
 	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
 	p.ctrl <- CtrlSignal{Type: CtrlPaused}
 }

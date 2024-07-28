@@ -213,7 +213,7 @@ func (p *beepPlayer) listen() {
 				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
 				OnRun:          func(started bool) {},
-				OnPaused:       func() {},
+				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
 					select {
@@ -362,8 +362,8 @@ func (p *beepPlayer) pausedNoLock() {
 	p.setState(types.Paused)
 }
 
-// Paused 暂停播放
-func (p *beepPlayer) Paused() {
+// Pause 暂停播放
+func (p *beepPlayer) Pause() {
 	p.l.Lock()
 	defer p.l.Unlock()
 	p.pausedNoLock()
@@ -407,7 +407,7 @@ func (p *beepPlayer) Toggle() {
 	case types.Paused, types.Stopped:
 		p.Resume()
 	case types.Playing:
-		p.Paused()
+		p.Pause()
 	default:
 		p.Resume()
 	}

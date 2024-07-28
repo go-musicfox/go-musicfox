@@ -11,7 +11,7 @@ import (
 type Player interface {
 	Play(music URLMusic)
 	CurMusic() URLMusic
-	Paused()
+	Pause()
 	Resume()
 	Stop()
 	Toggle()

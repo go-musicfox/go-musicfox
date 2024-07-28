@@ -152,7 +152,7 @@ func handlePauseCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPR
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.CtrlPaused()
+	_playerController.CtrlPause()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -160,7 +160,7 @@ func handleStopCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPRe
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
-	_playerController.CtrlPaused()
+	_playerController.CtrlPause()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -254,7 +254,7 @@ func handleWillSleepOrPowerOff(id objc.ID, cmd objc.SEL, notification objc.ID) {
 	if _playerController == nil {
 		return
 	}
-	_playerController.CtrlPaused()
+	_playerController.CtrlPause()
 }
 
 func handleDidWake(id objc.ID, cmd objc.SEL, notification objc.ID) {

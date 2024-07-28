@@ -53,7 +53,7 @@ func (m *CurPlaylist) BottomOutHook() model.Hook {
 			return true, nil
 		}
 		res, page := hook(main)
-		m.songs = m.netease.player.playlist
+		m.songs = m.netease.player.Playlist()
 		m.menus = menux.GetViewFromSongs(m.songs)
 		return res, page
 	}

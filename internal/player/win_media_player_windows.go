@@ -104,7 +104,7 @@ func (p *winMediaPlayer) buildWinPlayer() {
 				p.Resume()
 				p.setState(types.Playing)
 			case playback.MediaPlaybackStatePaused:
-				p.Paused()
+				p.Pause()
 				p.setState(types.Paused)
 			}
 		},
@@ -122,7 +122,7 @@ func (p *winMediaPlayer) buildWinPlayer() {
 				p.Resume()
 				p.setState(types.Playing)
 			case playback.MediaPlayerStatePaused:
-				p.Paused()
+				p.Pause()
 				p.setState(types.Paused)
 			case playback.MediaPlayerStateStopped:
 				p.Stop()
@@ -185,7 +185,7 @@ func (p *winMediaPlayer) listen() {
 			reset()
 			return
 		case p.curMusic = <-p.musicChan:
-			p.Paused()
+			p.Pause()
 			reset()
 
 			uri = Must1(foundation.UriCreateUri(p.curMusic.URL))
@@ -197,7 +197,7 @@ func (p *winMediaPlayer) listen() {
 				Duration:       8760 * time.Hour,
 				TickerInternal: 500 * time.Millisecond,
 				OnRun:          func(started bool) {},
-				OnPaused:       func() {},
+				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
 					var curTime time.Duration
@@ -239,7 +239,7 @@ func (p *winMediaPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 
-func (p *winMediaPlayer) Paused() {
+func (p *winMediaPlayer) Pause() {
 	p.l.Lock()
 	defer p.l.Unlock()
 	if p.state != types.Playing {
@@ -274,7 +274,7 @@ func (p *winMediaPlayer) Toggle() {
 	case types.Paused, types.Stopped:
 		p.Resume()
 	case types.Playing:
-		p.Paused()
+		p.Pause()
 	default:
 		p.Resume()
 	}

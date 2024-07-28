@@ -102,7 +102,7 @@ func (n *Netease) InitHook(_ *model.App) {
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
 			var playMode types.Mode
 			if err = json.Unmarshal(jsonStr, &playMode); err == nil {
-				n.player.mode = playMode
+				n.player.SetMode(playMode)
 			}
 		}
 
@@ -122,10 +122,8 @@ func (n *Netease) InitHook(_ *model.App) {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
 				p := n.player
-				p.curSongIndex = snapshot.CurSongIndex
-				p.playlist = snapshot.Playlist
+                p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
 				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
-				p.curSong = p.playlist[p.curSongIndex]
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
 		}

@@ -52,10 +52,8 @@
           languages.go = {
             enable = true;
           };
-          packages = [
-          ];
           enterShell = ''
-            echo $'\e[1;32mWelcom to go-musicfox project~\e[0m'
+            echo $'\e[1;32mWelcome to go-musicfox project~\e[0m'
           '';
         };
       };
