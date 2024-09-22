@@ -372,8 +372,8 @@ func (h *EventHandler) spaceKeyHandle() {
 	}
 
 	player.playlistUpdateAt = time.Now()
-	if player.Mode() == types.PmIntelligent {
-		player.SwitchMode()
+	if player.intelligent {
+		player.SetMode(player.lastMode)
 	}
 	player.StartPlay()
 }
