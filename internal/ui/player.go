@@ -68,7 +68,8 @@ type Player struct {
 	playlistUpdateAt time.Time   // 播放列表更新时间
 	songManager      songManager // 歌曲管理器
 	// TODO: 将心动模式单独抽象出来，减少耦合
-	intelligent    bool   // 是否处于心动模式
+	intelligent    bool // 是否处于心动模式
+	lastMode       types.Mode
 	playingMenuKey string // 正在播放的菜单Key
 	playingMenu    Menu
 
@@ -535,10 +536,6 @@ func (p *Player) PreviousSong(manual bool) {
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
 	if playlistLen == 0 || index >= playlistLen-1 {
-		if p.Mode() == types.PmIntelligent {
-			p.Intelligence(true)
-		}
-
 		main := p.netease.MustMain()
 		if p.InPlayingMenu() {
 			if main.IsDualColumn() && index%2 == 0 {
@@ -568,6 +565,9 @@ func (p *Player) Seek(duration time.Duration) {
 
 // SetMode 设置播放模式
 func (p *Player) SetMode(playMode types.Mode) {
+	if p.lastMode != p.netease.player.Mode() {
+		p.lastMode = p.netease.player.Mode()
+	}
 	switch playMode {
 	case types.PmIntelligent:
 		p.intelligent = true
@@ -748,12 +748,12 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		p.playlistUpdateAt = time.Now()
 		song = p.songManager.nextSong(true).unwrap()
 	} else {
-		p.songManager.init(p.CurSongIndex(), append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
+		p.SetMode(types.PmIntelligent)
+		p.playingMenuKey = "Intelligent"
+		p.songManager.init(0, append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
 		p.playlistUpdateAt = time.Now()
 		song = p.Playlist()[0]
 	}
-	p.SetMode(types.PmIntelligent)
-	p.playingMenuKey = "Intelligent"
 
 	p.PlaySong(song, DurationNext)
 	return nil
