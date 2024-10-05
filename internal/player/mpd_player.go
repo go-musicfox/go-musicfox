@@ -181,7 +181,7 @@ func (p *mpdPlayer) listen() {
 		case <-p.close:
 			return
 		case p.curMusic = <-p.musicChan:
-			p.Paused()
+			p.Pause()
 			if p.timer != nil {
 				p.timer.SetPassed(0)
 			}
@@ -230,7 +230,7 @@ func (p *mpdPlayer) listen() {
 				Duration:       8760 * time.Hour,
 				TickerInternal: 200 * time.Millisecond,
 				OnRun:          func(started bool) {},
-				OnPaused:       func() {},
+				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
 					select {
@@ -291,7 +291,7 @@ func (p *mpdPlayer) CurMusic() URLMusic {
 	return p.curMusic
 }
 
-func (p *mpdPlayer) Paused() {
+func (p *mpdPlayer) Pause() {
 	p.l.Lock()
 	defer p.l.Unlock()
 	err := p.client().Pause(true)
@@ -317,7 +317,7 @@ func (p *mpdPlayer) Toggle() {
 	case types.Paused, types.Stopped:
 		p.Resume()
 	case types.Playing:
-		p.Paused()
+		p.Pause()
 	default:
 		p.Resume()
 	}

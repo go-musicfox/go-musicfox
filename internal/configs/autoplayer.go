@@ -25,9 +25,11 @@ func (p AutoPlayerPlaylist) SpecialPlaylist() string {
 
 var autoPlayerModeMap = map[string]types.Mode{
 	"listLoop":    types.PmListLoop,
-	"order":       types.PmOrder,
+	"order":       types.PmOrdered,
 	"singleLoop":  types.PmSingleLoop,
-	"random":      types.PmRandom,
+	"random":      types.PmInfRandom,
+	"infRandom":   types.PmInfRandom,
+	"listRandom":  types.PmListRandom,
 	"intelligent": types.PmIntelligent,
 }
 

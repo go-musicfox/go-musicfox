@@ -3,7 +3,7 @@ package remote_control
 import "time"
 
 type Controller interface {
-	CtrlPaused()
+	CtrlPause()
 	CtrlResume()
 	CtrlStop()
 	CtrlToggle()
