@@ -1,3 +1,227 @@
+- semver: 4.5.4
+  date: 2024-10-05T10:59:10+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 27c211d78c872e9a4428fd8197922aa3a23a3e2f
+      note: 'fix: 心动模式与一般模式切换'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 3b81f2f2c44c3d3903bb3fc17debde9fb7a42676
+      note: 'fix: crash in macOS <=10.15 #255'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c542510ef828a111e3458f061d9c59ab9485b9e9
+      note: 'feat: remove go-optional dep'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 43a783d0cfa7bd9d5399d820a74e4eb337d74de0
+      note: 'chore: clean'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 2aa295324d32ca265d0e54230a0ca1846c7868ef
+      note: 'fix: crash in random mode when playlist is empty'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: d34f44ca9b22fa388f8d4277093b3de56b06196f
+      note: fix build
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 483501c36f12ebd9b15292cad49999cef81518c9
+      note: 'fix: like song heart display'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 2ac552ee3d70f0690a0b312062092f21b14474de
+      note: 'feat(ui)!: refactor player song management'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: 20d91e947a2581a8d992724b7db33f87ac0f4846
+      note: 一键下载歌词功能键位更改
+      author:
+        name: real-lys
+        email: 19556673670@163.com
+      committer:
+        name: real-lys
+        email: 19556673670@163.com
+    - commit: f573d15e71c33830c64548700ba31d21be4b44e7
+      note: 一键下载歌词功能
+      author:
+        name: real-lys
+        email: 19556673670@163.com
+      committer:
+        name: real-lys
+        email: 19556673670@163.com
+    - commit: 55c500ae414baf9674c9cf90bbb92280874d40a9
+      note: fix darwin build
+      author:
+        name: imxyy_soope_
+        email: 103114856+imxyy1soope1@users.noreply.github.com
+      committer:
+        name: imxyy_soope_
+        email: 103114856+imxyy1soope1@users.noreply.github.com
+    - commit: 91d6c5555f74037715ba52affd819d02b3bfbac4
+      note: fix windows build
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: cf3d2b73992f786146fd2fe717fe4baf9b8f160e
+      note: 'fix: incomplete merge'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: d4c0da4d4f33e1040c554c9c8b006d8bb3602e55
+      note: 'feat: better random play'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+    - commit: b57709e1dfa6b6ffda658f657ef7721195baca16
+      note: 'fix: 修改注释'
+      author:
+        name: ruisenlin
+        email: ruisenlin@xiaoman.cn
+      committer:
+        name: ruisenlin
+        email: ruisenlin@xiaoman.cn
+    - commit: 4997db79883695bd5dc5aebef8437c1d0a517e2e
+      note: 'feat: add maxPlayErrCount config'
+      author:
+        name: ruisenlin
+        email: ruisenlin@xiaoman.cn
+      committer:
+        name: ruisenlin
+        email: ruisenlin@xiaoman.cn
+    - commit: 5589a71690471f5a43723571e13ceff9e23e607a
+      note: 'ci: remove `close-issue-no-response`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2b13b0ad0e1fcdb4254953e2b342cfda03ed3905
+      note: 'chore: update default cfg'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1b074e746705c95b33bfd772b579cee1071aab3f
+      note: 'ci: update close-issue-no-response.yaml'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c7bb51b60cb5e224d03d6bb0b6a5e4aab3aac973
+      note: 'fix: migu concurrent write header #299'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f244c46e243f11485986a744e04106265cc99153
+      note: 'ci: update cron'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: f3d2e7e890c7964c31f46e06f315b49f3fa38a8e
+      note: 'ci: fix repo'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1b6d2c6aaaf582963af17defc55f4d3603318496
+      note: 'ci: create close-issue-no-response.yaml'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 0025af1617bdf692477a47ab340a9384966c9af0
+      note: 'fix: index out of range error'
+      author:
+        name: Yefori
+        email: 110314400+Yefori-Go@users.noreply.github.com
+      committer:
+        name: Yefori
+        email: 110314400+Yefori-Go@users.noreply.github.com
+    - commit: 8a0a54621e2b5708b8fa3bca6597621901442dc1
+      note: |-
+        optimize: cache使用os.UserCacheDir
+
+        不知道怎么解决这冲突
+        就提交一个了
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7f56dab108d158a3ce57e8bc9a4bf36f819d2c20
+      note: 'docs: update README.md'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 4b07f429e239f1b34388a62a342c447fb8b4fd03
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.3
   date: 2024-06-14T20:39:46+08:00
   packager: go-musicfox

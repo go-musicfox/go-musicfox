@@ -1,4 +1,36 @@
 
+4.5.4
+=============
+2024-10-05
+
+* fix: 心动模式与一般模式切换 (27c211d7)
+* fix: crash in macOS <=10.15 #255 (3b81f2f2)
+* feat: remove go-optional dep (c542510e)
+* chore: clean (43a783d0)
+* fix: crash in random mode when playlist is empty (2aa29532)
+* fix build (d34f44ca)
+* fix: like song heart display (483501c3)
+* feat(ui)!: refactor player song management (2ac552ee)
+* 一键下载歌词功能键位更改 (20d91e94)
+* 一键下载歌词功能 (f573d15e)
+* fix darwin build (55c500ae)
+* fix windows build (91d6c555)
+* fix: incomplete merge (cf3d2b73)
+* feat: better random play (d4c0da4d)
+* fix: 修改注释 (b57709e1)
+* feat: add maxPlayErrCount config (4997db79)
+* ci: remove `close-issue-no-response` (5589a716)
+* chore: update default cfg (2b13b0ad)
+* ci: update close-issue-no-response.yaml (1b074e74)
+* fix: migu concurrent write header #299 (c7bb51b6)
+* ci: update cron (f244c46e)
+* ci: fix repo (f3d2e7e8)
+* ci: create close-issue-no-response.yaml (1b6d2c6a)
+* fix: index out of range error (0025af16)
+* optimize: cache使用os.UserCacheDir (8a0a5462)
+* docs: update README.md (7f56dab1)
+* chore: update scoop config & changelog (4b07f429)
+
 4.5.3
 =============
 2024-06-14
