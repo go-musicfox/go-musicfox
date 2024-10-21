@@ -1,16 +1,104 @@
-- semver: 4.5.4
-  date: 2024-10-05T10:59:10+08:00
+- semver: 4.5.5
+  date: 2024-10-21T21:47:21+08:00
   packager: go-musicfox
   changes:
-    - commit: 27c211d78c872e9a4428fd8197922aa3a23a3e2f
+    - commit: 3578e941c6148efb0295e9add6bc4cc62047ddb4
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d287b9eb6356f8d6d283e8b7fbc99f0b5008ecd4
       note: 'fix: 心动模式与一般模式切换'
       author:
         name: imxyy_soope_
         email: 3516554684@qq.com
       committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 05701f0aa17d434948da470e21c9c61071728711
+      note: 'feat: remove go-optional dep'
+      author:
         name: imxyy_soope_
         email: 3516554684@qq.com
-    - commit: 3b81f2f2c44c3d3903bb3fc17debde9fb7a42676
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6bd5740139a2dbff8cab743015584af572979462
+      note: 'chore: clean'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7decce449efe336846a94f20b90276d9f2f54e70
+      note: 'fix: crash in random mode when playlist is empty'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f52a19fdd3c1592a5e0430784cef373169ed0619
+      note: fix build
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e2edb3277aea2d3ab28cf8690ce96fef3415ce4b
+      note: 'fix: like song heart display'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: bdfd2136fb232d147178a2cdf8059d7cf71e91c8
+      note: 'feat(ui)!: refactor player song management'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d5d3eaaab813edf29d00a06783ddb257caf4ae92
+      note: fix darwin build
+      author:
+        name: imxyy_soope_
+        email: 103114856+imxyy1soope1@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a9b3f8f6df08d458e2d58c898b809db6e698d48e
+      note: fix windows build
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0a320eb578fda59105a181a92c659108e57776ce
+      note: 'fix: incomplete merge'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c64db0d8d070726812bb5e050ec13ff211b4e782
+      note: 'feat: better random play'
+      author:
+        name: imxyy_soope_
+        email: 3516554684@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 691caae61aacc5827517d2f0ec4ec4acd3bcd1e9
       note: 'fix: crash in macOS <=10.15 #255'
       author:
         name: anhoder
@@ -18,118 +106,46 @@
       committer:
         name: anhoder
         email: anhoder@88.com
-    - commit: c542510ef828a111e3458f061d9c59ab9485b9e9
-      note: 'feat: remove go-optional dep'
+    - commit: 91403abd87b22440627444306442c9932e33b506
+      note: 'chore: update default cfg'
       author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
+        name: anhoder
+        email: anhoder@88.com
       committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: 43a783d0cfa7bd9d5399d820a74e4eb337d74de0
-      note: 'chore: clean'
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: 2aa295324d32ca265d0e54230a0ca1846c7868ef
-      note: 'fix: crash in random mode when playlist is empty'
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: d34f44ca9b22fa388f8d4277093b3de56b06196f
-      note: fix build
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: 483501c36f12ebd9b15292cad49999cef81518c9
-      note: 'fix: like song heart display'
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: 2ac552ee3d70f0690a0b312062092f21b14474de
-      note: 'feat(ui)!: refactor player song management'
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: 20d91e947a2581a8d992724b7db33f87ac0f4846
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6a85a0e8ed32dd1198cd0d308c860bac11362ad3
       note: 一键下载歌词功能键位更改
       author:
         name: real-lys
         email: 19556673670@163.com
       committer:
-        name: real-lys
-        email: 19556673670@163.com
-    - commit: f573d15e71c33830c64548700ba31d21be4b44e7
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 552fc0c0f72c4a4695b42ae014ab8761070b8903
       note: 一键下载歌词功能
       author:
         name: real-lys
         email: 19556673670@163.com
       committer:
-        name: real-lys
-        email: 19556673670@163.com
-    - commit: 55c500ae414baf9674c9cf90bbb92280874d40a9
-      note: fix darwin build
-      author:
-        name: imxyy_soope_
-        email: 103114856+imxyy1soope1@users.noreply.github.com
-      committer:
-        name: imxyy_soope_
-        email: 103114856+imxyy1soope1@users.noreply.github.com
-    - commit: 91d6c5555f74037715ba52affd819d02b3bfbac4
-      note: fix windows build
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: cf3d2b73992f786146fd2fe717fe4baf9b8f160e
-      note: 'fix: incomplete merge'
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: d4c0da4d4f33e1040c554c9c8b006d8bb3602e55
-      note: 'feat: better random play'
-      author:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-      committer:
-        name: imxyy_soope_
-        email: 3516554684@qq.com
-    - commit: b57709e1dfa6b6ffda658f657ef7721195baca16
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1071b91b7162a45557d2ab43b9e4a2a247fa6f3f
       note: 'fix: 修改注释'
       author:
-        name: ruisenlin
-        email: ruisenlin@xiaoman.cn
+        name: rayson-wheretogo
+        email: raysonwheretogo@gmail.com
       committer:
-        name: ruisenlin
-        email: ruisenlin@xiaoman.cn
-    - commit: 4997db79883695bd5dc5aebef8437c1d0a517e2e
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9e8e95765a24b556f548a689775664c66c9d9da5
       note: 'feat: add maxPlayErrCount config'
       author:
-        name: ruisenlin
-        email: ruisenlin@xiaoman.cn
+        name: rayson-wheretogo
+        email: raysonwheretogo@gmail.com
       committer:
-        name: ruisenlin
-        email: ruisenlin@xiaoman.cn
+        name: anhoder
+        email: anhoder@88.com
     - commit: 5589a71690471f5a43723571e13ceff9e23e607a
       note: 'ci: remove `close-issue-no-response`'
       author:
@@ -138,14 +154,6 @@
       committer:
         name: GitHub
         email: noreply@github.com
-    - commit: 2b13b0ad0e1fcdb4254953e2b342cfda03ed3905
-      note: 'chore: update default cfg'
-      author:
-        name: anhoder
-        email: anhoder@88.com
-      committer:
-        name: anhoder
-        email: anhoder@88.com
     - commit: 1b074e746705c95b33bfd772b579cee1071aab3f
       note: 'ci: update close-issue-no-response.yaml'
       author:
