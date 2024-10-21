@@ -46,6 +46,7 @@ func NewHelpMenu(base baseMenu) *HelpMenu {
 			{Title: "T", Subtitle: "标记选中歌曲为不喜欢"},
 			{Title: "d", Subtitle: "下载播放中音乐"},
 			{Title: "D", Subtitle: "下载当前选中音乐"},
+			{Title: "ctrl+l", Subtitle: "下载当前播放音乐歌词"},
 			{Title: "c/C", Subtitle: "当前播放列表"},
 			{Title: "r/R", Subtitle: "重新渲染UI"},
 			{Title: "/", Subtitle: "搜索当前列表"},

@@ -122,7 +122,7 @@ func (p *Player) Previous() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Pause
 func (p *Player) Pause() *dbus.Error {
 	log.Printf("Pause requested\n")
-	p.RemoteControl.player.CtrlPaused()
+	p.RemoteControl.player.CtrlPause()
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (p *Player) Play() *dbus.Error {
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Stop
 func (p *Player) Stop() *dbus.Error {
 	log.Printf("Stop requested\n")
-	p.RemoteControl.player.CtrlPaused() // 只暂停
+	p.RemoteControl.player.CtrlPause() // 只暂停
 	return nil
 }
 

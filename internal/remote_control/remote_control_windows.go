@@ -89,7 +89,7 @@ func (c *RemoteControl) registerEventHandlers() {
 			case media.SystemMediaTransportControlsButtonPlay:
 				c.p.CtrlResume()
 			case media.SystemMediaTransportControlsButtonPause:
-				c.p.CtrlPaused()
+				c.p.CtrlPause()
 			case media.SystemMediaTransportControlsButtonNext:
 				c.p.CtrlNext()
 			case media.SystemMediaTransportControlsButtonPrevious:

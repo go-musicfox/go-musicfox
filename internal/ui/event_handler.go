@@ -58,6 +58,7 @@ const (
 	OperateTypeRerender                           = "rerender"
 	OperateTypePageDown                           = "pageDown"
 	OperateTypePageUp                             = "pageUp"
+	OperateTypeDownloadLrc                        = "downloadLrc"
 )
 
 type EventHandler struct {
@@ -139,6 +140,7 @@ var keyOperateMapping = map[string]OperateType{
 	"R":         OperateTypeRerender,
 	"ctrl+d":    OperateTypePageDown,
 	"ctrl+u":    OperateTypePageUp,
+	"ctrl+l":    OperateTypeDownloadLrc,
 }
 
 func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
@@ -165,16 +167,16 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 			if !player.playlistUpdateAt.IsZero() {
 				subTitle = player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
 			}
-			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.playlist), &model.MenuItem{Title: "当前播放列表", Subtitle: subTitle})
+			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.Playlist()), &model.MenuItem{Title: "当前播放列表", Subtitle: subTitle})
 			player.LocatePlayingSong()
 		}
 	case OperateTypeSpace:
 		h.spaceKeyHandle()
 	case OperateTypeToggle:
-		if h.netease.player.State() == types.Stopped {
+		if player.State() == types.Stopped {
 			h.spaceKeyHandle()
 		} else {
-			h.netease.player.Toggle()
+			player.Toggle()
 		}
 	case OperateTypeForwardFiveSec:
 		player.Seek(player.PassedTime() + time.Second*5)
@@ -189,7 +191,7 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 	case OperateTypeNext:
 		player.NextSong(true)
 	case OperateTypeSwitchPlayMode:
-		player.SetPlayMode(0)
+		player.SwitchMode()
 	case OperateTypeIntelligence:
 		newPage := player.Intelligence(false)
 		return true, newPage, app.Tick(time.Nanosecond)
@@ -297,6 +299,8 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 			curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
 			main.SetSelectedIndex(curIndex)
 		}
+	case OperateTypeDownloadLrc:
+		DownLoadLrc(h.netease)
 	default:
 		return false, nil, nil
 	}
@@ -321,10 +325,10 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 func (h *EventHandler) spaceKeyHandle() {
 	var (
 		songs         []structs.Song
-		inPlayingMenu = h.netease.player.InPlayingMenu()
 		main          = h.netease.MustMain()
 		menu          = main.CurMenu()
 		player        = h.netease.player
+		inPlayingMenu = player.InPlayingMenu()
 	)
 	if me, ok := menu.(SongsMenu); ok {
 		songs = me.Songs()
@@ -332,47 +336,46 @@ func (h *EventHandler) spaceKeyHandle() {
 
 	selectedIndex := menu.RealDataIndex(main.SelectedIndex())
 	if me, ok := menu.(Menu); !ok || !me.IsPlayable() || len(songs) == 0 || selectedIndex > len(songs)-1 {
-		if player.curSongIndex > len(player.playlist)-1 {
+		if player.CurSongIndex() > len(player.Playlist())-1 {
 			return
 		}
 		switch player.State() {
 		case types.Paused:
-			h.netease.player.Resume()
+			player.Resume()
 		case types.Playing:
-			h.netease.player.Paused()
+			player.Pause()
 		case types.Stopped:
-			_ = player.PlaySong(player.playlist[player.curSongIndex], DurationNext)
+			player.StartPlay()
 		}
 		return
 	}
 
-	if inPlayingMenu && songs[selectedIndex].Id == player.playlist[player.curSongIndex].Id {
+	if inPlayingMenu && songs[selectedIndex].Id == player.CurSong().Id {
 		switch player.State() {
 		case types.Paused:
 			player.Resume()
 		case types.Playing:
-			player.Paused()
+			player.Pause()
 		case types.Stopped:
-			_ = player.PlaySong(player.playlist[player.curSongIndex], DurationNext)
+			player.StartPlay()
 		}
 		return
 	}
 
-	player.curSongIndex = selectedIndex
+	newPlaylist := make([]structs.Song, len(songs))
+	copy(newPlaylist, songs)
+	player.songManager.init(selectedIndex, newPlaylist)
+
 	player.playingMenuKey = menu.GetMenuKey()
 	if me, ok := menu.(Menu); ok {
 		player.playingMenu = me
 	}
 
-	newPlaylists := make([]structs.Song, len(songs))
-	copy(newPlaylists, songs)
-	player.playlist = newPlaylists
-
 	player.playlistUpdateAt = time.Now()
-	if player.mode == types.PmIntelligent {
-		player.SetPlayMode(0)
+	if player.intelligent {
+		player.SetMode(player.lastMode)
 	}
-	_ = player.PlaySong(player.playlist[selectedIndex], DurationNext)
+	player.StartPlay()
 }
 
 func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {
