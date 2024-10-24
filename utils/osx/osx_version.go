@@ -63,12 +63,11 @@ func OsVersion() (v Version) {
 
 	versionStr := strings.Replace(versions[major-4], "{decimal}", decimal, 1)
 	version := strings.Split(versionStr, ".")
-	if len(version) < 3 {
-		return
-	}
 
 	v.Major, _ = strconv.Atoi(version[0])
 	v.Minor, _ = strconv.Atoi(version[1])
-	v.Patch, _ = strconv.Atoi(version[2])
+	if len(version) >= 3 {
+		v.Patch, _ = strconv.Atoi(version[2])
+	}
 	return
 }
