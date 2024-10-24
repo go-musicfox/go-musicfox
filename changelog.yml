@@ -1,3 +1,23 @@
+- semver: 4.5.6
+  date: 2024-10-24T23:14:34+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 17892157bd617e62cbd39c7442ee5497c4e29ed1
+      note: 'fix: macOS NowPlaying 图片显示问题'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0910dd1022c8829d85d09511076cb575932e1a3f
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.5
   date: 2024-10-21T21:47:21+08:00
   packager: go-musicfox

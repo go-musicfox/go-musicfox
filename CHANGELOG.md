@@ -1,4 +1,11 @@
 
+4.5.6
+=============
+2024-10-24
+
+* fix: macOS NowPlaying 图片显示问题 (17892157)
+* chore: update scoop config & changelog (0910dd10)
+
 4.5.5
 =============
 2024-10-21
