@@ -497,7 +497,7 @@ func (p *Player) CurSongIndex() int {
 }
 
 func (p *Player) CurSong() structs.Song {
-	if len(p.Playlist()) == 0 {
+	if len(p.Playlist()) <= p.CurSongIndex() {
 		return structs.Song{}
 	}
 	return p.Playlist()[p.CurSongIndex()]
