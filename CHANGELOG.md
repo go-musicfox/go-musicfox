@@ -1,4 +1,11 @@
 
+4.5.7
+=============
+2024-11-01
+
+* fix: panic(index out of ran) #327 (1629dd8d)
+* chore: update scoop config & changelog (fa7b63a9)
+
 4.5.6
 =============
 2024-10-24

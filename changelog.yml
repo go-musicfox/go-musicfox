@@ -1,3 +1,23 @@
+- semver: 4.5.7
+  date: 2024-11-01T12:59:18+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 1629dd8dbaa2f433bd9011db58ba3c639a15fd0c
+      note: 'fix: panic(index out of ran) #327'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fa7b63a9bc8c3335c96ec1b2f066a08948f3a6a7
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.6
   date: 2024-10-24T23:14:34+08:00
   packager: go-musicfox
