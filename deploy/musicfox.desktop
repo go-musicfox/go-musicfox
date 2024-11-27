@@ -1,8 +1,8 @@
 [Desktop Entry]
 Icon=musicfox
 Exec=musicfox --verbose 0
-Name=go-musicfox
-Name[zh_CN]=go-musicfox
+Name=musicfox
+Name[zh_CN]=musicfox
 GenericName=golang-musicfox
 GenericName[zh_CN]=golang-musicfox
 Type=Application
