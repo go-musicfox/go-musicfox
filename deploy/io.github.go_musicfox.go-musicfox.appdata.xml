@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="console-application">
+  <id>io.github.go_musicfox.go-musicfox</id>
+  
+  <name>Musicfox</name>
+  <developer_name>anhoder</developer_name>
+  <summary>Terminal music player for Netease Cloud Music</summary>
+  <summary xml:lang="zh_CN">网易云音乐命令行客户端。</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  
+  <!--Not possible to control this application with mouse or touch since it only has a TUI-->
+  <recommends>
+    <control>keyboard</control>
+    <internet>always</internet>
+  </recommends>
+
+  <provides>
+    <binary>musicfox</binary>
+  </provides>
+  
+  <description>
+    <p>A Netease Cloud Music client on the terminal.</p>
+  </description>
+  
+  <launchable type="desktop-id">io.github.go_musicfox.go-musicfox.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/go-musicfox/go-musicfox/1629dd8dbaa2f433bd9011db58ba3c639a15fd0c/previews/main.png</image>
+      <caption>Main interface</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="bugtracker">https://github.com/go-musicfox/go-musicfox/issues</url>
+  <url type="homepage">https://github.com/go-musicfox/go-musicfox</url>
+  
+  <releases>
+    <release version="4.5.7" date="2024-11-02" type="stable">
+      <url type="details">https://github.com/go-musicfox/go-musicfox/releases/tag/v4.5.7</url>
+    </release>
+  </releases>
+
+</component>
