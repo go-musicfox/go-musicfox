@@ -1,5 +1,7 @@
-github.com/anhoder/foxful-cli v0.3.3 h1:46yWhlEujS+NquwHVXi9I/84V1/2/Lmn4hgFPToMAxY=
-github.com/anhoder/foxful-cli v0.3.3/go.mod h1:M6018fGlfMbZIGGWgYC82Thk8u57VJguePEg3BbyPWA=
+github.com/anhoder/foxful-cli v0.4.0 h1:ivjLsR8fUmOcx63MIRNGsOIS+EZs2ie76hOBmeCyw/A=
+github.com/anhoder/foxful-cli v0.4.0/go.mod h1:M6018fGlfMbZIGGWgYC82Thk8u57VJguePEg3BbyPWA=
+github.com/anhoder/foxful-cli v0.4.1 h1:G1RWNvvADKn0EEflquTSnfsVJ8o/XTB9tcOUnXpfrPg=
+github.com/anhoder/foxful-cli v0.4.1/go.mod h1:M6018fGlfMbZIGGWgYC82Thk8u57VJguePEg3BbyPWA=
 github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU=
 github.com/anhoder/gcli/v2 v2.3.5/go.mod h1:AOxm27rFzNDLpBrwbW1pAh3ofebpXOQk/9x009qC9y8=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=

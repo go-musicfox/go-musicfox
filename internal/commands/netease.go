@@ -55,6 +55,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.KBControllers = append(options.KBControllers, eventHandler)
 			options.MouseControllers = append(options.MouseControllers, eventHandler)
 			options.Ticker = netease.Player().RenderTicker()
+			options.DynamicRowCount = configs.ConfigRegistry.Main.DynamicMenuRows
 		},
 	)
 

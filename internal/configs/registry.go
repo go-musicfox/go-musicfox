@@ -82,6 +82,7 @@ func NewRegistryWithDefault() *Registry {
 			EnableMouseEvent: true,
 			DownloadDir:      "",
 			CacheLimit:       0,
+			DynamicMenuRows:  false,
 		},
 		Player: PlayerOptions{
 			Engine:         types.BeepPlayer,
@@ -166,6 +167,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.ShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)
 	registry.Main.CacheDir = ini.String("main.cacheDir", "")
 	registry.Main.CacheLimit = ini.Int64("main.cacheLimit", 0)
+	registry.Main.DynamicMenuRows = ini.Bool("main.dynamicMenuRows", false)
 
 	defaultPlayer := types.BeepPlayer
 	switch runtime.GOOS {
