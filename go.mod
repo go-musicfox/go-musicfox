@@ -3,7 +3,7 @@ module github.com/go-musicfox/go-musicfox
 go 1.22
 
 require (
-	github.com/anhoder/foxful-cli v0.3.3
+	github.com/anhoder/foxful-cli v0.4.1
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
@@ -32,6 +32,7 @@ require (
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.2
 	go.etcd.io/bbolt v1.3.7
+	golang.org/x/sys v0.19.0
 )
 
 require (
@@ -75,7 +76,6 @@ require (
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 )
