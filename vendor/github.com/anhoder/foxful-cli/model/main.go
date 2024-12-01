@@ -128,15 +128,15 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 		}
 
 		if m.options.DynamicRowCount {
-			var numColumns = 1
+			numColumns := 1
 			if m.isDualColumn {
 				numColumns = 2
 			}
 			// Compute the maximum number of entries per page based on the number of rows remaining.
-			// 11 is the magic number that works best.
-			// 3 lines for search + 5 lines of lyrics + 4 lines of song name and progress bar = 12. Not
+			// 13 is the magic number that works best.
+			// 3 lines for search + 5 lines of lyrics + 6 lines of song name and progress bar = 14. Not
 			// sure where the discrepancy comes from.
-			var maxEntries = (msg.Height - m.menuStartRow - 11) * numColumns
+			maxEntries := (msg.Height - m.menuStartRow - 13) * numColumns
 			if maxEntries > 10 {
 				m.menuPageSize = maxEntries
 			} else {
