@@ -1,3 +1,50 @@
+- semver: 4.6.0
+  date: 2024-12-01T18:28:29+08:00
+  packager: go-musicfox
+  changes:
+    - commit: dafda89c6cde545b84b2342acfbfedabec8ca984
+      note: 'fix: invalid char in filename #330'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d2ea69abd985909fe0171d699d890972434912f0
+      note: 'feat: support dynamic rows'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 46707661bbd0a9b2faffcac4344e1a391f36c89e
+      note: |-
+        添加metadata文件
+
+        详见https://freedesktop.org/software/appstream/docs/chap-Metadata.html的标准
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: cb8e027f75dcef8640a45b7e7a18b1ea9e414602
+      note: 应用名改为musicfox(与应用别处保持一致)
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 7a98d84d4dfb9968eef37132225a32f58a42e69f
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.5.7
   date: 2024-11-01T12:59:18+08:00
   packager: go-musicfox

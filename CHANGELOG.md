@@ -1,4 +1,14 @@
 
+4.6.0
+=============
+2024-12-01
+
+* fix: invalid char in filename #330 (dafda89c)
+* feat: support dynamic rows (d2ea69ab)
+* 添加metadata文件 (46707661)
+* 应用名改为musicfox(与应用别处保持一致) (cb8e027f)
+* chore: update scoop config & changelog (7a98d84d)
+
 4.5.7
 =============
 2024-11-01
