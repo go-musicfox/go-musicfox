@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -72,6 +73,7 @@ func DownloadFile(url, filename, dirname string) error {
 var (
 	songNameTpl *template.Template
 	tplInitd    sync.Once
+	reg         = regexp.MustCompile("[<>:\"/\\|?*\000]")
 )
 
 func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
@@ -92,8 +94,7 @@ func downloadMusic(url, musicType string, song structs.Song, downloadDir string)
 	filename := filenameBuilder.String()
 
 	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
-	replacer := strings.NewReplacer("/", "_", "\\", "_", "*", "_")
-	filename = replacer.Replace(filename)
+	filename = reg.ReplaceAllString(filename, "_")
 	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
