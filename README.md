@@ -285,7 +285,13 @@ $ brew install anhoder/go-musicfox/go-musicfox  // 指定 --head 使用master代
 $ brew unlink musicfox && brew link --overwrite go-musicfox
 ```
 
-#### 3. 直接下载
+#### 3. 通过 Flatpak 安装
+
+<a href='https://flathub.org/apps/io.github.go_musicfox.go-musicfox'>
+    <img width='120' alt='Download on Flathub' src='https://flathub.org/api/badge?locale=zh-Hans'/>
+</a>
+
+#### 4. 直接下载
 
 在 [Release](https://github.com/go-musicfox/go-musicfox/releases/latest) 下载 Linux 的可执行文件。
 
