@@ -32,7 +32,7 @@ require (
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.2
 	go.etcd.io/bbolt v1.3.7
-	golang.org/x/sys v0.19.0
+	golang.org/x/sys v0.28.0
 )
 
 require (
@@ -73,11 +73,11 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/term v0.17.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 )
 
 replace (
