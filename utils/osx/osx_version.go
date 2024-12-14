@@ -52,7 +52,7 @@ func OsVersion() (v Version) {
 	minor, _ := strconv.Atoi(kernelVersion[1])
 	patch, _ := strconv.Atoi(kernelVersion[2])
 
-	if major < 4 || major > 23 {
+	if major < 4 /* || major > 23 */ {
 		return
 	}
 
