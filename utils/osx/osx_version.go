@@ -30,6 +30,7 @@ var versions = []string{
 	"12.{decimal}",
 	"13.{decimal}",
 	"14.{decimal}",
+	"15.{decimal}",
 }
 
 type Version struct {
@@ -52,7 +53,7 @@ func OsVersion() (v Version) {
 	minor, _ := strconv.Atoi(kernelVersion[1])
 	patch, _ := strconv.Atoi(kernelVersion[2])
 
-	if major < 4 /* || major > 23 */ {
+	if major < 4 || major > 24 {
 		return
 	}
 
