@@ -126,7 +126,10 @@ func Notify(content NotifyContent) {
 		AppName: types.AppName,
 	})
 
-	if runtime.GOOS != "darwin" {
+	// Hard code flatpak icon directory
+	if os.Getenv("container") == "flatpak" {
+		content.Icon = "/app/share/icons/hicolor/512x512/apps/io.github.go_musicfox.go-musicfox.png"
+	} else if runtime.GOOS != "darwin" {
 		localDir := app.DataRootDir()
 		content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
