@@ -35,9 +35,10 @@ func tryFindCache(songId int64) (fpath string) {
 	if err != nil || len(files) == 0 {
 		return
 	}
+	prior := priority[configs.ConfigRegistry.Main.PlayerSongLevel]
 	for i := len(files) - 1; i >= 0; i-- {
 		file := files[i]
-		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) {
+		if strings.HasPrefix(file.Name(), strconv.FormatInt(songId, 10)) && !strings.HasSuffix(file.Name(), "-tmp") && file.Name() >= fmt.Sprintf("%d-%d", songId, prior) {
 			fpath = filepath.Join(cacheDir, file.Name())
 			return
 		}
@@ -83,7 +84,7 @@ func CopyCachedSong(song structs.Song) error {
 
 func GetCacheURL(songID int64) (fpath, musicType string) {
 	fpath = tryFindCache(songID)
-	if fpath == "" || path.Base(fpath) < fmt.Sprintf("%d-%d", songID, priority[configs.ConfigRegistry.Main.PlayerSongLevel]) {
+	if fpath == "" {
 		return
 	}
 	split := strings.Split(path.Base(fpath), ".")
