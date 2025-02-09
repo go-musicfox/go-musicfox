@@ -221,6 +221,48 @@ func (p *Player) lyricView() string {
 		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-main.MenuBottomRow()))
 	}
 
+	if main.CenterEverything() {
+		p.buildLyricsCentered(main, &lyricBuilder)
+	} else {
+		p.buildLyricsTraditional(main, &lyricBuilder)
+	}
+
+	if endRow-p.lyricStartRow-p.lyricLines > 0 {
+		lyricBuilder.WriteString(strings.Repeat("\n", endRow-p.lyricStartRow-p.lyricLines))
+	}
+
+	return lyricBuilder.String()
+}
+
+func (p *Player) buildLyricsCentered(main *model.Main, lyricBuilder *strings.Builder) {
+	windowWidth := p.netease.WindowWidth()
+	highlightLine := 2
+	startLine := highlightLine - (p.lyricLines-1)/2
+	endLine := highlightLine + (p.lyricLines-1)/2
+	extraPadding := 8 + max(0, (windowWidth-40)/5)
+	lyricsMaxLength := windowWidth - extraPadding
+	for i := startLine; i <= endLine; i++ {
+		line := p.lyrics[i]
+		if i == highlightLine {
+			line = p.lyricNowScrollBar.Tick(lyricsMaxLength, line)
+			line = strings.Trim(line, " ")
+		}
+		line = runewidth.Truncate(line, lyricsMaxLength, "")
+		lineLength := runewidth.StringWidth(line)
+		paddingLeft := (windowWidth - lineLength) / 2
+		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
+		if i == highlightLine {
+			line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
+		} else {
+			line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
+		}
+		lyricBuilder.WriteString(line)
+		lyricBuilder.WriteString(strings.Repeat(" ", windowWidth-paddingLeft-lineLength))
+		lyricBuilder.WriteString("\n")
+	}
+}
+
+func (p *Player) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.Builder) {
 	var startCol int
 	if main.IsDualColumn() {
 		startCol = main.MenuStartColumn() + 3
@@ -261,12 +303,6 @@ func (p *Player) lyricView() string {
 			lyricBuilder.WriteString("\n")
 		}
 	}
-
-	if endRow-p.lyricStartRow-p.lyricLines > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", endRow-p.lyricStartRow-p.lyricLines))
-	}
-
-	return lyricBuilder.String()
 }
 
 // songView 歌曲信息UI
