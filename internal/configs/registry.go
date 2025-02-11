@@ -77,6 +77,7 @@ func NewRegistryWithDefault() *Registry {
 			ShowLyricTrans:   true,
 			ShowNotify:       true,
 			NotifyIcon:       types.DefaultNotifyIcon,
+			NotifyAlbumCover: false,
 			PProfPort:        types.MainPProfPort,
 			AltScreen:        true,
 			EnableMouseEvent: true,
@@ -157,6 +158,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.ShowLyricTrans = ini.Bool("main.showLyricTrans", true)
 	registry.Main.ShowNotify = ini.Bool("main.showNotify", true)
 	registry.Main.NotifyIcon = ini.String("main.notifyIcon", types.DefaultNotifyIcon)
+	registry.Main.NotifyAlbumCover = ini.Bool("main.notifyAlbumCover", false)
 	registry.Main.PProfPort = ini.Int("main.pprofPort", types.MainPProfPort)
 	registry.Main.AltScreen = ini.Bool("main.altScreen", true)
 	registry.Main.EnableMouseEvent = ini.Bool("main.enableMouseEvent", true)
