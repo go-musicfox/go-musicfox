@@ -12,6 +12,7 @@ require (
 	github.com/ebitengine/purego v0.7.0
 	github.com/fhs/gompd/v2 v2.3.0
 	github.com/frolovo22/tag v0.0.2
+	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
 	github.com/go-flac/flacpicture v0.3.0
 	github.com/go-musicfox/netease-music v1.4.6
 	github.com/go-musicfox/notificator v0.1.2
@@ -32,7 +33,7 @@ require (
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.2
 	go.etcd.io/bbolt v1.3.7
-	golang.org/x/sys v0.28.0
+	golang.org/x/sys v0.30.0
 )
 
 require (
@@ -46,6 +47,7 @@ require (
 	github.com/forgoer/openssl v1.6.0 // indirect
 	github.com/go-flac/go-flac v1.0.0 // indirect
 	github.com/go-musicfox/requests v0.2.3 // indirect
+	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/gomodule/redigo v1.8.9 // indirect
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/gookit/goutil v0.6.10 // indirect
@@ -65,9 +67,11 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/rivo/uniseg v0.4.6 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
+	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
