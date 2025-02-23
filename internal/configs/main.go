@@ -14,6 +14,7 @@ type MainOptions struct {
 	ShowLyricTrans         bool                     // 显示歌词翻译
 	ShowNotify             bool                     // 显示通知
 	NotifyIcon             string                   // logo 图片名
+	NotifyAlbumCover       bool                     // 通知显示专辑封面
 	PProfPort              int                      // pprof端口
 	AltScreen              bool                     // AltScreen显示模式
 	EnableMouseEvent       bool                     // 启用鼠标事件
