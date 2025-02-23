@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gen2brain/beeep"
 	"github.com/go-musicfox/notificator"
 	"github.com/pkg/errors"
 
@@ -109,7 +110,9 @@ func (n Notificator) Push(urgency, title, text, iconPath, redirectUrl, groupId s
 		}
 		return n.osx.push(title, text, icon, redirectUrl, groupId).Run()
 	}
-
+	if runtime.GOOS == "windows" {
+		return beeep.Notify(title, text, iconPath)
+	}
 	return n.Notificator.Push(urgency, title, text, iconPath, redirectUrl)
 }
 

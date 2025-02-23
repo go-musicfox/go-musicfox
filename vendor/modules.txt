@@ -74,6 +74,9 @@ github.com/forgoer/openssl
 # github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 ## explicit; go 1.17
 github.com/frolovo22/tag
+# github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
+## explicit; go 1.14
+github.com/gen2brain/beeep
 # github.com/go-flac/flacpicture v0.3.0
 ## explicit; go 1.20
 github.com/go-flac/flacpicture
@@ -93,6 +96,9 @@ github.com/go-musicfox/requests
 # github.com/go-ole/go-ole v1.3.0
 ## explicit; go 1.12
 github.com/go-ole/go-ole
+# github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4
+## explicit
+github.com/go-toast/toast
 # github.com/godbus/dbus/v5 v5.1.0
 ## explicit; go 1.12
 github.com/godbus/dbus/v5
@@ -225,6 +231,9 @@ github.com/muesli/reflow/wrap
 # github.com/muesli/termenv v0.15.2
 ## explicit; go 1.17
 github.com/muesli/termenv
+# github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
+## explicit
+github.com/nu7hatch/gouuid
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -286,6 +295,9 @@ github.com/skip2/go-qrcode/reedsolomon
 github.com/skratchdot/open-golang/open
 # github.com/stretchr/testify v1.9.0
 ## explicit; go 1.17
+# github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af
+## explicit
+github.com/tadvi/systray
 # github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 ## explicit
 github.com/telanflow/cookiejar
@@ -318,11 +330,12 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/sync v0.10.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.28.0
+# golang.org/x/sys v0.30.0
 ## explicit; go 1.18
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
 # golang.org/x/term v0.27.0
 ## explicit; go 1.18
 golang.org/x/term
