@@ -92,8 +92,10 @@ func (n *Netease) InitHook(_ *model.App) {
 		var lastfmUser storage.LastfmUser
 		if jsonStr, err := table.GetByKVModel(&lastfmUser); err == nil {
 			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
-				n.lastfmUser = &lastfmUser
-				n.lastfm.SetSession(lastfmUser.SessionKey)
+				if lastfmUser.ApiKey == config.Lastfm.Key {
+					n.lastfmUser = &lastfmUser
+					n.lastfm.SetSession(lastfmUser.SessionKey)
+				}
 			}
 		}
 		n.MustMain().RefreshMenuList()
