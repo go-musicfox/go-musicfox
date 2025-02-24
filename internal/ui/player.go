@@ -37,6 +37,9 @@ import (
 // PlayDirection 下首歌的方向
 type PlayDirection uint8
 
+// getJustPlayedSong 获取刚刚播放的歌曲
+var getJustPlayedSong func() structs.Song
+
 const (
 	DurationNext PlayDirection = iota
 	DurationPrev
@@ -417,10 +420,8 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
-	if song.Id != p.CurSong().Id {
-		p.reportEnd() // 上一首播放结束
-	}
-
+	p.reportEnd()
+	getJustPlayedSong = func() structs.Song { return song }
 	loading := model.NewLoading(p.netease.MustMain())
 	loading.Start()
 	defer loading.Complete()
@@ -829,10 +830,10 @@ func (p *Player) RenderTicker() model.Ticker {
 	return p.renderTicker
 }
 
-func (p *Player) buildNeteaseReportService() *service.ReportService {
+func (p *Player) buildNeteaseReportService(song structs.Song) *service.ReportService {
 	svc := &service.ReportService{
-		ID:      p.CurSong().Id,
-		Alg:     p.CurSong().Alg,
+		ID:      song.Id,
+		Alg:     song.Alg,
 		Type:    "song",
 		Time:    int64(p.PassedTime().Seconds()),
 		EndType: "playend",
@@ -852,13 +853,13 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 	case *DjRecommendMenu:
 		svc.Type = "dj"
 	case nil:
-		if p.CurSong().Album.Id != 0 {
+		if song.Album.Id != 0 {
 			svc.SourceType = "album"
-			svc.SourceId = strconv.FormatInt(p.CurSong().Album.Id, 10)
+			svc.SourceId = strconv.FormatInt(song.Album.Id, 10)
 		}
 	}
 
-	if p.CurSong().Duration.Seconds()-p.PassedTime().Seconds() > 10 {
+	if song.Duration.Seconds()-p.PassedTime().Seconds() > 10 {
 		svc.EndType = "ui"
 	}
 
@@ -866,19 +867,23 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 }
 
 func (p *Player) reportStart() {
-	p.buildNeteaseReportService().Playstart()
+	p.buildNeteaseReportService(p.CurSong()).Playstart()
 	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.CurSong(), p.PassedTime())
 }
 
 func (p *Player) reportEnd() {
+	if getJustPlayedSong == nil {
+		return
+	}
+	song := getJustPlayedSong()
 	// 播放时间不少于20秒时，才上报
 	if p.PassedTime().Seconds() < 20 {
 		return
 	}
 
-	svc := p.buildNeteaseReportService()
+	svc := p.buildNeteaseReportService(song)
 	switch {
-	case math.Abs(p.CurSong().Duration.Seconds()-p.PassedTime().Seconds()) <= 10:
+	case math.Abs(song.Duration.Seconds()-p.PassedTime().Seconds()) <= 10:
 		// 播放结束
 		svc.EndType = "playend"
 	case time.Since(p.playlistUpdateAt).Seconds() <= 5:
@@ -890,7 +895,7 @@ func (p *Player) reportEnd() {
 	svc.Playend()
 
 	// 播放过一半, 上报lastfm
-	if p.PassedTime().Seconds() >= p.CurSong().Duration.Seconds()/2 {
-		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.CurSong(), p.PassedTime())
+	if p.PassedTime().Seconds() >= song.Duration.Seconds()/2 {
+		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, song, p.PassedTime())
 	}
 }
