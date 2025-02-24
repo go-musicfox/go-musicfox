@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	lastfmgo "github.com/shkh/lastfm-go"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
@@ -23,11 +24,11 @@ type Client struct {
 
 func NewClient() *Client {
 	client := &Client{}
-	if types.LastfmKey == "" || types.LastfmSecret == "" {
+	if configs.ConfigRegistry.Lastfm.Key == "" || configs.ConfigRegistry.Lastfm.Secret == "" {
 		err := errors.New("lastfm key或secret为空")
 		_, _ = client.errorHandle(err)
 	} else {
-		client.api = lastfmgo.New(types.LastfmKey, types.LastfmSecret)
+		client.api = lastfmgo.New(configs.ConfigRegistry.Lastfm.Key, configs.ConfigRegistry.Lastfm.Secret)
 	}
 	return client
 }
@@ -61,7 +62,7 @@ func (c *Client) GetAuthUrlWithToken() (token, url string, err error) {
 		return
 	}
 
-	url = fmt.Sprintf(types.LastfmAuthUrl, types.LastfmKey, token)
+	url = fmt.Sprintf(types.LastfmAuthUrl, configs.ConfigRegistry.Lastfm.Key, token)
 	return
 }
 

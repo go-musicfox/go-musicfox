@@ -11,6 +11,7 @@ type LastfmUser struct {
 	Name       string `json:"name"`
 	RealName   string `json:"real_name"`
 	Url        string `json:"url"`
+	ApiKey     string `json:"api_key"`
 	SessionKey string `json:"session_key"`
 }
 

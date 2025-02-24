@@ -6,6 +6,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
 
@@ -71,6 +72,7 @@ func (m *LastfmAuth) SubMenu(mod_el *model.App, _ int) model.Menu {
 	m.netease.lastfmUser.Name = user.Name
 	m.netease.lastfmUser.RealName = user.RealName
 	m.netease.lastfmUser.Url = user.Url
+	m.netease.lastfmUser.ApiKey = configs.ConfigRegistry.Lastfm.Key
 	m.netease.lastfmUser.Store()
 	return NewLastfmRes(m.baseMenu, "授权", nil, 3)
 }

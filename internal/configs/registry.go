@@ -22,6 +22,7 @@ type Registry struct {
 	AutoPlayer    AutoPlayerOptions
 	UNM           UNMOptions
 	Player        PlayerOptions
+	Lastfm        LastfmOptions
 	GlobalHotkeys map[string]string
 }
 
@@ -94,6 +95,10 @@ func NewRegistryWithDefault() *Registry {
 			Sources:            []string{types.UNMDefaultSources},
 			EnableLocalVip:     true,
 			UnlockSoundEffects: true,
+		},
+		Lastfm: LastfmOptions{
+			Key:    types.LastfmKey,
+			Secret: types.LastfmSecret,
 		},
 	}
 
@@ -209,6 +214,10 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.UNM.EnableLocalVip = ini.Bool("unm.enableLocalVip", true)
 	registry.UNM.UnlockSoundEffects = ini.Bool("unm.unlockSoundEffects", true)
 	registry.UNM.QQCookieFile = ini.String("unm.qqCookieFile", "")
+
+	// Lastfm
+	registry.Lastfm.Key = ini.String("lastfm.key", types.LastfmKey)
+	registry.Lastfm.Secret = ini.String("lastfm.secret", types.LastfmSecret)
 
 	return registry
 }
