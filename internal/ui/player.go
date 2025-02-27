@@ -867,7 +867,9 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 
 func (p *Player) reportStart() {
 	p.buildNeteaseReportService().Playstart()
-	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.CurSong(), p.PassedTime())
+	if configs.ConfigRegistry.Lastfm.Scrobble {
+		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.CurSong(), p.PassedTime())
+	}
 }
 
 func (p *Player) reportEnd() {
@@ -889,8 +891,10 @@ func (p *Player) reportEnd() {
 	}
 	svc.Playend()
 
-	// 播放过一半, 上报lastfm
-	if p.PassedTime().Seconds() >= p.CurSong().Duration.Seconds()/2 {
-		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.CurSong(), p.PassedTime())
+	if configs.ConfigRegistry.Lastfm.Scrobble {
+		// 播放过一半, 上报lastfm
+		if p.PassedTime().Seconds() >= p.CurSong().Duration.Seconds()/2 {
+			lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.CurSong(), p.PassedTime())
+		}
 	}
 }

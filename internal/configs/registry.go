@@ -99,6 +99,7 @@ func NewRegistryWithDefault() *Registry {
 		Lastfm: LastfmOptions{
 			Key:    types.LastfmKey,
 			Secret: types.LastfmSecret,
+			Scrobble: true,
 		},
 	}
 
@@ -218,6 +219,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	// Lastfm
 	registry.Lastfm.Key = ini.String("lastfm.key", types.LastfmKey)
 	registry.Lastfm.Secret = ini.String("lastfm.secret", types.LastfmSecret)
+	registry.Lastfm.Scrobble = ini.Bool("lastfm.scrobble", true)
 
 	return registry
 }

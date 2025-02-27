@@ -6,6 +6,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
 
@@ -31,8 +32,15 @@ func (m *Lastfm) MenuViews() []model.MenuItem {
 			{Title: "去授权"},
 		}
 	}
+
+	subtitle := "[已启用]"
+	if !configs.ConfigRegistry.Lastfm.Scrobble {
+		subtitle = "[未启用]"
+	}
+
 	return []model.MenuItem{
 		{Title: "查看用户信息"},
+		{Title: "上报", Subtitle: subtitle},
 		{Title: "清除授权"},
 	}
 }
@@ -45,6 +53,10 @@ func (m *Lastfm) SubMenu(_ *model.App, index int) model.Menu {
 	case 0:
 		_ = open.Start(m.netease.lastfmUser.Url)
 	case 1:
+		configs.ConfigRegistry.Lastfm.Scrobble = !configs.ConfigRegistry.Lastfm.Scrobble
+		// TODO: 更新副标题
+		return NewLastfmRes(m.baseMenu, "切换上报状态", nil, 2)
+	case 2:
 		m.netease.lastfmUser = &storage.LastfmUser{}
 		m.netease.lastfmUser.Clear()
 		return NewLastfmRes(m.baseMenu, "清除授权", nil, 2)
