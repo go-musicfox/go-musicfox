@@ -220,6 +220,9 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Lastfm.Key = ini.String("lastfm.key", types.LastfmKey)
 	registry.Lastfm.Secret = ini.String("lastfm.secret", types.LastfmSecret)
 	registry.Lastfm.Scrobble = ini.Bool("lastfm.scrobble", true)
+	if registry.Lastfm.Key == "" {
+		registry.Lastfm.Scrobble = false
+	}
 
 	return registry
 }
