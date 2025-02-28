@@ -26,6 +26,13 @@ func (m *Lastfm) GetMenuKey() string {
 	return "last_fm"
 }
 
+var getScrobbleSubtitle = func() string {
+	if !configs.ConfigRegistry.Lastfm.Scrobble {
+		return "[未启用]"
+	}
+	return "[已启用]"
+}
+
 func (m *Lastfm) MenuViews() []model.MenuItem {
 	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
 		return []model.MenuItem{
@@ -33,19 +40,14 @@ func (m *Lastfm) MenuViews() []model.MenuItem {
 		}
 	}
 
-	subtitle := "[已启用]"
-	if !configs.ConfigRegistry.Lastfm.Scrobble {
-		subtitle = "[未启用]"
-	}
-
 	return []model.MenuItem{
 		{Title: "查看用户信息"},
-		{Title: "上报", Subtitle: subtitle},
+		{Title: "上报", Subtitle: getScrobbleSubtitle()},
 		{Title: "清除授权"},
 	}
 }
 
-func (m *Lastfm) SubMenu(_ *model.App, index int) model.Menu {
+func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
 		return m.auth
 	}
@@ -54,8 +56,7 @@ func (m *Lastfm) SubMenu(_ *model.App, index int) model.Menu {
 		_ = open.Start(m.netease.lastfmUser.Url)
 	case 1:
 		configs.ConfigRegistry.Lastfm.Scrobble = !configs.ConfigRegistry.Lastfm.Scrobble
-		// TODO: 更新副标题
-		return NewLastfmRes(m.baseMenu, "切换上报状态", nil, 2)
+		app.MustMain().MenuList()[index].Subtitle = getScrobbleSubtitle()
 	case 2:
 		m.netease.lastfmUser = &storage.LastfmUser{}
 		m.netease.lastfmUser.Clear()

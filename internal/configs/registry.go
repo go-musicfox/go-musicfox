@@ -97,8 +97,8 @@ func NewRegistryWithDefault() *Registry {
 			UnlockSoundEffects: true,
 		},
 		Lastfm: LastfmOptions{
-			Key:    types.LastfmKey,
-			Secret: types.LastfmSecret,
+			Key:      types.LastfmKey,
+			Secret:   types.LastfmSecret,
 			Scrobble: true,
 		},
 	}
