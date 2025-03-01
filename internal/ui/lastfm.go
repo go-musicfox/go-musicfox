@@ -5,8 +5,6 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
-
-	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
 
 type Lastfm struct {
@@ -45,9 +43,7 @@ func (m *Lastfm) SubMenu(_ *model.App, index int) model.Menu {
 	case 0:
 		_ = open.Start(m.netease.lastfmUser.Url)
 	case 1:
-		m.netease.lastfmUser = &storage.LastfmUser{}
-		m.netease.lastfmUser.Clear()
-		return NewLastfmRes(m.baseMenu, "清除授权", nil, 2)
+		return NewLastfmRevokeMenu(m.baseMenu, 2)
 	}
 	return nil
 }
