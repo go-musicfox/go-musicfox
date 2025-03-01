@@ -5,6 +5,8 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
 )
 
 type Lastfm struct {
@@ -61,11 +63,27 @@ func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 		}
 		m.netease.lastfm.OpenUserHomePage()
 	case 1:
-		m.netease.lastfm.Tracker.Toggle()
-		app.MustMain().RefreshMenuList()
+		action := func() {
+			m.netease.lastfm.Tracker.Toggle()
+		}
+		menu := NewConfirmMenu(m.baseMenu, []ConfirmItem{
+			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+		})
+		app.MustMain().EnterMenu(menu, &m.MenuViews()[index])
 	case 2:
-		m.netease.lastfm.ClearUserInfo()
-		return NewLastfmRes(m.baseMenu, "清除授权", nil, 2)
+		action := func() {
+			m.netease.lastfm.ClearUserInfo()
+
+			notify.Notify(notify.NotifyContent{
+				Title:   "清除授权成功",
+				Text:    "Last.fm 授权已清除",
+				GroupId: types.GroupID,
+			})
+		}
+
+		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
+			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 2},
+		})
 	}
 	return nil
 }
