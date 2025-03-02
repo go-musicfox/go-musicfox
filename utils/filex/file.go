@@ -1,7 +1,6 @@
 package filex
 
 import (
-	"embed"
 	"io"
 	"io/fs"
 	"os"
@@ -11,9 +10,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 )
-
-//go:embed embed
-var embedDir embed.FS
 
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
