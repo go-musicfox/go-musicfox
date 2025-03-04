@@ -3,6 +3,7 @@ package lastfm
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 
 	"github.com/pkg/errors"
 	lastfmgo "github.com/shkh/lastfm-go"
@@ -85,6 +86,10 @@ func (c *Client) errorHandle(e error) (bool, error) {
 			slog.Error("Lastfm request failed", slogx.Error(lastfmErr))
 			return false, e
 		}
+	}
+	var networkErr *url.Error
+	if errors.As(e, &networkErr) {
+		return true, e
 	}
 	slog.Error("Lastfm other err", slogx.Error(e))
 	return false, e
