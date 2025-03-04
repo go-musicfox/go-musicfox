@@ -14,9 +14,10 @@ type Tracker struct {
 	client *Client
 	l      sync.Mutex
 
-	enable     bool                  // 是否启用，功能不可用时为本地模式
-	pending    *storage.ScrobbleList // 待上报项
-	nowPlaying storage.Scrobble      // 当前播放
+	enable        bool                  // 是否启用，功能不可用时为本地模式
+	scrobblePoint int                   // 可 Scrobble 百分比
+	pending       *storage.ScrobbleList // 待上报项
+	nowPlaying    storage.Scrobble      // 当前播放
 }
 
 func NewTracker(client *Client) *Tracker {
@@ -25,6 +26,7 @@ func NewTracker(client *Client) *Tracker {
 		enable:  configs.ConfigRegistry.Lastfm.Enable,
 		pending: &storage.ScrobbleList{},
 	}
+	t.setScrobblePoint(configs.ConfigRegistry.Lastfm.ScrobblePoint)
 	t.pending.InitFromStorage()
 
 	return t
@@ -114,6 +116,14 @@ func (t *Tracker) Playing(scrobble storage.Scrobble) {
 	}
 }
 
+func (t *Tracker) setScrobblePoint(point int) {
+	if point < 50 || point > 100 {
+		slog.Error("ScrobblePoint 大小须为 50~100，使用默认值 50")
+		point = 50
+	}
+	t.scrobblePoint = point
+}
+
 func (t *Tracker) Status() bool {
 	return t.enable
 }
@@ -153,7 +163,10 @@ func (t *Tracker) IsScrobbleable(duration, played float64) bool {
 	if played >= 4*60 { // 大于 4min 直接上报
 		return true
 	}
-	return played >= duration/2 // 过半
+	if t.scrobblePoint == 100 && duration-played < 3 { // 近似完整播放
+		return true
+	}
+	return played >= duration*(float64(t.scrobblePoint)/100) // 自定义上报起始比例
 }
 
 const scrobbleExpiryDays = 14
