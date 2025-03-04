@@ -30,9 +30,8 @@ import (
 )
 
 type Netease struct {
-	user       *structs.User
-	lastfm     *lastfm.Client
-	lastfmUser *storage.LastfmUser
+	user   *structs.User
+	lastfm *lastfm.Client
 
 	*model.App
 	login  *LoginPage
@@ -44,6 +43,7 @@ type Netease struct {
 func NewNetease(app *model.App) *Netease {
 	n := new(Netease)
 	n.lastfm = lastfm.NewClient()
+
 	n.player = NewPlayer(n)
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
@@ -85,18 +85,6 @@ func (n *Netease) InitHook(_ *model.App) {
 		// 刷新界面用户名
 		n.MustMain().RefreshMenuTitle()
 
-		// 获取lastfm用户信息
-		var lastfmUser storage.LastfmUser
-		if jsonStr, err := table.GetByKVModel(&lastfmUser); err == nil {
-			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
-				if lastfmUser.ApiKey == config.Lastfm.Key {
-					n.lastfmUser = &lastfmUser
-					n.lastfm.SetSession(lastfmUser.SessionKey)
-				}
-			}
-		}
-		n.MustMain().RefreshMenuList()
-
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
 			var playMode types.Mode
@@ -121,7 +109,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
 				p := n.player
-                p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
+				p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
 				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
@@ -229,6 +217,7 @@ func (n *Netease) InitHook(_ *model.App) {
 
 func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
+	n.lastfm.Close()
 }
 
 func (n *Netease) Player() *Player {

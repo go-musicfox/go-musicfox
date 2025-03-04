@@ -18,7 +18,6 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
@@ -867,7 +866,7 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 
 func (p *Player) reportStart() {
 	p.buildNeteaseReportService().Playstart()
-	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.CurSong(), p.PassedTime())
+	p.netease.lastfm.Tracker.Playing(*storage.NewScrobble(p.CurMusic().Song, 0))
 }
 
 func (p *Player) reportEnd() {
@@ -889,8 +888,8 @@ func (p *Player) reportEnd() {
 	}
 	svc.Playend()
 
-	// 播放过一半, 上报lastfm
-	if p.PassedTime().Seconds() >= p.CurSong().Duration.Seconds()/2 {
-		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.CurSong(), p.PassedTime())
+	// 检测并上报 last.fm
+	if p.netease.lastfm.Tracker.IsScrobbleable(p.CurMusic().Duration.Seconds(), p.PassedTime().Seconds()) {
+		go p.netease.lastfm.Tracker.Scrobble(*storage.NewScrobble(p.CurMusic().Song, p.PassedTime()))
 	}
 }
