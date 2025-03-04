@@ -6,7 +6,6 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
 
@@ -55,10 +54,7 @@ func (m *LastfmAuth) SubMenu(mod_el *model.App, _ int) model.Menu {
 	loading := model.NewLoading(m.netease.MustMain())
 	loading.Start()
 
-	if m.netease.lastfmUser == nil {
-		m.netease.lastfmUser = &storage.LastfmUser{}
-	}
-	m.netease.lastfmUser.SessionKey, err = m.netease.lastfm.GetSession(m.token)
+	sessionKey, err := m.netease.lastfm.GetSession(m.token)
 	if err != nil {
 		loading.Complete()
 		return NewLastfmRes(m.baseMenu, "授权", err, 1)
@@ -68,13 +64,16 @@ func (m *LastfmAuth) SubMenu(mod_el *model.App, _ int) model.Menu {
 	if err != nil {
 		return NewLastfmRes(m.baseMenu, "授权", err, 1)
 	}
-	m.netease.lastfmUser.Id = user.Id
-	m.netease.lastfmUser.Name = user.Name
-	m.netease.lastfmUser.RealName = user.RealName
-	m.netease.lastfmUser.Url = user.Url
-	m.netease.lastfmUser.ApiKey = configs.ConfigRegistry.Lastfm.Key
-	m.netease.lastfmUser.Store()
-	return NewLastfmRes(m.baseMenu, "授权", nil, 3)
+
+	m.netease.lastfm.InitUserInfo(&storage.LastfmUser{
+		Id:         user.Id,
+		Name:       user.Name,
+		RealName:   user.RealName,
+		Url:        user.Url,
+		SessionKey: sessionKey,
+	})
+
+	return NewLastfmRes(m.baseMenu, "授权", nil, 2)
 }
 
 func (m *LastfmAuth) FormatMenuItem(item *model.MenuItem) {
