@@ -72,9 +72,6 @@ func (n *Netease) InitHook(_ *model.App) {
 	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(projectDir, "cookie"), nil)
 	util.SetGlobalCookieJar(cookieJar)
 
-	// DBManager初始化
-	storage.DBManager = new(storage.LocalDBManager)
-
 	// 获取用户信息
 	errorx.Go(func() {
 		table := storage.NewTable()
