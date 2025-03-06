@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
@@ -40,6 +41,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	model.Submit = types.SubmitText
 	model.SearchPlaceholder = types.SearchPlaceholder
 	model.SearchResult = types.SearchResult
+
+	// DBManager 初始化
+	storage.DBManager = new(storage.LocalDBManager)
 
 	var (
 		netease      = ui.NewNetease(model.NewApp(opts))
