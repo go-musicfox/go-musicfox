@@ -9,7 +9,7 @@ import (
 )
 
 type Scrobble struct {
-	Artist     string        `json:"artist"`
+	Artist     []string      `json:"artist"`
 	Track      string        `json:"track"`
 	Album      string        `json:"album"`
 	Duration   time.Duration `json:"duration"`
@@ -19,7 +19,7 @@ type Scrobble struct {
 
 func NewScrobble(song structs.Song, playedTime time.Duration) *Scrobble {
 	return &Scrobble{
-		Artist:     song.ArtistName(),
+		Artist:     ArtistNames(song.Artists),
 		Track:      song.Name,
 		Album:      song.Album.Name,
 		Timestamp:  time.Now().Unix(),
@@ -64,4 +64,16 @@ func (sl *ScrobbleList) InitFromStorage() {
 	if jsonStr, err := t.GetByKVModel(sl); err == nil {
 		_ = json.Unmarshal(jsonStr, &sl.Scrobbles)
 	}
+}
+
+func ArtistNames(artists []structs.Artist) []string {
+	names := make([]string, len(artists))
+	for i, artist := range artists {
+		names[i] = artist.Name
+	}
+	return names
+}
+
+func (s *Scrobble) FilterArtist() {
+	s.Artist = s.Artist[:1]
 }
