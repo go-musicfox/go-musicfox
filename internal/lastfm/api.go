@@ -160,7 +160,11 @@ func (c *Client) NeedAuth() bool {
 }
 
 func (c *Client) OpenUserHomePage() {
-	_ = open.Start(c.user.Url)
+	url := "https://www.last.fm"
+	if c.user.Url != "" {
+		url = c.user.Url
+	}
+	_ = open.Start(url)
 }
 
 func (c *Client) InitUserInfo(user *storage.LastfmUser) {
