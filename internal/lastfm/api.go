@@ -27,17 +27,20 @@ func IsAvailable() bool {
 }
 
 type Client struct {
-	api      *lastfmgo.Api
-	user     *storage.LastfmUser
-	Tracker  *Tracker
-	needAuth bool
+	api        *lastfmgo.Api
+	user       *storage.LastfmUser
+	Tracker    *Tracker
+	needAuth   bool
+	apiAccount *storage.LastfmApiAccount
 }
 
 func NewClient() *Client {
 	client := &Client{
-		user:     &storage.LastfmUser{},
-		needAuth: true,
+		user:       &storage.LastfmUser{},
+		needAuth:   true,
+		apiAccount: &storage.LastfmApiAccount{},
 	}
+	client.apiAccount.InitFromStorage()
 	client.Tracker = NewTracker(client)
 
 	key, secret := client.getAPIKey()
@@ -57,6 +60,8 @@ func NewClient() *Client {
 
 func (c *Client) getAPIKey() (key, secret string) {
 	switch {
+	case c.apiAccount.Key != "" && c.apiAccount.Secret != "":
+		return c.apiAccount.Key, c.apiAccount.Secret
 	case configs.ConfigRegistry.Lastfm.Key != "" && configs.ConfigRegistry.Lastfm.Secret != "":
 		return configs.ConfigRegistry.Lastfm.Key, configs.ConfigRegistry.Lastfm.Secret
 	case types.LastfmKey != "" && types.LastfmSecret != "":
@@ -185,4 +190,21 @@ func (c *Client) UserName() string {
 		return c.user.Name
 	}
 	return ""
+}
+
+func (c *Client) SetApiAccount(key, secret string) {
+	c.apiAccount = &storage.LastfmApiAccount{Key: key, Secret: secret}
+	c.apiAccount.Store()
+	c.api = lastfmgo.New(key, secret)
+	available = true // 更新状态
+}
+
+func (c *Client) GetApiAccount() (key, secret string) {
+	return c.apiAccount.Key, c.apiAccount.Secret
+}
+
+func (c *Client) ClearApiAccount() {
+	c.apiAccount = &storage.LastfmApiAccount{}
+	c.apiAccount.Clear()
+	_, _ = c.getAPIKey() // 刷新状态
 }

@@ -9,21 +9,19 @@ import (
 
 type LastfmProfile struct {
 	baseMenu
-	auth *LastfmAuth
 }
 
 func NewLastfmProfile(base baseMenu) *LastfmProfile {
 	return &LastfmProfile{
 		baseMenu: base,
-		auth:     NewLastfmAuth(base),
 	}
 }
 
 func (m *LastfmProfile) GetMenuKey() string {
-	return "last_fm"
+	return "lastfm_profile"
 }
 
-func (m *LastfmProfile) MenuViews() []model.MenuItem {
+func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 	if !lastfm.IsAvailable() {
 		return []model.MenuItem{{Title: "设置 API account", Subtitle: "[待设置]"}}
 	}
@@ -40,11 +38,14 @@ func (m *LastfmProfile) MenuViews() []model.MenuItem {
 func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		// TODO: 设置 API key
-		return nil
+		page := NewLastfmCustomApiPage(m.netease)
+		page.AfterAction = func() {
+			app.MustMain().RefreshMenuList()
+		}
+		return NewMenuToPage(m.baseMenu, page)
 	case 1:
 		if m.netease.lastfm.NeedAuth() {
-			return m.auth
+			return NewLastfmAuth(m.baseMenu)
 		}
 
 		action := func() {
