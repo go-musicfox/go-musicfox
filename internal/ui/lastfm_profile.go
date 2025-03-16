@@ -45,7 +45,11 @@ func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 		return NewMenuToPage(m.baseMenu, page)
 	case 1:
 		if m.netease.lastfm.NeedAuth() {
-			return NewLastfmAuth(m.baseMenu)
+			page := NewLastfmAuthPage(m.netease)
+			page.AfterAction = func() {
+				app.MustMain().RefreshMenuList()
+			}
+			return NewMenuToPage(m.baseMenu, page)
 		}
 
 		action := func() {
