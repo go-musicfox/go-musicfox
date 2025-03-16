@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 )
@@ -21,23 +20,19 @@ func (m *Lastfm) GetMenuKey() string {
 	return "last_fm"
 }
 
-var getScrobbleSubtitle = func(m *lastfm.Tracker) string {
-	if m.Status() {
-		return "[已启用]"
-	}
-	return "[未启用]"
-}
-
-var getScrobbleCountSubtitle = func(m *lastfm.Tracker) string {
-	return fmt.Sprintf("[共 %d 条]", m.Count())
-}
-
 func (m *Lastfm) MenuViews() []model.MenuItem {
+	getControlTitle := func() string {
+		if m.netease.lastfm.Tracker.Status() {
+			return "关闭功能"
+		}
+		return "启用功能"
+	}
+
 	return []model.MenuItem{
 		{Title: "管理授权"},
 		{Title: "前往主页"},
-		{Title: "本地记录", Subtitle: getScrobbleSubtitle(m.netease.lastfm.Tracker)},
-		{Title: "清空队列", Subtitle: getScrobbleCountSubtitle(m.netease.lastfm.Tracker)},
+		{Title: getControlTitle()},
+		{Title: "清空队列", Subtitle: fmt.Sprintf("[共 %d 条]", m.netease.lastfm.Tracker.Count())},
 	}
 }
 
@@ -51,10 +46,9 @@ func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 		action := func() {
 			m.netease.lastfm.Tracker.Toggle()
 		}
-		menu := NewConfirmMenu(m.baseMenu, []ConfirmItem{
+		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
 			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
 		})
-		app.MustMain().EnterMenu(menu, &m.MenuViews()[index])
 	case 3:
 		action := func() {
 			m.netease.lastfm.Tracker.Clear()
@@ -65,7 +59,6 @@ func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 				GroupId: types.GroupID,
 			})
 		}
-
 		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
 			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
 		})
