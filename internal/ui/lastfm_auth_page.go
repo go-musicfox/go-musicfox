@@ -324,13 +324,12 @@ func (l *LastfmAuthPage) enterHandler() (model.Page, tea.Cmd) {
 	switch l.index {
 	case submitIndex:
 		// 提交
-		l.tips = util.SetFgStyle("暂未实现", termenv.ANSIBrightRed)
-		return l, nil
-		// if len(l.accountInput.Value()) <= 0 || len(l.passwordInput.Value()) <= 0 {
-		// 	l.tips = util.SetFgStyle("请输入账号或密码", termenv.ANSIBrightRed)
-		// 	return l, nil
-		// }
-		// return l.authByLogin()
+		// 简单的账号密码判断
+		if len(l.accountInput.Value()) < 2 || len(l.accountInput.Value()) > 15 || len(l.passwordInput.Value()) < 6 {
+			l.tips = util.SetFgStyle("请正确输入账号或密码", termenv.ANSIBrightRed)
+			return l, nil
+		}
+		return l.authByLogin()
 	case l.qrAuthIndex:
 		// 扫码授权
 		return l.authByQRCode()
@@ -426,8 +425,18 @@ func (l *LastfmAuthPage) showQRCode() (model.Page, tea.Cmd) {
 }
 
 func (l *LastfmAuthPage) authByLogin() (model.Page, tea.Cmd) {
-	// TODO: 账号密码登录
-	return l, tickLogin(time.Nanosecond)
+	var err error
+	l.sessionKey, err = l.netease.lastfm.Login(l.accountInput.Value(), l.passwordInput.Value())
+	if err != nil {
+		l.tips = util.SetFgStyle("登录失败，请检查", termenv.ANSIBrightRed)
+		slog.Error("登录失败", slogx.Error(err))
+		return l, nil
+	}
+
+	if !l.initUserInfo() {
+		return l, nil
+	}
+	return l.authSuccessHandle()
 }
 
 func (l *LastfmAuthPage) authByQRCode() (model.Page, tea.Cmd) {
