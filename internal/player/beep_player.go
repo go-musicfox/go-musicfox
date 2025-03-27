@@ -192,6 +192,7 @@ func (p *beepPlayer) listen() {
 				}
 			} else {
 				// 单曲循环以及歌单只有一首歌时不再请求网络
+				p.cacheDownloaded = true
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_RDONLY, 0666); err != nil {
 					panic(err)
 				}
