@@ -289,7 +289,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	}
 	if p.state == types.Playing || p.state == types.Paused {
 		speaker.Lock()
-		newPos := sampleRate.N(duration)
+		newPos := p.curFormat.SampleRate.N(duration)
 
 		if newPos < 0 {
 			newPos = 0
