@@ -151,7 +151,6 @@ func (p *beepPlayer) listen() {
 						}
 					}()
 					_, _ = iox.CopyClose(ctx, cacheWFile, read)
-					p.cacheDownloaded = true
 					p.l.Lock()
 					defer p.l.Unlock()
 					if p.curStreamer == nil {
@@ -179,6 +178,7 @@ func (p *beepPlayer) listen() {
 						_ = p.curStreamer.Seek(pos)
 						p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 					}
+					p.cacheDownloaded = true
 				}(ctx, p.cacheWriter, reader)
 
 				N := 512
@@ -277,7 +277,7 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *beepPlayer) Seek(duration time.Duration) {
-	if duration < 0 {
+	if duration < 0 || !p.cacheDownloaded {
 		return
 	}
 	// FIXME: 暂时仅对MP3格式提供跳转功能
