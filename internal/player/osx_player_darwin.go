@@ -202,6 +202,13 @@ func (p *osxPlayer) PassedTime() time.Duration {
 	return curTime
 }
 
+func (p *osxPlayer) PlayedTime() time.Duration {
+	if p.timer == nil {
+		return 0
+	}
+	return p.timer.ActualRuntime()
+}
+
 func (p *osxPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }

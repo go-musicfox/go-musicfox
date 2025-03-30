@@ -17,6 +17,7 @@ type Player interface {
 	Toggle()
 	Seek(duration time.Duration)
 	PassedTime() time.Duration
+	PlayedTime() time.Duration
 	TimeChan() <-chan time.Duration
 	State() types.State
 	StateChan() <-chan types.State

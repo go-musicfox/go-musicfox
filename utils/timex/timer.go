@@ -18,18 +18,24 @@ type Options struct {
 
 // Timer represents timer with pause/resume features.
 type Timer struct {
-	options  Options
-	ticker   *time.Ticker
-	started  bool
-	passed   time.Duration
-	lastTick time.Time
-	done     chan struct{}
-	l        sync.Mutex
+	options       Options
+	ticker        *time.Ticker
+	started       bool
+	passed        time.Duration
+	actualRuntime time.Duration
+	lastTick      time.Time
+	done          chan struct{}
+	l             sync.Mutex
 }
 
 // Passed returns how much done is already passed.
 func (t *Timer) Passed() time.Duration {
 	return t.passed
+}
+
+// ActualRuntime returns how much time the timer has actually spent running.
+func (t *Timer) ActualRuntime() time.Duration {
+	return t.actualRuntime
 }
 
 // SetPassed update passed.
@@ -74,6 +80,7 @@ func (t *Timer) Run() {
 		select {
 		case tickAt := <-t.ticker.C:
 			t.passed += tickAt.Sub(t.lastTick)
+			t.actualRuntime += tickAt.Sub(t.lastTick)
 			t.lastTick = time.Now()
 			t.options.OnTick()
 			if t.Remaining() <= 0 {
@@ -100,6 +107,7 @@ func (t *Timer) Pause() {
 
 	t.pushDone()
 	t.passed += time.Since(t.lastTick)
+	t.actualRuntime += time.Since(t.lastTick)
 	t.lastTick = time.Now()
 	t.options.OnPause()
 }

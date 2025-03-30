@@ -40,6 +40,9 @@ func (p *osxPlayer) Seek(_ time.Duration) {
 func (p *osxPlayer) PassedTime() time.Duration {
 	return 0
 }
+func (p *osxPlayer) PlayedTime() time.Duration {
+	return 0
+}
 
 func (p *osxPlayer) TimeChan() <-chan time.Duration {
 	return nil

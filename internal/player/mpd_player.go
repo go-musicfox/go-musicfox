@@ -340,6 +340,12 @@ func (p *mpdPlayer) PassedTime() time.Duration {
 	return p.timer.Passed()
 }
 
+func (p *mpdPlayer) PlayedTime() time.Duration {
+	if p.timer == nil {
+		return 0
+	}
+	return p.timer.ActualRuntime()
+}
 func (p *mpdPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }

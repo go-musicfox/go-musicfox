@@ -306,6 +306,13 @@ func (p *winMediaPlayer) PassedTime() time.Duration {
 	return curTime
 }
 
+func (p *winMediaPlayer) PlayedTime() time.Duration {
+	if p.timer == nil {
+		return 0
+	}
+	return p.timer.ActualRuntime()
+}
+
 func (p *winMediaPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
