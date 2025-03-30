@@ -402,6 +402,7 @@ $ musicfox
   * 参照[手动编译](#手动编译)一节自行编译。
 
   > 这里之所以使用 FLAC8，主要是为了兼容大部分系统，因为FLAC是向前兼容的（也就是说 `≥ 8` 的FLAC都可以使用）
+- wsl 环境下使用 beep 须安装 `libasound2-plugins`，见 [issues](https://github.com/microsoft/wslg/issues/864)
 
 </details>
 <details>
