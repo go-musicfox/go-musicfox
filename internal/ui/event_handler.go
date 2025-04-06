@@ -7,161 +7,45 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/mathx"
 )
 
-type OperateType string
-
-const (
-	OperateTypeEnter                              = "enter"
-	OperateTypeCurPlaylist                        = "curPlaylist"
-	OperateTypeSpace                              = "space"
-	OperateTypeToggle                             = "toggle"
-	OperateTypeForwardFiveSec                     = "forwardFiveSec"
-	OperateTypeForwardTenSec                      = "forwardTenSec"
-	OperateTypeBackwardOneSec                     = "backwardOneSec"
-	OperateTypeBackwardFiveSec                    = "backwardFiceSec"
-	OperateTypePrevious                           = "previous"
-	OperateTypeNext                               = "next"
-	OperateTypeSwitchPlayMode                     = "switchPlayMode"
-	OperateTypeIntelligence                       = "intelligence"
-	OperateTypeLikePlayingSong                    = "likePlayingSong"
-	OperateTypeLikeSelectedSong                   = "likeSelectedSong"
-	OperateTypeDislikePlayingSong                 = "dislikePlayingSong"
-	OperateTypeDislikeSelectedSong                = "dislikeSelectedSong"
-	OperateTypeLogout                             = "logout"
-	OperateTypeDownVolume                         = "downVolume"
-	OperateTypeUpVolume                           = "upVolume"
-	OperateTypeDownloadPlayigSong                 = "downloadPlayingSong"
-	OperateTypeDownloadSelectedSong               = "downloadSelectedSong"
-	OperateTypeTrashPlayingSong                   = "trashPlayingSong"
-	OperateTypeTrashSelectedSong                  = "trashSelectedSong"
-	OperateTypeHelp                               = "help"
-	OperateTypeAddSelectedSongToUserPlaylist      = "addSelectedSongToUserPlaylist"
-	OperateTypeRemoveSelectedSongFromUserPlaylist = "removeSelectedSongFromUserPlaylist"
-	OperateTypeAddPlayingSongToUserPlaylist       = "addPlayingSongToUserPlaylist"
-	OperateTypeRemovePlayingSongFromUserPlaylist  = "removePlayingSongFromUserPlaylist"
-	OperateTypeOpenAlbumOfPlayingSong             = "openAlbumOfPlayingSong"
-	OperateTypeOpenAlbumOfSelectedSong            = "openAlbumOfSelectedSong"
-	OperateTypeOpenArtistOfPlayingSong            = "openArtistOfPlayingSong"
-	OperateTypeOpenArtistOfSelectedSong           = "openArtistOfSelectedSong"
-	OperateTypeOpenPlayingSongInWeb               = "openPlayingSongInWeb"
-	OperateTypeOpenSelectedItemInWeb              = "openSelectedItemInWeb"
-	OperateTypeCollectSelectedPlaylist            = "collectSelectedPlaylist"
-	OperateTypeDiscollectSelectedPlaylist         = "discollectSelectedPlaylist"
-	OperateTypeDelSongFromCurPlaylist             = "delSongFromCurPlaylist"
-	OperateTypeAppendSongsToNext                  = "appendSongsToNext"
-	OperateTypeAppendSongsAfterCurPlaylist        = "appendSongsAfterCurPlaylist"
-	OperateTypeClearSongCache                     = "clearSongCache"
-	OperateTypeRerender                           = "rerender"
-	OperateTypePageDown                           = "pageDown"
-	OperateTypePageUp                             = "pageUp"
-	OperateTypeDownloadLrc                        = "downloadLrc"
-)
-
 type EventHandler struct {
-	netease *Netease
+	netease         *Netease
+	keyToOperateMap map[string]keybindings.OperateType // KeyStr -> OperateType
 }
 
 func NewEventHandler(netease *Netease) *EventHandler {
-	return &EventHandler{
-		netease: netease,
+	handler := &EventHandler{
+		netease:         netease,
+		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(),
 	}
-}
-
-var keyOperateMapping = map[string]OperateType{
-	"enter":     OperateTypeEnter,
-	"c":         OperateTypeCurPlaylist,
-	"C":         OperateTypeCurPlaylist,
-	" ":         OperateTypeSpace,
-	"　":         OperateTypeSpace,
-	"v":         OperateTypeForwardFiveSec,
-	"V":         OperateTypeForwardTenSec,
-	"x":         OperateTypeBackwardOneSec,
-	"X":         OperateTypeBackwardFiveSec,
-	"[":         OperateTypePrevious,
-	"【":         OperateTypePrevious,
-	"]":         OperateTypeNext,
-	"】":         OperateTypeNext,
-	"p":         OperateTypeSwitchPlayMode,
-	"P":         OperateTypeIntelligence,
-	",":         OperateTypeLikePlayingSong,
-	"，":         OperateTypeLikePlayingSong,
-	".":         OperateTypeDislikePlayingSong,
-	"。":         OperateTypeDislikePlayingSong,
-	"W":         OperateTypeLogout,
-	"=":         OperateTypeUpVolume,
-	"＝":         OperateTypeUpVolume,
-	"-":         OperateTypeDownVolume,
-	"−":         OperateTypeDownVolume,
-	"ー":         OperateTypeDownVolume,
-	"d":         OperateTypeDownloadPlayigSong,
-	"D":         OperateTypeDownloadSelectedSong,
-	"t":         OperateTypeTrashPlayingSong,
-	"T":         OperateTypeTrashSelectedSong,
-	"<":         OperateTypeLikeSelectedSong,
-	"〈":         OperateTypeLikeSelectedSong,
-	"＜":         OperateTypeLikeSelectedSong,
-	"《":         OperateTypeLikeSelectedSong,
-	"«":         OperateTypeLikeSelectedSong,
-	">":         OperateTypeDislikeSelectedSong,
-	"〉":         OperateTypeDislikeSelectedSong,
-	"＞":         OperateTypeDislikeSelectedSong,
-	"》":         OperateTypeDislikeSelectedSong,
-	"»":         OperateTypeDislikeSelectedSong,
-	"?":         OperateTypeHelp,
-	"？":         OperateTypeHelp,
-	"tab":       OperateTypeAddSelectedSongToUserPlaylist,
-	"shift+tab": OperateTypeRemoveSelectedSongFromUserPlaylist,
-	"`":         OperateTypeAddPlayingSongToUserPlaylist,
-	"~":         OperateTypeRemovePlayingSongFromUserPlaylist,
-	"～":         OperateTypeRemovePlayingSongFromUserPlaylist,
-	"a":         OperateTypeOpenAlbumOfPlayingSong,
-	"A":         OperateTypeOpenAlbumOfSelectedSong,
-	"s":         OperateTypeOpenArtistOfPlayingSong,
-	"S":         OperateTypeOpenArtistOfSelectedSong,
-	"o":         OperateTypeOpenPlayingSongInWeb,
-	"O":         OperateTypeOpenSelectedItemInWeb,
-	";":         OperateTypeCollectSelectedPlaylist,
-	":":         OperateTypeCollectSelectedPlaylist,
-	"：":         OperateTypeCollectSelectedPlaylist,
-	"；":         OperateTypeCollectSelectedPlaylist,
-	"'":         OperateTypeDiscollectSelectedPlaylist,
-	"\"":        OperateTypeDiscollectSelectedPlaylist,
-	"\\":        OperateTypeDelSongFromCurPlaylist,
-	"、":         OperateTypeDelSongFromCurPlaylist,
-	"e":         OperateTypeAppendSongsToNext,
-	"E":         OperateTypeAppendSongsAfterCurPlaylist,
-	"u":         OperateTypeClearSongCache,
-	"U":         OperateTypeClearSongCache,
-	"r":         OperateTypeRerender,
-	"R":         OperateTypeRerender,
-	"ctrl+d":    OperateTypePageDown,
-	"ctrl+u":    OperateTypePageUp,
-	"ctrl+l":    OperateTypeDownloadLrc,
+	return handler
 }
 
 func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
-	if ot, ok := keyOperateMapping[msg.String()]; ok {
-		return h.handle(ot)
+	if op, ok := h.keyToOperateMap[msg.String()]; ok {
+		stopPropagation, newPage, cmd := h.handle(op)
+		return stopPropagation, newPage, cmd
 	}
-
-	return false, nil, nil
+	return false, nil, nil // false: 允许 foxful-cli 处理
 }
 
-func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
+func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea.Cmd) {
 	var (
 		player = h.netease.player
 		app    = h.netease.App
 		main   = app.MustMain()
 		menu   = main.CurMenu()
 	)
-	switch ot {
-	case OperateTypeEnter:
+
+	switch op {
+	case keybindings.OpEnter:
 		return h.enterKeyHandle()
-	case OperateTypeCurPlaylist:
+	case keybindings.OpCurPlaylist:
 		if _, ok := menu.(*CurPlaylist); !ok {
 			var subTitle string
 			if !player.playlistUpdateAt.IsZero() {
@@ -170,136 +54,136 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.Playlist()), &model.MenuItem{Title: "当前播放列表", Subtitle: subTitle})
 			player.LocatePlayingSong()
 		}
-	case OperateTypeSpace:
-		h.spaceKeyHandle()
-	case OperateTypeToggle:
+	case keybindings.OpPlayOrToggle:
+		h.playOrToggleHandle()
+	case keybindings.OpToggle:
 		if player.State() == types.Stopped {
-			h.spaceKeyHandle()
+			h.playOrToggleHandle()
 		} else {
 			player.Toggle()
 		}
-	case OperateTypeForwardFiveSec:
+	case keybindings.OpSeekForward5s:
 		player.Seek(player.PassedTime() + time.Second*5)
-	case OperateTypeForwardTenSec:
+	case keybindings.OpSeekForward10s:
 		player.Seek(player.PassedTime() + time.Second*10)
-	case OperateTypeBackwardOneSec:
+	case keybindings.OpSeekBackward1s:
 		player.Seek(player.PassedTime() - time.Second*1)
-	case OperateTypeBackwardFiveSec:
+	case keybindings.OpSeekBackward5s:
 		player.Seek(player.PassedTime() - time.Second*5)
-	case OperateTypePrevious:
+	case keybindings.OpPrevious:
 		player.PreviousSong(true)
-	case OperateTypeNext:
+	case keybindings.OpNext:
 		player.NextSong(true)
-	case OperateTypeSwitchPlayMode:
+	case keybindings.OpSwitchPlayMode:
 		player.SwitchMode()
-	case OperateTypeIntelligence:
+	case keybindings.OpIntelligence:
 		newPage := player.Intelligence(false)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeLikePlayingSong:
+	case keybindings.OpLikePlayingSong:
 		newPage := likePlayingSong(h.netease, true)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeDislikePlayingSong:
+	case keybindings.OpDislikePlayingSong:
 		newPage := likePlayingSong(h.netease, false)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeLogout:
+	case keybindings.OpLogout:
 		logout()
 		return true, nil, tea.Quit
-	case OperateTypeDownVolume: // half-width, full-width and katakana
+	case keybindings.OpVolumeDown: // half-width, full-width and katakana
 		player.DownVolume()
-	case OperateTypeUpVolume:
+	case keybindings.OpVolumeUp:
 		player.UpVolume()
-	case OperateTypeDownloadPlayigSong:
+	case keybindings.OpDownloadPlayingSong:
 		downloadPlayingSong(h.netease)
-	case OperateTypeDownloadSelectedSong:
+	case keybindings.OpDownloadSelectedSong:
 		downloadSelectedSong(h.netease)
-	case OperateTypeTrashPlayingSong:
+	case keybindings.OpTrashPlayingSong:
 		// trash playing song
 		newPage := trashPlayingSong(h.netease)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeTrashSelectedSong:
+	case keybindings.OpTrashSelectedSong:
 		// trash selected song
 		newPage := trashSelectedSong(h.netease)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeLikeSelectedSong: // half-width, full-width, Japanese, Chinese and French
+	case keybindings.OpLikeSelectedSong: // half-width, full-width, Japanese, Chinese and French
 		// like selected song
 		newPage := likeSelectedSong(h.netease, true)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeDislikeSelectedSong:
+	case keybindings.OpDislikeSelectedSong:
 		// unlike selected song
 		newPage := likeSelectedSong(h.netease, false)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeHelp:
+	case keybindings.OpHelp:
 		// 帮助
 		main.EnterMenu(NewHelpMenu(newBaseMenu(h.netease)), &model.MenuItem{Title: "帮助"})
-	case OperateTypeAddSelectedSongToUserPlaylist:
+	case keybindings.OpAddSelectedToUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeRemoveSelectedSongFromUserPlaylist:
+	case keybindings.OpRemoveSelectedFromUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, true, false)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeAddPlayingSongToUserPlaylist:
+	case keybindings.OpAddPlayingToUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeRemovePlayingSongFromUserPlaylist:
+	case keybindings.OpRemovePlayingFromUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeOpenAlbumOfPlayingSong:
+	case keybindings.OpAlbumOfPlayingSong:
 		// 当前歌曲所属专辑
 		albumOfPlayingSong(h.netease)
-	case OperateTypeOpenAlbumOfSelectedSong:
+	case keybindings.OpAlbumOfSelectedSong:
 		// 选中歌曲所属专辑
 		albumOfSelectedSong(h.netease)
-	case OperateTypeOpenArtistOfPlayingSong:
+	case keybindings.OpArtistOfPlayingSong:
 		// 当前歌曲所属歌手
 		artistOfPlayingSong(h.netease)
-	case OperateTypeOpenArtistOfSelectedSong:
+	case keybindings.OpArtistOfSelectedSong:
 		// 选中歌曲所属歌手
 		artistOfSelectedSong(h.netease)
-	case OperateTypeOpenPlayingSongInWeb:
+	case keybindings.OpOpenPlayingSongInWeb:
 		// 网页打开当前歌曲
 		openPlayingSongInWeb(h.netease)
-	case OperateTypeOpenSelectedItemInWeb:
+	case keybindings.OpOpenSelectedItemInWeb:
 		// 网页打开选中项
 		openSelectedItemInWeb(h.netease)
-	case OperateTypeCollectSelectedPlaylist:
+	case keybindings.OpCollectSelectedPlaylist:
 		// 收藏选中歌单
 		newPage := collectSelectedPlaylist(h.netease, true)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeDiscollectSelectedPlaylist:
+	case keybindings.OpDiscollectSelectedPlaylist:
 		// 取消收藏选中歌单
 		newPage := collectSelectedPlaylist(h.netease, false)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeDelSongFromCurPlaylist:
+	case keybindings.OpDeleteSongFromPlaylist:
 		// 从播放列表删除歌曲,仅在当前播放列表界面有效
 		newPage := delSongFromPlaylist(h.netease)
 		return true, newPage, app.Tick(time.Nanosecond)
-	case OperateTypeAppendSongsToNext:
+	case keybindings.OpAppendSongsToNext:
 		// 追加到下一曲播放
 		appendSongsToCurPlaylist(h.netease, true)
-	case OperateTypeAppendSongsAfterCurPlaylist:
+	case keybindings.OpAppendSongsToEnd:
 		// 追加到播放列表末尾
 		appendSongsToCurPlaylist(h.netease, false)
-	case OperateTypeClearSongCache:
+	case keybindings.OpClearSongCache:
 		// 清除歌曲缓存
 		clearSongCache(h.netease)
-	case OperateTypeRerender:
+	case keybindings.OpRerenderUI:
 		// rerender
 		return true, main, app.RerenderCmd(true)
-	case OperateTypePageDown:
+	case keybindings.OpPageDown:
 		oldPage := main.CurPage()
 		main.NextPage()
 		if oldPage != main.CurPage() {
 			curIndex := mathx.Min(main.SelectedIndex()+main.PageSize(), len(menu.MenuViews())-1)
 			main.SetSelectedIndex(curIndex)
 		}
-	case OperateTypePageUp:
+	case keybindings.OpPageUp:
 		oldPage := main.CurPage()
 		main.PrePage()
 		if oldPage != main.CurPage() {
 			curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
 			main.SetSelectedIndex(curIndex)
 		}
-	case OperateTypeDownloadLrc:
+	case keybindings.OpDownloadPlayingSongLrc:
 		DownLoadLrc(h.netease)
 	default:
 		return false, nil, nil
@@ -321,8 +205,7 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 	return false, nil, nil
 }
 
-// 空格监听
-func (h *EventHandler) spaceKeyHandle() {
+func (h *EventHandler) playOrToggleHandle() {
 	var (
 		songs         []structs.Song
 		main          = h.netease.MustMain()

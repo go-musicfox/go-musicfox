@@ -1,9 +1,14 @@
 package ui
 
 import (
+	"slices"
+	"sort"
+	"strings"
+
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
@@ -15,61 +20,75 @@ type HelpMenu struct {
 func NewHelpMenu(base baseMenu) *HelpMenu {
 	menu := &HelpMenu{
 		baseMenu: base,
-		menus: []model.MenuItem{
-			{Title: "进来给个star⭐️呗~"},
-			{Title: "SPACE", Subtitle: "播放/暂停"},
-			{Title: "h/H/LEFT", Subtitle: "左"},
-			{Title: "l/L/RIGHT", Subtitle: "右"},
-			{Title: "k/K/UP", Subtitle: "上"},
-			{Title: "j/J/DOWN", Subtitle: "下"},
-			{Title: "g", Subtitle: "上移到顶部"},
-			{Title: "G", Subtitle: "下移到底部"},
-			{Title: "[", Subtitle: "上一首"},
-			{Title: "]", Subtitle: "下一首"},
-			{Title: "-", Subtitle: "减小音量"},
-			{Title: "=", Subtitle: "加大音量"},
-			{Title: "n/N/ENTER", Subtitle: "进入"},
-			{Title: "b/B/ESC", Subtitle: "返回"},
-			{Title: "q/Q", Subtitle: "退出"},
-			{Title: "w/W", Subtitle: "注销并退出"},
-			{Title: "p", Subtitle: "切换播放模式"},
-			{Title: "P", Subtitle: "心动模式"},
-			{Title: ",", Subtitle: "喜欢播放中歌曲"},
-			{Title: "<", Subtitle: "喜欢选中歌曲"},
-			{Title: ".", Subtitle: "取消喜欢播放中歌曲"},
-			{Title: ">", Subtitle: "取消喜欢选中歌曲"},
-			{Title: "`", Subtitle: "将播放中歌曲加入歌单"},
-			{Title: "Tab", Subtitle: "将选中歌曲加入歌单"},
-			{Title: "~", Subtitle: "将播放中歌曲从歌单中删除"},
-			{Title: "Shift+Tab", Subtitle: "将选中歌曲从歌单中删除"},
-			{Title: "t", Subtitle: "标记播放中歌曲为不喜欢"},
-			{Title: "T", Subtitle: "标记选中歌曲为不喜欢"},
-			{Title: "d", Subtitle: "下载播放中音乐"},
-			{Title: "D", Subtitle: "下载当前选中音乐"},
-			{Title: "ctrl+l", Subtitle: "下载当前播放音乐歌词"},
-			{Title: "c/C", Subtitle: "当前播放列表"},
-			{Title: "r/R", Subtitle: "重新渲染UI"},
-			{Title: "/", Subtitle: "搜索当前列表"},
-			{Title: "?", Subtitle: "帮助信息"},
-			{Title: "a", Subtitle: "播放中歌曲的所属专辑"},
-			{Title: "A", Subtitle: "选中歌曲的所属专辑"},
-			{Title: "s", Subtitle: "播放中歌曲的所属歌手"},
-			{Title: "S", Subtitle: "选中歌曲的所属歌手"},
-			{Title: "o", Subtitle: "网页打开播放中歌曲"},
-			{Title: "O", Subtitle: "网页打开选中歌曲/专辑..."},
-			{Title: "e", Subtitle: "添加为下一曲播放"},
-			{Title: "E", Subtitle: "添加到播放列表末尾"},
-			{Title: "\\", Subtitle: "从播放列表删除选中歌曲"},
-			{Title: "v/V", Subtitle: "快进5s/10s"},
-			{Title: "x/X", Subtitle: "快退1s/5s"},
-			{Title: ";/:", Subtitle: "收藏选中歌单"},
-			{Title: "'/\"", Subtitle: "取消收藏选中歌单"},
-			{Title: "u/U", Subtitle: "清除音乐缓存"},
-			{Title: "ctrl+u", Subtitle: "上一页"},
-			{Title: "ctrl+d", Subtitle: "下一页"},
-		},
+		menus:    []model.MenuItem{},
 	}
 
+	// 准备最终的菜单项列表，先添加固定项
+	menuItems := []model.MenuItem{
+		{Title: "进来给个star⭐️呗~"},
+	}
+
+	boundOperations := keybindings.UserOperateToKeys()
+
+	var builtinOps []keybindings.OperateType
+	var customOps []keybindings.OperateType
+	for op := range boundOperations {
+		if op < 0 {
+			builtinOps = append(builtinOps, op)
+		} else {
+			customOps = append(customOps, op)
+		}
+	}
+
+	sort.Slice(builtinOps, func(i, j int) bool {
+		return builtinOps[i] > builtinOps[j]
+	})
+	slices.Sort(customOps)
+
+	// 生成菜单项
+	processOp := func(op keybindings.OperateType) {
+		_, ok := boundOperations[op]
+		if !ok {
+			return
+		}
+
+		keysRaw := boundOperations[op]
+
+		validKeys := make([]string, 0, len(keysRaw))
+		seenKeys := make(map[string]struct{}) // 用于快速检查重复
+
+		for _, k := range keysRaw {
+			if k == "" {
+				continue
+			}
+			formattedKey := keybindings.FormatKeyForDisplay(k)
+			if _, seen := seenKeys[formattedKey]; !seen {
+				seenKeys[formattedKey] = struct{}{}
+				validKeys = append(validKeys, formattedKey)
+			}
+		}
+
+		// 如果没有有效的快捷键与此操作关联，则不显示此帮助项
+		if len(validKeys) == 0 {
+			return
+		}
+
+		keyStr := strings.Join(validKeys, "/")
+
+		menuItems = append(menuItems, model.MenuItem{
+			Title:    keyStr,
+			Subtitle: op.Desc(),
+		})
+	}
+
+	for _, op := range builtinOps {
+		processOp(op)
+	}
+	for _, op := range customOps {
+		processOp(op)
+	}
+
+	menu.menus = menuItems
 	return menu
 }
 
