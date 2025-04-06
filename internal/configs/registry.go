@@ -10,6 +10,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/gookit/ini/v2"
 
+	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
@@ -24,6 +25,8 @@ type Registry struct {
 	Player        PlayerOptions
 	Lastfm        LastfmOptions
 	GlobalHotkeys map[string]string
+	// Keybindings 存储最终生效的操作ID -> 按键列表映射
+	Keybindings map[keybindings.OperateType][]string
 }
 
 func (r *Registry) FillToModelOpts(opts *model.Options) {
@@ -70,21 +73,22 @@ func NewRegistryWithDefault() *Registry {
 			},
 		},
 		Main: MainOptions{
-			ShowTitle:        true,
-			LoadingText:      types.MainLoadingText,
-			PlayerSongLevel:  service.Higher,
-			PrimaryColor:     types.AppPrimaryColor,
-			ShowLyric:        true,
-			ShowLyricTrans:   true,
-			ShowNotify:       true,
-			NotifyIcon:       types.DefaultNotifyIcon,
-			NotifyAlbumCover: false,
-			PProfPort:        types.MainPProfPort,
-			AltScreen:        true,
-			EnableMouseEvent: true,
-			DownloadDir:      "",
-			CacheLimit:       0,
-			DynamicMenuRows:  false,
+			ShowTitle:             true,
+			LoadingText:           types.MainLoadingText,
+			PlayerSongLevel:       service.Higher,
+			PrimaryColor:          types.AppPrimaryColor,
+			ShowLyric:             true,
+			ShowLyricTrans:        true,
+			ShowNotify:            true,
+			NotifyIcon:            types.DefaultNotifyIcon,
+			NotifyAlbumCover:      false,
+			PProfPort:             types.MainPProfPort,
+			AltScreen:             true,
+			EnableMouseEvent:      true,
+			DownloadDir:           "",
+			CacheLimit:            0,
+			DynamicMenuRows:       false,
+			UseDefaultKeyBindings: true,
 		},
 		Player: PlayerOptions{
 			Engine:         types.BeepPlayer,
@@ -100,6 +104,7 @@ func NewRegistryWithDefault() *Registry {
 			Key:    types.LastfmKey,
 			Secret: types.LastfmSecret,
 		},
+		Keybindings: getDefaultBindingsMap(), // 初始化为默认键绑定
 	}
 
 	switch runtime.GOOS {
@@ -175,6 +180,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.CacheDir = ini.String("main.cacheDir", "")
 	registry.Main.CacheLimit = ini.Int64("main.cacheLimit", 0)
 	registry.Main.DynamicMenuRows = ini.Bool("main.dynamicMenuRows", false)
+	registry.Main.UseDefaultKeyBindings = ini.Bool("main.useDefaultKeyBindings", true)
 
 	defaultPlayer := types.BeepPlayer
 	switch runtime.GOOS {
@@ -222,6 +228,9 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Lastfm.Key = ini.String("lastfm.key", types.LastfmKey)
 	registry.Lastfm.Secret = ini.String("lastfm.secret", types.LastfmSecret)
 
+	userKeybindingsRaw := ini.StringMap("keybindings")
+	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)
+
 	return registry
 }
 
@@ -230,4 +239,14 @@ func firstCharOrDefault(s, defaultStr string) rune {
 		return []rune(s)[0]
 	}
 	return []rune(defaultStr)[0]
+}
+
+// getDefaultBindingsMap 从 KeybindingsRegistry 获取默认绑定映射
+func getDefaultBindingsMap() map[keybindings.OperateType][]string {
+	ops := keybindings.InitDefaults(true)
+	defaultMap := make(map[keybindings.OperateType][]string, len(ops))
+	for op := range ops {
+		defaultMap[op] = op.Keys()
+	}
+	return defaultMap
 }

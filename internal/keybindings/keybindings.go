@@ -2,6 +2,8 @@
 package keybindings
 
 import (
+	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -157,7 +159,7 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 }
 
 // 默认操作 -> 快捷键数组映射
-var defaultOperationKeys = map[OperateType][]string{
+var defaultBaseOperateToKeys = map[OperateType][]string{
 	OpRerenderUI:   {"r", "R"},
 	OpMoveLeft:     {"h", "H", "left"},
 	OpMoveRight:    {"l", "L", "right"},
@@ -169,7 +171,9 @@ var defaultOperationKeys = map[OperateType][]string{
 	OpGoBack:       {"b", "B", "esc"},
 	OpSearch:       {"/", "／", "、"},
 	OpQuit:         {"q", "Q"},
+}
 
+var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpHelp:           {"?", "？"},
 	OpPageUp:         {"ctrl+u", "pgup"},
 	OpPageDown:       {"ctrl+d", "pgdown"},
@@ -215,8 +219,32 @@ var defaultOperationKeys = map[OperateType][]string{
 	OpDiscollectSelectedPlaylist:     {"'", "\""},
 }
 
+var userOperateToKeys map[OperateType][]string
+
 func UserOperateToKeys() map[OperateType][]string {
-	return defaultOperationKeys
+	return userOperateToKeys
+}
+
+// InitDefaults 生成操作绑定的 map
+func InitDefaults(useDefault bool) map[OperateType][]string {
+	if !useDefault {
+		baseCopy := make(map[OperateType][]string, len(defaultBaseOperateToKeys))
+		for op, keys := range defaultBaseOperateToKeys {
+			baseCopy[op] = append([]string(nil), keys...)
+		}
+		userOperateToKeys = baseCopy
+		return baseCopy
+	}
+
+	mergedMap := make(map[OperateType][]string, len(defaultBaseOperateToKeys)+len(defaultOtherOperateToKeys))
+	for op, keys := range defaultBaseOperateToKeys {
+		mergedMap[op] = append([]string(nil), keys...)
+	}
+	for op, keys := range defaultOtherOperateToKeys {
+		mergedMap[op] = append([]string(nil), keys...)
+	}
+	userOperateToKeys = mergedMap
+	return mergedMap
 }
 
 var specialKeyDisplayMap = map[string]string{
@@ -300,15 +328,195 @@ func FormatKeyForDisplay(key string) string {
 	return key
 }
 
+// BuildEffectiveBindings 构建最终生效的按键绑定
+func BuildEffectiveBindings(userKeyBindings map[string]string, useDefault bool) map[OperateType][]string {
+	defaultBindings := InitDefaults(useDefault)
+
+	effectiveBindings := make(map[OperateType][]string, len(defaultBindings))
+	for op, keys := range defaultBindings {
+		effectiveBindings[op] = append([]string(nil), keys...)
+	}
+
+	if len(userKeyBindings) == 0 {
+		return effectiveBindings
+	}
+
+	// 预处理用户配置，移除不存在操作
+	nameToOperate := buildNameToOperateMap()
+	preprocessing := make(map[OperateType][]string)
+	for opStr, keysStr := range userKeyBindings {
+		op, ok := nameToOperate[opStr]
+		if !ok {
+			slog.Warn(fmt.Sprintf("配置文件 [keybindings] 中发现未知操作 '%s'，已忽略", opStr))
+			continue
+		}
+
+		// FIXME: 对于内置键绑定的操作，考虑使用（新增）而非不处理。或寻求其他方式进行支持
+		if op < 0 {
+			slog.Warn(fmt.Sprintf("内置操作 '%s'，暂不可更改，已忽略", opStr))
+			continue
+		}
+
+		if keysStr == "" {
+			slog.Info(fmt.Sprintf("解绑操作 '%s (%s)'", opStr, op.Desc()))
+			effectiveBindings[op] = []string{}
+			continue
+		}
+
+		keys := splitKeys(keysStr)
+		if len(keys) != 0 {
+			preprocessing[op] = keys
+		} else {
+			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置只无有效的绑定，忽略", op, op.Desc()))
+		}
+	}
+
+	// 构建临时的反向映射，用于冲突检测 (基于当前的 effectiveBindings)
+	getKeyToOp := func() map[string]OperateType {
+		keyToOp := make(map[string]OperateType)
+		for op, keys := range effectiveBindings {
+			for _, key := range keys {
+				keyToOp[key] = op
+			}
+		}
+		return keyToOp
+	}
+	keyToOp := getKeyToOp()
+
+	hardcodedKeys := getHardCordKeys()
+	conflicts := make(map[string][]OperateType) // 记录最终的冲突信息 Key -> Conflicting Ops
+	for op, keys := range preprocessing {
+		validKeys := make([]string, 0, len(keys))
+		skippedKeys := []string{}
+		for _, key := range keys {
+			// 跳过对硬编码按键的处理
+			if _, isHardcoded := hardcodedKeys[key]; isHardcoded {
+				skippedKeys = append(skippedKeys, key)
+				continue
+			}
+
+			// 处理冲突
+			if existingOp, ok := keyToOp[key]; ok && existingOp != op {
+				if _, recorded := conflicts[key]; !recorded {
+					conflicts[key] = []OperateType{existingOp, op}
+				} else {
+					conflicts[key] = append(conflicts[key], op)
+				}
+
+				// 在记录冲突后，需要移除旧绑定操作对此键的占用（如果旧操作还有其他键）
+				if oldKeys, ok := effectiveBindings[existingOp]; ok {
+					cleanedOldKeys := make([]string, 0, len(oldKeys)-1)
+					for _, oldKey := range oldKeys {
+						if oldKey != key {
+							cleanedOldKeys = append(cleanedOldKeys, oldKey)
+						}
+					}
+					effectiveBindings[existingOp] = cleanedOldKeys
+				}
+			}
+
+			validKeys = append(validKeys, key)
+		}
+		if len(skippedKeys) > 0 {
+			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置中包含硬编码按键 [%s]，这些特定绑定已被忽略。", op, op.Desc(), strings.Join(skippedKeys, ", ")))
+		}
+		// 只用有效的非内建键覆盖或设置绑定
+		if len(validKeys) > 0 {
+			effectiveBindings[op] = validKeys
+		} else {
+			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置只无有效的绑定，忽略", op, op.Desc()))
+		}
+	}
+
+	// 打印冲突信息
+	if len(conflicts) != 0 {
+		keyToOp := getKeyToOp()
+		for key, ops := range conflicts {
+			opStrs := make([]string, len(ops))
+			for _, op := range ops {
+				opStrs = append(opStrs, fmt.Sprintf("%s (%s)", op, op.Desc()))
+			}
+			finalOp := keyToOp[key]
+			slog.Warn(fmt.Sprintf("按键 '%s' 被分配给多个操作: %s。最终生效的操作是: '%s (%s)'",
+				key, strings.Join(opStrs, ", "), finalOp, finalOp.Desc()))
+		}
+	}
+
+	userOperateToKeys = effectiveBindings // 更新用户设置
+	return effectiveBindings
+}
+
 // BuildKeyToOperateTypeMap 构建反向查找映射的函数，Key -> OperateType
-func BuildKeyToOperateTypeMap() map[string]OperateType {
-	effectiveBindings := UserOperateToKeys()
+func BuildKeyToOperateTypeMap(effectiveBindings map[OperateType][]string) map[string]OperateType {
 	keyMap := make(map[string]OperateType)
-	for op, keys := range effectiveBindings {
+	if effectiveBindings == nil {
+		return keyMap
+	}
+
+	for op, keys := range userOperateToKeys {
 		for _, key := range keys {
 			keyMap[key] = op
 		}
 	}
 
 	return keyMap
+}
+
+// GetAllOperations 获取所有操作
+func GetAllOperations() map[OperateType]struct{} {
+	maps := make(map[OperateType]struct{}, len(keyBindingsRegistry))
+	for op := range keyBindingsRegistry {
+		maps[op] = struct{}{}
+	}
+	return maps
+}
+
+// GetHardCordKeys 获取被硬编码在 foxful-cli 的按键
+func getHardCordKeys() map[string]struct{} {
+	maps := make(map[string]struct{})
+	for op := range keyBindingsRegistry {
+		if op >= 0 {
+			continue
+		}
+		for _, k := range op.Keys() {
+			if k != "" {
+				maps[k] = struct{}{}
+			}
+		}
+	}
+	return maps
+}
+
+// BuildNameToOperateMap 创建一个操作名称到 OperateType 的映射
+func buildNameToOperateMap() map[string]OperateType {
+	maps := make(map[string]OperateType, len(keyBindingsRegistry))
+	for op := range keyBindingsRegistry {
+		if op.Name() != "" {
+			maps[op.Name()] = op
+		}
+	}
+	return maps
+}
+
+// SplitKeys 用于将配置的键字符串解析为键切片
+func splitKeys(s string) []string {
+	// FIXME: 对于快捷键本身使用 "," 的，需要做额外适配，使用空格作为分隔符？
+	keys := strings.Split(s, ",")
+	trimmedKeys := make([]string, 0, len(keys))
+	for _, key := range keys {
+		// FIXME: 可能会错误移除空格（包括Unicode \u3000 : "　"），考虑使用 "space" 替代或其他处理方式(strings.TrimFunc)
+		trimmedKey := strings.TrimSpace(key)
+		if trimmedKey == "" {
+			continue
+		}
+		// 统一为小写
+		if len(trimmedKey) > 1 {
+			trimmedKey = strings.ToLower(trimmedKey)
+		}
+		if trimmedKey == "space" {
+			trimmedKey = " "
+		}
+		trimmedKeys = append(trimmedKeys, trimmedKey)
+	}
+	return trimmedKeys
 }

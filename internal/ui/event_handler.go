@@ -1,12 +1,15 @@
 package ui
 
 import (
+	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -21,8 +24,9 @@ type EventHandler struct {
 func NewEventHandler(netease *Netease) *EventHandler {
 	handler := &EventHandler{
 		netease:         netease,
-		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(),
+		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(configs.ConfigRegistry.Keybindings),
 	}
+	slog.Info(fmt.Sprintf("事件处理器已初始化，加载了 %d 个有效按键绑定映射。\n", len(handler.keyToOperateMap)))
 	return handler
 }
 
