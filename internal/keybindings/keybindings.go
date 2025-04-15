@@ -100,6 +100,9 @@ const (
 	OpCollectSelectedPlaylist
 	OpDiscollectSelectedPlaylist
 	OpOpenSimiSongsOfSelectedSong
+
+	OpActionOfSelected
+	OpActionOfPlayingSong
 )
 
 var opNameToOperateMap = make(map[string]OperateType)
@@ -162,6 +165,9 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpCollectSelectedPlaylist:        {name: "collectSelectedPlaylist", desc: "收藏选中歌单"},
 	OpDiscollectSelectedPlaylist:     {name: "discollectSelectedPlaylist", desc: "取消收藏选中歌单"},
 	OpOpenSimiSongsOfSelectedSong:    {name: "simiSongsOfSelectedSong", desc: "与选中歌曲相似的歌曲"},
+
+	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
+	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},
 }
 
 // 默认操作 -> 快捷键数组映射
@@ -225,6 +231,9 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpCollectSelectedPlaylist:        {";", ":", "：", "；"},
 	OpDiscollectSelectedPlaylist:     {"'", "\""},
 	OpOpenSimiSongsOfSelectedSong:    {"F"},
+
+	OpActionOfSelected:    {"m"},
+	OpActionOfPlayingSong: {"M"},
 }
 
 var userOperateToKeys map[OperateType][]string
