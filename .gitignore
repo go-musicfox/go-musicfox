@@ -10,4 +10,3 @@ go.work.sum
 .envrc
 result/
 coverage.txt
-.vscode/settings.json
