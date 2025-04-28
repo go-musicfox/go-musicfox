@@ -41,6 +41,7 @@ const UNMDefaultSources = "kuwo"
 
 const BeepPlayer = "beep"          // beep
 const MpdPlayer = "mpd"            // mpd
+const MpvPlayer = "mpv"            // mpv player
 const OsxPlayer = "osx"            // osx
 const WinMediaPlayer = "win_media" // win media player
 
