@@ -1,4 +1,4 @@
-# github.com/anhoder/foxful-cli v0.4.2
+# github.com/anhoder/foxful-cli v0.4.3-0.20250523045153-1a2fc2506e8b
 ## explicit; go 1.20
 github.com/anhoder/foxful-cli/model
 github.com/anhoder/foxful-cli/util
