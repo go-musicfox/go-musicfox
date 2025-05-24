@@ -9,4 +9,5 @@ type PlayerOptions struct {
 	MpdAddr         string // mpd地址
 	MpdAutoStart    bool   // mpd自动启动
 	MaxPlayErrCount int    // 最大错误重试次数
+	MpvBin          string // mpv路径
 }

@@ -192,6 +192,9 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Player.MpdAutoStart = ini.Bool("player.mpdAutoStart", true)
 	registry.Player.MaxPlayErrCount = ini.Int("player.maxPlayErrCount", types.MaxPlayErrCount)
 
+	//MPV
+	registry.Player.MpvBin = ini.String("player.mpvBin", "")
+
 	// Auto play
 	registry.AutoPlayer.Enable = ini.Bool("autoplay.autoPlay", false)
 	registry.AutoPlayer.Playlist = AutoPlayerPlaylistFromString(ini.String("autoplay.autoPlayList", string(AutoPlayerPlaylistNo)))
