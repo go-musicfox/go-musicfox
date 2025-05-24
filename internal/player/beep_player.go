@@ -151,7 +151,6 @@ func (p *beepPlayer) listen() {
 						}
 					}()
 					_, _ = iox.CopyClose(ctx, cacheWFile, read)
-					p.cacheDownloaded = true
 					p.l.Lock()
 					defer p.l.Unlock()
 					if p.curStreamer == nil {
@@ -179,6 +178,7 @@ func (p *beepPlayer) listen() {
 						_ = p.curStreamer.Seek(pos)
 						p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 					}
+					p.cacheDownloaded = true
 				}(ctx, p.cacheWriter, reader)
 
 				N := 512
@@ -192,6 +192,7 @@ func (p *beepPlayer) listen() {
 				}
 			} else {
 				// 单曲循环以及歌单只有一首歌时不再请求网络
+				p.cacheDownloaded = true
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_RDONLY, 0666); err != nil {
 					panic(err)
 				}
@@ -276,7 +277,7 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *beepPlayer) Seek(duration time.Duration) {
-	if duration < 0 {
+	if duration < 0 || !p.cacheDownloaded {
 		return
 	}
 	// FIXME: 暂时仅对MP3格式提供跳转功能
@@ -288,7 +289,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	}
 	if p.state == types.Playing || p.state == types.Paused {
 		speaker.Lock()
-		newPos := sampleRate.N(duration)
+		newPos := p.curFormat.SampleRate.N(duration)
 
 		if newPos < 0 {
 			newPos = 0
