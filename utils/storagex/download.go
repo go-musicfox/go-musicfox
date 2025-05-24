@@ -221,6 +221,7 @@ var brMap = map[service.SongQualityLevel]string{
 func SetSongTag(file *os.File, song structs.Song) {
 	defer file.Close()
 	version := songtag.CheckVersion(file)
+	file.Seek(0, 0) // reset file offset
 	switch version {
 	case songtag.VersionID3v22, songtag.VersionID3v23, songtag.VersionID3v24:
 		tag, err := id3v2.ParseReader(file, id3v2.Options{Parse: true})
