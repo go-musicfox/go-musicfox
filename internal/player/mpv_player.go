@@ -277,6 +277,9 @@ func (p *mpvPlayer) PassedTime() time.Duration {
 	}
 	return p.timer.Passed()
 }
+func (p *mpvPlayer) PlayedTime() time.Duration {
+    return p.PassedTime()
+}
 
 // TimeChan 获取时间更新通道
 func (p *mpvPlayer) TimeChan() <-chan time.Duration {
