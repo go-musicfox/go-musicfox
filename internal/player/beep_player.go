@@ -271,6 +271,13 @@ func (p *beepPlayer) PassedTime() time.Duration {
 	return p.timer.Passed()
 }
 
+func (p *beepPlayer) PlayedTime() time.Duration {
+	if p.timer == nil {
+		return 0
+	}
+	return p.timer.ActualRuntime()
+}
+
 // TimeChan 获取定时器
 func (p *beepPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan

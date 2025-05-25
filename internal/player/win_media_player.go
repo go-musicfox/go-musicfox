@@ -40,6 +40,10 @@ func (p *winMediaPlayer) PassedTime() time.Duration {
 	return 0
 }
 
+func (p *winMediaPlayer) PlayedTime() time.Duration {
+	return 0
+}
+
 func (p *winMediaPlayer) TimeChan() <-chan time.Duration {
 	return nil
 }
