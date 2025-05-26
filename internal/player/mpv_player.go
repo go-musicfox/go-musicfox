@@ -278,6 +278,14 @@ func (p *mpvPlayer) PassedTime() time.Duration {
 	return p.timer.Passed()
 }
 
+// PlayedTime 获取计时器实际计时时间
+func (p *mpvPlayer) PlayedTime() time.Duration {
+	if p.timer == nil {
+		return 0
+	}
+	return p.timer.ActualRuntime()
+}
+
 // TimeChan 获取时间更新通道
 func (p *mpvPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
