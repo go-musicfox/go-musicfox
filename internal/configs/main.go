@@ -26,4 +26,5 @@ type MainOptions struct {
 	CacheDir               string                   // 指定缓存目录
 	CacheLimit             int64                    // 缓存大小（以MB为单位），0为不使用缓存，-1为不限制，默认为0
 	DynamicMenuRows        bool                     // 菜单行数动态变更
+	CenterEverything       bool                     // 界面全部居中
 }
