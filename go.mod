@@ -3,7 +3,7 @@ module github.com/go-musicfox/go-musicfox
 go 1.22
 
 require (
-	github.com/anhoder/foxful-cli v0.4.3-0.20250523045153-1a2fc2506e8b
+	github.com/anhoder/foxful-cli v0.5.0
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
