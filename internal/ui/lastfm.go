@@ -4,21 +4,16 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/skratchdot/open-golang/open"
-
-	"github.com/go-musicfox/go-musicfox/internal/storage"
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
 )
 
 type Lastfm struct {
 	baseMenu
-	auth *LastfmAuth
 }
 
 func NewLastfm(base baseMenu) *Lastfm {
-	return &Lastfm{
-		baseMenu: base,
-		auth:     NewLastfmAuth(base),
-	}
+	return &Lastfm{baseMenu: base}
 }
 
 func (m *Lastfm) GetMenuKey() string {
@@ -26,36 +21,56 @@ func (m *Lastfm) GetMenuKey() string {
 }
 
 func (m *Lastfm) MenuViews() []model.MenuItem {
-	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
-		return []model.MenuItem{
-			{Title: "去授权"},
+	getControlTitle := func() string {
+		if m.netease.lastfm.Tracker.Status() {
+			return "关闭功能"
 		}
+		return "启用功能"
 	}
+
 	return []model.MenuItem{
-		{Title: "查看用户信息"},
-		{Title: "清除授权"},
+		{Title: "管理授权"},
+		{Title: "前往主页"},
+		{Title: getControlTitle()},
+		{Title: "清空队列", Subtitle: fmt.Sprintf("[共 %d 条]", m.netease.lastfm.Tracker.Count())},
 	}
 }
 
-func (m *Lastfm) SubMenu(_ *model.App, index int) model.Menu {
-	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
-		return m.auth
-	}
+func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		_ = open.Start(m.netease.lastfmUser.Url)
+		return NewLastfmProfile(m.baseMenu)
 	case 1:
-		m.netease.lastfmUser = &storage.LastfmUser{}
-		m.netease.lastfmUser.Clear()
-		return NewLastfmRes(m.baseMenu, "清除授权", nil, 2)
+		m.netease.lastfm.OpenUserHomePage()
+	case 2:
+		action := func() {
+			m.netease.lastfm.Tracker.Toggle()
+		}
+		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
+			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+		})
+	case 3:
+		action := func() {
+			m.netease.lastfm.Tracker.Clear()
+
+			notify.Notify(notify.NotifyContent{
+				Title:   "清除 last.fm Scrobble 队列成功",
+				Text:    "Last.fm Scrobble 队列已清除",
+				GroupId: types.GroupID,
+			})
+		}
+		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
+			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+		})
 	}
 	return nil
 }
 
 func (m *Lastfm) FormatMenuItem(item *model.MenuItem) {
-	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
-		item.Subtitle = "[未授权]"
-	} else {
-		item.Subtitle = fmt.Sprintf("[%s]", m.netease.lastfmUser.Name)
+	item.Subtitle = "[未授权]"
+	if !m.netease.lastfm.NeedAuth() {
+		if username := m.netease.lastfm.UserName(); username != "" {
+			item.Subtitle = fmt.Sprintf("[%s]", username)
+		}
 	}
 }
