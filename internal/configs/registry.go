@@ -98,8 +98,9 @@ func NewRegistryWithDefault() *Registry {
 			UnlockSoundEffects: true,
 		},
 		Lastfm: LastfmOptions{
-			Key:    types.LastfmKey,
-			Secret: types.LastfmSecret,
+			Key:    "",
+			Secret: "",
+			Enable: false,
 		},
 	}
 
@@ -221,8 +222,9 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.UNM.QQCookieFile = ini.String("unm.qqCookieFile", "")
 
 	// Lastfm
-	registry.Lastfm.Key = ini.String("lastfm.key", types.LastfmKey)
-	registry.Lastfm.Secret = ini.String("lastfm.secret", types.LastfmSecret)
+	registry.Lastfm.Key = ini.String("lastfm.key", "")
+	registry.Lastfm.Secret = ini.String("lastfm.secret", "")
+	registry.Lastfm.Enable = ini.Bool("lastfm.enable", false)
 
 	return registry
 }

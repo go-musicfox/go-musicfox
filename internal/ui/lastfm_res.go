@@ -35,6 +35,7 @@ func (m *LastfmRes) SubMenu(app *model.App, _ int) model.Menu {
 	for i := 0; i < level; i++ {
 		app.MustMain().BackMenu()
 	}
+	app.MustMain().RefreshMenuList()
 	return nil
 }
 
