@@ -152,11 +152,21 @@ func GetPlaylistsFromHighQuality(data []byte) (list []structs.Playlist) {
 // GetFmSongs 获取每日歌曲列表
 func GetFmSongs(data []byte) (list []structs.Song) {
 	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		if song, err := structs.NewSongFromFmJson(value); err == nil {
+		if song, err := structs.NewSongFromCommonJson(value); err == nil {
 			list = append(list, song)
 		}
-
 	}, "data")
+
+	return
+}
+
+// GetSimiSongs 获取相似歌曲列表
+func GetSimiSongs(data []byte) (list []structs.Song) {
+	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+		if song, err := structs.NewSongFromCommonJson(value); err == nil {
+			list = append(list, song)
+		}
+	}, "songs")
 
 	return
 }

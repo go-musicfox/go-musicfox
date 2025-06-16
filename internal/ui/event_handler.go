@@ -43,6 +43,8 @@ const (
 	OperateTypeRemoveSelectedSongFromUserPlaylist = "removeSelectedSongFromUserPlaylist"
 	OperateTypeAddPlayingSongToUserPlaylist       = "addPlayingSongToUserPlaylist"
 	OperateTypeRemovePlayingSongFromUserPlaylist  = "removePlayingSongFromUserPlaylist"
+	OperateTypeOpenSimiSongsOfPlayingSong         = "openSimiSongsOfPlayingSong"
+	OperateTypeOpenSimiSongsOfSelectedSong        = "openSimiSongsOfSelectedSong"
 	OperateTypeOpenAlbumOfPlayingSong             = "openAlbumOfPlayingSong"
 	OperateTypeOpenAlbumOfSelectedSong            = "openAlbumOfSelectedSong"
 	OperateTypeOpenArtistOfPlayingSong            = "openArtistOfPlayingSong"
@@ -118,6 +120,8 @@ var keyOperateMapping = map[string]OperateType{
 	"`":         OperateTypeAddPlayingSongToUserPlaylist,
 	"~":         OperateTypeRemovePlayingSongFromUserPlaylist,
 	"～":         OperateTypeRemovePlayingSongFromUserPlaylist,
+	"f":         OperateTypeOpenSimiSongsOfPlayingSong,
+	"F":         OperateTypeOpenSimiSongsOfSelectedSong,
 	"a":         OperateTypeOpenAlbumOfPlayingSong,
 	"A":         OperateTypeOpenAlbumOfSelectedSong,
 	"s":         OperateTypeOpenArtistOfPlayingSong,
@@ -243,6 +247,12 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 	case OperateTypeRemovePlayingSongFromUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
+	case OperateTypeOpenSimiSongsOfPlayingSong:
+		// 与当前歌曲相似的歌曲
+		simiSongsOfPlayingSong(h.netease)
+	case OperateTypeOpenSimiSongsOfSelectedSong:
+		// 与当前选中歌曲相似的歌曲
+		simiSongsOfSelectedSong(h.netease)
 	case OperateTypeOpenAlbumOfPlayingSong:
 		// 当前歌曲所属专辑
 		albumOfPlayingSong(h.netease)

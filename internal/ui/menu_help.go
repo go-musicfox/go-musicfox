@@ -50,7 +50,8 @@ func NewHelpMenu(base baseMenu) *HelpMenu {
 			{Title: "c/C", Subtitle: "当前播放列表"},
 			{Title: "r/R", Subtitle: "重新渲染UI"},
 			{Title: "/", Subtitle: "搜索当前列表"},
-			{Title: "?", Subtitle: "帮助信息"},
+			{Title: "f", Subtitle: "与播放中歌曲相似的歌曲"},
+			{Title: "F", Subtitle: "与选中歌曲相似的歌曲"},
 			{Title: "a", Subtitle: "播放中歌曲的所属专辑"},
 			{Title: "A", Subtitle: "选中歌曲的所属专辑"},
 			{Title: "s", Subtitle: "播放中歌曲的所属歌手"},
@@ -67,6 +68,7 @@ func NewHelpMenu(base baseMenu) *HelpMenu {
 			{Title: "u/U", Subtitle: "清除音乐缓存"},
 			{Title: "ctrl+u", Subtitle: "上一页"},
 			{Title: "ctrl+d", Subtitle: "下一页"},
+			{Title: "?", Subtitle: "帮助信息"},
 		},
 	}
 
