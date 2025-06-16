@@ -1,4 +1,41 @@
 
+4.6.1
+=============
+2025-06-16
+
+* feat: add menu of similar songs (456e88fa)
+* chore(deps): bump golang.org/x/crypto from 0.31.0 to 0.35.0 (417bb25a)
+* chore(deps): update deps `foxful-cli` (45d348e4)
+* chore(deps): update deps `foxful-cli` (4ffff7b5)
+* add PlayedTime() (4e850a3d)
+* refactor: move Darwin assets to embed_darwin/ (fbfe317b)
+* feat: add extra configuration that centers everything (95c5edd4)
+* feat: support centering song name (4135eac7)
+* feat: support centering lyrics (3afa657b)
+* Update .gitignore (27dc8662)
+* add mpv player (7361fcfd)
+* feat: add actual playback time tracking (382d0029)
+* docs: use beep in wsl (a11ff1a1)
+* fix(beep): use audio's sample rate for seek (26269645)
+* fix(beep): prevent seek before load complete (f2c9a281)
+* fix(beep): prevent waiting when using cache (4d9c6a52)
+* fix: reset file offset before parsing music tags (fed4dd27)
+* refactor: embed files based on platform (dcc1247f)
+* fix: reauthorize after key change (5fcee308)
+* feat: add support for custom last.fm key (1145c1b7)
+* feat: use beeep to send notifications on Windows (6388ae27)
+* feat: use album cover in notifications (70c2c6f0)
+* feat: add beeep as a dependency for windows notifications (9302b3da)
+* fix: 切换歌曲质量导致缓存获取出错 (e84c6dea)
+* feat: allow second instance of musicfox to share the database (e6ef8b1d)
+* 更新appdata文件 (26f80ebc)
+* optimize: mac now playing (ea4c4743)
+* optimize: mac now playing (30df73ef)
+* chore(deps): bump golang.org/x/crypto from 0.17.0 to 0.31.0 (dea41925)
+* 添加flathub链接 (2634b135)
+* optimize: add one line for lyrics (0637e176)
+* chore: update scoop config & changelog (3bcc61ea)
+
 4.6.0
 =============
 2024-12-01

@@ -1,3 +1,295 @@
+- semver: 4.6.1
+  date: 2025-06-16T20:21:31+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 456e88fa5ebaac87738ebc538e8d19563093e204
+      note: 'feat: add menu of similar songs'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 417bb25a85f23227a520dba10917381408025f57
+      note: |-
+        chore(deps): bump golang.org/x/crypto from 0.31.0 to 0.35.0
+
+        Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.31.0 to 0.35.0.
+        - [Commits](https://github.com/golang/crypto/compare/v0.31.0...v0.35.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/crypto
+          dependency-version: 0.35.0
+          dependency-type: indirect
+        ...
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 45d348e4eddedbd0e005431bebaca57fb6fd504b
+      note: 'chore(deps): update deps `foxful-cli`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4ffff7b55b78441dee11c63c0169e5e219fe75e6
+      note: 'chore(deps): update deps `foxful-cli`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4e850a3d0560f594a3c7182dc05020e286409c85
+      note: |-
+        add PlayedTime()
+
+        fix https://github.com/go-musicfox/go-musicfox/issues/401#issue-3089330749
+      author:
+        name: lrst6963
+        email: 59269350+lrst6963@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fbfe317ba58840bd3014a5f73c42e6ebd54e818d
+      note: 'refactor: move Darwin assets to embed_darwin/'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 95c5edd45858fab503cde2f5458e7cadf9073053
+      note: 'feat: add extra configuration that centers everything'
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 4135eac7a23fc56c1683c0718c9f1bf2e47ba552
+      note: 'feat: support centering song name'
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 3afa657bcff9caa1ba66a705e910509ff6109c6f
+      note: 'feat: support centering lyrics'
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 27dc8662722ed469e559a5346813e073f1ee81b2
+      note: Update .gitignore
+      author:
+        name: lrst6963
+        email: 59269350+lrst6963@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 7361fcfd13c6e2a073ee4c78a1be26e8fa68572a
+      note: add mpv player
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: 382d00296625ee3d7cb19622508c61d1b6ca9318
+      note: 'feat: add actual playback time tracking'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: a11ff1a171f25d10606dfba0e4eb944e848e096c
+      note: 'docs: use beep in wsl'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 26269645ec593153800669fccb823b152d13539c
+      note: 'fix(beep): use audio''s sample rate for seek'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: f2c9a28137b67ef75024d19fc5a31d49a642ae4c
+      note: 'fix(beep): prevent seek before load complete'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4d9c6a52cf0a9b312caacce6b123ff3ef6fa24bd
+      note: 'fix(beep): prevent waiting when using cache'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: fed4dd277ac0c68788abf4c6fd0b8ff2a4082bd1
+      note: 'fix: reset file offset before parsing music tags'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: dcc1247f3f73c42382de00752b996115af062ea0
+      note: 'refactor: embed files based on platform'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 5fcee30883e942dc664d76dfcc881e8b82c67d55
+      note: 'fix: reauthorize after key change'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 1145c1b7c9ed2340646a53c88c6d7392aac704fa
+      note: 'feat: add support for custom last.fm key'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 6388ae279c3d7b34d789b117edad65c3c7edc5db
+      note: 'feat: use beeep to send notifications on Windows'
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 70c2c6f0f801612e17dd3d4954708db8c17777b3
+      note: 'feat: use album cover in notifications'
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 9302b3da0c6bb105a07de7d53295db4d4d1cd3e7
+      note: 'feat: add beeep as a dependency for windows notifications'
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: e84c6dea05ba00af30ed2b3ac63c6504ee66db50
+      note: |-
+        fix: 切换歌曲质量导致缓存获取出错
+
+            修复mpd在切换歌曲质量后无法获取缓存歌曲
+      author:
+        name: imxyy_soope_
+        email: imxyy@imxyy.top
+      committer:
+        name: imxyy_soope_
+        email: imxyy@imxyy.top
+    - commit: e6ef8b1ded20073782942335c3df38cd3aa6f3c5
+      note: |-
+        feat: allow second instance of musicfox to share the database
+
+        When the database file is opened by another musicfox process,
+        make a copy of the database and work on top of it so that login
+        info can be preserved. However, all data will be lost upon exit.
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: 26f80ebcd3cce87d9aa8172b5aa9540856fa828b
+      note: 更新appdata文件
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+    - commit: ea4c47434695ca606b9e8eca2d2b961c97d37c7c
+      note: 'optimize: mac now playing'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 30df73ef0a1185d816e36286726fd9fde518253b
+      note: 'optimize: mac now playing'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: dea419250a1341e6b3be5da694f08352bc5fb63e
+      note: |-
+        chore(deps): bump golang.org/x/crypto from 0.17.0 to 0.31.0
+
+        Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.17.0 to 0.31.0.
+        - [Commits](https://github.com/golang/crypto/compare/v0.17.0...v0.31.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/crypto
+          dependency-type: indirect
+        ...
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2634b135c3bf72d279b646bbd61b3cc33db810e9
+      note: 添加flathub链接
+      author:
+        name: Peter Li
+        email: lihaohong6@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 0637e17617fc025a7767cd82726f6b9c76b960b0
+      note: 'optimize: add one line for lyrics'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3bcc61ea762ef18084bc99084c396924c493703f
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.0
   date: 2024-12-01T18:28:29+08:00
   packager: go-musicfox
