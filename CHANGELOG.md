@@ -1,4 +1,11 @@
 
+4.6.2
+=============
+2025-06-16
+
+* fix: similar songs menu cannot refresh playlist (f857a4f1)
+* chore: update scoop config & changelog (fed293b7)
+
 4.6.1
 =============
 2025-06-16

@@ -1,3 +1,23 @@
+- semver: 4.6.2
+  date: 2025-06-17T00:02:02+08:00
+  packager: go-musicfox
+  changes:
+    - commit: f857a4f15d78372e5f54ae9aa0ffa71a69dfd953
+      note: 'fix: similar songs menu cannot refresh playlist'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fed293b7714beb9ab09912ffde8a3983b9b4f174
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.1
   date: 2025-06-16T20:21:31+08:00
   packager: go-musicfox
