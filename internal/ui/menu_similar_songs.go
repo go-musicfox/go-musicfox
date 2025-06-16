@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
@@ -92,5 +93,7 @@ func (m *SimilarSongsMenu) fetchSimilarSongs(songId int64, maxTry int) bool {
 
 	m.songs = append(m.songs, songs...)
 	m.menus = menux.GetViewFromSongs(m.songs)
+	m.netease.player.songManager.init(m.netease.player.CurSongIndex(), m.songs)
+	m.netease.player.playlistUpdateAt = time.Now()
 	return true
 }
