@@ -4,9 +4,7 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/skratchdot/open-golang/open"
-
-	"github.com/go-musicfox/go-musicfox/internal/storage"
+	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 )
 
 type Lastfm struct {
@@ -26,7 +24,13 @@ func (m *Lastfm) GetMenuKey() string {
 }
 
 func (m *Lastfm) MenuViews() []model.MenuItem {
-	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
+	if !lastfm.IsAvailable() {
+		return []model.MenuItem{
+			{Title: "当前不可用，请设置 API key 及 secret"},
+		}
+	}
+
+	if m.netease.lastfm.NeedAuth() {
 		return []model.MenuItem{
 			{Title: "去授权"},
 		}
@@ -38,24 +42,27 @@ func (m *Lastfm) MenuViews() []model.MenuItem {
 }
 
 func (m *Lastfm) SubMenu(_ *model.App, index int) model.Menu {
-	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
-		return m.auth
-	}
 	switch index {
 	case 0:
-		_ = open.Start(m.netease.lastfmUser.Url)
+		if !lastfm.IsAvailable() {
+			return nil
+		}
+		if m.netease.lastfm.NeedAuth() {
+			return m.auth
+		}
+		m.netease.lastfm.OpenUserHomePage()
 	case 1:
-		m.netease.lastfmUser = &storage.LastfmUser{}
-		m.netease.lastfmUser.Clear()
+		m.netease.lastfm.ClearUserInfo()
 		return NewLastfmRes(m.baseMenu, "清除授权", nil, 2)
 	}
 	return nil
 }
 
 func (m *Lastfm) FormatMenuItem(item *model.MenuItem) {
-	if m.netease.lastfmUser == nil || m.netease.lastfmUser.SessionKey == "" {
-		item.Subtitle = "[未授权]"
-	} else {
-		item.Subtitle = fmt.Sprintf("[%s]", m.netease.lastfmUser.Name)
+	item.Subtitle = "[未授权]"
+	if !m.netease.lastfm.NeedAuth() {
+		if username := m.netease.lastfm.UserName(); username != "" {
+			item.Subtitle = fmt.Sprintf("[%s]", username)
+		}
 	}
 }
