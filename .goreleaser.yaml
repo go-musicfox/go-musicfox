@@ -1,3 +1,5 @@
+version: 2
+
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
@@ -91,20 +93,6 @@ builds:
       - CPPFLAGS="-I/usr/local/mingw/aarch64-w64-mingw32/include $CPPFLAGS"
       - LDFLAGS="-L/usr/local/mingw/aarch64-w64-mingw32/lib $LDFLAGS"
       - CGO_LDFLAGS="-L/usr/local/mingw/aarch64-w64-mingw32/lib $CGO_LDFLAGS"
-  - id: go-musicfox-darwin-arm64
-    main: ./cmd/musicfox.go
-    binary: musicfox
-    goarch:
-      - arm64
-    goos:
-      - darwin
-    ldflags:
-      - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
-    tags:
-      - enable_global_hotkey
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
   - id: go-musicfox-darwin-amd64
     main: ./cmd/musicfox.go
     binary: musicfox
@@ -119,10 +107,24 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
+  - id: go-musicfox-darwin-arm64
+    main: ./cmd/musicfox.go
+    binary: musicfox
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    ldflags:
+      - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
 
 archives:
   - id: musicfox
-    builds:
+    ids:
       - go-musicfox-linux-amd64
       - go-musicfox-linux-arm64
       - go-musicfox-linux-arm
@@ -132,14 +134,14 @@ archives:
       - go-musicfox-darwin-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
-    format: zip
+    formats: [zip]
     files:
       - none*
 
 nfpms:
   - id: go-musicfox
     package_name: go-musicfox
-    builds:
+    ids:
       - go-musicfox-linux-amd64
       - go-musicfox-linux-arm64
       - go-musicfox-linux-arm
@@ -185,6 +187,7 @@ changelog:
     - title: Others
       order: 999
 
+# NOTE: will be deprecated
 brews:
   - name: "{{ .Env.HOMEBREW_NAME }}"
     repository:
@@ -214,6 +217,27 @@ brews:
       else
         bin.install 'musicfox'
       end
+
+homebrew_casks:
+  - name: "{{ .Env.HOMEBREW_NAME }}"
+    repository:
+      owner: go-musicfox
+      name: homebrew-go-musicfox
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    binary: musicfox
+    url:
+      template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://github.com/go-musicfox/go-musicfox"
+    description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
+    commit_author:
+      name: anhoder
+      email: anhoder@88.com
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Casks
+    hooks:
+      post:
+        install: |
+          system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/go-musicfox/go-musicfox \033[0m"
 
 winget:
   - name: go-musicfox

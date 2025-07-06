@@ -1,6 +1,6 @@
 PACKAGE_NAME          := go-musicfox
 PACKAGE_ROOT          := $(shell pwd)
-GOLANG_CROSS_VERSION  ?= v1.22.0
+GOLANG_CROSS_VERSION  ?= v1.24.4
 INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/internal/types
 LDFLAGS               := -s -w
 LASTFM_KEY            ?=
@@ -69,7 +69,7 @@ release-dry-run:
 		-v `pwd`/sysroot:/sysroot \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(GORELEASER_IMAGE) \
-		--clean --skip-validate --skip-publish
+		--clean --skip validate --skip publish
 
 .PHONY: release
 release:
