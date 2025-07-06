@@ -1,3 +1,23 @@
+- semver: 4.6.3
+  date: 2025-07-06T23:57:09+08:00
+  packager: go-musicfox
+  changes:
+    - commit: dd4f2c1ae76ca24787df50668654d01bdc5d0c9c
+      note: 'chore: upgrade goreleaser-cross'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d8ec40846edacf33af0d70f70817f6f99deb8fe9
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.2
   date: 2025-06-17T00:02:02+08:00
   packager: go-musicfox

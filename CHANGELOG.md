@@ -1,4 +1,11 @@
 
+4.6.3
+=============
+2025-07-06
+
+* chore: upgrade goreleaser-cross (dd4f2c1a)
+* chore: update scoop config & changelog (d8ec4084)
+
 4.6.2
 =============
 2025-06-16
