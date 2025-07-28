@@ -30,7 +30,7 @@ func GetPrimaryColor() termenv.Color {
 
 var MenuTitleColor string = "" // 菜单标题颜色配置
 var ProgressColorExcludeRanges string = "45-210" // 进度条颜色排除区间
-var ProgressColorSaturation string = "50-80,40-80" // 进度条颜色饱和度范围
+var ProgressColorSaturation string = "30-70,30-70" // 进度条颜色饱和度范围
 
 // GetMenuTitleColor 获取菜单标题颜色
 func GetMenuTitleColor() termenv.Color {
@@ -200,7 +200,7 @@ func GetRandomRgbColor(isRange bool) (string, string) {
 	startMin, startMax, endMin, endMax := parseSaturationRanges(ProgressColorSaturation)
 	
 	saturation := startMin + rand.Float64() * (startMax - startMin)  // 使用配置的饱和度范围
-	value := 0.7 + rand.Float64() * 0.2       // 70-90% 亮度
+	value := 0.3 + rand.Float64() * 0.65       // 30-95% 亮度
 	
 	r, g, b := hsvToRgb(hue, saturation, value)
 	startColor := fmt.Sprintf("#%02x%02x%02x", r, g, b)
@@ -255,7 +255,7 @@ func GetRandomRgbColor(isRange bool) (string, string) {
 	}
 	
 	saturationEnd := endMin + rand.Float64() * (endMax - endMin)  // 使用配置的结束色饱和度范围
-	valueEnd := 0.6 + rand.Float64() * 0.2       // 60-80% 亮度
+	valueEnd := 0.3 + rand.Float64() * 0.55       // 30-85% 亮度
 	
 	rEnd, gEnd, bEnd := hsvToRgb(hueEnd, saturationEnd, valueEnd)
 	endColor := fmt.Sprintf("#%02x%02x%02x", rEnd, gEnd, bEnd)
