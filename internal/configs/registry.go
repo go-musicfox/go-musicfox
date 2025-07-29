@@ -77,6 +77,7 @@ func NewRegistryWithDefault() *Registry {
 			MenuTitleColor:   "",  // 空字符串表示使用PrimaryColor
 			ProgressColorExcludeRanges: "45-210",
 			ProgressColorSaturation: "50-80,40-80",
+			ProgressColorBrightness: "70-90,60-80",
 			ShowLyric:        true,
 			ShowLyricTrans:   true,
 			ShowNotify:       true,
@@ -178,6 +179,10 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	// 进度条颜色饱和度范围
 	progressColorSaturation := ini.String("main.progressColorSaturation", "50-80,40-80")
 	registry.Main.ProgressColorSaturation = progressColorSaturation
+	
+	// 进度条颜色亮度范围
+	progressColorBrightness := ini.String("main.progressColorBrightness", "70-90,60-80")
+	registry.Main.ProgressColorBrightness = progressColorBrightness
 	registry.Main.ShowLyric = ini.Bool("main.showLyric", true)
 	registry.Main.LyricOffset = ini.Int("main.lyricOffset", 0)
 	registry.Main.ShowLyricTrans = ini.Bool("main.showLyricTrans", true)

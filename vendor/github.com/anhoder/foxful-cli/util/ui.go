@@ -31,6 +31,7 @@ func GetPrimaryColor() termenv.Color {
 var MenuTitleColor string = "" // 菜单标题颜色配置
 var ProgressColorExcludeRanges string = "45-210" // 进度条颜色排除区间
 var ProgressColorSaturation string = "50-80,40-80" // 进度条颜色饱和度范围
+var ProgressColorBrightness string = "70-90,60-80" // 进度条颜色亮度范围
 
 // GetMenuTitleColor 获取菜单标题颜色
 func GetMenuTitleColor() termenv.Color {
@@ -164,6 +165,53 @@ func parseSaturationRanges(saturationStr string) (startMin, startMax, endMin, en
 	return
 }
 
+// parseBrightnessRanges 解析亮度范围字符串，返回起始色和结束色的亮度范围
+func parseBrightnessRanges(brightnessStr string) (startMin, startMax, endMin, endMax float64) {
+	// 默认值
+	startMin, startMax, endMin, endMax = 0.7, 0.9, 0.6, 0.8
+	
+	if brightnessStr == "" {
+		return
+	}
+	
+	parts := strings.Split(brightnessStr, ",")
+	if len(parts) != 2 {
+		return
+	}
+	
+	// 解析起始色亮度范围
+	startParts := strings.Split(strings.TrimSpace(parts[0]), "-")
+	if len(startParts) == 2 {
+		if min, err := strconv.ParseFloat(strings.TrimSpace(startParts[0]), 64); err == nil && min >= 0 && min <= 100 {
+			startMin = min / 100.0
+		}
+		if max, err := strconv.ParseFloat(strings.TrimSpace(startParts[1]), 64); err == nil && max >= 0 && max <= 100 {
+			startMax = max / 100.0
+		}
+	}
+	
+	// 解析结束色亮度范围
+	endParts := strings.Split(strings.TrimSpace(parts[1]), "-")
+	if len(endParts) == 2 {
+		if min, err := strconv.ParseFloat(strings.TrimSpace(endParts[0]), 64); err == nil && min >= 0 && min <= 100 {
+			endMin = min / 100.0
+		}
+		if max, err := strconv.ParseFloat(strings.TrimSpace(endParts[1]), 64); err == nil && max >= 0 && max <= 100 {
+			endMax = max / 100.0
+		}
+	}
+	
+	// 确保最小值不大于最大值
+	if startMin > startMax {
+		startMin, startMax = startMax, startMin
+	}
+	if endMin > endMax {
+		endMin, endMax = endMax, endMin
+	}
+	
+	return
+}
+
 func GetPrimaryColorString() string {
 	if _primaryColorStr != "" {
 		return _primaryColorStr
@@ -196,11 +244,12 @@ func GetRandomRgbColor(isRange bool) (string, string) {
 	selectedRange := ranges[rand.Intn(len(ranges))]
 	hue := selectedRange[0] + rand.Float64()*(selectedRange[1]-selectedRange[0])
 	
-	// 解析饱和度配置
-	startMin, startMax, endMin, endMax := parseSaturationRanges(ProgressColorSaturation)
+	// 解析饱和度和亮度配置
+	startSatMin, startSatMax, endSatMin, endSatMax := parseSaturationRanges(ProgressColorSaturation)
+	startBrightMin, startBrightMax, endBrightMin, endBrightMax := parseBrightnessRanges(ProgressColorBrightness)
 	
-	saturation := startMin + rand.Float64() * (startMax - startMin)  // 使用配置的饱和度范围
-	value := 0.7 + rand.Float64() * 0.2       // 70-90% 亮度
+	saturation := startSatMin + rand.Float64() * (startSatMax - startSatMin)
+	value := startBrightMin + rand.Float64() * (startBrightMax - startBrightMin)
 	
 	r, g, b := hsvToRgb(hue, saturation, value)
 	startColor := fmt.Sprintf("#%02x%02x%02x", r, g, b)
@@ -209,53 +258,24 @@ func GetRandomRgbColor(isRange bool) (string, string) {
 		return startColor, ""
 	}
 
-	// 为结束颜色生成另一个安全色相
+	// 修改策略：只使用相近色，避免跨色系变化
 	rand.New(rand.NewSource(time.Now().UnixNano() / 5))
-	var hueEnd float64
 	
-	// 50%概率在同一区间内生成相近色，50%概率跳到另一个安全区间
-	if rand.Float64() < 0.5 {
-		// 在同一区间内生成相近色
-		rangeWidth := selectedRange[1] - selectedRange[0]
-		maxOffset := rangeWidth * 0.6  // 最多偏移区间宽度的60%
-		offset := (rand.Float64() - 0.5) * maxOffset
-		hueEnd = hue + offset
-		
-		// 确保不超出区间
-		if hueEnd < selectedRange[0] {
-			hueEnd = selectedRange[0]
-		} else if hueEnd > selectedRange[1] {
-			hueEnd = selectedRange[1]
-		}
-	} else {
-		// 跳到另一个安全区间，实现更丰富的色彩组合
-		otherRanges := make([][]float64, 0)
-		for _, r := range ranges {
-			if r[0] != selectedRange[0] || r[1] != selectedRange[1] {  // 排除当前区间（精确比较）
-				otherRanges = append(otherRanges, r)
-			}
-		}
-		
-		if len(otherRanges) > 0 {
-			endRange := otherRanges[rand.Intn(len(otherRanges))]
-			hueEnd = endRange[0] + rand.Float64()*(endRange[1]-endRange[0])
-		} else {
-			// 如果没有其他区间，在当前区间内生成
-			rangeWidth := selectedRange[1] - selectedRange[0]
-			maxOffset := rangeWidth * 0.6
-			offset := (rand.Float64() - 0.5) * maxOffset
-			hueEnd = hue + offset
-			
-			if hueEnd < selectedRange[0] {
-				hueEnd = selectedRange[0]
-			} else if hueEnd > selectedRange[1] {
-				hueEnd = selectedRange[1]
-			}
-		}
+	// 在同一区间内生成相近色，限制最多使用两种色系
+	rangeWidth := selectedRange[1] - selectedRange[0]
+	maxOffset := rangeWidth * 0.4  // 减少偏移范围，从60%降到40%
+	offset := (rand.Float64() - 0.5) * maxOffset
+	hueEnd := hue + offset
+	
+	// 确保不超出区间
+	if hueEnd < selectedRange[0] {
+		hueEnd = selectedRange[0]
+	} else if hueEnd > selectedRange[1] {
+		hueEnd = selectedRange[1]
 	}
 	
-	saturationEnd := endMin + rand.Float64() * (endMax - endMin)  // 使用配置的结束色饱和度范围
-	valueEnd := 0.6 + rand.Float64() * 0.2       // 60-80% 亮度
+	saturationEnd := endSatMin + rand.Float64() * (endSatMax - endSatMin)
+	valueEnd := endBrightMin + rand.Float64() * (endBrightMax - endBrightMin)
 	
 	rEnd, gEnd, bEnd := hsvToRgb(hueEnd, saturationEnd, valueEnd)
 	endColor := fmt.Sprintf("#%02x%02x%02x", rEnd, gEnd, bEnd)

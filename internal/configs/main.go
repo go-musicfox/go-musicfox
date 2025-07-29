@@ -12,6 +12,7 @@ type MainOptions struct {
 	MenuTitleColor         string                   // 菜单标题颜色
 	ProgressColorExcludeRanges string               // 进度条颜色排除区间
 	ProgressColorSaturation string                  // 进度条颜色饱和度范围
+	ProgressColorBrightness string                  // 进度条颜色亮度范围
 	ShowLyric              bool                     // 显示歌词
 	LyricOffset            int                      // 偏移:ms
 	ShowLyricTrans         bool                     // 显示歌词翻译
