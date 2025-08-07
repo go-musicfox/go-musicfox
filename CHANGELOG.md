@@ -1,4 +1,11 @@
 
+4.6.4
+=============
+2025-08-07
+
+* feat: 支持手动设置cookie登录 (11b9dcc0)
+* chore: update scoop config & changelog (179b9440)
+
 4.6.3
 =============
 2025-07-06

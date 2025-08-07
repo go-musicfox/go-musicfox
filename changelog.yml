@@ -1,3 +1,23 @@
+- semver: 4.6.4
+  date: 2025-08-07T20:26:25+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 11b9dcc00486d0117c209356c98462751bcb448c
+      note: 'feat: 支持手动设置cookie登录'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 179b9440b6f209e7fd6ade589117b72bdd9042a6
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.3
   date: 2025-07-06T23:57:09+08:00
   packager: go-musicfox
