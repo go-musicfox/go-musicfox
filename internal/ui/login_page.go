@@ -1,15 +1,12 @@
 package ui
 
 import (
-	"log"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/buger/jsonparser"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,11 +17,8 @@ import (
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/storage"
-	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
-	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -329,16 +323,13 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 }
 
 func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
-	var (
-		code     float64
-		response []byte
-	)
+	var code float64
 	if strings.ContainsRune(l.accountInput.Value(), '@') {
 		loginService := service.LoginEmailService{
 			Email:    l.accountInput.Value(),
 			Password: l.passwordInput.Value(),
 		}
-		code, response = loginService.LoginEmail()
+		code, _ = loginService.LoginEmail()
 	} else {
 		var (
 			phone       = l.accountInput.Value()
@@ -354,7 +345,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 			Password:    l.passwordInput.Value(),
 			Countrycode: countryCode,
 		}
-		code, response = loginService.LoginCellphone()
+		code, _ = loginService.LoginCellphone()
 	}
 
 	codeType := _struct.CheckCode(code)
@@ -367,7 +358,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 		return l, tickLogin(time.Nanosecond)
 	case _struct.Success:
 		l.tips = ""
-		if newPage := l.loginSuccessHandle(l.netease, response); newPage != nil {
+		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
 			return newPage, l.netease.Tick(time.Nanosecond)
 		}
 		return l.netease.MustMain(), model.TickMain(time.Nanosecond)
@@ -414,42 +405,17 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 	if code, resp := qrService.CheckQR(); code != 803 {
 		return errHandler(errors.Errorf("checkQR code: %f, resp: %s", code, string(resp)))
 	}
-	code, resp := (&service.UserAccountService{}).AccountInfo()
-	if code != 200 {
-		return errHandler(errors.Errorf("accountInfo code: %f, resp: %s", code, string(resp)))
-	}
 	l.tips = ""
-	if newPage := l.loginSuccessHandle(l.netease, resp); newPage != nil {
+	if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
 		return newPage, l.netease.Tick(time.Nanosecond)
 	}
 	return l.netease.MustMain(), model.TickMain(time.Nanosecond)
 }
 
-func (l *LoginPage) loginSuccessHandle(n *Netease, userInfo []byte) model.Page {
-	user, err := structs.NewUserFromJson(userInfo)
-	if err != nil {
-		return nil
+func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
+	if err := n.LoginCallback(); err != nil {
+		slog.Error("login callback error", slogx.Error(err))
 	}
-	n.user = &user
-
-	// 获取我喜欢的歌单
-	userPlaylists := service.UserPlaylistService{
-		Uid:    strconv.FormatInt(n.user.UserId, 10),
-		Limit:  strconv.Itoa(1),
-		Offset: strconv.Itoa(0),
-	}
-	_, response := userPlaylists.UserPlaylist()
-	n.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
-	if err != nil {
-		log.Printf("获取歌单ID失败: %+v\n", err)
-	}
-
-	// 写入本地数据库
-	table := storage.NewTable()
-	_ = table.SetByKVModel(storage.User{}, user)
-
-	// 更新like list
-	go likelist.RefreshLikeList(user.UserId)
 
 	var newPage model.Page
 	if l.AfterLogin != nil {
