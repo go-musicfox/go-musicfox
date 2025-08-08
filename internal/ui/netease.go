@@ -96,7 +96,9 @@ func (n *Netease) InitHook(_ *model.App) {
 				errorx.Must1(url.Parse("https://music.163.com")),
 				errorx.Must1(http.ParseCookie(config.Main.NeteaseCookie)),
 			)
-			errorx.Must(n.LoginCallback())
+			if err := n.LoginCallback(); err != nil {
+				slog.Warn("使用cookie登录失败", slogx.Error(err))
+			}
 		}
 
 		// 刷新界面用户名
@@ -260,7 +262,7 @@ func (n *Netease) LoginCallback() error {
 
 	user, err := structs.NewUserFromJson(resp)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.WithMessagef(err, "parse user err, code: %f, resp: %s", code, string(resp))
 	}
 	n.user = &user
 
@@ -273,7 +275,7 @@ func (n *Netease) LoginCallback() error {
 	_, response := userPlaylists.UserPlaylist()
 	n.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
 	if err != nil {
-		slog.Warn("获取歌单ID失败", slogx.Error(err))
+		slog.Warn("获取歌单ID失败", slogx.Error(err), slog.String("response", string(response)))
 	}
 
 	// 写入本地数据库
