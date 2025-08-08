@@ -90,7 +90,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		if n.user != nil && config.Main.NeteaseCookie != "" {
+		if n.user == nil && config.Main.NeteaseCookie != "" {
 			// 使用cookie登录
 			cookieJar.SetCookies(
 				errorx.Must1(url.Parse("https://music.163.com")),
