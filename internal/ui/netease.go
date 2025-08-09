@@ -34,9 +34,8 @@ import (
 )
 
 type Netease struct {
-	user       *structs.User
-	lastfm     *lastfm.Client
-	lastfmUser *storage.LastfmUser
+	user   *structs.User
+	lastfm *lastfm.Client
 
 	*model.App
 	login  *LoginPage
@@ -76,9 +75,6 @@ func (n *Netease) InitHook(_ *model.App) {
 	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(projectDir, "cookie"), nil)
 	util.SetGlobalCookieJar(cookieJar)
 
-	// DBManager初始化
-	storage.DBManager = new(storage.LocalDBManager)
-
 	// 获取用户信息
 	errorx.Go(func() {
 		table := storage.NewTable()
@@ -103,18 +99,6 @@ func (n *Netease) InitHook(_ *model.App) {
 
 		// 刷新界面用户名
 		n.MustMain().RefreshMenuTitle()
-
-		// 获取lastfm用户信息
-		var lastfmUser storage.LastfmUser
-		if jsonStr, err := table.GetByKVModel(&lastfmUser); err == nil {
-			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
-				if lastfmUser.ApiKey == config.Lastfm.Key {
-					n.lastfmUser = &lastfmUser
-					n.lastfm.SetSession(lastfmUser.SessionKey)
-				}
-			}
-		}
-		n.MustMain().RefreshMenuList()
 
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
@@ -248,6 +232,7 @@ func (n *Netease) InitHook(_ *model.App) {
 
 func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
+	n.lastfm.Close()
 }
 
 func (n *Netease) Player() *Player {
