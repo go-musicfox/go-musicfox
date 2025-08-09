@@ -87,6 +87,7 @@ const (
 	OpAlbumOfPlayingSong
 	OpArtistOfPlayingSong
 	OpOpenPlayingSongInWeb
+	OpOpenSimiSongsOfPlayingSong
 	OpLikeSelectedSong
 	OpDislikeSelectedSong
 	OpTrashSelectedSong
@@ -98,6 +99,7 @@ const (
 	OpOpenSelectedItemInWeb
 	OpCollectSelectedPlaylist
 	OpDiscollectSelectedPlaylist
+	OpOpenSimiSongsOfSelectedSong
 )
 
 // 操作信息
@@ -145,6 +147,7 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpAlbumOfPlayingSong:             {name: "openAlbumOfPlayingSong", desc: "播放中歌曲的所属专辑"},
 	OpArtistOfPlayingSong:            {name: "openArtistOfPlayingSong", desc: "播放中歌曲的所属歌手"},
 	OpOpenPlayingSongInWeb:           {name: "openPlayingSongInWeb", desc: "网页打开播放中歌曲"},
+	OpOpenSimiSongsOfPlayingSong:     {name: "simiSongsOfPlayingSong", desc: "与播放中歌曲相似的歌曲"},
 	OpLikeSelectedSong:               {name: "likeSelectedSong", desc: "喜欢选中歌曲"},
 	OpDislikeSelectedSong:            {name: "dislikeSelectedSong", desc: "取消喜欢选中歌曲"},
 	OpTrashSelectedSong:              {name: "trashSelectedSong", desc: "标记选中歌曲为不喜欢"},
@@ -156,6 +159,7 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpOpenSelectedItemInWeb:          {name: "openSelectedItemInWeb", desc: "网页打开选中歌曲/专辑..."},
 	OpCollectSelectedPlaylist:        {name: "collectSelectedPlaylist", desc: "收藏选中歌单"},
 	OpDiscollectSelectedPlaylist:     {name: "discollectSelectedPlaylist", desc: "取消收藏选中歌单"},
+	OpOpenSimiSongsOfSelectedSong:    {name: "simiSongsOfSelectedSong", desc: "与选中歌曲相似的歌曲"},
 }
 
 // 默认操作 -> 快捷键数组映射
@@ -206,6 +210,7 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpAlbumOfPlayingSong:             {"a"},
 	OpArtistOfPlayingSong:            {"s"},
 	OpOpenPlayingSongInWeb:           {"o"},
+	OpOpenSimiSongsOfPlayingSong:     {"f"},
 	OpLikeSelectedSong:               {"<", "〈", "＜", "《", "«"},
 	OpDislikeSelectedSong:            {">", "〉", "＞", "》", "»"},
 	OpTrashSelectedSong:              {"T"},
@@ -217,6 +222,7 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpOpenSelectedItemInWeb:          {"O"},
 	OpCollectSelectedPlaylist:        {";", ":", "：", "；"},
 	OpDiscollectSelectedPlaylist:     {"'", "\""},
+	OpOpenSimiSongsOfSelectedSong:    {"F"},
 }
 
 var userOperateToKeys map[OperateType][]string

@@ -1,9 +1,9 @@
 module github.com/go-musicfox/go-musicfox
 
-go 1.22
+go 1.23.0
 
 require (
-	github.com/anhoder/foxful-cli v0.4.2
+	github.com/anhoder/foxful-cli v0.5.0
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.1
 	github.com/charmbracelet/bubbles v0.16.1
@@ -77,11 +77,11 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
 
 replace (

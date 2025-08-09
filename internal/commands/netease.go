@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
@@ -41,6 +42,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	model.SearchPlaceholder = types.SearchPlaceholder
 	model.SearchResult = types.SearchResult
 
+	// DBManager 初始化
+	storage.DBManager = new(storage.LocalDBManager)
+
 	var (
 		netease      = ui.NewNetease(model.NewApp(opts))
 		eventHandler = ui.NewEventHandler(netease)
@@ -56,6 +60,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.MouseControllers = append(options.MouseControllers, eventHandler)
 			options.Ticker = netease.Player().RenderTicker()
 			options.DynamicRowCount = configs.ConfigRegistry.Main.DynamicMenuRows
+			options.CenterEverything = configs.ConfigRegistry.Main.CenterEverything
 		},
 	)
 

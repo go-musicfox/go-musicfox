@@ -18,7 +18,6 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
@@ -221,6 +220,48 @@ func (p *Player) lyricView() string {
 		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-main.MenuBottomRow()))
 	}
 
+	if main.CenterEverything() {
+		p.buildLyricsCentered(main, &lyricBuilder)
+	} else {
+		p.buildLyricsTraditional(main, &lyricBuilder)
+	}
+
+	if endRow-p.lyricStartRow-p.lyricLines > 0 {
+		lyricBuilder.WriteString(strings.Repeat("\n", endRow-p.lyricStartRow-p.lyricLines))
+	}
+
+	return lyricBuilder.String()
+}
+
+func (p *Player) buildLyricsCentered(main *model.Main, lyricBuilder *strings.Builder) {
+	windowWidth := p.netease.WindowWidth()
+	highlightLine := 2
+	startLine := highlightLine - (p.lyricLines-1)/2
+	endLine := highlightLine + (p.lyricLines-1)/2
+	extraPadding := 8 + max(0, (windowWidth-40)/5)
+	lyricsMaxLength := windowWidth - extraPadding
+	for i := startLine; i <= endLine; i++ {
+		line := p.lyrics[i]
+		if i == highlightLine {
+			line = p.lyricNowScrollBar.Tick(lyricsMaxLength, line)
+			line = strings.Trim(line, " ")
+		}
+		line = runewidth.Truncate(line, lyricsMaxLength, "")
+		lineLength := runewidth.StringWidth(line)
+		paddingLeft := (windowWidth - lineLength) / 2
+		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
+		if i == highlightLine {
+			line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
+		} else {
+			line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
+		}
+		lyricBuilder.WriteString(line)
+		lyricBuilder.WriteString(strings.Repeat(" ", windowWidth-paddingLeft-lineLength))
+		lyricBuilder.WriteString("\n")
+	}
+}
+
+func (p *Player) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.Builder) {
 	var startCol int
 	if main.IsDualColumn() {
 		startCol = main.MenuStartColumn() + 3
@@ -261,25 +302,39 @@ func (p *Player) lyricView() string {
 			lyricBuilder.WriteString("\n")
 		}
 	}
-
-	if endRow-p.lyricStartRow-p.lyricLines > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", endRow-p.lyricStartRow-p.lyricLines))
-	}
-
-	return lyricBuilder.String()
 }
 
 // songView 歌曲信息UI
 func (p *Player) songView() string {
+
+	// Every part of the song view is expressed as a segment: unformatted text followed by a color specification
+	// This makes computing the total length of the song view easier
+	type Segment struct {
+		text  string
+		color termenv.Color
+	}
+
 	var (
-		builder strings.Builder
-		main    = p.netease.MustMain()
+		builder  strings.Builder
+		main     = p.netease.MustMain()
+		segments []Segment
 	)
+
+	// Helper for adding a new segment
+	addSegment := func(text string, color termenv.Color) {
+		segments = append(segments, Segment{text, color})
+	}
+	// Helper for adding text whose color we don't care about
+	addText := func(text string) {
+		segments = append(segments, Segment{text, termenv.ANSIBrightBlack})
+	}
 
 	prefixLen := 10
 	if main.MenuStartColumn()-4 > 0 {
 		prefixLen += 12
-		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()-4))
+		if !main.CenterEverything() {
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), termenv.ANSIBrightBlack)
+		}
 		{
 			var msg string
 			if p.intelligent {
@@ -287,45 +342,76 @@ func (p *Player) songView() string {
 			} else {
 				msg = p.songManager.modeName()
 			}
-			builder.WriteString(util.SetFgStyle(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta))
+			addSegment(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta)
 		}
-		builder.WriteString(util.SetFgStyle(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue))
+		addSegment(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue)
 	}
 	if p.State() == types.Playing {
-		builder.WriteString(util.SetFgStyle("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow))
+		addSegment("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow)
 	} else {
-		builder.WriteString(util.SetFgStyle("_ z Z Z ", termenv.ANSIYellow))
+		addSegment("_ z Z Z ", termenv.ANSIYellow)
 	}
 
 	if p.CurSong().Id > 0 {
+		var color termenv.ANSIColor
 		if likelist.IsLikeSong(p.CurSong().Id) {
-			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIRed))
+			color = termenv.ANSIRed
 		} else {
-			builder.WriteString(util.SetFgStyle("♥ ", termenv.ANSIWhite))
+			color = termenv.ANSIWhite
 		}
+		addSegment("♥ ", color)
 	}
 
 	if p.CurSongIndex() < len(p.Playlist()) {
 		// 按剩余长度截断字符串
-		truncateSong := runewidth.Truncate(p.CurSong().Name, p.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
-		builder.WriteString(util.SetFgStyle(truncateSong, util.GetPrimaryColor()))
-		builder.WriteString(" ")
+		songName := p.CurSong().Name
+		if !main.CenterEverything() {
+			songName = runewidth.Truncate(songName, p.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
+		}
+		addSegment(songName, util.GetPrimaryColor())
+		addText(" ")
 
 		var artists strings.Builder
 		for i, v := range p.CurSong().Artists {
 			if i != 0 {
 				artists.WriteString(",")
 			}
-
 			artists.WriteString(v.Name)
 		}
 
-		// 按剩余长度截断字符串
-		remainLen := p.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(p.CurSong().Name)
-		truncateArtists := runewidth.Truncate(
-			runewidth.FillRight(artists.String(), remainLen),
-			remainLen, "")
-		builder.WriteString(util.SetFgStyle(truncateArtists, termenv.ANSIBrightBlack))
+		artistString := artists.String()
+		if !main.CenterEverything() {
+			// 按剩余长度截断字符串
+			remainLen := p.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(p.CurSong().Name)
+			artistString = runewidth.Truncate(
+				runewidth.FillRight(artistString, remainLen),
+				remainLen, "")
+		}
+		addSegment(artistString, termenv.ANSIBrightBlack)
+	}
+
+	if main.CenterEverything() {
+		totalWidth := 0
+		widthLimit := p.netease.WindowWidth() - 4
+		for index, segment := range segments {
+			segmentWidth := runewidth.StringWidth(segment.text)
+			if totalWidth+segmentWidth > widthLimit {
+				segmentWidth = max(0, widthLimit-totalWidth)
+				segments[index].text = runewidth.Truncate(segment.text, segmentWidth, "")
+			}
+			totalWidth += segmentWidth
+		}
+		paddingLeft := (p.netease.WindowWidth() - totalWidth) / 2
+		builder.WriteString(strings.Repeat(" ", paddingLeft))
+		for _, segment := range segments {
+			builder.WriteString(util.SetFgStyle(segment.text, segment.color))
+		}
+		builder.WriteString(strings.Repeat(" ", p.netease.WindowWidth()-paddingLeft-totalWidth))
+	} else {
+		// simply concatenate every segment with the specified color
+		for _, segment := range segments {
+			builder.WriteString(util.SetFgStyle(segment.text, segment.color))
+		}
 	}
 
 	return builder.String()
@@ -867,7 +953,7 @@ func (p *Player) buildNeteaseReportService() *service.ReportService {
 
 func (p *Player) reportStart() {
 	p.buildNeteaseReportService().Playstart()
-	lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseStart, p.CurSong(), p.PassedTime())
+	p.netease.lastfm.Tracker.Playing(*storage.NewScrobble(p.CurMusic().Song, 0))
 }
 
 func (p *Player) reportEnd() {
@@ -889,8 +975,8 @@ func (p *Player) reportEnd() {
 	}
 	svc.Playend()
 
-	// 播放过一半, 上报lastfm
-	if p.PassedTime().Seconds() >= p.CurSong().Duration.Seconds()/2 {
-		lastfm.Report(p.netease.lastfm, lastfm.ReportPhaseComplete, p.CurSong(), p.PassedTime())
+	// 检测并上报 last.fm
+	if p.netease.lastfm.Tracker.IsScrobbleable(p.CurMusic().Duration.Seconds(), p.PassedTime().Seconds()) {
+		go p.netease.lastfm.Tracker.Scrobble(*storage.NewScrobble(p.CurMusic().Song, p.PassedTime()))
 	}
 }

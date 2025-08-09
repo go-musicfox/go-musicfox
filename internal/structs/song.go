@@ -63,8 +63,8 @@ func NewSongFromShortNameSongsJson(json []byte) (Song, error) {
 	return song, nil
 }
 
-// NewSongFromFmJson 从私人FM获取数据
-func NewSongFromFmJson(json []byte) (Song, error) {
+// NewSongFromCommonJson 从私人FM获取数据
+func NewSongFromCommonJson(json []byte) (Song, error) {
 	var song Song
 	if len(json) == 0 {
 		return song, errors.New("json is empty")

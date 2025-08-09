@@ -3,6 +3,8 @@ package ui
 import (
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,9 +12,11 @@ import (
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/buger/jsonparser"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
+	"github.com/pkg/errors"
 	"github.com/telanflow/cookiejar"
 
 	"github.com/go-musicfox/go-musicfox/internal/automator"
@@ -30,9 +34,8 @@ import (
 )
 
 type Netease struct {
-	user       *structs.User
-	lastfm     *lastfm.Client
-	lastfmUser *storage.LastfmUser
+	user   *structs.User
+	lastfm *lastfm.Client
 
 	*model.App
 	login  *LoginPage
@@ -72,9 +75,6 @@ func (n *Netease) InitHook(_ *model.App) {
 	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(projectDir, "cookie"), nil)
 	util.SetGlobalCookieJar(cookieJar)
 
-	// DBManager初始化
-	storage.DBManager = new(storage.LocalDBManager)
-
 	// 获取用户信息
 	errorx.Go(func() {
 		table := storage.NewTable()
@@ -85,20 +85,34 @@ func (n *Netease) InitHook(_ *model.App) {
 				n.user = &user
 			}
 		}
+
+		if n.user == nil && config.Main.NeteaseCookie != "" {
+			// 使用cookie登录
+			cookieJar.SetCookies(
+				errorx.Must1(url.Parse("https://music.163.com")),
+				errorx.Must1(http.ParseCookie(config.Main.NeteaseCookie)),
+			)
+			if err := n.LoginCallback(); err != nil {
+				slog.Warn("使用cookie登录失败", slogx.Error(err))
+			}
+		}
+
 		// 刷新界面用户名
 		n.MustMain().RefreshMenuTitle()
 
-		// 获取lastfm用户信息
-		var lastfmUser storage.LastfmUser
-		if jsonStr, err := table.GetByKVModel(&lastfmUser); err == nil {
-			if err = json.Unmarshal(jsonStr, &lastfmUser); err == nil {
-				if lastfmUser.ApiKey == config.Lastfm.Key {
-					n.lastfmUser = &lastfmUser
-					n.lastfm.SetSession(lastfmUser.SessionKey)
-				}
+		if n.user == nil && config.Main.NeteaseCookie != "" {
+			// 使用cookie登录
+			cookieJar.SetCookies(
+				errorx.Must1(url.Parse("https://music.163.com")),
+				errorx.Must1(http.ParseCookie(config.Main.NeteaseCookie)),
+			)
+			if err := n.LoginCallback(); err != nil {
+				slog.Warn("使用cookie登录失败", slogx.Error(err))
 			}
 		}
-		n.MustMain().RefreshMenuList()
+
+		// 刷新界面用户名
+		n.MustMain().RefreshMenuTitle()
 
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
@@ -124,7 +138,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			var snapshot storage.PlayerSnapshot
 			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
 				p := n.player
-                p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
+				p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
 				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
 				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
 			}
@@ -232,8 +246,43 @@ func (n *Netease) InitHook(_ *model.App) {
 
 func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
+	n.lastfm.Close()
 }
 
 func (n *Netease) Player() *Player {
 	return n.player
+}
+
+func (n *Netease) LoginCallback() error {
+	code, resp := (&service.UserAccountService{}).AccountInfo()
+	if code != 200 {
+		return errors.Errorf("accountInfo code: %f, resp: %s", code, string(resp))
+	}
+
+	user, err := structs.NewUserFromJson(resp)
+	if err != nil {
+		return errors.WithMessagef(err, "parse user err, code: %f, resp: %s", code, string(resp))
+	}
+	n.user = &user
+
+	// 获取我喜欢的歌单
+	userPlaylists := service.UserPlaylistService{
+		Uid:    strconv.FormatInt(n.user.UserId, 10),
+		Limit:  strconv.Itoa(1),
+		Offset: strconv.Itoa(0),
+	}
+	_, response := userPlaylists.UserPlaylist()
+	n.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
+	if err != nil {
+		slog.Warn("获取歌单ID失败", slogx.Error(err), slog.String("response", string(response)))
+	}
+
+	// 写入本地数据库
+	table := storage.NewTable()
+	_ = table.SetByKVModel(storage.User{}, user)
+
+	// 更新like list
+	go likelist.RefreshLikeList(user.UserId)
+
+	return nil
 }

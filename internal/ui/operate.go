@@ -337,6 +337,52 @@ func downloadPlayingSong(m *Netease) {
 	go storagex.DownloadMusic(m.player.CurSong())
 }
 
+func simiSongsOfPlayingSong(m *Netease) {
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
+
+	var (
+		main = m.MustMain()
+		menu = main.CurMenu()
+	)
+	if m.player.CurSongIndex() >= len(m.player.Playlist()) {
+		return
+	}
+
+	curSong := m.player.CurSong()
+	// 避免重复进入
+	if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongId == curSong.Id {
+		return
+	}
+
+	main.EnterMenu(NewSimilarSongsMenu(newBaseMenu(m), curSong), &model.MenuItem{Title: "相似歌曲", Subtitle: "与「" + curSong.Name + "」相似的歌曲"})
+}
+
+func simiSongsOfSelectedSong(m *Netease) {
+	loading := model.NewLoading(m.MustMain())
+	loading.Start()
+	defer loading.Complete()
+
+	var (
+		main = m.MustMain()
+		menu = main.CurMenu()
+	)
+	me, ok := menu.(SongsMenu)
+	selectedIndex := menu.RealDataIndex(main.SelectedIndex())
+	if !ok || selectedIndex >= len(me.Songs()) {
+		return
+	}
+	songs := me.Songs()
+
+	// 避免重复进入
+	if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongId == songs[selectedIndex].Id {
+		return
+	}
+
+	main.EnterMenu(NewSimilarSongsMenu(newBaseMenu(m), songs[selectedIndex]), &model.MenuItem{Title: "相似歌曲", Subtitle: "与「" + songs[selectedIndex].Name + "」相似的歌曲"})
+}
+
 func albumOfPlayingSong(m *Netease) {
 	loading := model.NewLoading(m.MustMain())
 	loading.Start()

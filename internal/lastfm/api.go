@@ -3,13 +3,13 @@ package lastfm
 import (
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/pkg/errors"
 	lastfmgo "github.com/shkh/lastfm-go"
+	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -18,19 +18,52 @@ type AuthInvalid struct {
 	error
 }
 
+var available = true
+
+// IsAvailable lastfm 功能可用性
+func IsAvailable() bool {
+	return available
+}
+
 type Client struct {
-	api *lastfmgo.Api
+	api      *lastfmgo.Api
+	user     *storage.LastfmUser
+	Tracker  *Tracker
+	needAuth bool
 }
 
 func NewClient() *Client {
-	client := &Client{}
-	if configs.ConfigRegistry.Lastfm.Key == "" || configs.ConfigRegistry.Lastfm.Secret == "" {
-		err := errors.New("lastfm key或secret为空")
-		_, _ = client.errorHandle(err)
+	client := &Client{
+		user:     &storage.LastfmUser{},
+		needAuth: true,
+	}
+	client.Tracker = NewTracker(client)
+
+	key, secret := client.getAPIKey()
+	if IsAvailable() {
+		client.api = lastfmgo.New(key, secret)
+		client.user.InitFromStorage() // 获取lastfm用户信息
+		if client.user.ApiKey == key && client.user.SessionKey != "" {
+			client.SetSession(client.user.SessionKey)
+			client.needAuth = false
+		}
 	} else {
-		client.api = lastfmgo.New(configs.ConfigRegistry.Lastfm.Key, configs.ConfigRegistry.Lastfm.Secret)
+		err := errors.New("lastfm 当前不可用，请检查 lastfm key 或 secret")
+		_, _ = client.errorHandle(err)
 	}
 	return client
+}
+
+func (c *Client) getAPIKey() (key, secret string) {
+	switch {
+	case configs.ConfigRegistry.Lastfm.Key != "" && configs.ConfigRegistry.Lastfm.Secret != "":
+		return configs.ConfigRegistry.Lastfm.Key, configs.ConfigRegistry.Lastfm.Secret
+	case types.LastfmKey != "" && types.LastfmSecret != "":
+		return types.LastfmKey, types.LastfmSecret
+	default:
+		available = false
+		return
+	}
 }
 
 func (c *Client) errorHandle(e error) (bool, error) {
@@ -41,8 +74,12 @@ func (c *Client) errorHandle(e error) (bool, error) {
 	if errors.As(e, &lastfmErr) {
 		switch lastfmErr.Code {
 		case 9: // invalid session key
-			return false, AuthInvalid{lastfmErr}
+			c.needAuth = true
+			return true, AuthInvalid{lastfmErr}
 		case 11, 16: // server error
+			return true, e
+		case 10, 26: // API key error
+			available = false
 			return true, e
 		default:
 			slog.Error("Lastfm request failed", slogx.Error(lastfmErr))
@@ -62,12 +99,14 @@ func (c *Client) GetAuthUrlWithToken() (token, url string, err error) {
 		return
 	}
 
-	url = fmt.Sprintf(types.LastfmAuthUrl, configs.ConfigRegistry.Lastfm.Key, token)
+	key, _ := c.getAPIKey()
+	url = fmt.Sprintf(types.LastfmAuthUrl, key, token)
 	return
 }
 
 func (c *Client) SetSession(session string) {
 	if c.api != nil {
+		c.needAuth = false
 		c.api.SetSession(session)
 	}
 }
@@ -82,40 +121,6 @@ func (c *Client) GetSession(token string) (sessionKey string, err error) {
 	}
 	sessionKey = c.api.GetSessionKey()
 	return
-}
-
-func (c *Client) UpdateNowPlaying(args map[string]any) error {
-	if c.api == nil {
-		return errors.New("lastfm key或secret为空")
-	}
-	if c.api.GetSessionKey() == "" {
-		_, err := c.errorHandle(errors.New("empty session key"))
-		return err
-	}
-	_, err := c.api.Track.UpdateNowPlaying(args)
-
-	var retry bool
-	if retry, err = c.errorHandle(err); retry {
-		return c.UpdateNowPlaying(args)
-	}
-	return err
-}
-
-func (c *Client) Scrobble(args map[string]any) error {
-	if c.api == nil {
-		return errors.New("lastfm key或secret为空")
-	}
-	if c.api.GetSessionKey() == "" {
-		_, err := c.errorHandle(errors.New("empty session key"))
-		return err
-	}
-	_, err := c.api.Track.Scrobble(args)
-
-	var retry bool
-	if retry, err = c.errorHandle(err); retry {
-		return c.Scrobble(args)
-	}
-	return err
 }
 
 func (c *Client) GetUserInfo(args map[string]any) (lastfmgo.UserGetInfo, error) {
@@ -135,37 +140,40 @@ func (c *Client) GetUserInfo(args map[string]any) (lastfmgo.UserGetInfo, error) 
 	return userInfo, err
 }
 
-type ReportPhase uint8
+func (c *Client) Close() {
+	c.Tracker.close()
+}
 
-const (
-	ReportPhaseStart ReportPhase = iota
-	ReportPhaseComplete
-)
-
-func Report(client *Client, phase ReportPhase, song structs.Song, passedTime time.Duration) {
-	switch phase {
-	case ReportPhaseStart:
-		go func(song structs.Song) {
-			_ = client.UpdateNowPlaying(map[string]any{
-				"artist":   song.ArtistName(),
-				"track":    song.Name,
-				"album":    song.Album.Name,
-				"duration": song.Duration,
-			})
-		}(song)
-	case ReportPhaseComplete:
-		duration := song.Duration.Seconds()
-		passedSeconds := passedTime.Seconds()
-		if passedSeconds >= duration/2 {
-			go func(song structs.Song, passed time.Duration) {
-				_ = client.Scrobble(map[string]any{
-					"artist":    song.ArtistName(),
-					"track":     song.Name,
-					"album":     song.Album.Name,
-					"timestamp": time.Now().Unix(),
-					"duration":  song.Duration.Seconds(),
-				})
-			}(song, passedTime)
-		}
+func (c *Client) NeedAuth() bool {
+	if c.needAuth {
+		return true
 	}
+	if c.user.SessionKey == "" {
+		return true
+	}
+	return false
+}
+
+func (c *Client) OpenUserHomePage() {
+	_ = open.Start(c.user.Url)
+}
+
+func (c *Client) InitUserInfo(user *storage.LastfmUser) {
+	c.needAuth = false
+	key, _ := c.getAPIKey()
+	user.ApiKey = key
+	c.user = user
+	c.user.Store()
+}
+
+func (c *Client) ClearUserInfo() {
+	c.user = &storage.LastfmUser{}
+	c.user.Clear()
+}
+
+func (c *Client) UserName() string {
+	if c.user != nil {
+		return c.user.Name
+	}
+	return ""
 }

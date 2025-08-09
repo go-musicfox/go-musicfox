@@ -92,7 +92,7 @@ $ brew unlink musicfox && brew link --overwrite go-musicfox
 
 <details>
 <summary>
-  
+
 ### Linux
 </summary>
 
@@ -100,7 +100,7 @@ $ brew unlink musicfox && brew link --overwrite go-musicfox
 
 <details>
 <summary>
-  
+
 ##### Arch Linux
 </summary>
 
@@ -263,7 +263,7 @@ $ nix-shell -p go-musicfox
 
 <details>
 <summary>
-  
+
 ##### Termux(Android)
 </summary>
 
@@ -272,7 +272,7 @@ $ apt install go-musicfox
 ```
 > 如果遇到卡顿，请切换到mpd播放引擎
 </details>
-  
+
 #### 2. 通过 Homebrew 安装
 
 ```sh
@@ -319,7 +319,7 @@ scoop install go-musicfox
 
 <details>
 <summary>
-  
+
 ### 手动编译
 </summary>
 
@@ -378,14 +378,14 @@ $ musicfox
 
 <details>
 <summary>
-  
+
 ### 注意事项
 </summary>
 
 - **请务必使用等宽字体，或将配置项 `doubleColumn` 设为 `false`，否则双列显示排版可能会混乱**
-- **如果在使用时出现莫名奇妙的光标移动、切歌或暂停等现象，请将配置项 `enableMouseEvent` 设置为 `false`** 
-- **本应用不对 macOS 原生终端和 Windows 的命令提示符（CMD）做兼容处理（[#99](https://github.com/go-musicfox/go-musicfox/issues/99)）**   
-  > macOS 用户推荐使用 [iTerm2](https://iterm2.com/) 或 [Kitty](https://sw.kovidgoyal.net/kitty/) 
+- **如果在使用时出现莫名奇妙的光标移动、切歌或暂停等现象，请将配置项 `enableMouseEvent` 设置为 `false`**
+- **本应用不对 macOS 原生终端和 Windows 的命令提示符（CMD）做兼容处理（[#99](https://github.com/go-musicfox/go-musicfox/issues/99)）**
+  > macOS 用户推荐使用 [iTerm2](https://iterm2.com/) 或 [Kitty](https://sw.kovidgoyal.net/kitty/)
   >
   > Linux 用户推荐使用 [Kitty](https://sw.kovidgoyal.net/kitty/)
   >
@@ -395,7 +395,7 @@ $ musicfox
   ./musicfox: error while loading shared libraries: libFLAC.so.8: cannot open shared object file: No such file or directory
   ```
   例如 Ubuntu 23.10 及它的衍生版系列，`libFLAC.so.12` 已经将 `libFLAC.so.8` 替换。
-  
+
   遇到这种问题，你可以：
   * 找到已安装的新版 `libFLAC.so`，将其软链为`libFLAC.so.8`: `ln -s /xxx/libFLAC.so /xxx/libFLAC.so.8` （**推荐**）
   * 自行安装 `libflac8` （不推荐）
@@ -407,7 +407,7 @@ $ musicfox
 </details>
 <details>
 <summary>
-  
+
 ### 快捷键
 </summary>
 
@@ -468,6 +468,7 @@ $ musicfox
 | `openAlbumOfPlayingSong`            | 播放中歌曲的所属专辑          | `a`                                             |
 | `openArtistOfPlayingSong`           | 播放中歌曲的所属歌手          | `s`                                             |
 | `openPlayingSongInWeb`              | 网页打开播放中歌曲            | `o`                                             |
+| `simiSongsOfPlayingSong`            | 与播放中歌曲相似的歌曲        | `f`                                             |
 | `likeSelectedSong`                  | 喜欢选中歌曲                  | `<`, `〈`, `＜`, `《`, `«`                 |
 | `dislikeSelectedSong`               | 取消喜欢选中歌曲              | `>`, `〉`, `＞`, `》`, `»`                 |
 | `trashSelectedSong`                 | 标记选中歌曲为不喜欢          | `T`                                             |
@@ -479,13 +480,14 @@ $ musicfox
 | `openSelectedItemInWeb`             | 网页打开选中歌曲/专辑...      | `O`                                             |
 | `collectSelectedPlaylist`           | 收藏选中歌单                  | `;`, `:`, `：`, `；`                        |
 | `discollectSelectedPlaylist`        | 取消收藏选中歌单              | `'`, `"`                                        |
+| `simiSongsOfSelectedSong            | 与选中歌曲相似的歌曲          | `f`                                             |
 
 注意：
 - 多个按键请以英文逗号`,`分隔，每个键无需引号（不支持）
 - 非字符快捷键大小写不敏感，如 `shift+tab` 等同 `Shift+Tab`，但 `a` 与 `A` 不同
 - 多次绑定同一个键的行为是未定义的，以程序最后读取的为准
 - [不可自定义操作](#不可自定义操作-内置) 不可自定义且其使用的键也不可用于自定义
-- 
+
 
 ```ini
 [main]
@@ -506,7 +508,7 @@ next = alt+n
 help = ?,ctrl+h
 
 # 取消“心动模式”的默认 P 键
-intelligence = 
+intelligence =
 
 # 将“显示当前播放列表”改为 Ctrl+P
 curPlaylist = ctrl+p
@@ -523,9 +525,9 @@ ctrl+shift+space=toggle
 ```
 
 > 因为Linux下开启全局快捷键需要安装比较多的依赖，可能你并不需要这个功能，所以Releases中的Linux二进制文件是不支持全局快捷键的
-> 
-> 如果需要开启，请安装[依赖](https://github.com/go-vgo/robotgo#requirements)后手动进行编译: 
-> 
+>
+> 如果需要开启，请安装[依赖](https://github.com/go-vgo/robotgo#requirements)后手动进行编译:
+>
 > ```shell
 > BUILD_TAGS=enable_global_hotkey make build
 > ```
@@ -534,22 +536,22 @@ ctrl+shift+space=toggle
 </details>
 <details>
 <summary>
-  
+
 ## 配置文件
 </summary>
 
 配置文件路径为用户配置目录下的 `go-musicfox.ini` 文件，详细可参见[配置示例](./utils/filex/embed/go-musicfox.ini)。
 
 > 用户配置目录路径：
-> 
+>
 > macOS：`$HOME/Library/Application Support/go-musicfox`
 >
 > Linux：`$XDG_CONFIG_HOME/go-musicfox` 或 `$HOME/.config/go-musicfox`
-> 
+>
 > Windows：`%AppData%\go-musicfox`
-> 
+>
 > 你可以通过设置 `MUSICFOX_ROOT` 环境变量来自定义用户配置的存储位置
-> 
+>
 > 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
 
 </details>
@@ -588,7 +590,7 @@ See [CHANGELOG.md](./CHANGELOG.md)
 * [gcli](https://github.com/gookit/gcli)
 * ...
 
-感谢 [JetBrains Open Source](https://www.jetbrains.com/zh-cn/opensource/?from=archery) 为项目提供免费的 IDE 授权    
+感谢 [JetBrains Open Source](https://www.jetbrains.com/zh-cn/opensource/?from=archery) 为项目提供免费的 IDE 授权
 [<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" width="200"/>](https://www.jetbrains.com/opensource/)
 
 </details>

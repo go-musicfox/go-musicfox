@@ -89,6 +89,8 @@ func NewRegistryWithDefault() *Registry {
 			CacheLimit:            0,
 			DynamicMenuRows:       false,
 			UseDefaultKeyBindings: true,
+			CenterEverything:      false,
+			NeteaseCookie:         "",
 		},
 		Player: PlayerOptions{
 			Engine:         types.BeepPlayer,
@@ -101,8 +103,9 @@ func NewRegistryWithDefault() *Registry {
 			UnlockSoundEffects: true,
 		},
 		Lastfm: LastfmOptions{
-			Key:    types.LastfmKey,
-			Secret: types.LastfmSecret,
+			Key:    "",
+			Secret: "",
+			Enable: false,
 		},
 		Keybindings: getDefaultBindingsMap(), // 初始化为默认键绑定
 	}
@@ -181,6 +184,8 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.CacheLimit = ini.Int64("main.cacheLimit", 0)
 	registry.Main.DynamicMenuRows = ini.Bool("main.dynamicMenuRows", false)
 	registry.Main.UseDefaultKeyBindings = ini.Bool("main.useDefaultKeyBindings", true)
+	registry.Main.CenterEverything = ini.Bool("main.centerEverything", false)
+	registry.Main.NeteaseCookie = ini.String("main.neteaseCookie", "")
 
 	defaultPlayer := types.BeepPlayer
 	switch runtime.GOOS {
@@ -198,7 +203,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Player.MpdAutoStart = ini.Bool("player.mpdAutoStart", true)
 	registry.Player.MaxPlayErrCount = ini.Int("player.maxPlayErrCount", types.MaxPlayErrCount)
 
-	//MPV
+	// MPV
 	registry.Player.MpvBin = ini.String("player.mpvBin", "")
 
 	// Auto play
@@ -225,8 +230,9 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.UNM.QQCookieFile = ini.String("unm.qqCookieFile", "")
 
 	// Lastfm
-	registry.Lastfm.Key = ini.String("lastfm.key", types.LastfmKey)
-	registry.Lastfm.Secret = ini.String("lastfm.secret", types.LastfmSecret)
+	registry.Lastfm.Key = ini.String("lastfm.key", "")
+	registry.Lastfm.Secret = ini.String("lastfm.secret", "")
+	registry.Lastfm.Enable = ini.Bool("lastfm.enable", false)
 
 	userKeybindingsRaw := ini.StringMap("keybindings")
 	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)
