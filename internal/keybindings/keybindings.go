@@ -102,6 +102,8 @@ const (
 	OpOpenSimiSongsOfSelectedSong
 )
 
+var opNameToOperateMap = make(map[string]OperateType)
+
 // 操作信息
 var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpRerenderUI:   {name: "rerender", desc: "重新渲染UI"},
@@ -348,10 +350,9 @@ func BuildEffectiveBindings(userKeyBindings map[string]string, useDefault bool) 
 	}
 
 	// 预处理用户配置，移除不存在操作
-	nameToOperate := buildNameToOperateMap()
 	preprocessing := make(map[OperateType][]string)
 	for opStr, keysStr := range userKeyBindings {
-		op, ok := nameToOperate[opStr]
+		op, ok := GetOperationFromName(opStr)
 		if !ok {
 			slog.Warn(fmt.Sprintf("配置文件 [keybindings] 中发现未知操作 '%s'，已忽略", opStr))
 			continue
@@ -468,13 +469,10 @@ func BuildKeyToOperateTypeMap(effectiveBindings map[OperateType][]string) map[st
 	return keyMap
 }
 
-// GetAllOperations 获取所有操作
-func GetAllOperations() map[OperateType]struct{} {
-	maps := make(map[OperateType]struct{}, len(keyBindingsRegistry))
-	for op := range keyBindingsRegistry {
-		maps[op] = struct{}{}
-	}
-	return maps
+// 使用操作名称查询 OperateType
+func GetOperationFromName(opName string) (OperateType, bool) {
+	op, ok := opNameToOperateMap[opName]
+	return op, ok
 }
 
 // GetHardCordKeys 获取被硬编码在 foxful-cli 的按键
@@ -488,17 +486,6 @@ func getHardCordKeys() map[string]struct{} {
 			if k != "" {
 				maps[k] = struct{}{}
 			}
-		}
-	}
-	return maps
-}
-
-// BuildNameToOperateMap 创建一个操作名称到 OperateType 的映射
-func buildNameToOperateMap() map[string]OperateType {
-	maps := make(map[string]OperateType, len(keyBindingsRegistry))
-	for op := range keyBindingsRegistry {
-		if op.Name() != "" {
-			maps[op.Name()] = op
 		}
 	}
 	return maps
@@ -525,4 +512,15 @@ func splitKeys(s string) []string {
 		trimmedKeys = append(trimmedKeys, trimmedKey)
 	}
 	return trimmedKeys
+}
+
+// 创建一个操作名称到 OperateType 的映射
+func init() {
+	maps := make(map[string]OperateType, len(keyBindingsRegistry))
+	for op := range keyBindingsRegistry {
+		if op.Name() != "" {
+			maps[op.Name()] = op
+		}
+	}
+	opNameToOperateMap = maps
 }
