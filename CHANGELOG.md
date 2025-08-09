@@ -1,4 +1,12 @@
 
+4.6.5
+=============
+2025-08-08
+
+* optimize: `panic` => `log warn` (56a4b669)
+* fix: 判断错误 (f7a5ec28)
+* chore: update scoop config & changelog (97205057)
+
 4.6.4
 =============
 2025-08-07

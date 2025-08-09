@@ -1,3 +1,31 @@
+- semver: 4.6.5
+  date: 2025-08-08T13:08:41+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 56a4b66995c400289ff56f027b75455afecefb17
+      note: 'optimize: `panic` => `log warn`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f7a5ec287c83dd51fbf2cca40dea6e9a8ac48dcf
+      note: 'fix: 判断错误'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 97205057ee211f46deb413b01ccbdbc297cfd73c
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.4
   date: 2025-08-07T20:26:25+08:00
   packager: go-musicfox
