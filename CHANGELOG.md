@@ -1,4 +1,11 @@
 
+4.6.6
+=============
+2025-08-09
+
+* fix: `panic` (3f8f21fc)
+* chore: update scoop config & changelog (2a06f1b7)
+
 4.6.5
 =============
 2025-08-08

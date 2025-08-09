@@ -1,3 +1,23 @@
+- semver: 4.6.6
+  date: 2025-08-09T14:40:46+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 3f8f21fc64bff6de2e13c712ca78ebbee5c2b49e
+      note: 'fix: `panic`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2a06f1b71b807465d76e7100d509d72e69c85c05
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.5
   date: 2025-08-08T13:08:41+08:00
   packager: go-musicfox
