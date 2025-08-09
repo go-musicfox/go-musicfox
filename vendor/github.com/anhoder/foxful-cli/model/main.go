@@ -358,7 +358,7 @@ func (m *Main) MenuTitleView(a *App, top *int, menuTitle *MenuItem) string {
 			menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
 		}
 	}
-	menuTitleBuilder.WriteString(util.SetFgStyle(title, termenv.ANSIBrightGreen))
+	menuTitleBuilder.WriteString(util.SetFgStyle(title, util.GetMenuTitleColor()))
 
 	if top != nil {
 		*top = m.menuTitleStartRow

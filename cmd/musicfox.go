@@ -35,6 +35,9 @@ func musicfox() {
 	filex.LoadIniConfig()
 
 	util.PrimaryColor = configs.ConfigRegistry.Main.PrimaryColor
+	util.MenuTitleColor = configs.ConfigRegistry.Main.MenuTitleColor
+	util.ProgressColorExcludeRanges = configs.ConfigRegistry.Main.ProgressColorExcludeRanges
+	util.ProgressColorSaturation = configs.ConfigRegistry.Main.ProgressColorSaturation
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
 		randomColor  = util.GetPrimaryColor()
