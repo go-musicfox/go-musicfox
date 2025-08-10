@@ -12,7 +12,6 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/skratchdot/open-golang/open"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -871,10 +870,10 @@ func DownLoadLrc(m *Netease) {
 		return
 	}
 
-	savepath := app.DataRootDir() + "/" + configs.ConfigRegistry.Main.DownloadLyricDir + "/"
 	filename := curSong.Name
+	savepath := filepath.Join(app.DownloadLyricDir(), filename+".lrc")
 
-	err = os.WriteFile(savepath+filename+".lrc", []byte(lrc), 0644)
+	err = os.WriteFile(savepath, []byte(lrc), 0644)
 	if err != nil {
 		notify.Notify(notify.NotifyContent{
 			Title:   "下载歌词失败",

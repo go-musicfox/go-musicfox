@@ -52,10 +52,25 @@ func CacheDir() string {
 
 func DownloadDir() string {
 	downloadDir := configs.ConfigRegistry.Main.DownloadDir
-	if downloadDir == "" {
-		downloadDir = filepath.Join(DataRootDir(), "download")
+	return resolvePath(downloadDir, DataRootDir(), "download")
+}
+
+func DownloadLyricDir() string {
+	downloadLyricDir := configs.ConfigRegistry.Main.DownloadLyricDir
+	return resolvePath(downloadLyricDir, DataRootDir(), "download")
+}
+
+func resolvePath(pathA, basePathB string, additional ...string) string {
+	var resolvedBase string
+	if filepath.IsAbs(pathA) {
+		resolvedBase = pathA
+	} else {
+		resolvedBase = filepath.Join(basePathB, pathA)
 	}
-	return downloadDir
+	allSegments := append([]string{resolvedBase}, additional...)
+	fullPath := filepath.Join(allSegments...)
+	absPath, _ := filepath.Abs(fullPath)
+	return absPath
 }
 
 // IDToBin convert autoincrement ID to []byte
