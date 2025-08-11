@@ -35,7 +35,8 @@ except for float arguments and return values.
 
 ## Example
 
-This example only works on macOS and Linux. For a complete example look at [libc](https://github.com/ebitengine/purego/tree/main/examples/libc) which supports Windows and FreeBSD.
+The example below only showcases purego use for macOS and Linux. The other platforms require special handling which can
+be seen in the complete example at [examples/libc](https://github.com/ebitengine/purego/tree/main/examples/libc) which supports Windows and FreeBSD.
 
 ```go
 package main
@@ -74,7 +75,7 @@ Then to run: `CGO_ENABLED=0 go run main.go`
 ## Questions
 
 If you have questions about how to incorporate purego in your project or want to discuss
-how it works join the [Discord](https://discord.com/channels/842049801528016967/1123106378731487345)!
+how it works join the [Discord](https://discord.gg/HzGZVD6BkY)!
 
 ### External Code
 

@@ -648,11 +648,11 @@ func appendSongsToCurPlaylist(m *Netease, addToNext bool) {
 	if addToNext && len(m.player.Playlist()) > 0 {
 		// 添加为下一曲
 		targetIndex := m.player.CurSongIndex() + 1
-		m.player.songManager.init(m.player.CurSongIndex(), slices.Concat(m.player.Playlist()[:targetIndex], appendSongs, m.player.Playlist()[targetIndex:]))
+		_ = m.player.playlistManager.Initialize(m.player.CurSongIndex(), slices.Concat(m.player.Playlist()[:targetIndex], appendSongs, m.player.Playlist()[targetIndex:]))
 		notifyTitle = "已添加到下一曲"
 	} else {
 		// 添加到播放列表末尾
-		m.player.songManager.init(m.player.CurSongIndex(), append(m.player.Playlist(), appendSongs...))
+		_ = m.player.playlistManager.Initialize(m.player.CurSongIndex(), append(m.player.Playlist(), appendSongs...))
 		notifyTitle = "已添加到播放列表末尾"
 	}
 
@@ -822,7 +822,9 @@ func delSongFromPlaylist(m *Netease) model.Page {
 		return nil
 	}
 
-	m.player.songManager.delSong(selectedIndex).ifSome(func(song structs.Song) { m.player.PlaySong(song, DurationNext) })
+	if removedSong, err := m.player.playlistManager.RemoveSong(selectedIndex); err == nil {
+		m.player.PlaySong(removedSong, DurationNext)
+	}
 	songs := m.player.Playlist()
 	me.menus = menux.GetViewFromSongs(songs)
 	me.songs = songs

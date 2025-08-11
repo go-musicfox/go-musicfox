@@ -374,7 +374,7 @@ func (h *EventHandler) spaceKeyHandle() {
 
 	newPlaylist := make([]structs.Song, len(songs))
 	copy(newPlaylist, songs)
-	player.songManager.init(selectedIndex, newPlaylist)
+	_ = player.playlistManager.Initialize(selectedIndex, newPlaylist)
 
 	player.playingMenuKey = menu.GetMenuKey()
 	if me, ok := menu.(Menu); ok {

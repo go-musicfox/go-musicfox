@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Ebitengine Authors
 
-//go:build darwin || freebsd || linux
+//go:build (darwin || freebsd || linux) && !android && !faketime
 
 package purego
 
@@ -33,6 +33,10 @@ func init() {
 // A second call to Dlopen with the same path will return the same handle, but the internal
 // reference count for the handle will be incremented. Therefore, all
 // Dlopen calls should be balanced with a Dlclose call.
+//
+// This function is not available on Windows.
+// Use [golang.org/x/sys/windows.LoadLibrary], [golang.org/x/sys/windows.LoadLibraryEx],
+// [golang.org/x/sys/windows.NewLazyDLL], or [golang.org/x/sys/windows.NewLazySystemDLL] for Windows instead.
 func Dlopen(path string, mode int) (uintptr, error) {
 	u := fnDlopen(path, mode)
 	if u == 0 {
@@ -45,6 +49,9 @@ func Dlopen(path string, mode int) (uintptr, error) {
 // It returns the address where that symbol is loaded into memory. If the symbol is not found,
 // in the specified library or any of the libraries that were automatically loaded by Dlopen
 // when that library was loaded, Dlsym returns zero.
+//
+// This function is not available on Windows.
+// Use [golang.org/x/sys/windows.GetProcAddress] for Windows instead.
 func Dlsym(handle uintptr, name string) (uintptr, error) {
 	u := fnDlsym(handle, name)
 	if u == 0 {
@@ -56,16 +63,14 @@ func Dlsym(handle uintptr, name string) (uintptr, error) {
 // Dlclose decrements the reference count on the dynamic library handle.
 // If the reference count drops to zero and no other loaded libraries
 // use symbols in it, then the dynamic library is unloaded.
+//
+// This function is not available on Windows.
+// Use [golang.org/x/sys/windows.FreeLibrary] for Windows instead.
 func Dlclose(handle uintptr) error {
 	if fnDlclose(handle) {
 		return Dlerror{fnDlerror()}
 	}
 	return nil
-}
-
-//go:linkname openLibrary openLibrary
-func openLibrary(name string) (uintptr, error) {
-	return Dlopen(name, RTLD_NOW|RTLD_GLOBAL)
 }
 
 func loadSymbol(handle uintptr, name string) (uintptr, error) {
@@ -78,17 +83,17 @@ func loadSymbol(handle uintptr, name string) (uintptr, error) {
 // appear to work if you link directly to the C function on darwin arm64.
 
 //go:linkname dlopen dlopen
-var dlopen uintptr
+var dlopen uint8
 var dlopenABI0 = uintptr(unsafe.Pointer(&dlopen))
 
 //go:linkname dlsym dlsym
-var dlsym uintptr
+var dlsym uint8
 var dlsymABI0 = uintptr(unsafe.Pointer(&dlsym))
 
 //go:linkname dlclose dlclose
-var dlclose uintptr
+var dlclose uint8
 var dlcloseABI0 = uintptr(unsafe.Pointer(&dlclose))
 
 //go:linkname dlerror dlerror
-var dlerror uintptr
+var dlerror uint8
 var dlerrorABI0 = uintptr(unsafe.Pointer(&dlerror))
