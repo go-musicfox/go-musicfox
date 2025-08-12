@@ -310,7 +310,7 @@ func (h *EventHandler) handle(ot OperateType) (bool, model.Page, tea.Cmd) {
 			main.SetSelectedIndex(curIndex)
 		}
 	case OperateTypeDownloadLrc:
-		DownLoadLrc(h.netease)
+		downloadPlayingSongLrc(h.netease)
 	default:
 		return false, nil, nil
 	}
