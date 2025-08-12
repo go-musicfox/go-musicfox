@@ -252,9 +252,9 @@ func (p *Player) buildLyricsCentered(main *model.Main, lyricBuilder *strings.Bui
 		paddingLeft := (windowWidth - lineLength) / 2
 		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
 		if i == highlightLine {
-			line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
+			line = util.SetFgStyle(line, configs.ConfigRegistry.Main.Theme.GetLyricCurrentLineColor())
 		} else {
-			line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
+			line = util.SetFgStyle(line, configs.ConfigRegistry.Main.Theme.GetLyricOtherLinesColor())
 		}
 		lyricBuilder.WriteString(line)
 		lyricBuilder.WriteString(strings.Repeat(" ", windowWidth-paddingLeft-lineLength))
@@ -280,10 +280,10 @@ func (p *Player) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.
 			}
 			if i == 2 {
 				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, configs.ConfigRegistry.Main.Theme.GetLyricCurrentLineColor()))
 			} else {
 				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, configs.ConfigRegistry.Main.Theme.GetLyricOtherLinesColor()))
 			}
 			lyricBuilder.WriteString("\n")
 		}
@@ -295,10 +295,10 @@ func (p *Player) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.
 			}
 			if i == 2 {
 				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, configs.ConfigRegistry.Main.Theme.GetLyricCurrentLineColor()))
 			} else {
 				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
+				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, configs.ConfigRegistry.Main.Theme.GetLyricOtherLinesColor()))
 			}
 			lyricBuilder.WriteString("\n")
 		}
