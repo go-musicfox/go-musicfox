@@ -8,7 +8,7 @@ type MainOptions struct {
 	ShowTitle              bool                     // 主界面是否显示标题
 	LoadingText            string                   // 主页面加载中提示
 	PlayerSongLevel        service.SongQualityLevel // 歌曲音质级别
-	PrimaryColor           string                   // 主题色
+	Theme                  ThemeOptions             // 主题配置
 	ShowLyric              bool                     // 显示歌词
 	LyricOffset            int                      // 偏移:ms
 	ShowLyricTrans         bool                     // 显示歌词翻译
