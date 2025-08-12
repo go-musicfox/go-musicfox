@@ -41,18 +41,22 @@ func NewPlaylistManager() PlaylistManager {
 
 // registerPlayModes 注册所有播放模式
 func (pm *playlistManager) registerPlayModes() {
-	// 注册顺序播放模式
+	// 列表循环
+	pm.playModes[types.PmListLoop] = NewListLoopPlayMode()
+
+	// 顺序播放
 	pm.playModes[types.PmOrdered] = NewOrderedPlayMode()
 
-	// 注册循环播放模式
-	pm.playModes[types.PmListLoop] = NewListLoopPlayMode()
+	// 单曲循环
 	pm.playModes[types.PmSingleLoop] = NewSingleLoopPlayMode()
 
-	// 注册随机播放模式
+	// 列表随机
 	pm.playModes[types.PmListRandom] = NewListRandomPlayMode()
+
+	// 无限随机
 	pm.playModes[types.PmInfRandom] = NewInfiniteRandomPlayMode()
 
-	// 注册心动模式
+	// 心动模式
 	pm.playModes[types.PmIntelligent] = NewIntelligentPlayMode()
 }
 

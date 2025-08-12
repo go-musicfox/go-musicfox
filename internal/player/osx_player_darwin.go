@@ -51,6 +51,8 @@ func NewOsxPlayer() *osxPlayer {
 	p.player.SetVolume(float32(p.volume) / 100.0)
 	cocoa.NSNotificationCenter_defaultCenter().
 		AddObserverSelectorNameObject(p.handler.ID, sel_handleFinish, core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
+	cocoa.NSNotificationCenter_defaultCenter().
+		AddObserverSelectorNameObject(p.handler.ID, sel_handleFailed, core.String("AVPlayerItemFailedToPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
 
 	errorx.WaitGoStart(p.listen)
 
@@ -77,6 +79,12 @@ func (p *osxPlayer) listen() {
 				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.URL)))
 				p.player.ReplaceCurrentItemWithPlayerItem(item)
 
+				// 重新注册通知监听器，因为CurrentItem已经改变
+				cocoa.NSNotificationCenter_defaultCenter().
+					AddObserverSelectorNameObject(p.handler.ID, sel_handleFinish, core.String("AVPlayerItemDidPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
+				cocoa.NSNotificationCenter_defaultCenter().
+					AddObserverSelectorNameObject(p.handler.ID, sel_handleFailed, core.String("AVPlayerItemFailedToPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
+
 				// 计时器
 				p.timer = timex.NewTimer(timex.Options{
 					Duration:       8760 * time.Hour,
@@ -101,7 +109,11 @@ func (p *osxPlayer) listen() {
 						}
 					},
 				})
-				p.Resume()
+				// 延迟启动播放，给AVPlayer时间准备
+				go func() {
+					time.Sleep(100 * time.Millisecond)
+					p.Resume()
+				}()
 			})
 		}
 	}
@@ -145,9 +157,32 @@ func (p *osxPlayer) Resume() {
 	if p.state == types.Playing {
 		return
 	}
+	
+	// 检查当前项是否有效
+	if p.player.CurrentItem().ID == 0 {
+		return
+	}
+	
 	go p.timer.Run()
 	p.player.Play()
-	p.setState(types.Playing)
+	
+	// 延迟验证播放状态，给AVPlayer时间开始播放
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		core.Autorelease(func() {
+			// 检查播放时间是否在增长，以验证是否真正在播放
+			t := p.player.CurrentTime()
+			if t.Timescale > 0 || p.state == types.Stopped {
+				// 如果有有效的时间或者已经被停止，则设置状态
+				if p.state != types.Stopped {
+					p.setState(types.Playing)
+				}
+			} else {
+				// 播放失败，保持暂停状态
+				p.setState(types.Paused)
+			}
+		})
+	}()
 }
 
 func (p *osxPlayer) Stop() {

@@ -13,6 +13,7 @@ import (
 var (
 	class_AVPlayerHandler objc.Class
 	sel_handleFinish      = objc.RegisterName("handleFinish:")
+	sel_handleFailed      = objc.RegisterName("handleFailed:")
 	_player               *osxPlayer
 )
 
@@ -28,6 +29,10 @@ func init() {
 				Cmd: sel_handleFinish,
 				Fn:  handleFinish,
 			},
+			{
+				Cmd: sel_handleFailed,
+				Fn:  handleFailed,
+			},
 		},
 	)
 	if err != nil {
@@ -37,6 +42,20 @@ func init() {
 
 func handleFinish(id objc.ID, cmd objc.SEL, event objc.ID) {
 	// 这里会出现两次通知
+	core.Autorelease(func() {
+		var item avcore.AVPlayerItem
+		item.SetObjcID(event.Send(macdriver.SEL_object))
+
+		url := item.Asset().URL()
+		curUrl := _player.player.CurrentItem().Asset().URL()
+		if url.AbsoluteString().String() == curUrl.AbsoluteString().String() {
+			_player.Stop()
+		}
+	})
+}
+
+func handleFailed(id objc.ID, cmd objc.SEL, event objc.ID) {
+	// 播放失败处理
 	core.Autorelease(func() {
 		var item avcore.AVPlayerItem
 		item.SetObjcID(event.Send(macdriver.SEL_object))

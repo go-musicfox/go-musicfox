@@ -518,6 +518,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		p.progressRamp = []string{}
 		p.playErrCount++
 		if p.playErrCount >= configs.ConfigRegistry.Player.MaxPlayErrCount {
+			slog.Error("Play song error", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song), slog.Any("err", err))
 			return
 		}
 		switch direction {

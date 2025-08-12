@@ -10,7 +10,6 @@ const (
 	PmSingleLoop
 	PmListRandom
 	PmInfRandom
-	NormalPmLength
 	PmIntelligent
 )
 
