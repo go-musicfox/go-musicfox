@@ -861,3 +861,26 @@ func downloadPlayingSongLrc(m *Netease) {
 
 	go storagex.DownLoadLrc(m.player.CurSong())
 }
+
+func action(m *Netease, curPlaying bool) {
+	var (
+		main     = m.MustMain()
+		menu     = main.CurMenu()
+		newTitle *model.MenuItem
+	)
+
+	switch menu.(type) {
+	case SongsMenu:
+	case PlaylistsMenu:
+	default:
+		newTitle = &model.MenuItem{Title: "操作当前播放"}
+	}
+
+	menuKey := m.MustMain().CurMenu().GetMenuKey()
+	if menuKey != actionMenuKey {
+		newMenu := NewActionMenu(newBaseMenu(m), menuKey, curPlaying)
+		main.EnterMenu(
+			newMenu,
+			newTitle)
+	}
+}
