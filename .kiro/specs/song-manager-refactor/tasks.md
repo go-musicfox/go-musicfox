@@ -150,21 +150,57 @@
   - 更新导入语句和依赖关系
   - 确保编译通过且所有测试成功
 
-### 8. 集成测试和验证 ✅
+### 8. 实现心动模式PlayMode
 
-- [x] 8.1 编写端到端集成测试
+- [x] 8.1 创建IntelligentPlayMode实现
+  - 创建`intelligent.go`文件
+  - 实现IntelligentPlayMode结构体，包含智能推荐逻辑
+  - 实现PlayMode接口的所有方法：NextSong, PreviousSong, Initialize, GetMode, GetModeName, OnPlaylistChanged
+  - 集成智能推荐算法，基于当前歌曲获取相似歌曲列表
+  - 参考需求：将心动模式从Player层抽离到Playlist包中（player.go#L70-71的TODO）
+
+- [x] 8.2 重构Player中的心动模式逻辑
+  - 移除Player结构体中的`intelligent`字段
+  - 移除Player.Intelligence()方法中的特殊处理逻辑
+  - 修改Player.SetMode()方法，将PmIntelligent作为标准PlayMode处理
+  - 确保心动模式完全通过PlaylistManager管理
+  - 参考需求4.1：使用策略模式消除复杂的模式切换
+
+- [x] 8.3 更新类型定义和常量
+  - 在playlist包中定义IntelligentMode常量
+  - 更新PlaylistManager的模式注册，包含IntelligentPlayMode
+  - 确保types.PmIntelligent与新的IntelligentPlayMode正确映射
+  - 参考需求1.2：接口应当有清晰、描述性的名称
+
+- [x] 8.4 为IntelligentPlayMode编写单元测试
+  - 创建`intelligent_test.go`文件
+  - 测试智能推荐逻辑的正确性
+  - 测试NextSong和PreviousSong的行为
+  - 测试OnPlaylistChanged方法处理推荐列表更新
+  - 参考需求2.1和需求2.3：覆盖所有公共方法和边界条件
+
+- [x] 8.5 集成测试心动模式重构
+  - 验证心动模式在UI层的正确工作
+  - 测试从其他模式切换到心动模式的流程
+  - 确保智能推荐功能与原有行为一致
+  - 验证重构后不影响现有功能
+  - 参考需求6.3：处理模式切换的边界情况
+
+### 9. 集成测试和验证 ✅
+
+- [x] 9.1 编写端到端集成测试
   - 创建集成测试验证完整的播放流程
   - 测试UI层与播放列表管理器的交互
   - 验证所有播放模式在实际使用中的正确性
   - 参考需求2.2：验证所有播放模式的正确行为
 
-- [x] 8.2 性能测试和优化
+- [x] 9.2 性能测试和优化
   - 编写基准测试验证性能
   - 测试大播放列表的处理性能
   - 优化内存使用和算法效率
   - 确保重构后性能不降低
 
-- [x] 8.3 最终验证和文档更新
+- [x] 9.3 最终验证和文档更新
   - 运行完整的测试套件确保所有功能正常
   - 验证代码覆盖率达到要求（当前89.5%，接近90%要求）
   - 更新相关文档和注释

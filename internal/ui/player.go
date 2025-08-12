@@ -67,11 +67,9 @@ type Player struct {
 
 	playlistUpdateAt time.Time                // 播放列表更新时间
 	playlistManager  playlist.PlaylistManager // 播放列表管理器
-	// TODO: 将心动模式单独抽象出来，减少耦合
-	intelligent    bool // 是否处于心动模式
-	lastMode       types.Mode
-	playingMenuKey string // 正在播放的菜单Key
-	playingMenu    Menu
+	lastMode         types.Mode
+	playingMenuKey   string // 正在播放的菜单Key
+	playingMenu      Menu
 
 	lrcFile           *lyric.LRCFile
 	transLrcFile      *lyric.TranslateLRCFile
@@ -307,7 +305,6 @@ func (p *Player) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.
 
 // songView 歌曲信息UI
 func (p *Player) songView() string {
-
 	// Every part of the song view is expressed as a segment: unformatted text followed by a color specification
 	// This makes computing the total length of the song view easier
 	type Segment struct {
@@ -337,12 +334,7 @@ func (p *Player) songView() string {
 			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), termenv.ANSIBrightBlack)
 		}
 		{
-			var msg string
-			if p.intelligent {
-				msg = "心动"
-			} else {
-				msg = p.playlistManager.GetPlayModeName()
-			}
+			msg := p.playlistManager.GetPlayModeName()
 			addSegment(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta)
 		}
 		addSegment(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue)
@@ -595,28 +587,35 @@ func (p *Player) CurSong() structs.Song {
 func (p *Player) NextSong(manual bool) {
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
-	if playlistLen == 0 || index >= playlistLen-1 {
+
+	// 尝试获取下一首歌曲
+	song, err := p.playlistManager.NextSong(manual)
+	if err != nil {
+		// 如果是心动模式且到达列表末尾，获取更多推荐
 		if p.Mode() == types.PmIntelligent {
 			p.Intelligence(true)
+			return
 		}
 
-		main := p.netease.MustMain()
-		if p.InPlayingMenu() {
-			if main.IsDualColumn() && index%2 == 0 {
-				p.netease.MustMain().MoveRight()
-			} else {
-				p.netease.MustMain().MoveDown()
-			}
-		} else if p.playingMenu != nil {
-			if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
-				bottomHook(main)
+		// 其他模式的处理逻辑
+		if playlistLen == 0 || index >= playlistLen-1 {
+			main := p.netease.MustMain()
+			if p.InPlayingMenu() {
+				if main.IsDualColumn() && index%2 == 0 {
+					p.netease.MustMain().MoveRight()
+				} else {
+					p.netease.MustMain().MoveDown()
+				}
+			} else if p.playingMenu != nil {
+				if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
+					bottomHook(main)
+				}
 			}
 		}
+		return
 	}
 
-	if song, err := p.playlistManager.NextSong(manual); err == nil {
-		p.PlaySong(song, DurationNext)
-	}
+	p.PlaySong(song, DurationNext)
 }
 
 // PreviousSong 上一曲
@@ -656,18 +655,9 @@ func (p *Player) SetMode(playMode types.Mode) {
 	if p.lastMode != p.netease.player.Mode() {
 		p.lastMode = p.netease.player.Mode()
 	}
-	
-	// 设置心动模式标志
-	p.intelligent = (playMode == types.PmIntelligent)
-	
-	// 如果是心动模式，实际使用顺序播放
-	actualMode := playMode
-	if playMode == types.PmIntelligent {
-		actualMode = types.PmOrdered
-	}
-	
+
 	// 直接使用PlaylistManager设置播放模式
-	_ = p.playlistManager.SetPlayMode(actualMode)
+	_ = p.playlistManager.SetPlayMode(playMode)
 
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayMode{}, playMode)
@@ -676,11 +666,28 @@ func (p *Player) SetMode(playMode types.Mode) {
 // SwitchMode 顺序切换播放模式
 func (p *Player) SwitchMode() {
 	mode := p.Mode()
-	mode = (mode + 1) % types.NormalPmLength
-	p.SetMode(mode)
+	supportedModes := p.playlistManager.SupportedPlayModes()
+	index := 0
+	for i, m := range supportedModes {
+		if mode != m {
+			continue
+		}
+		index = i + 1
+		break
+	}
 
-	table := storage.NewTable()
-	_ = table.SetByKVModel(storage.PlayMode{}, p.Mode())
+	for {
+		if index >= len(supportedModes) {
+			index = 0
+		}
+		if supportedModes[index] == types.PmIntelligent {
+			index++
+			continue
+		}
+		break
+	}
+
+	p.SetMode(supportedModes[index])
 }
 
 // Close 关闭
@@ -701,7 +708,7 @@ func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, in
 	curIndex := len(p.lyrics) / 2
 
 	// before
-	for i := 0; i < curIndex; i++ {
+	for i := range curIndex {
 		if f, tf := p.lrcTimer.GetLRCFragment(index - curIndex + i); f != nil {
 			p.lyrics[i] = f.Content
 			if tf != nil && tf.Content != "" {
@@ -796,6 +803,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		return page
 	}
 
+	// 获取智能推荐歌曲
 	intelligenceService := service.PlaymodeIntelligenceListService{
 		SongId:       strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
 		PlaylistId:   strconv.FormatInt(playlist.playlistId, 10),

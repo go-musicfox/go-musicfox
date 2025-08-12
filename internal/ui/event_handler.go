@@ -265,9 +265,6 @@ func (h *EventHandler) playOrToggleHandle() {
 	}
 
 	player.playlistUpdateAt = time.Now()
-	if player.intelligent {
-		player.SetMode(player.lastMode)
-	}
 	player.StartPlay()
 }
 
