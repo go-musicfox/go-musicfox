@@ -34,11 +34,12 @@ func musicfox() {
 	// 加载config
 	filex.LoadIniConfig()
 
-	util.PrimaryColor = configs.ConfigRegistry.Main.PrimaryColor
-	util.MenuTitleColor = configs.ConfigRegistry.Main.MenuTitleColor
-	util.ProgressColorExcludeRanges = configs.ConfigRegistry.Main.ProgressColorExcludeRanges
-	util.ProgressColorSaturation = configs.ConfigRegistry.Main.ProgressColorSaturation
-	util.ProgressColorBrightness = configs.ConfigRegistry.Main.ProgressColorBrightness
+	// 设置主题配置到util包
+	util.PrimaryColor = configs.ConfigRegistry.Main.Theme.PrimaryColor
+	util.MenuTitleColor = configs.ConfigRegistry.Main.Theme.MenuTitleColor
+	util.ProgressColorExcludeRanges = configs.ConfigRegistry.Main.Theme.ProgressColor.ExcludeRanges
+	util.ProgressColorSaturation = configs.ConfigRegistry.Main.Theme.ProgressColor.Saturation
+	util.ProgressColorBrightness = configs.ConfigRegistry.Main.Theme.ProgressColor.Brightness
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
 		randomColor  = util.GetPrimaryColor()

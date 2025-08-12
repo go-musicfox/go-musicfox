@@ -33,7 +33,7 @@ func (r *Registry) FillToModelOpts(opts *model.Options) {
 	opts.AppName = types.AppName
 	opts.WhetherDisplayTitle = r.Main.ShowTitle
 	opts.LoadingText = r.Main.LoadingText
-	opts.PrimaryColor = r.Main.PrimaryColor
+	opts.PrimaryColor = r.Main.Theme.PrimaryColor
 	opts.DualColumn = r.Main.DualColumn
 
 	if r.Main.EnableMouseEvent {
@@ -70,14 +70,22 @@ func NewRegistryWithDefault() *Registry {
 			},
 		},
 		Main: MainOptions{
-			ShowTitle:        true,
-			LoadingText:      types.MainLoadingText,
-			PlayerSongLevel:  service.Higher,
-			PrimaryColor:     types.AppPrimaryColor,
-			MenuTitleColor:   "",  // 空字符串表示使用PrimaryColor
-			ProgressColorExcludeRanges: "45-210",
-			ProgressColorSaturation: "50-80,40-80",
-			ProgressColorBrightness: "70-90,60-80",
+			ShowTitle:       true,
+			LoadingText:     types.MainLoadingText,
+			PlayerSongLevel: service.Higher,
+			Theme: ThemeOptions{
+				PrimaryColor:   types.AppPrimaryColor,
+				MenuTitleColor: "", // 空字符串表示使用PrimaryColor
+				ProgressColor: ProgressColorOptions{
+					ExcludeRanges: "45-210",
+					Saturation:    "50-80,40-80",
+					Brightness:    "70-90,60-80",
+				},
+				LyricColor: LyricColorOptions{
+					CurrentLine: "#00ffff", // 亮青色
+					OtherLines:  "#808080", // 灰色
+				},
+			},
 			ShowLyric:        true,
 			ShowLyricTrans:   true,
 			ShowNotify:       true,
@@ -157,32 +165,8 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	if songLevel.IsValid() {
 		registry.Main.PlayerSongLevel = songLevel
 	}
-	primaryColor := ini.String("main.primaryColor", types.AppPrimaryColor)
-	if primaryColor != "" {
-		registry.Main.PrimaryColor = primaryColor
-	} else {
-		registry.Main.PrimaryColor = types.AppPrimaryColor
-	}
-	
-	// 菜单标题颜色，默认使用主题色
-	menuTitleColor := ini.String("main.menuTitleColor", "")
-	if menuTitleColor != "" {
-		registry.Main.MenuTitleColor = menuTitleColor
-	} else {
-		registry.Main.MenuTitleColor = registry.Main.PrimaryColor
-	}
-	
-	// 进度条颜色排除区间
-	progressColorExcludeRanges := ini.String("main.progressColorExcludeRanges", "45-210")
-	registry.Main.ProgressColorExcludeRanges = progressColorExcludeRanges
-	
-	// 进度条颜色饱和度范围
-	progressColorSaturation := ini.String("main.progressColorSaturation", "50-80,40-80")
-	registry.Main.ProgressColorSaturation = progressColorSaturation
-	
-	// 进度条颜色亮度范围
-	progressColorBrightness := ini.String("main.progressColorBrightness", "70-90,60-80")
-	registry.Main.ProgressColorBrightness = progressColorBrightness
+	// 加载主题配置
+	loadThemeConfig(filepath, registry)
 	registry.Main.ShowLyric = ini.Bool("main.showLyric", true)
 	registry.Main.LyricOffset = ini.Int("main.lyricOffset", 0)
 	registry.Main.ShowLyricTrans = ini.Bool("main.showLyricTrans", true)
@@ -256,4 +240,31 @@ func firstCharOrDefault(s, defaultStr string) rune {
 		return []rune(s)[0]
 	}
 	return []rune(defaultStr)[0]
+}
+
+// loadThemeConfig 加载主题配置
+func loadThemeConfig(configFilePath string, registry *Registry) {
+	// 尝试从theme.ini文件加载主题配置
+	themeFilePath := strings.Replace(configFilePath, "go-musicfox.ini", "theme.ini", 1)
+	
+	// 加载theme.ini文件
+	if err := ini.LoadExists(themeFilePath); err == nil {
+		// 基础颜色配置
+		registry.Main.Theme.PrimaryColor = ini.String("theme.primaryColor", types.AppPrimaryColor)
+		registry.Main.Theme.MenuTitleColor = ini.String("theme.menuTitleColor", "")
+		
+		// 进度条颜色配置
+		registry.Main.Theme.ProgressColor.ExcludeRanges = ini.String("theme.progressColor.excludeRanges", "45-210")
+		registry.Main.Theme.ProgressColor.Saturation = ini.String("theme.progressColor.saturation", "50-80,40-80")
+		registry.Main.Theme.ProgressColor.Brightness = ini.String("theme.progressColor.brightness", "70-90,60-80")
+		
+		// 歌词颜色配置
+		registry.Main.Theme.LyricColor.CurrentLine = ini.String("theme.lyricColor.currentLine", "#00ffff")
+		registry.Main.Theme.LyricColor.OtherLines = ini.String("theme.lyricColor.otherLines", "#808080")
+	}
+	
+	// 重新加载原配置文件以支持其他配置项
+	if err := ini.LoadExists(configFilePath); err != nil {
+		return
+	}
 }
