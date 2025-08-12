@@ -413,63 +413,106 @@ $ musicfox
 
 #### 应用内快捷键
 
-|          按键           |       作用       |              备注               |
-|:---------------------:|:--------------:|:-----------------------------:|
-|   `h`/`H`/`← (左方向)`   |       左        |                               |
-|   `l`/`L`/`→ (右方向)`   |       右        |                               |
-|   `k`/`K`/`↑ (上方向)`   |       上        |                               |
-|   `j`/`J`/`↓ (下方向)`   |       下        |                               |
-|          `g`          |     上移到顶部      |                               |
-|          `G`          |     下移到底部      |                               |
-|        `q`/`Q`        |       退出       |                               |
-|     `Space (空格)`      |     暂停/播放      |                               |
-|          `[`          |      上一曲       |                               |
-|          `]`          |      下一曲       |                               |
-|        `-/滚轮下`        |      减小音量      |                               |
-|        `=/滚轮上`        |      加大音量      |                               |
-| `n`/`N`/`Enter (回车)`  |    进入选中的菜单     |                               |
-| `b`/`B`/`Escape (退出)` |     返回上级菜单     |                               |
-|        `w`/`W`        |    退出并退出登录     |                               |
-|          `p`          |     切换播放方式     |                               |
-|          `P`          | 心动模式（仅在歌单中时有效） |                               |
-|        `r`/`R`        |    重新渲染 UI     | 如果 UI 界面因为某种原因出现错乱，可以使用这个重新渲染 |
-|        `c`/`C`        |     当前播放列表     |                               |
-|        `v`/`V`        | 快进 5 s / 10 s  |                               |
-|        `x`/`X`        |  快退 1 s / 5 s  |                               |
-|          `,`          |    喜欢当前播放歌曲    |                               |
-|          `<`          |    喜欢当前选中歌曲    |                               |
-|          `.`          |  当前播放歌曲移除出喜欢   |                               |
-|          `>`          |  当前选中歌曲移除出喜欢   |                               |
-|        `` ` ``        |   当前播放歌曲加入歌单   |                               |
-|          `~`          |   当前播放歌曲移出歌单   |                               |
-|         `Tab`         |   当前选中歌曲加入歌单   |                               |
-|      `Shift+Tab`      |   当前选中歌曲移出歌单   |                               |
-|          `>`          |  当前选中歌曲移除出喜欢   |                               |
-|          `>`          |  当前选中歌曲移除出喜欢   |                               |
-|          `t`          |  标记当前播放歌曲为不喜欢  |                               |
-|          `T`          |  标记当前选中歌曲为不喜欢  |                               |
-|          `d`          |    下载当前播放歌曲    |                               |
-|          `D`          |    下载当前选中歌曲    |                               |
-|        `ctrl`+`l`     |    下载当前播放歌曲歌词    |                               |
-|          `/`          |     搜索当前列表     |                               |
-|          `?`          |      帮助信息      |                               |
-|          `f`          |   与播放中歌曲相似的歌曲   |                               |
-|          `F`          |   与选中歌曲相似的歌曲    |                               |
-|          `a`          |   播放中歌曲的所属专辑   |                               |
-|          `A`          |   选中歌曲的所属专辑    |                               |
-|          `s`          |   播放中歌曲的所属歌手   |                               |
-|          `S`          |   选中歌曲的所属歌手    |                               |
-|          `o`          |   网页打开播放中歌曲    |                               |
-|          `O`          | 网页打开选中歌曲/专辑... |                               |
-|          `e`          |    添加为下一曲播放    |                               |
-|          `E`          |   添加到播放列表末尾    |                               |
-|          `\`          |  从播放列表删除选中歌曲   |         仅在当前播放列表界面有效          |
-|        `;`/`:`        |     收藏选中歌单     |                               |
-|        `'`/`"`        |    取消收藏选中歌单    |                               |
-|        `u`/`U`        |     清除音乐缓存     |                               |
-|        `ctrl`+`u`        |     上一页     |                               |
-|        `ctrl`+`d`        |     下一页     |                               |
+##### 不可自定义操作 (内置)
 
+这些是程序核心框架提供的基础操作，其快捷键通常**无法**通过配置文件修改。
+
+| 配置标识符        | 操作说明        | 默认按键                                      |
+| :---------------- | :-------------- | :-------------------------------------------- |
+| `rerender`        | 重新渲染UI      | `r`, `R`                                      |
+| `moveLeft`        | 左              | `h`, `H`, `Left`                              |
+| `moveRight`       | 右              | `l`, `L`, `Right`                             |
+| `moveUp`          | 上              | `k`, `K`, `Up`                                |
+| `moveDown`        | 下              | `j`, `J`, `Down`                              |
+| `moveToTop`       | 上移到顶部      | `g`                                           |
+| `moveToBottom`    | 下移到底部      | `G`                                           |
+| `enter`           | 进入            | `n`, `N`, `Enter`                             |
+| `goBack`          | 返回上一级      | `b`, `B`, `Esc`                               |
+| `search`          | 搜索当前列表    | `/`, `／`, `、`                             |
+| `quit`            | 退出            | `q`, `Q`                                      |
+
+##### 可自定义操作
+
+你可以在配置文件的 `[keybindings]` 部分修改这些操作的快捷键。
+
+| 配置标识符                          | 操作说明                      | 默认按键                                        |
+| :---------------------------------- | :---------------------------- | :---------------------------------------------- |
+| `help`                              | 帮助信息                      | `?`, `？`                                     |
+| `pageUp`                            | 上一页                        | `Ctrl+u`, `PgUp`                                |
+| `pageDown`                          | 下一页                        | `Ctrl+d`, `PgDown`                              |
+| `playortoggle`                      | 播放/暂停                     | `Space`, ` `, `　`                           |
+| `toggle`                            | 切换播放状态                  | *(无)*                                          |
+| `previous`                          | 上一首                        | `[`, `【`                                     |
+| `next`                              | 下一首                        | `]`, `】`                                     |
+| `backwardOneSec`                    | 快退1秒                       | `x`                                             |
+| `backwardFiveSec`                   | 快退5秒                       | `X`                                             |
+| `forwardFiveSec`                    | 快进5秒                       | `v`                                             |
+| `forwardTenSec`                     | 快进10秒                      | `V`                                             |
+| `downVolume`                        | 减小音量                      | `-`, `−`, `ー`                                |
+| `upVolume`                          | 加大音量                      | `=`, `＝`                                     |
+| `switchPlayMode`                    | 切换播放模式                  | `p`                                             |
+| `intelligence`                      | 心动模式                      | `P`                                             |
+| `clearSongCache`                    | 清除音乐缓存                  | `u`, `U`                                        |
+| `logout`                            | 注销并退出                    | `w`, `W`                                        |
+| `curPlaylist`                       | 显示当前播放列表              | `c`, `C`                                        |
+| `appendSongsToNext`                 | 添加为下一曲播放              | `e`                                             |
+| `appendSongsAfterCurPlaylist`       | 添加到播放列表末尾            | `E`                                             |
+| `delSongFromCurPlaylist`            | 从播放列表删除选中歌曲        | `\`, `、`                                     |
+| `likePlayingSong`                   | 喜欢播放中歌曲                | `,`, `，`                                     |
+| `dislikePlayingSong`                | 取消喜欢播放中歌曲            | `.`, `。`                                     |
+| `trashPlayingSong`                  | 标记播放中歌曲为不喜欢        | `t`                                             |
+| `addPlayingSongToUserPlaylist`      | 将播放中歌曲加入歌单          | `` ` ``                                         |
+| `removePlayingSongFromUserPlaylist` | 将播放歌曲从歌单中删除        | `~`, `～`                                     |
+| `downloadPlayingSong`               | 下载播放中歌曲                | `d`                                             |
+| `downloadPlayingSongLrc`            | 下载当前播放音乐歌词          | `Ctrl+l`                                        |
+| `openAlbumOfPlayingSong`            | 播放中歌曲的所属专辑          | `a`                                             |
+| `openArtistOfPlayingSong`           | 播放中歌曲的所属歌手          | `s`                                             |
+| `openPlayingSongInWeb`              | 网页打开播放中歌曲            | `o`                                             |
+| `simiSongsOfPlayingSong`            | 与播放中歌曲相似的歌曲        | `f`                                             |
+| `likeSelectedSong`                  | 喜欢选中歌曲                  | `<`, `〈`, `＜`, `《`, `«`                 |
+| `dislikeSelectedSong`               | 取消喜欢选中歌曲              | `>`, `〉`, `＞`, `》`, `»`                 |
+| `trashSelectedSong`                 | 标记选中歌曲为不喜欢          | `T`                                             |
+| `addSelectedSongToUserPlaylist`     | 将选中歌曲加入歌单            | `Tab`                                           |
+| `removeSelectedSongFromUserPlaylist`  | 将选中歌曲从歌单中删除        | `Shift+Tab`                                     |
+| `downloadSelectedSong`              | 下载选中歌曲                  | `D`                                             |
+| `openAlbumOfSelectedSong`           | 选中歌曲的所属专辑            | `A`                                             |
+| `openArtistOfSelectedSong`          | 选中歌曲的所属歌手            | `S`                                             |
+| `openSelectedItemInWeb`             | 网页打开选中歌曲/专辑...      | `O`                                             |
+| `collectSelectedPlaylist`           | 收藏选中歌单                  | `;`, `:`, `：`, `；`                        |
+| `discollectSelectedPlaylist`        | 取消收藏选中歌单              | `'`, `"`                                        |
+| `simiSongsOfSelectedSong`           | 与选中歌曲相似的歌曲          | `F`                                             |
+
+注意：
+- 多个按键请以英文逗号`,`分隔，每个键无需引号（不支持）
+- 非字符快捷键大小写不敏感，如 `shift+tab` 等同 `Shift+Tab`，但 `a` 与 `A` 不同
+- 多次绑定同一个键的行为是未定义的，以程序最后读取的为准
+- [不可自定义操作](#不可自定义操作-内置) 不可自定义且其使用的键也不可用于自定义
+
+
+```ini
+[main]
+useDefaultKeyBindings=false
+```
+
+示例配置：
+```ini
+[main]
+# 取消所有默认键绑定（须自定义键以确保正常使用）
+useDefaultKeyBindings=false
+
+[keybindings]
+# 将“下一首”改为 Alt+N
+next = alt+n
+
+# 为“帮助”额外添加 Ctrl+H
+help = ?,ctrl+h
+
+# 取消“心动模式”的默认 P 键
+intelligence =
+
+# 将“显示当前播放列表”改为 Ctrl+P
+curPlaylist = ctrl+p
+```
 
 #### 全局快捷键
 
