@@ -100,20 +100,6 @@ func (n *Netease) InitHook(_ *model.App) {
 		// 刷新界面用户名
 		n.MustMain().RefreshMenuTitle()
 
-		if n.user == nil && config.Main.NeteaseCookie != "" {
-			// 使用cookie登录
-			cookieJar.SetCookies(
-				errorx.Must1(url.Parse("https://music.163.com")),
-				errorx.Must1(http.ParseCookie(config.Main.NeteaseCookie)),
-			)
-			if err := n.LoginCallback(); err != nil {
-				slog.Warn("使用cookie登录失败", slogx.Error(err))
-			}
-		}
-
-		// 刷新界面用户名
-		n.MustMain().RefreshMenuTitle()
-
 		// 获取播放模式
 		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
 			var playMode types.Mode

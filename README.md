@@ -480,7 +480,7 @@ $ musicfox
 | `openSelectedItemInWeb`             | 网页打开选中歌曲/专辑...      | `O`                                             |
 | `collectSelectedPlaylist`           | 收藏选中歌单                  | `;`, `:`, `：`, `；`                        |
 | `discollectSelectedPlaylist`        | 取消收藏选中歌单              | `'`, `"`                                        |
-| `simiSongsOfSelectedSong            | 与选中歌曲相似的歌曲          | `f`                                             |
+| `simiSongsOfSelectedSong`           | 与选中歌曲相似的歌曲          | `F`                                             |
 
 注意：
 - 多个按键请以英文逗号`,`分隔，每个键无需引号（不支持）
