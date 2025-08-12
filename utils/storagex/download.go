@@ -9,12 +9,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
 	"time"
 
 	"github.com/bogem/id3v2/v2"
+	"github.com/buger/jsonparser"
 	songtag "github.com/frolovo22/tag"
 	"github.com/go-flac/flacpicture"
 	"github.com/go-musicfox/netease-music/service"
@@ -156,6 +158,40 @@ func DownloadMusic(song structs.Song) {
 			GroupId: types.GroupID,
 		})
 		errHandler(err)
+	}
+}
+
+func DownLoadLrc(song structs.Song) {
+	lrcService := service.LyricService{
+		ID: strconv.FormatInt(song.Id, 10),
+	}
+	code, response := lrcService.Lyric()
+	if code != 200 {
+		return
+	}
+	lrc, err := jsonparser.GetString(response, "lrc", "lyric")
+	if err != nil {
+		return
+	}
+
+	filename := song.Name
+	savepath := filepath.Join(app.DownloadLyricDir(), filename+".lrc")
+
+	err = os.WriteFile(savepath, []byte(lrc), 0644)
+	if err != nil {
+		notify.Notify(notify.NotifyContent{
+			Title:   "下载歌词失败",
+			Text:    err.Error(),
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
+		})
+	} else {
+		notify.Notify(notify.NotifyContent{
+			Title:   "下载歌词成功",
+			Text:    song.Name + ".lrc 已保存到指定目录",
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
+		})
 	}
 }
 

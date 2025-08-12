@@ -12,7 +12,6 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/skratchdot/open-golang/open"
 
-	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -851,7 +850,7 @@ func clearSongCache(m *Netease) {
 	m.MustMain().EnterMenu(NewClearSongCacheMenu(newBaseMenu(m), m), &model.MenuItem{Title: "清除缓存", Subtitle: "确定清除缓存"})
 }
 
-func DownLoadLrc(m *Netease) {
+func downloadPlayingSongLrc(m *Netease) {
 	loading := model.NewLoading(m.MustMain())
 	loading.Start()
 	defer loading.Complete()
@@ -859,37 +858,6 @@ func DownLoadLrc(m *Netease) {
 	if m.player.CurSongIndex() >= len(m.player.Playlist()) {
 		return
 	}
-	curSong := m.player.CurSong()
-	//utils.DownloadLrc(curSong)
-	lrcService := service.LyricService{
-		ID: strconv.FormatInt(curSong.Id, 10),
-	}
-	code, response := lrcService.Lyric()
-	if code != 200 {
-		return
-	}
-	lrc, err := jsonparser.GetString(response, "lrc", "lyric")
-	if err != nil {
-		return
-	}
 
-	savepath := app.DataRootDir() + "/" + configs.ConfigRegistry.Main.DownloadLyricDir + "/"
-	filename := curSong.Name
-
-	err = os.WriteFile(savepath+filename+".lrc", []byte(lrc), 0644)
-	if err != nil {
-		notify.Notify(notify.NotifyContent{
-			Title:   "下载歌词失败",
-			Text:    err.Error(),
-			Url:     types.AppGithubUrl,
-			GroupId: types.GroupID,
-		})
-	} else {
-		notify.Notify(notify.NotifyContent{
-			Title:   "下载歌词成功",
-			Text:    curSong.Name + ".lrc 已保存到指定目录",
-			Url:     types.AppGithubUrl,
-			GroupId: types.GroupID,
-		})
-	}
+	go storagex.DownLoadLrc(m.player.CurSong())
 }

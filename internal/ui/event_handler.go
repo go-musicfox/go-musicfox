@@ -194,7 +194,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			main.SetSelectedIndex(curIndex)
 		}
 	case keybindings.OpDownloadPlayingSongLrc:
-		DownLoadLrc(h.netease)
+		downloadPlayingSongLrc(h.netease)
 	default:
 		return false, nil, nil
 	}
