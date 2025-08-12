@@ -20,6 +20,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
+	"github.com/go-musicfox/go-musicfox/internal/playlist"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
@@ -64,8 +65,8 @@ type Player struct {
 	netease *Netease
 	cancel  context.CancelFunc
 
-	playlistUpdateAt time.Time   // 播放列表更新时间
-	songManager      songManager // 歌曲管理器
+	playlistUpdateAt time.Time                // 播放列表更新时间
+	playlistManager  playlist.PlaylistManager // 播放列表管理器
 	// TODO: 将心动模式单独抽象出来，减少耦合
 	intelligent    bool // 是否处于心动模式
 	lastMode       types.Mode
@@ -97,7 +98,7 @@ type Player struct {
 func NewPlayer(n *Netease) *Player {
 	p := &Player{
 		netease:           n,
-		songManager:       &listLoopSongManager{},
+		playlistManager:   playlist.NewPlaylistManager(),
 		ctrl:              make(chan CtrlSignal),
 		lyricNowScrollBar: app.NewXScrollBar(),
 	}
@@ -340,7 +341,7 @@ func (p *Player) songView() string {
 			if p.intelligent {
 				msg = "心动"
 			} else {
-				msg = p.songManager.modeName()
+				msg = p.playlistManager.GetPlayModeName()
 			}
 			addSegment(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta)
 		}
@@ -567,26 +568,27 @@ func (p *Player) StartPlay() {
 }
 
 func (p *Player) Mode() types.Mode {
-	return p.songManager.mode()
+	return p.playlistManager.GetPlayMode()
 }
 
 func (p *Player) Playlist() []structs.Song {
-	return p.songManager.getPlaylist()
+	return p.playlistManager.GetPlaylist()
 }
 
 func (p *Player) InitSongManager(index int, playlist []structs.Song) {
-	p.songManager.init(index, playlist)
+	_ = p.playlistManager.Initialize(index, playlist)
 }
 
 func (p *Player) CurSongIndex() int {
-	return p.songManager.getCurSongIndex()
+	return p.playlistManager.GetCurrentIndex()
 }
 
 func (p *Player) CurSong() structs.Song {
-	if len(p.Playlist()) <= p.CurSongIndex() {
+	index := p.CurSongIndex()
+	if index < 0 || len(p.Playlist()) <= index {
 		return structs.Song{}
 	}
-	return p.Playlist()[p.CurSongIndex()]
+	return p.Playlist()[index]
 }
 
 // NextSong 下一曲
@@ -612,9 +614,9 @@ func (p *Player) NextSong(manual bool) {
 		}
 	}
 
-	p.songManager.nextSong(manual).ifSome(func(song structs.Song) {
+	if song, err := p.playlistManager.NextSong(manual); err == nil {
 		p.PlaySong(song, DurationNext)
-	})
+	}
 }
 
 // PreviousSong 上一曲
@@ -636,9 +638,9 @@ func (p *Player) PreviousSong(manual bool) {
 		}
 	}
 
-	p.songManager.prevSong(manual).ifSome(func(song structs.Song) {
+	if song, err := p.playlistManager.PreviousSong(manual); err == nil {
 		p.PlaySong(song, DurationNext)
-	})
+	}
 }
 
 func (p *Player) Seek(duration time.Duration) {
@@ -654,34 +656,18 @@ func (p *Player) SetMode(playMode types.Mode) {
 	if p.lastMode != p.netease.player.Mode() {
 		p.lastMode = p.netease.player.Mode()
 	}
-	switch playMode {
-	case types.PmIntelligent:
-		p.intelligent = true
-		ordered := p.songManager.ordered()
-		p.songManager = &ordered
-	case types.PmOrdered:
-		p.intelligent = false
-		ordered := p.songManager.ordered()
-		p.songManager = &ordered
-	case types.PmSingleLoop:
-		p.intelligent = false
-		single := p.songManager.singleLoop()
-		p.songManager = &single
-	case types.PmListRandom:
-		p.intelligent = false
-		random := p.songManager.listRandom()
-		p.songManager = &random
-	case types.PmInfRandom:
-		p.intelligent = false
-		random := p.songManager.infRandom()
-		p.songManager = &random
-	case types.PmListLoop:
-		fallthrough
-	default:
-		p.intelligent = false
-		list := p.songManager.listLoop()
-		p.songManager = &list
+	
+	// 设置心动模式标志
+	p.intelligent = (playMode == types.PmIntelligent)
+	
+	// 如果是心动模式，实际使用顺序播放
+	actualMode := playMode
+	if playMode == types.PmIntelligent {
+		actualMode = types.PmOrdered
 	}
+	
+	// 直接使用PlaylistManager设置播放模式
+	_ = p.playlistManager.SetPlayMode(actualMode)
 
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.PlayMode{}, playMode)
@@ -830,13 +816,17 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 
 	var song structs.Song
 	if appendMode {
-		p.songManager.init(p.CurSongIndex(), append(p.Playlist(), songs...))
+		_ = p.playlistManager.Initialize(p.CurSongIndex(), append(p.Playlist(), songs...))
 		p.playlistUpdateAt = time.Now()
-		song = p.songManager.nextSong(true).unwrap()
+		var err error
+		song, err = p.playlistManager.NextSong(true)
+		if err != nil {
+			return nil
+		}
 	} else {
 		p.SetMode(types.PmIntelligent)
 		p.playingMenuKey = "Intelligent"
-		p.songManager.init(0, append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
+		_ = p.playlistManager.Initialize(0, append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
 		p.playlistUpdateAt = time.Now()
 		song = p.Playlist()[0]
 	}

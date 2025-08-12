@@ -26,6 +26,7 @@ type MainOptions struct {
 	CacheDir               string                   // 指定缓存目录
 	CacheLimit             int64                    // 缓存大小（以MB为单位），0为不使用缓存，-1为不限制，默认为0
 	DynamicMenuRows        bool                     // 菜单行数动态变更
+	UseDefaultKeyBindings  bool                     // 使用默认键绑定
 	CenterEverything       bool                     // 界面全部居中
 	NeteaseCookie          string                   // 网易云音乐登录cookie
 }

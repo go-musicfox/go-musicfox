@@ -119,15 +119,10 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		// 获取播放歌曲信息
-		if jsonStr, err := table.GetByKVModel(storage.PlayerSnapshot{}); err == nil && len(jsonStr) > 0 {
-			var snapshot storage.PlayerSnapshot
-			if err = json.Unmarshal(jsonStr, &snapshot); err == nil {
-				p := n.player
-				p.songManager.init(snapshot.CurSongIndex, snapshot.Playlist)
-				p.playlistUpdateAt = snapshot.PlaylistUpdateAt
-				p.playingMenuKey = "from_local_db" // 启动后，重置菜单Key，避免很多问题
-			}
+		// 加载播放列表状态
+		if err := n.player.playlistManager.LoadState(); err != nil {
+			// 如果加载失败，记录错误但不影响启动
+			slog.Warn("Failed to load playlist state", slogx.Error(err))
 		}
 		n.Rerender(false)
 
