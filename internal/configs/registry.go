@@ -103,9 +103,10 @@ func NewRegistryWithDefault() *Registry {
 			UnlockSoundEffects: true,
 		},
 		Lastfm: LastfmOptions{
-			Key:    "",
-			Secret: "",
-			Enable: false,
+			Key:           "",
+			Secret:        "",
+			Enable:        false,
+			ScrobblePoint: 50,
 		},
 		Keybindings: getDefaultBindingsMap(), // 初始化为默认键绑定
 	}
@@ -233,6 +234,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Lastfm.Key = ini.String("lastfm.key", "")
 	registry.Lastfm.Secret = ini.String("lastfm.secret", "")
 	registry.Lastfm.Enable = ini.Bool("lastfm.enable", false)
+	registry.Lastfm.ScrobblePoint = ini.Int("lastfm.scrobblePoint", 50)
 
 	userKeybindingsRaw := ini.StringMap("keybindings")
 	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)
