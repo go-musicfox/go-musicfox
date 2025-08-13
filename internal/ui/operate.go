@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -63,7 +63,7 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 		var err error
 		m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
 		if err != nil {
-			log.Printf("获取歌单ID失败: %+v\n", err)
+			slog.Error("获取歌单ID失败", "error", err)
 			return nil
 		}
 
@@ -181,7 +181,7 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 		var err error
 		m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
 		if err != nil {
-			log.Printf("获取歌单ID失败: %+v\n", err)
+			slog.Error("获取歌单ID失败", err)
 			return nil
 		}
 
@@ -847,7 +847,31 @@ func delSongFromPlaylist(m *Netease) model.Page {
 }
 
 func clearSongCache(m *Netease) {
-	m.MustMain().EnterMenu(NewClearSongCacheMenu(newBaseMenu(m), m), &model.MenuItem{Title: "清除缓存", Subtitle: "确定清除缓存"})
+	action := func() {
+		loading := model.NewLoading(m.MustMain())
+		loading.Start()
+		defer loading.Complete()
+		err := storagex.ClearMusicCache()
+		if err != nil {
+			slog.Error("清除缓存失败", "error", err)
+			notify.Notify(notify.NotifyContent{
+				Title:   "清除缓存失败",
+				Text:    err.Error(),
+				GroupId: types.GroupID,
+			})
+		} else {
+			slog.Error("清除缓存成功")
+			notify.Notify(notify.NotifyContent{
+				Title:   "清除缓存成功",
+				Text:    "缓存已清除",
+				GroupId: types.GroupID,
+			})
+		}
+	}
+	menu := NewConfirmMenu(newBaseMenu(m), []ConfirmItem{
+		{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+	})
+	m.MustMain().EnterMenu(menu, &model.MenuItem{Title: "清除缓存", Subtitle: "确定清除缓存"})
 }
 
 func downloadPlayingSongLrc(m *Netease) {
