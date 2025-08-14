@@ -109,11 +109,7 @@ func (p *osxPlayer) listen() {
 						}
 					},
 				})
-				// 延迟启动播放，给AVPlayer时间准备
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					p.Resume()
-				}()
+				p.Resume()
 			})
 		}
 	}
@@ -158,31 +154,10 @@ func (p *osxPlayer) Resume() {
 		return
 	}
 	
-	// 检查当前项是否有效
-	if p.player.CurrentItem().ID == 0 {
-		return
-	}
-	
 	go p.timer.Run()
 	p.player.Play()
 	
-	// 延迟验证播放状态，给AVPlayer时间开始播放
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		core.Autorelease(func() {
-			// 检查播放时间是否在增长，以验证是否真正在播放
-			t := p.player.CurrentTime()
-			if t.Timescale > 0 || p.state == types.Stopped {
-				// 如果有有效的时间或者已经被停止，则设置状态
-				if p.state != types.Stopped {
-					p.setState(types.Playing)
-				}
-			} else {
-				// 播放失败，保持暂停状态
-				p.setState(types.Paused)
-			}
-		})
-	}()
+	p.setState(types.Playing)
 }
 
 func (p *osxPlayer) Stop() {
