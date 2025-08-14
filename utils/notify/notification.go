@@ -32,7 +32,7 @@ func (o osxNotificator) getNotifierCmd() string {
 	localDir := app.DataRootDir()
 	notifierPath := filepath.Join(localDir, "musicfox-notifier.app")
 	if _, err := os.Stat(notifierPath); os.IsNotExist(err) {
-		err = filex.CopyDirFromEmbed("embed/musicfox-notifier.app", notifierPath)
+		err = filex.CopyDirFromEmbed("embed_darwin/musicfox-notifier.app", notifierPath)
 		if err != nil {
 			log.Printf("copy musicfox-notifier.app failed, err: %+v", errors.WithStack(err))
 		}
