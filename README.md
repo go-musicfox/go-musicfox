@@ -481,6 +481,8 @@ $ musicfox
 | `collectSelectedPlaylist`           | 收藏选中歌单                  | `;`, `:`, `：`, `；`                        |
 | `discollectSelectedPlaylist`        | 取消收藏选中歌单              | `'`, `"`                                        |
 | `simiSongsOfSelectedSong`           | 与选中歌曲相似的歌曲          | `F`                                             |
+| `actionOfSelected`                  | 对于选中项或当前播放的操作    | `m`                                          |
+| `actionOfPlayingSong`               | 对于当前播放的操作            | `M`                                          |
 
 注意：
 - 多个按键请以英文逗号`,`分隔，每个键无需引号（不支持）
