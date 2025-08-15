@@ -114,6 +114,18 @@ func (c *Client) GetAuthUrlWithToken() (token, url string, err error) {
 	return
 }
 
+func (c *Client) Login(username, password string) (sessionKey string, err error) {
+	if c.api == nil {
+		return "", errors.New("lastfm key或secret为空")
+	}
+
+	if err := c.api.Login(username, password); err != nil {
+		_, err = c.errorHandle(err)
+		return "", err
+	}
+	return c.api.GetSessionKey(), nil
+}
+
 func (c *Client) SetSession(session string) {
 	if c.api != nil {
 		c.needAuth = false
