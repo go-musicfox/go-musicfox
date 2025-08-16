@@ -240,7 +240,7 @@ func (n *Netease) LoginCallback() error {
 		return errors.Errorf("accountInfo code: %f, resp: %s", code, string(resp))
 	}
 
-	user, err := structs.NewUserFromJson(resp)
+	user, err := structs.NewUserFromJsonForLogin(resp)
 	if err != nil {
 		return errors.WithMessagef(err, "parse user err, code: %f, resp: %s", code, string(resp))
 	}
