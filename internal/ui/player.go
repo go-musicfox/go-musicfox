@@ -496,10 +496,6 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
-	if song.Id != p.CurSong().Id {
-		p.reportEnd() // 上一首播放结束
-	}
-
 	loading := model.NewLoading(p.netease.MustMain())
 	loading.Start()
 	defer loading.Complete()
@@ -586,6 +582,7 @@ func (p *Player) CurSong() structs.Song {
 
 // NextSong 下一曲
 func (p *Player) NextSong(manual bool) {
+	p.reportEnd()
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
 
@@ -621,6 +618,7 @@ func (p *Player) NextSong(manual bool) {
 
 // PreviousSong 上一曲
 func (p *Player) PreviousSong(manual bool) {
+	p.reportEnd()
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
 	if playlistLen == 0 || index >= playlistLen-1 {
