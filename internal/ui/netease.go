@@ -20,6 +20,7 @@ import (
 	"github.com/telanflow/cookiejar"
 
 	"github.com/go-musicfox/go-musicfox/internal/automator"
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -41,7 +42,8 @@ type Netease struct {
 	login  *LoginPage
 	search *SearchPage
 
-	player *Player
+	player   *Player
+	shareSvc *composer.ShareService
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -52,6 +54,7 @@ func NewNetease(app *model.App) *Netease {
 	n.search = NewSearchPage(n)
 	n.App = app
 
+	n.shareSvc = composer.NewShareService()
 	return n
 }
 

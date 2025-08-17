@@ -100,6 +100,8 @@ const (
 	OpCollectSelectedPlaylist
 	OpDiscollectSelectedPlaylist
 	OpOpenSimiSongsOfSelectedSong
+	OpSharePlayingItem
+	OpShareSelectItem
 
 	OpActionOfSelected
 	OpActionOfPlayingSong
@@ -165,6 +167,8 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpCollectSelectedPlaylist:        {name: "collectSelectedPlaylist", desc: "收藏选中歌单"},
 	OpDiscollectSelectedPlaylist:     {name: "discollectSelectedPlaylist", desc: "取消收藏选中歌单"},
 	OpOpenSimiSongsOfSelectedSong:    {name: "simiSongsOfSelectedSong", desc: "与选中歌曲相似的歌曲"},
+	OpSharePlayingItem:               {name: "sharePlayingItem", desc: "分享当前播放"},
+	OpShareSelectItem:                {name: "shareSelectItem", desc: "分享当前选中"},
 
 	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
 	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},

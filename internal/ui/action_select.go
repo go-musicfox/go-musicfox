@@ -112,6 +112,9 @@ func (m *ActionMenu) selectSongAction() {
 		}, {
 			title: model.MenuItem{Title: "相似的歌曲"},
 			action:  func() { simiSongsOfSelectedSong(m.netease) },
+		}, {
+			title:  model.MenuItem{Title: "分享"},
+			action: func() { shareSelectItem(m.netease) },
 		},
 	}
 	if m.from == CurPlaylistKey { // 仅在当前播放界面生效
@@ -157,6 +160,9 @@ func (m *ActionMenu) curSongAction() {
 		}, {
 			title: model.MenuItem{Title: "相似的歌曲"},
 			action:  func() { simiSongsOfPlayingSong(m.netease) },
+		}, {
+			title:  model.MenuItem{Title: "分享"},
+			action: func() { sharePlayingItem(m.netease) },
 		},
 	}
 }

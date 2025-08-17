@@ -50,6 +50,13 @@ func (m *DjSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	return NewDjRadioDetailMenu(m.baseMenu, m.radios[index].Id)
 }
 
+func (m *DjSubListMenu) ItemToShare(index int) any {
+		if index >= 0 && index < len(m.radios) {
+			return m.radios[index]
+		}
+		return  nil
+}
+
 func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 

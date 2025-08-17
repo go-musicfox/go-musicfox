@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,10 +13,12 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/clipboard"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
@@ -907,4 +910,77 @@ func action(m *Netease, curPlaying bool) {
 			newMenu,
 			newTitle)
 	}
+}
+
+func shareToClipBoard(m *Netease, data any) {
+	var handleError = func(err error) {
+		slog.Error("分享失败", "error", err)
+		notify.Notify(notify.NotifyContent{
+			Title:   "分享失败",
+			Text:    err.Error(),
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
+		})
+	}
+
+	str, err := m.shareSvc.Share(data)
+	if err != nil {
+		handleError(err)
+	}
+	if err = clipboard.Write(str); err != nil {
+		handleError(err)
+	}
+}
+
+func shareSelectItem(m *Netease) {
+	var (
+		main          = m.MustMain()
+		menu          = main.CurMenu()
+		selectedIndex = menu.RealDataIndex(main.SelectedIndex())
+		item          any
+	)
+
+	if sharer, ok := menu.(composer.Sharer); ok {
+		if item = sharer.ItemToShare(selectedIndex); item != nil {
+			shareToClipBoard(m, item)
+		}
+		return
+	}
+
+	// For backward compatibility with legacy menu types.
+	switch me := menu.(type) {
+	case SongsMenu:
+		if selectedIndex >= len(me.Songs()) {
+			return
+		}
+		item = me.Songs()[selectedIndex]
+	case AlbumsMenu:
+		if selectedIndex >= len(me.Albums()) {
+			return
+		}
+		item = me.Albums()[selectedIndex]
+	case ArtistsMenu:
+		if selectedIndex >= len(me.Artists()) {
+			return
+		}
+		item = me.Artists()[selectedIndex]
+	case PlaylistsMenu:
+		if selectedIndex >= len(me.Playlists()) {
+			return
+		}
+		item = me.Playlists()[selectedIndex]
+	default:
+		slog.Error(fmt.Sprintf("不支持的页面: %T", me))
+	}
+
+	if item != nil {
+		shareToClipBoard(m, item)
+	}
+}
+
+func sharePlayingItem(m *Netease) {
+	if m.player.CurSongIndex() >= len(m.player.Playlist()) {
+		return
+	}
+	shareToClipBoard(m, m.player.CurSong())
 }
