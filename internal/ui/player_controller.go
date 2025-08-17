@@ -2,7 +2,11 @@ package ui
 
 import (
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/internal/remote_control"
 )
+
+var _ remote_control.Controller = (*Player)(nil)
 
 // Deprecated: Only remote_control.Handler can call this method, others please use Player instead.
 func (p *Player) CtrlPause() {
@@ -50,4 +54,14 @@ func (p *Player) CtrlSeek(duration time.Duration) {
 func (p *Player) CtrlSetVolume(volume int) {
 	// NOTICE: 提供给state_handler调用，因为有GC panic问题，这里使用chan传递
 	p.Player.SetVolume(volume)
+}
+
+// Deprecated: Only remote_control.Handler can call this method, others please use Player instead.
+func (p *Player) CtrlLikeNowPlaying() {
+	
+}
+
+// Deprecated: Only remote_control.Handler can call this method, others please use Player instead.
+func (p *Player) CtrlDislikeNowPlaying() {
+	
 }

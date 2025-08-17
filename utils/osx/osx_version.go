@@ -9,28 +9,29 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var versions = []string{
-	"10.0.{decimal}",
-	"10.1.{decimal}",
-	"10.2.{decimal}",
-	"10.3.{decimal}",
-	"10.4.{decimal}",
-	"10.5.{decimal}",
-	"10.6.{decimal}",
-	"10.7.{decimal}",
-	"10.8.{decimal}",
-	"10.9.{decimal}",
-	"10.10.{decimal}",
-	"10.11.{decimal}",
-	"10.12.{decimal}",
-	"10.13.{decimal}",
-	"10.14.{decimal}",
-	"10.15.{decimal}",
-	"11.{decimal}",
-	"12.{decimal}",
-	"13.{decimal}",
-	"14.{decimal}",
-	"15.{decimal}",
+var versions = map[int]string{
+	4: "10.0.{decimal}",
+	5: "10.1.{decimal}",
+	6: "10.2.{decimal}",
+	7: "10.3.{decimal}",
+	8 : "10.4.{decimal}",
+	9: "10.5.{decimal}",
+	10: "10.6.{decimal}",
+	11: "10.7.{decimal}",
+	12: "10.8.{decimal}",
+	13: "10.9.{decimal}",
+	14: "10.10.{decimal}",
+	15: "10.11.{decimal}",
+	16: "10.12.{decimal}",
+	17: "10.13.{decimal}",
+	18: "10.14.{decimal}",
+	19: "10.15.{decimal}",
+	20: "11.{decimal}",
+	21: "12.{decimal}",
+	22: "13.{decimal}",
+	23: "14.{decimal}",
+	24: "15.{decimal}",
+	25: "25.{decimal}",
 }
 
 type Version struct {
@@ -53,7 +54,12 @@ func OsVersion() (v Version) {
 	minor, _ := strconv.Atoi(kernelVersion[1])
 	patch, _ := strconv.Atoi(kernelVersion[2])
 
-	if major < 4 || major > 24 {
+	// if major < 4 || major > 24 {
+	// 	return
+	// }
+	
+	versionStr, ok := versions[major-4]
+	if !ok {
 		return
 	}
 
@@ -62,7 +68,7 @@ func OsVersion() (v Version) {
 		decimal = strconv.Itoa(minor - 1)
 	}
 
-	versionStr := strings.Replace(versions[major-4], "{decimal}", decimal, 1)
+	versionStr = strings.Replace(versionStr, "{decimal}", decimal, 1)
 	version := strings.Split(versionStr, ".")
 
 	v.Major, _ = strconv.Atoi(version[0])

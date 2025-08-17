@@ -231,10 +231,18 @@ func handleChangePlaybackPositionCommand(id objc.ID, cmd objc.SEL, event objc.ID
 }
 
 func handleLikeCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPRemoteCommandHandlerStatus {
+	if _playerController == nil {
+		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
+	}
+	_playerController.CtrlLikeNowPlaying()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func handleDislikeCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPRemoteCommandHandlerStatus {
+	if _playerController == nil {
+		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
+	}
+	_playerController.CtrlDislikeNowPlaying()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
