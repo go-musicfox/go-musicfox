@@ -27,6 +27,7 @@ type Registry struct {
 	GlobalHotkeys map[string]string
 	// Keybindings 存储最终生效的操作ID -> 按键列表映射
 	Keybindings map[keybindings.OperateType][]string
+	Share       map[string]string
 }
 
 func (r *Registry) FillToModelOpts(opts *model.Options) {
@@ -110,6 +111,7 @@ func NewRegistryWithDefault() *Registry {
 			OnlyFirstArtist: false,
 		},
 		Keybindings: getDefaultBindingsMap(), // 初始化为默认键绑定
+		Share:       nil,
 	}
 
 	switch runtime.GOOS {
@@ -240,6 +242,8 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 
 	userKeybindingsRaw := ini.StringMap("keybindings")
 	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)
+
+	registry.Share = ini.StringMap("share")
 
 	return registry
 }

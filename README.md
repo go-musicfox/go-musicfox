@@ -535,6 +535,51 @@ ctrl+shift+space=toggle
 > ```
 
 </details>
+<details>
+<summary>
+
+### 自定义分享模板
+</summary>
+
+分享文本的内容是完全可定制的，它由一套模板系统驱动（使用 [text/template](https://pkg.go.dev/text/template) ，支持条件判断等高级用法）。
+
+#### 字段分组详解
+
+| 字段分组   | 包含字段                                                                                                   |
+| :--------- | :--------------------------------------------------------------------------------------------------------- |
+| `Song`     | `SongId`: 歌曲ID <br> `SongName`: 歌曲名称 <br> `SongArtists`: 歌曲的艺术家名 <br> `SongUrl`: 歌曲链接     |
+| `Album`    | `AlbumId`: 专辑ID <br> `AlbumName`: 专辑名称 <br> `AlbumUrl`: 专辑链接 <br> `AlbumArtists`: 专辑的艺术家名 |
+| `Artist`   | `ArtistId`: 歌手ID <br> `ArtistName`: 歌手姓名 <br> `ArtistUrl`: 歌手链接                                  |
+| `Playlist` | `PlaylistId`: 歌单ID <br> `PlaylistName`: 歌单名称 <br> `PlaylistUrl`: 歌单链接                            |
+| `User`     | `UserID`: 用户ID <br> `UserName`: 用户昵称 <br> `UserUrl`: 用户链接                                        |
+| `DjRadio`  | `DjRadioId`: 播客电台ID <br> `DjRadioName`: 播客电台名称 <br> `DjRadioUrl`: 播客电台链接                   |
+| `Episode`  | `EpisodeId`: 播客节目ID <br> `EpisodeName`: 播客节目名称 <br> `EpisodeUrl`: 播客节目链接                   |
+
+**注意：**
+*   对于 `episode`（播客节目）类型，由于其本质也是一首“歌曲”，因此它同时拥有 `Episode`、`Song` 和 `Album` 的所有字段。其中 `EpisodeName` 和 `SongName` 的值是相同的。
+
+#### 模板类型与可用字段
+不同类型的分享项目，其可用的信息字段也不同。例如，分享一首“歌曲”时，您可以同时获取到“歌曲信息”和它所属的“专辑信息”；而分享一个“歌手”时，则只有“歌手信息”。
+不支持自定义模板名
+
+| 模板名称   | 说明                       | 可用字段分组                                  |
+| :--------- | :------------------------- | :-------------------------------------------- |
+| `song`     | 用于分享一首单曲。         | `Song`, `Album`                               |
+| `album`    | 用于分享一张专辑。         | `Album`                                       |
+| `artist`   | 用于分享一位歌手。         | `Artist`                                      |
+| `playlist` | 用于分享一个歌单。         | `Playlist`, `User`                            |
+| `user`     | 用于分享一位用户。         | `User`                                        |
+| `djRadio`  | 用于分享一个播客电台。     | `DjRadio`, `User`                             |
+| `episode`  | 用于分享播客中的一期节目。 | `Episode`, `DjRadio`, `User`, `Song`, `Album` |
+
+#### 示例
+
+```ini
+[share]
+song = "分享{{if .SongArtists}}{{.SongArtists}}的{{end}}单曲《{{.SongName}}》: {{.SongUrl}} (来自@网易云音乐)"
+```
+
+</details>
 </details>
 <details>
 <summary>

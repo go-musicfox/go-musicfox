@@ -51,6 +51,11 @@ func NewShareService() *ShareService {
 	}
 }
 
+// RegisterTemplates 用于动态注册或覆盖分享模板。
+func (s *ShareService) RegisterTemplates(templates map[string]string) error {
+	return s.tplManager.LoadFromMap(templates)
+}
+
 // Share 根据传入的数据项（如 structs.Song）生成对应的分享文本。
 // 它会根据数据类型匹配并执行相应的模板。
 func (s *ShareService) Share(data any) (string, error) {

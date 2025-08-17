@@ -55,6 +55,8 @@ func NewNetease(app *model.App) *Netease {
 	n.App = app
 
 	n.shareSvc = composer.NewShareService()
+	n.shareSvc.RegisterTemplates(configs.ConfigRegistry.Share)
+
 	return n
 }
 
