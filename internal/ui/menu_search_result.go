@@ -222,3 +222,34 @@ func (m *SearchResultMenu) Artists() []ds2.Artist {
 	}
 	return nil
 }
+
+func (m *SearchResultMenu) ItemToShare(index int) any {
+	switch items := m.result.(type) {
+	case []ds2.Song:
+		if index >= 0 && index < len(items) {
+			return items[index]
+		}
+	case []ds2.Album:
+		if index >= 0 && index < len(items) {
+			return items[index]
+		}
+	case []ds2.Artist:
+		if index >= 0 && index < len(items) {
+			return items[index]
+		}
+	case []ds2.Playlist:
+		if index >= 0 && index < len(items) {
+			return items[index]
+		}
+	case []ds2.User:
+		if index >= 0 && index < len(items) {
+			return items[index]
+		}
+	case []ds2.DjRadio:
+		if index >= 0 && index < len(items) {
+			return items[index]
+		}
+	}
+
+	return nil
+}

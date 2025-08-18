@@ -44,24 +44,44 @@ func NewUserFromLocalJson(json []byte) (User, error) {
 	return user, nil
 }
 
-func NewUserFromJson(json []byte) (User, error) {
+func NewUserFromJson(json []byte, keys ...string) (User, error) {
 	var user User
 	if len(json) == 0 {
 		return user, errors.New("json is empty")
 	}
 
-	userId, err := jsonparser.GetInt(json, "profile", "userId")
+	targetData := json
+	if len(keys) > 0 {
+		extractedData, _, _, err := jsonparser.Get(json, keys...)
+		if err != nil {
+			return user, err
+		}
+		targetData = extractedData
+	}
+
+	userId, err := jsonparser.GetInt(targetData, "userId")
 	if err != nil {
 		return user, err
 	}
 	user.UserId = userId
 
-	if nickname, err := jsonparser.GetString(json, "profile", "nickname"); err == nil {
+	if nickname, err := jsonparser.GetString(targetData, "nickname"); err == nil {
 		user.Nickname = nickname
 	}
 
-	if avatarUrl, err := jsonparser.GetString(json, "profile", "avatarUrl"); err == nil {
+	if avatarUrl, err := jsonparser.GetString(targetData, "avatarUrl"); err == nil {
 		user.AvatarUrl = avatarUrl
+	}
+
+	return user, nil
+}
+
+func NewUserFromJsonForLogin(json []byte) (User, error) {
+	var user User
+
+	user, err := NewUserFromJson(json, "profile")
+	if err != nil {
+		return user, err
 	}
 
 	if accountId, err := jsonparser.GetInt(json, "account", "id"); err == nil {
@@ -78,18 +98,9 @@ func NewUserFromSearchResultJson(json []byte) (User, error) {
 		return user, errors.New("json is empty")
 	}
 
-	userId, err := jsonparser.GetInt(json, "userId")
+	user, err := NewUserFromJson(json)
 	if err != nil {
 		return user, err
-	}
-	user.UserId = userId
-
-	if nickname, err := jsonparser.GetString(json, "nickname"); err == nil {
-		user.Nickname = nickname
-	}
-
-	if avatarUrl, err := jsonparser.GetString(json, "avatarUrl"); err == nil {
-		user.AvatarUrl = avatarUrl
 	}
 
 	return user, nil

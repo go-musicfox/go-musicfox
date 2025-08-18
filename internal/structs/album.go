@@ -23,23 +23,32 @@ func (a Album) ArtistName() string {
 }
 
 // NewAlbumFromJson 获取歌曲列表的专辑信息
-func NewAlbumFromJson(json []byte) (Album, error) {
+func NewAlbumFromJson(json []byte, keys ...string) (Album, error) {
 	var album Album
 	if len(json) == 0 {
 		return album, errors.New("json is empty")
 	}
 
-	alId, err := jsonparser.GetInt(json, "al", "id")
+	targetData := json
+	if len(keys) > 0 {
+		extractedData, _, _, err := jsonparser.Get(json, keys...)
+		if err != nil {
+			return album, err
+		}
+		targetData = extractedData
+	}
+
+	alId, err := jsonparser.GetInt(targetData, "id")
 	if err != nil {
 		return album, err
 	}
 	album.Id = alId
 
-	if alName, err := jsonparser.GetString(json, "al", "name"); err == nil {
+	if alName, err := jsonparser.GetString(targetData, "name"); err == nil {
 		album.Name = alName
 	}
 
-	if alPic, err := jsonparser.GetString(json, "al", "picUrl"); err == nil {
+	if alPic, err := jsonparser.GetString(targetData, "picUrl"); err == nil {
 		album.PicUrl = alPic
 	}
 
@@ -53,18 +62,9 @@ func NewAlbumFromAlbumJson(json []byte) (Album, error) {
 		return album, errors.New("json is empty")
 	}
 
-	alId, err := jsonparser.GetInt(json, "id")
+	album, err := NewAlbumFromJson(json)
 	if err != nil {
 		return album, err
-	}
-	album.Id = alId
-
-	if alName, err := jsonparser.GetString(json, "name"); err == nil {
-		album.Name = alName
-	}
-
-	if alPic, err := jsonparser.GetString(json, "picUrl"); err == nil {
-		album.PicUrl = alPic
 	}
 
 	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {

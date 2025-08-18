@@ -20,6 +20,7 @@ import (
 	"github.com/telanflow/cookiejar"
 
 	"github.com/go-musicfox/go-musicfox/internal/automator"
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -41,7 +42,8 @@ type Netease struct {
 	login  *LoginPage
 	search *SearchPage
 
-	player *Player
+	player   *Player
+	shareSvc *composer.ShareService
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -51,6 +53,9 @@ func NewNetease(app *model.App) *Netease {
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
 	n.App = app
+
+	n.shareSvc = composer.NewShareService()
+	n.shareSvc.RegisterTemplates(configs.ConfigRegistry.Share)
 
 	return n
 }
@@ -240,7 +245,7 @@ func (n *Netease) LoginCallback() error {
 		return errors.Errorf("accountInfo code: %f, resp: %s", code, string(resp))
 	}
 
-	user, err := structs.NewUserFromJson(resp)
+	user, err := structs.NewUserFromJsonForLogin(resp)
 	if err != nil {
 		return errors.WithMessagef(err, "parse user err, code: %f, resp: %s", code, string(resp))
 	}

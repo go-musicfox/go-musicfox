@@ -199,6 +199,10 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		action(h.netease, false)
 	case keybindings.OpActionOfPlayingSong:
 		action(h.netease, true)
+	case keybindings.OpSharePlayingItem:
+		shareSelectItem(h.netease)
+	case keybindings.OpShareSelectItem:
+		shareSelectItem(h.netease)
 	default:
 		return false, nil, nil
 	}
