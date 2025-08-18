@@ -10,9 +10,15 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/forgoer/openssl"
+	"log"
 	"math/big"
+	math_rand "math/rand/v2"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
+
+	"github.com/forgoer/openssl"
 )
 
 var iv = []byte("0102030405060708")
@@ -120,4 +126,33 @@ func Eapi(url string, data map[string]interface{}) map[string]string {
 	eapiType := make(map[string]string, 1)
 	eapiType["params"] = strings.ToUpper(hex.EncodeToString(aesEncrypt([]byte(dd), "ecb", eapiKey, nil)))
 	return eapiType
+}
+
+// 生成chainID
+func GenerateChainID(cookieJar http.CookieJar) string {
+	version := "v1"
+	musicURL, err := url.Parse("https://music.163.com")
+	if err != nil {
+		log.Fatalf("Failed to parse music URL: %v", err)
+	}
+	// 从 cookieJar 中获取 sDeviceId
+	var sDeviceId string
+	if cookieJar != nil {
+		for _, cookie := range cookieJar.Cookies(musicURL) {
+			if cookie.Name == "sDeviceId" {
+				sDeviceId = cookie.Value
+				break
+			}
+		}
+	}
+	// 如果 cookie 中没有 sDeviceId,生成一个新的
+	if sDeviceId == "" {
+		randomNum := math_rand.IntN(1000000)
+		sDeviceId = fmt.Sprintf("unknown-%d", randomNum)
+	}
+	platform := "web"
+	action := "login"
+	timestamp := time.Now().UnixMilli()
+	chainID := fmt.Sprintf("%s_%s_%s_%s_%d", version, sDeviceId, platform, action, timestamp)
+	return chainID
 }

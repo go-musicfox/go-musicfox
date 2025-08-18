@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"log"
 	"math/rand"
@@ -54,6 +55,13 @@ var cookieJar http.CookieJar
 
 func SetGlobalCookieJar(jar http.CookieJar) {
 	cookieJar = jar
+}
+
+func GetGlobalCookieJar() http.CookieJar {
+	if cookieJar == nil {
+		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
+	}
+	return cookieJar
 }
 
 func CookieValueByName(cookies []*http.Cookie, name string, fallback string) string {
@@ -245,4 +253,132 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		resCode = 200
 	}
 	return
+}
+
+// -------------------分割线 -------------------
+
+// 以上的CreateRequest函数是一个高度耦合，职责不清，状态管理混乱和难以测试的函数，
+// 而且所有网易云音乐接口操作全都调用这东西 ，稍微一改全都得炸！！
+// 现在登录失效了，甚至原因都找不到，只能通过打补丁的方式修复
+// 所以乖宝宝千万不要学上面的写法
+// 后续为了长期维护，以上函数必须被重构！！气死我了！
+
+// 请求结构体
+type request struct {
+	Req     *requests.Request
+	Url     string
+	Headers map[string]string
+	Params  map[string]string
+	Datas   map[string]string
+	Json    map[string]string
+}
+
+// 初始化并返回一个request结构体以进行发送请求前的准备
+func NewRequest(url string) *request {
+	req := requests.Requests()
+	// 设置全局CookieJar
+	if cookieJar == nil {
+		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
+	}
+	host := "https://music.163.com"
+	targetUrl, err := urlpkg.Parse(host)
+	if err != nil {
+		log.Fatalf("无法解析 URL: %v", err)
+	}
+
+	// 生成与设备标识有关的cookie
+	sessionCookie := &http.Cookie{
+		Name:   "sDeviceId",
+		Value:  GenerateChainID(cookieJar),
+		Path:   "/",
+		Domain: "music.163.com",
+	}
+
+	cookiesToSet := []*http.Cookie{sessionCookie}
+	// 将cookie添加到CookieJar
+	cookieJar.SetCookies(targetUrl, cookiesToSet)
+	req.Client.Jar = cookieJar
+	return &request{
+		Req: req,
+		Url: url,
+		Headers: map[string]string{
+			"User-Agent": chooseUserAgent("pc"),
+			"Referer":    host,
+		},
+		Params: map[string]string{},
+		Datas:  map[string]string{},
+		Json:   map[string]string{},
+	}
+}
+
+// 发送 GET 请求
+//
+// 设置结构体中的Params字段以传入query参数
+func (req *request) SendGet() (Response *http.Response) {
+	resp, err := req.Req.Get(
+		req.Url,
+		requests.Header(req.Headers),
+		requests.Params(req.Params))
+	if err != nil {
+		log.Fatalf("GET request error: %s, url: %s", err.Error(), req.Url)
+	}
+	return resp.R
+}
+
+// 发送 POST 请求
+//
+// 若要发送Json数据，请设置结构体中的Json字段
+// 发送FormData数据则设置结构体中的Datas字段
+func (req *request) SendPost() (Response *http.Response) {
+	// 判断一下post的数据类型
+	if len(req.Json) > 0 {
+		resp, err := req.Req.PostJson(
+			req.Url,
+			requests.Header(req.Headers),
+			requests.Datas(req.Json),
+		)
+		if err != nil {
+			log.Fatalf("POST request error: %s, url: %s", err.Error(), req.Url)
+		}
+		Response = resp.R
+	} else {
+		resp, err := req.Req.Post(
+			req.Url,
+			requests.Header(req.Headers),
+			requests.Datas(req.Datas),
+		)
+		if err != nil {
+			log.Fatalf("POST request error: %s, url: %s", err.Error(), req.Url)
+		}
+		Response = resp.R
+	}
+	return Response
+}
+
+// 调用网易云音乐的API
+//
+// 返回：
+// - code: API调用后的状态码
+// - bodyBytes: API返回的内容
+func CallWeapi(api string, data map[string]string) (code float64, bodyBytes []byte) {
+	req := NewRequest(api)
+	// 传入加密后的formdata
+	req.Datas = Weapi(data)
+	resp := req.SendPost()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading body: %v", err)
+	}
+	defer resp.Body.Close()
+	// 获取api调用后的code
+	var respData map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &respData)
+	if err != nil {
+		log.Fatalf("Error unmarshaling JSON: %v", err)
+	}
+	code, ok := respData["code"].(float64)
+	if !ok {
+		log.Fatal("Could not get 'code' or it's not a number")
+	}
+	return code, bodyBytes
 }
