@@ -24,11 +24,11 @@ type Tracker struct {
 func NewTracker(client *Client) *Tracker {
 	t := &Tracker{
 		client:          client,
-		enable:          configs.ConfigRegistry.Lastfm.Enable,
-		onlyFirstArtist: configs.ConfigRegistry.Lastfm.OnlyFirstArtist,
+		enable:          configs.ConfigRegistry.Reporter.Lastfm.Enable,
+		onlyFirstArtist: configs.ConfigRegistry.Reporter.Lastfm.OnlyFirstArtist,
 		pending:         &storage.ScrobbleList{},
 	}
-	t.setScrobblePoint(configs.ConfigRegistry.Lastfm.ScrobblePoint)
+	t.setScrobblePoint(configs.ConfigRegistry.Reporter.Lastfm.ScrobblePoint)
 	t.pending.InitFromStorage()
 
 	return t

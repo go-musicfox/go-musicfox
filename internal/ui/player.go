@@ -22,6 +22,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/playlist"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
+	"github.com/go-musicfox/go-musicfox/internal/reporter"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -91,14 +92,24 @@ type Player struct {
 	renderTicker *tickerByPlayer // renderTicker 用于渲染
 
 	player.Player // 播放器
+	reporter      reporter.Service
 }
 
 func NewPlayer(n *Netease) *Player {
+	reporterOptions := []reporter.Option{}
+	if configs.ConfigRegistry.Reporter.Lastfm.Enable {
+		reporterOptions = append(reporterOptions, reporter.WithLastFM(n.lastfm.Tracker))
+	}
+	if configs.ConfigRegistry.Reporter.Netease.Enable {
+		reporterOptions = append(reporterOptions, reporter.WithNetease())
+	}
+
 	p := &Player{
 		netease:           n,
 		playlistManager:   playlist.NewPlaylistManager(),
 		ctrl:              make(chan CtrlSignal),
 		lyricNowScrollBar: app.NewXScrollBar(),
+		reporter:          reporter.NewService(reporterOptions...),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
@@ -496,9 +507,7 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
-	if song.Id != p.CurSong().Id {
-		p.reportEnd() // 上一首播放结束
-	}
+	p.reporter.ReportEnd(p.PlayedTime())
 
 	loading := model.NewLoading(p.netease.MustMain())
 	loading.Start()
@@ -540,7 +549,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	// 上报开始播放
-	p.reportStart()
+	p.reporter.ReportStart(song)
 
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
@@ -694,7 +703,7 @@ func (p *Player) SwitchMode() {
 // Close 关闭
 func (p *Player) Close() error {
 	// 退出前上报
-	p.reportEnd()
+	p.reporter.ReportEnd(p.PlayedTime())
 
 	p.cancel()
 	if p.stateHandler != nil {
@@ -912,70 +921,4 @@ func (p *Player) PlayingInfo() control.PlayingInfo {
 
 func (p *Player) RenderTicker() model.Ticker {
 	return p.renderTicker
-}
-
-func (p *Player) buildNeteaseReportService() *service.ReportService {
-	svc := &service.ReportService{
-		ID:      p.CurSong().Id,
-		Alg:     p.CurSong().Alg,
-		Type:    "song",
-		Time:    int64(p.PassedTime().Seconds()),
-		EndType: "playend",
-	}
-
-	switch m := p.playingMenu.(type) {
-	case *PlaylistDetailMenu:
-		svc.SourceType = "list"
-		svc.SourceId = strconv.FormatInt(m.PlaylistId(), 10)
-	case *AlbumDetailMenu:
-		svc.SourceType = "album"
-		svc.SourceId = strconv.FormatInt(m.AlbumId(), 10)
-	case *DailyRecommendSongsMenu:
-		svc.SourceType = "dailySongRecommend"
-	case *PersonalFmMenu:
-		svc.SourceType = "userfm"
-	case *DjRecommendMenu:
-		svc.Type = "dj"
-	case nil:
-		if p.CurSong().Album.Id != 0 {
-			svc.SourceType = "album"
-			svc.SourceId = strconv.FormatInt(p.CurSong().Album.Id, 10)
-		}
-	}
-
-	if p.CurSong().Duration.Seconds()-p.PassedTime().Seconds() > 10 {
-		svc.EndType = "ui"
-	}
-
-	return svc
-}
-
-func (p *Player) reportStart() {
-	p.buildNeteaseReportService().Playstart()
-	p.netease.lastfm.Tracker.Playing(*storage.NewScrobble(p.CurMusic().Song, 0))
-}
-
-func (p *Player) reportEnd() {
-	// 播放时间不少于20秒时，才上报
-	if p.PassedTime().Seconds() < 20 {
-		return
-	}
-
-	svc := p.buildNeteaseReportService()
-	switch {
-	case math.Abs(p.CurSong().Duration.Seconds()-p.PassedTime().Seconds()) <= 10:
-		// 播放结束
-		svc.EndType = "playend"
-	case time.Since(p.playlistUpdateAt).Seconds() <= 5:
-		// 更换了歌单
-		svc.EndType = "interrupt"
-	default:
-		svc.EndType = "ui"
-	}
-	svc.Playend()
-
-	// 检测并上报 last.fm
-	if p.netease.lastfm.Tracker.IsScrobbleable(p.CurMusic().Duration.Seconds(), p.PassedTime().Seconds()) {
-		go p.netease.lastfm.Tracker.Scrobble(*storage.NewScrobble(p.CurMusic().Song, p.PassedTime()))
-	}
 }
