@@ -47,6 +47,7 @@ func tryFindCache(songId int64) (fpath string) {
 }
 
 func CopyCachedSong(song structs.Song) error {
+	initNameGen()
 	downloadDir := app.DownloadDir()
 	cacheDir := app.CacheDir()
 	if !filex.FileOrDirExists(downloadDir) {
@@ -61,10 +62,7 @@ func CopyCachedSong(song structs.Song) error {
 	}
 	split := strings.Split(path.Base(oldFilename), ".")
 	musicType := split[len(split)-1]
-	filename := fmt.Sprintf("%s-%s.%s", song.Name, song.ArtistName(), musicType)
-	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
-	filename = strings.ReplaceAll(filename, "/", "_")
-	filename = strings.ReplaceAll(filename, "\\", "_")
+	filename, _ := nameGen.Song(song, musicType)
 	targetFilename := filepath.Join(downloadDir, filename)
 
 	if _, err := os.Stat(targetFilename); err == nil {
