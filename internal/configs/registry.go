@@ -23,7 +23,7 @@ type Registry struct {
 	AutoPlayer    AutoPlayerOptions
 	UNM           UNMOptions
 	Player        PlayerOptions
-	Lastfm        LastfmOptions
+	Reporter      ReporterOptions
 	GlobalHotkeys map[string]string
 	// Keybindings 存储最终生效的操作ID -> 按键列表映射
 	Keybindings map[keybindings.OperateType][]string
@@ -103,12 +103,17 @@ func NewRegistryWithDefault() *Registry {
 			EnableLocalVip:     true,
 			UnlockSoundEffects: true,
 		},
-		Lastfm: LastfmOptions{
-			Key:             "",
-			Secret:          "",
-			Enable:          false,
-			ScrobblePoint:   50,
-			OnlyFirstArtist: false,
+		Reporter: ReporterOptions{
+			Lastfm: ReporterLastfmOptions{
+				Key:             "",
+				Secret:          "",
+				Enable:          false,
+				ScrobblePoint:   50,
+				OnlyFirstArtist: false,
+			},
+			Netease: ReporterNeteaseOptions{
+				Enable: false,
+			},
 		},
 		Keybindings: getDefaultBindingsMap(), // 初始化为默认键绑定
 		Share:       nil,
@@ -233,12 +238,21 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.UNM.UnlockSoundEffects = ini.Bool("unm.unlockSoundEffects", true)
 	registry.UNM.QQCookieFile = ini.String("unm.qqCookieFile", "")
 
-	// Lastfm
-	registry.Lastfm.Key = ini.String("lastfm.key", "")
-	registry.Lastfm.Secret = ini.String("lastfm.secret", "")
-	registry.Lastfm.Enable = ini.Bool("lastfm.enable", false)
-	registry.Lastfm.ScrobblePoint = ini.Int("lastfm.scrobblePoint", 50)
-	registry.Lastfm.OnlyFirstArtist = ini.Bool("lastfm.onlyFirstArtist", false)
+	// Reporter.Lastfm, 兼容旧配置
+	lastfmKey := ini.String("lastfm.key", "")
+	lastfmSecret := ini.String("lastfm.secret", "")
+	lastfmEnable := ini.Bool("lastfm.enable", false)
+	lastfmScrobblePoint := ini.Int("lastfm.scrobblePoint", 50)
+	lastfmOnlyFirstArtist := ini.Bool("lastfm.onlyFirstArtist", false)
+
+	registry.Reporter.Lastfm.Key = ini.String("reporter.lastfmKey", lastfmKey)
+	registry.Reporter.Lastfm.Secret = ini.String("reporter.lastfmSecret", lastfmSecret)
+	registry.Reporter.Lastfm.Enable = ini.Bool("reporter.lastfmEnable", lastfmEnable)
+	registry.Reporter.Lastfm.ScrobblePoint = ini.Int("reporter.lastfmScrobblePoint", lastfmScrobblePoint)
+	registry.Reporter.Lastfm.OnlyFirstArtist = ini.Bool("reporter.lastfmOnlyFirstArtist", lastfmOnlyFirstArtist)
+
+	// Reporter.Netease
+	registry.Reporter.Netease.Enable = ini.Bool("reporter.neteaseEnable", false)
 
 	userKeybindingsRaw := ini.StringMap("keybindings")
 	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)

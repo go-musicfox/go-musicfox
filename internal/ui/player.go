@@ -96,15 +96,20 @@ type Player struct {
 }
 
 func NewPlayer(n *Netease) *Player {
+	reporterOptions := []reporter.Option{}
+	if configs.ConfigRegistry.Reporter.Lastfm.Enable {
+		reporterOptions = append(reporterOptions, reporter.WithLastFM(n.lastfm.Tracker))
+	}
+	if configs.ConfigRegistry.Reporter.Netease.Enable {
+		reporterOptions = append(reporterOptions, reporter.WithNetease())
+	}
+
 	p := &Player{
 		netease:           n,
 		playlistManager:   playlist.NewPlaylistManager(),
 		ctrl:              make(chan CtrlSignal),
 		lyricNowScrollBar: app.NewXScrollBar(),
-		reporter: reporter.NewService(
-			reporter.WithLastFM(n.lastfm.Tracker),
-			reporter.WithNetease(),
-		),
+		reporter:          reporter.NewService(reporterOptions...),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())

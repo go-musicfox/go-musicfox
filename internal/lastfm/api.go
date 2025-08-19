@@ -62,8 +62,8 @@ func (c *Client) getAPIKey() (key, secret string) {
 	switch {
 	case c.apiAccount.Key != "" && c.apiAccount.Secret != "":
 		return c.apiAccount.Key, c.apiAccount.Secret
-	case configs.ConfigRegistry.Lastfm.Key != "" && configs.ConfigRegistry.Lastfm.Secret != "":
-		return configs.ConfigRegistry.Lastfm.Key, configs.ConfigRegistry.Lastfm.Secret
+	case configs.ConfigRegistry.Reporter.Lastfm.Key != "" && configs.ConfigRegistry.Reporter.Lastfm.Secret != "":
+		return configs.ConfigRegistry.Reporter.Lastfm.Key, configs.ConfigRegistry.Reporter.Lastfm.Secret
 	case types.LastfmKey != "" && types.LastfmSecret != "":
 		return types.LastfmKey, types.LastfmSecret
 	default:
