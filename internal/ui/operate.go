@@ -128,7 +128,6 @@ func likePlayingSong(m *Netease, isLike bool) model.Page {
 func logout() {
 	table := storage.NewTable()
 	_ = table.DeleteByKVModel(storage.User{})
-	(&storage.LastfmUser{}).Clear()
 	notify.Notify(notify.NotifyContent{
 		Title:   "登出成功",
 		Text:    "已清理用户信息",
