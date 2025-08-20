@@ -7,12 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/bogem/id3v2/v2"
@@ -23,6 +21,7 @@ import (
 	foldersize "github.com/markthree/go-get-folder-size/src"
 	"github.com/pkg/errors"
 
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -73,30 +72,26 @@ func DownloadFile(url, filename, dirname string) error {
 }
 
 var (
-	songNameTpl *template.Template
-	tplInitd    sync.Once
-	reg         = regexp.MustCompile("[<>:\"/\\|?*\000]")
+	tplInitd sync.Once
+	nameGen  *composer.FileNameGenerator
 )
 
-func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
+func initNameGen() {
 	tplInitd.Do(func() {
-		tpl := template.New("songName")
-		if configs.ConfigRegistry.Main.DownloadFileNameTpl != "" {
-			songNameTpl = template.Must(tpl.Parse(configs.ConfigRegistry.Main.DownloadFileNameTpl))
-		} else {
-			songNameTpl = template.Must(tpl.Parse("{{.SongName}}-{{.ArtistName}}.{{.SongType}}"))
+		nameGen = composer.NewFileNameGenerator()
+		tplDownloadStr := configs.ConfigRegistry.Main.DownloadFileNameTpl
+		if tplDownloadStr != "" {
+			if err := nameGen.RegisterSongTemplate(tplDownloadStr); err != nil {
+				panic(fmt.Sprintf("加载自定义下载模板失败, %v", err))
+			}
+			nameGen.RegisterLyricTemplate(tplDownloadStr)
 		}
 	})
-	var filenameBuilder strings.Builder
-	_ = songNameTpl.Execute(&filenameBuilder, map[string]string{
-		"SongName":   song.Name,
-		"ArtistName": song.ArtistName(),
-		"SongType":   musicType,
-	})
-	filename := filenameBuilder.String()
+}
 
-	// Windows Linux 均不允许文件名中出现 / \ 替换为 _
-	filename = reg.ReplaceAllString(filename, "_")
+func downloadMusic(url, musicType string, song structs.Song, downloadDir string) error {
+	initNameGen()
+	filename, _ := nameGen.Song(song, musicType)
 	err := DownloadFile(url, filename, downloadDir)
 	if err != nil {
 		return err
@@ -174,8 +169,8 @@ func DownLoadLrc(song structs.Song) {
 		return
 	}
 
-	filename := song.Name
-	savepath := filepath.Join(app.DownloadLyricDir(), filename+".lrc")
+	filename, _ := nameGen.Lyric(song, "lrc")
+	savepath := filepath.Join(app.DownloadLyricDir(), filename)
 
 	err = os.WriteFile(savepath, []byte(lrc), 0644)
 	if err != nil {
