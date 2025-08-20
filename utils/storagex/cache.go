@@ -3,7 +3,6 @@ package storagex
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -11,15 +10,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/buger/jsonparser"
-	"github.com/go-musicfox/netease-music/service"
 	"github.com/pkg/errors"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
-	"github.com/go-musicfox/go-musicfox/utils/mathx"
 )
 
 func tryFindCache(songId int64) (fpath string) {
@@ -88,66 +84,5 @@ func GetCacheURL(songID int64) (fpath, musicType string) {
 	split := strings.Split(path.Base(fpath), ".")
 	musicType = split[len(split)-1]
 	fpath = "file://" + fpath
-	return
-}
-
-func PlayableURLSong(song structs.Song) (url, musicType string, err error) {
-	if configs.ConfigRegistry.Main.CacheLimit != 0 {
-		if url, musicType = GetCacheURL(song.Id); url != "" {
-			return
-		}
-	}
-
-	slog.Info("get play url of song",
-		slog.Int64("song", song.Id),
-		slog.String("level", string(configs.ConfigRegistry.Main.PlayerSongLevel)),
-	)
-
-	urlService := service.SongUrlV1Service{
-		ID:      strconv.FormatInt(song.Id, 10),
-		Level:   configs.ConfigRegistry.Main.PlayerSongLevel,
-		SkipUNM: true,
-	}
-	code, response := urlService.SongUrl()
-	if code != 200 {
-		err = errors.New(string(response))
-		return
-	}
-
-	var (
-		err1, err2    error
-		freeTrialInfo jsonparser.ValueType
-	)
-	url, err1 = jsonparser.GetString(response, "data", "[0]", "url")
-	_, freeTrialInfo, _, err2 = jsonparser.Get(response, "data", "[0]", "freeTrialInfo")
-	if err1 != nil || err2 != nil || url == "" || (freeTrialInfo != jsonparser.NotExist && freeTrialInfo != jsonparser.Null) {
-		br, ok := brMap[urlService.Level]
-		if !ok {
-			br = "320000"
-		}
-		s := service.SongUrlService{
-			ID: strconv.FormatInt(song.Id, 10),
-			Br: br,
-		}
-		code, response = s.SongUrl()
-		if code != 200 {
-			err = errors.New(string(response))
-			return
-		}
-	}
-
-	if size, _ := jsonparser.GetInt(response, "data", "[0]", "size"); size != 0 {
-		slog.Info("music size", slog.String("size", mathx.FormatBytes(size)))
-	}
-
-	url, _ = jsonparser.GetString(response, "data", "[0]", "url")
-	musicType, _ = jsonparser.GetString(response, "data", "[0]", "type")
-	if musicType = strings.ToLower(musicType); musicType == "" {
-		musicType = "mp3"
-	}
-	err = nil
-	if configs.ConfigRegistry.Main.CacheLimit != 0 {
-		go CacheMusic(song, url, musicType, urlService.Level)
-	}
 	return
 }

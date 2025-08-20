@@ -8,13 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bogem/id3v2/v2"
-	"github.com/buger/jsonparser"
 	songtag "github.com/frolovo22/tag"
 	"github.com/go-flac/flacpicture"
 	"github.com/go-musicfox/netease-music/service"
@@ -27,6 +25,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
+	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -111,7 +110,7 @@ func DownloadMusic(song structs.Song) {
 		err error
 	)
 
-	url, musicType, err := PlayableURLSong(song)
+	info, err := netease.FetchPlayableInfo(song.Id, configs.ConfigRegistry.Main.PlayerSongLevel)
 	if err != nil {
 		errHandler(err)
 		return
@@ -128,7 +127,7 @@ func DownloadMusic(song structs.Song) {
 	if fpath := tryFindCache(song.Id); fpath != "" {
 		err = CopyCachedSong(song)
 	} else {
-		err = downloadMusic(url, musicType, song, downloadDir)
+		err = downloadMusic(info.URL, info.MusicType, song, downloadDir)
 	}
 	switch true {
 	case err == nil:
@@ -157,14 +156,7 @@ func DownloadMusic(song structs.Song) {
 }
 
 func DownLoadLrc(song structs.Song) {
-	lrcService := service.LyricService{
-		ID: strconv.FormatInt(song.Id, 10),
-	}
-	code, response := lrcService.Lyric()
-	if code != 200 {
-		return
-	}
-	lrc, err := jsonparser.GetString(response, "lrc", "lyric")
+	lrc, err := netease.FetchLyric(song.Id)
 	if err != nil {
 		return
 	}
@@ -239,14 +231,6 @@ func ClearDir(dir string) error {
 		return os.MkdirAll(dir, os.ModePerm)
 	}
 	return nil
-}
-
-var brMap = map[service.SongQualityLevel]string{
-	service.Standard: "320000",
-	service.Higher:   "320000",
-	service.Exhigh:   "320000",
-	service.Lossless: "999000",
-	service.Hires:    "999000",
 }
 
 func SetSongTag(file *os.File, song structs.Song) {
