@@ -73,7 +73,7 @@ func (p *osxPlayer) listen() {
 				}
 				if p.timer != nil {
 					p.timer.Stop()
-					p.timer = nil
+					// p.timer = nil
 				}
 
 				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.URL)))
@@ -153,10 +153,10 @@ func (p *osxPlayer) Resume() {
 	if p.state == types.Playing {
 		return
 	}
-	
+
 	go p.timer.Run()
 	p.player.Play()
-	
+
 	p.setState(types.Playing)
 }
 

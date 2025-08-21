@@ -272,6 +272,12 @@ func (h *EventHandler) playOrToggleHandle() {
 		player.playingMenu = me
 	}
 
+	// 如果当前不是心动模式菜单
+	mode := player.Mode()
+	if !inPlayingMenu && mode == types.PmIntelligent && player.playingMenuKey != "Intelligent" {
+		player.SetMode(types.PmListLoop)
+	}
+
 	player.playlistUpdateAt = time.Now()
 	player.StartPlay()
 }

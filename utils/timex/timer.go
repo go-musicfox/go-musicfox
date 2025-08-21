@@ -52,6 +52,9 @@ func (t *Timer) Remaining() time.Duration {
 
 // Run starts just created timer and resumes paused.
 func (t *Timer) Run() {
+	if t == nil {
+		return
+	}
 	if t.started && t.ticker != nil {
 		t.options.OnRun(t.started)
 		return
