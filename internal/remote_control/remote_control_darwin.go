@@ -65,21 +65,21 @@ func (s *RemoteControl) registerCommands() {
 	s.remoteCommandCenter.PauseCommand().AddTargetAction(s.commandHandler.ID, sel_handlePauseCommand)
 	s.remoteCommandCenter.StopCommand().AddTargetAction(s.commandHandler.ID, sel_handleStopCommand)
 	s.remoteCommandCenter.TogglePlayPauseCommand().AddTargetAction(s.commandHandler.ID, sel_handleTogglePlayPauseCommand)
-	s.remoteCommandCenter.NextTrackCommand().AddTargetAction(s.commandHandler.ID, sel_handleNextTrackCommand)
 	s.remoteCommandCenter.PreviousTrackCommand().AddTargetAction(s.commandHandler.ID, sel_handlePreviousTrackCommand)
-	//s.remoteCommandCenter.ChangeRepeatModeCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangeRepeatModeCommand)
-	//s.remoteCommandCenter.ChangeShuffleModeCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangeShuffleModeCommand)
-	//s.remoteCommandCenter.ChangePlaybackRateCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangePlaybackRateCommand)
-	//s.remoteCommandCenter.SeekBackwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSeekBackwardCommand)
-	//s.remoteCommandCenter.SeekForwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSeekForwardCommand)
-	//s.remoteCommandCenter.SkipForwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSkipForwardCommand)
-	//s.remoteCommandCenter.SkipBackwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSkipBackwardCommand)
+	s.remoteCommandCenter.NextTrackCommand().AddTargetAction(s.commandHandler.ID, sel_handleNextTrackCommand)
+	// s.remoteCommandCenter.ChangeRepeatModeCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangeRepeatModeCommand)
+	// s.remoteCommandCenter.ChangeShuffleModeCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangeShuffleModeCommand)
+	// s.remoteCommandCenter.ChangePlaybackRateCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangePlaybackRateCommand)
+	// s.remoteCommandCenter.SeekBackwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSeekBackwardCommand)
+	// s.remoteCommandCenter.SeekForwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSeekForwardCommand)
+	// s.remoteCommandCenter.SkipForwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSkipForwardCommand)
+	// s.remoteCommandCenter.SkipBackwardCommand().AddTargetAction(s.commandHandler.ID, sel_handleSkipBackwardCommand)
 	s.remoteCommandCenter.ChangePlaybackPositionCommand().AddTargetAction(s.commandHandler.ID, sel_handleChangePlaybackPositionCommand)
 	s.remoteCommandCenter.LikeCommand().AddTargetAction(s.commandHandler.ID, sel_handleLikeCommand)
 	s.remoteCommandCenter.DislikeCommand().AddTargetAction(s.commandHandler.ID, sel_handleDislikeCommand)
-	//s.remoteCommandCenter.BookmarkCommand().AddTargetAction(s.commandHandler.ID, sel_handleBookmarkCommand)
-	//s.remoteCommandCenter.EnableLanguageOptionCommand().AddTargetAction(s.commandHandler.ID, sel_handleEnableLanguageOptionCommand)
-	//s.remoteCommandCenter.DisableLanguageOptionCommand().AddTargetAction(s.commandHandler.ID, sel_handleDisableLanguageOptionCommand)
+	// s.remoteCommandCenter.BookmarkCommand().AddTargetAction(s.commandHandler.ID, sel_handleBookmarkCommand)
+	// s.remoteCommandCenter.EnableLanguageOptionCommand().AddTargetAction(s.commandHandler.ID, sel_handleEnableLanguageOptionCommand)
+	// s.remoteCommandCenter.DisableLanguageOptionCommand().AddTargetAction(s.commandHandler.ID, sel_handleDisableLanguageOptionCommand)
 
 	workspaceNC := cocoa.NSWorkspace_sharedWorkspace().NotificationCenter()
 	workspaceNC.AddObserverSelectorNameObject(s.commandHandler.ID, sel_handleWillSleepOrPowerOff, core.String("NSWorkspaceWillSleepNotification"), core.NSObject{})
@@ -114,10 +114,10 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 
 	osVersion := osx.OsVersion()
 	if info.PicUrl != "" && osVersion.Major > 10 { // NOTE: 老版本会报错，暂时不设置图片
-		picUrl := app.AddResizeParamForPicUrl(info.PicUrl, 60)
+		picUrl := app.AddResizeParamForPicUrl(info.PicUrl, 200)
 		s.l.Lock()
 		if s.curArtworkUrl != picUrl {
-			var lastArtwork = s.curArtwork
+			lastArtwork := s.curArtwork
 			defer lastArtwork.Release()
 
 			s.curArtworkUrl = picUrl
@@ -138,6 +138,9 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 
 	s.nowPlayingCenter.SetPlaybackState(stateMap[info.State])
 	s.nowPlayingCenter.SetNowPlayingInfo(dic.NSDictionary)
+
+	// mac 26不生效，重新注册command
+	s.registerCommands()
 }
 
 func (s *RemoteControl) SetPosition(time.Duration) {
