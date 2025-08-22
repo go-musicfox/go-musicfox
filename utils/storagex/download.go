@@ -12,9 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bogem/id3v2/v2"
-	songtag "github.com/frolovo22/tag"
-	"github.com/go-flac/flacpicture"
 	"github.com/go-musicfox/netease-music/service"
 	foldersize "github.com/markthree/go-get-folder-size/src"
 	"github.com/pkg/errors"
@@ -22,6 +19,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
@@ -73,6 +71,7 @@ func DownloadFile(url, filename, dirname string) error {
 var (
 	tplInitd sync.Once
 	nameGen  *composer.FileNameGenerator
+	tagger   = track.NewTagger()
 )
 
 func initNameGen() {
@@ -95,8 +94,7 @@ func downloadMusic(url, musicType string, song structs.Song, downloadDir string)
 	if err != nil {
 		return err
 	}
-	file, _ := os.OpenFile(filepath.Join(downloadDir, filename), os.O_RDWR, os.ModePerm)
-	SetSongTag(file, song)
+	SetSongTag(filepath.Join(downloadDir, filename), song)
 	slog.Info("下载歌曲成功", slog.String("file", filename))
 	return nil
 }
@@ -210,11 +208,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 		errHandler(err)
 		return
 	}
-	file, err := os.OpenFile(filepath.Join(cacheDir, filename), os.O_RDWR, os.ModePerm)
-	if err != nil {
-		return
-	}
-	SetSongTag(file, song)
+	SetSongTag(filepath.Join(cacheDir, filename), song)
 	slog.Info("缓存歌曲成功", slog.String("file", filename))
 }
 
@@ -233,57 +227,8 @@ func ClearDir(dir string) error {
 	return nil
 }
 
-func SetSongTag(file *os.File, song structs.Song) {
-	defer file.Close()
-	version := songtag.CheckVersion(file)
-	file.Seek(0, 0) // reset file offset
-	switch version {
-	case songtag.VersionID3v22, songtag.VersionID3v23, songtag.VersionID3v24:
-		tag, err := id3v2.ParseReader(file, id3v2.Options{Parse: true})
-		if err != nil {
-			return
-		}
-		tag.SetDefaultEncoding(id3v2.EncodingUTF8)
-		if imgResp, err := http.Get(app.AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
-			defer imgResp.Body.Close()
-			if data, err := io.ReadAll(imgResp.Body); err == nil {
-				tag.AddAttachedPicture(id3v2.PictureFrame{
-					Encoding:    id3v2.EncodingUTF8,
-					MimeType:    "image/jpg",
-					PictureType: id3v2.PTOther,
-					Picture:     data,
-				})
-			}
-		}
-		tag.SetTitle(song.Name)
-		tag.SetAlbum(song.Album.Name)
-		tag.SetArtist(song.ArtistName())
-		_ = tag.Save()
-		_ = tag.Close()
-	default:
-		metadata, err := songtag.Read(file)
-		if err != nil {
-			return
-		}
-		defer metadata.Close()
-		_ = metadata.SetAlbum(song.Album.Name)
-		_ = metadata.SetArtist(song.ArtistName())
-		_ = metadata.SetAlbumArtist(song.Album.ArtistName())
-		_ = metadata.SetTitle(song.Name)
-		if _, ok := metadata.(*songtag.FLAC); !ok {
-			return
-		}
-		if imgResp, err := http.Get(app.AddResizeParamForPicUrl(song.PicUrl, 1024)); err == nil {
-			defer imgResp.Body.Close()
-			if data, err := io.ReadAll(imgResp.Body); err == nil {
-				img, _ := flacpicture.NewFromImageData(flacpicture.PictureTypeFrontCover, "cover", data, "image/jpeg")
-				_ = metadata.(*songtag.FLAC).SetFlacPicture(img)
-			}
-		}
-		filename := file.Name()
-		_ = metadata.SaveFile(filename + "-tmp")
-		_ = file.Close()
-		_ = os.Remove(filename)
-		_ = os.Rename(filename+"-tmp", filename)
+func SetSongTag(filePath string, song structs.Song) {
+	if err := tagger.SetSongTag(filePath, song); err != nil {
+		slog.Error("元数据写入失败", "error", err)
 	}
 }
