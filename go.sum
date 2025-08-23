@@ -1,3 +1,5 @@
+github.com/adrg/xdg v0.5.3 h1:xRnxJXne7+oWDatRhR1JLnvuccuIeCoBu2rtuLqQB78=
+github.com/adrg/xdg v0.5.3/go.mod h1:nlTsY+NNiCBGCK2tpm09vRqfVzrc2fLmXGpBLF0zlTQ=
 github.com/anhoder/foxful-cli v0.5.0 h1:K6wx7q+lxdOokjHhK04RFM19nj8Vuy0CKajUnTLgjfs=
 github.com/anhoder/foxful-cli v0.5.0/go.mod h1:M6018fGlfMbZIGGWgYC82Thk8u57VJguePEg3BbyPWA=
 github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU=

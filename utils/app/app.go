@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	_ "github.com/adrg/xdg"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )

@@ -3,6 +3,7 @@ module github.com/go-musicfox/go-musicfox
 go 1.23.0
 
 require (
+	github.com/adrg/xdg v0.5.3
 	github.com/anhoder/foxful-cli v0.5.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/bogem/id3v2/v2 v2.1.4
