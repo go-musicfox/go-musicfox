@@ -74,10 +74,10 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 
 func (n *Netease) InitHook(_ *model.App) {
 	config := configs.ConfigRegistry
-	projectDir := app.DataRootDir()
+	dataDir := app.DataDir()
 
 	// 全局文件Jar
-	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(projectDir, "cookie"), nil)
+	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(dataDir, "cookie"), nil)
 	util.SetGlobalCookieJar(cookieJar)
 
 	// 获取用户信息
@@ -145,10 +145,10 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 			if needUpdate {
 				// 删除旧notifier
-				_ = os.RemoveAll(filepath.Join(projectDir, "musicfox-notifier.app"))
+				_ = os.RemoveAll(filepath.Join(dataDir, "musicfox-notifier.app"))
 
 				// 删除旧logo
-				_ = os.Remove(filepath.Join(projectDir, types.DefaultNotifyIcon))
+				_ = os.Remove(filepath.Join(dataDir, types.DefaultNotifyIcon))
 
 				extInfo.StorageVersion = types.AppVersion
 				_ = table.SetByKVModel(extInfo, extInfo)

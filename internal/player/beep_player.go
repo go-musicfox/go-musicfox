@@ -99,7 +99,7 @@ func (p *beepPlayer) listen() {
 		panic(err)
 	}
 
-	cacheFile := filepath.Join(app.DataRootDir(), "music_cache")
+	cacheFile := filepath.Join(app.RuntimeDir(), "beep_playing")
 	for {
 		select {
 		case <-p.close:

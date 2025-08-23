@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	dir := app.DataRootDir()
+	dir := app.LogDir()
 
 	f, err := os.OpenFile(filepath.Join(dir, "musicfox.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {

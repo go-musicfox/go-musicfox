@@ -7,14 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 )
 
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {
-	projectDir := app.DataRootDir()
-	configFile := filepath.Join(projectDir, types.AppIniFile)
+	configFile := app.ConfigFilePath()
 	if !FileOrDirExists(configFile) {
 		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
 	}
