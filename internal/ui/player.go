@@ -521,7 +521,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 
 	p.LocatePlayingSong()
 	p.Pause()
-	url, musicType, err := p.getPlayInfo(song.Id)
+	url, musicType, err := p.getPlayInfo(song)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
@@ -712,10 +712,10 @@ func (p *Player) Close() error {
 	return nil
 }
 
-func (p *Player) getPlayInfo(songID int64) (string, string, error) {
-	info, err := netease.FetchPlayableInfo(songID, configs.ConfigRegistry.Main.PlayerSongLevel)
-	url := info.URL
-	musicType := info.MusicType
+func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
+	info, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
+	url := info.Info.URL
+	musicType := info.Info.MusicType
 	return url, musicType, err
 }
 

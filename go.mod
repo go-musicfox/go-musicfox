@@ -23,7 +23,6 @@ require (
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gookit/ini/v2 v2.2.2
 	github.com/gopxl/beep v1.4.0
-	github.com/markthree/go-get-folder-size v0.5.0
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/termenv v0.15.2
 	github.com/pkg/errors v0.9.1
