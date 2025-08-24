@@ -403,6 +403,9 @@ $ musicfox
 
   > 这里之所以使用 FLAC8，主要是为了兼容大部分系统，因为FLAC是向前兼容的（也就是说 `≥ 8` 的FLAC都可以使用）
 - wsl 环境下使用 beep 须安装 `libasound2-plugins`，见 [issues](https://github.com/microsoft/wslg/issues/864)
+- XDG 支持
+
+  自 [#453](https://github.com/go-musicfox/go-musicfox/pull/453) 起，提供了完整的 XDG 支持，部分文件路径变更，见 [XDG 支持说明](./docs/xdg_support.md)
 
 </details>
 <details>
