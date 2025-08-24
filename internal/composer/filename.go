@@ -13,8 +13,8 @@ const (
 )
 
 var defaultDownloadTemplates = map[string]string{
-	tplDownloadSong:  "{{.SongName}}-{{.ArtistName}}.{{.FileExt}}",
-	tplDownloadLyric: "{{.SongName}}-{{.ArtistName}}.{{.FileExt}}",
+	tplDownloadSong:  "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}",
+	tplDownloadLyric: "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}",
 }
 
 type FileNameProps struct {
@@ -65,6 +65,7 @@ func (m *FileNameGenerator) generator(name string, song structs.Song, fileExt st
 		FileExt:   fileExt,
 		SongType:  fileExt,
 	}
+	props.ArtistName = props.SongArtists
 	str, err := m.tplManager.Execute(name, props)
 	if err == nil {
 		// Windows Linux 均不允许文件名中出现 / \ 替换为 _
