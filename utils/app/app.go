@@ -3,74 +3,174 @@ package app
 import (
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/adrg/xdg"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+// pathManager 统一管理应用的所有路径，遵循XDG规范
+type pathManager struct {
+	isPortable bool   // 是否为便携模式
+	rootDir    string // 根目录，仅在便携模式下有意义
+
+	configDir   string // 配置文件目录 (XDG_CONFIG_HOME)
+	dataDir     string // 数据文件目录 (XDG_DATA_HOME)
+	stateDir    string // 状态文件目录 (XDG_STATE_HOME)
+	cacheDir    string // 缓存目录 (XDG_CACHE_HOME)
+	runtimeDir  string // 运行时目录 (XDG_RUNTIME_DIR)
+	downloadDir string // 下载目录 (XDG_DOWNLOAD_DIR)
+
+	dbDir         string // 数据库目录
+	logDir        string // 日志文件目录
+	musicCacheDir string // 音乐缓存子目录的完整路径
+}
+
 var (
-	projectDir     string
-	projectDirOnce sync.Once
+	paths         pathManager
+	bootstrapOnce sync.Once
+	initPathsOnce sync.Once
 )
 
-// DataRootDir 获取本地数据存储目录
-func DataRootDir() string {
-	projectDirOnce.Do(func() {
-		if root := os.Getenv("MUSICFOX_ROOT"); root != "" {
-			projectDir = root
-		} else {
-			configDir, err := os.UserConfigDir()
-			if nil != err {
-				panic("未获取到本地数据目录：" + err.Error())
+func initPaths() {
+	bootstrapOnce.Do(func() {
+		portableRoot := os.Getenv("MUSICFOX_ROOT")
+		if portableRoot != "" {
+			absRoot, err := filepath.Abs(portableRoot)
+			if err != nil {
+				panic(fmt.Sprintf("无法解析便携模式根目录: %v", err))
 			}
-			projectDir = filepath.Join(configDir, types.AppLocalDataDir)
+			paths.isPortable = true
+			paths.rootDir = absRoot
+			paths.configDir = absRoot
+			paths.stateDir = absRoot
+			paths.dataDir = filepath.Join(absRoot, "data")
+			paths.cacheDir = filepath.Join(absRoot, "cache")
+			paths.downloadDir = filepath.Join(absRoot, "download")
+			mustCreateDirectory(absRoot)
+		} else {
+			paths.dataDir = filepath.Join(xdg.DataHome, types.AppLocalDataDir)
+			paths.stateDir = filepath.Join(xdg.StateHome, types.AppLocalDataDir)
+			paths.cacheDir = filepath.Join(xdg.CacheHome, types.AppLocalDataDir)
+			paths.downloadDir = filepath.Join(xdg.UserDirs.Download, types.AppLocalDataDir)
+			path, err := xdg.ConfigFile(types.AppLocalDataDir)
+			if err != nil {
+				panic(fmt.Sprintf("无法获取配置目录: %v", err))
+			}
+			paths.configDir = path
 		}
-		if _, err := os.Stat(projectDir); os.IsNotExist(err) {
-			_ = os.MkdirAll(projectDir, os.ModePerm)
-		}
+		paths.logDir = filepath.Join(paths.stateDir, "log")
+		paths.dbDir = filepath.Join(paths.dataDir, "db")
+
+		mustCreateDirectory(paths.configDir, paths.dataDir, paths.logDir)
 	})
-	return projectDir
+}
+
+func initPathsWithConfig() {
+	initPathsOnce.Do(func() {
+		initPaths()
+		if userCacheDir := configs.ConfigRegistry.Main.CacheDir; userCacheDir != "" {
+			if paths.isPortable {
+				paths.cacheDir = filepath.Join(paths.rootDir, userCacheDir)
+			} else {
+				paths.cacheDir, _ = filepath.Abs(userCacheDir)
+			}
+		}
+		paths.musicCacheDir = filepath.Join(paths.cacheDir, "music_cache")
+
+		if userDownloadDir := configs.ConfigRegistry.Main.DownloadDir; userDownloadDir != "" {
+			if paths.isPortable {
+				paths.downloadDir = filepath.Join(paths.rootDir, userDownloadDir)
+			} else {
+				paths.downloadDir, _ = filepath.Abs(userDownloadDir)
+			}
+		}
+
+		mustCreateDirectory(paths.cacheDir)
+	})
+}
+
+func mustCreateDirectory(dirs ...string) {
+	for _, dir := range dirs {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				slog.Error("创建目录失败", "dir", dir, "error", err)
+			}
+		}
+	}
+}
+
+func ConfigDir() string {
+	initPaths()
+	return paths.configDir
+}
+
+func ConfigFilePath() string {
+	return filepath.Join(ConfigDir(), types.AppIniFile)
+}
+
+// DataDir 获取数据文件目录 (db, cookie, logo.png)
+func DataDir() string {
+	initPaths()
+	return paths.dataDir
+}
+
+// RuntimeDir 用于 beep 临时文件、二维码图片路径等
+func RuntimeDir() string {
+	initPaths()
+	dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
+	mustCreateDirectory(dir)
+	return dir
+}
+
+func DBDir() string {
+	return filepath.Join(DataDir(), "db")
+}
+
+func StateDir() string {
+	initPaths()
+	return paths.stateDir
+}
+
+func LogDir() string {
+	initPaths()
+	return paths.logDir
 }
 
 func CacheDir() string {
-	cacheDir := configs.ConfigRegistry.Main.CacheDir
-	if cacheDir == "" {
-		cache, err := os.UserCacheDir()
-		if nil != err {
-			panic("未获取到本地缓存目录：" + err.Error())
-		}
-		cacheDir = filepath.Join(cache, types.AppLocalDataDir)
-	}
-	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
-		_ = os.MkdirAll(cacheDir, os.ModePerm)
-	}
-	return cacheDir
+	initPathsWithConfig()
+	return paths.cacheDir
 }
 
+// MusicCacheDir 获取存放音乐文件的特定缓存子目录
+func MusicCacheDir() string {
+	initPathsWithConfig()
+	return paths.musicCacheDir
+}
+
+// DownloadDir 下载目录
 func DownloadDir() string {
-	downloadDir := configs.ConfigRegistry.Main.DownloadDir
-	return resolvePath(downloadDir, DataRootDir(), "download")
+	initPathsWithConfig()
+	return paths.downloadDir
 }
 
+// DownloadLyricDir 歌词下载目录，同 DownloadDir
 func DownloadLyricDir() string {
-	downloadLyricDir := configs.ConfigRegistry.Main.DownloadLyricDir
-	return resolvePath(downloadLyricDir, DataRootDir(), "download")
-}
-
-func resolvePath(pathA, basePathB string, additional ...string) string {
-	var resolvedBase string
-	if filepath.IsAbs(pathA) {
-		resolvedBase = pathA
-	} else {
-		resolvedBase = filepath.Join(basePathB, pathA)
+	customDir := configs.ConfigRegistry.Main.DownloadLyricDir
+	if customDir == "" {
+		return DownloadDir()
 	}
-	allSegments := append([]string{resolvedBase}, additional...)
-	fullPath := filepath.Join(allSegments...)
-	absPath, _ := filepath.Abs(fullPath)
-	return absPath
+
+	if paths.isPortable {
+		return filepath.Join(paths.rootDir, customDir)
+	} else {
+		dir, _ := filepath.Abs(customDir)
+		return dir
+	}
 }
 
 // IDToBin convert autoincrement ID to []byte

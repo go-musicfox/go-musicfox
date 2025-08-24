@@ -34,9 +34,7 @@ func (m *LocalDB) Close() error {
 
 // NewLocalDB 创建本地数据库
 func NewLocalDB(dbName string) (*LocalDB, error) {
-	projectPath := app.DataRootDir()
-
-	dbDir := fmt.Sprintf("%s/db", projectPath)
+	dbDir := app.DBDir()
 	if _, err := os.Stat(dbDir); err != nil {
 		_ = os.MkdirAll(dbDir, 0755)
 	}

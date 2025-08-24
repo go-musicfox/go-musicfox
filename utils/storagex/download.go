@@ -203,7 +203,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 		slog.Error("缓存歌曲失败", slog.Any("error", errs))
 	}
 	var err error
-	cacheDir := app.CacheDir()
+	cacheDir := app.MusicCacheDir()
 	size, err := foldersize.Invoke(cacheDir)
 	if err != nil {
 		errHandler(err)
@@ -227,7 +227,7 @@ func CacheMusic(song structs.Song, url string, musicType string, quality service
 }
 
 func ClearMusicCache() error {
-	cacheDir := app.CacheDir()
+	cacheDir := app.MusicCacheDir()
 	return ClearDir(cacheDir)
 }
 

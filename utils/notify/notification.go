@@ -29,7 +29,7 @@ type osxNotificator struct {
 }
 
 func (o osxNotificator) getNotifierCmd() string {
-	localDir := app.DataRootDir()
+	localDir := app.DataDir()
 	notifierPath := filepath.Join(localDir, "musicfox-notifier.app")
 	if _, err := os.Stat(notifierPath); os.IsNotExist(err) {
 		err = filex.CopyDirFromEmbed("embed_darwin/musicfox-notifier.app", notifierPath)
@@ -212,7 +212,7 @@ func useAppIcon(content *NotifyContent) {
 		content.Icon = "/app/share/icons/hicolor/512x512/apps/io.github.go_musicfox.go-musicfox.png"
 		return
 	}
-	localDir := app.DataRootDir()
+	localDir := app.DataDir()
 	content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 	if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
 		content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)

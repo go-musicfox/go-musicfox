@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/anhoder/foxful-cli/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/commands"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/migration"
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
@@ -33,6 +35,20 @@ func musicfox() {
 
 	// 加载config
 	filex.LoadIniConfig()
+
+	needsMigration, err := migration.NeedsMigration()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[CRITICAL] Failed to check for migration: %v\n", err)
+		return
+	}
+
+	if needsMigration {
+		fmt.Println("需要迁移旧数据，正在启动迁移程序...")
+		if err := migration.RunAndReport(); err != nil {
+			fmt.Fprintf(os.Stderr, "[CRITICAL] Migration UI failed: %v\n", err)
+		}
+		return
+	}
 
 	util.PrimaryColor = configs.ConfigRegistry.Main.PrimaryColor
 	var (

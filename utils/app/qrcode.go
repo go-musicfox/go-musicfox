@@ -7,7 +7,7 @@ import (
 )
 
 func GenQRCode(filename, content string) (string, error) {
-	localDir := DataRootDir()
+	localDir := RuntimeDir()
 	qrcodePath := filepath.Join(localDir, filename)
 	if err := qrcode.WriteFile(content, qrcode.Medium, 256, qrcodePath); err != nil {
 		return "", err

@@ -23,7 +23,7 @@ import (
 )
 
 func tryFindCache(songId int64) (fpath string) {
-	cacheDir := app.CacheDir()
+	cacheDir := app.MusicCacheDir()
 	if !filex.FileOrDirExists(cacheDir) {
 		if configs.ConfigRegistry.Main.CacheLimit != 0 {
 			_ = os.MkdirAll(cacheDir, os.ModePerm)
@@ -49,7 +49,7 @@ func tryFindCache(songId int64) (fpath string) {
 func CopyCachedSong(song structs.Song) error {
 	initNameGen()
 	downloadDir := app.DownloadDir()
-	cacheDir := app.CacheDir()
+	cacheDir := app.MusicCacheDir()
 	if !filex.FileOrDirExists(downloadDir) {
 		_ = os.MkdirAll(downloadDir, os.ModePerm)
 	}
