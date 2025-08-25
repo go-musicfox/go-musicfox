@@ -104,12 +104,17 @@ func (n *Netease) InitHook(_ *model.App) {
 
 		if n.user == nil && config.Main.NeteaseCookie != "" {
 			// 使用cookie登录
-			cookieJar.SetCookies(
-				errorx.Must1(url.Parse("https://music.163.com")),
-				errorx.Must1(http.ParseCookie(config.Main.NeteaseCookie)),
-			)
-			if err := n.LoginCallback(); err != nil {
-				slog.Warn("使用cookie登录失败", slogx.Error(err))
+			cookies, err := http.ParseCookie(config.Main.NeteaseCookie)
+			if err != nil {
+				slog.Error("网易云 cookies 格式错误", "error", err)
+			} else {
+				cookieJar.SetCookies(
+					errorx.Must1(url.Parse("https://music.163.com")),
+					cookies,
+				)
+				if err := n.LoginCallback(); err != nil {
+					slog.Warn("使用cookie登录失败", slogx.Error(err))
+				}
 			}
 		}
 
