@@ -16,17 +16,14 @@ type LoginCellphoneService struct {
 	CsrfToken   string `json:"csrf_token" from:"csrf_token"`
 }
 
-func (service *LoginCellphoneService) LoginCellphone() (float64, []byte) {
-
-	// cookiesOS := &http.Cookie{Name: "os", Value: "ios"}
-	// appVersion := &http.Cookie{Name: "appver", Value: "8.7.01"}
-
-	// options := &util.Options{
-	// 	Crypto:  "weapi",
-	// 	Ua:      "pc",
-	// 	Cookies: []*http.Cookie{cookiesOS, appVersion},
-	// }
-	data := make(map[string]string)
+// LoginCellphone 使用手机号和密码登录
+//
+// 返回：
+//   - code: 状态码
+//   - bodyBytes：返回的响应体
+//   - err：错误内容
+func (service *LoginCellphoneService) LoginCellphone() (float64, []byte, error) {
+	data := make(map[string]interface{})
 
 	data["phone"] = service.Phone
 	if service.Countrycode != "" {
@@ -50,9 +47,22 @@ func (service *LoginCellphoneService) LoginCellphone() (float64, []byte) {
 	}
 	data["rememberLogin"] = "true"
 
-	// code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/weapi/login/cellphone`, data, options)
-
 	api := "https://music.163.com/weapi/login/cellphone"
-	code, bodyBytes := util.CallWeapi(api, data)
-	return code, bodyBytes
+	code, bodyBytes, err := util.CallWeapi(api, data)
+	return code, bodyBytes, err
+}
+
+// web端登录安全检查,需要获取checkToken的值
+func (service *LoginCellphoneService) loginSecure() (float64, []byte, error) {
+	data := make(map[string]interface{})
+	data["phone"] = service.Phone
+	if service.Countrycode != "" {
+		data["countrycode"] = service.Countrycode
+	} else {
+		data["countrycode"] = "86"
+	}
+	data["checkToken"] = "" // 需要动态生成
+	api := "https://music.163.com/api/user/login/secure"
+	code, bodyBytes, err := util.CallWeapi(api, data)
+	return code, bodyBytes, err
 }
