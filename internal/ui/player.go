@@ -31,7 +31,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
-	"github.com/go-musicfox/go-musicfox/utils/storagex"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
@@ -522,7 +521,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 
 	p.LocatePlayingSong()
 	p.Pause()
-	url, musicType, err := storagex.PlayableURLSong(song)
+	url, musicType, err := p.getPlayInfo(song)
 	if url == "" || err != nil {
 		p.progressRamp = []string{}
 		p.playErrCount++
@@ -711,6 +710,13 @@ func (p *Player) Close() error {
 	}
 	p.Player.Close()
 	return nil
+}
+
+func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
+	info, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
+	url := info.Info.URL
+	musicType := info.Info.MusicType
+	return url, musicType, err
 }
 
 // lyricListener 歌词变更监听

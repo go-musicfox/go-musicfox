@@ -25,6 +25,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
@@ -42,8 +43,9 @@ type Netease struct {
 	login  *LoginPage
 	search *SearchPage
 
-	player   *Player
-	shareSvc *composer.ShareService
+	player       *Player
+	shareSvc     *composer.ShareService
+	trackManager *track.Manager
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -56,6 +58,15 @@ func NewNetease(app *model.App) *Netease {
 
 	n.shareSvc = composer.NewShareService()
 	n.shareSvc.RegisterTemplates(configs.ConfigRegistry.Share)
+
+	quality := configs.ConfigRegistry.Main.PlayerSongLevel
+	maxSizeMB := configs.ConfigRegistry.Main.CacheLimit
+	nameGen := composer.NewFileNameGenerator()
+	nameGen.RegisterSongTemplate(configs.ConfigRegistry.Main.DownloadFileNameTpl)
+	n.trackManager = track.NewManager(
+		track.WithNameGenerator(nameGen),
+		track.WithCacher(track.NewCacher(maxSizeMB)),
+		track.WithSongQuality(quality))
 
 	return n
 }

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -23,7 +25,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
-	"github.com/go-musicfox/go-musicfox/utils/storagex"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
@@ -307,6 +308,44 @@ func trashSelectedSong(m *Netease) model.Page {
 	return nil
 }
 
+func handleSongDownload(m *Netease, song structs.Song) {
+	if song.Id == 0 {
+		slog.Error("指定音乐不存在，跳过下载")
+	}
+	slog.Info("开始下载歌曲", "song", song.Name, "id", song.Id)
+	notify.Notify(notify.NotifyContent{
+		Title:   "👇🏻 正在下载，请稍候...",
+		Text:    song.Name,
+		GroupId: types.GroupID,
+	})
+
+	path, err := m.trackManager.DownloadSong(context.Background(), song)
+
+	switch {
+	case err == nil:
+		slog.Info("歌曲下载成功", "song", song.Name, "id", song.Id, "path", path)
+		notify.Notify(notify.NotifyContent{
+			Title:   "✅ 下载完成",
+			Text:    filepath.Base(path),
+			GroupId: types.GroupID,
+		})
+	case errors.Is(err, os.ErrExist):
+		slog.Info("歌曲文件已存在，跳过下载", "song", song.Name, "id", song.Id, "path", path)
+		notify.Notify(notify.NotifyContent{
+			Title:   "🙅🏻 文件已存在",
+			Text:    filepath.Base(path),
+			GroupId: types.GroupID,
+		})
+	default:
+		slog.Error("歌曲下载失败", "song", song.Name, "id", song.Id, "error", err)
+		notify.Notify(notify.NotifyContent{
+			Title:   "❌ 下载失败",
+			Text:    err.Error(),
+			GroupId: types.GroupID,
+		})
+	}
+}
+
 // 下载当前音乐
 func downloadSelectedSong(m *Netease) {
 	loading := model.NewLoading(m.MustMain())
@@ -323,7 +362,8 @@ func downloadSelectedSong(m *Netease) {
 		return
 	}
 	songs := me.Songs()
-	go storagex.DownloadMusic(songs[selectedIndex])
+
+	go handleSongDownload(m, songs[selectedIndex])
 }
 
 func downloadPlayingSong(m *Netease) {
@@ -335,7 +375,7 @@ func downloadPlayingSong(m *Netease) {
 		return
 	}
 
-	go storagex.DownloadMusic(m.player.CurSong())
+	go handleSongDownload(m, m.player.CurSong())
 }
 
 func simiSongsOfPlayingSong(m *Netease) {
@@ -853,7 +893,7 @@ func clearSongCache(m *Netease) {
 		loading := model.NewLoading(m.MustMain())
 		loading.Start()
 		defer loading.Complete()
-		err := storagex.ClearMusicCache()
+		err := m.trackManager.ClearCache()
 		if err != nil {
 			slog.Error("清除缓存失败", "error", err)
 			notify.Notify(notify.NotifyContent{
@@ -876,6 +916,41 @@ func clearSongCache(m *Netease) {
 	m.MustMain().EnterMenu(menu, &model.MenuItem{Title: "清除缓存", Subtitle: "确定清除缓存"})
 }
 
+func handleLyricDownload(m *Netease, song structs.Song) {
+	if song.Id == 0 {
+		slog.Error("指定音乐不存在，跳过下载")
+	}
+	slog.Info("开始下载歌词", "song", song.Name, "id", song.Id)
+
+	path, err := m.trackManager.DownloadLyric(context.Background(), song)
+
+	switch {
+	case err == nil:
+		slog.Info("歌词下载成功", "song", song.Name, "id", song.Id, "path", path)
+		notify.Notify(notify.NotifyContent{
+			Title:   "下载歌词成功",
+			Text:    filepath.Base(path),
+			Url:     filepath.Base(path),
+			GroupId: types.GroupID,
+		})
+	case errors.Is(err, os.ErrExist):
+		slog.Info("歌词文件已存在，跳过下载", "song", song.Name, "id", song.Id, "path", path)
+		notify.Notify(notify.NotifyContent{
+			Title:   "歌词文件已存在",
+			Text:    filepath.Base(path),
+			GroupId: types.GroupID,
+		})
+	default:
+		slog.Error("歌词下载失败", "song", song.Name, "id", song.Id, "error", err)
+		notify.Notify(notify.NotifyContent{
+			Title:   "下载歌词失败",
+			Text:    err.Error(),
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
+		})
+	}
+}
+
 func downloadPlayingSongLrc(m *Netease) {
 	loading := model.NewLoading(m.MustMain())
 	loading.Start()
@@ -885,7 +960,7 @@ func downloadPlayingSongLrc(m *Netease) {
 		return
 	}
 
-	go storagex.DownLoadLrc(m.player.CurSong())
+	go handleLyricDownload(m, m.player.CurSong())
 }
 
 func action(m *Netease, curPlaying bool) {
