@@ -713,9 +713,12 @@ func (p *Player) Close() error {
 }
 
 func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
-	info, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
-	url := info.Info.URL
-	musicType := info.Info.MusicType
+	source, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
+	if err != nil || source.Info == nil{
+		return "", "", err
+	}
+	url := source.Info.URL
+	musicType := source.Info.MusicType
 	return url, musicType, err
 }
 
