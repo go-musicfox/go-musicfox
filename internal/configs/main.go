@@ -29,4 +29,5 @@ type MainOptions struct {
 	UseDefaultKeyBindings  bool                     // 使用默认键绑定
 	CenterEverything       bool                     // 界面全部居中
 	NeteaseCookie          string                   // 网易云音乐登录cookie
+	Debug                  bool                     // 是否启用 Debug
 }

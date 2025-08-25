@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 func NewPlayerCommand() *gcli.Command {
@@ -30,6 +32,10 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		errorx.Go(func() {
 			panic(http.ListenAndServe(":"+strconv.Itoa(configs.ConfigRegistry.Main.PProfPort), nil))
 		}, true)
+	}
+
+	if GlobalOptions.DebugMode {
+		slogx.LevelVar().Set(slog.LevelDebug)
 	}
 
 	http.DefaultClient.Timeout = types.AppHttpTimeout

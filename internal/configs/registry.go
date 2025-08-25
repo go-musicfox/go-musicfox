@@ -92,6 +92,7 @@ func NewRegistryWithDefault() *Registry {
 			UseDefaultKeyBindings: true,
 			CenterEverything:      false,
 			NeteaseCookie:         "",
+			Debug:                 false,
 		},
 		Player: PlayerOptions{
 			Engine:         types.BeepPlayer,
@@ -195,6 +196,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.UseDefaultKeyBindings = ini.Bool("main.useDefaultKeyBindings", true)
 	registry.Main.CenterEverything = ini.Bool("main.centerEverything", false)
 	registry.Main.NeteaseCookie = ini.String("main.neteaseCookie", "")
+	registry.Main.Debug = ini.Bool("main.debug", false)
 
 	defaultPlayer := types.BeepPlayer
 	switch runtime.GOOS {
