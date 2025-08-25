@@ -1,3 +1,6 @@
+permissions:
+  contents: write
+  packages: write
 name: release
 
 defaults:
