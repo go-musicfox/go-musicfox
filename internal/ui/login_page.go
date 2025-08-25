@@ -323,7 +323,11 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 }
 
 func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
-	var code float64
+	var (
+		code float64
+		err  error
+	)
+
 	if strings.ContainsRune(l.accountInput.Value(), '@') {
 		loginService := service.LoginEmailService{
 			Email:    l.accountInput.Value(),
@@ -345,7 +349,11 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 			Password:    l.passwordInput.Value(),
 			Countrycode: countryCode,
 		}
-		code, _ = loginService.LoginCellphone()
+		code, _, err = loginService.LoginCellphone()
+		if err != nil {
+			l.tips = util.SetFgStyle("登录失败："+err.Error(), termenv.ANSIBrightRed)
+			return l, tickLogin(time.Nanosecond)
+		}
 	}
 
 	codeType := _struct.CheckCode(code)
@@ -372,13 +380,16 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 	qrService := service.LoginQRService{}
 	if l.qrLoginStep == 0 {
-		code, resp, url := qrService.GetKey()
+		code, resp, url, err := qrService.GetKey()
 		errHandler := func(err error) (model.Page, tea.Cmd) {
 			l.tips = util.SetFgStyle("生成二维码失败，请稍候再试", termenv.ANSIBrightRed)
 			if err != nil {
 				slog.Error("生成二维码失败", slogx.Error(err))
 			}
 			return l, nil
+		}
+		if err != nil {
+			return errHandler(err)
 		}
 		if code != 200 || url == "" {
 			return errHandler(errors.Errorf("code: %f, resp: %s", code, string(resp)))
@@ -402,7 +413,11 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 		}
 		return l, nil
 	}
-	if code, resp := qrService.CheckQR(); code != 803 {
+	code, resp, err := qrService.CheckQR()
+	if err != nil {
+		return errHandler(err)
+	}
+	if code != 803 {
 		return errHandler(errors.Errorf("checkQR code: %f, resp: %s", code, string(resp)))
 	}
 	l.tips = ""

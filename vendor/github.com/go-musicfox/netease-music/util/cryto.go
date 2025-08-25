@@ -128,6 +128,27 @@ func Eapi(url string, data map[string]interface{}) map[string]string {
 	return eapiType
 }
 
+// 对网易云api的参数进行加密处理
+func ApiParamsEncode(data map[string]interface{}) (map[string]string, error) {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal data to JSON: %w", err)
+	}
+	secretKey, secondSecretKey := NewLen16Rand()
+	firstCiphertext := aesEncrypt(jsonData, "cbc", presetKey, iv)
+	firstCiphertextBase64 := base64.StdEncoding.EncodeToString(firstCiphertext)
+	secondCiphertext := aesEncrypt(
+		[]byte(firstCiphertextBase64), "cbc", secondSecretKey, iv)
+	finalParams := base64.StdEncoding.EncodeToString(secondCiphertext)
+	encryptedSecretKey := rsaEncrypt(secretKey, publicKey)
+	finalEncSecKey := hex.EncodeToString(encryptedSecretKey)
+	encodedParams := map[string]string{
+		"params":    finalParams,
+		"encSecKey": finalEncSecKey,
+	}
+	return encodedParams, nil
+}
+
 // 生成chainID
 func GenerateChainID(cookieJar http.CookieJar) string {
 	version := "v1"
