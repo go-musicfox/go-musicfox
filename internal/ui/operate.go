@@ -136,6 +136,16 @@ func logout() {
 		GroupId: types.GroupID,
 	})
 	_ = os.Remove(filepath.Join(app.DataDir(), "cookie"))
+
+	//调用退出登录api
+	logout_service := service.LogoutService{}
+	code, _, err := logout_service.Logout()
+	if err != nil {
+		slog.Error("调用退出登录api错误", slog.String("error", err.Error()))
+	}
+	if code != 200 {
+		slog.Error("退出登录状态异常")
+	}
 }
 
 // likeSelectedSong like/unlike selected song
@@ -184,7 +194,7 @@ func likeSelectedSong(m *Netease, isLike bool) model.Page {
 		var err error
 		m.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
 		if err != nil {
-			slog.Error("获取歌单ID失败", err)
+			slog.Error("获取歌单ID失败", slog.String("error", err.Error()))
 			return nil
 		}
 

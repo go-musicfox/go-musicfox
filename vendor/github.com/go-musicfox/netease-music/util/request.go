@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -51,17 +52,24 @@ func chooseUserAgent(ua string) string {
 	return userAgentList["pc"]
 }
 
-var cookieJar http.CookieJar
+var (
+	globalCookieJar http.CookieJar
+	once            sync.Once
+)
 
 func SetGlobalCookieJar(jar http.CookieJar) {
-	cookieJar = jar
+	globalCookieJar = jar
 }
 
 func GetGlobalCookieJar() http.CookieJar {
-	if cookieJar == nil {
-		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
-	}
-	return cookieJar
+	once.Do(func() {
+		if globalCookieJar == nil {
+			// 为空时才新建一个jar对象
+			jar, _ := cookiejar.New(nil)
+			globalCookieJar = jar
+		}
+	})
+	return globalCookieJar
 }
 
 func CookieValueByName(cookies []*http.Cookie, name string, fallback string) string {
@@ -90,12 +98,10 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		globalDeviceId = deviceIds[idx]
 	})
 
-	if cookieJar == nil {
-		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
-	}
+	globalCookieJar = GetGlobalCookieJar()
 
 	if u, err := urlpkg.Parse(url); err == nil {
-		options.Cookies = append(options.Cookies, cookieJar.Cookies(u)...)
+		options.Cookies = append(options.Cookies, globalCookieJar.Cookies(u)...)
 	}
 	req := requests.Requests()
 
@@ -114,7 +120,7 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		csrfToken   = CookieValueByName(options.Cookies, "__csrf", "")
 	)
 
-	req.Client.Jar = cookieJar
+	req.Client.Jar = globalCookieJar
 	req.Header.Set("User-Agent", chooseUserAgent(options.Ua))
 	req.Header.Set("os", os)
 	req.Header.Set("appver", appver)
@@ -276,27 +282,13 @@ type request struct {
 // 初始化并返回一个request结构体以进行发送请求前的准备
 func NewRequest(url string) *request {
 	req := requests.Requests()
-	// 设置全局CookieJar
-	if cookieJar == nil {
-		cookieJar, _ = cookiejar.New(&cookiejar.Options{})
+	cookieJar := GetGlobalCookieJar()
+	cookieMap := map[string]string{
+		"sDeviceId": GenerateChainID(cookieJar),
 	}
 	host := "https://music.163.com"
-	targetUrl, err := urlpkg.Parse(host)
-	if err != nil {
-		log.Fatalf("无法解析 URL: %v", err)
-	}
-
-	// 生成与设备标识有关的cookie
-	sessionCookie := &http.Cookie{
-		Name:   "sDeviceId",
-		Value:  GenerateChainID(cookieJar),
-		Path:   "/",
-		Domain: "music.163.com",
-	}
-
-	cookiesToSet := []*http.Cookie{sessionCookie}
-	// 将cookie添加到CookieJar
-	cookieJar.SetCookies(targetUrl, cookiesToSet)
+	// 添加设备ID
+	AddCookiesToJar(cookieJar, cookieMap, host)
 	req.Client.Jar = cookieJar
 	return &request{
 		Req: req,
@@ -314,22 +306,22 @@ func NewRequest(url string) *request {
 // 发送 GET 请求
 //
 // 设置结构体中的Params字段以传入query参数
-func (req *request) SendGet() (Response *http.Response) {
+func (req *request) SendGet() (Response *http.Response, err error) {
 	resp, err := req.Req.Get(
 		req.Url,
 		requests.Header(req.Headers),
 		requests.Params(req.Params))
 	if err != nil {
-		log.Fatalf("GET request error: %s, url: %s", err.Error(), req.Url)
+		return nil, fmt.Errorf("GET request error: %s, url: %s", err.Error(), req.Url)
 	}
-	return resp.R
+	return resp.R, nil
 }
 
 // 发送 POST 请求
 //
 // 若要发送Json数据，请设置结构体中的Json字段
 // 发送FormData数据则设置结构体中的Datas字段
-func (req *request) SendPost() (Response *http.Response) {
+func (req *request) SendPost() (Response *http.Response, err error) {
 	// 判断一下post的数据类型
 	if len(req.Json) > 0 {
 		resp, err := req.Req.PostJson(
@@ -338,7 +330,7 @@ func (req *request) SendPost() (Response *http.Response) {
 			requests.Datas(req.Json),
 		)
 		if err != nil {
-			log.Fatalf("POST request error: %s, url: %s", err.Error(), req.Url)
+			return nil, fmt.Errorf("POST request error: %s, url: %s", err.Error(), req.Url)
 		}
 		Response = resp.R
 	} else {
@@ -348,37 +340,56 @@ func (req *request) SendPost() (Response *http.Response) {
 			requests.Datas(req.Datas),
 		)
 		if err != nil {
-			log.Fatalf("POST request error: %s, url: %s", err.Error(), req.Url)
+			return nil, fmt.Errorf("POST request error: %s, url: %s", err.Error(), req.Url)
 		}
 		Response = resp.R
 	}
-	return Response
+	return Response, nil
 }
 
-// 调用网易云音乐的API
+// CallWeapi 调用网易云音乐的 web 端 API。
+//
+// 用法：传入需要调用的 API 路径以及 map 形式的 form data。
 //
 // 返回：
-// - code: API调用后的状态码
-// - bodyBytes: API返回的内容
-func CallWeapi(api string, data map[string]string) (code float64, bodyBytes []byte) {
-	req := NewRequest(api)
-	// 传入加密后的formdata
-	req.Datas = Weapi(data)
-	resp := req.SendPost()
-	bodyBytes, err := io.ReadAll(resp.Body)
+//   - code: API 响应中的业务状态码。
+//   - bodyBytes: 完整的 API 响应体。
+//   - err: 如果在请求过程中发生任何错误，则返回非 nil 的 error。
+func CallWeapi(api string, data map[string]interface{}) (code float64, bodyBytes []byte, err error) {
+	encodedParams, err := ApiParamsEncode(data)
 	if err != nil {
-		log.Fatalf("Error reading body: %v", err)
+		return 0, nil, fmt.Errorf("failed to encode api params: %w", err)
+	}
+	req := NewRequest(api)
+	req.Datas = encodedParams
+
+	resp, err := req.SendPost()
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
-	// 获取api调用后的code
-	var respData map[string]interface{}
-	err = json.Unmarshal(bodyBytes, &respData)
+
+	// 读取响应体
+	bodyBytes, err = io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error unmarshaling JSON: %v", err)
+		return 0, nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	code, ok := respData["code"].(float64)
+
+	// 解析并验证响应中的 'code'
+	var respData map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &respData); err != nil {
+		return 0, bodyBytes, fmt.Errorf("error unmarshaling response JSON: %w", err)
+	}
+
+	codeValue, codeExists := respData["code"]
+	if !codeExists {
+		return 0, bodyBytes, fmt.Errorf("response JSON does not contain 'code' field")
+	}
+
+	code, ok := codeValue.(float64)
 	if !ok {
-		log.Fatal("Could not get 'code' or it's not a number")
+		return 0, bodyBytes, fmt.Errorf("'code' field is not a number, got type: %T", codeValue)
 	}
-	return code, bodyBytes
+
+	return code, bodyBytes, nil
 }
