@@ -217,6 +217,7 @@ func downloadSong(n *Netease, isSelected bool) {
 func handleSongDownload(n *Netease, song structs.Song) {
 	if song.Id == 0 {
 		slog.Error("指定音乐不存在，跳过下载")
+		return
 	}
 	slog.Info("开始下载歌曲", "song", song.Name, "id", song.Id)
 	notify.Notify(notify.NotifyContent{
@@ -274,6 +275,7 @@ func downloadSongLrc(n *Netease, isSelected bool) {
 func handleLyricDownload(n *Netease, song structs.Song) {
 	if song.Id == 0 {
 		slog.Error("指定音乐不存在，跳过下载")
+		return
 	}
 	slog.Info("开始下载歌词", "song", song.Name, "id", song.Id)
 
