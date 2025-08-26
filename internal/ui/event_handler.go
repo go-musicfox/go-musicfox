@@ -84,10 +84,10 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		newPage := player.Intelligence(false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLikePlayingSong:
-		newPage := likePlayingSong(h.netease, true)
+		newPage := likeSong(h.netease, true, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpDislikePlayingSong:
-		newPage := likePlayingSong(h.netease, false)
+		newPage := likeSong(h.netease, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLogout:
 		logout()
@@ -97,24 +97,24 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpVolumeUp:
 		player.UpVolume()
 	case keybindings.OpDownloadPlayingSong:
-		downloadPlayingSong(h.netease)
+		downloadSong(h.netease, false)
 	case keybindings.OpDownloadSelectedSong:
-		downloadSelectedSong(h.netease)
+		downloadSong(h.netease, true)
 	case keybindings.OpTrashPlayingSong:
 		// trash playing song
-		newPage := trashPlayingSong(h.netease)
+		newPage := trashSong(h.netease, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpTrashSelectedSong:
 		// trash selected song
-		newPage := trashSelectedSong(h.netease)
+		newPage := trashSong(h.netease, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLikeSelectedSong: // half-width, full-width, Japanese, Chinese and French
 		// like selected song
-		newPage := likeSelectedSong(h.netease, true)
+		newPage := likeSong(h.netease, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpDislikeSelectedSong:
 		// unlike selected song
-		newPage := likeSelectedSong(h.netease, false)
+		newPage := likeSong(h.netease, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpHelp:
 		// 帮助
@@ -133,28 +133,28 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpOpenSimiSongsOfPlayingSong:
 		// 与当前歌曲相似的歌曲
-		simiSongsOfPlayingSong(h.netease)
+		findSimilarSongs(h.netease, false)
 	case keybindings.OpOpenSimiSongsOfSelectedSong:
 		// 与当前选中歌曲相似的歌曲
-		simiSongsOfSelectedSong(h.netease)
+		findSimilarSongs(h.netease, false)
 	case keybindings.OpAlbumOfPlayingSong:
 		// 当前歌曲所属专辑
-		albumOfPlayingSong(h.netease)
+		goToAlbumOfSong(h.netease, false)
 	case keybindings.OpAlbumOfSelectedSong:
 		// 选中歌曲所属专辑
-		albumOfSelectedSong(h.netease)
+		goToAlbumOfSong(h.netease, false)
 	case keybindings.OpArtistOfPlayingSong:
 		// 当前歌曲所属歌手
-		artistOfPlayingSong(h.netease)
+		goToArtistOfSong(h.netease, false)
 	case keybindings.OpArtistOfSelectedSong:
 		// 选中歌曲所属歌手
-		artistOfSelectedSong(h.netease)
+		goToArtistOfSong(h.netease, true)
 	case keybindings.OpOpenPlayingSongInWeb:
 		// 网页打开当前歌曲
-		openPlayingSongInWeb(h.netease)
+		openInWeb(h.netease, false)
 	case keybindings.OpOpenSelectedItemInWeb:
 		// 网页打开选中项
-		openSelectedItemInWeb(h.netease)
+		openInWeb(h.netease, true)
 	case keybindings.OpCollectSelectedPlaylist:
 		// 收藏选中歌单
 		newPage := collectSelectedPlaylist(h.netease, true)
@@ -194,15 +194,15 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			main.SetSelectedIndex(curIndex)
 		}
 	case keybindings.OpDownloadPlayingSongLrc:
-		downloadPlayingSongLrc(h.netease)
+		downloadSongLrc(h.netease, false)
 	case keybindings.OpActionOfSelected:
 		action(h.netease, false)
 	case keybindings.OpActionOfPlayingSong:
 		action(h.netease, true)
 	case keybindings.OpSharePlayingItem:
-		shareSelectItem(h.netease)
+		shareItem(h.netease, false)
 	case keybindings.OpShareSelectItem:
-		shareSelectItem(h.netease)
+		shareItem(h.netease, true)
 	default:
 		return false, nil, nil
 	}
