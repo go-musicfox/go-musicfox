@@ -94,6 +94,7 @@ const (
 	OpAddSelectedToUserPlaylist
 	OpRemoveSelectedFromUserPlaylist
 	OpDownloadSelectedSong
+	OpDownloadSelectedSongLrc
 	OpAlbumOfSelectedSong
 	OpArtistOfSelectedSong
 	OpOpenSelectedItemInWeb
@@ -161,6 +162,7 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpAddSelectedToUserPlaylist:      {name: "addSelectedSongToUserPlaylist", desc: "将选中歌曲加入歌单"},
 	OpRemoveSelectedFromUserPlaylist: {name: "removeSelectedSongFromUserPlaylist", desc: "将选中歌曲从歌单中删除"},
 	OpDownloadSelectedSong:           {name: "downloadSelectedSong", desc: "下载选中歌曲"},
+	OpDownloadSelectedSongLrc:        {name: "downloadSelectedSongLrc", desc: "下载选中歌曲的歌词"},
 	OpAlbumOfSelectedSong:            {name: "openAlbumOfSelectedSong", desc: "选中歌曲的所属专辑"},
 	OpArtistOfSelectedSong:           {name: "openArtistOfSelectedSong", desc: "选中歌曲的所属歌手"},
 	OpOpenSelectedItemInWeb:          {name: "openSelectedItemInWeb", desc: "网页打开选中歌曲/专辑..."},
