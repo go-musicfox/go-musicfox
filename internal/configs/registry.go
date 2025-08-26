@@ -94,11 +94,12 @@ func NewRegistryWithDefault() *Registry {
 			Debug:                 false,
 		},
 		Storge: StorgeOptions{
-			DownloadDir:         "",
-			DownloadFileNameTpl: "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}",
-			CacheLimit:          0,
-			DownloadLyricDir:    "",
-			CacheDir:            "",
+			DownloadDir:           "",
+			DownloadLyricDir:      "",
+			DownloadSongWithLyric: false,
+			DownloadFileNameTpl:   "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}",
+			CacheLimit:            0,
+			CacheDir:              "",
 		},
 		Player: PlayerOptions{
 			Engine:         types.BeepPlayer,
@@ -206,6 +207,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	cacheLimit := ini.Int64("main.cacheLimit", 0)
 	registry.Storge.DownloadDir = ini.String("stroge.downloadDir", downloadDir)
 	registry.Storge.DownloadLyricDir = ini.String("stroge.downloadLyricDir", downloadLyricDir)
+	registry.Storge.DownloadSongWithLyric = ini.Bool("stroge.downloadSongWithLyric", false)
 	registry.Storge.DownloadFileNameTpl = ini.String("stroge.downloadFileNameTpl", downloadFileNameTpl)
 	registry.Storge.CacheDir = ini.String("stroge.cacheDir", cacheDir)
 	registry.Storge.CacheLimit = ini.Int64("stroge.cacheLimit", cacheLimit)

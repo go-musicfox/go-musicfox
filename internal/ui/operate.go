@@ -13,6 +13,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -246,6 +247,12 @@ func handleSongDownload(n *Netease, song structs.Song) {
 			Text:    err.Error(),
 			GroupId: types.GroupID,
 		})
+	}
+
+	withLyric := configs.ConfigRegistry.Storge.DownloadSongWithLyric
+	if withLyric && (err == nil || errors.Is(err, os.ErrExist)) {
+		slog.Info("歌曲已下载或已存在，开始下载歌词", "song", song.Name, "id", song.Id)
+		go handleLyricDownload(n, song)
 	}
 }
 
