@@ -84,19 +84,19 @@ func (m *ActionMenu) selectSongAction() {
 	m.item = []ActionItem{
 		{
 			title:  model.MenuItem{Title: "所属专辑"},
-			action: func() { albumOfSelectedSong(m.netease) },
+			action: func() { goToAlbumOfSong(m.netease, true) },
 		}, {
 			title:  model.MenuItem{Title: "所属歌手"},
-			action: func() { artistOfSelectedSong(m.netease) },
+			action: func() { goToArtistOfSong(m.netease, true) },
 		}, {
 			title:  model.MenuItem{Title: "下载"},
-			action: func() { downloadSelectedSong(m.netease) },
+			action: func() { downloadSong(m.netease, true) },
 		}, {
 			title: model.MenuItem{Title: "添加到喜欢"},
-			page:  func() model.Page { return likeSelectedSong(m.netease, true) },
+			page:  func() model.Page { return likeSong(m.netease, true, true) },
 		}, {
 			title: model.MenuItem{Title: "从喜欢移除"},
-			page:  func() model.Page { return likeSelectedSong(m.netease, false) },
+			page:  func() model.Page { return likeSong(m.netease, false, true) },
 		}, {
 			title: model.MenuItem{Title: "添加至歌单"},
 			page:  func() model.Page { return openAddSongToUserPlaylistMenu(m.netease, true, true) },
@@ -105,16 +105,16 @@ func (m *ActionMenu) selectSongAction() {
 			page:  func() model.Page { return openAddSongToUserPlaylistMenu(m.netease, true, false) },
 		}, {
 			title:  model.MenuItem{Title: "在网页打开"},
-			action: func() { openSelectedItemInWeb(m.netease) },
+			action: func() { openInWeb(m.netease, true) },
 		}, {
 			title: model.MenuItem{Title: "标记为不喜欢"},
-			page:  func() model.Page { return trashSelectedSong(m.netease) },
+			page:  func() model.Page { return trashSong(m.netease, true) },
 		}, {
-			title: model.MenuItem{Title: "相似的歌曲"},
-			action:  func() { simiSongsOfSelectedSong(m.netease) },
+			title:  model.MenuItem{Title: "相似的歌曲"},
+			action: func() { findSimilarSongs(m.netease, true) },
 		}, {
 			title:  model.MenuItem{Title: "分享"},
-			action: func() { shareSelectItem(m.netease) },
+			action: func() { shareItem(m.netease, true) },
 		},
 	}
 	if m.from == CurPlaylistKey { // 仅在当前播放界面生效
@@ -129,22 +129,22 @@ func (m *ActionMenu) curSongAction() {
 	m.item = []ActionItem{
 		{
 			title:  model.MenuItem{Title: "所属专辑"},
-			action: func() { albumOfPlayingSong(m.netease) },
+			action: func() { goToAlbumOfSong(m.netease, false) },
 		}, {
 			title:  model.MenuItem{Title: "所属歌手"},
-			action: func() { artistOfPlayingSong(m.netease) },
+			action: func() { goToArtistOfSong(m.netease, false) },
 		}, {
 			title:  model.MenuItem{Title: "下载音乐"},
-			action: func() { downloadPlayingSong(m.netease) },
+			action: func() { downloadSong(m.netease, false) },
 		}, {
 			title:  model.MenuItem{Title: "下载歌词"},
-			action: func() { downloadPlayingSongLrc(m.netease) },
+			action: func() { downloadSongLrc(m.netease, false) },
 		}, {
 			title: model.MenuItem{Title: "添加到喜欢"},
-			page:  func() model.Page { return likePlayingSong(m.netease, true) },
+			page:  func() model.Page { return likeSong(m.netease, true, false) },
 		}, {
 			title: model.MenuItem{Title: "从喜欢移除"},
-			page:  func() model.Page { return likePlayingSong(m.netease, false) },
+			page:  func() model.Page { return likeSong(m.netease, false, false) },
 		}, {
 			title: model.MenuItem{Title: "添加至歌单"},
 			page:  func() model.Page { return openAddSongToUserPlaylistMenu(m.netease, false, true) },
@@ -153,16 +153,16 @@ func (m *ActionMenu) curSongAction() {
 			page:  func() model.Page { return openAddSongToUserPlaylistMenu(m.netease, false, false) },
 		}, {
 			title:  model.MenuItem{Title: "在网页打开"},
-			action: func() { openPlayingSongInWeb(m.netease) },
+			action: func() { openInWeb(m.netease, false) },
 		}, {
 			title: model.MenuItem{Title: "标记为不喜欢"},
-			page:  func() model.Page { return trashPlayingSong(m.netease) },
+			page:  func() model.Page { return trashSong(m.netease, false) },
 		}, {
-			title: model.MenuItem{Title: "相似的歌曲"},
-			action:  func() { simiSongsOfPlayingSong(m.netease) },
+			title:  model.MenuItem{Title: "相似的歌曲"},
+			action: func() { findSimilarSongs(m.netease, false) },
 		}, {
 			title:  model.MenuItem{Title: "分享"},
-			action: func() { sharePlayingItem(m.netease) },
+			action: func() { shareItem(m.netease, false) },
 		},
 	}
 }
