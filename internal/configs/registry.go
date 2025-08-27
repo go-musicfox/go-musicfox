@@ -110,6 +110,7 @@ func NewRegistryWithDefault() *Registry {
 			Sources:            []string{types.UNMDefaultSources},
 			EnableLocalVip:     true,
 			UnlockSoundEffects: true,
+			SkipInvalidTracks:  false,
 		},
 		Reporter: ReporterOptions{
 			Lastfm: ReporterLastfmOptions{
@@ -253,6 +254,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.UNM.EnableLocalVip = ini.Bool("unm.enableLocalVip", true)
 	registry.UNM.UnlockSoundEffects = ini.Bool("unm.unlockSoundEffects", true)
 	registry.UNM.QQCookieFile = ini.String("unm.qqCookieFile", "")
+	registry.UNM.SkipInvalidTracks = ini.Bool("unm.skipInvalidTracks", false)
 
 	// Reporter.Lastfm, 兼容旧配置
 	lastfmKey := ini.String("lastfm.key", "")
