@@ -10,3 +10,4 @@ go.work.sum
 .envrc
 result/
 coverage.txt
+musicfox
