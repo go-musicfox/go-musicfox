@@ -262,11 +262,7 @@ func useAppIcon(content *NotifyContent) {
 		return
 	}
 	localDir := app.DataDir()
-	if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
-		if err != nil {
-			content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
-		}
-	}
+	content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 	if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
 		if err != nil {
 			content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)
