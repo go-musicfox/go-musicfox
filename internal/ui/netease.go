@@ -60,9 +60,9 @@ func NewNetease(app *model.App) *Netease {
 	n.shareSvc.RegisterTemplates(configs.ConfigRegistry.Share)
 
 	quality := configs.ConfigRegistry.Main.PlayerSongLevel
-	maxSizeMB := configs.ConfigRegistry.Main.CacheLimit
+	maxSizeMB := configs.ConfigRegistry.Storge.CacheLimit
 	nameGen := composer.NewFileNameGenerator()
-	nameGen.RegisterSongTemplate(configs.ConfigRegistry.Main.DownloadFileNameTpl)
+	nameGen.RegisterSongTemplate(configs.ConfigRegistry.Storge.DownloadFileNameTpl)
 	n.trackManager = track.NewManager(
 		track.WithNameGenerator(nameGen),
 		track.WithCacher(track.NewCacher(maxSizeMB)),
