@@ -13,11 +13,13 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/clipboard"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
@@ -206,7 +208,7 @@ func downloadSong(n *Netease, isSelected bool) {
 			slog.Warn("未获取到下载项")
 			return nil
 		}
-		go handleSongDownload(n, song)
+		errorx.Go(func() { handleSongDownload(n, song) }, true)
 		return nil
 	})
 	op.ShowLoading().Execute()
@@ -216,6 +218,7 @@ func downloadSong(n *Netease, isSelected bool) {
 func handleSongDownload(n *Netease, song structs.Song) {
 	if song.Id == 0 {
 		slog.Error("指定音乐不存在，跳过下载")
+		return
 	}
 	slog.Info("开始下载歌曲", "song", song.Name, "id", song.Id)
 	notify.Notify(notify.NotifyContent{
@@ -247,6 +250,12 @@ func handleSongDownload(n *Netease, song structs.Song) {
 			GroupId: types.GroupID,
 		})
 	}
+
+	withLyric := configs.ConfigRegistry.Storge.DownloadSongWithLyric
+	if withLyric && (err == nil || errors.Is(err, os.ErrExist)) {
+		slog.Info("歌曲已下载或已存在，开始下载歌词", "song", song.Name, "id", song.Id)
+		errorx.Go(func() { handleLyricDownload(n, song) }, true)
+	}
 }
 
 // downloadSongLrc 下载歌词
@@ -257,7 +266,7 @@ func downloadSongLrc(n *Netease, isSelected bool) {
 			slog.Warn("未获取到下载项")
 			return nil
 		}
-		go handleLyricDownload(n, song)
+		errorx.Go(func() { handleLyricDownload(n, song) }, true)
 		return nil
 	})
 	op.ShowLoading().Execute()
@@ -267,6 +276,7 @@ func downloadSongLrc(n *Netease, isSelected bool) {
 func handleLyricDownload(n *Netease, song structs.Song) {
 	if song.Id == 0 {
 		slog.Error("指定音乐不存在，跳过下载")
+		return
 	}
 	slog.Info("开始下载歌词", "song", song.Name, "id", song.Id)
 

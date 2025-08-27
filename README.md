@@ -478,6 +478,7 @@ $ musicfox
 | `addSelectedSongToUserPlaylist`     | 将选中歌曲加入歌单            | `Tab`                                           |
 | `removeSelectedSongFromUserPlaylist`  | 将选中歌曲从歌单中删除        | `Shift+Tab`                                     |
 | `downloadSelectedSong`              | 下载选中歌曲                  | `D`                                             |
+| `downloadSelectedSongLrc`           | 下载选中歌曲的歌词            |                                                 |
 | `openAlbumOfSelectedSong`           | 选中歌曲的所属专辑            | `A`                                             |
 | `openArtistOfSelectedSong`          | 选中歌曲的所属歌手            | `S`                                             |
 | `openSelectedItemInWeb`             | 网页打开选中歌曲/专辑...      | `O`                                             |
@@ -492,6 +493,7 @@ $ musicfox
 - 非字符快捷键大小写不敏感，如 `shift+tab` 等同 `Shift+Tab`，但 `a` 与 `A` 不同
 - 多次绑定同一个键的行为是未定义的，以程序最后读取的为准
 - [不可自定义操作](#不可自定义操作-内置) 不可自定义且其使用的键也不可用于自定义
+- 与歌曲、歌单等存在关联的操作现已默认添加至 `actionOfSelected` 及 `actionOfPlayingSong`
 
 
 ```ini

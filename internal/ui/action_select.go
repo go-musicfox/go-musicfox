@@ -92,6 +92,9 @@ func (m *ActionMenu) selectSongAction() {
 			title:  model.MenuItem{Title: "下载"},
 			action: func() { downloadSong(m.netease, true) },
 		}, {
+			title:  model.MenuItem{Title: "下载歌词"},
+			action: func() { downloadSongLrc(m.netease, true) },
+		}, {
 			title: model.MenuItem{Title: "添加到喜欢"},
 			page:  func() model.Page { return likeSong(m.netease, true, true) },
 		}, {

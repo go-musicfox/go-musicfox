@@ -195,6 +195,8 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		}
 	case keybindings.OpDownloadPlayingSongLrc:
 		downloadSongLrc(h.netease, false)
+	case keybindings.OpDownloadSelectedSongLrc:
+		downloadSongLrc(h.netease, true)
 	case keybindings.OpActionOfSelected:
 		action(h.netease, false)
 	case keybindings.OpActionOfPlayingSong:
