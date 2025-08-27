@@ -28,6 +28,7 @@ type Registry struct {
 	// Keybindings 存储最终生效的操作ID -> 按键列表映射
 	Keybindings map[keybindings.OperateType][]string
 	Share       map[string]string
+	Storge      StorgeOptions
 }
 
 func (r *Registry) FillToModelOpts(opts *model.Options) {
@@ -86,13 +87,18 @@ func NewRegistryWithDefault() *Registry {
 			PProfPort:             types.MainPProfPort,
 			AltScreen:             true,
 			EnableMouseEvent:      true,
-			DownloadDir:           "",
-			CacheLimit:            0,
 			DynamicMenuRows:       false,
 			UseDefaultKeyBindings: true,
 			CenterEverything:      false,
 			NeteaseCookie:         "",
 			Debug:                 false,
+		},
+		Storge: StorgeOptions{
+			DownloadDir:         "",
+			DownloadFileNameTpl: "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}",
+			CacheLimit:          0,
+			DownloadLyricDir:    "",
+			CacheDir:            "",
 		},
 		Player: PlayerOptions{
 			Engine:         types.BeepPlayer,
@@ -186,17 +192,23 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Main.AltScreen = ini.Bool("main.altScreen", true)
 	registry.Main.EnableMouseEvent = ini.Bool("main.enableMouseEvent", true)
 	registry.Main.DualColumn = ini.Bool("main.doubleColumn", true)
-	registry.Main.DownloadDir = ini.String("main.downloadDir", "")
-	registry.Main.DownloadLyricDir = ini.String("main.downloadLyricDir", "")
-	registry.Main.DownloadFileNameTpl = ini.String("main.downloadFileNameTpl", "")
 	registry.Main.ShowAllSongsOfPlaylist = ini.Bool("main.showAllSongsOfPlaylist", false)
-	registry.Main.CacheDir = ini.String("main.cacheDir", "")
-	registry.Main.CacheLimit = ini.Int64("main.cacheLimit", 0)
 	registry.Main.DynamicMenuRows = ini.Bool("main.dynamicMenuRows", false)
 	registry.Main.UseDefaultKeyBindings = ini.Bool("main.useDefaultKeyBindings", true)
 	registry.Main.CenterEverything = ini.Bool("main.centerEverything", false)
 	registry.Main.NeteaseCookie = ini.String("main.neteaseCookie", "")
 	registry.Main.Debug = ini.Bool("main.debug", false)
+
+	downloadDir := ini.String("main.downloadDir", "")
+	downloadLyricDir := ini.String("main.downloadLyricDir", "")
+	downloadFileNameTpl := ini.String("main.downloadFileNameTpl", "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}")
+	cacheDir := ini.String("main.cacheDir", "")
+	cacheLimit := ini.Int64("main.cacheLimit", 0)
+	registry.Storge.DownloadDir = ini.String("stroge.downloadDir", downloadDir)
+	registry.Storge.DownloadLyricDir = ini.String("stroge.downloadLyricDir", downloadLyricDir)
+	registry.Storge.DownloadFileNameTpl = ini.String("stroge.downloadFileNameTpl", downloadFileNameTpl)
+	registry.Storge.CacheDir = ini.String("stroge.cacheDir", cacheDir)
+	registry.Storge.CacheLimit = ini.Int64("stroge.cacheLimit", cacheLimit)
 
 	defaultPlayer := types.BeepPlayer
 	switch runtime.GOOS {
