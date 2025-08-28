@@ -13,8 +13,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/gen2brain/beeep"
 	"github.com/go-musicfox/notificator"
+	"github.com/godbus/dbus/v5"
 	"github.com/pkg/errors"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -146,7 +148,22 @@ func Notify(content NotifyContent) {
 			useAppIcon(&content)
 		}
 	}
-
+	if runtime.GOOS == "linux" {
+		freedesktop_dbus, err := dbus.ConnectSessionBus()
+		if err != nil {
+			log.Printf("connect dbus failed: %+v", errors.WithStack(err))
+		}
+		defer freedesktop_dbus.Close()
+		notfiy := freedesktop_dbus.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
+		call := notfiy.Call("org.freedesktop.Notifications.Notify", 0, types.AppName, uint32(0),
+			content.Icon, content.Title, content.Text, []string{},
+			map[string]dbus.Variant{}, int32(5000))
+		//Notify spec  https://specifications.freedesktop.org/notification-spec/1.3/protocol.html#command-notify
+		if call.Err != nil {
+			log.Printf("connect org.freedesktop.Notifications failed: %+v", errors.WithStack(call.Err))
+		}
+		return
+	}
 	_ = notify.Push(notificator.UrNormal, content.Title, content.Text, content.Icon, content.Url, content.GroupId)
 }
 
@@ -212,10 +229,46 @@ func useAppIcon(content *NotifyContent) {
 		content.Icon = "/app/share/icons/hicolor/512x512/apps/io.github.go_musicfox.go-musicfox.png"
 		return
 	}
+	if runtime.GOOS == "linux" {
+		content.Icon, _ = xdg.SearchDataFile("pixmaps/musicfox.png") //old systems,power by systems packing
+		//app need in XDG_DATA_DIRS hicolor 16 24 32 48 64 96 128 192 256 512
+		//icons/hicolor/scalable/apps can use  svg
+		//see https://specifications.freedesktop.org/icon-theme-spec/latest/#directory_layout
+		//and see https://gitlab.freedesktop.org/xdg/default-icon-theme
+		sizeOne := [10]string{"16", "24", "32", "48", "64", "96", "128", "192", "256", "512"}
+		for _, size := range sizeOne {
+			sizexsize := size + "x" + size
+			content.Icon, _ = xdg.SearchDataFile(filepath.Join("icons", "hicolor", sizexsize, "apps", "musicfox.png"))
+			if content.Icon != "" {
+				content.Icon = "musicfox"
+				return
+			}
+		}
+		if content.Icon == "" {
+			content.Icon = filepath.Join(xdg.DataHome, "icons", "hicolor", "512x512", "apps", "musicfox.png") //user dir can write
+		}
+		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
+			err := os.MkdirAll(filepath.Join(xdg.DataHome, "icons", "hicolor", "512x512", "apps"), 0777)
+			if err != nil {
+				log.Printf("\n filed to mkdir XDG_DATA_DIRS/icons/hicolor/512x512/apps  , err: %+v", errors.WithStack(err))
+			}
+			// 写入logo文件
+			err = filex.CopyFileFromEmbed("embed/logo.png", content.Icon)
+			if err != nil {
+				log.Printf("copy logo.png to  failed, err: %+v", errors.WithStack(err))
+			}
+		}
+		content.Icon = "musicfox"
+		return
+	}
 	localDir := app.DataDir()
 	content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
 	if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
-		content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)
+		if err != nil {
+			content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)
+		}
+	}
+	if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
 		// 写入logo文件
 		err = filex.CopyFileFromEmbed("embed/logo.png", content.Icon)
 		if err != nil {
