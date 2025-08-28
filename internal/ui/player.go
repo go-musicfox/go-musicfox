@@ -522,11 +522,22 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	p.LocatePlayingSong()
 	p.Pause()
 	url, musicType, err := p.getPlayInfo(song)
-	if url == "" || err != nil {
+
+	var skip bool
+	logger := slog.With(slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
+	if configs.ConfigRegistry.UNM.SkipInvalidTracks {
+		skip, _ = netease.HasBannedPathSuffix(url)
+	}
+
+	if url == "" || err != nil || skip {
 		p.progressRamp = []string{}
 		p.playErrCount++
+		if skip {
+			logger.Info("已拦截无效播放")
+		} else {
+			logger.Error("Play song error", slog.Any("err", err))
+		}
 		if p.playErrCount >= configs.ConfigRegistry.Player.MaxPlayErrCount {
-			slog.Error("Play song error", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song), slog.Any("err", err))
 			return
 		}
 		switch direction {
@@ -714,7 +725,7 @@ func (p *Player) Close() error {
 
 func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
 	source, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
-	if err != nil || source.Info == nil{
+	if err != nil || source.Info == nil {
 		return "", "", err
 	}
 	url := source.Info.URL
