@@ -149,12 +149,12 @@ func Notify(content NotifyContent) {
 		}
 	}
 	if runtime.GOOS == "linux" {
-		DBUS, err := dbus.ConnectSessionBus()
+		freedesktop_dbus, err := dbus.ConnectSessionBus()
 		if err != nil {
 			log.Printf("connect dbus failed: %+v", errors.WithStack(err))
 		}
-		defer DBUS.Close()
-		notfiy := DBUS.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
+		defer freedesktop_dbus.Close()
+		notfiy := freedesktop_dbus.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
 		call := notfiy.Call("org.freedesktop.Notifications.Notify", 0, types.AppName, uint32(0),
 			content.Icon, content.Title, content.Text, []string{},
 			map[string]dbus.Variant{}, int32(5000))
