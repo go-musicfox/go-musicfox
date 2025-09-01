@@ -68,6 +68,15 @@ func GetGlobalCookieJar() http.CookieJar {
 			jar, _ := cookiejar.New(nil)
 			globalCookieJar = jar
 		}
+		if CheckSDeviceId(globalCookieJar) == "" {
+			// jar中没有sDeviceId则生成一个并添加
+			sDeviceId := GenerateSDeviceId()
+			cookieMap := map[string]string{
+				"sDeviceId": sDeviceId,
+			}
+			host := "https://music.163.com"
+			AddCookiesToJar(globalCookieJar, cookieMap, host)
+		}
 	})
 	return globalCookieJar
 }
@@ -283,19 +292,13 @@ type request struct {
 func NewRequest(url string) *request {
 	req := requests.Requests()
 	cookieJar := GetGlobalCookieJar()
-	cookieMap := map[string]string{
-		"sDeviceId": GenerateChainID(cookieJar),
-	}
-	host := "https://music.163.com"
-	// 添加设备ID
-	AddCookiesToJar(cookieJar, cookieMap, host)
 	req.Client.Jar = cookieJar
 	return &request{
 		Req: req,
 		Url: url,
 		Headers: map[string]string{
 			"User-Agent": chooseUserAgent("pc"),
-			"Referer":    host,
+			"Referer":    "https://music.163.com",
 		},
 		Params: map[string]string{},
 		Datas:  map[string]string{},

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
 	math_rand "math/rand/v2"
 	"net/http"
@@ -149,27 +148,33 @@ func ApiParamsEncode(data map[string]interface{}) (map[string]string, error) {
 	return encodedParams, nil
 }
 
-// 生成chainID
-func GenerateChainID(cookieJar http.CookieJar) string {
-	version := "v1"
-	musicURL, err := url.Parse("https://music.163.com")
-	if err != nil {
-		log.Fatalf("Failed to parse music URL: %v", err)
-	}
+// CheckSDeviceId 检查 sDeviceId 是否存在,存在返回值,不存在返回空字符串
+func CheckSDeviceId(cookieJar http.CookieJar) string {
 	// 从 cookieJar 中获取 sDeviceId
-	var sDeviceId string
+	musicURL, _ := url.Parse("https://music.163.com")
 	if cookieJar != nil {
 		for _, cookie := range cookieJar.Cookies(musicURL) {
 			if cookie.Name == "sDeviceId" {
-				sDeviceId = cookie.Value
-				break
+				return cookie.Value
 			}
 		}
 	}
-	// 如果 cookie 中没有 sDeviceId,生成一个新的
+	return ""
+}
+
+// GenerateSDeviceId 生成一个随机的 sDeviceId
+func GenerateSDeviceId() string {
+	randomNum := math_rand.IntN(1000000)
+	sDeviceId := fmt.Sprintf("unknown-%d", randomNum)
+	return sDeviceId
+}
+
+// GenerateChainID 生成chainID
+func GenerateChainID(cookieJar http.CookieJar) string {
+	version := "v1"
+	sDeviceId := CheckSDeviceId(cookieJar)
 	if sDeviceId == "" {
-		randomNum := math_rand.IntN(1000000)
-		sDeviceId = fmt.Sprintf("unknown-%d", randomNum)
+		sDeviceId = GenerateSDeviceId()
 	}
 	platform := "web"
 	action := "login"
