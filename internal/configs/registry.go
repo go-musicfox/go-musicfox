@@ -119,6 +119,7 @@ func NewRegistryWithDefault() *Registry {
 				Enable:          false,
 				ScrobblePoint:   50,
 				OnlyFirstArtist: false,
+				SkipDjRadio:     false,
 			},
 			Netease: ReporterNeteaseOptions{
 				Enable: false,
@@ -268,6 +269,7 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Reporter.Lastfm.Enable = ini.Bool("reporter.lastfmEnable", lastfmEnable)
 	registry.Reporter.Lastfm.ScrobblePoint = ini.Int("reporter.lastfmScrobblePoint", lastfmScrobblePoint)
 	registry.Reporter.Lastfm.OnlyFirstArtist = ini.Bool("reporter.lastfmOnlyFirstArtist", lastfmOnlyFirstArtist)
+	registry.Reporter.Lastfm.SkipDjRadio = ini.Bool("reporter.lastfmSkipDjRadio", false)
 
 	// Reporter.Netease
 	registry.Reporter.Netease.Enable = ini.Bool("reporter.neteaseEnable", false)

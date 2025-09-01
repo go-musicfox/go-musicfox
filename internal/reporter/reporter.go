@@ -35,12 +35,12 @@ func NewService(options ...Option) Service {
 	return master
 }
 
-func WithLastFM(tracker *lastfm.Tracker) Option {
+func WithLastFM(tracker *lastfm.Tracker, skipDjRadio bool) Option {
 	return func(m *MasterReporter) {
 		if tracker == nil {
 			return
 		}
-		m.reporters = append(m.reporters, newLastFMReporter(tracker))
+		m.reporters = append(m.reporters, newLastFMReporter(tracker, skipDjRadio))
 	}
 }
 

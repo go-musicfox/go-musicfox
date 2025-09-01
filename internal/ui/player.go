@@ -97,7 +97,8 @@ type Player struct {
 func NewPlayer(n *Netease) *Player {
 	reporterOptions := []reporter.Option{}
 	if configs.ConfigRegistry.Reporter.Lastfm.Enable {
-		reporterOptions = append(reporterOptions, reporter.WithLastFM(n.lastfm.Tracker))
+		skipDjRadio := configs.ConfigRegistry.Reporter.Lastfm.SkipDjRadio
+		reporterOptions = append(reporterOptions, reporter.WithLastFM(n.lastfm.Tracker, skipDjRadio))
 	}
 	if configs.ConfigRegistry.Reporter.Netease.Enable {
 		reporterOptions = append(reporterOptions, reporter.WithNetease())

@@ -11,6 +11,7 @@ type ReporterLastfmOptions struct {
 	Secret          string // Last.fm API Shared Secret
 	ScrobblePoint   int    // Last.fm 上报百分比
 	OnlyFirstArtist bool   // Last.fm 只上报一位艺术家
+	SkipDjRadio     bool   // Last.fm 上报跳过电台节目
 }
 
 type ReporterNeteaseOptions struct {
