@@ -34,7 +34,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		}, true)
 	}
 
-	if GlobalOptions.DebugMode {
+	if GlobalOptions.DebugMode || configs.ConfigRegistry.Main.Debug {
 		slogx.LevelVar().Set(slog.LevelDebug)
 	}
 
