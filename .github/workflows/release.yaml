@@ -34,6 +34,9 @@ jobs:
 
       - name: Checkout...
         uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          persist-credentials: true
 
       - run: git fetch --prune --unshallow
 
@@ -86,7 +89,7 @@ jobs:
         name: Push scoop config
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{secrets.PAT}}
+          ssh: true
           branch: master
 
       - name: Upload artifact
