@@ -1,3 +1,676 @@
+- semver: 4.7.1
+  date: 2025-09-01T23:38:23+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 8fd50c2cbc293467a2d5301f658a6817e65fbf8d
+      note: 'fix: update ci token'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6cde734809ad6667ca375b0978a6209e69f71ca1
+      note: 'fix: update ci token'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3aad4581c1a2fcf636979126de79b30be26bc6a9
+      note: 'fix(log): apply debug mode from config'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 0578aac713980ec450b7ce90df395c82f9d187e1
+      note: 'feat(repoter): exclude radio plays for Last.fm'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4e2d12d8d3cee004285ab8455dfa8688314a313d
+      note: 'fix: clear action items when no song is loaded'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 66d42210e0bb06ec549d9fa42aaa8a0b9ad0891d
+      note: 'fix: action menu title'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: f64d58c2aaed627d01afa64e4ac88967ab03f2a5
+      note: 'fix: action menu items'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+- semver: 4.7.0
+  date: 2025-09-01T13:22:14+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 5083468587844993b47268eab9689558e25a6cab
+      note: 'chore: rm `w` keymap'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1c0bf808e1f687f9d1387745d05734ae8f661d69
+      note: 'chore: upgrade deps'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ef39ce3b25254ebab81411b29a36470a5da6b5d2
+      note: |-
+        改名》》
+
+        把DBUS 修改为 freedesktop_dbus
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+    - commit: 5afcd358b616fb1934df0a488cd19d5bdb3f2526
+      note: |-
+        晚上了，发现下部分不对劲改回去
+
+        把下面的逻辑该回之前
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+    - commit: 323da774e330f4327616a7209c54e07abde1b8b3
+      note: |-
+        脱离notify-send,把logo插入xdg目录
+
+        使用godbus 代替notify-send 在linux上的通知
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+    - commit: c87b1c7fefee18b6a4c3eeb953736f16f41d69bb
+      note: 'feat: add option to skip invalid tracks'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 93482267b761f514d4e33befb88bf85ea2f381ec
+      note: 'chore: add ignore item'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 27b4537a767048016cb874a32b9dc98aeb782da3
+      note: 'refactor: wrap download goroutines with errorx.Go'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 8d7b5f44466f8a415e4cb5c8486e89b1a8d0899d
+      note: 'fix: exit early on invalid song ID in downloads'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 7bd85a4a62cfcf6a2dc3787a06abb7fa7466cb00
+      note: 'feat: add option to download lyrics with song'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 845a91aadc537c275024772158bed6a52e14fff3
+      note: 'feat: add download selected song lyrics'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 702cda7b4bb303d9dab321837a0f8778ae996672
+      note: |-
+        refactor(config): group storage-related configurations
+
+        Consolidate download and cache settings into a new 'StorgeOptions'
+        struct and a dedicated '[storage]' section in the configuration
+        file. This improves the organization and clarity of application
+        settings, making them easier to manage and understand.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: b2641894d8777c74a6db34bb2082644e0266458c
+      note: 'refactor: unify UI actions with operation executor'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4eb30025f459363798030c0c4de0c2463839da5c
+      note: "\U0001F44Csync dependency && update services func"
+      author:
+        name: marisa
+        email: 1435608435@qq.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 3001a917b17b1f71f6d78e8fe73961ec6dcb7415
+      note: |-
+        Potential fix for code scanning alert no. 1: Workflow does not contain permissions
+
+        Co-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ac6db7c46370ce6cd9f02b71360d49c3f79021a9
+      note: 'fix: parse bad cookies'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 9a49058bf4ac8afb938a65965646a9b3b3914334
+      note: 'fix: get song url'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4e0a9a996e2cf4b7d068176416bca2cc42a28491
+      note: 'feat(log): debug mode'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: eb6c8543a10d5a4a44cdaddae4d809cf73db73df
+      note: |-
+        refactor: centralize track download and cache logic
+
+        Replaced the scattered functions in `utils/storagex` with a new `track.Manager`.
+
+        This new manager now handles all song/lyric downloading, caching, and source resolution in a unified and concurrency-safe way.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 1dff884728017b6c15d586c76586152bba6dc625
+      note: |-
+        feat(track): add manager for song retrieval and caching
+
+        Introduces `track.Manager` to centralize the logic for retrieving, caching, and downloading songs.
+
+        This change adds the `golang.org/x/sync/singleflight` dependency to prevent redundant concurrent fetches.```
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 6c38e5863d2f2a08c0edd669da2f3e6c0e386086
+      note: 'chore(deps): bump golang.org/x/sync to v0.16.0'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: fc63a6178b60adf959689b2cad88de31a2820eb7
+      note: 'feat(track): introduce track data fetching service'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 413d50b65699560af6fe1ab1dc3a04c89c1506ff
+      note: |-
+        feat(track): add standalone song caching service
+
+        This new module is a preparatory step and will replace the existing caching logic in a future change.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: e0629016dabf42cbe73ef36519ebac5085d3e9d0
+      note: |-
+        refactor(track): extract song tagging logic
+
+        Moves the functionality for writing song metadata (title, artist, cover art) from `utils/storagex/download.go` to a new `internal/track` package.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: b14dc54e7a2b95f53c9c491e951f68f8c50cf6fa
+      note: |-
+        refactor(netease): centralize API fetching logic
+
+        Move the logic for fetching song info and lyrics into the `netease` package to improve code organization.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: f6ca7498dce79032eecacb1a570d635a684c59ed
+      note: 'docs: add documentation for XDG support'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 9a86439979c096857f8d72846a8e5825145ff4d1
+      note: |-
+        feat(migration): add automatic data migration
+
+        This commit automatically moves old user data (like the database and cookie file) to its new location when the app starts.
+
+        A report is shown to the user with the results.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 41bb0bf2f600f871a4debb062948a9140e42e839
+      note: |-
+        refactor: standardize paths with XDG
+
+        This commit refactors application path management to align with the XDG Base Directory Specification, replacing the old single-directory structure.
+
+        Key Changes:
+
+        - **From:** All files previously in `MUSICFOX_ROOT` or `~/.config/go-musicfox`.
+        - **To:** Files are now separated according to XDG standards:
+          - Config: `~/.config/go-musicfox`
+          - Data: `~/.local/share/go-musicfox`
+          - Cache: `~/.cache/go-musicfox`
+          - State (logs): `~/.local/state/go-musicfox`
+          - Runtime (QR codes, player state): `XDG_RUNTIME_DIR`
+        - **Portable Mode:** Support for `MUSICFOX_ROOT` is preserved for a fully self-contained experience.
+        - **Music Cache:** Music files are now stored in a dedicated `music_cache` subdirectory within the main cache directory to prevent clutter.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 17a48f70c6dab5d0a7856e8d4994b2e7443ebfba
+      note: 'build(deps): add adrg/xdg dependency'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: a4244528527ae323475e4850e366cdaa17cd2cd3
+      note: 'fix(composer): resolve empty artist name in filenames'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: f54ebae71823a5e9e4a5a34963771f8e844d6724
+      note: 'fix: macOS 26 MPRemoteCommand not work'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b11d5c4a801708eb9dab2fcc40e298743357a080
+      note: 'fix: panic & intelligent mode switch'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b0393fc02436652601646e67cb4fd57a7025e199
+      note: 'refactor: use composer to build download filenames'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 51d242e29baad62832a8ac66ed2f1bae1c746a16
+      note: 'fix(last.fm): unexpected logout'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 18e6b376bb5ee382df076224896c8eedff3b8adc
+      note: |-
+        feat(reporter):unify scrobblers and add Netease
+
+        Refactors the Last.fm scrobbler into a generic reporter service to support multiple platforms.
+
+        - Introduces a `[reporter]` section in the configuration, replacing the legacy `[lastfm]` section.
+        - Adds support for reporting playback status to Netease Cloud Music.
+        - Maintains backward compatibility with old `[lastfm]` settings.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: cb50cad6a4977092d718cd4ed473a966aad0bdbf
+      note: |-
+        refactor(reporter): decouple reporting logic
+
+        Introduces a new `internal/reporter` package to decouple song playback reporting logic from the player component. This improves modularity and separation of concerns.
+
+        The new Netease reporter currently provides only foundational support. Furthermore, this feature is non-operational as its upstream dependency is defunct.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: d092a8d4c9106e5a096d00fdf8aa616cdc7cf771
+      note: 'feat: sync netease-music'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8dba99ba5c9a335c92429446e5c07d50d3fdcbea
+      note: 'feat: support customizable share templates'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: a8a9928e24c6c6e8ca09c866fa88b1b0fab6f9b0
+      note: 'feat: add item sharing feature'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4c2fc1e49cc7f20a2361b71e85751a9fc1061e38
+      note: 'fix: Compatible with mac 25 beta'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e3d460737ed9a322ed5496a47c536f000d3954d2
+      note: |-
+        feat: add template manager and data builder
+
+        Introduces the `composer` package to provide a flexible and thread-safe templating system.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: b32d23b230104ecba66c93f4b835bc41a08ea258
+      note: |-
+        feat(structs): enhance models with new fields
+
+        Adds new fields to several models:
+
+        - `Song`: Adds DJ radio info and cloud disk match status.
+        - `Playlist`: Adds `Creator` and `Privacy`.
+        - `DjRadio`: Adds `Privacy`.
+
+        Also refactored the JSON parsing logic for better code reuse.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 1b44926eaeaf4ffb6fa01a061137452c06b035bc
+      note: 'fix: copy notifier app failed for darwin'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 091a45691d0e5a657abdcf88e98b406ca2368eae
+      note: 'fix: player status error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 65a59ce8f80cdf114c1c91fbd6dfb1c3430c0c5a
+      note: 'feat: optimize play mode & osx player'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 630f337f78948ae5643bb3491e38715d4432c912
+      note: 'feat(last.fm): auth by login'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 95e29eb2869f90d20a207f42542a7824ac311697
+      note: 'feat(last.fm): auth by qrcode'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: ebb7b07fdf062694e41b7a00146fe240b014e522
+      note: 'refactor(last.fm): auth page'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 96fe5760e00d9d693bebda29e224fa0a0fedf076
+      note: 'fix: use action menu'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 2cbc9cad33fe6afabdb798db403c68ff99bb17cd
+      note: 'feat(last.fm): set api account in TUI'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: b3bc5db0caba14abf49531e70375ffb648f5a544
+      note: 'refactor(last.fm): management menu'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 57ef0c8c7422078547cf3952cff493f4b55b4bec
+      note: 'feat(last.fm): clean local scrobbles'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 492395e7f9b1cf8c5f6e8130f72d971e0a0f1453
+      note: 'refactor(ui): use ConfirmMenu to clear song cache'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 2e88ac771b5bb017e95448c4cb782d0759258a1c
+      note: 'feat(last.fm): add operation confirmation'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 724ee97c6c3961a398dcfd36096cc2c4b523a4c7
+      note: 'feat: 心动模式处理'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4185345df129b3c33d655d20381b6232d980985c
+      note: 'feat(last.fm): support toggle scrobble status'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 9ce2bc5c8c2a3b2459318a77431b0f40356c46c5
+      note: 'feat(last.fm): support scrobble with single-artist'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4e5eeeabe9000e0cdc3c2246aa129e4ff9dac7ce
+      note: 'feat: add an action menu'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: cc80f20a02327454bcf600e0fb0faf9f28f7db29
+      note: 'feat: add a menu to open pages'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 68f667c760ca5affa9dc80aeace3b63be1cfa2bb
+      note: 'refactor: lyric download'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 0806cc578f6603541a7e8d24a4df03480132bc1b
+      note: 'feat(last.fm): scrobble point'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: ab345f405df6f34871f797efbdbd95977509ed14
+      note: 'fix: apply fixes from PR review'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 6e0003c381a858624143f111d34e1ba7614f4159
+      note: 'refactor: song manager'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f28a03f41eceb5dc7c18399754bd3a7c39a56292
+      note: 'fix: lyric download'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 05b98850277bd55c20db246702fe50fa1aa6a5fa
+      note: 'fix: global hotkey'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: a40df14eb3f12bdab69b491327c4a4c1e3561e09
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.6.6
   date: 2025-08-09T14:40:46+08:00
   packager: go-musicfox
