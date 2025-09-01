@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"log/slog"
+
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 )
@@ -59,6 +61,25 @@ func (m *ActionMenu) SubMenu(app *model.App, index int) model.Menu {
 }
 
 func (m *ActionMenu) BeforeEnterMenuHook() model.Hook {
+	m.buildActionItems()
+	if !m.playing && len(m.items) == 0 {
+		slog.Debug("无针对选择项的操作，改为操作当前播放")
+		m.playing = true
+		m.buildActionItems()
+	}
+	return nil
+}
+
+func (m *ActionMenu) FormatMenuItem(item *model.MenuItem) {
+	if m.playing {
+		item.Title = "操作当前播放"
+		if song, ok := getTargetSong(m.netease, false); ok {
+			item.Subtitle = song.Name
+		}
+	}
+}
+
+func (m *ActionMenu) buildActionItems() {
 	isSelected := !m.playing
 	var actions []ActionItem
 	main := m.netease.MustMain()
@@ -94,7 +115,6 @@ func (m *ActionMenu) BeforeEnterMenuHook() model.Hook {
 	}
 
 	m.items = actions
-	return nil
 }
 
 func buildPlaylistActions(n *Netease) []ActionItem {

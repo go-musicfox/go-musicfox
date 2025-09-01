@@ -701,24 +701,38 @@ func clearSongCache(n *Netease) {
 
 // action 打开操作菜单
 func action(n *Netease, curPlaying bool) {
-	var (
-		main     = n.MustMain()
-		menu     = main.CurMenu()
-		newTitle *model.MenuItem
-	)
-	switch menu.(type) {
-	case SongsMenu:
-	case PlaylistsMenu:
-	default:
-		newTitle = &model.MenuItem{Title: "操作当前播放"}
+	main := n.MustMain()
+	menu := main.CurMenu()
+
+	menuKey := menu.GetMenuKey()
+	if menuKey == actionMenuKey {
+		slog.Debug("已位于操作菜单，取消")
+		return
 	}
-	menuKey := n.MustMain().CurMenu().GetMenuKey()
-	if menuKey != actionMenuKey {
-		newMenu := NewActionMenu(newBaseMenu(n), menuKey, curPlaying)
-		main.EnterMenu(
-			newMenu,
-			newTitle)
+
+	var newTitle *model.MenuItem
+
+	// 显式设置 titel 避免被修改后影响原 item
+	if curPlaying {
+		song, ok := getTargetSong(n, false)
+		if ok {
+			newTitle = &model.MenuItem{Title: "操作当前播放", Subtitle: song.Name}
+		} else {
+			newTitle = &model.MenuItem{Title: "操作当前播放", Subtitle: "当前无播放"}
+		}
+	} else {
+		menuItems := menu.MenuViews()
+		selectedIndex := menu.RealDataIndex(main.SelectedIndex())
+		if selectedIndex >= 0 && selectedIndex < len(menuItems) {
+			item := menuItems[selectedIndex]
+			newTitle = &model.MenuItem{Title: "操作：" + item.Title, Subtitle: item.Subtitle}
+		} else {
+			newTitle = &model.MenuItem{Title: "操作", Subtitle: "未知操作对象"}
+		}
 	}
+
+	newMenu := NewActionMenu(newBaseMenu(n), menuKey, curPlaying)
+	main.EnterMenu(newMenu, newTitle)
 }
 
 // shareItem 分享项目到剪贴板
