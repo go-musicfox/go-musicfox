@@ -208,7 +208,7 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpSwitchPlayMode: {"p"},
 	OpIntelligence:   {"P"},
 	OpClearSongCache: {"u", "U"},
-	OpLogout:         {"w", "W"},
+	OpLogout:         {"W"},
 	OpCurPlaylist:    {"c", "C"},
 
 	OpAppendSongsToNext:              {"e"},

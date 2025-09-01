@@ -69,7 +69,7 @@ func logout() {
 	})
 	_ = os.Remove(filepath.Join(app.DataDir(), "cookie"))
 
-	//调用退出登录api
+	// 调用退出登录api
 	logout_service := service.LogoutService{}
 	code, _, err := logout_service.Logout()
 	if err != nil {
@@ -467,7 +467,6 @@ func collectSelectedPlaylist(n *Netease, isCollect bool) model.Page {
 // appendSongsToCurPlaylist 添加歌曲到播放列表
 func appendSongsToCurPlaylist(n *Netease, addToNext bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
-
 		main := n.MustMain()
 		menu := main.CurMenu()
 		selectedIndex := menu.RealDataIndex(main.SelectedIndex())
