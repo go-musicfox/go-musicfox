@@ -5,6 +5,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
 const actionMenuKey = "action_menu"
@@ -19,9 +20,10 @@ type ActionItem struct {
 
 type ActionMenu struct {
 	baseMenu
-	from    string // 发起 action 的页面
-	playing bool   // 是否针对当前播放
-	items    []ActionItem
+	from        string // 发起 action 的页面
+	playing     bool   // 是否针对当前播放
+	items       []ActionItem
+	playingSong structs.Song // 当前播放
 }
 
 // NewActionMenu 新建操作页
@@ -61,8 +63,9 @@ func (m *ActionMenu) SubMenu(app *model.App, index int) model.Menu {
 }
 
 func (m *ActionMenu) BeforeEnterMenuHook() model.Hook {
+	isSelected := !m.playing
 	m.buildActionItems()
-	if !m.playing && len(m.items) == 0 {
+	if isSelected && len(m.items) == 0 {
 		slog.Debug("无针对选择项的操作，改为操作当前播放")
 		m.playing = true
 		m.buildActionItems()
@@ -73,13 +76,23 @@ func (m *ActionMenu) BeforeEnterMenuHook() model.Hook {
 func (m *ActionMenu) FormatMenuItem(item *model.MenuItem) {
 	if m.playing {
 		item.Title = "操作当前播放"
-		if song, ok := getTargetSong(m.netease, false); ok {
-			item.Subtitle = song.Name
+		if m.playingSong.Id != 0 {
+			item.Subtitle = m.playingSong.Name
+		} else {
+			item.Subtitle = "当前无播放"
 		}
 	}
 }
 
 func (m *ActionMenu) buildActionItems() {
+	if m.playing {
+		var ok bool
+		if m.playingSong, ok = getTargetSong(m.netease, false); !ok {
+			slog.Debug("无法获取到当前播放歌曲")
+			return
+		}
+	}
+
 	isSelected := !m.playing
 	var actions []ActionItem
 	main := m.netease.MustMain()
