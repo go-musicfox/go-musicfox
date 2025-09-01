@@ -86,7 +86,7 @@ jobs:
         name: Push scoop config
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{secrets.ACCESS_TOKEN}}
+          github_token: ${{secrets.PAT}}
           branch: master
 
       - name: Upload artifact
