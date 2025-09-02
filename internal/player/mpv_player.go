@@ -22,6 +22,8 @@ var (
 
 // mpvPlayer 实现基于MPV的播放器
 type mpvPlayer struct {
+	binPath string // MPV可执行文件路径
+
 	cmd    *exec.Cmd
 	mutex  sync.Mutex
 
@@ -54,6 +56,7 @@ func NewMpvPlayer(conf *MpvConfig) *mpvPlayer {
 	}
 
 	p := &mpvPlayer{
+		binPath:   binPath, // 保存自定义路径
 		volume:    50, // 默认音量
 		state:     types.Stopped,
 		timeChan:  make(chan time.Duration),
@@ -98,7 +101,7 @@ func (p *mpvPlayer) startMpv(url string) error {
 		args = append(args, url)
 	}
 
-	p.cmd = exec.Command("mpv", args...)
+	p.cmd = exec.Command(p.binPath, args...)
 
 	// 启动进程
 	if err := p.cmd.Start(); err != nil {
