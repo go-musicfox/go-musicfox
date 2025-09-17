@@ -207,12 +207,12 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	downloadFileNameTpl := ini.String("main.downloadFileNameTpl", "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}")
 	cacheDir := ini.String("main.cacheDir", "")
 	cacheLimit := ini.Int64("main.cacheLimit", 0)
-	registry.Storge.DownloadDir = ini.String("stroge.downloadDir", downloadDir)
-	registry.Storge.DownloadLyricDir = ini.String("stroge.downloadLyricDir", downloadLyricDir)
-	registry.Storge.DownloadSongWithLyric = ini.Bool("stroge.downloadSongWithLyric", false)
-	registry.Storge.DownloadFileNameTpl = ini.String("stroge.downloadFileNameTpl", downloadFileNameTpl)
-	registry.Storge.CacheDir = ini.String("stroge.cacheDir", cacheDir)
-	registry.Storge.CacheLimit = ini.Int64("stroge.cacheLimit", cacheLimit)
+	registry.Storge.DownloadDir = ini.String("storage.downloadDir", downloadDir)
+	registry.Storge.DownloadLyricDir = ini.String("storage.downloadLyricDir", downloadLyricDir)
+	registry.Storge.DownloadSongWithLyric = ini.Bool("storage.downloadSongWithLyric", false)
+	registry.Storge.DownloadFileNameTpl = ini.String("storage.downloadFileNameTpl", downloadFileNameTpl)
+	registry.Storge.CacheDir = ini.String("storage.cacheDir", cacheDir)
+	registry.Storge.CacheLimit = ini.Int64("storage.cacheLimit", cacheLimit)
 
 	defaultPlayer := types.BeepPlayer
 	switch runtime.GOOS {
