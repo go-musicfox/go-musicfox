@@ -139,7 +139,7 @@ func (m *Manager) ResolvePlayableSource(ctx context.Context, song structs.Song) 
 		return PlayableSource{}, err
 	}
 
-	if source.Type == SourceRemote {
+	if source.Type == SourceRemote && !m.cacher.IsDisabled() {
 		go m.backgroundCache(ctx, source)
 	}
 
