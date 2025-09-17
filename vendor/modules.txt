@@ -24,7 +24,9 @@ github.com/buger/jsonparser
 github.com/charmbracelet/bubbles/cursor
 github.com/charmbracelet/bubbles/key
 github.com/charmbracelet/bubbles/runeutil
+github.com/charmbracelet/bubbles/table
 github.com/charmbracelet/bubbles/textinput
+github.com/charmbracelet/bubbles/viewport
 # github.com/charmbracelet/bubbletea v0.25.0 => github.com/go-musicfox/bubbletea v0.25.0-foxful
 ## explicit; go 1.18
 github.com/charmbracelet/bubbletea

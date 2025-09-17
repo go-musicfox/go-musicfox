@@ -136,13 +136,13 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		findSimilarSongs(h.netease, false)
 	case keybindings.OpOpenSimiSongsOfSelectedSong:
 		// 与当前选中歌曲相似的歌曲
-		findSimilarSongs(h.netease, false)
+		findSimilarSongs(h.netease, true)
 	case keybindings.OpAlbumOfPlayingSong:
 		// 当前歌曲所属专辑
 		goToAlbumOfSong(h.netease, false)
 	case keybindings.OpAlbumOfSelectedSong:
 		// 选中歌曲所属专辑
-		goToAlbumOfSong(h.netease, false)
+		goToAlbumOfSong(h.netease, true)
 	case keybindings.OpArtistOfPlayingSong:
 		// 当前歌曲所属歌手
 		goToArtistOfSong(h.netease, false)

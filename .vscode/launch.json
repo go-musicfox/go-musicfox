@@ -8,7 +8,9 @@
       "program": "${workspaceFolder}/cmd/musicfox.go",
       "console": "integratedTerminal",
       "env": {},
-      "args": []
+      "args": [
+        "--debug"
+      ]
     }
   ]
 }

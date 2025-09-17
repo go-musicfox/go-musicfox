@@ -9,13 +9,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-musicfox/netease-music/service"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
+
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
-	"github.com/go-musicfox/netease-music/service"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/singleflight"
 )
 
 var supportedFileExtensions = []string{"mp3", "flac"}
@@ -139,7 +140,7 @@ func (m *Manager) ResolvePlayableSource(ctx context.Context, song structs.Song) 
 		return PlayableSource{}, err
 	}
 
-	if source.Type == SourceRemote {
+	if source.Type == SourceRemote && !m.cacher.IsDisabled() {
 		go m.backgroundCache(ctx, source)
 	}
 
@@ -252,7 +253,8 @@ func (m *Manager) resolveSongSource(ctx context.Context, song structs.Song) (Pla
 					Path: finalFilePath,
 					Info: &netease.PlayableInfo{
 						URL:       "file://" + finalFilePath,
-						MusicType: ext},
+						MusicType: ext,
+					},
 				}, nil
 			}
 		}
@@ -267,7 +269,8 @@ func (m *Manager) resolveSongSource(ctx context.Context, song structs.Song) (Pla
 				Path: cachePath,
 				Info: &netease.PlayableInfo{
 					URL:       "file://" + cachePath,
-					MusicType: fileType},
+					MusicType: fileType,
+				},
 			}, nil
 		}
 		if !errors.Is(cacheErr, os.ErrNotExist) {
@@ -281,7 +284,7 @@ func (m *Manager) resolveSongSource(ctx context.Context, song structs.Song) (Pla
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch playable info: %w", err)
 		}
-		slog.Debug("Resolved source: Remote", "songId", song.Id)
+		slog.Debug("Resolved source: Remote", "songId", song.Id, slog.Any("info", info))
 		return PlayableSource{
 			Song: song,
 			Type: SourceRemote,

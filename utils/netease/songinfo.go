@@ -35,6 +35,7 @@ func FetchPlayableInfo(songID int64, quality service.SongQualityLevel) (Playable
 		SkipUNM: true,
 	}
 	code, response := urlService.SongUrl()
+	slog.Debug("fetch song url", "code", code, "response", string(response))
 	if code != 200 {
 		return PlayableInfo{}, errors.New(string(response))
 	}
@@ -55,12 +56,12 @@ func FetchPlayableInfo(songID int64, quality service.SongQualityLevel) (Playable
 			Br: br,
 		}
 		code, response = s.SongUrl()
+		slog.Debug("retry fetch song url", "code", code, "response", string(response))
 		if code != 200 {
 			return PlayableInfo{}, errors.New(string(response))
 		}
+		url, _ = jsonparser.GetString(response, "data", "[0]", "url")
 	}
-
-	url, _ = jsonparser.GetString(response, "data", "[0]", "url")
 
 	size, _ := jsonparser.GetInt(response, "data", "[0]", "size")
 	if size > 0 {
