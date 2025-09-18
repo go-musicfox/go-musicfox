@@ -1,0 +1,258 @@
+# ---------------------------------------------------------------- #
+#                  Go-Musicfox Configuration File                  #
+# ---------------------------------------------------------------- #
+# 本文件使用TOML格式。详细语法请参考: https://toml.io/             #
+# ---------------------------------------------------------------- #
+
+# 启动页相关配置
+[startup]
+# 是否显示启动页
+enable = true
+# 启动页进度条是否具有回弹效果
+progressOutBounce = true
+# 启动页的持续时长（秒）
+loadingSeconds = 2
+# 启动页欢迎语
+welcome = "musicfox"
+# 启动时是否自动签到 (网易云有风控，建议关闭)
+signIn = false
+# 启动时是否检查应用更新
+checkUpdate = true
+
+
+# 主界面与核心功能配置
+[main]
+# altScreen 显示模式
+altScreen=true
+# 是否在界面中启用鼠标事件
+enableMouseEvent = true
+# 是否开启 Debug 模式
+debug = false
+
+
+# 桌面通知相关设置
+[main.notification]
+# 是否启用桌面通知
+enable = true
+# (Windows/Linux) 默认通知图标
+icon = "logo.png"
+# (Windows/Linux) 是否使用歌曲的专辑封面作为通知图标（如为否则使用默认通知图标）
+albumCover = false
+
+# 歌词显示相关设置
+[main.lyric]
+# 是否显示歌词
+show = true
+# 是否显示翻译歌词
+showTranslation = true
+# 歌词显示时间的全局偏移量（毫秒），正值表示歌词提前显示
+offset = 0
+
+# Go性能分析工具pprof的相关设置
+[main.pprof]
+# pprof 服务监听的端口，通过 --pprof 命令行选项启用
+port = 9876
+
+# 账号相关配置
+[main.account]
+# 网易云音乐的登录 Cookie
+neteaseCookie = ""
+
+
+# 主题设置
+[theme]
+# 是否在界面顶部显示标题
+showTitle = true
+# 菜单加载时显示的提示文字
+loadingText = "[加载中...]"
+# 是否使用双列布局（需要等宽字体以获得最佳体验）
+doubleColumn = true
+# 菜单行数是否根据终端高度动态变化
+dynamicMenuRows = false
+# 界面所有内容居中（实验性功能，未来版本中可能会大幅改动）
+centerEverything = false
+# 主题颜色
+# 随机
+# primaryColor = "random"
+primaryColor = "#ea403f" # 经典网易云音乐红
+
+# 进度条字符样式配置
+[theme.progress]
+# 进度条已加载字符
+fullChar = "#"
+fullCharWhenFirst = "#"
+fullCharWhenLast = "#"
+lastFullChar = "#"
+# 进度条未加载字符
+emptyChar = "·"
+emptyCharWhenFirst = "·"
+emptyCharWhenLast = "·"
+firstEmptyChar = "·"
+
+
+# 下载、缓存等文件存储相关配置
+[storage]
+# 下载目录
+# 若设置了 MUSICFOX_ROOT 变量，则默认为 ${MUSICFOX_ROOT}/download
+# 若未设置 MUSICFOX_ROOT 变量，则为相应系统的默认下载目录的 go-musicfox 子目录
+# 请使用绝对路径
+downloadDir = ""
+# 歌词文件的默认下载目录。如果为空，则与downloadDir保持一致。
+lyricDir = ""
+# 下载歌曲时是否同时下载歌词文件（仅当下载歌曲成功时）
+downloadSongWithLyric = false
+# 下载文件的命名模板
+# 可用字段参考 #自定义分享模板 中的 song 部分，FileExt 为自适应的后缀名
+# fileNameTpl = "{{.SongName}}-{{.SongArtists}}.{{.FileExt}}"
+
+# 音乐播放缓存相关设置
+[storage.cache]
+# 缓存目录
+# 若设置了 MUSICFOX_ROOT 变量，则默认为 ${MUSICFOX_ROOT}/cache
+# 若未设置 MUSICFOX_ROOT 变量，则为相应系统的默认缓存目录的 go-musicfox 子目录
+# 注意：如果使用 mpd，mpd 配置中的 "music_directory" 必须与 cacheDir 一致
+dir = ""
+# 缓存文件的总大小限制（单位：MB）
+# 0 为不使用缓存，-1 为不限制
+limit = 0
+
+
+# 播放器引擎与行为配置
+[player]
+# 播放引擎，可选: "beep", "mpd", "mpv", "osx", "win_media"
+# Mac 默认 "osx", Windows 默认 "win_media", 其他系统默认 "beep"
+engine = "beep"
+# 允许的最大连续失败重试次数
+maxPlayErrCount = 3
+# 期望的歌曲音质
+# 可选: "standard", "exhigh", "higher", "lossless", "hires",
+#       "jyeffect"(高清环绕声), "sky"(沉浸环绕声), "jymaster"(超清母带)
+songLevel = "higher"
+# 是否获取并显示歌单下的所有歌曲，默认前 1000 首
+# 开启后可能会占用更多内存（大量歌曲数据）和带宽（会同时发送多个请求获取歌单下歌曲数据）
+showAllSongsOfPlaylist = false
+
+# `beep` 引擎专属配置 (跨平台)
+[player.beep]
+# MP3解码器，可选: "go-mp3", "minimp3"
+# "minimp3" CPU占用更低，但稳定性可能稍逊于 "go-mp3"
+mp3Decoder = "go-mp3"
+
+# `mpd` 引擎专属配置，需要安装mpd
+[player.mpd]
+# mpd 可执行文件的路径，如果为空，则在系统 PATH 中查找
+bin = "mpd"
+# mpd配置文件的路径
+# 注意：配置文件中必须设置 pid_file，否则应用退出时无法正确关闭 mpd 进程
+configFile = ""
+# 与mpd服务的连接方式，可选: "tcp", "unix"
+network = "unix"
+# 连接地址
+# network 为 "tcp" 时，填写 "ip:port" (如 "127.0.0.1:6600")
+# network 为 "unix" 时，填写 socket 文件路径
+addr = ""
+# 是否在需要时自动启动 mpd 服务
+autoStart = true
+
+# `mpv` 引擎专属配置，需要安装 mpv
+[player.mpv]
+# mpv 可执行文件的路径，如果为空，则在系统 PATH 中查找
+bin = "mpv"
+
+
+# 启动时自动播放相关配置
+[autoplay]
+# 是否在启动后自动开始播放
+enable = false
+# 自动播放的歌单
+# 可选: "dailyReco", "like", "no", 或 "name:歌单名"
+# "no" 表示保持上次退出时的播放列表，无视 offset
+playlist = "dailyReco"
+# 播放列表的起始偏移量，0 为第一首，-1 为最后一首
+offset = 0
+# 播放模式
+# 可选: "listLoop", "order", "singleLoop", "random"（无视offset）, "intelligent"（心动）, "last"（上次退出时的模式）
+mode = "last"
+
+
+# UNM (Unlock NetEase Music) 相关配置，用于解锁灰色或无版权歌曲
+[unm]
+# 是否启用 UNM 功能
+enable = false
+# 音源匹配来源，可配置多个，用逗号分隔
+# 可选: "kuwo", "kugou", "migu", "qq"
+sources = ["kuwo"]
+# UNM搜索其他平台限制 0-3
+searchLimit = 0
+# 解除会员限制
+enableLocalVip = true
+# 解除音质限制
+unlockSoundEffects = true
+# 用于获取QQ音乐音源的Cookie文件路径
+qqCookieFile = ""
+# 检测到无效的歌（如提示酷我...）时跳过播放，该效果计入播放错误计数
+skipInvalidTracks = false
+
+
+# 播放状态上报配置
+[reporter]
+# 是否将播放状态上报回网易云音乐（“听歌排行”）
+# 注意：可能存在风控风险
+[reporter.netease]
+enable = false
+
+# 上报至 Last.fm
+[reporter.lastfm]
+enable = false
+# Last.fm API Key
+key = ""
+# Last.fm API Shared Secret
+secret = ""
+# 播放一首歌的百分比达到多少时，才进行上报
+# 范围: 50-100
+scrobblePoint = 50
+# 是否只上报歌曲的第一位艺术家
+onlyFirstArtist = false
+# 是否跳过电台节目的上报
+skipDjRadio = false
+
+
+# 快捷键绑定配置
+[keybindings]
+# 是否使用应用内置的默认快捷键作为基础
+# 设置为false时，只有您在 [keybindings.app] 中定义的快捷键会生效。
+useDefaultKeyBindings = true
+
+# 全局快捷键，即使应用在后台也能响应
+# 格式: "快捷键组合" = "功能名"
+# 功能名列表请参考项目文档
+[keybindings.global]
+# "ctrl+shift+space" = "toggle"
+
+# 应用内快捷键
+# 格式: "功能名" = ["按键1", "按键2", ...]
+[keybindings.app]
+help = ["?", "？"]
+pageUp = ["ctrl+u", "pgup"]
+pageDown = ["ctrl+d", "pgdown"]
+playOrToggle = ["space"] # 空格
+toggle = [] # 空数组表示取消此功能的快捷键
+previous = ["[", "【"]
+next = ["]", "】"]
+backwardFiveSec = ["X"]
+backwardOneSec = ["x"]
+forwardFiveSec = ["v"]
+forwardTenSec = ["V"]
+downVolume = ["-", "−", "ー"]
+upVolume = ["=", "＝"]
+switchPlayMode = ["p"]
+intelligence = ["P"]
+clearSongCache = ["u", "U"]
+logout = ["W"]
+curPlaylist = ["c", "C"]
+
+
+# 自定义分享模板
+# 格式: "名称" = "模板字符串"
+# 详细用法请参考项目文档（README）
+[share]
