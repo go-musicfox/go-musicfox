@@ -360,6 +360,10 @@ func ProcessUserBindings(userKeyBindings map[string][]string) map[OperateType][]
 	}
 
 	for opStr, keys := range userKeyBindings {
+		// 修正新旧配置中大小写不一致问题，该判断应在弃用 INI 支持后移除
+		if opStr == "playOrToggle" {
+			opStr = "playortoggle"
+		}
 		op, ok := GetOperationFromName(opStr)
 		if !ok {
 			slog.Warn(fmt.Sprintf("配置文件 [keybindings] 中发现未知操作 '%s'，已忽略", opStr))
