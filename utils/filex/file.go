@@ -12,25 +12,28 @@ import (
 )
 
 // LoadConfig 加载配置
+// 它会自动处理新旧配置文件的选择、创建和加载。
 func LoadConfig() {
-	configFile := app.ConfigFilePath()
+	configDir := app.ConfigDir()
+
+	resolved := configs.ResolveConfigFile(configDir)
+
+	if !resolved.Exists {
+		_ = CopyFileFromEmbed("embed/go-musicfox.toml", resolved.Path)
+	}
 
 	var cfg *configs.Config
 	var err error
-	cfg, err = configs.NewConfigFromTomlFile(configFile)
-	if err != nil {
-		panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
+	if resolved.Format == configs.FormatTOML {
+		cfg, err = configs.NewConfigFromTomlFile(resolved.Path)
+		if err != nil {
+			panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
+		}
+	} else {
+		registry := configs.NewRegistryFromIniFile(resolved.Path)
+		cfg = configs.MigrateLegacyRegistry(registry)
 	}
 	configs.AppConfig = cfg
-}
-
-// LoadIniConfig 加载ini配置信息
-func LoadIniConfig() {
-	configFile := app.ConfigFilePath()
-	if !FileOrDirExists(configFile) {
-		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
-	}
-	configs.ConfigRegistry = configs.NewRegistryFromIniFile(configFile)
 }
 
 func FileOrDirExists(filename string) bool {
