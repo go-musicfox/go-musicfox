@@ -275,7 +275,8 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Reporter.Netease.Enable = ini.Bool("reporter.neteaseEnable", false)
 
 	userKeybindingsRaw := ini.StringMap("keybindings")
-	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)
+	userBindings := keybindings.ProcessUserBindingsLegacy(userKeybindingsRaw)
+	registry.Keybindings = keybindings.BuildEffectiveBindings(userBindings, registry.Main.UseDefaultKeyBindings)
 
 	registry.Share = ini.StringMap("share")
 

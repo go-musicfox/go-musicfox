@@ -337,7 +337,7 @@ func FormatKeyForDisplay(key string) string {
 
 	keyStr := key
 	for modLower, modDisplay := range modifierMap {
-		keyStr = strings.Replace(keyStr, modLower, modDisplay, -1)
+		keyStr = strings.ReplaceAll(keyStr, modLower, modDisplay)
 	}
 	if keyStr != key {
 		return keyStr
@@ -351,8 +351,76 @@ func FormatKeyForDisplay(key string) string {
 	return key
 }
 
-// BuildEffectiveBindings 构建最终生效的按键绑定
-func BuildEffectiveBindings(userKeyBindings map[string]string, useDefault bool) map[OperateType][]string {
+// ProcessUserBindings 解析并验证用户定义的按键绑定(map[string][]string)
+// 它会处理未知或不可更改的操作，并返回一个标准化的 map[OperateType][]string
+func ProcessUserBindings(userKeyBindings map[string][]string) map[OperateType][]string {
+	processed := make(map[OperateType][]string)
+	if userKeyBindings == nil {
+		return processed
+	}
+
+	for opStr, keys := range userKeyBindings {
+		op, ok := GetOperationFromName(opStr)
+		if !ok {
+			slog.Warn(fmt.Sprintf("配置文件 [keybindings] 中发现未知操作 '%s'，已忽略", opStr))
+			continue
+		}
+
+		// NOTE: 内置操作 (op < 0) 不允许用户覆盖
+		if op < 0 {
+			slog.Warn(fmt.Sprintf("内置操作 '%s'，暂不可更改，已忽略", opStr))
+			continue
+		}
+
+		// 如果用户提供了空数组，视为解绑
+		if len(keys) == 0 {
+			slog.Info(fmt.Sprintf("解绑操作 '%s (%s)'", opStr, op.Desc()))
+			processed[op] = []string{}
+			continue
+		}
+
+		// 标准化按键
+		var normalizedKeys []string
+		for _, key := range keys {
+			if key == "" {
+				continue
+			}
+			// 统一为小写以便匹配，但保留单字符大写
+			if len(key) > 1 {
+				key = strings.ToLower(key)
+			}
+
+			if key == "space" {
+				key = " "
+			}
+			normalizedKeys = append(normalizedKeys, key)
+		}
+
+		if len(normalizedKeys) > 0 {
+			processed[op] = normalizedKeys
+		} else {
+			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置未包含有效按键，已忽略", opStr, op.Desc()))
+		}
+	}
+	return processed
+}
+
+// ProcessUserBindingsLegacy 为旧的 map[string]string 配置格式提供兼容层
+func ProcessUserBindingsLegacy(userKeyBindings map[string]string) map[OperateType][]string {
+	if userKeyBindings == nil {
+		return make(map[OperateType][]string)
+	}
+
+	newUserKeyBindings := make(map[string][]string, len(userKeyBindings))
+	for opStr, keysStr := range userKeyBindings {
+		newUserKeyBindings[opStr] = splitKeys(keysStr)
+	}
+
+	return ProcessUserBindings(newUserKeyBindings)
+}
+
+// BuildEffectiveBindings 合并默认绑定和用户自定义绑定，处理冲突，并返回最终生效的按键映射
+func BuildEffectiveBindings(userBindings map[OperateType][]string, useDefault bool) map[OperateType][]string {
 	defaultBindings := InitDefaults(useDefault)
 
 	effectiveBindings := make(map[OperateType][]string, len(defaultBindings))
@@ -360,112 +428,77 @@ func BuildEffectiveBindings(userKeyBindings map[string]string, useDefault bool) 
 		effectiveBindings[op] = append([]string(nil), keys...)
 	}
 
-	if len(userKeyBindings) == 0 {
+	if len(userBindings) == 0 {
 		return effectiveBindings
 	}
 
-	// 预处理用户配置，移除不存在操作
-	preprocessing := make(map[OperateType][]string)
-	for opStr, keysStr := range userKeyBindings {
-		op, ok := GetOperationFromName(opStr)
-		if !ok {
-			slog.Warn(fmt.Sprintf("配置文件 [keybindings] 中发现未知操作 '%s'，已忽略", opStr))
-			continue
-		}
-
-		// FIXME: 对于内置键绑定的操作，考虑使用（新增）而非不处理。或寻求其他方式进行支持
-		if op < 0 {
-			slog.Warn(fmt.Sprintf("内置操作 '%s'，暂不可更改，已忽略", opStr))
-			continue
-		}
-
-		if keysStr == "" {
-			slog.Info(fmt.Sprintf("解绑操作 '%s (%s)'", opStr, op.Desc()))
-			effectiveBindings[op] = []string{}
-			continue
-		}
-
-		keys := splitKeys(keysStr)
-		if len(keys) != 0 {
-			preprocessing[op] = keys
-		} else {
-			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置只无有效的绑定，忽略", op, op.Desc()))
-		}
-	}
-
-	// 构建临时的反向映射，用于冲突检测 (基于当前的 effectiveBindings)
-	getKeyToOp := func() map[string]OperateType {
-		keyToOp := make(map[string]OperateType)
-		for op, keys := range effectiveBindings {
-			for _, key := range keys {
-				keyToOp[key] = op
-			}
-		}
-		return keyToOp
-	}
-	keyToOp := getKeyToOp()
-
 	hardcodedKeys := getHardCordKeys()
-	conflicts := make(map[string][]OperateType) // 记录最终的冲突信息 Key -> Conflicting Ops
-	for op, keys := range preprocessing {
+	keyToOp := BuildKeyToOperateTypeMap(effectiveBindings) // 构建初始的 按键 -> 操作 反向映射
+	conflicts := make(map[string][]OperateType)            // 用于记录所有发生的冲突
+
+	// 遍历用户配置，解决冲突并记录
+	for op, keys := range userBindings {
 		validKeys := make([]string, 0, len(keys))
-		skippedKeys := []string{}
+		var skippedKeys []string
+
 		for _, key := range keys {
-			// 跳过对硬编码按键的处理
 			if _, isHardcoded := hardcodedKeys[key]; isHardcoded {
 				skippedKeys = append(skippedKeys, key)
 				continue
 			}
 
-			// 处理冲突
-			if existingOp, ok := keyToOp[key]; ok && existingOp != op {
+			if existingOp, found := keyToOp[key]; found && existingOp != op {
 				if _, recorded := conflicts[key]; !recorded {
-					conflicts[key] = []OperateType{existingOp, op}
-				} else {
-					conflicts[key] = append(conflicts[key], op)
+					conflicts[key] = append(conflicts[key], existingOp)
 				}
+				conflicts[key] = append(conflicts[key], op)
 
-				// 在记录冲突后，需要移除旧绑定操作对此键的占用（如果旧操作还有其他键）
-				if oldKeys, ok := effectiveBindings[existingOp]; ok {
-					cleanedOldKeys := make([]string, 0, len(oldKeys)-1)
-					for _, oldKey := range oldKeys {
-						if oldKey != key {
-							cleanedOldKeys = append(cleanedOldKeys, oldKey)
-						}
-					}
-					effectiveBindings[existingOp] = cleanedOldKeys
-				}
+				// 从原来的操作中移除这个按键
+				effectiveBindings[existingOp] = removeKeyFromStringSlice(effectiveBindings[existingOp], key)
 			}
 
 			validKeys = append(validKeys, key)
 		}
+
 		if len(skippedKeys) > 0 {
 			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置中包含硬编码按键 [%s]，这些特定绑定已被忽略。", op, op.Desc(), strings.Join(skippedKeys, ", ")))
 		}
-		// 只用有效的非内建键覆盖或设置绑定
-		if len(validKeys) > 0 {
-			effectiveBindings[op] = validKeys
-		} else {
-			slog.Warn(fmt.Sprintf("操作 '%s (%s)' 的用户配置只无有效的绑定，忽略", op, op.Desc()))
+
+		effectiveBindings[op] = validKeys
+
+		for _, key := range validKeys {
+			keyToOp[key] = op
 		}
 	}
 
-	// 打印冲突信息
-	if len(conflicts) != 0 {
-		keyToOp := getKeyToOp()
+	// 统一打印所有在处理过程中记录的冲突信息
+	if len(conflicts) > 0 {
 		for key, ops := range conflicts {
-			opStrs := make([]string, len(ops))
+			opDescs := make([]string, 0, len(ops))
 			for _, op := range ops {
-				opStrs = append(opStrs, fmt.Sprintf("%s (%s)", op, op.Desc()))
+				name := fmt.Sprintf("'%s (%s)'", op.Name(), op.Desc())
+				opDescs = append(opDescs, name)
 			}
-			finalOp := keyToOp[key]
+
+			finalOp := keyToOp[key] // 获取最终生效的操作
 			slog.Warn(fmt.Sprintf("按键 '%s' 被分配给多个操作: %s。最终生效的操作是: '%s (%s)'",
-				key, strings.Join(opStrs, ", "), finalOp, finalOp.Desc()))
+				FormatKeyForDisplay(key), strings.Join(opDescs, ", "), finalOp.Name(), finalOp.Desc()))
 		}
 	}
 
 	userOperateToKeys = effectiveBindings // 更新用户设置
 	return effectiveBindings
+}
+
+// removeKeyFromStringSlice 是一个辅助函数，从字符串切片中移除指定的元素
+func removeKeyFromStringSlice(slice []string, key string) []string {
+	newSlice := make([]string, 0, len(slice))
+	for _, item := range slice {
+		if item != key {
+			newSlice = append(newSlice, item)
+		}
+	}
+	return newSlice
 }
 
 // BuildKeyToOperateTypeMap 构建反向查找映射的函数，Key -> OperateType
