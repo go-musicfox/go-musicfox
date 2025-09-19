@@ -26,7 +26,7 @@ func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 	k := koanf.New(".")
 
 	// 加载内嵌的 TOML 文件作为默认值
-	defaultTomlBytes, err := filex.ReadFileFromEmbed("embed/go-musicfox.toml")
+	defaultTomlBytes, err := filex.ReadFileFromEmbed("embed/" + types.AppTomlFile)
 	if err != nil {
 		return nil, fmt.Errorf("critical error: failed to read embedded default config: %w", err)
 	}

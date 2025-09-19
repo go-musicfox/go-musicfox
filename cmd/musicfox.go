@@ -83,7 +83,7 @@ func loadConfig() {
 	resolved := configs.ResolveConfigFile(configDir)
 
 	if !resolved.Exists {
-		_ = filex.CopyFileFromEmbed("embed/go-musicfox.toml", resolved.Path)
+		_ = filex.CopyFileFromEmbed("embed/"+types.AppTomlFile, resolved.Path)
 	}
 
 	var cfg *configs.Config
