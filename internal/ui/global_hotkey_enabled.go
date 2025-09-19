@@ -14,7 +14,7 @@ import (
 
 func (h *EventHandler) RegisterGlobalHotkeys(opts *model.Options) {
 	opts.GlobalKeyHandlers = make(map[string]model.GlobalKeyHandler)
-	for global, operate := range configs.ConfigRegistry.GlobalHotkeys {
+	for global, operate := range configs.AppConfig.Keybindings.Global {
 		ot, ok := keybindings.GetOperationFromName(operate)
 		if !ok {
 			slog.Warn(fmt.Sprintf("无效的操作：'%s'，忽略全局快捷键 '%s'", operate, global))

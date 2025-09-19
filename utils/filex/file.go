@@ -1,6 +1,7 @@
 package filex
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -9,6 +10,19 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 )
+
+// LoadConfig 加载配置
+func LoadConfig() {
+	configFile := app.ConfigFilePath()
+
+	var cfg *configs.Config
+	var err error
+	cfg, err = configs.NewConfigFromTomlFile(configFile)
+	if err != nil {
+		panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
+	}
+	configs.AppConfig = cfg
+}
 
 // LoadIniConfig 加载ini配置信息
 func LoadIniConfig() {

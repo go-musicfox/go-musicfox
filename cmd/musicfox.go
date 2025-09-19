@@ -35,7 +35,7 @@ func musicfox() {
 	}
 
 	// 加载config
-	filex.LoadIniConfig()
+	filex.LoadConfig()
 
 	needsMigration, err := migration.NeedsMigration()
 	if err != nil {
@@ -51,7 +51,7 @@ func musicfox() {
 		return
 	}
 
-	util.PrimaryColor = configs.ConfigRegistry.Main.PrimaryColor
+	util.PrimaryColor = configs.AppConfig.Theme.PrimaryColor
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
 		randomColor  = util.GetPrimaryColor()
@@ -62,11 +62,11 @@ func musicfox() {
 	app.Logo.Text = logoColorful
 
 	// 更新netease配置
-	neteaseutil.UNMSwitch = configs.ConfigRegistry.UNM.Enable
-	neteaseutil.Sources = configs.ConfigRegistry.UNM.Sources
-	neteaseutil.SearchLimit = configs.ConfigRegistry.UNM.SearchLimit
-	neteaseutil.EnableLocalVip = configs.ConfigRegistry.UNM.EnableLocalVip
-	neteaseutil.UnlockSoundEffects = configs.ConfigRegistry.UNM.UnlockSoundEffects
+	neteaseutil.UNMSwitch = configs.AppConfig.UNM.Enable
+	neteaseutil.Sources = configs.AppConfig.UNM.Sources
+	neteaseutil.SearchLimit = configs.AppConfig.UNM.SearchLimit
+	neteaseutil.EnableLocalVip = configs.AppConfig.UNM.EnableLocalVip
+	neteaseutil.UnlockSoundEffects = configs.AppConfig.UNM.UnlockSoundEffects
 
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)

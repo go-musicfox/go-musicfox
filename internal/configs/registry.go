@@ -14,6 +14,9 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+// ConfigRegistry 加载自 INI 配置的全局配置
+//
+// Deprecated: please use configs.AppConfig instead.
 var ConfigRegistry *Registry
 
 type Registry struct {

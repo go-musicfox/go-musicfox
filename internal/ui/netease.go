@@ -57,12 +57,12 @@ func NewNetease(app *model.App) *Netease {
 	n.App = app
 
 	n.shareSvc = composer.NewShareService()
-	n.shareSvc.RegisterTemplates(configs.ConfigRegistry.Share)
+	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
 
-	quality := configs.ConfigRegistry.Main.PlayerSongLevel
-	maxSizeMB := configs.ConfigRegistry.Storge.CacheLimit
+	quality := configs.AppConfig.Player.SongLevel
+	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
 	nameGen := composer.NewFileNameGenerator()
-	nameGen.RegisterSongTemplate(configs.ConfigRegistry.Storge.DownloadFileNameTpl)
+	nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
 	n.trackManager = track.NewManager(
 		track.WithNameGenerator(nameGen),
 		track.WithCacher(track.NewCacher(maxSizeMB)),
@@ -84,7 +84,7 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 }
 
 func (n *Netease) InitHook(_ *model.App) {
-	config := configs.ConfigRegistry
+	config := configs.AppConfig
 	dataDir := app.DataDir()
 
 	// 全局文件Jar
@@ -102,9 +102,9 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		if n.user == nil && config.Main.NeteaseCookie != "" {
+		if n.user == nil && config.Main.Account.NeteaseCookie != "" {
 			// 使用cookie登录
-			cookies, err := http.ParseCookie(config.Main.NeteaseCookie)
+			cookies, err := http.ParseCookie(config.Main.Account.NeteaseCookie)
 			if err != nil {
 				slog.Error("网易云 cookies 格式错误", "error", err)
 			} else {
@@ -233,8 +233,8 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		// 自动播放
-		if config.AutoPlayer.Enable {
-			autoPlayer := automator.NewAutoPlayer(n.user, n.player, config.AutoPlayer)
+		if config.Autoplay.Enable {
+			autoPlayer := automator.NewAutoPlayer(n.user, n.player, config.Autoplay)
 			if err := autoPlayer.Start(); err != nil {
 				slog.Error("自动播放失败", slogx.Error(err))
 				notify.Notify(notify.NotifyContent{

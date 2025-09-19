@@ -20,11 +20,11 @@ type AutoPlayerBackend interface {
 
 type AutoPlayer struct {
 	backend AutoPlayerBackend
-	options configs.AutoPlayerOptions
+	options configs.AutoplayConfig
 	user    *structs.User
 }
 
-func NewAutoPlayer(user *structs.User, backend AutoPlayerBackend, options configs.AutoPlayerOptions) *AutoPlayer {
+func NewAutoPlayer(user *structs.User, backend AutoPlayerBackend, options configs.AutoplayConfig) *AutoPlayer {
 	return &AutoPlayer{
 		user:    user,
 		backend: backend,

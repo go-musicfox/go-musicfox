@@ -73,7 +73,7 @@ func initPaths() {
 func initPathsWithConfig() {
 	initPathsOnce.Do(func() {
 		initPaths()
-		if userCacheDir := configs.ConfigRegistry.Storge.CacheDir; userCacheDir != "" {
+		if userCacheDir := configs.AppConfig.Storage.Cache.Dir; userCacheDir != "" {
 			if paths.isPortable {
 				paths.cacheDir = filepath.Join(paths.rootDir, userCacheDir)
 			} else {
@@ -82,7 +82,7 @@ func initPathsWithConfig() {
 		}
 		paths.musicCacheDir = filepath.Join(paths.cacheDir, "music_cache")
 
-		if userDownloadDir := configs.ConfigRegistry.Storge.DownloadDir; userDownloadDir != "" {
+		if userDownloadDir := configs.AppConfig.Storage.DownloadDir; userDownloadDir != "" {
 			if paths.isPortable {
 				paths.downloadDir = filepath.Join(paths.rootDir, userDownloadDir)
 			} else {
@@ -110,7 +110,7 @@ func ConfigDir() string {
 }
 
 func ConfigFilePath() string {
-	return filepath.Join(ConfigDir(), types.AppIniFile)
+	return filepath.Join(ConfigDir(), types.AppTomlFile)
 }
 
 // DataDir 获取数据文件目录 (db, cookie, logo.png)
@@ -160,7 +160,7 @@ func DownloadDir() string {
 
 // DownloadLyricDir 歌词下载目录，同 DownloadDir
 func DownloadLyricDir() string {
-	customDir := configs.ConfigRegistry.Storge.DownloadLyricDir
+	customDir := configs.AppConfig.Storage.LyricDir
 	if customDir == "" {
 		return DownloadDir()
 	}

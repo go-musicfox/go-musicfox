@@ -213,7 +213,7 @@ func (s *SearchPage) View(a *model.App) string {
 	)
 
 	// title
-	if configs.ConfigRegistry.Main.ShowTitle {
+	if configs.AppConfig.Theme.ShowTitle {
 		builder.WriteString(main.TitleView(a, &top))
 	} else {
 		top++
