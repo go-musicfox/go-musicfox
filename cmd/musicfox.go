@@ -13,6 +13,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/migration"
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
 	_ "github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -34,8 +35,7 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.DebugMode, "debug", "", false, "enable debug log level")
 	}
 
-	// 加载config
-	filex.LoadConfig()
+	loadConfig()
 
 	needsMigration, err := migration.NeedsMigration()
 	if err != nil {
@@ -74,4 +74,28 @@ func musicfox() {
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()
+}
+
+// loadConfig 加载配置
+func loadConfig() {
+	configDir := app.ConfigDir()
+
+	resolved := configs.ResolveConfigFile(configDir)
+
+	if !resolved.Exists {
+		_ = filex.CopyFileFromEmbed("embed/go-musicfox.toml", resolved.Path)
+	}
+
+	var cfg *configs.Config
+	var err error
+	if resolved.Format == configs.FormatTOML {
+		cfg, err = configs.NewConfigFromTomlFile(resolved.Path)
+		if err != nil {
+			panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
+		}
+	} else {
+		registry := configs.NewRegistryFromIniFile(resolved.Path)
+		cfg = configs.MigrateLegacyRegistry(registry)
+	}
+	configs.AppConfig = cfg
 }

@@ -119,9 +119,9 @@ limit = 0
 
 # 播放器引擎与行为配置
 [player]
-# 播放引擎，可选: "beep", "mpd", "mpv", "osx", "win_media"
+# 播放引擎，可选: "beep", "mpd", "mpv", "osx", "win_media", "auto"（根据系统自动选择）
 # Mac 默认 "osx", Windows 默认 "win_media", 其他系统默认 "beep"
-engine = "beep"
+engine = "auto"
 # 允许的最大连续失败重试次数
 maxPlayErrCount = 3
 # 期望的歌曲音质

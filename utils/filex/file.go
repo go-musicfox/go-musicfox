@@ -1,44 +1,19 @@
 package filex
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/utils/app"
 )
-
-// LoadConfig 加载配置
-// 它会自动处理新旧配置文件的选择、创建和加载。
-func LoadConfig() {
-	configDir := app.ConfigDir()
-
-	resolved := configs.ResolveConfigFile(configDir)
-
-	if !resolved.Exists {
-		_ = CopyFileFromEmbed("embed/go-musicfox.toml", resolved.Path)
-	}
-
-	var cfg *configs.Config
-	var err error
-	if resolved.Format == configs.FormatTOML {
-		cfg, err = configs.NewConfigFromTomlFile(resolved.Path)
-		if err != nil {
-			panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
-		}
-	} else {
-		registry := configs.NewRegistryFromIniFile(resolved.Path)
-		cfg = configs.MigrateLegacyRegistry(registry)
-	}
-	configs.AppConfig = cfg
-}
 
 func FileOrDirExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
+}
+
+func ReadFileFromEmbed(src string) ([]byte, error) {
+	return embedDir.ReadFile(src)
 }
 
 func CopyFileFromEmbed(src, dst string) error {

@@ -3,12 +3,15 @@ package configs
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/go-musicfox/go-musicfox/internal/keybindings"
+	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/filex"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/providers/structs"
+	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 )
 
@@ -22,9 +25,13 @@ var EffectiveKeybindings map[keybindings.OperateType][]string
 func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 	k := koanf.New(".")
 
-	// 加载默认值
-	if err := k.Load(structs.Provider(NewDefaultConfig(), "koanf"), nil); err != nil {
-		return nil, fmt.Errorf("error loading default config: %w", err)
+	// 加载内嵌的 TOML 文件作为默认值
+	defaultTomlBytes, err := filex.ReadFileFromEmbed("embed/go-musicfox.toml")
+	if err != nil {
+		return nil, fmt.Errorf("critical error: failed to read embedded default config: %w", err)
+	}
+	if err := k.Load(rawbytes.Provider(defaultTomlBytes), toml.Parser()); err != nil {
+		return nil, fmt.Errorf("critical error: failed to parse embedded default config: %w", err)
 	}
 
 	if err := k.Load(file.Provider(tomlPath), toml.Parser()); err != nil {
@@ -32,6 +39,9 @@ func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 			return nil, fmt.Errorf("error loading TOML config file '%s': %w", tomlPath, err)
 		}
 	}
+
+	// 处理动态默认值
+	applyDynamicDefaults(k)
 
 	finalConfig := &Config{}
 	unmarshalConf := koanf.UnmarshalConf{
@@ -51,4 +61,20 @@ func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 	)
 
 	return finalConfig, nil
+}
+
+// applyDynamicDefaults 处理无法在静态TOML中定义的默认值
+func applyDynamicDefaults(k *koanf.Koanf) {
+	if k.String("player.engine") == "auto" {
+		var defaultEngine string
+		switch runtime.GOOS {
+		case "darwin":
+			defaultEngine = types.OsxPlayer
+		case "windows":
+			defaultEngine = types.WinMediaPlayer
+		default:
+			defaultEngine = types.BeepPlayer
+		}
+		k.Set("player.engine", defaultEngine)
+	}
 }

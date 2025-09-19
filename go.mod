@@ -26,7 +26,7 @@ require (
 	github.com/gopxl/beep v1.4.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
 	github.com/knadh/koanf/providers/file v1.2.0
-	github.com/knadh/koanf/providers/structs v1.0.0
+	github.com/knadh/koanf/providers/rawbytes v1.0.0
 	github.com/knadh/koanf/v2 v2.3.0
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/muesli/termenv v0.15.2
@@ -49,7 +49,6 @@ require (
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d // indirect
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
-	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776 // indirect
 	github.com/forgoer/openssl v1.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
