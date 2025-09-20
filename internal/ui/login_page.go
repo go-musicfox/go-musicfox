@@ -199,7 +199,7 @@ func (l *LoginPage) View(a *model.App) string {
 	)
 
 	// title
-	if configs.ConfigRegistry.Main.ShowTitle {
+	if configs.AppConfig.Theme.ShowTitle {
 		builder.WriteString(mainPage.TitleView(a, &top))
 	} else {
 		top++

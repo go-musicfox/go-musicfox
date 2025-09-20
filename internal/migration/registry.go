@@ -28,7 +28,7 @@ func getMigrationItems() []migrationItem {
 		},
 		{
 			description: "迁移配置文件",
-			oldPathFn:   func() string { return filepath.Join(oldRootDir, types.AppIniFile) },
+			oldPathFn:   func() string { return filepath.Join(oldRootDir, filepath.Base(app.ConfigFilePath())) },
 			newPathFn:   app.ConfigFilePath,
 		},
 		{

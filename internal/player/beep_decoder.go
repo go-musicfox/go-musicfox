@@ -19,7 +19,7 @@ import (
 func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
 	switch t {
 	case Mp3:
-		switch configs.ConfigRegistry.Player.BeepMp3Decoder {
+		switch configs.AppConfig.Player.Beep.Mp3Decoder {
 		case types.BeepMiniMp3Decoder:
 			minimp3pkg.BufferSize = 1024 * 50
 			streamer, format, err = minimp3.Decode(r)

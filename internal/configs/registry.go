@@ -14,6 +14,9 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+// ConfigRegistry 加载自 INI 配置的全局配置
+//
+// Deprecated: please use configs.AppConfig instead.
 var ConfigRegistry *Registry
 
 type Registry struct {
@@ -275,7 +278,8 @@ func NewRegistryFromIniFile(filepath string) *Registry {
 	registry.Reporter.Netease.Enable = ini.Bool("reporter.neteaseEnable", false)
 
 	userKeybindingsRaw := ini.StringMap("keybindings")
-	registry.Keybindings = keybindings.BuildEffectiveBindings(userKeybindingsRaw, registry.Main.UseDefaultKeyBindings)
+	userBindings := keybindings.ProcessUserBindingsLegacy(userKeybindingsRaw)
+	registry.Keybindings = keybindings.BuildEffectiveBindings(userBindings, registry.Main.UseDefaultKeyBindings)
 
 	registry.Share = ini.StringMap("share")
 

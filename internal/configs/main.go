@@ -31,3 +31,50 @@ type MainOptions struct {
 	NeteaseCookie          string                   // 网易云音乐登录cookie
 	Debug                  bool                     // 是否启用 Debug
 }
+
+// MainConfig 主界面与核心功能配置
+type MainConfig struct {
+	// AltScreen 显示模式
+	AltScreen bool `koanf:"altScreen"`
+	// 启用鼠标事件
+	EnableMouseEvent bool `koanf:"enableMouseEvent"`
+	// 是否启用 Debug
+	Debug bool `koanf:"debug"`
+
+	Notification NotificationConfig `koanf:"notification"`
+	Lyric        LyricConfig        `koanf:"lyric"`
+	Pprof        PprofConfig        `koanf:"pprof"`
+	Account      AccountConfig      `koanf:"account"`
+}
+
+// NotificationConfig 桌面通知相关设置
+type NotificationConfig struct {
+	// 显示通知
+	Enable bool `koanf:"enable"`
+	// logo 图片名
+	Icon string `koanf:"icon"`
+	// 通知显示专辑封面
+	AlbumCover bool `koanf:"albumCover"`
+}
+
+// LyricConfig 歌词显示相关设置
+type LyricConfig struct {
+	// 显示歌词
+	Show bool `koanf:"show"`
+	// 显示歌词翻译
+	ShowTranslation bool `koanf:"showTranslation"`
+	// 偏移: ms
+	Offset int `koanf:"offset"`
+}
+
+// PprofConfig Go 性能分析工具 pprof 的相关设置
+type PprofConfig struct {
+	// pprof 端口
+	Port int `koanf:"port"`
+}
+
+// AccountConfig 账号相关配置
+type AccountConfig struct {
+	// 网易云音乐登录 Cookie
+	NeteaseCookie string `koanf:"neteaseCookie"`
+}

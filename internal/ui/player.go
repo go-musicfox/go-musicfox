@@ -96,11 +96,11 @@ type Player struct {
 
 func NewPlayer(n *Netease) *Player {
 	reporterOptions := []reporter.Option{}
-	if configs.ConfigRegistry.Reporter.Lastfm.Enable {
-		skipDjRadio := configs.ConfigRegistry.Reporter.Lastfm.SkipDjRadio
+	if configs.AppConfig.Reporter.Lastfm.Enable {
+		skipDjRadio := configs.AppConfig.Reporter.Lastfm.SkipDjRadio
 		reporterOptions = append(reporterOptions, reporter.WithLastFM(n.lastfm.Tracker, skipDjRadio))
 	}
-	if configs.ConfigRegistry.Reporter.Netease.Enable {
+	if configs.AppConfig.Reporter.Netease.Enable {
 		reporterOptions = append(reporterOptions, reporter.WithNetease())
 	}
 
@@ -161,7 +161,7 @@ func NewPlayer(n *Netease) *Player {
 				}
 				if p.lrcTimer != nil {
 					select {
-					case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.ConfigRegistry.Main.LyricOffset):
+					case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.AppConfig.Main.Lyric.Offset):
 					default:
 					}
 				}
@@ -184,7 +184,7 @@ func (p *Player) Update(_ tea.Msg, _ *model.App) {
 	main := p.netease.MustMain()
 	// 播放器歌词
 	spaceHeight := p.netease.WindowHeight() - 5 - main.MenuBottomRow()
-	if spaceHeight < 3 || !configs.ConfigRegistry.Main.ShowLyric {
+	if spaceHeight < 3 || !configs.AppConfig.Main.Lyric.Show {
 		// 不显示歌词
 		p.showLyric = false
 	} else {
@@ -526,7 +526,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 
 	var skip bool
 	logger := slog.With(slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
-	if configs.ConfigRegistry.UNM.SkipInvalidTracks {
+	if configs.AppConfig.UNM.SkipInvalidTracks {
 		skip, _ = netease.HasBannedPathSuffix(url)
 	}
 
@@ -538,7 +538,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		} else {
 			logger.Error("Play song error", slog.Any("err", err))
 		}
-		if p.playErrCount >= configs.ConfigRegistry.Player.MaxPlayErrCount {
+		if p.playErrCount >= configs.AppConfig.Player.MaxPlayErrCount {
 			return
 		}
 		switch direction {
@@ -786,7 +786,7 @@ func (p *Player) getLyric(songId int64) {
 			p.lrcFile = file
 		}
 	}
-	if configs.ConfigRegistry.Main.ShowLyricTrans {
+	if configs.AppConfig.Main.Lyric.ShowTranslation {
 		if lrc, err := jsonparser.GetString(response, "tlyric", "lyric"); err == nil && lrc != "" {
 			if file, err := lyric.ReadTranslateLRC(strings.NewReader(lrc)); err == nil {
 				p.transLrcFile = file
@@ -801,7 +801,7 @@ func (p *Player) getLyric(songId int64) {
 // updateLyric 更新歌词UI
 func (p *Player) updateLyric(songId int64) {
 	p.getLyric(songId)
-	if !configs.ConfigRegistry.Main.ShowLyric {
+	if !configs.AppConfig.Main.Lyric.Show {
 		return
 	}
 	p.lyrics = [5]string{}

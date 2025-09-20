@@ -192,7 +192,7 @@ func (l *LastfmCustomApiPage) View(a *model.App) string {
 	)
 
 	// title
-	if configs.ConfigRegistry.Main.ShowTitle {
+	if configs.AppConfig.Theme.ShowTitle {
 		builder.WriteString(mainPage.TitleView(a, &top))
 	} else {
 		top++
@@ -326,9 +326,9 @@ func (l *LastfmCustomApiPage) reloadApiAccount() (model.Page, tea.Cmd) {
 		l.keyInput.SetValue(key)
 		l.secretInput.SetValue(secret)
 		l.tips = util.SetFgStyle("已从已配置值(TUI 设置值)加载", termenv.ANSIBrightGreen)
-	} else if configs.ConfigRegistry.Reporter.Lastfm.Key != "" && configs.ConfigRegistry.Reporter.Lastfm.Secret != "" {
-		l.keyInput.SetValue(configs.ConfigRegistry.Reporter.Lastfm.Key)
-		l.secretInput.SetValue(configs.ConfigRegistry.Reporter.Lastfm.Secret)
+	} else if configs.AppConfig.Reporter.Lastfm.Key != "" && configs.AppConfig.Reporter.Lastfm.Secret != "" {
+		l.keyInput.SetValue(configs.AppConfig.Reporter.Lastfm.Key)
+		l.secretInput.SetValue(configs.AppConfig.Reporter.Lastfm.Secret)
 		l.tips = util.SetFgStyle("已从本次启动时的配置文件中加载", termenv.ANSIBrightGreen)
 	} else {
 		l.keyInput.Reset()

@@ -62,3 +62,15 @@ func AutoPlayerPlaylistFromString(playlist string) AutoPlayerPlaylist {
 		return AutoPlayerPlaylistDailyReco
 	}
 }
+
+// AutoplayConfig 启动时自动播放相关配置
+type AutoplayConfig struct {
+	// 是否自动开始播放
+	Enable bool `koanf:"enable"`
+	// 自动播放列表
+	Playlist AutoPlayerPlaylist `koanf:"playlist"`
+	// 播放偏移：0为歌单第一项，-1为歌单最后一项
+	Offset int `koanf:"offset"`
+	// 播放模式
+	Mode types.Mode `koanf:"mode"`
+}

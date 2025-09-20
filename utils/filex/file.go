@@ -5,23 +5,15 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/utils/app"
 )
-
-// LoadIniConfig 加载ini配置信息
-func LoadIniConfig() {
-	configFile := app.ConfigFilePath()
-	if !FileOrDirExists(configFile) {
-		_ = CopyFileFromEmbed("embed/go-musicfox.ini", configFile)
-	}
-	configs.ConfigRegistry = configs.NewRegistryFromIniFile(configFile)
-}
 
 func FileOrDirExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
+}
+
+func ReadFileFromEmbed(src string) ([]byte, error) {
+	return embedDir.ReadFile(src)
 }
 
 func CopyFileFromEmbed(src, dst string) error {

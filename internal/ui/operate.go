@@ -251,7 +251,7 @@ func handleSongDownload(n *Netease, song structs.Song) {
 		})
 	}
 
-	withLyric := configs.ConfigRegistry.Storge.DownloadSongWithLyric
+	withLyric := configs.AppConfig.Storage.DownloadSongWithLyric
 	if withLyric && (err == nil || errors.Is(err, os.ErrExist)) {
 		slog.Info("歌曲已下载或已存在，开始下载歌词", "song", song.Name, "id", song.Id)
 		errorx.Go(func() { handleLyricDownload(n, song) }, true)

@@ -24,7 +24,7 @@ type EventHandler struct {
 func NewEventHandler(netease *Netease) *EventHandler {
 	handler := &EventHandler{
 		netease:         netease,
-		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(configs.ConfigRegistry.Keybindings),
+		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(configs.EffectiveKeybindings),
 	}
 	slog.Info(fmt.Sprintf("事件处理器已初始化，加载了 %d 个有效按键绑定映射。", len(handler.keyToOperateMap)))
 	return handler

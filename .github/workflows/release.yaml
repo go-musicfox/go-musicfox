@@ -45,6 +45,11 @@ jobs:
         with:
           go-version: "^1.22.0"
 
+      - name: Sync Go Modules and Vendor
+        run: |
+          go mod tidy
+          go mod vendor
+
       - name: branch name
         id: branch_name
         run: |-
