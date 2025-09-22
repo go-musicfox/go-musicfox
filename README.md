@@ -406,6 +406,8 @@ $ musicfox
 - XDG 支持
 
   自 [#453](https://github.com/go-musicfox/go-musicfox/pull/453) 起，提供了完整的 XDG 支持，部分文件路径变更，见 [XDG 支持说明](./docs/xdg_support.md)
+- 配置文件格式
+  自 [#484](https://github.com/go-musicfox/go-musicfox/pull/484) 起，配置文件格式已由 INI 更换为 [TOML](https://toml.io/)
 
 </details>
 <details>
@@ -489,46 +491,41 @@ $ musicfox
 | `actionOfPlayingSong`               | 对于当前播放的操作            | `M`                                          |
 
 注意：
-- 多个按键请以英文逗号`,`分隔，每个键无需引号（不支持）
 - 非字符快捷键大小写不敏感，如 `shift+tab` 等同 `Shift+Tab`，但 `a` 与 `A` 不同
 - 多次绑定同一个键的行为是未定义的，以程序最后读取的为准
 - [不可自定义操作](#不可自定义操作-内置) 不可自定义且其使用的键也不可用于自定义
 - 与歌曲、歌单等存在关联的操作现已默认添加至 `actionOfSelected` 及 `actionOfPlayingSong`
 
 
-```ini
-[main]
-useDefaultKeyBindings=false
-```
-
 示例配置：
-```ini
-[main]
-# 取消所有默认键绑定（须自定义键以确保正常使用）
-useDefaultKeyBindings=false
-
+```toml
 [keybindings]
+# 取消所有默认键绑定（须自定义键以确保正常使用）
+useDefaultKeyBindings = false
+
+# 应用内快捷键
+[keybindings.app]
 # 将“下一首”改为 Alt+N
-next = alt+n
+next = "alt+n"
 
 # 为“帮助”额外添加 Ctrl+H
-help = ?,ctrl+h
+help = ["?","ctrl+h"]
 
 # 取消“心动模式”的默认 P 键
-intelligence =
+intelligence = ""
 
 # 将“显示当前播放列表”改为 Ctrl+P
-curPlaylist = ctrl+p
+curPlaylist = "ctrl+p"
 ```
 
 #### 全局快捷键
 
 默认不设置任何全局快捷键，如果需要请在配置文件中的`global_hotkey`下进行配置，例如：
 
-```ini
-[global_hotkey]
-# 格式：键=功能 (https://github.com/go-musicfox/go-musicfox/blob/master/internal/ui/event_handler.go#L15)
-ctrl+shift+space=toggle
+```toml
+[keybindings.global]
+# 格式：键=功能
+"ctrl+shift+space" = "toggle"
 ```
 
 > 因为Linux下开启全局快捷键需要安装比较多的依赖，可能你并不需要这个功能，所以Releases中的Linux二进制文件是不支持全局快捷键的
@@ -579,7 +576,7 @@ ctrl+shift+space=toggle
 
 #### 示例
 
-```ini
+```toml
 [share]
 song = "分享{{if .SongArtists}}{{.SongArtists}}的{{end}}单曲《{{.SongName}}》: {{.SongUrl}} (来自@网易云音乐)"
 ```

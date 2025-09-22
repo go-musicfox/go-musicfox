@@ -127,7 +127,7 @@ type NotifyContent struct {
 }
 
 func Notify(content NotifyContent) {
-	if !configs.ConfigRegistry.Main.ShowNotify {
+	if !configs.AppConfig.Main.Notification.Enable {
 		return
 	}
 
@@ -138,7 +138,7 @@ func Notify(content NotifyContent) {
 	if runtime.GOOS != "darwin" {
 		// On non-macOS operating systems, only one image is allowed per notification.
 		// The user can choose to send an album cover in notifications or use the default musicfox icon.
-		if configs.ConfigRegistry.Main.NotifyAlbumCover {
+		if configs.AppConfig.Main.Notification.AlbumCover {
 			err := useAlbumCover(&content)
 			// fall back to default icon
 			if err != nil {
@@ -262,7 +262,7 @@ func useAppIcon(content *NotifyContent) {
 		return
 	}
 	localDir := app.DataDir()
-	content.Icon = filepath.Join(localDir, configs.ConfigRegistry.Main.NotifyIcon)
+	content.Icon = filepath.Join(localDir, configs.AppConfig.Main.Notification.Icon)
 	if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
 		if err != nil {
 			content.Icon = filepath.Join(localDir, types.DefaultNotifyIcon)

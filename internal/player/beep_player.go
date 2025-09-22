@@ -153,7 +153,7 @@ func (p *beepPlayer) listen() {
 						return
 					}
 					// 除了MP3格式，其他格式无需重载
-					if p.curMusic.Type == Mp3 && configs.ConfigRegistry.Player.BeepMp3Decoder != types.BeepMiniMp3Decoder {
+					if p.curMusic.Type == Mp3 && configs.AppConfig.Player.Beep.Mp3Decoder != types.BeepMiniMp3Decoder {
 						// 需再开一次文件，保证其指针变化，否则将概率导致 p.ctrl.Streamer = beep.Seq(……) 直接停止播放
 						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0666)
 						// 使用新的文件后需手动Seek到上次播放处
@@ -286,7 +286,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
 	// minimp3未实现Seek
-	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.ConfigRegistry.Player.BeepMp3Decoder == types.BeepMiniMp3Decoder {
+	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.AppConfig.Player.Beep.Mp3Decoder == types.BeepMiniMp3Decoder {
 		return
 	}
 	if p.state == types.Playing || p.state == types.Paused {

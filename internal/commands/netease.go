@@ -30,11 +30,11 @@ func NewPlayerCommand() *gcli.Command {
 func runPlayer(_ *gcli.Command, _ []string) error {
 	if GlobalOptions.PProfMode {
 		errorx.Go(func() {
-			panic(http.ListenAndServe(":"+strconv.Itoa(configs.ConfigRegistry.Main.PProfPort), nil))
+			panic(http.ListenAndServe(":"+strconv.Itoa(configs.AppConfig.Main.Pprof.Port), nil))
 		}, true)
 	}
 
-	if GlobalOptions.DebugMode || configs.ConfigRegistry.Main.Debug {
+	if GlobalOptions.DebugMode || configs.AppConfig.Main.Debug {
 		slogx.LevelVar().Set(slog.LevelDebug)
 	}
 
@@ -42,7 +42,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	runewidth.DefaultCondition.EastAsianWidth = false
 
 	opts := model.DefaultOptions()
-	configs.ConfigRegistry.FillToModelOpts(opts)
+	configs.AppConfig.FillToModelOpts(opts)
 
 	model.Submit = types.SubmitText
 	model.SearchPlaceholder = types.SearchPlaceholder
@@ -65,8 +65,8 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.KBControllers = append(options.KBControllers, eventHandler)
 			options.MouseControllers = append(options.MouseControllers, eventHandler)
 			options.Ticker = netease.Player().RenderTicker()
-			options.DynamicRowCount = configs.ConfigRegistry.Main.DynamicMenuRows
-			options.CenterEverything = configs.ConfigRegistry.Main.CenterEverything
+			options.DynamicRowCount = configs.AppConfig.Theme.DynamicMenuRows
+			options.CenterEverything = configs.AppConfig.Theme.CenterEverything
 		},
 	)
 

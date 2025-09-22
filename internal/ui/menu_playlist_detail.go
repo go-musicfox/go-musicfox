@@ -48,7 +48,7 @@ func (m *PlaylistDetailMenu) SubMenu(_ *model.App, _ int) model.Menu {
 
 func (m *PlaylistDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		codeType, songs := netease.FetchSongsOfPlaylist(m.playlistId, configs.ConfigRegistry.Main.ShowAllSongsOfPlaylist)
+		codeType, songs := netease.FetchSongsOfPlaylist(m.playlistId, configs.AppConfig.Player.ShowAllSongsOfPlaylist)
 		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
