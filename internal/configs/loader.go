@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
+	"github.com/pkg/errors"
 )
 
 // AppConfig 全局配置
@@ -28,15 +28,15 @@ func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 	// 加载内嵌的 TOML 文件作为默认值
 	defaultTomlBytes, err := filex.ReadFileFromEmbed("embed/" + types.AppTomlFile)
 	if err != nil {
-		return nil, fmt.Errorf("critical error: failed to read embedded default config: %w", err)
+		return nil, errors.Wrap(err, "failed to read embedded default config")
 	}
 	if err := k.Load(rawbytes.Provider(defaultTomlBytes), toml.Parser()); err != nil {
-		return nil, fmt.Errorf("critical error: failed to parse embedded default config: %w", err)
+		return nil, errors.Wrap(err, "failed to parse embedded default config")
 	}
 
 	if err := k.Load(file.Provider(tomlPath), toml.Parser()); err != nil {
 		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("error loading TOML config file '%s': %w", tomlPath, err)
+			return nil, errors.Wrapf(err, "error loading TOML config file '%s'", tomlPath)
 		}
 	}
 
@@ -51,7 +51,7 @@ func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 		},
 	}
 	if err := k.UnmarshalWithConf("", finalConfig, unmarshalConf); err != nil {
-		return nil, fmt.Errorf("error unmarshalling config: %w", err)
+		return nil, errors.Wrap(err, "error unmarshalling config")
 	}
 
 	// 处理键绑定

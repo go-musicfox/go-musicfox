@@ -525,7 +525,7 @@ curPlaylist = "ctrl+p"
 ```toml
 [keybindings.global]
 # 格式：键=功能
-"ctrl+shift+space" = toggle
+"ctrl+shift+space" = "toggle"
 ```
 
 > 因为Linux下开启全局快捷键需要安装比较多的依赖，可能你并不需要这个功能，所以Releases中的Linux二进制文件是不支持全局快捷键的
