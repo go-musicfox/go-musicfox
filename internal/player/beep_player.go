@@ -145,11 +145,6 @@ func (p *beepPlayer) listen() {
 
 				// 边下载边播放
 				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
-					defer func() {
-						if errorx.Recover(true) {
-							p.Stop()
-						}
-					}()
 					_, _ = iox.CopyClose(ctx, cacheWFile, read)
 					p.l.Lock()
 					defer p.l.Unlock()
@@ -454,12 +449,9 @@ func (p *beepPlayer) reset() {
 }
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
-	defer func() {
-		if err := recover(); err != nil {
-			slog.Error("streamer panic", slogx.Error(err))
-			p.Stop()
-		}
-	}()
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
 	err := p.curStreamer.Err()
