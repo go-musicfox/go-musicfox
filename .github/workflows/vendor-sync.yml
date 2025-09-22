@@ -3,7 +3,7 @@ name: Sync Go Vendor
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'go.mod'
       - 'go.sum'
