@@ -61,7 +61,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
 		func(options *model.Options) {
 			options.LocalSearchMenu = ui.NewLocalSearchMenu(netease)
-			options.Components = append(options.Components, netease.Player())
+			options.Components = append(options.Components, netease.Components()...)
 			options.KBControllers = append(options.KBControllers, eventHandler)
 			options.MouseControllers = append(options.MouseControllers, eventHandler)
 			options.Ticker = netease.Player().RenderTicker()

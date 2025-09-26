@@ -11,7 +11,6 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/buger/jsonparser"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
@@ -71,14 +70,7 @@ type Player struct {
 	playingMenuKey   string // 正在播放的菜单Key
 	playingMenu      Menu
 
-	lrcFile           *lyric.LRCFile
-	transLrcFile      *lyric.TranslateLRCFile
-	lrcTimer          *lyric.LRCTimer // 歌词计时器
-	lyrics            [5]string       // 歌词信息，保留5行
-	showLyric         bool            // 显示歌词
-	lyricStartRow     int             // 歌词开始行
-	lyricLines        int             // 歌词显示行数，3或5
-	lyricNowScrollBar *app.XScrollBar // 当前歌词滚动
+	lyricService *lyric.Service
 
 	// 播放进度条
 	progressLastWidth float64
@@ -94,7 +86,7 @@ type Player struct {
 	reporter      reporter.Service
 }
 
-func NewPlayer(n *Netease) *Player {
+func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 	reporterOptions := []reporter.Option{}
 	if configs.AppConfig.Reporter.Lastfm.Enable {
 		skipDjRadio := configs.AppConfig.Reporter.Lastfm.SkipDjRadio
@@ -105,11 +97,11 @@ func NewPlayer(n *Netease) *Player {
 	}
 
 	p := &Player{
-		netease:           n,
-		playlistManager:   playlist.NewPlaylistManager(),
-		ctrl:              make(chan CtrlSignal),
-		lyricNowScrollBar: app.NewXScrollBar(),
-		reporter:          reporter.NewService(reporterOptions...),
+		netease:         n,
+		lyricService:    lyricService,
+		playlistManager: playlist.NewPlaylistManager(),
+		ctrl:            make(chan CtrlSignal),
+		reporter:        reporter.NewService(reporterOptions...),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
@@ -159,12 +151,9 @@ func NewPlayer(n *Netease) *Player {
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					p.NextSong(false)
 				}
-				if p.lrcTimer != nil {
-					select {
-					case p.lrcTimer.Timer() <- duration + time.Millisecond*time.Duration(configs.AppConfig.Main.Lyric.Offset):
-					default:
-					}
-				}
+
+				p.lyricService.UpdatePosition(duration)
+
 				if p.renderTicker != nil {
 					select {
 					case p.renderTicker.c <- time.Now():
@@ -180,138 +169,14 @@ func NewPlayer(n *Netease) *Player {
 	return p
 }
 
-func (p *Player) Update(_ tea.Msg, _ *model.App) {
-	main := p.netease.MustMain()
-	// 播放器歌词
-	spaceHeight := p.netease.WindowHeight() - 5 - main.MenuBottomRow()
-	if spaceHeight < 3 || !configs.AppConfig.Main.Lyric.Show {
-		// 不显示歌词
-		p.showLyric = false
-	} else {
-		p.showLyric = true
-		if spaceHeight >= 5 {
-			// 5行歌词
-			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 3
-			p.lyricLines = 5
-		} else {
-			// 3行歌词
-			p.lyricStartRow = (p.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 2
-			p.lyricLines = 3
-		}
-	}
-}
+func (p *Player) Update(_ tea.Msg, _ *model.App) {}
 
 func (p *Player) View(a *model.App, main *model.Main) (view string, lines int) {
 	var playerBuilder strings.Builder
-	playerBuilder.WriteString(p.lyricView())
 	playerBuilder.WriteString(p.songView())
 	playerBuilder.WriteString("\n\n")
 	playerBuilder.WriteString(p.progressView())
 	return playerBuilder.String(), a.WindowHeight() - main.MenuBottomRow()
-}
-
-// lyricView 歌词显示UI
-func (p *Player) lyricView() string {
-	var (
-		endRow = p.netease.WindowHeight() - 4
-		main   = p.netease.MustMain()
-	)
-
-	if !p.showLyric {
-		if endRow-main.MenuBottomRow() > 0 {
-			return strings.Repeat("\n", endRow-main.MenuBottomRow())
-		} else {
-			return ""
-		}
-	}
-
-	var lyricBuilder strings.Builder
-	if p.lyricStartRow > main.MenuBottomRow() {
-		lyricBuilder.WriteString(strings.Repeat("\n", p.lyricStartRow-main.MenuBottomRow()))
-	}
-
-	if main.CenterEverything() {
-		p.buildLyricsCentered(main, &lyricBuilder)
-	} else {
-		p.buildLyricsTraditional(main, &lyricBuilder)
-	}
-
-	if endRow-p.lyricStartRow-p.lyricLines > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", endRow-p.lyricStartRow-p.lyricLines))
-	}
-
-	return lyricBuilder.String()
-}
-
-func (p *Player) buildLyricsCentered(main *model.Main, lyricBuilder *strings.Builder) {
-	windowWidth := p.netease.WindowWidth()
-	highlightLine := 2
-	startLine := highlightLine - (p.lyricLines-1)/2
-	endLine := highlightLine + (p.lyricLines-1)/2
-	extraPadding := 8 + max(0, (windowWidth-40)/5)
-	lyricsMaxLength := windowWidth - extraPadding
-	for i := startLine; i <= endLine; i++ {
-		line := p.lyrics[i]
-		if i == highlightLine {
-			line = p.lyricNowScrollBar.Tick(lyricsMaxLength, line)
-			line = strings.Trim(line, " ")
-		}
-		line = runewidth.Truncate(line, lyricsMaxLength, "")
-		lineLength := runewidth.StringWidth(line)
-		paddingLeft := (windowWidth - lineLength) / 2
-		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
-		if i == highlightLine {
-			line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
-		} else {
-			line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
-		}
-		lyricBuilder.WriteString(line)
-		lyricBuilder.WriteString(strings.Repeat(" ", windowWidth-paddingLeft-lineLength))
-		lyricBuilder.WriteString("\n")
-	}
-}
-
-func (p *Player) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.Builder) {
-	var startCol int
-	if main.IsDualColumn() {
-		startCol = main.MenuStartColumn() + 3
-	} else {
-		startCol = main.MenuStartColumn() - 4
-	}
-
-	maxLen := p.netease.WindowWidth() - startCol - 4
-	switch p.lyricLines {
-	// 3行歌词
-	case 3:
-		for i := 1; i <= 3; i++ {
-			if startCol > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
-			}
-			if i == 2 {
-				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
-			} else {
-				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
-			}
-			lyricBuilder.WriteString("\n")
-		}
-	// 5行歌词
-	case 5:
-		for i := 0; i < 5; i++ {
-			if startCol > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
-			}
-			if i == 2 {
-				lyricLine := p.lyricNowScrollBar.Tick(maxLen, p.lyrics[i])
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
-			} else {
-				lyricLine := runewidth.Truncate(runewidth.FillRight(p.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
-			}
-			lyricBuilder.WriteString("\n")
-		}
-	}
 }
 
 // songView 歌曲信息UI
@@ -550,7 +415,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		return
 	}
 
-	go p.updateLyric(song.Id)
+	go p.lyricService.SetSong(context.Background(), song)
 
 	p.Play(player.URLMusic{
 		URL:  url,
@@ -665,9 +530,6 @@ func (p *Player) PreviousSong(manual bool) {
 
 func (p *Player) Seek(duration time.Duration) {
 	p.Player.Seek(duration)
-	if p.lrcTimer != nil {
-		p.lrcTimer.Rewind()
-	}
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
@@ -732,85 +594,6 @@ func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
 	url := source.Info.URL
 	musicType := source.Info.MusicType
 	return url, musicType, err
-}
-
-// lyricListener 歌词变更监听
-func (p *Player) lyricListener(_ int64, content, transContent string, _ bool, index int) {
-	curIndex := len(p.lyrics) / 2
-
-	// before
-	for i := range curIndex {
-		if f, tf := p.lrcTimer.GetLRCFragment(index - curIndex + i); f != nil {
-			p.lyrics[i] = f.Content
-			if tf != nil && tf.Content != "" {
-				p.lyrics[i] += " [" + tf.Content + "]"
-			}
-		} else {
-			p.lyrics[i] = ""
-		}
-	}
-
-	// cur
-	p.lyrics[curIndex] = content
-	if transContent != "" {
-		p.lyrics[curIndex] += " [" + transContent + "]"
-	}
-
-	// after
-	for i := 1; i < len(p.lyrics)-curIndex; i++ {
-		if f, tf := p.lrcTimer.GetLRCFragment(index + i); f != nil {
-			p.lyrics[curIndex+i] = f.Content
-			if tf != nil && tf.Content != "" {
-				p.lyrics[curIndex+i] += " [" + tf.Content + "]"
-			}
-		} else {
-			p.lyrics[curIndex+i] = ""
-		}
-	}
-}
-
-// getLyric 获取歌曲歌词
-func (p *Player) getLyric(songId int64) {
-	p.lrcFile, _ = lyric.ReadLRC(strings.NewReader("[00:00.00] 暂无歌词~"))
-	p.transLrcFile, _ = lyric.ReadTranslateLRC(strings.NewReader("[00:00.00]"))
-	lrcService := service.LyricService{
-		ID: strconv.FormatInt(songId, 10),
-	}
-	code, response := lrcService.Lyric()
-	if code != 200 {
-		return
-	}
-
-	if lrc, err := jsonparser.GetString(response, "lrc", "lyric"); err == nil && lrc != "" {
-		if file, err := lyric.ReadLRC(strings.NewReader(lrc)); err == nil {
-			p.lrcFile = file
-		}
-	}
-	if configs.AppConfig.Main.Lyric.ShowTranslation {
-		if lrc, err := jsonparser.GetString(response, "tlyric", "lyric"); err == nil && lrc != "" {
-			if file, err := lyric.ReadTranslateLRC(strings.NewReader(lrc)); err == nil {
-				p.transLrcFile = file
-			}
-		}
-	}
-	if p.stateHandler != nil {
-		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-	}
-}
-
-// updateLyric 更新歌词UI
-func (p *Player) updateLyric(songId int64) {
-	p.getLyric(songId)
-	if !configs.AppConfig.Main.Lyric.Show {
-		return
-	}
-	p.lyrics = [5]string{}
-	if p.lrcTimer != nil {
-		p.lrcTimer.Stop()
-	}
-	p.lrcTimer = lyric.NewLRCTimer(p.lrcFile, p.transLrcFile)
-	p.lrcTimer.AddListener(p.lyricListener)
-	p.lrcTimer.Start()
 }
 
 // Intelligence 智能/心动模式
@@ -936,7 +719,7 @@ func (p *Player) PlayingInfo() control.PlayingInfo {
 		Album:          song.Album.Name,
 		Artist:         song.ArtistName(),
 		AlbumArtist:    song.Album.ArtistName(),
-		LRCText:        p.lrcFile.AsText(p.transLrcFile),
+		LRCText:        p.lyricService.State().FormatAsLRC(),
 	}
 }
 

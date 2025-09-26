@@ -181,7 +181,7 @@ func (m *Manager) DownloadSong(ctx context.Context, song structs.Song) (string, 
 // DownloadLyric 下载一首歌的歌词并返回其本地路径。
 func (m *Manager) DownloadLyric(ctx context.Context, song structs.Song) (string, error) {
 	if song.Id == 0 {
-		return "", fmt.Errorf("Song does not exist, id = 0")
+		return "", errors.New("Song does not exist, id = 0")
 	}
 	key := fmt.Sprintf("lyric-download-%d", song.Id)
 	result, err, _ := m.sfGroup.Do(key, func() (any, error) {
@@ -203,7 +203,7 @@ func (m *Manager) DownloadLyric(ctx context.Context, song structs.Song) (string,
 		if err := m.ensureDirExists(m.lyricDir); err != nil {
 			return "", err
 		}
-		if err = os.WriteFile(filePath, []byte(lrc), 0644); err != nil {
+		if err = os.WriteFile(filePath, []byte(lrc.Original), 0644); err != nil {
 			return "", err
 		}
 		return filePath, nil
@@ -215,17 +215,17 @@ func (m *Manager) DownloadLyric(ctx context.Context, song structs.Song) (string,
 	return result.(string), err
 }
 
-// GetLyric 获取一首歌的歌词文本字符串。
-func (m *Manager) GetLyric(ctx context.Context, songID int64) (string, error) {
+// GetLyric 获取一首歌的歌词。
+func (m *Manager) GetLyric(ctx context.Context, songID int64) (structs.LRCData, error) {
 	key := fmt.Sprintf("lyric-fetch-%d", songID)
 	result, err, _ := m.sfGroup.Do(key, func() (any, error) {
 		return m.fetcher.FetchLyric(ctx, songID)
 	})
 
 	if err != nil {
-		return "", err
+		return structs.LRCData{}, err
 	}
-	return result.(string), nil
+	return result.(structs.LRCData), nil
 }
 
 func (m *Manager) ClearCache() error {

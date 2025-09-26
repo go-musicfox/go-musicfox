@@ -7,14 +7,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/netease-music/service"
+	"github.com/pkg/errors"
 )
 
 type Fetcher interface {
 	FetchPlayableInfo(ctx context.Context, songID int64) (*netease.PlayableInfo, error)
 	FetchStream(ctx context.Context, source PlayableSource) (io.ReadCloser, error)
-	FetchLyric(ctx context.Context, songID int64) (string, error)
+	FetchLyric(ctx context.Context, songID int64) (structs.LRCData, error)
 }
 
 type fetcher struct {
@@ -74,10 +76,10 @@ func (f *fetcher) FetchStream(ctx context.Context, source PlayableSource) (io.Re
 	return resp.Body, nil
 }
 
-func (f *fetcher) FetchLyric(ctx context.Context, songID int64) (string, error) {
-	lrc, err := netease.FetchLyric(songID)
+func (f *fetcher) FetchLyric(ctx context.Context, songID int64) (structs.LRCData, error) {
+	lrcData, err := netease.FetchLyric(songID)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch lyric for song %d: %w", songID, err)
+		return structs.LRCData{}, errors.Wrapf(err, "failed to fetch lyric for song %d", songID)
 	}
-	return lrc, nil
+	return lrcData, nil
 }
