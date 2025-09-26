@@ -131,6 +131,8 @@ songLevel = "higher"
 # 是否获取并显示歌单下的所有歌曲，默认前 1000 首
 # 开启后可能会占用更多内存（大量歌曲数据）和带宽（会同时发送多个请求获取歌单下歌曲数据）
 showAllSongsOfPlaylist = false
+# Ctrl + 鼠标滚轮单次滚动调节的音量值 (取值范围 1-20)
+mouseVolumeStep = 1
 
 # `beep` 引擎专属配置 (跨平台)
 [player.beep]

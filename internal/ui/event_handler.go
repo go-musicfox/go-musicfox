@@ -19,11 +19,19 @@ import (
 type EventHandler struct {
 	netease         *Netease
 	keyToOperateMap map[string]keybindings.OperateType // KeyStr -> OperateType
+	mouseVolumeStep int
 }
 
 func NewEventHandler(netease *Netease) *EventHandler {
+	step := configs.AppConfig.Player.MouseVolumeStep
+	if step <= 0 {
+		step = 1
+	} else if step > 20 {
+		step = 20
+	}
 	handler := &EventHandler{
 		netease:         netease,
+		mouseVolumeStep: step,
 		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(configs.EffectiveKeybindings),
 	}
 	slog.Info(fmt.Sprintf("事件处理器已初始化，加载了 %d 个有效按键绑定映射。", len(handler.keyToOperateMap)))
@@ -289,28 +297,45 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 		player = h.netease.player
 		main   = a.MustMain()
 	)
-	switch {
-	case msg.Button == tea.MouseButtonLeft && slices.Contains([]tea.MouseAction{tea.MouseActionPress, tea.MouseActionMotion}, msg.Action):
-		x, y := msg.X, msg.Y
-		w := len(player.progressRamp)
-		if y+1 == a.WindowHeight() && x+1 <= len(player.progressRamp) {
-			allDuration := int(player.CurMusic().Duration.Seconds())
-			if allDuration == 0 {
-				return true, main, nil
-			}
-			duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(w)
-			player.Seek(time.Second * time.Duration(duration))
-			if player.State() != types.Playing {
-				player.Resume()
+
+	switch msg.Button {
+	case tea.MouseButtonLeft:
+		// Handle progress bar seeking first
+		if slices.Contains([]tea.MouseAction{tea.MouseActionPress, tea.MouseActionMotion}, msg.Action) {
+			x, y := msg.X, msg.Y
+			w := len(player.progressRamp)
+			if y+1 == a.WindowHeight() && x+1 <= len(player.progressRamp) {
+				allDuration := int(player.CurMusic().Duration.Seconds())
+				if allDuration == 0 {
+					return true, main, nil
+				}
+				duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(w)
+				player.Seek(time.Second * time.Duration(duration))
+				if player.State() != types.Playing {
+					player.Resume()
+				}
+				return true, main, a.Tick(time.Nanosecond)
 			}
 		}
-	case msg.Button == tea.MouseButtonWheelDown && msg.Action == tea.MouseActionPress:
-		player.DownVolume()
-	case msg.Button == tea.MouseButtonWheelUp && msg.Action == tea.MouseActionPress:
-		player.UpVolume()
-	case msg.Button == tea.MouseButtonWheelLeft && msg.Action == tea.MouseActionPress:
+	case tea.MouseButtonWheelDown:
+		if msg.Ctrl {
+			currentVolume := player.Volume()
+			newVolume := max(currentVolume-h.mouseVolumeStep, 0)
+			player.SetVolume(newVolume)
+		} else {
+			player.DownVolume()
+		}
+	case tea.MouseButtonWheelUp:
+		if msg.Ctrl {
+			currentVolume := player.Volume()
+			newVolume := min(currentVolume+h.mouseVolumeStep, 100)
+			player.SetVolume(newVolume)
+		} else {
+			player.UpVolume()
+		}
+	case tea.MouseButtonWheelLeft:
 		player.PreviousSong(true)
-	case msg.Button == tea.MouseButtonWheelRight && msg.Action == tea.MouseActionPress:
+	case tea.MouseButtonWheelRight:
 		player.NextSong(true)
 	}
 
