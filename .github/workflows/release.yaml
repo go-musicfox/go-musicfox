@@ -1,7 +1,7 @@
 permissions:
   contents: write
   packages: write
-name: release
+name: Release
 
 defaults:
   run:
