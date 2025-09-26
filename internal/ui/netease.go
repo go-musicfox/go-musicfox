@@ -120,9 +120,13 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		if n.user == nil && config.Main.Account.NeteaseCookie != "" {
+		cookieStr := os.Getenv("MUSICFOX_COOKIE")
+		if cookieStr == "" {
+			cookieStr = config.Main.Account.NeteaseCookie
+		}
+		if n.user == nil && cookieStr != "" {
 			// 使用cookie登录
-			cookies, err := http.ParseCookie(config.Main.Account.NeteaseCookie)
+			cookies, err := http.ParseCookie(cookieStr)
 			if err != nil {
 				slog.Error("网易云 cookies 格式错误", "error", err)
 			} else {
