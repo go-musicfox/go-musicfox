@@ -23,6 +23,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/track"
@@ -43,21 +44,16 @@ type Netease struct {
 	login  *LoginPage
 	search *SearchPage
 
-	player       *Player
-	shareSvc     *composer.ShareService
-	trackManager *track.Manager
+	lyricService  *lyric.Service
+	lyricRenderer *LyricRenderer
+	player        *Player
+	shareSvc      *composer.ShareService
+	trackManager  *track.Manager
 }
 
 func NewNetease(app *model.App) *Netease {
 	n := new(Netease)
 	n.lastfm = lastfm.NewClient()
-	n.player = NewPlayer(n)
-	n.login = NewLoginPage(n)
-	n.search = NewSearchPage(n)
-	n.App = app
-
-	n.shareSvc = composer.NewShareService()
-	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
 
 	quality := configs.AppConfig.Player.SongLevel
 	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
@@ -68,7 +64,29 @@ func NewNetease(app *model.App) *Netease {
 		track.WithCacher(track.NewCacher(maxSizeMB)),
 		track.WithSongQuality(quality))
 
+	showTranslation := configs.AppConfig.Main.Lyric.ShowTranslation
+	offset := time.Duration(configs.AppConfig.Main.Lyric.Offset) * time.Millisecond
+	showLyric := configs.AppConfig.Main.Lyric.Show
+
+	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset)
+	n.player = NewPlayer(n, n.lyricService)
+	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
+
+	n.login = NewLoginPage(n)
+	n.search = NewSearchPage(n)
+	n.App = app
+
+	n.shareSvc = composer.NewShareService()
+	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
+
 	return n
+}
+
+func (n *Netease) Components() []model.Component {
+	return []model.Component{
+		n.lyricRenderer,
+		n.player,
+	}
 }
 
 // ToLoginPage 需要登录的处理
