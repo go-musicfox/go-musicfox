@@ -399,7 +399,7 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 			return errHandler(err)
 		}
 		_ = open.Start(path)
-		l.tips = util.SetFgStyle("请扫描二维码(MUSICFOX_ROOT/qrcode.png)登录后，点击「继续」", termenv.ANSIBrightRed)
+		l.tips = util.SetFgStyle("请扫描二维码("+path+")登录后，点击「继续」", termenv.ANSIBrightRed)
 		l.qrLoginStep++
 		l.qrLoginButton = model.GetFocusedButton(l.qrButtonTextByStep())
 		l.qrLoginUniKey = qrService.UniKey
