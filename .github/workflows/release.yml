@@ -1,0 +1,478 @@
+# go-musicfox v2 发布流水线
+# 自动化发布流程，支持多平台构建和发布
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (例如: v2.1.0)'
+        required: true
+        type: string
+      prerelease:
+        description: '是否为预发布版本'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: '是否为草稿发布'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 预检查
+  pre-check:
+    name: 发布预检查
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 验证版本号
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            VERSION="${{ github.ref_name }}"
+            if [[ "$VERSION" =~ -[a-zA-Z] ]]; then
+              IS_PRERELEASE="true"
+            else
+              IS_PRERELEASE="false"
+            fi
+          fi
+          
+          # 验证版本号格式
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.+)?$ ]]; then
+            echo "❌ 无效的版本号格式: $VERSION"
+            echo "版本号应该符合格式: vX.Y.Z 或 vX.Y.Z-suffix"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          
+          echo "✅ 版本号验证通过: $VERSION"
+          echo "预发布版本: $IS_PRERELEASE"
+
+      - name: 检查版本是否已存在
+        run: |
+          if git tag -l | grep -q "^${{ steps.version.outputs.version }}$"; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "❌ 版本 ${{ steps.version.outputs.version }} 已存在"
+              exit 1
+            fi
+          fi
+
+      - name: 生成变更日志
+        id: changelog
+        run: |
+          # 获取上一个标签
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "生成从 $PREVIOUS_TAG 到 ${{ steps.version.outputs.version }} 的变更日志"
+            CHANGELOG=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD)
+          else
+            echo "生成完整变更日志"
+            CHANGELOG=$(git log --pretty=format:"- %s")
+          fi
+          
+          # 保存到文件以避免特殊字符问题
+          echo "$CHANGELOG" > changelog.txt
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 检查必要文件
+        run: |
+          echo "检查必要文件..."
+          
+          required_files=(
+            "v2/go.mod"
+            "v2/Makefile"
+            "v2/README.md"
+            "LICENSE"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ 缺少必要文件: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ 所有必要文件检查通过"
+
+  # 运行完整测试套件
+  test:
+    name: 发布前测试
+    uses: ./.github/workflows/test.yml
+    needs: pre-check
+    with:
+      test_type: 'all'
+      coverage_threshold: '85'
+
+  # 多平台构建
+  build:
+    name: 构建发布版本
+    runs-on: ${{ matrix.os }}
+    needs: [pre-check, test]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装构建依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 安装macOS依赖
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install portaudio flac taglib
+
+      - name: 安装TinyGo (WebAssembly)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          wget https://github.com/tinygo-org/tinygo/releases/download/v0.30.0/tinygo_0.30.0_amd64.deb
+          sudo dpkg -i tinygo_0.30.0_amd64.deb || true
+          sudo apt-get install -f
+
+      - name: 获取构建信息
+        id: build_info
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u '+%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: 构建发布版本
+        working-directory: ./v2
+        run: |
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            export CGO_ENABLED=0
+          else
+            export CGO_ENABLED=1
+          fi
+          
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+          fi
+          
+          # 构建微内核和插件
+          make build-all \
+            VERSION=${{ needs.pre-check.outputs.version }} \
+            COMMIT=${{ steps.build_info.outputs.commit }} \
+            BUILD_TIME="${{ steps.build_info.outputs.build_time }}" \
+            BUILDFLAGS="-ldflags='-s -w'"
+        shell: bash
+
+      - name: 创建发布包
+        working-directory: ./v2
+        run: |
+          ./scripts/package.sh \
+            --format=all \
+            --platforms=${{ matrix.goos }} \
+            --include-docs \
+            --checksum \
+            ${{ needs.pre-check.outputs.version }}
+        shell: bash
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            v2/dist/*
+          retention-days: 30
+
+  # 构建Docker镜像
+  build-docker:
+    name: 构建Docker镜像
+    runs-on: ubuntu-latest
+    needs: [pre-check, test]
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录容器注册表
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 提取元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.pre-check.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.pre-check.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.pre-check.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 构建并推送Docker镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./v2
+          file: ./v2/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ needs.pre-check.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ github.run_id }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 创建GitHub Release
+  create-release:
+    name: 创建GitHub Release
+    runs-on: ubuntu-latest
+    needs: [pre-check, test, build, build-docker]
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v3
+        with:
+          path: release-artifacts
+
+      - name: 整理发布文件
+        run: |
+          mkdir -p release-files
+          
+          # 复制所有发布文件到统一目录
+          find release-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.dmg" -o -name "*.msi" \) -exec cp {} release-files/ \;
+          
+          # 复制校验和文件
+          find release-artifacts -name "checksums.txt" -exec cat {} \; > release-files/checksums.txt
+          
+          # 显示发布文件
+          echo "发布文件列表:"
+          ls -la release-files/
+
+      - name: 生成发布说明
+        run: |
+          cat > release-notes.md << EOF
+          # go-musicfox v2 ${{ needs.pre-check.outputs.version }}
+          
+          ## 🎵 新特性
+          
+          - 微内核插件架构
+          - 支持四种插件类型：动态链接库、RPC、WebAssembly、热加载
+          - 多平台支持：Linux、macOS、Windows
+          - 完整的插件开发工具链
+          - 容器化部署支持
+          
+          ## 📦 安装方式
+          
+          ### 二进制安装
+          
+          下载对应平台的压缩包，解压后运行安装脚本：
+          
+          \`\`\`bash
+          # Linux/macOS
+          tar -xzf go-musicfox-${{ needs.pre-check.outputs.version }}-<platform>.tar.gz
+          cd go-musicfox-${{ needs.pre-check.outputs.version }}-<platform>
+          ./scripts/install.sh
+          
+          # Windows
+          # 解压zip文件，运行 scripts/install.bat
+          \`\`\`
+          
+          ### 包管理器安装
+          
+          \`\`\`bash
+          # Debian/Ubuntu
+          sudo dpkg -i go-musicfox-${{ needs.pre-check.outputs.version }}-amd64.deb
+          
+          # RedHat/CentOS
+          sudo rpm -i go-musicfox-${{ needs.pre-check.outputs.version }}-x86_64.rpm
+          \`\`\`
+          
+          ### Docker安装
+          
+          \`\`\`bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.pre-check.outputs.version }}
+          docker run -d --name go-musicfox ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.pre-check.outputs.version }}
+          \`\`\`
+          
+          ## 🔄 变更日志
+          
+          ${{ needs.pre-check.outputs.changelog }}
+          
+          ## 📋 支持的平台
+          
+          | 平台 | 架构 | 状态 |
+          |------|------|------|
+          | Linux | amd64 | ✅ |
+          | Linux | arm64 | ✅ |
+          | macOS | amd64 | ✅ |
+          | macOS | arm64 | ✅ |
+          | Windows | amd64 | ✅ |
+          
+          ## 🔐 文件校验
+          
+          请使用 \`checksums.txt\` 文件验证下载文件的完整性：
+          
+          \`\`\`bash
+          sha256sum -c checksums.txt
+          \`\`\`
+          
+          ## 📚 文档
+          
+          - [用户手册](https://github.com/go-musicfox/go-musicfox/tree/v2/docs)
+          - [插件开发指南](https://github.com/go-musicfox/go-musicfox/tree/v2/docs/guides)
+          - [API文档](https://github.com/go-musicfox/go-musicfox/tree/v2/docs/api)
+          
+          ## 🐛 问题反馈
+          
+          如果您遇到任何问题，请在 [Issues](https://github.com/go-musicfox/go-musicfox/issues) 中反馈。
+          
+          ## 🤝 贡献
+          
+          欢迎贡献代码和插件！请查看 [贡献指南](https://github.com/go-musicfox/go-musicfox/blob/main/CONTRIBUTING.md)。
+          EOF
+
+      - name: 创建Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.pre-check.outputs.version }}
+          name: go-musicfox v2 ${{ needs.pre-check.outputs.version }}
+          body_path: release-notes.md
+          files: release-files/*
+          prerelease: ${{ needs.pre-check.outputs.is_prerelease == 'true' }}
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 发布到包管理器
+  publish-packages:
+    name: 发布到包管理器
+    runs-on: ubuntu-latest
+    needs: [pre-check, create-release]
+    if: ${{ needs.pre-check.outputs.is_prerelease == 'false' }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 发布到Homebrew
+        run: |
+          echo "TODO: 发布到Homebrew"
+          # 这里可以添加发布到Homebrew的逻辑
+
+      - name: 发布到AUR
+        run: |
+          echo "TODO: 发布到AUR"
+          # 这里可以添加发布到AUR的逻辑
+
+      - name: 发布到Chocolatey
+        run: |
+          echo "TODO: 发布到Chocolatey"
+          # 这里可以添加发布到Chocolatey的逻辑
+
+  # 发布后通知
+  post-release:
+    name: 发布后处理
+    runs-on: ubuntu-latest
+    needs: [pre-check, create-release, publish-packages]
+    if: always() && needs.create-release.result == 'success'
+    
+    steps:
+      - name: 发布成功通知
+        run: |
+          echo "🎉 go-musicfox v2 ${{ needs.pre-check.outputs.version }} 发布成功！"
+          echo "📦 GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.pre-check.outputs.version }}"
+          echo "🐳 Docker镜像: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.pre-check.outputs.version }}"
+          
+          if [ "${{ needs.pre-check.outputs.is_prerelease }}" = "true" ]; then
+            echo "⚠️  这是一个预发布版本"
+          fi
+
+      - name: 更新文档
+        run: |
+          echo "TODO: 自动更新文档网站"
+          # 这里可以添加自动更新文档的逻辑
+
+      - name: 清理旧的预发布版本
+        if: ${{ needs.pre-check.outputs.is_prerelease == 'false' }}
+        run: |
+          echo "TODO: 清理旧的预发布版本"
+          # 这里可以添加清理逻辑

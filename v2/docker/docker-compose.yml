@@ -1,0 +1,289 @@
+# go-musicfox v2 生产环境容器编排
+# 支持微内核插件架构的完整部署
+
+version: '3.8'
+
+services:
+  # 主应用服务
+  musicfox:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        VERSION: ${MUSICFOX_VERSION:-latest}
+        COMMIT: ${MUSICFOX_COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-$(date -u '+%Y-%m-%d_%H:%M:%S')}
+    image: go-musicfox:${MUSICFOX_VERSION:-latest}
+    container_name: go-musicfox-app
+    restart: unless-stopped
+    ports:
+      - "${MUSICFOX_PORT:-8080}:8080"
+      - "${MUSICFOX_RPC_PORT:-8081}:8081"
+      - "${MUSICFOX_PLUGIN_PORT:-8082}:8082"
+    environment:
+      - MUSICFOX_ENV=production
+      - MUSICFOX_LOG_LEVEL=${MUSICFOX_LOG_LEVEL:-info}
+      - MUSICFOX_CONFIG_DIR=/app/config
+      - MUSICFOX_PLUGIN_DIR=/app/plugins
+      - MUSICFOX_DATA_DIR=/app/data
+      - MUSICFOX_LOG_DIR=/app/logs
+      - MUSICFOX_REDIS_URL=redis://redis:6379
+      - MUSICFOX_DB_URL=postgres://musicfox:${DB_PASSWORD:-musicfox123}@postgres:5432/musicfox?sslmode=disable
+    volumes:
+      - musicfox_data:/app/data
+      - musicfox_logs:/app/logs
+      - musicfox_config:/app/config
+      - musicfox_plugins:/app/plugins
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - musicfox_network
+    healthcheck:
+      test: ["/app/bin/go-musicfox", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Redis缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: go-musicfox-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - musicfox_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+  # PostgreSQL数据库服务
+  postgres:
+    image: postgres:15-alpine
+    container_name: go-musicfox-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=musicfox
+      - POSTGRES_USER=musicfox
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-musicfox123}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - musicfox_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musicfox -d musicfox"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.15'
+
+  # 插件管理服务
+  plugin-manager:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.plugin-manager
+    image: go-musicfox-plugin-manager:${MUSICFOX_VERSION:-latest}
+    container_name: go-musicfox-plugin-manager
+    restart: unless-stopped
+    ports:
+      - "${PLUGIN_MANAGER_PORT:-9090}:9090"
+    environment:
+      - MUSICFOX_ENV=production
+      - MUSICFOX_LOG_LEVEL=${MUSICFOX_LOG_LEVEL:-info}
+      - MUSICFOX_PLUGIN_DIR=/app/plugins
+      - MUSICFOX_PLUGIN_REGISTRY_URL=${PLUGIN_REGISTRY_URL:-}
+    volumes:
+      - musicfox_plugins:/app/plugins
+      - musicfox_logs:/app/logs
+    depends_on:
+      - musicfox
+    networks:
+      - musicfox_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+  # 监控服务
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: go-musicfox-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9091}:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - musicfox_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.15'
+
+  # 日志收集服务
+  fluentd:
+    image: fluent/fluentd:v1.16-debian-1
+    container_name: go-musicfox-fluentd
+    restart: unless-stopped
+    ports:
+      - "${FLUENTD_PORT:-24224}:24224"
+      - "${FLUENTD_PORT:-24224}:24224/udp"
+    volumes:
+      - ./fluentd.conf:/fluentd/etc/fluent.conf:ro
+      - musicfox_logs:/var/log/musicfox
+    networks:
+      - musicfox_network
+    depends_on:
+      - musicfox
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+  # 反向代理服务
+  nginx:
+    image: nginx:alpine
+    container_name: go-musicfox-nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - musicfox
+      - plugin-manager
+    networks:
+      - musicfox_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+        reservations:
+          memory: 32M
+          cpus: '0.05'
+
+# 网络配置
+networks:
+  musicfox_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 数据卷配置
+volumes:
+  musicfox_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}
+  
+  musicfox_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOG_DIR:-./logs}
+  
+  musicfox_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CONFIG_DIR:-./config}
+  
+  musicfox_plugins:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PLUGIN_DIR:-./plugins}
+  
+  redis_data:
+    driver: local
+  
+  postgres_data:
+    driver: local
+  
+  prometheus_data:
+    driver: local
+  
+  nginx_logs:
+    driver: local

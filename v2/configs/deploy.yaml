@@ -1,0 +1,606 @@
+# go-musicfox v2 部署配置
+# 微内核插件架构部署设置
+
+# 项目信息
+project:
+  name: "go-musicfox"
+  version: "2.0.0"
+  environment: "production"
+  
+# 部署目标
+targets:
+  # 本地部署
+  local:
+    enabled: true
+    install_path: "/usr/local/bin"
+    config_path: "/etc/go-musicfox"
+    data_path: "/var/lib/go-musicfox"
+    log_path: "/var/log/go-musicfox"
+    plugin_path: "/usr/local/lib/go-musicfox/plugins"
+    user: "musicfox"
+    group: "musicfox"
+    
+  # 系统服务
+  systemd:
+    enabled: true
+    service_name: "go-musicfox"
+    service_file: "/etc/systemd/system/go-musicfox.service"
+    enable_on_boot: true
+    restart_policy: "always"
+    
+  # Docker部署
+  docker:
+    enabled: true
+    registry: "ghcr.io"
+    namespace: "go-musicfox"
+    image_name: "go-musicfox"
+    tag: "latest"
+    dockerfile: "docker/Dockerfile"
+    build_context: "."
+    
+    # 容器配置
+    container:
+      name: "go-musicfox"
+      restart_policy: "unless-stopped"
+      network_mode: "bridge"
+      
+      # 端口映射
+      ports:
+        - "8080:8080"  # HTTP API
+        - "8081:8081"  # RPC服务
+        - "8082:8082"  # 插件服务
+      
+      # 卷挂载
+      volumes:
+        - "./configs:/app/configs:ro"
+        - "./data:/app/data"
+        - "./logs:/app/logs"
+        - "./plugins:/app/plugins"
+      
+      # 环境变量
+      environment:
+        MUSICFOX_ENV: "production"
+        MUSICFOX_LOG_LEVEL: "info"
+        MUSICFOX_CONFIG_DIR: "/app/configs"
+        MUSICFOX_DATA_DIR: "/app/data"
+        MUSICFOX_LOG_DIR: "/app/logs"
+        MUSICFOX_PLUGIN_DIR: "/app/plugins"
+      
+      # 资源限制
+      resources:
+        memory: "512m"
+        cpu: "0.5"
+        
+  # Kubernetes部署
+  kubernetes:
+    enabled: true
+    namespace: "go-musicfox"
+    
+    # Deployment配置
+    deployment:
+      name: "go-musicfox"
+      replicas: 1
+      strategy:
+        type: "RollingUpdate"
+        rolling_update:
+          max_unavailable: 0
+          max_surge: 1
+      
+      # Pod配置
+      pod:
+        restart_policy: "Always"
+        
+        # 容器配置
+        containers:
+          - name: "go-musicfox"
+            image: "ghcr.io/go-musicfox/go-musicfox:latest"
+            ports:
+              - container_port: 8080
+                name: "http"
+              - container_port: 8081
+                name: "rpc"
+              - container_port: 8082
+                name: "plugin"
+            
+            # 环境变量
+            env:
+              - name: "MUSICFOX_ENV"
+                value: "production"
+              - name: "MUSICFOX_LOG_LEVEL"
+                value: "info"
+              - name: "MUSICFOX_CONFIG_DIR"
+                value: "/app/configs"
+            
+            # 资源配置
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "250m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+            
+            # 健康检查
+            liveness_probe:
+              http_get:
+                path: "/health"
+                port: 8080
+              initial_delay_seconds: 30
+              period_seconds: 10
+              timeout_seconds: 5
+              failure_threshold: 3
+            
+            readiness_probe:
+              http_get:
+                path: "/ready"
+                port: 8080
+              initial_delay_seconds: 5
+              period_seconds: 5
+              timeout_seconds: 3
+              failure_threshold: 3
+            
+            # 卷挂载
+            volume_mounts:
+              - name: "config"
+                mount_path: "/app/configs"
+                read_only: true
+              - name: "data"
+                mount_path: "/app/data"
+              - name: "logs"
+                mount_path: "/app/logs"
+              - name: "plugins"
+                mount_path: "/app/plugins"
+        
+        # 边车容器 - 插件管理器
+        - name: "plugin-manager"
+          image: "ghcr.io/go-musicfox/plugin-manager:latest"
+          ports:
+            - container_port: 9090
+              name: "manager"
+          
+          env:
+            - name: "PLUGIN_DIR"
+              value: "/app/plugins"
+            - name: "CORE_RPC_ADDR"
+              value: "localhost:8081"
+          
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          
+          volume_mounts:
+            - name: "plugins"
+              mount_path: "/app/plugins"
+        
+        # 卷定义
+        volumes:
+          - name: "config"
+            config_map:
+              name: "go-musicfox-config"
+          - name: "data"
+            persistent_volume_claim:
+              claim_name: "go-musicfox-data"
+          - name: "logs"
+            empty_dir: {}
+          - name: "plugins"
+            persistent_volume_claim:
+              claim_name: "go-musicfox-plugins"
+    
+    # Service配置
+    service:
+      name: "go-musicfox"
+      type: "ClusterIP"
+      ports:
+        - name: "http"
+          port: 80
+          target_port: 8080
+          protocol: "TCP"
+        - name: "rpc"
+          port: 8081
+          target_port: 8081
+          protocol: "TCP"
+        - name: "plugin"
+          port: 8082
+          target_port: 8082
+          protocol: "TCP"
+    
+    # Ingress配置
+    ingress:
+      enabled: false
+      name: "go-musicfox"
+      class: "nginx"
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: "/"
+      hosts:
+        - host: "musicfox.example.com"
+          paths:
+            - path: "/"
+              path_type: "Prefix"
+              service:
+                name: "go-musicfox"
+                port: 80
+      tls: []
+    
+    # ConfigMap配置
+    config_map:
+      name: "go-musicfox-config"
+      data:
+        config.yaml: |
+          server:
+            host: "0.0.0.0"
+            port: 8080
+            rpc_port: 8081
+            plugin_port: 8082
+          
+          log:
+            level: "info"
+            format: "json"
+            output: "stdout"
+          
+          plugins:
+            enabled: true
+            directory: "/app/plugins"
+            hot_reload: false
+    
+    # PersistentVolumeClaim配置
+    persistent_volume_claims:
+      - name: "go-musicfox-data"
+        access_modes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "1Gi"
+        storage_class: "standard"
+      
+      - name: "go-musicfox-plugins"
+        access_modes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "500Mi"
+        storage_class: "standard"
+
+# 安装配置
+installation:
+  # 系统要求
+  requirements:
+    os:
+      - "linux"
+      - "darwin"
+      - "windows"
+    arch:
+      - "amd64"
+      - "arm64"
+    min_memory: "256MB"
+    min_disk: "100MB"
+    
+  # 依赖检查
+  dependencies:
+    system:
+      - name: "libc"
+        version: ">= 2.17"
+        required: true
+      - name: "alsa-lib"
+        version: ">= 1.1.0"
+        required: false
+        platforms: ["linux"]
+      - name: "portaudio"
+        version: ">= 19.6.0"
+        required: false
+        platforms: ["darwin", "windows"]
+    
+    runtime:
+      - name: "ca-certificates"
+        required: true
+      - name: "tzdata"
+        required: true
+  
+  # 安装步骤
+  steps:
+    pre_install:
+      - "check_system_requirements"
+      - "create_user_and_group"
+      - "create_directories"
+      - "check_dependencies"
+    
+    install:
+      - "copy_binary"
+      - "copy_plugins"
+      - "copy_configs"
+      - "set_permissions"
+      - "create_symlinks"
+    
+    post_install:
+      - "install_systemd_service"
+      - "enable_service"
+      - "start_service"
+      - "verify_installation"
+  
+  # 卸载步骤
+  uninstall_steps:
+    pre_uninstall:
+      - "stop_service"
+      - "disable_service"
+      - "backup_user_data"
+    
+    uninstall:
+      - "remove_binary"
+      - "remove_plugins"
+      - "remove_configs"
+      - "remove_systemd_service"
+    
+    post_uninstall:
+      - "remove_directories"
+      - "remove_user_and_group"
+      - "cleanup_logs"
+
+# 更新配置
+update:
+  # 更新策略
+  strategy: "rolling"
+  
+  # 备份设置
+  backup:
+    enabled: true
+    directory: "/var/backups/go-musicfox"
+    keep_versions: 3
+    compress: true
+  
+  # 回滚设置
+  rollback:
+    enabled: true
+    auto_rollback_on_failure: true
+    health_check_timeout: "5m"
+  
+  # 更新步骤
+  steps:
+    pre_update:
+      - "check_version_compatibility"
+      - "backup_current_version"
+      - "stop_service"
+    
+    update:
+      - "update_binary"
+      - "update_plugins"
+      - "migrate_configs"
+      - "migrate_data"
+    
+    post_update:
+      - "start_service"
+      - "verify_update"
+      - "cleanup_old_versions"
+
+# 监控配置
+monitoring:
+  # 健康检查
+  health_checks:
+    - name: "http_health"
+      type: "http"
+      endpoint: "http://localhost:8080/health"
+      interval: "30s"
+      timeout: "5s"
+      retries: 3
+    
+    - name: "rpc_health"
+      type: "tcp"
+      endpoint: "localhost:8081"
+      interval: "30s"
+      timeout: "3s"
+      retries: 3
+    
+    - name: "plugin_health"
+      type: "tcp"
+      endpoint: "localhost:8082"
+      interval: "60s"
+      timeout: "3s"
+      retries: 3
+  
+  # 指标收集
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    port: 8080
+    format: "prometheus"
+  
+  # 日志收集
+  logging:
+    enabled: true
+    level: "info"
+    format: "json"
+    output: "file"
+    file: "/var/log/go-musicfox/app.log"
+    rotation:
+      enabled: true
+      max_size: "100MB"
+      max_files: 10
+      max_age: "30d"
+  
+  # 告警配置
+  alerts:
+    enabled: false
+    rules:
+      - name: "high_memory_usage"
+        condition: "memory_usage > 80%"
+        severity: "warning"
+        duration: "5m"
+      
+      - name: "service_down"
+        condition: "up == 0"
+        severity: "critical"
+        duration: "1m"
+      
+      - name: "plugin_load_failure"
+        condition: "plugin_load_errors > 0"
+        severity: "warning"
+        duration: "1m"
+
+# 安全配置
+security:
+  # 用户和权限
+  user:
+    name: "musicfox"
+    group: "musicfox"
+    home: "/var/lib/go-musicfox"
+    shell: "/bin/false"
+    system_user: true
+  
+  # 文件权限
+  permissions:
+    binary: "0755"
+    config: "0644"
+    data: "0750"
+    logs: "0750"
+    plugins: "0755"
+  
+  # 网络安全
+  network:
+    bind_address: "127.0.0.1"
+    allowed_origins: []
+    rate_limiting:
+      enabled: true
+      requests_per_minute: 60
+    
+    tls:
+      enabled: false
+      cert_file: ""
+      key_file: ""
+      min_version: "1.2"
+  
+  # 插件安全
+  plugins:
+    signature_verification: true
+    sandbox_mode: true
+    allowed_capabilities:
+      - "network"
+      - "filesystem_read"
+    
+    forbidden_capabilities:
+      - "filesystem_write"
+      - "system_call"
+
+# 性能配置
+performance:
+  # 资源限制
+  limits:
+    max_memory: "1GB"
+    max_cpu: "2"
+    max_open_files: 1024
+    max_connections: 100
+  
+  # 缓存配置
+  cache:
+    enabled: true
+    size: "100MB"
+    ttl: "1h"
+  
+  # 并发配置
+  concurrency:
+    max_workers: 10
+    queue_size: 1000
+    timeout: "30s"
+  
+  # 插件性能
+  plugins:
+    max_load_time: "10s"
+    max_init_time: "5s"
+    memory_limit: "100MB"
+    cpu_limit: "0.5"
+
+# 环境配置
+environments:
+  # 开发环境
+  development:
+    log_level: "debug"
+    hot_reload: true
+    debug_mode: true
+    profiling: true
+    metrics_enabled: true
+  
+  # 测试环境
+  testing:
+    log_level: "info"
+    hot_reload: false
+    debug_mode: false
+    profiling: false
+    metrics_enabled: true
+  
+  # 生产环境
+  production:
+    log_level: "warn"
+    hot_reload: false
+    debug_mode: false
+    profiling: false
+    metrics_enabled: true
+
+# 通知配置
+notifications:
+  # 部署通知
+  deployment:
+    enabled: false
+    channels:
+      - type: "webhook"
+        url: ""
+        events: ["start", "success", "failure"]
+      - type: "email"
+        recipients: []
+        events: ["failure"]
+  
+  # 更新通知
+  update:
+    enabled: false
+    channels:
+      - type: "webhook"
+        url: ""
+        events: ["start", "success", "failure", "rollback"]
+  
+  # 健康检查通知
+  health:
+    enabled: false
+    channels:
+      - type: "webhook"
+        url: ""
+        events: ["unhealthy", "recovered"]
+
+# 备份和恢复
+backup:
+  # 备份配置
+  enabled: true
+  schedule: "0 2 * * *"  # 每天凌晨2点
+  retention: "30d"
+  compression: true
+  encryption: false
+  
+  # 备份内容
+  include:
+    - "/var/lib/go-musicfox/data"
+    - "/etc/go-musicfox"
+    - "/var/log/go-musicfox"
+  
+  exclude:
+    - "*.tmp"
+    - "*.log"
+    - "cache/*"
+  
+  # 备份存储
+  storage:
+    type: "local"
+    path: "/var/backups/go-musicfox"
+    
+    # 远程存储（可选）
+    remote:
+      enabled: false
+      type: "s3"
+      bucket: ""
+      region: ""
+      access_key: ""
+      secret_key: ""
+  
+  # 恢复配置
+  restore:
+    auto_restore: false
+    verify_integrity: true
+    test_restore: true

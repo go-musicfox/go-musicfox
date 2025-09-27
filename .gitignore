@@ -11,3 +11,8 @@ go.work.sum
 result/
 coverage.txt
 musicfox
+**/coverage.html
+**/coverage.out
+**/test_*.txt
+**/test_*.log
+loader.test

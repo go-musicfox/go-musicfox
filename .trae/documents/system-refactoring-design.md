@@ -2021,13 +2021,13 @@ func BenchmarkEventHandling(b *testing.B) {
 
 ### 通用技术栈
 
-* **语言**：Go 1.23+
+* **语言**：Go 1.25+
 
-* **依赖注入**：wire 或 dig
+* **依赖注入**：dig
 
-* **配置管理**：viper
+* **配置管理**：koanf
 
-* **日志**：slog 或 logrus
+* **日志**：slog
 
 * **测试**：testify
 

@@ -1,0 +1,666 @@
+# go-musicfox v2 插件配置模板
+# 微内核插件架构插件设置
+
+# 插件系统配置
+plugin_system:
+  # 基本设置
+  enabled: true
+  version: "2.0.0"
+  api_version: "v2"
+  
+  # 插件目录
+  directories:
+    # 系统插件目录
+    system: "/usr/local/lib/go-musicfox/plugins"
+    # 用户插件目录
+    user: "~/.local/share/go-musicfox/plugins"
+    # 开发插件目录
+    development: "./plugins"
+  
+  # 插件发现
+  discovery:
+    auto_scan: true
+    scan_interval: "30s"
+    watch_changes: true
+    
+    # 扫描模式
+    scan_patterns:
+      - "*/plugin.yaml"
+      - "*/plugin.yml"
+      - "*/manifest.json"
+    
+    # 排除模式
+    exclude_patterns:
+      - "*/test*"
+      - "*/.git"
+      - "*/node_modules"
+      - "*/target"
+      - "*/build"
+  
+  # 插件加载
+  loading:
+    # 加载策略
+    strategy: "lazy"  # lazy, eager, manual
+    
+    # 并行加载
+    parallel: true
+    max_concurrent: 5
+    
+    # 超时设置
+    timeout:
+      load: "10s"
+      init: "5s"
+      start: "3s"
+      stop: "3s"
+    
+    # 重试设置
+    retry:
+      enabled: true
+      max_attempts: 3
+      backoff: "exponential"
+      initial_delay: "1s"
+      max_delay: "10s"
+  
+  # 热重载
+  hot_reload:
+    enabled: true
+    watch_files: true
+    debounce_delay: "500ms"
+    
+    # 重载策略
+    strategy: "graceful"  # graceful, immediate, scheduled
+    
+    # 重载事件
+    events:
+      - "file_change"
+      - "config_change"
+      - "dependency_update"
+
+# 插件类型配置
+plugin_types:
+  # 动态链接库插件
+  shared:
+    enabled: true
+    extension: ".so"
+    platforms:
+      - "linux"
+      - "darwin"
+    
+    # 加载配置
+    loading:
+      mode: "plugin"
+      lazy: true
+      symbols:
+        - "PluginInit"
+        - "PluginStart"
+        - "PluginStop"
+        - "PluginInfo"
+    
+    # 安全配置
+    security:
+      verify_signature: true
+      sandbox: false
+      capabilities:
+        - "network"
+        - "filesystem_read"
+  
+  # RPC插件
+  rpc:
+    enabled: true
+    protocol: "grpc"
+    
+    # 通信配置
+    communication:
+      timeout: "30s"
+      keepalive: "60s"
+      max_message_size: "4MB"
+      compression: "gzip"
+    
+    # 进程管理
+    process:
+      auto_start: true
+      auto_restart: true
+      max_restarts: 5
+      restart_delay: "5s"
+      health_check_interval: "10s"
+    
+    # 安全配置
+    security:
+      tls_enabled: false
+      mutual_tls: false
+      token_auth: false
+      rate_limiting: true
+  
+  # WebAssembly插件
+  wasm:
+    enabled: true
+    runtime: "wasmtime"  # wasmtime, wasmer, wazero
+    
+    # 运行时配置
+    runtime_config:
+      memory_limit: "64MB"
+      execution_timeout: "10s"
+      fuel_limit: 1000000
+      
+      # WASI支持
+      wasi:
+        enabled: true
+        filesystem_access: "readonly"
+        network_access: false
+        environment_variables: []
+    
+    # 安全配置
+    security:
+      sandbox: true
+      capabilities:
+        - "compute"
+        - "memory"
+  
+  # 热加载插件
+  hotload:
+    enabled: true
+    
+    # 热加载配置
+    config:
+      check_interval: "1s"
+      reload_delay: "100ms"
+      graceful_shutdown: true
+      preserve_state: true
+    
+    # 状态管理
+    state:
+      persistence: true
+      backup_on_reload: true
+      restore_on_failure: true
+    
+    # 安全配置
+    security:
+      verify_checksum: true
+      rollback_on_failure: true
+
+# 插件接口定义
+interfaces:
+  # 音频处理接口
+  audio_processor:
+    version: "v2"
+    methods:
+      - name: "ProcessAudio"
+        input: "AudioBuffer"
+        output: "AudioBuffer"
+      - name: "GetLatency"
+        output: "Duration"
+      - name: "GetSampleRate"
+        output: "int"
+    
+    events:
+      - "AudioStarted"
+      - "AudioStopped"
+      - "BufferUnderrun"
+  
+  # 音乐源接口
+  music_source:
+    version: "v2"
+    methods:
+      - name: "Search"
+        input: "SearchRequest"
+        output: "SearchResponse"
+      - name: "GetPlaylist"
+        input: "PlaylistRequest"
+        output: "PlaylistResponse"
+      - name: "GetSong"
+        input: "SongRequest"
+        output: "SongResponse"
+      - name: "GetLyrics"
+        input: "LyricsRequest"
+        output: "LyricsResponse"
+    
+    events:
+      - "SongChanged"
+      - "PlaylistUpdated"
+      - "SearchCompleted"
+  
+  # UI扩展接口
+  ui_extension:
+    version: "v2"
+    methods:
+      - name: "RenderWidget"
+        input: "RenderContext"
+        output: "Widget"
+      - name: "HandleEvent"
+        input: "UIEvent"
+        output: "EventResponse"
+      - name: "GetTheme"
+        output: "Theme"
+    
+    events:
+      - "ThemeChanged"
+      - "WindowResized"
+      - "KeyPressed"
+  
+  # 存储接口
+  storage:
+    version: "v2"
+    methods:
+      - name: "Get"
+        input: "GetRequest"
+        output: "GetResponse"
+      - name: "Set"
+        input: "SetRequest"
+        output: "SetResponse"
+      - name: "Delete"
+        input: "DeleteRequest"
+        output: "DeleteResponse"
+      - name: "List"
+        input: "ListRequest"
+        output: "ListResponse"
+    
+    events:
+      - "DataChanged"
+      - "StorageError"
+
+# 插件依赖管理
+dependencies:
+  # 依赖解析
+  resolution:
+    enabled: true
+    strategy: "strict"  # strict, permissive, latest
+    
+    # 版本约束
+    version_constraints:
+      semantic_versioning: true
+      allow_prerelease: false
+      allow_build_metadata: true
+    
+    # 冲突解决
+    conflict_resolution:
+      strategy: "highest"  # highest, lowest, manual
+      allow_downgrades: false
+  
+  # 依赖缓存
+  cache:
+    enabled: true
+    directory: ".plugin-cache"
+    ttl: "24h"
+    max_size: "100MB"
+  
+  # 依赖验证
+  verification:
+    enabled: true
+    check_signatures: true
+    verify_checksums: true
+    scan_vulnerabilities: true
+
+# 插件安全配置
+security:
+  # 签名验证
+  signature_verification:
+    enabled: true
+    required: false
+    trusted_keys: []
+    key_servers: []
+  
+  # 沙箱配置
+  sandbox:
+    enabled: true
+    mode: "strict"  # strict, permissive, disabled
+    
+    # 资源限制
+    limits:
+      memory: "100MB"
+      cpu: "50%"
+      disk: "10MB"
+      network_bandwidth: "1MB/s"
+      open_files: 100
+      processes: 1
+    
+    # 权限控制
+    permissions:
+      filesystem:
+        read: ["./data", "./config"]
+        write: ["./data/cache"]
+        execute: []
+      
+      network:
+        outbound: ["https://*", "http://localhost:*"]
+        inbound: []
+      
+      system:
+        environment_variables: ["HOME", "USER", "PATH"]
+        system_calls: ["read", "write", "open", "close"]
+  
+  # 审计配置
+  audit:
+    enabled: true
+    log_level: "info"
+    log_file: "plugin-audit.log"
+    
+    events:
+      - "plugin_loaded"
+      - "plugin_started"
+      - "plugin_stopped"
+      - "permission_denied"
+      - "security_violation"
+
+# 插件监控配置
+monitoring:
+  # 性能监控
+  performance:
+    enabled: true
+    
+    # 指标收集
+    metrics:
+      - "cpu_usage"
+      - "memory_usage"
+      - "disk_io"
+      - "network_io"
+      - "api_calls"
+      - "error_rate"
+    
+    # 采样配置
+    sampling:
+      interval: "10s"
+      retention: "24h"
+  
+  # 健康检查
+  health:
+    enabled: true
+    interval: "30s"
+    timeout: "5s"
+    
+    checks:
+      - name: "plugin_responsive"
+        type: "ping"
+      - name: "memory_usage"
+        type: "threshold"
+        threshold: "80%"
+      - name: "error_rate"
+        type: "threshold"
+        threshold: "5%"
+  
+  # 告警配置
+  alerts:
+    enabled: true
+    
+    rules:
+      - name: "high_memory_usage"
+        condition: "memory_usage > 90%"
+        severity: "warning"
+        duration: "5m"
+      
+      - name: "plugin_crash"
+        condition: "plugin_status == 'crashed'"
+        severity: "critical"
+        duration: "0s"
+      
+      - name: "high_error_rate"
+        condition: "error_rate > 10%"
+        severity: "warning"
+        duration: "2m"
+
+# 插件配置管理
+configuration:
+  # 配置源
+  sources:
+    - type: "file"
+      path: "plugin.yaml"
+      format: "yaml"
+      watch: true
+    
+    - type: "environment"
+      prefix: "PLUGIN_"
+      transform: "lowercase"
+    
+    - type: "consul"
+      enabled: false
+      address: "localhost:8500"
+      prefix: "plugins/"
+  
+  # 配置验证
+  validation:
+    enabled: true
+    schema_file: "plugin-schema.json"
+    strict_mode: false
+  
+  # 配置热重载
+  hot_reload:
+    enabled: true
+    debounce: "1s"
+    restart_on_change: false
+
+# 插件日志配置
+logging:
+  # 日志级别
+  level: "info"
+  
+  # 日志格式
+  format: "json"  # json, text, structured
+  
+  # 日志输出
+  outputs:
+    - type: "file"
+      path: "plugins.log"
+      rotation:
+        max_size: "100MB"
+        max_files: 10
+        max_age: "30d"
+    
+    - type: "stdout"
+      enabled: true
+  
+  # 日志字段
+  fields:
+    - "timestamp"
+    - "level"
+    - "plugin_id"
+    - "plugin_type"
+    - "message"
+    - "error"
+  
+  # 日志过滤
+  filters:
+    - level: "debug"
+      plugins: ["development/*"]
+    - level: "error"
+      plugins: ["*"]
+
+# 插件开发配置
+development:
+  # 开发模式
+  enabled: false
+  
+  # 调试配置
+  debug:
+    enabled: false
+    port: 2345
+    wait_for_debugger: false
+  
+  # 热重载
+  hot_reload:
+    enabled: true
+    watch_patterns:
+      - "**/*.go"
+      - "**/*.yaml"
+      - "**/*.json"
+    
+    ignore_patterns:
+      - "**/*_test.go"
+      - "**/vendor/**"
+      - "**/.git/**"
+  
+  # 测试配置
+  testing:
+    enabled: true
+    auto_test: false
+    coverage: true
+    benchmark: false
+  
+  # 性能分析
+  profiling:
+    enabled: false
+    cpu_profile: true
+    memory_profile: true
+    trace_profile: false
+
+# 插件示例配置
+examples:
+  # 音频处理插件示例
+  audio_equalizer:
+    type: "shared"
+    interface: "audio_processor"
+    
+    config:
+      bands: 10
+      frequency_range: [20, 20000]
+      gain_range: [-20, 20]
+    
+    dependencies:
+      - name: "fftw"
+        version: ">= 3.3.0"
+    
+    permissions:
+      - "audio_processing"
+  
+  # 音乐源插件示例
+  netease_music:
+    type: "rpc"
+    interface: "music_source"
+    
+    config:
+      api_endpoint: "https://music.163.com/api"
+      rate_limit: 100
+      cache_ttl: "1h"
+    
+    dependencies:
+      - name: "http_client"
+        version: ">= 2.0.0"
+    
+    permissions:
+      - "network_access"
+      - "cache_write"
+  
+  # UI扩展插件示例
+  visualizer:
+    type: "wasm"
+    interface: "ui_extension"
+    
+    config:
+      fps: 60
+      resolution: [800, 600]
+      effects: ["spectrum", "waveform"]
+    
+    dependencies:
+      - name: "canvas_api"
+        version: ">= 1.0.0"
+    
+    permissions:
+      - "ui_rendering"
+      - "audio_analysis"
+  
+  # 存储插件示例
+  redis_cache:
+    type: "hotload"
+    interface: "storage"
+    
+    config:
+      host: "localhost"
+      port: 6379
+      database: 0
+      password: ""
+      ttl: "24h"
+    
+    dependencies:
+      - name: "redis_client"
+        version: ">= 8.0.0"
+    
+    permissions:
+      - "network_access"
+      - "data_storage"
+
+# 插件市场配置
+marketplace:
+  # 市场设置
+  enabled: false
+  
+  # 仓库配置
+  repositories:
+    - name: "official"
+      url: "https://plugins.go-musicfox.com"
+      trusted: true
+      priority: 1
+    
+    - name: "community"
+      url: "https://community-plugins.go-musicfox.com"
+      trusted: false
+      priority: 2
+  
+  # 安装配置
+  installation:
+    auto_update: false
+    verify_signatures: true
+    backup_before_install: true
+  
+  # 搜索配置
+  search:
+    cache_results: true
+    cache_ttl: "1h"
+    max_results: 50
+
+# 插件模板
+templates:
+  # 基础插件模板
+  basic:
+    files:
+      - "plugin.yaml"
+      - "main.go"
+      - "README.md"
+      - "LICENSE"
+    
+    structure:
+      - "cmd/"
+      - "pkg/"
+      - "internal/"
+      - "test/"
+      - "docs/"
+  
+  # 高级插件模板
+  advanced:
+    files:
+      - "plugin.yaml"
+      - "main.go"
+      - "Makefile"
+      - "Dockerfile"
+      - "go.mod"
+      - "README.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".golangci.yml"
+    
+    structure:
+      - "cmd/"
+      - "pkg/"
+      - "internal/"
+      - "api/"
+      - "test/"
+      - "docs/"
+      - "scripts/"
+      - "configs/"
+
+# 插件迁移配置
+migration:
+  # 版本迁移
+  version:
+    enabled: true
+    auto_migrate: false
+    backup_before_migrate: true
+  
+  # 数据迁移
+  data:
+    enabled: true
+    migration_scripts: "migrations/"
+    rollback_enabled: true
+  
+  # 配置迁移
+  config:
+    enabled: true
+    transform_rules: "config-transforms.yaml"
+    validate_after_migrate: true

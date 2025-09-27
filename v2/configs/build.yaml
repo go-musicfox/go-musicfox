@@ -1,0 +1,455 @@
+# go-musicfox v2 构建配置
+# 微内核插件架构构建设置
+
+# 项目信息
+project:
+  name: "go-musicfox"
+  version: "2.0.0"
+  description: "基于微内核插件架构的终端音乐播放器"
+  author: "anhoder"
+  license: "MIT"
+  repository: "https://github.com/go-musicfox/go-musicfox"
+
+# 构建设置
+build:
+  # 输出目录
+  output_dir: "build"
+  temp_dir: "tmp"
+  
+  # Go构建设置
+  go:
+    version: "1.21"
+    mod_mode: "readonly"
+    build_flags:
+      - "-trimpath"
+      - "-ldflags=-s -w -X main.version={{.Version}} -X main.buildTime={{.BuildTime}} -X main.gitCommit={{.GitCommit}}"
+    tags:
+      - "netgo"
+      - "osusergo"
+    
+  # CGO设置
+  cgo:
+    enabled: true
+    flags:
+      - "-O2"
+      - "-g"
+    
+  # 交叉编译目标
+  targets:
+    - os: "linux"
+      arch: "amd64"
+      enabled: true
+    - os: "linux"
+      arch: "arm64"
+      enabled: true
+    - os: "darwin"
+      arch: "amd64"
+      enabled: true
+    - os: "darwin"
+      arch: "arm64"
+      enabled: true
+    - os: "windows"
+      arch: "amd64"
+      enabled: true
+    - os: "windows"
+      arch: "arm64"
+      enabled: false
+    - os: "freebsd"
+      arch: "amd64"
+      enabled: false
+    - os: "openbsd"
+      arch: "amd64"
+      enabled: false
+  
+  # 并行构建
+  parallel:
+    enabled: true
+    max_workers: 4
+  
+  # 增量构建
+  incremental:
+    enabled: true
+    cache_dir: ".build-cache"
+  
+  # 构建优化
+  optimization:
+    strip_debug: true
+    compress_binary: true
+    upx_enabled: false
+    upx_level: 9
+
+# 插件构建设置
+plugins:
+  # 插件目录
+  directory: "plugins"
+  output_dir: "build/plugins"
+  
+  # 插件类型
+  types:
+    shared:
+      enabled: true
+      extension: ".so"
+      build_mode: "plugin"
+      flags:
+        - "-buildmode=plugin"
+      targets:
+        - os: "linux"
+          arch: "amd64"
+        - os: "linux"
+          arch: "arm64"
+        - os: "darwin"
+          arch: "amd64"
+        - os: "darwin"
+          arch: "arm64"
+    
+    rpc:
+      enabled: true
+      build_mode: "exe"
+      flags:
+        - "-buildmode=exe"
+      targets:
+        - os: "linux"
+          arch: "amd64"
+        - os: "linux"
+          arch: "arm64"
+        - os: "darwin"
+          arch: "amd64"
+        - os: "darwin"
+          arch: "arm64"
+        - os: "windows"
+          arch: "amd64"
+    
+    wasm:
+      enabled: true
+      extension: ".wasm"
+      build_mode: "exe"
+      flags:
+        - "-buildmode=exe"
+      env:
+        GOOS: "js"
+        GOARCH: "wasm"
+      targets:
+        - os: "js"
+          arch: "wasm"
+    
+    hotload:
+      enabled: true
+      extension: ".so"
+      build_mode: "plugin"
+      flags:
+        - "-buildmode=plugin"
+        - "-race"
+      targets:
+        - os: "linux"
+          arch: "amd64"
+        - os: "darwin"
+          arch: "amd64"
+  
+  # 插件发现
+  discovery:
+    auto_scan: true
+    scan_patterns:
+      - "plugins/*/plugin.yaml"
+      - "plugins/*/go.mod"
+    exclude_patterns:
+      - "plugins/*/test*"
+      - "plugins/*/.git"
+  
+  # 插件验证
+  validation:
+    enabled: true
+    strict_mode: false
+    required_files:
+      - "plugin.yaml"
+      - "main.go"
+    
+  # 插件依赖
+  dependencies:
+    resolve_enabled: true
+    vendor_enabled: false
+    mod_download: true
+
+# 测试设置
+test:
+  # 测试目录
+  directories:
+    - "./..."
+    - "plugins/..."
+  
+  # 测试标志
+  flags:
+    - "-v"
+    - "-race"
+    - "-coverprofile=coverage.out"
+    - "-covermode=atomic"
+  
+  # 测试超时
+  timeout: "10m"
+  
+  # 并行测试
+  parallel: true
+  
+  # 基准测试
+  benchmark:
+    enabled: false
+    flags:
+      - "-bench=."
+      - "-benchmem"
+  
+  # 覆盖率
+  coverage:
+    enabled: true
+    threshold: 80
+    output_format: "html"
+    output_file: "coverage.html"
+
+# 代码质量
+quality:
+  # 静态分析
+  static_analysis:
+    enabled: true
+    tools:
+      - name: "golangci-lint"
+        enabled: true
+        config: ".golangci.yml"
+      - name: "gosec"
+        enabled: true
+        severity: "medium"
+      - name: "staticcheck"
+        enabled: true
+  
+  # 代码格式化
+  formatting:
+    enabled: true
+    tools:
+      - "gofmt"
+      - "goimports"
+  
+  # 依赖检查
+  dependencies:
+    vulnerability_scan: true
+    license_check: true
+    outdated_check: true
+
+# 文档生成
+documentation:
+  enabled: true
+  
+  # API文档
+  api:
+    enabled: true
+    format: "swagger"
+    output: "docs/api"
+  
+  # 代码文档
+  code:
+    enabled: true
+    tool: "godoc"
+    output: "docs/code"
+  
+  # 插件文档
+  plugins:
+    enabled: true
+    auto_generate: true
+    output: "docs/plugins"
+
+# 打包设置
+packaging:
+  # 打包格式
+  formats:
+    - "tar.gz"
+    - "zip"
+    - "deb"
+    - "rpm"
+    - "msi"
+  
+  # 包含文件
+  include:
+    - "build/go-musicfox*"
+    - "build/plugins/**"
+    - "README.md"
+    - "LICENSE"
+    - "configs/default.yaml"
+    - "docs/**"
+  
+  # 排除文件
+  exclude:
+    - "*.log"
+    - "*.tmp"
+    - ".git/**"
+    - "tmp/**"
+  
+  # 包元数据
+  metadata:
+    maintainer: "anhoder <anHoder@gmail.com>"
+    homepage: "https://github.com/go-musicfox/go-musicfox"
+    description: "Terminal music player with microkernel plugin architecture"
+    category: "sound"
+    priority: "optional"
+
+# 发布设置
+release:
+  # 发布渠道
+  channels:
+    github:
+      enabled: true
+      draft: false
+      prerelease: false
+    
+    homebrew:
+      enabled: true
+      tap: "go-musicfox/homebrew-tap"
+    
+    aur:
+      enabled: false
+      package: "go-musicfox"
+    
+    snap:
+      enabled: false
+      name: "go-musicfox"
+    
+    docker:
+      enabled: true
+      registry: "ghcr.io"
+      namespace: "go-musicfox"
+  
+  # 发布资产
+  assets:
+    - "build/go-musicfox-*"
+    - "build/packages/*"
+    - "docs/CHANGELOG.md"
+  
+  # 发布说明
+  notes:
+    auto_generate: true
+    template: "docs/release-notes.tmpl"
+
+# 环境变量
+environment:
+  # 构建环境
+  build:
+    GO111MODULE: "on"
+    GOPROXY: "https://proxy.golang.org,direct"
+    GOSUMDB: "sum.golang.org"
+    CGO_ENABLED: "1"
+  
+  # 开发环境
+  development:
+    MUSICFOX_ENV: "development"
+    MUSICFOX_LOG_LEVEL: "debug"
+    MUSICFOX_HOT_RELOAD: "true"
+  
+  # 生产环境
+  production:
+    MUSICFOX_ENV: "production"
+    MUSICFOX_LOG_LEVEL: "info"
+    MUSICFOX_HOT_RELOAD: "false"
+
+# 缓存设置
+cache:
+  # 构建缓存
+  build:
+    enabled: true
+    directory: ".build-cache"
+    max_size: "1GB"
+    ttl: "7d"
+  
+  # 依赖缓存
+  dependencies:
+    enabled: true
+    directory: ".deps-cache"
+    max_size: "500MB"
+    ttl: "30d"
+  
+  # 测试缓存
+  test:
+    enabled: true
+    directory: ".test-cache"
+    max_size: "100MB"
+    ttl: "1d"
+
+# 通知设置
+notifications:
+  # 构建通知
+  build:
+    enabled: false
+    webhooks: []
+    email: []
+  
+  # 发布通知
+  release:
+    enabled: false
+    webhooks: []
+    email: []
+  
+  # 错误通知
+  error:
+    enabled: true
+    webhooks: []
+    email: []
+
+# 安全设置
+security:
+  # 代码签名
+  code_signing:
+    enabled: false
+    certificate: ""
+    key: ""
+  
+  # 漏洞扫描
+  vulnerability_scan:
+    enabled: true
+    tools:
+      - "govulncheck"
+      - "nancy"
+  
+  # 许可证检查
+  license_check:
+    enabled: true
+    allowed_licenses:
+      - "MIT"
+      - "Apache-2.0"
+      - "BSD-3-Clause"
+      - "ISC"
+    forbidden_licenses:
+      - "GPL-3.0"
+      - "AGPL-3.0"
+
+# 性能设置
+performance:
+  # 构建性能
+  build:
+    parallel_jobs: 4
+    memory_limit: "2GB"
+    timeout: "30m"
+  
+  # 测试性能
+  test:
+    parallel_packages: 4
+    memory_limit: "1GB"
+    timeout: "10m"
+  
+  # 分析工具
+  profiling:
+    enabled: false
+    cpu_profile: true
+    memory_profile: true
+    trace_profile: false
+
+# 调试设置
+debug:
+  # 调试信息
+  enabled: false
+  verbose: false
+  
+  # 构建调试
+  build:
+    keep_temp_files: false
+    print_commands: false
+    dry_run: false
+  
+  # 插件调试
+  plugins:
+    verbose_loading: false
+    trace_calls: false
+    dump_symbols: false

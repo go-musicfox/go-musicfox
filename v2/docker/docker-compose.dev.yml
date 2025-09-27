@@ -1,0 +1,290 @@
+# go-musicfox v2 开发环境容器编排
+# 支持热重载和完整开发工具链
+
+version: '3.8'
+
+services:
+  # 开发环境主服务
+  musicfox-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    image: go-musicfox-dev:latest
+    container_name: go-musicfox-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_PORT:-8080}:8080"
+      - "${DEV_RPC_PORT:-8081}:8081"
+      - "${DEV_PLUGIN_PORT:-8082}:8082"
+      - "${DEV_DEBUG_PORT:-2345}:2345"  # Delve调试端口
+      - "${DEV_PPROF_PORT:-6060}:6060"  # pprof性能分析端口
+    environment:
+      - MUSICFOX_ENV=development
+      - MUSICFOX_LOG_LEVEL=debug
+      - MUSICFOX_HOT_RELOAD=true
+      - MUSICFOX_CONFIG_DIR=/workspace/config
+      - MUSICFOX_PLUGIN_DIR=/workspace/plugins
+      - MUSICFOX_DATA_DIR=/workspace/data
+      - MUSICFOX_LOG_DIR=/workspace/logs
+      - MUSICFOX_REDIS_URL=redis://redis-dev:6379
+      - MUSICFOX_DB_URL=postgres://musicfox:dev123@postgres-dev:5432/musicfox_dev?sslmode=disable
+      - GO111MODULE=on
+      - GOPROXY=https://goproxy.cn,direct
+      - GOSUMDB=sum.golang.google.cn
+    volumes:
+      - ../:/workspace:cached
+      - go_mod_cache:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+      - dev_data:/workspace/data
+      - dev_logs:/workspace/logs
+    depends_on:
+      - redis-dev
+      - postgres-dev
+    networks:
+      - musicfox_dev_network
+    stdin_open: true
+    tty: true
+    command: ["/workspace/dev-start.sh", "--watch"]
+    healthcheck:
+      test: ["/workspace/health-check.sh"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+
+  # 开发环境Redis
+  redis-dev:
+    image: redis:7-alpine
+    container_name: go-musicfox-redis-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_REDIS_PORT:-6380}:6379"
+    environment:
+      - REDIS_PASSWORD=
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - musicfox_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 开发环境PostgreSQL
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: go-musicfox-postgres-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_POSTGRES_PORT:-5433}:5432"
+    environment:
+      - POSTGRES_DB=musicfox_dev
+      - POSTGRES_USER=musicfox
+      - POSTGRES_PASSWORD=dev123
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ../migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - musicfox_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musicfox -d musicfox_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 开发工具服务
+  dev-tools:
+    image: alpine:latest
+    container_name: go-musicfox-dev-tools
+    restart: unless-stopped
+    volumes:
+      - ../:/workspace:cached
+    networks:
+      - musicfox_dev_network
+    command: tail -f /dev/null
+
+  # 测试数据库（用于集成测试）
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: go-musicfox-postgres-test
+    restart: unless-stopped
+    ports:
+      - "${TEST_POSTGRES_PORT:-5434}:5432"
+    environment:
+      - POSTGRES_DB=musicfox_test
+      - POSTGRES_USER=musicfox
+      - POSTGRES_PASSWORD=test123
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - testing
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musicfox -d musicfox_test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 插件开发服务器
+  plugin-dev-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.plugin-dev
+    image: go-musicfox-plugin-dev:latest
+    container_name: go-musicfox-plugin-dev
+    restart: unless-stopped
+    ports:
+      - "${PLUGIN_DEV_PORT:-9090}:9090"
+      - "${PLUGIN_DEV_WS_PORT:-9091}:9091"  # WebSocket端口
+    environment:
+      - MUSICFOX_ENV=development
+      - MUSICFOX_LOG_LEVEL=debug
+      - PLUGIN_DEV_MODE=true
+      - PLUGIN_HOT_RELOAD=true
+    volumes:
+      - ../plugins:/app/plugins:cached
+      - ../tools:/app/tools:cached
+      - dev_plugin_cache:/app/.cache
+    depends_on:
+      - musicfox-dev
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - plugin-dev
+
+  # 文档服务器
+  docs-server:
+    image: nginx:alpine
+    container_name: go-musicfox-docs
+    restart: unless-stopped
+    ports:
+      - "${DOCS_PORT:-8090}:80"
+    volumes:
+      - ../docs:/usr/share/nginx/html:ro
+      - ./nginx-docs.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - docs
+
+  # 代码质量检查服务
+  code-quality:
+    image: golangci/golangci-lint:latest
+    container_name: go-musicfox-lint
+    volumes:
+      - ../:/app:cached
+    working_dir: /app
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - quality
+    command: golangci-lint run --config .golangci.yml
+
+  # 性能测试服务
+  performance-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.perf-test
+    image: go-musicfox-perf-test:latest
+    container_name: go-musicfox-perf-test
+    volumes:
+      - ../:/workspace:cached
+      - perf_results:/results
+    depends_on:
+      - musicfox-dev
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - performance
+    environment:
+      - TARGET_URL=http://musicfox-dev:8080
+      - TEST_DURATION=60s
+      - CONCURRENT_USERS=10
+
+  # 监控开发服务
+  prometheus-dev:
+    image: prom/prometheus:latest
+    container_name: go-musicfox-prometheus-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_PROMETHEUS_PORT:-9092}:9090"
+    volumes:
+      - ./prometheus-dev.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_dev_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=24h'
+      - '--web.enable-lifecycle'
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - monitoring
+
+  # Grafana开发服务
+  grafana-dev:
+    image: grafana/grafana:latest
+    container_name: go-musicfox-grafana-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=dev123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_dev_data:/var/lib/grafana
+      - ./grafana-dev.ini:/etc/grafana/grafana.ini:ro
+    depends_on:
+      - prometheus-dev
+    networks:
+      - musicfox_dev_network
+    profiles:
+      - monitoring
+
+# 网络配置
+networks:
+  musicfox_dev_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+# 数据卷配置
+volumes:
+  # Go相关缓存
+  go_mod_cache:
+    driver: local
+  go_build_cache:
+    driver: local
+  
+  # 开发数据
+  dev_data:
+    driver: local
+  dev_logs:
+    driver: local
+  dev_plugin_cache:
+    driver: local
+  
+  # 数据库
+  redis_dev_data:
+    driver: local
+  postgres_dev_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  
+  # 监控
+  prometheus_dev_data:
+    driver: local
+  grafana_dev_data:
+    driver: local
+  
+  # 性能测试结果
+  perf_results:
+    driver: local

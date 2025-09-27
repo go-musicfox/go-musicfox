@@ -1,0 +1,547 @@
+# go-musicfox v2 测试流水线
+# 全面的测试覆盖，包括单元测试、集成测试、性能测试和安全测试
+
+name: Test
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨2点运行完整测试套件
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: '测试类型'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - performance
+          - security
+          - plugin
+      coverage_threshold:
+        description: '代码覆盖率阈值 (%)'
+        required: false
+        default: '80'
+        type: string
+
+env:
+  GO_VERSION: '1.21'
+  COVERAGE_THRESHOLD: ${{ github.event.inputs.coverage_threshold || '80' }}
+
+jobs:
+  # 单元测试
+  unit-test:
+    name: 单元测试
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'unit' || github.event.inputs.test_type == '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.20', '1.21']
+        include:
+          - os: ubuntu-latest
+            goos: linux
+          - os: macos-latest
+            goos: darwin
+          - os: windows-latest
+            goos: windows
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: 安装Linux依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev \
+            xvfb
+
+      - name: 安装macOS依赖
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install portaudio flac taglib
+
+      - name: 安装Windows依赖
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          # Windows使用纯Go实现，无需额外依赖
+          Write-Host "Windows构建使用纯Go实现"
+
+      - name: 下载Go依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 生成测试数据
+        working-directory: ./v2
+        run: |
+          mkdir -p testdata
+          go run ./internal/testutil/generate_test_data.go
+        shell: bash
+
+      - name: 运行单元测试
+        working-directory: ./v2
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            # Linux使用xvfb运行GUI测试
+            xvfb-run -a go test -v -race -coverprofile=coverage.out -covermode=atomic -timeout=10m ./...
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # Windows禁用CGO
+            set CGO_ENABLED=0
+            go test -v -coverprofile=coverage.out -covermode=atomic -timeout=10m ./...
+          else
+            # macOS正常运行
+            go test -v -race -coverprofile=coverage.out -covermode=atomic -timeout=10m ./...
+          fi
+        shell: bash
+
+      - name: 检查测试覆盖率
+        working-directory: ./v2
+        run: |
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "当前覆盖率: ${coverage}%"
+          echo "要求覆盖率: ${{ env.COVERAGE_THRESHOLD }}%"
+          
+          if (( $(echo "$coverage < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "❌ 测试覆盖率不足: ${coverage}% < ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          else
+            echo "✅ 测试覆盖率达标: ${coverage}% >= ${{ env.COVERAGE_THRESHOLD }}%"
+          fi
+        shell: bash
+
+      - name: 生成覆盖率报告
+        working-directory: ./v2
+        run: |
+          go tool cover -html=coverage.out -o coverage.html
+          go tool cover -func=coverage.out > coverage.txt
+        shell: bash
+
+      - name: 上传覆盖率报告
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./v2/coverage.out
+          flags: unittests
+          name: codecov-${{ matrix.os }}-go${{ matrix.go-version }}
+          fail_ci_if_error: true
+
+      - name: 上传测试报告
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report-${{ matrix.os }}-go${{ matrix.go-version }}
+          path: |
+            v2/coverage.html
+            v2/coverage.txt
+          retention-days: 30
+
+  # 集成测试
+  integration-test:
+    name: 集成测试
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' || github.event.inputs.test_type == '' }}
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: musicfox_test
+          POSTGRES_USER: musicfox
+          POSTGRES_PASSWORD: test123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev \
+            postgresql-client
+
+      - name: 下载依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 等待服务就绪
+        run: |
+          echo "等待Redis服务..."
+          timeout 30 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
+          
+          echo "等待PostgreSQL服务..."
+          timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U musicfox; do sleep 1; done'
+
+      - name: 初始化测试数据库
+        run: |
+          PGPASSWORD=test123 psql -h localhost -p 5432 -U musicfox -d musicfox_test -c "
+            CREATE TABLE IF NOT EXISTS test_data (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(255) NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO test_data (name) VALUES ('test1'), ('test2'), ('test3');
+          "
+
+      - name: 构建测试二进制
+        working-directory: ./v2
+        run: |
+          make build-core
+          chmod +x build/go-musicfox-linux-amd64
+
+      - name: 运行集成测试
+        working-directory: ./v2
+        env:
+          MUSICFOX_REDIS_URL: redis://localhost:6379
+          MUSICFOX_DB_URL: postgres://musicfox:test123@localhost:5432/musicfox_test?sslmode=disable
+          MUSICFOX_ENV: test
+        run: |
+          # 启动应用
+          ./build/go-musicfox-linux-amd64 --daemon --config=configs/test.yaml &
+          APP_PID=$!
+          
+          # 等待应用启动
+          sleep 10
+          
+          # 运行集成测试
+          go test -v -tags=integration ./test/integration/... -timeout=5m
+          
+          # 清理
+          kill $APP_PID || true
+
+      - name: 收集集成测试日志
+        if: always()
+        run: |
+          mkdir -p integration-logs
+          cp -r v2/logs/* integration-logs/ || true
+          cp -r v2/testdata/* integration-logs/ || true
+
+      - name: 上传集成测试报告
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-report
+          path: integration-logs/
+          retention-days: 30
+
+  # 插件测试
+  plugin-test:
+    name: 插件测试
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'plugin' || github.event.inputs.test_type == '' }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 安装TinyGo (WebAssembly测试)
+        run: |
+          wget https://github.com/tinygo-org/tinygo/releases/download/v0.30.0/tinygo_0.30.0_amd64.deb
+          sudo dpkg -i tinygo_0.30.0_amd64.deb || true
+          sudo apt-get install -f
+
+      - name: 下载依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 构建微内核
+        working-directory: ./v2
+        run: make build-core
+
+      - name: 构建测试插件
+        working-directory: ./v2
+        run: |
+          # 构建各种类型的测试插件
+          make build-plugins
+          
+          # 验证插件构建结果
+          ls -la build/plugins/
+
+      - name: 运行插件测试
+        working-directory: ./v2
+        run: |
+          # 测试动态链接库插件
+          go test -v ./plugins/shared/... -timeout=5m
+          
+          # 测试RPC插件
+          go test -v ./plugins/rpc/... -timeout=5m
+          
+          # 测试WebAssembly插件
+          go test -v ./plugins/wasm/... -timeout=5m
+          
+          # 测试热加载插件
+          go test -v ./plugins/hotload/... -timeout=5m
+
+      - name: 插件兼容性测试
+        working-directory: ./v2
+        run: |
+          # 测试插件加载和卸载
+          ./tools/plugin-validator.sh build/plugins/
+          
+          # 测试插件热重载
+          ./tools/test-hot-reload.sh
+
+      - name: 上传插件测试报告
+        uses: actions/upload-artifact@v3
+        with:
+          name: plugin-test-report
+          path: |
+            v2/build/plugins/
+            v2/plugin-test-results.txt
+          retention-days: 30
+
+  # 性能测试
+  performance-test:
+    name: 性能测试
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'performance' }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 下载依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 构建性能测试版本
+        working-directory: ./v2
+        run: |
+          make build-core BUILDFLAGS="-tags=perf"
+          chmod +x build/go-musicfox-linux-amd64
+
+      - name: 运行基准测试
+        working-directory: ./v2
+        run: |
+          # CPU性能测试
+          go test -bench=. -benchmem -cpuprofile=cpu.prof ./... > benchmark-results.txt
+          
+          # 内存性能测试
+          go test -bench=. -benchmem -memprofile=mem.prof ./...
+          
+          # 并发性能测试
+          go test -bench=BenchmarkConcurrent -benchmem ./...
+
+      - name: 分析性能数据
+        working-directory: ./v2
+        run: |
+          # 生成性能报告
+          go tool pprof -text cpu.prof > cpu-profile.txt
+          go tool pprof -text mem.prof > mem-profile.txt
+          
+          # 检查性能回归
+          if [ -f "benchmark-baseline.txt" ]; then
+            go run ./tools/benchmark-compare.go benchmark-baseline.txt benchmark-results.txt
+          fi
+
+      - name: 负载测试
+        working-directory: ./v2
+        run: |
+          # 启动应用
+          ./build/go-musicfox-linux-amd64 --daemon &
+          APP_PID=$!
+          
+          # 等待启动
+          sleep 5
+          
+          # 运行负载测试
+          go run ./tools/load-test.go --duration=60s --concurrent=10
+          
+          # 清理
+          kill $APP_PID || true
+
+      - name: 上传性能报告
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-test-report
+          path: |
+            v2/benchmark-results.txt
+            v2/cpu-profile.txt
+            v2/mem-profile.txt
+            v2/cpu.prof
+            v2/mem.prof
+          retention-days: 30
+
+  # 安全测试
+  security-test:
+    name: 安全测试
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'security' }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装安全扫描工具
+        run: |
+          # 安装gosec
+          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          
+          # 安装nancy (依赖漏洞扫描)
+          go install github.com/sonatypecommunity/nancy@latest
+          
+          # 安装govulncheck
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: 下载依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 运行gosec安全扫描
+        working-directory: ./v2
+        run: |
+          gosec -fmt sarif -out gosec-report.sarif -stdout -verbose=text ./...
+
+      - name: 运行依赖漏洞扫描
+        working-directory: ./v2
+        run: |
+          go list -json -deps ./... | nancy sleuth
+
+      - name: 运行Go漏洞检查
+        working-directory: ./v2
+        run: |
+          govulncheck ./...
+
+      - name: 检查敏感信息泄露
+        working-directory: ./v2
+        run: |
+          # 检查硬编码密码、API密钥等
+          grep -r -i "password\|secret\|key\|token" --include="*.go" . || true
+          
+          # 检查TODO和FIXME中的安全问题
+          grep -r -i "TODO.*security\|FIXME.*security" --include="*.go" . || true
+
+      - name: 上传安全扫描报告
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: v2/gosec-report.sarif
+
+      - name: 上传安全测试报告
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-test-report
+          path: |
+            v2/gosec-report.sarif
+          retention-days: 30
+
+  # 测试结果汇总
+  test-summary:
+    name: 测试结果汇总
+    runs-on: ubuntu-latest
+    needs: [unit-test, integration-test, plugin-test, performance-test, security-test]
+    if: always()
+    
+    steps:
+      - name: 汇总测试结果
+        run: |
+          echo "# go-musicfox v2 测试结果汇总" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 测试状态" >> $GITHUB_STEP_SUMMARY
+          echo "| 测试类型 | 状态 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 单元测试 | ${{ needs.unit-test.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 集成测试 | ${{ needs.integration-test.result == 'success' && '✅ 通过' || needs.integration-test.result == 'skipped' && '⏭️ 跳过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 插件测试 | ${{ needs.plugin-test.result == 'success' && '✅ 通过' || needs.plugin-test.result == 'skipped' && '⏭️ 跳过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 性能测试 | ${{ needs.performance-test.result == 'success' && '✅ 通过' || needs.performance-test.result == 'skipped' && '⏭️ 跳过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 安全测试 | ${{ needs.security-test.result == 'success' && '✅ 通过' || needs.security-test.result == 'skipped' && '⏭️ 跳过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 总体状态" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.unit-test.result }}" == "success" && 
+                ("${{ needs.integration-test.result }}" == "success" || "${{ needs.integration-test.result }}" == "skipped") && 
+                ("${{ needs.plugin-test.result }}" == "success" || "${{ needs.plugin-test.result }}" == "skipped") && 
+                ("${{ needs.performance-test.result }}" == "success" || "${{ needs.performance-test.result }}" == "skipped") && 
+                ("${{ needs.security-test.result }}" == "success" || "${{ needs.security-test.result }}" == "skipped") ]]; then
+            echo "✅ **所有测试通过！代码质量良好，可以合并。**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **测试失败！请检查失败的测试并修复问题。**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

@@ -1,0 +1,273 @@
+# go-musicfox v2 开发环境容器
+# 包含完整的开发工具链和热重载支持
+
+FROM golang:1.21-alpine
+
+# 安装开发依赖
+RUN apk add --no-cache \
+    git \
+    make \
+    gcc \
+    musl-dev \
+    pkgconfig \
+    alsa-lib-dev \
+    portaudio-dev \
+    flac-dev \
+    taglib-dev \
+    bash \
+    curl \
+    wget \
+    vim \
+    nano \
+    htop \
+    tree \
+    jq \
+    yq \
+    && rm -rf /var/cache/apk/*
+
+# 安装开发工具
+RUN go install github.com/cosmtrek/air@latest && \
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && \
+    go install github.com/swaggo/swag/cmd/swag@latest && \
+    go install github.com/golang/mock/mockgen@latest && \
+    go install honnef.co/go/tools/cmd/staticcheck@latest && \
+    go install github.com/securecodewarrior/sast-scan@latest
+
+# 安装Node.js（用于前端工具）
+RUN apk add --no-cache nodejs npm
+
+# 安装Docker CLI（用于容器内构建）
+RUN apk add --no-cache docker-cli
+
+# 创建开发用户
+RUN addgroup -g 1000 developer && \
+    adduser -D -s /bin/bash -u 1000 -G developer developer && \
+    echo 'developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# 安装sudo
+RUN apk add --no-cache sudo
+
+# 设置工作目录
+WORKDIR /workspace
+
+# 创建开发目录结构
+RUN mkdir -p \
+    /workspace/src \
+    /workspace/build \
+    /workspace/dist \
+    /workspace/plugins \
+    /workspace/config \
+    /workspace/data \
+    /workspace/logs \
+    /workspace/tmp \
+    /workspace/.cache \
+    && chown -R developer:developer /workspace
+
+# 复制开发配置文件
+COPY docker/dev-configs/ /workspace/config/
+COPY docker/dev-scripts/ /workspace/scripts/
+RUN chmod +x /workspace/scripts/*.sh
+
+# 设置Git配置（开发环境）
+RUN git config --global --add safe.directory /workspace
+
+# 设置环境变量
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=sum.golang.google.cn
+ENV GO111MODULE=on
+ENV CGO_ENABLED=1
+ENV MUSICFOX_ENV=development
+ENV MUSICFOX_HOME=/workspace
+ENV MUSICFOX_CONFIG_DIR=/workspace/config
+ENV MUSICFOX_PLUGIN_DIR=/workspace/plugins
+ENV MUSICFOX_DATA_DIR=/workspace/data
+ENV MUSICFOX_LOG_DIR=/workspace/logs
+ENV MUSICFOX_LOG_LEVEL=debug
+ENV MUSICFOX_HOT_RELOAD=true
+
+# 暴露开发端口
+EXPOSE 8080 8081 8082 9090 9091 9092
+
+# 创建开发启动脚本
+RUN cat > /workspace/dev-start.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "=== go-musicfox v2 开发环境 ==="
+echo "工作目录: $(pwd)"
+echo "Go版本: $(go version)"
+echo "用户: $(whoami)"
+echo
+
+# 检查项目结构
+if [ ! -f "go.mod" ]; then
+    echo "初始化Go模块..."
+    go mod init github.com/go-musicfox/go-musicfox/v2
+fi
+
+# 下载依赖
+echo "下载依赖..."
+go mod download
+go mod tidy
+
+# 生成开发配置
+echo "生成开发配置..."
+make dev-config
+
+# 启动热重载开发服务器
+echo "启动开发服务器..."
+if [ "$1" = "--watch" ]; then
+    echo "启用热重载模式"
+    air -c .air.toml
+else
+    echo "启动普通模式"
+    make dev
+fi
+EOF
+
+RUN chmod +x /workspace/dev-start.sh
+
+# 创建Air配置文件
+RUN cat > /workspace/.air.toml << 'EOF'
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+  args_bin = ["--dev"]
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/go-musicfox"
+  delay = 1000
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "build", "dist"]
+  exclude_file = []
+  exclude_regex = ["_test.go"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  include_dir = []
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml", "json"]
+  kill_delay = "0s"
+  log = "build-errors.log"
+  send_interrupt = false
+  stop_on_root = false
+
+[color]
+  app = ""
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = false
+
+[screen]
+  clear_on_rebuild = false
+EOF
+
+# 创建开发用的Makefile扩展
+RUN cat > /workspace/Makefile.dev << 'EOF'
+# 开发环境专用Makefile
+
+.PHONY: dev dev-config dev-clean dev-test dev-lint dev-plugins
+
+# 开发模式运行
+dev:
+	@echo "启动开发模式..."
+	go run ./cmd/go-musicfox --dev --config=$(MUSICFOX_CONFIG_DIR)/dev.yaml
+
+# 生成开发配置
+dev-config:
+	@echo "生成开发配置..."
+	mkdir -p $(MUSICFOX_CONFIG_DIR)
+	cp config/dev.yaml.example $(MUSICFOX_CONFIG_DIR)/dev.yaml || true
+	cp config/plugins.yaml.example $(MUSICFOX_CONFIG_DIR)/plugins.yaml || true
+
+# 开发环境清理
+dev-clean:
+	@echo "清理开发环境..."
+	rm -rf tmp/ build/ dist/ .cache/
+	go clean -cache -testcache -modcache
+
+# 开发测试
+dev-test:
+	@echo "运行开发测试..."
+	go test -v -race -cover ./...
+
+# 开发代码检查
+dev-lint:
+	@echo "运行代码检查..."
+	golangci-lint run
+	staticcheck ./...
+
+# 开发插件构建
+dev-plugins:
+	@echo "构建开发插件..."
+	./scripts/build-plugins.sh --dev
+EOF
+
+# 健康检查脚本
+RUN cat > /workspace/health-check.sh << 'EOF'
+#!/bin/bash
+# 开发环境健康检查
+
+echo "=== 开发环境健康检查 ==="
+
+# 检查Go环境
+echo "Go版本: $(go version)"
+echo "GOPATH: $GOPATH"
+echo "GOPROXY: $GOPROXY"
+
+# 检查项目状态
+if [ -f "go.mod" ]; then
+    echo "✓ Go模块已初始化"
+else
+    echo "✗ Go模块未初始化"
+fi
+
+# 检查依赖
+if go mod verify > /dev/null 2>&1; then
+    echo "✓ 依赖验证通过"
+else
+    echo "✗ 依赖验证失败"
+fi
+
+# 检查构建
+if go build -o /tmp/test-build ./cmd/go-musicfox > /dev/null 2>&1; then
+    echo "✓ 构建测试通过"
+    rm -f /tmp/test-build
+else
+    echo "✗ 构建测试失败"
+fi
+
+# 检查工具
+echo "开发工具状态:"
+command -v air > /dev/null && echo "  ✓ air" || echo "  ✗ air"
+command -v golangci-lint > /dev/null && echo "  ✓ golangci-lint" || echo "  ✗ golangci-lint"
+command -v staticcheck > /dev/null && echo "  ✓ staticcheck" || echo "  ✗ staticcheck"
+
+echo "=== 健康检查完成 ==="
+EOF
+
+RUN chmod +x /workspace/health-check.sh
+
+# 设置用户权限
+RUN chown -R developer:developer /workspace /go
+
+# 数据卷
+VOLUME ["/workspace", "/go/pkg"]
+
+# 切换到开发用户
+USER developer
+
+# 设置bash为默认shell
+SHELL ["/bin/bash", "-c"]
+
+# 工作目录
+WORKDIR /workspace
+
+# 默认命令
+CMD ["/workspace/dev-start.sh"]

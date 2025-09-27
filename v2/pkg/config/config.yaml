@@ -1,0 +1,22 @@
+app:
+    debug: false
+    name: go-musicfox
+    version: 2.0.0
+plugins:
+    netease:
+        auto_start: true
+        enabled: true
+        name: netease
+        path: plugins/netease
+        priority: 80
+        resources:
+            max_cpu: 0.5
+            max_goroutines: 100
+            max_memory: 104857600
+            timeout: 30s
+        security:
+            sandbox: true
+        type: rpc
+server:
+    host: localhost
+    port: 8080

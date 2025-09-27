@@ -1,0 +1,105 @@
+[Unit]
+Description=go-musicfox v2 Music Player
+Documentation=https://github.com/go-musicfox/go-musicfox
+After=network.target network-online.target
+Wants=network-online.target
+Requires=network.target
+
+[Service]
+# 服务类型
+Type=simple
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=3
+
+# 用户和组
+User=musicfox
+Group=musicfox
+
+# 执行命令
+ExecStart=/usr/local/bin/go-musicfox --daemon --config=/etc/go-musicfox/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+
+# 工作目录
+WorkingDirectory=/var/lib/go-musicfox
+
+# 环境变量
+Environment=MUSICFOX_ENV=production
+Environment=MUSICFOX_CONFIG_DIR=/etc/go-musicfox
+Environment=MUSICFOX_DATA_DIR=/var/lib/go-musicfox
+Environment=MUSICFOX_LOG_DIR=/var/lib/go-musicfox/logs
+Environment=MUSICFOX_PLUGIN_DIR=/var/lib/go-musicfox/plugins
+Environment=MUSICFOX_LOG_LEVEL=info
+
+# 进程管理
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=30
+TimeoutStopSec=30
+TimeoutReloadSec=10
+
+# 标准输入输出
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=go-musicfox
+
+# 安全设置
+# 基础安全
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+
+# 文件系统访问
+ReadWritePaths=/var/lib/go-musicfox
+ReadWritePaths=/etc/go-musicfox
+ReadWritePaths=/tmp
+ReadOnlyPaths=/usr/local/bin/go-musicfox
+
+# 网络访问
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=10.0.0.0/8
+IPAddressAllow=172.16.0.0/12
+IPAddressAllow=192.168.0.0/16
+
+# 系统调用限制
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@debug @mount @cpu-emulation @obsolete @privileged @reboot @swap
+
+# 内核功能限制
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# 内存和进程限制
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitCORE=0
+
+# 其他安全设置
+RemoveIPC=true
+PrivateUsers=true
+ProtectProc=invisible
+ProcSubset=pid
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
+Alias=musicfox.service

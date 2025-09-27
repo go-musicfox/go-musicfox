@@ -1,0 +1,523 @@
+# go-musicfox v2 构建流水线
+# 支持微内核插件架构的多平台构建
+
+name: Build
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'release/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - core-only
+          - plugins-only
+      platforms:
+        description: '目标平台 (逗号分隔)'
+        required: false
+        default: 'linux,darwin,windows'
+        type: string
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 代码质量检查
+  quality:
+    name: 代码质量检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 下载Go依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 代码格式检查
+        working-directory: ./v2
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "代码格式不符合规范:"
+            gofmt -s -l .
+            exit 1
+          fi
+
+      - name: 静态分析
+        working-directory: ./v2
+        run: go vet ./...
+
+      - name: 安装golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+
+      - name: 运行golangci-lint
+        working-directory: ./v2
+        run: $(go env GOPATH)/bin/golangci-lint run --timeout=10m
+
+      - name: 安全扫描
+        uses: securecodewarrior/github-action-add-sarif@v1
+        with:
+          sarif-file: 'gosec-report.sarif'
+        continue-on-error: true
+
+  # 单元测试
+  test:
+    name: 单元测试
+    runs-on: ${{ matrix.os }}
+    needs: quality
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.20', '1.21']
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: 安装Linux依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 安装macOS依赖
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install portaudio flac taglib
+
+      - name: 安装Windows依赖
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Windows依赖通过CGO_ENABLED=0禁用
+          echo "Windows构建使用纯Go实现"
+
+      - name: 下载依赖
+        working-directory: ./v2
+        run: go mod download
+
+      - name: 运行测试
+        working-directory: ./v2
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            export CGO_ENABLED=0
+          fi
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        shell: bash
+
+      - name: 上传覆盖率报告
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./v2/coverage.out
+          flags: unittests
+          name: codecov-${{ matrix.os }}-go${{ matrix.go-version }}
+
+  # 构建微内核
+  build-core:
+    name: 构建微内核
+    runs-on: ${{ matrix.os }}
+    needs: test
+    if: ${{ github.event.inputs.build_type != 'plugins-only' }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装构建依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 安装macOS依赖
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install portaudio flac taglib
+
+      - name: 获取版本信息
+        id: version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(git describe --tags --always --dirty)" >> $GITHUB_OUTPUT
+          fi
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u '+%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: 构建微内核
+        working-directory: ./v2
+        run: |
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            export CGO_ENABLED=0
+          else
+            export CGO_ENABLED=1
+          fi
+          
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+          fi
+          
+          make build-core \
+            VERSION=${{ steps.version.outputs.version }} \
+            COMMIT=${{ steps.version.outputs.commit }} \
+            BUILD_TIME="${{ steps.version.outputs.build_time }}"
+        shell: bash
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-musicfox-core-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: v2/build/go-musicfox-${{ matrix.goos }}-${{ matrix.goarch }}*
+          retention-days: 30
+
+  # 构建插件
+  build-plugins:
+    name: 构建插件
+    runs-on: ${{ matrix.os }}
+    needs: test
+    if: ${{ github.event.inputs.build_type != 'core-only' }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装构建依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 安装macOS依赖
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install portaudio flac taglib
+
+      - name: 安装TinyGo (WebAssembly)
+        run: |
+          wget https://github.com/tinygo-org/tinygo/releases/download/v0.30.0/tinygo_0.30.0_amd64.deb
+          sudo dpkg -i tinygo_0.30.0_amd64.deb || true
+          sudo apt-get install -f
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: 构建插件
+        working-directory: ./v2
+        run: |
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            export CGO_ENABLED=0
+          else
+            export CGO_ENABLED=1
+          fi
+          
+          make build-plugins
+        shell: bash
+
+      - name: 上传插件产物
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-musicfox-plugins-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: v2/build/plugins/
+          retention-days: 30
+
+  # 构建Docker镜像
+  build-docker:
+    name: 构建Docker镜像
+    runs-on: ubuntu-latest
+    needs: [build-core, build-plugins]
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/') }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录容器注册表
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 获取版本信息
+        id: version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(git describe --tags --always --dirty)" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u '+%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
+
+      - name: 提取元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 构建并推送Docker镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./v2
+          file: ./v2/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            COMMIT=${{ steps.version.outputs.commit }}
+            BUILD_TIME=${{ steps.version.outputs.build_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 集成测试
+  integration-test:
+    name: 集成测试
+    runs-on: ubuntu-latest
+    needs: [build-core, build-plugins]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: musicfox_test
+          POSTGRES_USER: musicfox
+          POSTGRES_PASSWORD: test123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libportaudio2 \
+            libportaudio-dev \
+            libflac-dev \
+            libtag1-dev
+
+      - name: 下载构建产物
+        uses: actions/download-artifact@v3
+        with:
+          name: go-musicfox-core-linux-amd64
+          path: v2/build/
+
+      - name: 下载插件产物
+        uses: actions/download-artifact@v3
+        with:
+          name: go-musicfox-plugins-linux-amd64
+          path: v2/build/plugins/
+
+      - name: 设置执行权限
+        run: chmod +x v2/build/go-musicfox-linux-amd64
+
+      - name: 运行集成测试
+        working-directory: ./v2
+        run: |
+          export MUSICFOX_REDIS_URL="redis://localhost:6379"
+          export MUSICFOX_DB_URL="postgres://musicfox:test123@localhost:5432/musicfox_test?sslmode=disable"
+          make integration-test
+
+  # 性能测试
+  performance-test:
+    name: 性能测试
+    runs-on: ubuntu-latest
+    needs: [build-core, build-plugins]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 下载构建产物
+        uses: actions/download-artifact@v3
+        with:
+          name: go-musicfox-core-linux-amd64
+          path: v2/build/
+
+      - name: 运行性能测试
+        working-directory: ./v2
+        run: |
+          chmod +x build/go-musicfox-linux-amd64
+          make benchmark
+
+      - name: 上传性能报告
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report
+          path: v2/benchmark-results.txt
+          retention-days: 30
+
+  # 构建状态通知
+  notify:
+    name: 构建状态通知
+    runs-on: ubuntu-latest
+    needs: [quality, test, build-core, build-plugins, integration-test]
+    if: always()
+    
+    steps:
+      - name: 构建成功通知
+        if: ${{ needs.quality.result == 'success' && needs.test.result == 'success' && needs.build-core.result == 'success' && needs.build-plugins.result == 'success' && needs.integration-test.result == 'success' }}
+        run: |
+          echo "✅ go-musicfox v2 构建成功！"
+          echo "- 代码质量检查: 通过"
+          echo "- 单元测试: 通过"
+          echo "- 微内核构建: 成功"
+          echo "- 插件构建: 成功"
+          echo "- 集成测试: 通过"
+
+      - name: 构建失败通知
+        if: ${{ needs.quality.result == 'failure' || needs.test.result == 'failure' || needs.build-core.result == 'failure' || needs.build-plugins.result == 'failure' || needs.integration-test.result == 'failure' }}
+        run: |
+          echo "❌ go-musicfox v2 构建失败！"
+          echo "- 代码质量检查: ${{ needs.quality.result }}"
+          echo "- 单元测试: ${{ needs.test.result }}"
+          echo "- 微内核构建: ${{ needs.build-core.result }}"
+          echo "- 插件构建: ${{ needs.build-plugins.result }}"
+          echo "- 集成测试: ${{ needs.integration-test.result }}"
+          exit 1

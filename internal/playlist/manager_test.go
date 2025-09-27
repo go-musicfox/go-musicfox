@@ -4,12 +4,33 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+// setupTestEnvironment 设置测试环境
+func setupTestEnvironment() {
+	// 初始化DBManager以避免panic
+	if storage.DBManager == nil {
+		storage.DBManager = new(storage.LocalDBManager)
+	}
+}
+
+// teardownTestEnvironment 清理测试环境
+func teardownTestEnvironment() {
+	// 清理DBManager
+	if storage.DBManager != nil {
+		_ = storage.DBManager.Close()
+		storage.DBManager = nil
+	}
+}
+
 // TestNewPlaylistManager 测试创建新的播放列表管理器
 func TestNewPlaylistManager(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 	if manager == nil {
 		t.Fatal("NewPlaylistManager() returned nil")
@@ -33,6 +54,9 @@ func TestNewPlaylistManager(t *testing.T) {
 
 // TestInitialize 测试初始化播放列表
 func TestInitialize(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	// 测试空播放列表初始化
@@ -80,6 +104,9 @@ func TestInitialize(t *testing.T) {
 
 // TestGetCurrentSong 测试获取当前歌曲
 func TestGetCurrentSong(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	// 测试空播放列表
@@ -111,6 +138,9 @@ func TestGetCurrentSong(t *testing.T) {
 
 // TestRemoveSong 测试移除歌曲
 func TestRemoveSong(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	// 测试空播放列表
@@ -164,6 +194,9 @@ func TestRemoveSong(t *testing.T) {
 
 // TestSetPlayMode 测试设置播放模式
 func TestSetPlayMode(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	// 测试设置列表循环模式
@@ -238,6 +271,9 @@ func TestSetPlayMode(t *testing.T) {
 
 // TestNextSong 测试下一首歌曲
 func TestNextSong(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	// 测试空播放列表
@@ -271,6 +307,9 @@ func TestNextSong(t *testing.T) {
 
 // TestPreviousSong 测试上一首歌曲
 func TestPreviousSong(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	// 测试空播放列表
@@ -304,6 +343,9 @@ func TestPreviousSong(t *testing.T) {
 
 // TestConcurrentAccess 测试并发访问安全性
 func TestConcurrentAccess(t *testing.T) {
+	setupTestEnvironment()
+	defer teardownTestEnvironment()
+	
 	manager := NewPlaylistManager()
 
 	songs := []structs.Song{
