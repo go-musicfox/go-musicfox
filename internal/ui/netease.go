@@ -44,11 +44,14 @@ type Netease struct {
 	login  *LoginPage
 	search *SearchPage
 
-	lyricService  *lyric.Service
-	lyricRenderer *LyricRenderer
-	player        *Player
-	shareSvc      *composer.ShareService
-	trackManager  *track.Manager
+	lyricService *lyric.Service
+
+	lyricRenderer    *LyricRenderer
+	songInfoRenderer *SongInfoRenderer
+
+	player       *Player
+	shareSvc     *composer.ShareService
+	trackManager *track.Manager
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -70,7 +73,9 @@ func NewNetease(app *model.App) *Netease {
 
 	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset)
 	n.player = NewPlayer(n, n.lyricService)
+
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
+	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
 
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
@@ -85,6 +90,7 @@ func NewNetease(app *model.App) *Netease {
 func (n *Netease) Components() []model.Component {
 	return []model.Component{
 		n.lyricRenderer,
+		n.songInfoRenderer,
 		n.player,
 	}
 }
