@@ -42,6 +42,8 @@ type PlaylistManager interface {
 	GetPlayMode() types.Mode
 
 	// GetPlayModeName 获取当前播放模式的名称
+	//
+	// Deprecated: please use GetPlayMode().Name() instead.
 	GetPlayModeName() string
 
 	// SaveState 保存播放列表状态到存储
@@ -69,10 +71,11 @@ type PlayMode interface {
 	GetMode() types.Mode
 
 	// GetModeName 获取播放模式名称
+	//
+	// Deprecated: please use GetMode().Name() instead.
 	GetModeName() string
 
 	// OnPlaylistChanged 当播放列表发生变化时的回调
 	// 用于处理播放列表变化对播放模式的影响（如随机播放需要重新洗牌）
 	OnPlaylistChanged(currentIndex int, playlist []structs.Song) error
 }
-
