@@ -4,14 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -79,10 +75,6 @@ type Player struct {
 	playingMenu      Menu
 
 	lyricService *lyric.Service
-
-	// 播放进度条
-	progressLastWidth float64
-	progressRamp      []string
 
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
 	stateHandler *control.RemoteControl
@@ -177,42 +169,6 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 	return p
 }
 
-func (p *Player) Update(_ tea.Msg, _ *model.App) {}
-
-func (p *Player) View(a *model.App, main *model.Main) (view string, lines int) {
-	var playerBuilder strings.Builder
-	playerBuilder.WriteString("\n\n")
-	playerBuilder.WriteString(p.progressView())
-	return playerBuilder.String(), a.WindowHeight() - main.MenuBottomRow()
-}
-
-// progressView 进度条UI
-func (p *Player) progressView() string {
-	allDuration := int(p.CurMusic().Duration.Seconds())
-	if allDuration == 0 {
-		return ""
-	}
-	passedDuration := int(p.PassedTime().Seconds())
-	progress := passedDuration * 100 / allDuration
-
-	width := float64(p.netease.WindowWidth() - 14)
-	start, end := model.GetProgressColor()
-	if width != p.progressLastWidth || len(p.progressRamp) == 0 {
-		p.progressRamp = util.MakeRamp(start, end, width)
-		p.progressLastWidth = width
-	}
-
-	progressView := model.Progress(&p.netease.Options().ProgressOptions, int(width), int(math.Round(width*float64(progress)/100)), p.progressRamp)
-
-	if allDuration/60 >= 100 {
-		times := util.SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
-		return progressView + " " + times
-	} else {
-		times := util.SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
-		return progressView + " " + times + " "
-	}
-}
-
 // InPlayingMenu 是否处于正在播放的菜单中
 func (p *Player) InPlayingMenu() bool {
 	key := p.netease.MustMain().CurMenu().GetMenuKey()
@@ -296,7 +252,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	}
 
 	if url == "" || err != nil || skip {
-		p.progressRamp = []string{}
 		p.playErrCount++
 		if skip {
 			logger.Info("已拦截无效播放")

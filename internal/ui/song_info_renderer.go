@@ -135,5 +135,9 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		}
 	}
 
-	return builder.String(), 1
+	// 使用一个较大的数字避免被 foxful-cli 的添加空行逻辑破坏
+	lines = a.WindowHeight() - main.MenuBottomRow()
+
+	// 换行为播放信息与进度条之间的空行
+	return builder.String() + "\n\n", lines
 }
