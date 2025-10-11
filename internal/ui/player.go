@@ -474,30 +474,26 @@ func (p *Player) NextSong(manual bool) {
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
 
+	// 到达底部，则触发翻页或加载更多
+	if playlistLen == 0 || index >= playlistLen-1 {
+		main := p.netease.MustMain()
+		if p.InPlayingMenu() {
+			if main.IsDualColumn() && index%2 == 0 {
+				p.netease.MustMain().MoveRight()
+			} else {
+				p.netease.MustMain().MoveDown()
+			}
+		} else if p.playingMenu != nil {
+			if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
+				bottomHook(main)
+			}
+		}
+	}
+
 	// 尝试获取下一首歌曲
 	song, err := p.playlistManager.NextSong(manual)
 	if err != nil {
-		// 如果是心动模式且到达列表末尾，获取更多推荐
-		if p.Mode() == types.PmIntelligent {
-			p.Intelligence(true)
-			return
-		}
-
-		// 其他模式的处理逻辑
-		if playlistLen == 0 || index >= playlistLen-1 {
-			main := p.netease.MustMain()
-			if p.InPlayingMenu() {
-				if main.IsDualColumn() && index%2 == 0 {
-					p.netease.MustMain().MoveRight()
-				} else {
-					p.netease.MustMain().MoveDown()
-				}
-			} else if p.playingMenu != nil {
-				if bottomHook := p.playingMenu.BottomOutHook(); bottomHook != nil {
-					bottomHook(main)
-				}
-			}
-		}
+		slog.Error("Get next song error", slog.Any("err", err), slog.String("play_mode", p.playlistManager.GetPlayModeName()))
 		return
 	}
 
