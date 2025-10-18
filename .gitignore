@@ -11,3 +11,4 @@ go.work.sum
 result/
 coverage.txt
 musicfox
+__debug*

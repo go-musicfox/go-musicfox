@@ -152,6 +152,7 @@ func Notify(content NotifyContent) {
 		freedesktop_dbus, err := dbus.ConnectSessionBus()
 		if err != nil {
 			log.Printf("connect dbus failed: %+v", errors.WithStack(err))
+			return
 		}
 		defer freedesktop_dbus.Close()
 		notfiy := freedesktop_dbus.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
