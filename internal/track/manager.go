@@ -260,22 +260,24 @@ func (m *Manager) resolveSongSource(ctx context.Context, song structs.Song) (Pla
 		}
 
 		// 检查缓存
-		cachePath, fileType, cacheErr := m.cacher.GetPath(song.Id, m.quality)
-		if cacheErr == nil {
-			slog.Debug("Resolved source: Cached", "songId", song.Id)
-			return PlayableSource{
-				Song: song,
-				Type: SourceCached,
-				Path: cachePath,
-				Info: &netease.PlayableInfo{
-					URL:       "file://" + cachePath,
-					MusicType: fileType,
-				},
-			}, nil
-		}
-		if !errors.Is(cacheErr, os.ErrNotExist) {
-			slog.Error("Cache system error during source resolution", "songId", song.Id, "error", cacheErr)
-			return nil, cacheErr
+		if !m.cacher.IsDisabled() {
+			cachePath, fileType, cacheErr := m.cacher.GetPath(song.Id, m.quality)
+			if cacheErr == nil {
+				slog.Debug("Resolved source: Cached", "songId", song.Id)
+				return PlayableSource{
+					Song: song,
+					Type: SourceCached,
+					Path: cachePath,
+					Info: &netease.PlayableInfo{
+						URL:       "file://" + cachePath,
+						MusicType: fileType,
+					},
+				}, nil
+			}
+			if !errors.Is(cacheErr, os.ErrNotExist) {
+				slog.Error("Cache system error during source resolution", "songId", song.Id, "error", cacheErr)
+				return nil, cacheErr
+			}
 		}
 
 		// 从网络获取
