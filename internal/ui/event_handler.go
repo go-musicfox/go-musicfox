@@ -292,13 +292,13 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 	switch {
 	case msg.Button == tea.MouseButtonLeft && slices.Contains([]tea.MouseAction{tea.MouseActionPress, tea.MouseActionMotion}, msg.Action):
 		x, y := msg.X, msg.Y
-		w := len(player.progressRamp)
-		if y+1 == a.WindowHeight() && x+1 <= len(player.progressRamp) {
+		progressBarWidth := a.WindowWidth() - 14
+		if y+1 == a.WindowHeight() && x+1 <= progressBarWidth {
 			allDuration := int(player.CurMusic().Duration.Seconds())
 			if allDuration == 0 {
 				return true, main, nil
 			}
-			duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(w)
+			duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(progressBarWidth)
 			player.Seek(time.Second * time.Duration(duration))
 			if player.State() != types.Playing {
 				player.Resume()

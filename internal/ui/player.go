@@ -4,17 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
-	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
@@ -27,7 +21,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
-	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
@@ -59,6 +52,17 @@ const (
 	CtrlRerender CtrlType = "Rerender"
 )
 
+// playerRendererState 提高 UI 渲染所需的歌曲信息
+type playerRendererState interface {
+	CurSong() structs.Song
+	CurSongIndex() int
+	PassedTime() time.Duration
+	State() types.State
+	Volume() int
+	Mode() types.Mode
+	Playlist() []structs.Song
+}
+
 // Player 网易云音乐播放器
 type Player struct {
 	netease *Netease
@@ -71,10 +75,6 @@ type Player struct {
 	playingMenu      Menu
 
 	lyricService *lyric.Service
-
-	// 播放进度条
-	progressLastWidth float64
-	progressRamp      []string
 
 	playErrCount int // 错误计数，当错误连续超过5次，停止播放
 	stateHandler *control.RemoteControl
@@ -169,150 +169,6 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 	return p
 }
 
-func (p *Player) Update(_ tea.Msg, _ *model.App) {}
-
-func (p *Player) View(a *model.App, main *model.Main) (view string, lines int) {
-	var playerBuilder strings.Builder
-	playerBuilder.WriteString(p.songView())
-	playerBuilder.WriteString("\n\n")
-	playerBuilder.WriteString(p.progressView())
-	return playerBuilder.String(), a.WindowHeight() - main.MenuBottomRow()
-}
-
-// songView 歌曲信息UI
-func (p *Player) songView() string {
-	// Every part of the song view is expressed as a segment: unformatted text followed by a color specification
-	// This makes computing the total length of the song view easier
-	type Segment struct {
-		text  string
-		color termenv.Color
-	}
-
-	var (
-		builder  strings.Builder
-		main     = p.netease.MustMain()
-		segments []Segment
-	)
-
-	// Helper for adding a new segment
-	addSegment := func(text string, color termenv.Color) {
-		segments = append(segments, Segment{text, color})
-	}
-	// Helper for adding text whose color we don't care about
-	addText := func(text string) {
-		segments = append(segments, Segment{text, termenv.ANSIBrightBlack})
-	}
-
-	prefixLen := 10
-	if main.MenuStartColumn()-4 > 0 {
-		prefixLen += 12
-		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), termenv.ANSIBrightBlack)
-		}
-		{
-			msg := p.playlistManager.GetPlayModeName()
-			addSegment(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta)
-		}
-		addSegment(fmt.Sprintf("%d%% ", p.Volume()), termenv.ANSIBrightBlue)
-	}
-	if p.State() == types.Playing {
-		addSegment("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow)
-	} else {
-		addSegment("_ z Z Z ", termenv.ANSIYellow)
-	}
-
-	if p.CurSong().Id > 0 {
-		var color termenv.ANSIColor
-		if likelist.IsLikeSong(p.CurSong().Id) {
-			color = termenv.ANSIRed
-		} else {
-			color = termenv.ANSIWhite
-		}
-		addSegment("♥ ", color)
-	}
-
-	if p.CurSongIndex() < len(p.Playlist()) {
-		// 按剩余长度截断字符串
-		songName := p.CurSong().Name
-		if !main.CenterEverything() {
-			songName = runewidth.Truncate(songName, p.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
-		}
-		addSegment(songName, util.GetPrimaryColor())
-		addText(" ")
-
-		var artists strings.Builder
-		for i, v := range p.CurSong().Artists {
-			if i != 0 {
-				artists.WriteString(",")
-			}
-			artists.WriteString(v.Name)
-		}
-
-		artistString := artists.String()
-		if !main.CenterEverything() {
-			// 按剩余长度截断字符串
-			remainLen := p.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(p.CurSong().Name)
-			artistString = runewidth.Truncate(
-				runewidth.FillRight(artistString, remainLen),
-				remainLen, "")
-		}
-		addSegment(artistString, termenv.ANSIBrightBlack)
-	}
-
-	if main.CenterEverything() {
-		totalWidth := 0
-		widthLimit := p.netease.WindowWidth() - 4
-		for index, segment := range segments {
-			segmentWidth := runewidth.StringWidth(segment.text)
-			if totalWidth+segmentWidth > widthLimit {
-				segmentWidth = max(0, widthLimit-totalWidth)
-				segments[index].text = runewidth.Truncate(segment.text, segmentWidth, "")
-			}
-			totalWidth += segmentWidth
-		}
-		paddingLeft := (p.netease.WindowWidth() - totalWidth) / 2
-		builder.WriteString(strings.Repeat(" ", paddingLeft))
-		for _, segment := range segments {
-			builder.WriteString(util.SetFgStyle(segment.text, segment.color))
-		}
-		builder.WriteString(strings.Repeat(" ", p.netease.WindowWidth()-paddingLeft-totalWidth))
-	} else {
-		// simply concatenate every segment with the specified color
-		for _, segment := range segments {
-			builder.WriteString(util.SetFgStyle(segment.text, segment.color))
-		}
-	}
-
-	return builder.String()
-}
-
-// progressView 进度条UI
-func (p *Player) progressView() string {
-	allDuration := int(p.CurMusic().Duration.Seconds())
-	if allDuration == 0 {
-		return ""
-	}
-	passedDuration := int(p.PassedTime().Seconds())
-	progress := passedDuration * 100 / allDuration
-
-	width := float64(p.netease.WindowWidth() - 14)
-	start, end := model.GetProgressColor()
-	if width != p.progressLastWidth || len(p.progressRamp) == 0 {
-		p.progressRamp = util.MakeRamp(start, end, width)
-		p.progressLastWidth = width
-	}
-
-	progressView := model.Progress(&p.netease.Options().ProgressOptions, int(width), int(math.Round(width*float64(progress)/100)), p.progressRamp)
-
-	if allDuration/60 >= 100 {
-		times := util.SetFgStyle(fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
-		return progressView + " " + times
-	} else {
-		times := util.SetFgStyle(fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60), util.GetPrimaryColor())
-		return progressView + " " + times + " "
-	}
-}
-
 // InPlayingMenu 是否处于正在播放的菜单中
 func (p *Player) InPlayingMenu() bool {
 	key := p.netease.MustMain().CurMenu().GetMenuKey()
@@ -396,7 +252,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	}
 
 	if url == "" || err != nil || skip {
-		p.progressRamp = []string{}
 		p.playErrCount++
 		if skip {
 			logger.Info("已拦截无效播放")
