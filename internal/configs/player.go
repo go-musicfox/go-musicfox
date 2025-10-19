@@ -25,6 +25,9 @@ type PlayerConfig struct {
 	// 显示歌单下所有歌曲
 	ShowAllSongsOfPlaylist bool `koanf:"showAllSongsOfPlaylist"`
 
+	// 鼠标滚轮单次滚动调节的音量值 (取值范围 1-20)
+	MouseVolumeStep int `koanf:"mouseVolumeStep"`
+
 	Beep BeepConfig `koanf:"beep"`
 	Mpd  MpdConfig  `koanf:"mpd"`
 	Mpv  MpvConfig  `koanf:"mpv"`

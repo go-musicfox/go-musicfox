@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -340,7 +341,10 @@ func (p *beepPlayer) DownVolume() {
 }
 
 func (p *beepPlayer) Volume() int {
-	return int((p.volume.Volume + 5) * 100 / 5) // 转为0~100存储
+	p.l.Lock()
+	defer p.l.Unlock()
+	floatVolume := (p.volume.Volume + 5) * 100 / 5
+	return int(math.Round(floatVolume)) // 转为0~100存储
 }
 
 func (p *beepPlayer) SetVolume(volume int) {
