@@ -124,7 +124,11 @@ func DataDir() string {
 func RuntimeDir() string {
 	initPaths()
 	dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
-	mustCreateDirectory(dir)
+	
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		slog.Error("创建运行时目录失败，使用缓存目录", "dir", dir, "error", err)
+		return CacheDir()
+	}
 	return dir
 }
 
