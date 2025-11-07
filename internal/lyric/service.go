@@ -3,6 +3,7 @@ package lyric
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -88,12 +89,18 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 	s.lastLRCData = lrcData
 	s.currentSongID = song.Id
 
-	lrcFile, _ := ReadLRC(strings.NewReader(lrcData.Original))
+	lrcFile, err := ReadLRC(strings.NewReader(lrcData.Original))
+	if err != nil {
+		return errors.Wrap(err, "failed to parse original lyric")
+	}
 	s.fragments = lrcFile.fragments
 
 	if s.showTranslation {
-		transLrcFile, _ := ReadTranslateLRC(strings.NewReader(lrcData.Translated))
-		s.transFragments = transLrcFile.fragments
+		if trans, err := ReadTranslateLRC(strings.NewReader(lrcData.Translated)); err != nil {
+			slog.Error("failed to parse lyric translationd", "error", err)
+		} else {
+			s.transFragments = trans.fragments
+		}
 	}
 
 	s.isRunning = true

@@ -270,7 +270,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		return
 	}
 
-	go p.lyricService.SetSong(context.Background(), song)
+	errorx.Go(func() {
+		p.lyricService.SetSong(context.Background(), song)
+	}, true)
 
 	p.Play(player.URLMusic{
 		URL:  url,
