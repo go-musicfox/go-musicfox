@@ -65,6 +65,8 @@ type LyricConfig struct {
 	ShowTranslation bool `koanf:"showTranslation"`
 	// 偏移: ms
 	Offset int `koanf:"offset"`
+	// 忽略歌词解析错误
+	SkipParseErr bool `koanf:"skipParseErr"`
 }
 
 // PprofConfig Go 性能分析工具 pprof 的相关设置

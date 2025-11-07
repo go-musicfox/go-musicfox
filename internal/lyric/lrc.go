@@ -18,6 +18,8 @@ import (
 // Parses an LRC file
 // https://en.wikipedia.org/wiki/LRC_(file_format)
 
+// TODO: 重构歌词解析以简化 Service.SetSong 方法
+
 type LRCFile struct {
 	fragments []LRCFragment
 
@@ -108,9 +110,9 @@ func ReadLRC(reader io.Reader) (lrcFile *LRCFile, err error) {
 }
 
 func ReadTranslateLRC(reader io.Reader) (f *TranslateLRCFile, err error) {
-	lrcFile, e := ReadLRC(reader)
-	if e != nil {
-		return nil, e
+	lrcFile, err := ReadLRC(reader)
+	if err != nil && lrcFile == nil { // 允许 lrcFile 非空时继续尝试解析
+		return nil, err
 	}
 	f = &TranslateLRCFile{fragments: map[int64]string{}}
 	for _, fragment := range lrcFile.fragments {
