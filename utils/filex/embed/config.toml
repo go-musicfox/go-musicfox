@@ -110,9 +110,11 @@ downloadSongWithLyric = false
 # 缓存目录
 # 若设置了 MUSICFOX_ROOT 变量，则默认为 ${MUSICFOX_ROOT}/cache
 # 若未设置 MUSICFOX_ROOT 变量，则为相应系统的默认缓存目录的 go-musicfox 子目录
-# 注意：如果使用 mpd，mpd 配置中的 "music_directory" 必须与 cacheDir 一致
 dir = ""
-# 缓存文件的总大小限制（单位：MB）
+# 音乐缓存路径，相对路径相对于 dir
+# 注意：如果使用 mpd，mpd 配置中的 "music_directory" 必须与 musicDir 路径一致
+musicDir = "music_cache"
+# 音乐缓存文件的总大小限制（单位：MB）
 # 0 为不使用缓存，-1 为不限制
 limit = 0
 

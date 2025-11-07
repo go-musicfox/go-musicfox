@@ -80,7 +80,12 @@ func initPathsWithConfig() {
 				paths.cacheDir, _ = filepath.Abs(userCacheDir)
 			}
 		}
-		paths.musicCacheDir = filepath.Join(paths.cacheDir, "music_cache")
+		musicCacheDir := configs.AppConfig.Storage.Cache.MusicDir
+		if filepath.IsAbs(musicCacheDir) {
+			paths.musicCacheDir, _ = filepath.Abs(musicCacheDir)
+		} else {
+			paths.musicCacheDir = filepath.Join(paths.cacheDir, musicCacheDir)
+		}
 
 		if userDownloadDir := configs.AppConfig.Storage.DownloadDir; userDownloadDir != "" {
 			if paths.isPortable {

@@ -28,6 +28,8 @@ type StorageConfig struct {
 type CacheConfig struct {
 	// 指定缓存目录
 	Dir string `koanf:"dir"`
+	// 音乐缓存路径，相对于 Dir
+	MusicDir string `koanf:"musicDir"`
 	// 缓存大小（以MB为单位），0为不使用缓存，-1为不限制
 	Limit int64 `koanf:"limit"`
 }
