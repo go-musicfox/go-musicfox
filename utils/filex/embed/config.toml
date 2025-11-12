@@ -47,6 +47,8 @@ show = true
 showTranslation = true
 # 歌词显示时间的全局偏移量（毫秒），正值表示歌词提前显示
 offset = 0
+# 忽略歌词解析错误
+skipParseErr = false
 
 # Go性能分析工具pprof的相关设置
 [main.pprof]

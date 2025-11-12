@@ -71,8 +71,9 @@ func NewNetease(app *model.App) *Netease {
 	showTranslation := configs.AppConfig.Main.Lyric.ShowTranslation
 	offset := time.Duration(configs.AppConfig.Main.Lyric.Offset) * time.Millisecond
 	showLyric := configs.AppConfig.Main.Lyric.Show
+	skipParseErr := configs.AppConfig.Main.Lyric.SkipParseErr
 
-	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset)
+	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset, skipParseErr)
 	n.player = NewPlayer(n, n.lyricService)
 
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)

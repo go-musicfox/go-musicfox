@@ -3,6 +3,7 @@ package lyric
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -58,18 +59,20 @@ type Service struct {
 	isRunning       bool
 	showTranslation bool
 	offset          time.Duration
+	skipParseErr    bool
 
 	mu sync.RWMutex
 }
 
 // NewService creates a new lyric service.
-func NewService(fetcher Fetcher, showTranslation bool, initialOffset time.Duration) *Service {
+func NewService(fetcher Fetcher, showTranslation bool, initialOffset time.Duration, skipParseErr bool) *Service {
 	return &Service{
 		fetcher:         fetcher,
 		currentIndex:    -1,
 		showTranslation: showTranslation,
 		offset:          initialOffset,
 		transFragments:  make(map[int64]string),
+		skipParseErr:    skipParseErr,
 	}
 }
 
@@ -88,12 +91,29 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 	s.lastLRCData = lrcData
 	s.currentSongID = song.Id
 
-	lrcFile, _ := ReadLRC(strings.NewReader(lrcData.Original))
-	s.fragments = lrcFile.fragments
+	lrcFile, err := ReadLRC(strings.NewReader(lrcData.Original))
+	if err != nil {
+		if !s.skipParseErr {
+			return errors.Wrap(err, "failed to parse original lyric")
+		}
+		slog.Debug("ignoring lyric parsing error", "error", err)
+	}
+
+	if lrcFile != nil {
+		s.fragments = lrcFile.fragments
+	}
 
 	if s.showTranslation {
-		transLrcFile, _ := ReadTranslateLRC(strings.NewReader(lrcData.Translated))
-		s.transFragments = transLrcFile.fragments
+		if trans, err := ReadTranslateLRC(strings.NewReader(lrcData.Translated)); err == nil {
+			s.transFragments = trans.fragments
+		} else {
+			if s.skipParseErr && trans != nil {
+				s.transFragments = trans.fragments
+				slog.Debug("ignoring lyric translation parsing error", "error", err)
+			} else {
+				slog.Error("failed to parse lyric translationd", "error", err)
+			}
+		}
 	}
 
 	s.isRunning = true
