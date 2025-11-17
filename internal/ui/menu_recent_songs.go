@@ -45,7 +45,7 @@ func (m *RecentSongsMenu) BeforeEnterMenuHook() model.Hook {
 		}
 
 		recentSongService := service.RecordRecentSongsService{}
-		code, response := recentSongService.RecordRecentSongs()
+		code, response, _ := recentSongService.RecordRecentSongs()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
