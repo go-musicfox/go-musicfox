@@ -15,10 +15,10 @@ type LoginQRService struct {
 //
 // 返回：
 //
-//	- code: 状态码
-//  - bodyByte：返回的响应体
-//  - 获取到的Unikey
-//  - error
+//   - code: 状态码
+//   - bodyByte：返回的响应体
+//   - 获取到的Unikey
+//   - error
 func (service *LoginQRService) GetKey() (float64, []byte, string, error) {
 	data := map[string]interface{}{
 		"type":         1,

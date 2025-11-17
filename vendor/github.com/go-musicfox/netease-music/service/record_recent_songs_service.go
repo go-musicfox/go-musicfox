@@ -8,18 +8,15 @@ type RecordRecentSongsService struct {
 	Limit string `json:"limit" form:"limit"`
 }
 
-func (service *RecordRecentSongsService) RecordRecentSongs() (float64, []byte) {
-	options := &util.Options{
-		Crypto: "weapi",
-	}
-	data := make(map[string]string)
+func (service *RecordRecentSongsService) RecordRecentSongs() (float64, []byte, error) {
+	data := make(map[string]any)
 	if service.Limit == "" {
 		data["limit"] = "100"
 	} else {
 		data["limit"] = service.Limit
 	}
+	api := "https://music.163.com/api/play-record/song/list"
+	code, reBody, err := util.CallWeapi(api, data)
 
-	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/api/play-record/song/list`, data, options)
-
-	return code, reBody
+	return code, reBody, err
 }
