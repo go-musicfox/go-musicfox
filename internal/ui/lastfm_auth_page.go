@@ -408,7 +408,7 @@ func (l *LastfmAuthPage) showQRCode() (model.Page, tea.Cmd) {
 		return l, nil
 	}
 
-	path, err := app.GenQRCode("qrcode_lastfm.png", l.url)
+	path, _, err := app.GenQRCode("qrcode_lastfm.png", l.url)
 	if err != nil {
 		return errHandler(err)
 	}
