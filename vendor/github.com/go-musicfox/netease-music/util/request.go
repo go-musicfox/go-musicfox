@@ -286,14 +286,15 @@ type request struct {
 	Params  map[string]string
 	Datas   map[string]string
 	Json    map[string]string
+	Proxy   string
 }
 
 // 初始化并返回一个request结构体以进行发送请求前的准备
-func NewRequest(url string) *request {
+func NewRequest(url string, proxy ...string) *request {
 	req := requests.Requests()
 	cookieJar := GetGlobalCookieJar()
 	req.Client.Jar = cookieJar
-	return &request{
+	r := &request{
 		Req: req,
 		Url: url,
 		Headers: map[string]string{
@@ -304,6 +305,12 @@ func NewRequest(url string) *request {
 		Datas:  map[string]string{},
 		Json:   map[string]string{},
 	}
+	// 如果传入了代理地址，则设置代理
+	if len(proxy) > 0 && proxy[0] != "" {
+		r.Proxy = proxy[0]
+		r.Req.Proxy(r.Proxy)
+	}
+	return r
 }
 
 // 发送 GET 请求
@@ -358,12 +365,12 @@ func (req *request) SendPost() (Response *http.Response, err error) {
 //   - code: API 响应中的业务状态码。
 //   - bodyBytes: 完整的 API 响应体。
 //   - err: 如果在请求过程中发生任何错误，则返回非 nil 的 error。
-func CallWeapi(api string, data map[string]interface{}) (code float64, bodyBytes []byte, err error) {
+func CallWeapi(api string, data map[string]interface{}, proxy ...string) (code float64, bodyBytes []byte, err error) {
 	encodedParams, err := ApiParamsEncode(data)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to encode api params: %w", err)
 	}
-	req := NewRequest(api)
+	req := NewRequest(api, proxy...)
 	req.Datas = encodedParams
 
 	resp, err := req.SendPost()

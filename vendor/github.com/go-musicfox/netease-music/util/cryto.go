@@ -182,3 +182,27 @@ func GenerateChainID(cookieJar http.CookieJar) string {
 	chainID := fmt.Sprintf("%s_%s_%s_%s_%d", version, sDeviceId, platform, action, timestamp)
 	return chainID
 }
+
+// 生成 _ntes_nuid
+func CreateNtesUID(
+	location string,
+	screenWidth, screenHeight int,
+	userAgent string,
+) string {
+	timestamp := time.Now().UnixMilli()
+	random := math_rand.Float64()
+
+	// 模拟真实的浏览器窗口尺寸
+	clientWidth, clientHeight := generateBrowserClientDimensions(screenWidth, screenHeight)
+
+	return GenerateNtesUID(
+		timestamp,
+		location,
+		screenWidth,
+		screenHeight,
+		userAgent,
+		random,
+		clientWidth,
+		clientHeight,
+	)
+}

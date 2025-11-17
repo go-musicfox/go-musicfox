@@ -1,0 +1,111 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+    # you may remove this if you don't need go generate
+    - go generate ./...
+
+builds:
+  - main: ./cmd/qrterminal/main.go
+    binary: qrterminal
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+
+archives:
+  - formats: [tar.gz]
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  github:
+    owner: mdp
+    name: qrterminal
+  draft: false
+  prerelease: auto
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+brews:
+  - name: qrterminal
+    repository:
+      owner: mdp
+      name: homebrew-tap
+      token: "{{ .Env.GORELEASER_TOKEN_TAP }}"
+    commit_author:
+      name: mdp
+      email: m@mdp.im
+    homepage: https://github.com/mdp/qrterminal
+    description: 'Create and display QR codes on the command line'
+
+dockers:
+  - image_templates:
+      - ghcr.io/mdp/qrterminal:{{ .Tag }}-amd64
+    goarch: amd64
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - image_templates:
+      - ghcr.io/mdp/qrterminal:{{ .Tag }}-arm64
+    goarch: arm64
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - id: qrterminal-latest
+    name_template: ghcr.io/mdp/qrterminal:latest
+    image_templates:
+      - ghcr.io/mdp/qrterminal:{{ .Tag }}-amd64
+      - ghcr.io/mdp/qrterminal:{{ .Tag }}-arm64
+    skip_push: auto
+  - id: qrterminal-Tag
+    name_template: ghcr.io/mdp/qrterminal:{{ .Tag }}
+    image_templates:
+      - ghcr.io/mdp/qrterminal:{{ .Tag }}-amd64
+      - ghcr.io/mdp/qrterminal:{{ .Tag }}-arm64

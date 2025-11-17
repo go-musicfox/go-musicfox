@@ -1,10 +1,16 @@
 package util
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"math/rand"
+	math_rand "math/rand/v2"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -85,4 +91,53 @@ func AddCookiesToJar(jar http.CookieJar, cookies map[string]string, targetURLStr
 	if len(cookiesToSet) > 0 {
 		jar.SetCookies(targetURL, cookiesToSet)
 	}
+}
+
+func stringToEnt(s string) string {
+	var builder strings.Builder
+	for _, r := range s {
+		if r > 255 {
+			builder.WriteString(fmt.Sprintf("&#%d;", r))
+		} else {
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
+}
+
+// 生成_ntes_nuid
+func GenerateNtesUID(
+	timestamp int64,
+	location string,
+	screenWidth, screenHeight int,
+	userAgent string,
+	random float64,
+	clientWidth, clientHeight int,
+) string {
+	clientDimensions := fmt.Sprintf("%d:%d", clientWidth, clientHeight)
+	rawString := strconv.FormatInt(timestamp, 10) +
+		location +
+		strconv.Itoa(screenWidth) +
+		strconv.Itoa(screenHeight) +
+		userAgent +
+		strconv.FormatFloat(random, 'f', -1, 64) +
+		clientDimensions
+	encodedString := stringToEnt(rawString)
+	hasher := md5.New()
+	hasher.Write([]byte(encodedString))
+	hashBytes := hasher.Sum(nil)
+	return hex.EncodeToString(hashBytes)
+}
+
+func generateBrowserClientDimensions(screenWidth, screenHeight int) (clientWidth, clientHeight int) {
+	verticalOffset := math_rand.N(150-90+1) + 90
+	clientHeight = screenHeight - verticalOffset
+
+	horizontalOffset := 0
+	if math_rand.N(2) == 1 {
+		horizontalOffset = 17
+	}
+	clientWidth = screenWidth - horizontalOffset
+
+	return clientWidth, clientHeight
 }

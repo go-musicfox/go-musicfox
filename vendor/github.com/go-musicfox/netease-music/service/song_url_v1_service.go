@@ -33,13 +33,8 @@ type SongUrlV1Service struct {
 	SkipUNM    bool
 }
 
-func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
-	options := &util.Options{
-		Crypto:  "eapi",
-		Url:     "/api/song/enhance/player/url/v1",
-		SkipUNM: service.SkipUNM,
-	}
-	data := make(map[string]string)
+func (service *SongUrlV1Service) SongUrl() (float64, []byte, error) {
+	data := make(map[string]interface{})
 	data["ids"] = "[" + service.ID + "]"
 	if service.Level == "" {
 		service.Level = Higher
@@ -53,7 +48,7 @@ func (service *SongUrlV1Service) SongUrl() (float64, []byte) {
 	}
 	data["encodeType"] = service.EncodeType
 
-	code, reBody, _ := util.CreateRequest("POST", `https://interface.music.163.com/eapi/song/enhance/player/url/v1`, data, options)
-
-	return code, reBody
+	api := "https://music.163.com/weapi/song/enhance/player/url/v1"
+	code, bodyBytes, err := util.CallWeapi(api, data)
+	return code, bodyBytes, err
 }
