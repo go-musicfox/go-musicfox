@@ -34,7 +34,7 @@ func FetchPlayableInfo(songID int64, quality service.SongQualityLevel) (Playable
 		Level:   quality,
 		SkipUNM: true,
 	}
-	code, response := urlService.SongUrl()
+	code, response, _ := urlService.SongUrl()
 	slog.Debug("fetch song url", "code", code, "response", string(response))
 	if code != 200 {
 		return PlayableInfo{}, errors.New(string(response))

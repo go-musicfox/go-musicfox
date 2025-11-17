@@ -13,12 +13,9 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
-	"github.com/pkg/errors"
-	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -49,7 +46,6 @@ type LoginPage struct {
 	submitButton  string
 	qrLoginButton string
 	qrLoginStep   int
-	qrLoginUniKey string
 	tips          string
 	AfterLogin    LoginCallback
 }
@@ -377,54 +373,10 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 	}
 }
 
+// loginByQRCode 跳转到二维码登录界面
 func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
-	qrService := service.LoginQRService{}
-	if l.qrLoginStep == 0 {
-		code, resp, url, err := qrService.GetKey()
-		errHandler := func(err error) (model.Page, tea.Cmd) {
-			l.tips = util.SetFgStyle("生成二维码失败，请稍候再试", termenv.ANSIBrightRed)
-			if err != nil {
-				slog.Error("生成二维码失败", slogx.Error(err))
-			}
-			return l, nil
-		}
-		if err != nil {
-			return errHandler(err)
-		}
-		if code != 200 || url == "" {
-			return errHandler(errors.Errorf("code: %f, resp: %s", code, string(resp)))
-		}
-		path, err := app.GenQRCode("qrcode.png", url)
-		if err != nil {
-			return errHandler(err)
-		}
-		_ = open.Start(path)
-		l.tips = util.SetFgStyle("请扫描二维码(MUSICFOX_ROOT/qrcode.png)登录后，点击「继续」", termenv.ANSIBrightRed)
-		l.qrLoginStep++
-		l.qrLoginButton = model.GetFocusedButton(l.qrButtonTextByStep())
-		l.qrLoginUniKey = qrService.UniKey
-		return l, nil
-	}
-	qrService.UniKey = l.qrLoginUniKey
-	errHandler := func(err error) (model.Page, tea.Cmd) {
-		l.tips = util.SetFgStyle("校验二维码失败，请稍候再试", termenv.ANSIBrightRed)
-		if err != nil {
-			slog.Error("生成二维码失败", slogx.Error(err))
-		}
-		return l, nil
-	}
-	code, resp, err := qrService.CheckQR()
-	if err != nil {
-		return errHandler(err)
-	}
-	if code != 803 {
-		return errHandler(errors.Errorf("checkQR code: %f, resp: %s", code, string(resp)))
-	}
-	l.tips = ""
-	if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
-		return newPage, l.netease.Tick(time.Nanosecond)
-	}
-	return l.netease.MustMain(), model.TickMain(time.Nanosecond)
+	qrPage := NewQRLoginPage(l.netease, l, l.AfterLogin)
+	return qrPage, qrPage.Init()
 }
 
 func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
