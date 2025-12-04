@@ -1,6 +1,6 @@
 module github.com/go-musicfox/go-musicfox
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/adrg/xdg v0.5.3
@@ -40,8 +40,8 @@ require (
 	github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
 	github.com/tosone/minimp3 v1.0.2
 	go.etcd.io/bbolt v1.3.7
-	golang.org/x/sync v0.16.0
-	golang.org/x/sys v0.32.0
+	golang.org/x/sync v0.18.0
+	golang.org/x/sys v0.38.0
 )
 
 require (
@@ -88,10 +88,10 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/term v0.29.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
 
