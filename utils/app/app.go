@@ -22,7 +22,6 @@ type pathManager struct {
 	dataDir     string // 数据文件目录 (XDG_DATA_HOME)
 	stateDir    string // 状态文件目录 (XDG_STATE_HOME)
 	cacheDir    string // 缓存目录 (XDG_CACHE_HOME)
-	runtimeDir  string // 运行时目录 (XDG_RUNTIME_DIR)
 	downloadDir string // 下载目录 (XDG_DOWNLOAD_DIR)
 
 	dbDir         string // 数据库目录
@@ -129,7 +128,16 @@ func DataDir() string {
 func RuntimeDir() string {
 	initPaths()
 	dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
-	mustCreateDirectory(dir)
+
+	// 尝试创建目录
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			// 创建失败（如只读系统），回退到 CacheDir
+			slog.Warn("无法创建 RuntimeDir，回退到 CacheDir", "dir", dir, "error", err)
+			return CacheDir()
+		}
+	}
+
 	return dir
 }
 
