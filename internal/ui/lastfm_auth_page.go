@@ -15,7 +15,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	"github.com/mattn/go-runewidth"
@@ -35,7 +34,6 @@ type LastfmAuthPage struct {
 	submitButton    string
 	browserButton   string
 	qrAuthButton    string
-	qrAuthStep      int
 	browserAuthStep int
 	tips            string
 	AfterAction     func()
@@ -294,14 +292,7 @@ func (l *LastfmAuthPage) updateLoginInputs(msg tea.Msg) (model.Page, tea.Cmd) {
 }
 
 func (l *LastfmAuthPage) qrButtonTextByStep() string {
-	switch l.qrAuthStep {
-	case 1:
-		return "已扫码授权，继续"
-	case 0:
-		fallthrough
-	default:
-		return "扫码授权"
-	}
+	return "扫码授权"
 }
 
 func (l *LastfmAuthPage) browserButtonTextByStep() string {
@@ -395,35 +386,6 @@ func (l *LastfmAuthPage) initUserInfo() bool {
 	return true
 }
 
-func (l *LastfmAuthPage) showQRCode() (model.Page, tea.Cmd) {
-	errHandler := func(err error) (model.Page, tea.Cmd) {
-		l.tips = util.SetFgStyle("生成二维码失败，请稍候再试", termenv.ANSIBrightRed)
-		if err != nil {
-			slog.Error("生成二维码失败", slogx.Error(err))
-		}
-		return l, nil
-	}
-
-	if !l.getAuthUrlWithToken() {
-		return l, nil
-	}
-
-	path, _, err := app.GenQRCode("qrcode_lastfm.png", l.url)
-	if err != nil {
-		return errHandler(err)
-	}
-	slog.Info("路径", slog.Any("path", path))
-	if err = open.Start(path); err == nil {
-		l.tips = util.SetFgStyle("请扫描二维码(MUSICFOX_ROOT/qrcode_lastfm.png)登录授权后，点击「继续」", termenv.ANSIBrightRed)
-	} else {
-		l.tips = util.SetFgStyle("二维码(MUSICFOX_ROOT/qrcode_lastfm.png)展示失败，请自行打开并扫码授权", termenv.ANSIBrightRed)
-	}
-
-	l.qrAuthStep++
-	l.qrAuthButton = model.GetFocusedButton(l.qrButtonTextByStep())
-	return l, nil
-}
-
 func (l *LastfmAuthPage) authByLogin() (model.Page, tea.Cmd) {
 	var err error
 	l.sessionKey, err = l.netease.lastfm.Login(l.accountInput.Value(), l.passwordInput.Value())
@@ -440,18 +402,8 @@ func (l *LastfmAuthPage) authByLogin() (model.Page, tea.Cmd) {
 }
 
 func (l *LastfmAuthPage) authByQRCode() (model.Page, tea.Cmd) {
-	if l.qrAuthStep == 0 {
-		l.showQRCode()
-		return l, nil
-	}
-
-	if !l.getSessionKey() {
-		return l, nil
-	}
-	if !l.initUserInfo() {
-		return l, nil
-	}
-	return l.authSuccessHandle()
+	qrPage := NewLastfmQRAuthPage(l.netease, l, l.AfterAction)
+	return qrPage, qrPage.Init()
 }
 
 func (l *LastfmAuthPage) authByBrower() (model.Page, tea.Cmd) {
