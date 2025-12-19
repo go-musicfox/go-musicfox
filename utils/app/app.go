@@ -22,6 +22,7 @@ type pathManager struct {
 	dataDir     string // 数据文件目录 (XDG_DATA_HOME)
 	stateDir    string // 状态文件目录 (XDG_STATE_HOME)
 	cacheDir    string // 缓存目录 (XDG_CACHE_HOME)
+	runtimeDir  string // 运行时目录 (XDG_RUNTIME_DIR)
 	downloadDir string // 下载目录 (XDG_DOWNLOAD_DIR)
 
 	dbDir         string // 数据库目录
@@ -30,9 +31,10 @@ type pathManager struct {
 }
 
 var (
-	paths         pathManager
-	bootstrapOnce sync.Once
-	initPathsOnce sync.Once
+	paths          pathManager
+	bootstrapOnce  sync.Once
+	initPathsOnce  sync.Once
+	runtimeDirOnce sync.Once
 )
 
 func initPaths() {
@@ -125,20 +127,26 @@ func DataDir() string {
 }
 
 // RuntimeDir 用于 beep 临时文件、二维码图片路径等
+// TODO: 考虑移除 runtime 目录改为系统临时目录
 func RuntimeDir() string {
-	initPaths()
-	dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
+	runtimeDirOnce.Do(func() {
+		initPaths()
 
-	// 尝试创建目录
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			// 创建失败（如只读系统），回退到 CacheDir
-			slog.Warn("无法创建 RuntimeDir，回退到 CacheDir", "dir", dir, "error", err)
-			return CacheDir()
+		if paths.isPortable {
+			paths.runtimeDir = CacheDir()
+			return
 		}
-	}
 
-	return dir
+		dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
+
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			slog.Warn("无法创建 RuntimeDir，回退到 CacheDir", "dir", dir, "error", err)
+			dir = CacheDir()
+		}
+		paths.runtimeDir = dir
+	})
+
+	return paths.runtimeDir
 }
 
 func DBDir() string {
