@@ -31,9 +31,10 @@ type pathManager struct {
 }
 
 var (
-	paths         pathManager
-	bootstrapOnce sync.Once
-	initPathsOnce sync.Once
+	paths          pathManager
+	bootstrapOnce  sync.Once
+	initPathsOnce  sync.Once
+	runtimeDirOnce sync.Once
 )
 
 func initPaths() {
@@ -126,11 +127,26 @@ func DataDir() string {
 }
 
 // RuntimeDir 用于 beep 临时文件、二维码图片路径等
+// TODO: 考虑移除 runtime 目录改为系统临时目录
 func RuntimeDir() string {
-	initPaths()
-	dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
-	mustCreateDirectory(dir)
-	return dir
+	runtimeDirOnce.Do(func() {
+		initPaths()
+
+		if paths.isPortable {
+			paths.runtimeDir = CacheDir()
+			return
+		}
+
+		dir := filepath.Join(xdg.RuntimeDir, types.AppLocalDataDir)
+
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			slog.Warn("无法创建 RuntimeDir，回退到 CacheDir", "dir", dir, "error", err)
+			dir = CacheDir()
+		}
+		paths.runtimeDir = dir
+	})
+
+	return paths.runtimeDir
 }
 
 func DBDir() string {
