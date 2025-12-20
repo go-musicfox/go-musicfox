@@ -1,3 +1,410 @@
+- semver: 4.7.2
+  date: 2025-12-19T13:38:57+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0de3acf1f97fb9cd772ba2fce4adcdaa9b8ede8f
+      note: 'fix: runtime path for portable mode'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 8ed38b525ab88d450db237c19bd926b3d82d1bf0
+      note: update RuntimeDir
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: f25e5c4758a443c5dd1d51bd9ba486555f695e89
+      note: update lastfm qr
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: d20db8c6aee8f0aebc2857e0e180362040fdfbdc
+      note: |-
+        chore(deps): bump golang.org/x/crypto from 0.35.0 to 0.45.0
+
+        Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.35.0 to 0.45.0.
+        - [Commits](https://github.com/golang/crypto/compare/v0.35.0...v0.45.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/crypto
+          dependency-version: 0.45.0
+          dependency-type: indirect
+        ...
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2f53f3ecf14cbb6115768663e5bea0c96182e31b
+      note: 'chore(vendor): sync go vendor directory'
+      author:
+        name: github-actions[bot]
+        email: github-actions[bot]@users.noreply.github.com
+      committer:
+        name: github-actions[bot]
+        email: github-actions[bot]@users.noreply.github.com
+    - commit: ca1c141219520dfab167900df10295fd318e113f
+      note: ⬆️update dependencies & update functions calling
+      author:
+        name: kaguya
+        email: 1435608435@qq.com
+      committer:
+        name: kaguya
+        email: 1435608435@qq.com
+    - commit: 558ac02a4091a2afca1108c831643c99199bb006
+      note: '✨feat(login): show qrcode in terminal on a new page'
+      author:
+        name: kaguya
+        email: 1435608435@qq.com
+      committer:
+        name: kaguya
+        email: 1435608435@qq.com
+    - commit: 309e16c5f69d6156c01fb1927c6d956daf838646
+      note: 'feat(cache): allow configuring the music cache path'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: b1694a7a443d83e5b5f0e8798f1194cec5246e1b
+      note: 'feat(lyric): add option to ignore parsing errors'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 64aead91025b41db0723ccca89d3804bf67c2ec4
+      note: 'fix(lyric): handle parsing errors to prevent panic'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 27b56dd095c9249a8170403a111592c1c666c00d
+      note: 'fix(track): skip cache lookup if disabled'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4cdde1c7697a10071da7669c8775088d209fd87d
+      note: 'fix: `BottomOutHook` not work'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7b03466c0cf35a5e903aaf9aa62eabc28c6e61e4
+      note: 'refactor(ui): decouple progress rendering into ProgressRenderer'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4f069974cbc4ad01ef8bde57ec9e9a1d7937bf23
+      note: 'fix(notify): avoid panic when dbus is unavailable'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 9e7010c14d6a499769bf77192bbead518a2f916b
+      note: 'rrefactor(ui): decouple song info rendering into SongInfoRenderer'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: b2c952132d91e573ad4be5ac9911187c9ae6f3ba
+      note: 'refactor: improve string representation for types.Mode'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 8e2f9a7dee1d0f30e3cb3328c2b4dd50134badd4
+      note: 'fix(beep): correct volume calculation by rounding float value'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 75b3461c1094a00c68dc64135ed0de5bda719372
+      note: 'feat: implement fine-grained volume stepping via mouse scroll'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 85c5c1e3fdbd414c9257d074859396791db2fc51
+      note: 'feat(auth): get cookie str from env'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2dbd764c24dff49411e5437804b94718ad9357ce
+      note: 'chore: update action name'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1ab8c637cacd4e299a67e97112a91dc1063efb0a
+      note: 'refactor(ui): decouple lyric logic from Player'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: d40d9ef5c268737eca2e5d31bbf9c7044be63b66
+      note: 'feat(ui): add LyricRenderer component'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 469b5e15150a01a9deb55829cd33d08d55b65e56
+      note: 'feat(lyric): introduce lyric service'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 40a55b6556825470598383213608f26abc9b4196
+      note: 'feat(track): support fetching translated lyrics'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 6097d86b215a80824ae2650ced0d7de46b7217df
+      note: 'chore(vendor): sync go vendor directory'
+      author:
+        name: github-actions[bot]
+        email: github-actions[bot]@users.noreply.github.com
+      committer:
+        name: github-actions[bot]
+        email: github-actions[bot]@users.noreply.github.com
+    - commit: 4705b96c78924f2890f2e69af180364c17050751
+      note: 'fix(ci): correct trigger branch to master for vendor sync'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 7a11ef72e4731fcbe4778f9472e71e69dba26d25
+      note: |-
+        Potential fix for code scanning alert no. 2: Workflow does not contain permissions
+
+        Co-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fe0be8f924179a1a3551202cfa143f951389732b
+      note: 'refactor(configs): improve error handling with pkg/errors'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 83b6cc07d76b7b313cbbf30da951d0c3c0514c3b
+      note: 'ci: add workflow to automate vendor sync'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: e87d42ea68893ce56b841974edb8638faac63b29
+      note: |-
+        fix(beep): resolve race condition in streamer
+
+        The beep player was susceptible to a critical race condition when songs were switched rapidly. This could lead to a nil pointer dereference panic within the `streamer` method, and previous attempts to `recover` from this panic resulted in deadlocks.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 1ade1822745e0b12f50411d97730b7d19cc79562
+      note: 'ci: ensure vendor directory is synced before build'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: aa23857f80f033a021ffa61dc6b366f4179e8747
+      note: 'fix(configs): normalize ''playortoggle'' keybinding to ''playOrToggle'''
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 695b8e08f4d27d83a272efcc99adb41e9ad6590c
+      note: 'docs: uodate README for config'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 4c9b0a182beebcdfa7ddf1e7a88247ac107e1c6b
+      note: |-
+        refactor(configs): rename default config file to config.toml
+
+        Renames the default configuration file from `go-musicfox.toml` to the more standard `config.toml`.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 33e47c35dfb0477c1adbb782e93492ca15a5ad85
+      note: |-
+        refactor(configs): use embedded TOML for defaults
+
+        The default configuration is now sourced directly from an embedded `go-musicfox.toml` file,
+        establishing it as the single source of truth and improving maintainability.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: ee1204d5258d8c7bbd9943ded8f2e8fb9c468adf
+      note: |-
+        refactor(configs): add backward compatibility for legacy INI format
+
+        To provide a smooth upgrade experience, the application now falls back to loading the legacy `go-musicfox.ini` if the new `go-musicfox.toml` is not found.
+
+        A warning is logged when the INI file is used, encouraging users to migrate. This compatibility is temporary and will be removed in a future version.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 44a6e4e43a560a2dc61618387d95d1a0eb4ee8d1
+      note: |-
+        feat(config): replace INI with TOML configuration system
+
+        Backward compatibility for legacy `.ini` files is not included in this commit.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: a7748eed915da96a7198a7d6e32a00c694a1b861
+      note: |-
+        refactor(config): add TOML configuration support using koanf
+
+        This commit introduces the infrastructure for TOML-based configuration as a modern replacement for the legacy INI format. The new system is built using the `knadh/koanf` library.
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 207dfe2dcc756e316101df5829cd9f25c5228463
+      note: 'refactor(keybindings): decouple config processing for TOML support'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: c83124ad9edee42bca32343e51b7399da3616c23
+      note: 'feat(config): add toml format config'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 13d9cf608d8df07585465df64a19fb96fef7a404
+      note: 'fix: storgae config invalid'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+    - commit: 0d525d5df59dd4e7bb578f3d58b02e8e9d867b4b
+      note: 'feat: add more path info to `config`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ea593abbe525c949e0fab61669267cd9e17ac1e8
+      note: 'chore: disable `unm` by default'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9de23c0b4eca6cfcab978b597fa5a7aea22dbd88
+      note: 'fix: custom MPV binary path'
+      author:
+        name: Sakari
+        email: 20642596+sakarie9@users.noreply.github.com
+      committer:
+        name: Sakari
+        email: 20642596+sakarie9@users.noreply.github.com
+    - commit: a6c86819e01db0add8f16d0b8772b05a7799f563
+      note: 'fix: rm `w` for logout'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8cd8518809020b982e734e6a653ba2988cbd4739
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.7.1
   date: 2025-09-01T23:38:23+08:00
   packager: go-musicfox
