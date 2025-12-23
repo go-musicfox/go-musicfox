@@ -56,11 +56,17 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	progressView := model.Progress(&r.netease.Options().ProgressOptions, int(width), int(math.Round(width*float64(progress)/100)), r.progressRamp)
 
+	//将passedDuration的值限制在allDuration的范围内
+	displayDuration := passedDuration
+	if displayDuration > allDuration {
+		displayDuration = allDuration
+	}
+
 	var times string
 	if allDuration/60 >= 100 {
-		times = fmt.Sprintf("%03d:%02d/%03d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60)
+		times = fmt.Sprintf("%03d:%02d/%03d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	} else {
-		times = fmt.Sprintf("%02d:%02d/%02d:%02d", passedDuration/60, passedDuration%60, allDuration/60, allDuration%60)
+		times = fmt.Sprintf("%02d:%02d/%02d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	}
 
 	styledTimes := util.SetFgStyle(times, util.GetPrimaryColor())
