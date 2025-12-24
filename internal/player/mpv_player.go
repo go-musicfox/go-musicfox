@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -127,7 +126,7 @@ func (p *mpvPlayer) startMpv(url, mediaTitle string) error {
 	}
 
 	if mt := strings.TrimSpace(mediaTitle); mt != "" {
-		args = append(args, "--force-media-title="+strconv.Quote(mt))
+		args = append(args, "--force-media-title="+mt)
 	}
 
 	if url != "" {
@@ -240,29 +239,32 @@ func (p *mpvPlayer) getMpvTimePos() (time.Duration, error) {
 
 // Play 播放指定音乐
 func (p *mpvPlayer) Play(music URLMusic) {
-	p.curMusic = music
-
-	// 停止当前 ticker
-	p.stopTicker()
-
-	// 启动MPV播放音乐
-	if err := p.startMpv(music.URL, buildMpvMediaTitle(music)); err != nil {
-		slog.Error("MPV播放失败", slogx.Error(err))
-		return
-	}
-
-	// 初始化同步时间
+	// 重置播放状态（保护 curMusic、ticker 和 state）
 	p.mutex.Lock()
+	p.curMusic = music
+	p.stopTicker()
 	p.lastSyncTime = time.Now()
 	p.playStartTime = time.Now()
 	p.cachedTimePos = 0
+	p.startTicker()
+	p.state = types.Playing
 	p.mutex.Unlock()
 
-	// 启动定期同步 ticker
-	p.startTicker()
+	// 启动MPV播放音乐（在解锁后，避免长时间持有锁）
+	if err := p.startMpv(music.URL, buildMpvMediaTitle(music)); err != nil {
+		slog.Error("MPV播放失败", slogx.Error(err))
+		// 如果启动失败，需要恢复状态
+		p.mutex.Lock()
+		p.state = types.Stopped
+		p.mutex.Unlock()
+		return
+	}
 
-	// 设置状态为播放中
-	p.setState(types.Playing)
+	// 通知状态变化
+	select {
+	case p.stateChan <- types.Playing:
+	case <-time.After(time.Second * 2):
+	}
 }
 
 // startTicker 启动定期同步 ticker
@@ -309,36 +311,66 @@ func (p *mpvPlayer) stopTicker() {
 
 // CurMusic 获取当前播放的音乐
 func (p *mpvPlayer) CurMusic() URLMusic {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	return p.curMusic
 }
 
 // Pause 暂停播放
 func (p *mpvPlayer) Pause() {
-	if p.state == types.Playing {
-		_ = p.sendCommand("{ \"command\": [\"set_property\", \"pause\", true] }")
-		// 暂停时同步一次当前位置
-		if timePos, err := p.getMpvTimePos(); err == nil {
-			p.mutex.Lock()
-			p.cachedTimePos = timePos
-			p.mutex.Unlock()
-		}
-		p.setState(types.Paused)
+	p.mutex.Lock()
+	if p.state != types.Playing {
+		p.mutex.Unlock()
+		return
+	}
+	p.mutex.Unlock()
+
+	_ = p.sendCommand("{ \"command\": [\"set_property\", \"pause\", true] }")
+	if timePos, err := p.getMpvTimePos(); err == nil {
+		p.mutex.Lock()
+		p.cachedTimePos = timePos
+		p.mutex.Unlock()
+	}
+
+	p.mutex.Lock()
+	p.state = types.Paused
+	p.mutex.Unlock()
+	select {
+	case p.stateChan <- types.Paused:
+	case <-time.After(time.Second * 2):
 	}
 }
 
 // Resume 恢复播放
 func (p *mpvPlayer) Resume() {
-	if p.state == types.Paused || p.state == types.Stopped {
-		_ = p.sendCommand("{ \"command\": [\"set_property\", \"pause\", false] }")
-		p.setState(types.Playing)
+	p.mutex.Lock()
+	if p.state != types.Paused && p.state != types.Stopped {
+		p.mutex.Unlock()
+		return
+	}
+	p.mutex.Unlock()
+
+	_ = p.sendCommand("{ \"command\": [\"set_property\", \"pause\", false] }")
+	p.mutex.Lock()
+	p.state = types.Playing
+	p.mutex.Unlock()
+	select {
+	case p.stateChan <- types.Playing:
+	case <-time.After(time.Second * 2):
 	}
 }
 
 // Stop 停止播放
 func (p *mpvPlayer) Stop() {
 	_ = p.sendCommand("{ \"command\": [\"stop\"] }")
+	p.mutex.Lock()
 	p.stopTicker()
-	p.setState(types.Stopped)
+	p.state = types.Stopped
+	p.mutex.Unlock()
+	select {
+	case p.stateChan <- types.Stopped:
+	case <-time.After(time.Second * 2):
+	}
 }
 
 // Toggle 切换播放/暂停状态
@@ -355,9 +387,12 @@ func (p *mpvPlayer) Toggle() {
 
 // Seek 跳转到指定时间
 func (p *mpvPlayer) Seek(duration time.Duration) {
+	p.mutex.Lock()
 	if p.state != types.Playing && p.state != types.Paused {
+		p.mutex.Unlock()
 		return
 	}
+	p.mutex.Unlock()
 
 	cmd := fmt.Sprintf(`{ "command": ["set_property", "time-pos", %f] }`, duration.Seconds())
 	if err := p.sendCommand(cmd); err != nil {
@@ -392,7 +427,7 @@ func (p *mpvPlayer) PassedTime() time.Duration {
 	return p.cachedTimePos
 }
 
-// PlayedTime 获取实际播放时长（从开始播放到现在经过的时间）
+// PlayedTime 获取从播放开始到现在的时间
 func (p *mpvPlayer) PlayedTime() time.Duration {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -420,7 +455,9 @@ func (p *mpvPlayer) StateChan() <-chan types.State {
 
 // setState 设置状态并通知
 func (p *mpvPlayer) setState(state types.State) {
+	p.mutex.Lock()
 	p.state = state
+	p.mutex.Unlock()
 	select {
 	case p.stateChan <- state:
 	case <-time.After(time.Second * 2):
