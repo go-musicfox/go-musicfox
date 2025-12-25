@@ -74,6 +74,7 @@ func NewNetease(app *model.App) *Netease {
 	skipParseErr := configs.AppConfig.Main.Lyric.SkipParseErr
 
 	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset, skipParseErr)
+	n.lyricService.EnableYRC(true) // Enable word-by-word lyrics
 	n.player = NewPlayer(n, n.lyricService)
 
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
