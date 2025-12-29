@@ -23,6 +23,7 @@ type LyricRenderer struct {
 	lyricStartRow     int
 	lyrics            [5]string // A fixed-size array to hold lines for rendering
 	lyricNowScrollBar *app.XScrollBar
+	currentTimeMs     int64 // Current playback time in milliseconds for YRC rendering
 }
 
 // NewLyricRenderer creates a new lyric renderer component.
@@ -38,6 +39,87 @@ func NewLyricRenderer(netease *Netease, lyricService *lyric.Service, initialVisi
 // SetVisibility allows dynamic control over the renderer's visibility.
 func (r *LyricRenderer) SetVisibility(visible bool) {
 	r.isVisible = visible
+}
+
+// SetCurrentTime sets the current playback time for YRC word highlighting.
+func (r *LyricRenderer) SetCurrentTime(timeMs int64) {
+	r.currentTimeMs = timeMs
+}
+
+// prepareYRCLines builds YRC word-by-word lyric lines for rendering.
+func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
+	index := state.YRCLineIndex
+
+	// Fill current YRC line (with word-level details in a special format)
+	currentLine := state.YRCLines[index]
+	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs)
+
+	// Fill previous YRC lines
+	for i := 1; i <= centerIndex; i++ {
+		if index-i >= 0 {
+			prevLine := state.YRCLines[index-i]
+			r.lyrics[centerIndex-i] = r.buildYRCLineString(prevLine, -1) // No highlight for previous lines
+		}
+	}
+
+	// Fill next YRC lines
+	for i := 1; i < r.lyricLines-centerIndex; i++ {
+		if index+i < len(state.YRCLines) {
+			nextLine := state.YRCLines[index+i]
+			r.lyrics[centerIndex+i] = r.buildYRCLineString(nextLine, -1) // No highlight for next lines
+		}
+	}
+}
+
+// buildYRCLineString constructs a displayable string from YRC line with word progress highlighting.
+// If currentTimeMs >= 0, highlights words based on their timing with ANSI colors.
+func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64) string {
+	var result strings.Builder
+
+	for _, word := range line.Words {
+		if currentTimeMs >= 0 && currentTimeMs < word.StartTime {
+			// Word not yet played: gray color
+			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightBlack))
+		} else if currentTimeMs >= 0 && currentTimeMs >= word.EndTime {
+			// Word fully played: cyan color
+			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightCyan))
+		} else if currentTimeMs >= 0 && currentTimeMs >= word.StartTime {
+			// Word currently playing: bright yellow/green for emphasis
+			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightYellow))
+		} else {
+			// No time tracking (non-current line): gray color
+			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightBlack))
+		}
+	}
+
+	// Append translation if available (gray color)
+	if line.TranslatedLyric != "" {
+		result.WriteString(" ")
+		result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.ANSIBrightBlack))
+	}
+
+	return result.String()
+}
+
+// stripAnsiCodes removes ANSI escape sequences from a string to get visible content
+func stripAnsiCodes(s string) string {
+	var result strings.Builder
+	inEscape := false
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\033' && i+1 < len(s) && s[i+1] == '[' {
+			inEscape = true
+			i++ // skip '['
+			continue
+		}
+		if inEscape {
+			if (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= 'a' && s[i] <= 'z') {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteByte(s[i])
+	}
+	return result.String()
 }
 
 // Update handles UI messages, primarily for resizing and configuration updates.
@@ -72,6 +154,11 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
+	// Update YRC playback time for word-level progress
+	if player := r.netease.Player(); player != nil {
+		r.SetCurrentTime(player.PassedTime().Milliseconds())
+	}
+
 	r.prepareLyricLines()
 
 	var lyricBuilder strings.Builder
@@ -97,11 +184,22 @@ func (r *LyricRenderer) prepareLyricLines() {
 	state := r.lyricService.State()
 	r.lyrics = [5]string{} // Clear previous lines
 
-	if !state.IsRunning || state.CurrentIndex < 0 {
+	if !state.IsRunning {
 		return
 	}
 
 	centerIndex := (r.lyricLines - 1) / 2
+
+	// If YRC is enabled, render word-by-word lyrics
+	if state.YRCEnabled && len(state.YRCLines) > 0 && state.YRCLineIndex >= 0 {
+		r.prepareYRCLines(state, centerIndex)
+		return
+	}
+
+	// Otherwise, render traditional LRC
+	if state.CurrentIndex < 0 {
+		return
+	}
 
 	// Fill current line
 	currentFrag := state.Fragments[state.CurrentIndex]
@@ -146,18 +244,30 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 	lyricsMaxLength := windowWidth - extraPadding
 	for i := startLine; i <= endLine; i++ {
 		line := r.lyrics[i]
-		if i == highlightLine {
+		// 中心行如果是普通 LRC，可以滚动；如果含 ANSI 颜色码（YRC 高亮），禁止滚动避免破坏转义序列
+		if i == highlightLine && !strings.Contains(line, "\033[") {
 			line = r.lyricNowScrollBar.Tick(lyricsMaxLength, line)
 			line = strings.Trim(line, " ")
 		}
-		line = runewidth.Truncate(line, lyricsMaxLength, "")
-		lineLength := runewidth.StringWidth(line)
+		// 不对带 ANSI 颜色码的行做截断（YRC 模式），否则会截掉 ESC 导致 "[96m" 之类残留
+		if !strings.Contains(line, "\033[") {
+			line = runewidth.Truncate(line, lyricsMaxLength, "")
+		}
+		// 计算可见宽度（去除 ANSI 码）
+		visibleLine := line
+		if strings.Contains(line, "\033[") {
+			visibleLine = stripAnsiCodes(line)
+		}
+		lineLength := runewidth.StringWidth(visibleLine)
 		paddingLeft := (windowWidth - lineLength) / 2
 		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
-		if i == highlightLine {
-			line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
-		} else {
-			line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
+		// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
+		if !strings.Contains(line, "\033[") {
+			if i == highlightLine {
+				line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
+			} else {
+				line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
+			}
 		}
 		lyricBuilder.WriteString(line)
 		lyricBuilder.WriteString(strings.Repeat(" ", windowWidth-paddingLeft-lineLength))
@@ -181,12 +291,36 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 			if startCol > 0 {
 				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
-			if i == 2 {
-				lyricLine := r.lyricNowScrollBar.Tick(maxLen, r.lyrics[i])
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+			var lyricLine string
+			if i == 2 && !strings.Contains(r.lyrics[i], "\033[") {
+				// 只有普通 LRC 中行允许滚动；YRC 有 ANSI 颜色码时禁止滚动
+				lyricLine = r.lyricNowScrollBar.Tick(maxLen, r.lyrics[i])
 			} else {
-				lyricLine := runewidth.Truncate(runewidth.FillRight(r.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
+				// Don't truncate lines with ANSI codes (YRC mode) as it breaks escape sequences
+				if strings.Contains(r.lyrics[i], "\033[") {
+					lyricLine = r.lyrics[i]
+				} else {
+					lyricLine = runewidth.Truncate(runewidth.FillRight(r.lyrics[i], maxLen), maxLen, "")
+				}
+			}
+			// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
+			if !strings.Contains(lyricLine, "\033[") {
+				if i == 2 {
+					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan)
+				} else {
+					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack)
+				}
+			}
+			lyricBuilder.WriteString(lyricLine)
+			// 计算可见宽度并填充空格到行末，避免残留
+			visibleLine := lyricLine
+			if strings.Contains(lyricLine, "\033[") {
+				visibleLine = stripAnsiCodes(lyricLine)
+			}
+			lineLen := runewidth.StringWidth(visibleLine)
+			remainingWidth := r.netease.WindowWidth() - startCol - lineLen
+			if remainingWidth > 0 {
+				lyricBuilder.WriteString(strings.Repeat(" ", remainingWidth))
 			}
 			lyricBuilder.WriteString("\n")
 		}
@@ -195,12 +329,35 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 			if startCol > 0 {
 				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 			}
-			if i == 2 {
-				lyricLine := r.lyricNowScrollBar.Tick(maxLen, r.lyrics[i])
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan))
+			var lyricLine string
+			if i == 2 && !strings.Contains(r.lyrics[i], "\033[") {
+				lyricLine = r.lyricNowScrollBar.Tick(maxLen, r.lyrics[i])
 			} else {
-				lyricLine := runewidth.Truncate(runewidth.FillRight(r.lyrics[i], maxLen), maxLen, "")
-				lyricBuilder.WriteString(util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack))
+				// Don't truncate lines with ANSI codes (YRC mode) as it breaks escape sequences
+				if strings.Contains(r.lyrics[i], "\033[") {
+					lyricLine = r.lyrics[i]
+				} else {
+					lyricLine = runewidth.Truncate(runewidth.FillRight(r.lyrics[i], maxLen), maxLen, "")
+				}
+			}
+			// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
+			if !strings.Contains(lyricLine, "\033[") {
+				if i == 2 {
+					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan)
+				} else {
+					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack)
+				}
+			}
+			lyricBuilder.WriteString(lyricLine)
+			// 计算可见宽度并填充空格到行末，避免残留
+			visibleLine := lyricLine
+			if strings.Contains(lyricLine, "\033[") {
+				visibleLine = stripAnsiCodes(lyricLine)
+			}
+			lineLen := runewidth.StringWidth(visibleLine)
+			remainingWidth := r.netease.WindowWidth() - startCol - lineLen
+			if remainingWidth > 0 {
+				lyricBuilder.WriteString(strings.Repeat(" ", remainingWidth))
 			}
 			lyricBuilder.WriteString("\n")
 		}
