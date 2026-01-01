@@ -15,7 +15,6 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -48,6 +47,15 @@ type LoginPage struct {
 	qrLoginStep   int
 	tips          string
 	AfterLogin    LoginCallback
+
+	// 以下字段用于鼠标点击区域的计算与命中
+	accountRowY  int // 账号输入框所在的行号（1-based）
+	passwordRowY int // 密码输入框所在的行号（1-based）
+	buttonsRowY  int // 提交/扫码按钮所在行号（1-based）
+	submitStartX int // 提交按钮起始 X（0-based）
+	submitEndX   int // 提交按钮结束 X（0-based，闭区间）
+	qrStartX     int // 扫码按钮起始 X（0-based）
+	qrEndX       int // 扫码按钮结束 X（0-based，闭区间）
 }
 
 func NewLoginPage(netease *Netease) (login *LoginPage) {
@@ -98,6 +106,66 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 	if _, ok = msg.(tickLoginMsg); ok {
 		return l, nil
+	}
+
+	// 鼠标事件处理
+	if mouse, ok := msg.(tea.MouseMsg); ok {
+		// 仅处理左键按下的点击
+		if mouse.Button == tea.MouseButtonLeft && mouse.Action == tea.MouseActionPress {
+			// 行坐标转换为 1-based 与 View 中记录的行号一致
+			y := mouse.Y + 1
+			x := mouse.X
+
+			// 点击输入框：设置焦点
+			if y == l.accountRowY {
+				l.index = 0
+				// 焦点与样式更新
+				l.accountInput.Focus()
+				l.accountInput.Prompt = model.GetFocusedPrompt()
+				l.accountInput.TextStyle = util.GetPrimaryFontStyle()
+
+				l.passwordInput.Blur()
+				l.passwordInput.Prompt = model.GetBlurredPrompt()
+				l.passwordInput.TextStyle = lipgloss.NewStyle()
+
+				// 按钮样式同步
+				l.submitButton = model.GetBlurredSubmitButton()
+				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+				return l, tickLogin(time.Nanosecond)
+			}
+			if y == l.passwordRowY {
+				l.index = 1
+				// 焦点与样式更新
+				l.passwordInput.Focus()
+				l.passwordInput.Prompt = model.GetFocusedPrompt()
+				l.passwordInput.TextStyle = util.GetPrimaryFontStyle()
+
+				l.accountInput.Blur()
+				l.accountInput.Prompt = model.GetBlurredPrompt()
+				l.accountInput.TextStyle = lipgloss.NewStyle()
+
+				// 按钮样式同步
+				l.submitButton = model.GetBlurredSubmitButton()
+				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+				return l, tickLogin(time.Nanosecond)
+			}
+
+			// 点击按钮：触发提交或扫码登录
+			if y == l.buttonsRowY {
+				// 命中提交按钮
+				if x >= l.submitStartX && x <= l.submitEndX {
+					l.index = submitIndex
+					return l.enterHandler()
+				}
+				// 命中扫码按钮
+				if x >= l.qrStartX && x <= l.qrEndX {
+					l.index = qrLoginIndex
+					return l.enterHandler()
+				}
+			}
+		}
+		// 其他鼠标事件交给输入框以便光标闪烁等
+		return l.updateLoginInputs(mouse)
 	}
 
 	if key, ok = msg.(tea.KeyMsg); !ok {
@@ -194,16 +262,23 @@ func (l *LoginPage) View(a *model.App) string {
 		mainPage = l.netease.MustMain()
 	)
 
+	lineCount := 0
+	write := func(s string) {
+		builder.WriteString(s)
+		lineCount += strings.Count(s, "\n")
+	}
+	curRow := func() int { return lineCount + 1 }
+
 	// title
 	if configs.AppConfig.Theme.ShowTitle {
-		builder.WriteString(mainPage.TitleView(a, &top))
+		write(mainPage.TitleView(a, &top))
 	} else {
 		top++
 	}
 
 	// menu title
-	builder.WriteString(mainPage.MenuTitleView(a, &top, l.menuTitle))
-	builder.WriteString("\n\n\n")
+	write(mainPage.MenuTitleView(a, &top, l.menuTitle))
+	write("\n\n\n")
 	top += 2
 
 	inputs := []*textinput.Model{
@@ -213,10 +288,10 @@ func (l *LoginPage) View(a *model.App) string {
 
 	for i, input := range inputs {
 		if mainPage.MenuStartColumn() > 0 {
-			builder.WriteString(strings.Repeat(" ", mainPage.MenuStartColumn()))
+			write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 		}
 
-		builder.WriteString(input.View())
+		write(input.View())
 
 		var valueLen int
 		if input.Value() == "" {
@@ -225,42 +300,67 @@ func (l *LoginPage) View(a *model.App) string {
 			valueLen = runewidth.StringWidth(input.Value())
 		}
 		if spaceLen := l.netease.WindowWidth() - mainPage.MenuStartColumn() - valueLen - 3; spaceLen > 0 {
-			builder.WriteString(strings.Repeat(" ", spaceLen))
+			write(strings.Repeat(" ", spaceLen))
+		}
+
+		// 记录输入框所在行号（1-based）
+		if i == 0 {
+			l.accountRowY = curRow()
+		} else if i == 1 {
+			l.passwordRowY = curRow()
 		}
 
 		top++
 
 		if i < len(inputs)-1 {
-			builder.WriteString("\n\n")
+			write("\n\n")
 			top++
 		}
 	}
 
-	builder.WriteString("\n\n")
+	write("\n\n")
 	top++
 	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 	}
-	builder.WriteString(l.tips)
-	builder.WriteString("\n\n")
+	write(l.tips)
+	write("\n\n")
 	top++
 	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 	}
-	builder.WriteString(l.submitButton)
+	// 记录按钮所在行（1-based）
+	l.buttonsRowY = curRow()
+
+	// 计算按钮的起止 X 坐标（0-based）
+	submitX := mainPage.MenuStartColumn()
+	if submitX < 0 {
+		submitX = 0
+	}
+	submitW := lipgloss.Width(l.submitButton)
+	l.submitStartX = submitX
+	l.submitEndX = submitX + submitW - 1
+
+	write(l.submitButton)
 
 	btnBlank := "    "
-	builder.WriteString(btnBlank)
-	builder.WriteString(l.qrLoginButton)
+	write(btnBlank)
+	// 扫码按钮坐标
+	qrX := submitX + submitW + lipgloss.Width(btnBlank)
+	qrW := lipgloss.Width(l.qrLoginButton)
+	l.qrStartX = qrX
+	l.qrEndX = qrX + qrW - 1
 
-	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - runewidth.StringWidth(types.SubmitText) - runewidth.StringWidth(l.qrButtonTextByStep()) - len(btnBlank)
+	write(l.qrLoginButton)
+
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(l.submitButton) - lipgloss.Width(l.qrLoginButton) - lipgloss.Width(btnBlank)
 	if spaceLen > 0 {
-		builder.WriteString(strings.Repeat(" ", spaceLen))
+		write(strings.Repeat(" ", spaceLen))
 	}
-	builder.WriteString("\n")
+	write("\n")
 
 	if a.WindowHeight() > top+3 {
-		builder.WriteString(strings.Repeat("\n", a.WindowHeight()-top-3))
+		write(strings.Repeat("\n", a.WindowHeight()-top-3))
 	}
 
 	return builder.String()

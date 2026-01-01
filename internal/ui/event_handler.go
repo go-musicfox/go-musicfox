@@ -3,16 +3,19 @@ package ui
 import (
 	"fmt"
 	"log/slog"
+	"runtime"
 	"slices"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/mathx"
 )
 
@@ -20,6 +23,11 @@ type EventHandler struct {
 	netease         *Netease
 	keyToOperateMap map[string]keybindings.OperateType // KeyStr -> OperateType
 	mouseVolumeStep int
+
+	// 双击检测相关字段
+	lastClickTime time.Time
+	lastClickX    int
+	lastClickY    int
 }
 
 func NewEventHandler(netease *Netease) *EventHandler {
@@ -38,6 +46,7 @@ func NewEventHandler(netease *Netease) *EventHandler {
 	return handler
 }
 
+// KeyMsgHandle 处理键盘事件
 func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.Page, tea.Cmd) {
 	if op, ok := h.keyToOperateMap[msg.String()]; ok {
 		stopPropagation, newPage, cmd := h.handle(op)
@@ -292,15 +301,136 @@ func (h *EventHandler) playOrToggleHandle() {
 	player.StartPlay()
 }
 
+// MouseMsgHandle 处理鼠标事件
 func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {
 	var (
 		player = h.netease.player
 		main   = a.MustMain()
 	)
 
+	// 登录页需要自己处理鼠标点击（输入框/按钮），这里不要吞掉事件
+	if _, ok := a.CurPage().(*LoginPage); ok {
+		return false, nil, nil
+	}
+
 	switch msg.Button {
 	case tea.MouseButtonLeft:
-		// Handle progress bar seeking first
+		// Handle play mode click
+		if msg.Action == tea.MouseActionPress {
+			// 计算播放模式显示位置
+			// 播放模式在歌曲信息行，位于窗口底部往上第3行（进度条是最后一行，往上数第3行）
+			playModeRow := a.WindowHeight() - 3
+			menuStartColumn := main.MenuStartColumn()
+
+			if msg.Y == playModeRow {
+				// 检查是否点击在播放模式区域
+				if menuStartColumn > 4 { // 确保有足够空间显示播放模式
+					// 播放模式名称最长约5个字符（如"列表循环"、"顺序播放"等）
+					playModeEndX := menuStartColumn + 5
+					if msg.X >= menuStartColumn-4 && msg.X <= playModeEndX {
+						player.SwitchMode()
+						return true, main, a.Tick(time.Nanosecond)
+					}
+				}
+				leftPad := 0
+				if !main.CenterEverything() && main.MenuStartColumn()-4 > 0 {
+					leftPad = main.MenuStartColumn() - 4
+				}
+
+				// 前缀段宽度：模式/音量/状态/心形与空格（模式/音量仅在 menuStartColumn-4>0 时显示）
+				modeWidth := 0
+				volWidth := 0
+				if main.MenuStartColumn()-4 > 0 {
+					modeWidth = runewidth.StringWidth(fmt.Sprintf("[%s] ", player.Mode().Name()))
+					volWidth = runewidth.StringWidth(fmt.Sprintf("%d%% ", player.Volume()))
+				}
+				var stateText string
+				if player.State() == types.Playing {
+					stateText = "♫ ♪ ♫ ♪ "
+				} else {
+					stateText = "_ z Z Z "
+				}
+				stateWidth := runewidth.StringWidth(stateText)
+				heartWidth := 0
+				if player.CurSong().Id > 0 {
+					// 仅宽度受影响，是否喜欢不影响字符宽度
+					_ = likelist.IsLikeSong(player.CurSong().Id)
+					heartWidth = runewidth.StringWidth("♥ ")
+				}
+
+				// 歌曲名显示宽度（可能被截断）
+				songName := player.CurSong().Name
+				songShownWidth := runewidth.StringWidth(songName)
+				if !main.CenterEverything() {
+					prefixLen := 10
+					if main.MenuStartColumn()-4 > 0 {
+						prefixLen += 12
+					}
+					maxSongWidth := a.WindowWidth() - main.MenuStartColumn() - prefixLen
+					if songShownWidth > maxSongWidth {
+						songShownWidth = maxSongWidth
+					}
+				}
+
+				// 歌手区域起始 X（绝对坐标，0-based）：左对齐空格 + 前缀段 + 歌曲名 + 一个空格
+				artistStartX := leftPad + modeWidth + volWidth + stateWidth + heartWidth + songShownWidth + 1
+				if msg.X >= artistStartX {
+					// 歌手区域，进入当前播放歌曲的歌手详情
+					goToArtistOfSong(h.netease, false)
+					return true, main, a.Tick(time.Nanosecond)
+				}
+			}
+		}
+
+		// Handle single and double-click detection for menu items
+		if msg.Action == tea.MouseActionPress {
+			now := time.Now()
+			// 根据操作系统设置双击间隔阈值
+			var doubleClickInterval time.Duration
+			switch runtime.GOOS {
+			case "darwin":
+				doubleClickInterval = 400 * time.Millisecond
+			case "windows":
+				doubleClickInterval = 500 * time.Millisecond
+			default:
+				doubleClickInterval = 300 * time.Millisecond
+			}
+
+			// 计算坐标差的绝对值
+			deltaX := msg.X - h.lastClickX
+			if deltaX < 0 {
+				deltaX = -deltaX
+			}
+			deltaY := msg.Y - h.lastClickY
+			if deltaY < 0 {
+				deltaY = -deltaY
+			}
+
+			// 检测是否为双击（时间间隔小于阈值且位置相近）
+			if now.Sub(h.lastClickTime) <= doubleClickInterval &&
+				deltaX <= 2 && deltaY <= 2 {
+				// 双击事件处理
+				handled, page := h.handleDoubleClick(msg, a, main)
+				if handled {
+					// 重置双击检测状态
+					h.lastClickTime = time.Time{}
+					if page != nil {
+						return true, page, a.Tick(time.Nanosecond)
+					}
+					return true, main, a.Tick(time.Nanosecond)
+				}
+			} else {
+				// 单击事件处理：改变焦点
+				h.handleSingleClick(msg, a, main)
+			}
+
+			// 更新最后点击信息
+			h.lastClickTime = now
+			h.lastClickX = msg.X
+			h.lastClickY = msg.Y
+		}
+
+		// Handle progress bar seeking
 		if slices.Contains([]tea.MouseAction{tea.MouseActionPress, tea.MouseActionMotion}, msg.Action) {
 			x, y := msg.X, msg.Y
 			progressBarWidth := a.WindowWidth() - 14
@@ -337,7 +467,235 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 		player.PreviousSong(true)
 	case tea.MouseButtonWheelRight:
 		player.NextSong(true)
+	case tea.MouseButtonForward:
+		// 鼠标前进键：上一页
+		if msg.Action == tea.MouseActionPress {
+			oldPage := main.CurPage()
+			main.PrePage()
+			if oldPage != main.CurPage() {
+				curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
+				main.SetSelectedIndex(curIndex)
+			}
+			return true, main, a.Tick(time.Nanosecond)
+		}
+	case tea.MouseButtonBackward:
+		// 鼠标后退键：下一页
+		if msg.Action == tea.MouseActionPress {
+			oldPage := main.CurPage()
+			main.NextPage()
+			if oldPage != main.CurPage() {
+				curIndex := mathx.Min(main.SelectedIndex()+main.PageSize(), len(main.CurMenu().MenuViews())-1)
+				main.SetSelectedIndex(curIndex)
+			}
+			return true, main, a.Tick(time.Nanosecond)
+		}
+	case tea.MouseButtonRight:
+		// 鼠标右键：根据点击位置判断是菜单还是歌曲信息区域
+		if msg.Action == tea.MouseActionPress {
+			// 歌曲信息行：等同于对“当前播放”按 m
+			playModeRow := a.WindowHeight() - 3
+			if msg.Y == playModeRow {
+				action(h.netease, true)
+				return true, main, a.Tick(time.Nanosecond)
+			}
+
+			// 菜单区域：先切换焦点；若当前是“可播放歌曲菜单”，则打开选中项操作菜单
+			menuStartRow := main.MenuStartRow()
+			menuBottomRow := main.MenuBottomRow()
+			y := msg.Y + 1 // 1-based
+			isInMenuArea := y >= menuStartRow && y < menuBottomRow
+			if isInMenuArea {
+				h.handleSingleClick(msg, a, main)
+
+				menu := main.CurMenu()
+				if _, ok := menu.(SongsMenu); ok {
+					if curMenu, ok := menu.(Menu); ok && curMenu.IsPlayable() {
+						action(h.netease, false)
+						return true, main, a.Tick(time.Nanosecond)
+					}
+				}
+
+				return true, main, a.Tick(time.Nanosecond)
+			}
+
+			// 非菜单区域：默认触发“当前播放”的操作菜单
+			action(h.netease, true)
+			return true, main, a.Tick(time.Nanosecond)
+		}
+	case tea.MouseButtonMiddle:
+		// 鼠标中键：返回上一级（等同于ESC键）
+		if msg.Action == tea.MouseActionPress {
+			main.BackMenu()
+			return true, main, a.Tick(time.Nanosecond)
+		}
 	}
 
 	return true, main, a.Tick(time.Nanosecond)
+}
+
+// handleSingleClick 处理鼠标单击事件，单击菜单项时改变焦点
+func (h *EventHandler) handleSingleClick(msg tea.MouseMsg, a *model.App, main *model.Main) bool {
+	menu := main.CurMenu()
+	menuViews := menu.MenuViews()
+
+	// 获取菜单显示区域的行范围
+	menuStartRow := main.MenuStartRow()
+	menuBottomRow := main.MenuBottomRow()
+	menuStartColumn := main.MenuStartColumn()
+
+	// 检查点击是否在菜单区域内
+	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较（参考进度条的 y+1）
+	y := msg.Y + 1
+	if y < menuStartRow || y >= menuBottomRow {
+		return false
+	}
+
+	// X坐标：检查是否在菜单的有效区域内
+	if msg.X < menuStartColumn-4 {
+		return false
+	}
+
+	// 计算点击对应的菜单项索引
+	// menuStartRow 即第一个菜单项所在行
+	actualMenuStartRow := menuStartRow
+	relativeRow := y - actualMenuStartRow
+
+	if relativeRow < 0 {
+		return false
+	}
+
+	pageStartIndex := (main.CurPage() - 1) * main.PageSize()
+
+	var clickedIndex int
+
+	if main.IsDualColumn() {
+		// 双列模式：需要判断点击是左列还是右列
+		// 参考 foxful-cli/model/main.go menuItemView 的逻辑
+		windowWidth := a.WindowWidth()
+		var leftColumnWidth int
+		if windowWidth <= 88 {
+			// 窗口较窄时，左右列平分
+			leftColumnWidth = (windowWidth - menuStartColumn - 4) / 2
+		} else {
+			// 窗口较宽时，左列固定44字符
+			leftColumnWidth = 44
+		}
+
+		if msg.X < menuStartColumn+leftColumnWidth {
+			// 左列
+			clickedIndex = pageStartIndex + relativeRow*2
+		} else {
+			// 右列
+			clickedIndex = pageStartIndex + relativeRow*2 + 1
+		}
+	} else {
+		// 单列模式：每行一个菜单项
+		clickedIndex = pageStartIndex + relativeRow
+	}
+
+	// 验证索引是否有效
+	if clickedIndex < 0 || clickedIndex >= len(menuViews) {
+		return false
+	}
+
+	// 设置选中索引
+	main.SetSelectedIndex(clickedIndex)
+	return true
+}
+
+// handleDoubleClick 处理鼠标双击事件，双击菜单项时进入该菜单
+func (h *EventHandler) handleDoubleClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page) {
+	menu := main.CurMenu()
+	menuViews := menu.MenuViews()
+
+	// 获取菜单显示区域的行范围
+	menuStartRow := main.MenuStartRow()
+	menuBottomRow := main.MenuBottomRow()
+	menuStartColumn := main.MenuStartColumn()
+
+	// 检查点击是否在菜单区域内
+	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较（参考进度条的 y+1）
+	y := msg.Y + 1
+	if y < menuStartRow || y >= menuBottomRow {
+		return false, nil
+	}
+
+	// X坐标：检查是否在菜单的有效区域内
+	// 菜单项前面有4个空格用于显示序号和选中标记
+	if msg.X < menuStartColumn-4 {
+		return false, nil
+	}
+
+	// 计算点击对应的菜单项索引
+	// menuStartRow 即第一个菜单项所在行
+	actualMenuStartRow := menuStartRow
+	relativeRow := y - actualMenuStartRow
+
+	if relativeRow < 0 {
+		return false, nil
+	}
+
+	pageStartIndex := (main.CurPage() - 1) * main.PageSize()
+
+	var clickedIndex int
+
+	if main.IsDualColumn() {
+		// 双列模式：每行显示两个菜单项
+		// 参考 foxful-cli/model/main.go menuItemView 的逻辑
+		windowWidth := a.WindowWidth()
+		var leftColumnWidth int
+		if windowWidth <= 88 {
+			// 窗口较窄时，左右列平分
+			leftColumnWidth = (windowWidth - menuStartColumn - 4) / 2
+		} else {
+			// 窗口较宽时，左列固定44字符
+			leftColumnWidth = 44
+		}
+
+		if msg.X < menuStartColumn+leftColumnWidth {
+			// 左列
+			clickedIndex = pageStartIndex + relativeRow*2
+		} else {
+			// 右列
+			clickedIndex = pageStartIndex + relativeRow*2 + 1
+		}
+	} else {
+		// 单列模式：每行一个菜单项
+		clickedIndex = pageStartIndex + relativeRow
+	}
+
+	// 验证索引是否有效
+	if clickedIndex < 0 || clickedIndex >= len(menuViews) {
+		return false, nil
+	}
+
+	// 设置选中索引
+	main.SetSelectedIndex(clickedIndex)
+
+	// 如果是歌曲菜单，双击播放歌曲
+	if songsMenu, ok := menu.(SongsMenu); ok {
+		if curMenu, ok := menu.(Menu); ok && curMenu.IsPlayable() {
+			songs := songsMenu.Songs()
+			selectedIndex := menu.RealDataIndex(clickedIndex)
+			if selectedIndex >= 0 && selectedIndex < len(songs) {
+				// 调用播放逻辑
+				h.playOrToggleHandle()
+				return true, nil
+			}
+		}
+	}
+
+	// 非歌曲菜单，进入子菜单
+	loading := model.NewLoading(main)
+	loading.Start()
+	defer loading.Complete()
+
+	submenu := menu.SubMenu(a, menu.RealDataIndex(clickedIndex))
+	if submenu != nil {
+		menuTitle := &menuViews[clickedIndex]
+		newPage := main.EnterMenu(submenu, menuTitle)
+		return true, newPage
+	}
+
+	return false, nil
 }
