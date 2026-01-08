@@ -27,9 +27,10 @@ type State struct {
 	CurrentIndex        int
 	IsRunning           bool
 	// Word-by-word lyric data
-	YRCLines     []YRCLine
-	YRCLineIndex int  // Current YRC line index
-	YRCEnabled   bool // Whether YRC mode is active
+	YRCLines        []YRCLine
+	YRCLineIndex    int  // Current YRC line index
+	YRCEnabled      bool // Whether YRC mode is active
+	ShowTranslation bool // Whether translation display is enabled
 }
 
 // FormatAsLRC serializes the State into a string that conforms to the LRC file format standard.
@@ -222,7 +223,7 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 			s.yrcLines = yrcLines
 
 			// Optionally align translation and roman lyrics to YRC
-			if lrcData.Ytlrc != "" {
+			if s.showTranslation && lrcData.Ytlrc != "" {
 				s.yrcLines = AlignTranslationToYRC(s.yrcLines, lrcData.Ytlrc)
 			}
 			if lrcData.Yromalrc != "" {
@@ -289,8 +290,21 @@ func (s *Service) EnableTranslation(enable bool) {
 	if enable {
 		transLrcFile, _ := ReadTranslateLRC(strings.NewReader(s.lastLRCData.Translated))
 		s.transFragments = transLrcFile.fragments
+		// Re-align YRC translation if YRC is active
+		if len(s.yrcLines) > 0 {
+			if s.lastLRCData.Ytlrc != "" {
+				s.yrcLines = AlignTranslationToYRC(s.yrcLines, s.lastLRCData.Ytlrc)
+			} else if len(s.transFragments) > 0 {
+				// Fallback when no ytlrc
+				s.yrcLines = AlignTranslationFragmentsToYRC(s.yrcLines, s.transFragments)
+			}
+		}
 	} else {
 		s.transFragments = make(map[int64]string)
+		// Clear YRC translations
+		for i := range s.yrcLines {
+			s.yrcLines[i].TranslatedLyric = ""
+		}
 	}
 }
 
@@ -324,6 +338,7 @@ func (s *Service) State() State {
 		YRCLines:            s.yrcLines,
 		YRCLineIndex:        s.yrcIndex,
 		YRCEnabled:          s.showYRC && len(s.yrcLines) > 0,
+		ShowTranslation:     s.showTranslation,
 	}
 }
 

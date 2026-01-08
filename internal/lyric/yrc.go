@@ -284,6 +284,21 @@ func AlignRomanToYRC(yrcLines []YRCLine, romanLRC string) []YRCLine {
 	return yrcLines
 }
 
+// AlignTranslationFragmentsToYRC 将已解析的 LRC 翻译片段（timeMs->text）合并到 YRC 行中。
+// 用于没有 ytlrc，仅有传统 tlyric 的回退场景。
+func AlignTranslationFragmentsToYRC(yrcLines []YRCLine, transFragments map[int64]string) []YRCLine {
+	if len(transFragments) == 0 || len(yrcLines) == 0 {
+		return yrcLines
+	}
+
+	for i := range yrcLines {
+		if trans, ok := transFragments[yrcLines[i].StartTime]; ok && trans != "" {
+			yrcLines[i].TranslatedLyric = trans
+		}
+	}
+	return yrcLines
+}
+
 // FindYRCLineAtTimeMs 查找给定时间（毫秒）处活动的 YRC 行索引。
 // 如果没有活动行则返回 -1。
 func FindYRCLineAtTimeMs(yrcLines []YRCLine, timeMs int64) int {
