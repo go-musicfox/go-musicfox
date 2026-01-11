@@ -52,13 +52,13 @@ func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 
 	// Fill current YRC line (with word-level details in a special format)
 	currentLine := state.YRCLines[index]
-	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs)
+	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs, state.ShowTranslation)
 
 	// Fill previous YRC lines
 	for i := 1; i <= centerIndex; i++ {
 		if index-i >= 0 {
 			prevLine := state.YRCLines[index-i]
-			r.lyrics[centerIndex-i] = r.buildYRCLineString(prevLine, -1) // No highlight for previous lines
+			r.lyrics[centerIndex-i] = r.buildYRCLineString(prevLine, -1, state.ShowTranslation) // No highlight for previous lines
 		}
 	}
 
@@ -66,14 +66,14 @@ func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 	for i := 1; i < r.lyricLines-centerIndex; i++ {
 		if index+i < len(state.YRCLines) {
 			nextLine := state.YRCLines[index+i]
-			r.lyrics[centerIndex+i] = r.buildYRCLineString(nextLine, -1) // No highlight for next lines
+			r.lyrics[centerIndex+i] = r.buildYRCLineString(nextLine, -1, state.ShowTranslation) // No highlight for next lines
 		}
 	}
 }
 
 // buildYRCLineString constructs a displayable string from YRC line with word progress highlighting.
 // If currentTimeMs >= 0, highlights words based on their timing with ANSI colors.
-func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64) string {
+func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64, showTranslation bool) string {
 	var result strings.Builder
 
 	for _, word := range line.Words {
@@ -92,8 +92,8 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 		}
 	}
 
-	// Append translation if available (gray color)
-	if line.TranslatedLyric != "" {
+	// Append translation if available and enabled (gray color)
+	if showTranslation && line.TranslatedLyric != "" {
 		result.WriteString(" ")
 		result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.ANSIBrightBlack))
 	}
@@ -204,8 +204,10 @@ func (r *LyricRenderer) prepareLyricLines() {
 	// Fill current line
 	currentFrag := state.Fragments[state.CurrentIndex]
 	line := currentFrag.Content
-	if trans, ok := state.TranslatedFragments[currentFrag.StartTimeMs]; ok && trans != "" {
-		line += " [" + trans + "]"
+	if state.ShowTranslation {
+		if trans, ok := state.TranslatedFragments[currentFrag.StartTimeMs]; ok && trans != "" {
+			line += " [" + trans + "]"
+		}
 	}
 	r.lyrics[centerIndex] = line
 
@@ -214,8 +216,10 @@ func (r *LyricRenderer) prepareLyricLines() {
 		if state.CurrentIndex-i >= 0 {
 			prevFrag := state.Fragments[state.CurrentIndex-i]
 			line := prevFrag.Content
-			if trans, ok := state.TranslatedFragments[prevFrag.StartTimeMs]; ok && trans != "" {
-				line += " [" + trans + "]"
+			if state.ShowTranslation {
+				if trans, ok := state.TranslatedFragments[prevFrag.StartTimeMs]; ok && trans != "" {
+					line += " [" + trans + "]"
+				}
 			}
 			r.lyrics[centerIndex-i] = line
 		}
@@ -226,8 +230,10 @@ func (r *LyricRenderer) prepareLyricLines() {
 		if state.CurrentIndex+i < len(state.Fragments) {
 			nextFrag := state.Fragments[state.CurrentIndex+i]
 			line := nextFrag.Content
-			if trans, ok := state.TranslatedFragments[nextFrag.StartTimeMs]; ok && trans != "" {
-				line += " [" + trans + "]"
+			if state.ShowTranslation {
+				if trans, ok := state.TranslatedFragments[nextFrag.StartTimeMs]; ok && trans != "" {
+					line += " [" + trans + "]"
+				}
 			}
 			r.lyrics[centerIndex+i] = line
 		}
