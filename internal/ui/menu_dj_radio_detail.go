@@ -27,7 +27,7 @@ func NewDjRadioDetailMenu(base baseMenu, djRadioId int64) *DjRadioDetailMenu {
 	return &DjRadioDetailMenu{
 		baseMenu:  base,
 		djRadioId: djRadioId,
-		limit:     50,
+		limit:     500,
 	}
 }
 
@@ -53,6 +53,7 @@ func (m *DjRadioDetailMenu) BeforeEnterMenuHook() model.Hook {
 			RID:    strconv.FormatInt(m.djRadioId, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
+			Asc:    "true",
 		}
 		code, response := djProgramService.DjProgram()
 		codeType := _struct.CheckCode(code)
@@ -79,6 +80,7 @@ func (m *DjRadioDetailMenu) BottomOutHook() model.Hook {
 			RID:    strconv.FormatInt(m.djRadioId, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(offset),
+			Asc:    "true",
 		}
 		code, response := djProgramService.DjProgram()
 		codeType := _struct.CheckCode(code)
