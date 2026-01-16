@@ -28,8 +28,8 @@ altScreen = true
 enableMouseEvent = true
 # 是否开启 Debug 模式
 debug = false
-# 播放时 UI 刷新帧率（建议 30-60，更高帧率可使 YRC 歌词动画更平滑）
-frameRate = 30
+# 播放时 UI 刷新帧率（更高帧率可使动画更平滑，但消耗更多cpu）
+frameRate = 5
 
 
 # 桌面通知相关设置
@@ -53,7 +53,7 @@ offset = 0
 skipParseErr = false
 # YRC 歌词渲染模式（仅对逐字歌词有效）
 # 可选: "simple"(简单，默认), "smooth"(平滑), "wave"(波浪), "glow"(发光)
-yrcRenderMode = "smooth"
+renderMode = "smooth"
 
 # Go性能分析工具pprof的相关设置
 [main.pprof]
@@ -85,6 +85,9 @@ primaryColor = "#ea403f" # 经典网易云音乐红
 
 # 进度条字符样式配置
 [theme.progress]
+# 进度条渲染模式
+# 可选: "smooth"(平滑，默认), "wave"(波浪), "glow"(发光)
+renderMode = "smooth"
 # 进度条已加载字符
 fullChar = "#"
 fullCharWhenFirst = "#"

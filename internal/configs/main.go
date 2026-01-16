@@ -69,8 +69,8 @@ type LyricConfig struct {
 	Offset int `koanf:"offset"`
 	// 忽略歌词解析错误
 	SkipParseErr bool `koanf:"skipParseErr"`
-	// YRC 歌词渲染模式：simple(简单), smooth(平滑), wave(波浪), glow(发光)
-	YrcRenderMode string `koanf:"yrcRenderMode"`
+	// 歌词渲染模式：smooth(平滑), wave(波浪), glow(发光)
+	RenderMode string `koanf:"renderMode"`
 }
 
 // PprofConfig Go 性能分析工具 pprof 的相关设置

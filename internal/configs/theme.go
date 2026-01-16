@@ -29,6 +29,8 @@ type ThemeConfig struct {
 
 // ProgressConfig 进度条字符样式配置
 type ProgressConfig struct {
+	RenderMode string `koanf:"renderMode"`
+
 	FullChar           string `koanf:"fullChar"`
 	FullCharWhenFirst  string `koanf:"fullCharWhenFirst"`
 	FullCharWhenLast   string `koanf:"fullCharWhenLast"`

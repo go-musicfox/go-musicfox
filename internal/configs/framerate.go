@@ -8,9 +8,9 @@ import (
 // It provides methods to calculate the time interval between frames.
 type FrameRate int
 
-// DefaultFrameRate returns the default frame rate (30 FPS).
+// DefaultFrameRate returns the default frame rate (5 FPS).
 func DefaultFrameRate() FrameRate {
-	return 30
+	return 5
 }
 
 // Interval returns the time duration between frames based on the frame rate.

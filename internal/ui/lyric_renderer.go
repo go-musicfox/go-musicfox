@@ -77,10 +77,10 @@ func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 // buildYRCLineString constructs a displayable string from YRC line with word progress highlighting.
 // If currentTimeMs >= 0, highlights words based on their timing with ANSI colors.
 func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64, showTranslation bool) string {
-	// Get render mode from config (default: "simple" for smooth word-by-word rendering)
-	renderMode := "simple"
-	if configs.AppConfig.Main.Lyric.YrcRenderMode != "" {
-		renderMode = configs.AppConfig.Main.Lyric.YrcRenderMode
+	// Get render mode from config (default: "smooth")
+	renderMode := "smooth"
+	if configs.AppConfig.Main.Lyric.RenderMode != "" {
+		renderMode = configs.AppConfig.Main.Lyric.RenderMode
 	}
 
 	// For non-current lines (no time tracking), use simple gray rendering
@@ -140,8 +140,6 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 	// Use currentTimeMs as animation time for smoother effects (in milliseconds)
 	animationTime := float64(currentTimeMs) * 0.001 // Convert to seconds
 	switch renderMode {
-	case "simple":
-		result = renderSimple(words)
 	case "smooth":
 		result = renderSmooth(words, progress)
 	case "wave":
@@ -152,8 +150,8 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 		}
 		result = renderGlow(words, currentWordIndex, animationTime)
 	default:
-		// Default to simple mode
-		result = renderSimple(words)
+		// Default to smooth mode
+		result = renderSmooth(words, progress)
 	}
 
 	// Append translation if available and enabled (gray color)
@@ -257,52 +255,102 @@ func (r *LyricRenderer) prepareLyricLines() {
 		return
 	}
 
-	// Otherwise, render traditional LRC (no render mode for LRC as it lacks word-level timing)
+	// Otherwise, render traditional LRC with render mode support
 	if state.CurrentIndex < 0 {
 		return
 	}
 
-	r.renderLRCStandard(state, centerIndex)
+	r.renderLRCWithMode(state, centerIndex, r.currentTimeMs)
 }
 
-// renderLRCStandard renders LRC lyrics without render modes (plain text with line-level display).
-// LRC only has line-level timestamps, so we don't use character-level render modes.
-func (r *LyricRenderer) renderLRCStandard(state lyric.State, centerIndex int) {
-	// Fill current line
-	currentFrag := state.Fragments[state.CurrentIndex]
-	line := currentFrag.Content
-	if state.ShowTranslation {
-		if trans, ok := state.TranslatedFragments[currentFrag.StartTimeMs]; ok && trans != "" {
-			line += " [" + trans + "]"
+// renderLRCWithMode renders LRC lyrics with render mode support.
+// LRC uses line-level color gradient based on playback progress.
+func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, currentTimeMs int64) {
+	// Get render mode from config
+	renderMode := "smooth"
+	if configs.AppConfig.Main.Lyric.RenderMode != "" {
+		renderMode = configs.AppConfig.Main.Lyric.RenderMode
+	}
+
+	// Animation time for wave/glow effects
+	animationTime := float64(currentTimeMs) * 0.001 // Convert to seconds
+
+	// Helper function to calculate line progress
+	calculateLineProgress := func(startTimeMs, endTimeMs int64) float64 {
+		if currentTimeMs <= startTimeMs {
+			return 0.4
+		}
+		if currentTimeMs >= endTimeMs {
+			return 1.0
+		}
+		lineDuration := endTimeMs - startTimeMs
+		elapsedTime := currentTimeMs - startTimeMs
+		return 0.4 + min(float64(elapsedTime)/float64(lineDuration), 0.6)
+	}
+
+	// Helper function to render line with mode
+	renderLineWithMode := func(content string, progress float64) string {
+		switch renderMode {
+		case "smooth":
+			return renderLRCLineSmooth(content, progress)
+		case "wave":
+			return renderLRCWave(content, progress, animationTime)
+		case "glow":
+			return renderLRCGlow(content, progress, animationTime)
+		default:
+			return renderLRCLineSmooth(content, progress)
 		}
 	}
-	r.lyrics[centerIndex] = line
 
-	// Fill previous lines
+	// Helper function to get fragment content with translation
+	getFragmentContent := func(frag lyric.LRCFragment) string {
+		content := frag.Content
+		if state.ShowTranslation {
+			if trans, ok := state.TranslatedFragments[frag.StartTimeMs]; ok && trans != "" {
+				content += " [" + trans + "]"
+			}
+		}
+		return content
+	}
+
+	// Helper function to render plain gray text (for non-current lines)
+	renderPlainGray := func(content string) string {
+		return util.SetFgStyle(content, termenv.RGBColor(string(LyricInactiveColor)))
+	}
+
+	// Fill current line (with color gradient effect)
+	if state.CurrentIndex >= 0 && state.CurrentIndex < len(state.Fragments) {
+		currentFrag := state.Fragments[state.CurrentIndex]
+		content := getFragmentContent(currentFrag)
+
+		// Calculate current line progress
+		var currentProgress float64
+		if state.CurrentIndex+1 < len(state.Fragments) {
+			nextFrag := state.Fragments[state.CurrentIndex+1]
+			currentProgress = calculateLineProgress(currentFrag.StartTimeMs, nextFrag.StartTimeMs)
+		} else {
+			// Last line - assume 5 seconds duration
+			currentProgress = calculateLineProgress(currentFrag.StartTimeMs, currentFrag.StartTimeMs+5000)
+		}
+
+		r.lyrics[centerIndex] = renderLineWithMode(content, currentProgress)
+	}
+
+	// Fill previous lines (gray - already played)
 	for i := 1; i <= centerIndex; i++ {
 		if state.CurrentIndex-i >= 0 {
 			prevFrag := state.Fragments[state.CurrentIndex-i]
-			line := prevFrag.Content
-			if state.ShowTranslation {
-				if trans, ok := state.TranslatedFragments[prevFrag.StartTimeMs]; ok && trans != "" {
-					line += " [" + trans + "]"
-				}
-			}
-			r.lyrics[centerIndex-i] = line
+			content := getFragmentContent(prevFrag)
+			r.lyrics[centerIndex-i] = renderPlainGray(content)
 		}
 	}
 
-	// Fill next lines
+	// Fill next lines (gray - not yet played)
 	for i := 1; i < r.lyricLines-centerIndex; i++ {
 		if state.CurrentIndex+i < len(state.Fragments) {
 			nextFrag := state.Fragments[state.CurrentIndex+i]
-			line := nextFrag.Content
-			if state.ShowTranslation {
-				if trans, ok := state.TranslatedFragments[nextFrag.StartTimeMs]; ok && trans != "" {
-					line += " [" + trans + "]"
-				}
-			}
-			r.lyrics[centerIndex+i] = line
+			content := getFragmentContent(nextFrag)
+			r.lyrics[centerIndex+i] = renderPlainGray(content)
 		}
 	}
 }

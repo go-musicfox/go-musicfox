@@ -57,37 +57,6 @@ func clamp(v, min, max float64) float64 {
 	return v
 }
 
-// renderSimple renders lyrics with simple mode - word-by-word color change with linear interpolation.
-// Uses direct linear color transition from inactive to active for smooth, continuous animation.
-func renderSimple(words []wordWithTiming) string {
-	var sb strings.Builder
-
-	// Use defined colors
-	activeColor := LyricActiveColor
-	inactiveColor := LyricInactiveColor
-
-	for _, w := range words {
-		var color lipgloss.Color
-
-		switch w.state {
-		case wordStatePlayed:
-			color = activeColor
-		case wordStatePlaying:
-			// Direct linear interpolation for smooth, continuous color transition
-			// No easing applied - let the natural timing drive the animation
-			color = blendColor(inactiveColor, activeColor, w.interpolation)
-		case wordStateNotPlayed:
-			color = inactiveColor
-		default:
-			color = inactiveColor
-		}
-
-		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
-	}
-
-	return sb.String()
-}
-
 // renderSmooth renders lyrics with smooth mode - uses color gradient transition with interpolation.
 // All words participate in gradient calculation for continuous color transitions.
 func renderSmooth(words []wordWithTiming, progress float64) string {
@@ -322,4 +291,66 @@ type wordWithTiming struct {
 	text          string
 	state         wordState
 	interpolation float64 // 0.0-1.0, 词内的插值进度，用于平滑动画
+}
+
+// LRC line state for rendering
+type lrcLineState int
+
+const (
+	lrcLineStateFuture lrcLineState = iota
+	lrcLineStatePlaying
+	lrcLineStatePlayed
+)
+
+// LRC渲染模式函数 - 整行颜色变化
+
+// renderLRCLineSmooth renders LRC lyrics with smooth mode - smooth color gradient transition.
+// Uses eased interpolation for more natural color transitions.
+func renderLRCLineSmooth(line string, progress float64) string {
+	// Use eased progress for smoother color transition
+	easedProgress := easeInOutCubic(progress)
+	color := blendColor(LyricInactiveColor, LyricActiveColor, easedProgress)
+	return util.SetFgStyle(line, termenv.RGBColor(string(color)))
+}
+
+// renderLRCWave renders LRC lyrics with wave mode - dynamic wave effect across the line.
+// Adds animated wave effect that pulses with the music.
+func renderLRCWave(line string, progress float64, animationTime float64) string {
+	// Calculate base color from progress
+	baseColor := blendColor(LyricInactiveColor, LyricActiveColor, progress)
+
+	// Add dynamic wave effect
+	wave := math.Sin(animationTime*2.0) * 0.1
+	// Blend between transition color and base color based on wave
+	finalColor := blendColor(LyricTransitionColor, baseColor, 0.5+wave)
+
+	return util.SetFgStyle(line, termenv.RGBColor(string(finalColor)))
+}
+
+// renderLRCGlow renders LRC lyrics with glow mode - soft glow effect.
+// The line has a soft glow that pulses gently.
+func renderLRCGlow(line string, progress float64, animationTime float64) string {
+	// Calculate base color from progress
+	baseColor := blendColor(LyricInactiveColor, LyricActiveColor, progress)
+
+	// Calculate glow pulse
+	pulse := (math.Sin(animationTime*2.0) + 1) / 2 // 0-1 sine wave
+
+	// Glow strength based on progress (more progress = stronger glow)
+	glowStrength := 0.1 + progress*0.2 + pulse*0.1
+	glowStrength = clamp(glowStrength, 0, 0.4)
+
+	// Blend base color with white for glow effect
+	finalColor := blendColor(baseColor, LyricWhiteColor, glowStrength)
+
+	return util.SetFgStyle(line, termenv.RGBColor(string(finalColor)))
+}
+
+// easeInOutCubic provides smooth easing for color transitions.
+// Creates natural acceleration and deceleration effect.
+func easeInOutCubic(t float64) float64 {
+	if t < 0.5 {
+		return 4 * t * t * t
+	}
+	return 1 - math.Pow(-2*t+2, 3)/2
 }
