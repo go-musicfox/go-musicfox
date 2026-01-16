@@ -264,16 +264,6 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		if configs.UseIni {
-			issuesUrl := "https://github.com/go-musicfox/go-musicfox/issues/483"
-			slog.Warn("配置文件格式已由 INI 切换至 TOML，INI 支持将在后续版本完全移除，请尽快更新", "url", issuesUrl)
-			notify.Notify(notify.NotifyContent{
-				Title: "配置文件格式已由 INI 切换至 TOML",
-				Text:  "INI 支持将在后续版本完全移除，请尽快更新",
-				Url:   issuesUrl,
-			})
-		}
-
 		// 自动播放
 		if config.Autoplay.Enable {
 			autoPlayer := automator.NewAutoPlayer(n.user, n.player, config.Autoplay)

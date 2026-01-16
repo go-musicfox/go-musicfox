@@ -83,6 +83,9 @@ func (t *Tracker) updateNowPlaying(scrobble storage.Scrobble) error {
 }
 
 func (t *Tracker) scrobble(scrobble storage.Scrobble) (retry bool, err error) {
+	if t.client.api == nil {
+		return false, errors.New("lastfm api not initialized")
+	}
 	if t.IsScrobbleExpired(scrobble) {
 		return false, errors.New("scrobble 已过期")
 	}

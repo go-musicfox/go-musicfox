@@ -116,8 +116,7 @@ func ConfigDir() string {
 }
 
 func ConfigFilePath() string {
-	resolved := configs.ResolveConfigFile(ConfigDir())
-	return resolved.Path
+	return filepath.Join(ConfigDir(), types.AppTomlFile)
 }
 
 // DataDir 获取数据文件目录 (db, cookie, logo.png)

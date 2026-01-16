@@ -26,7 +26,6 @@ const StartupTickDuration = time.Millisecond * 16
 
 const AppLocalDataDir = "go-musicfox"
 const AppDBName = "musicfox"
-const AppIniFile = "go-musicfox.ini"
 const AppTomlFile = "config.toml"
 const AppPrimaryRandom = "random"
 const AppPrimaryColor = "#f90022"

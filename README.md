@@ -587,9 +587,8 @@ song = "分享{{if .SongArtists}}{{.SongArtists}}的{{end}}单曲《{{.SongName}
 <summary>
 
 ## 配置文件
-</summary>
 
-配置文件路径为用户配置目录下的 `go-musicfox.ini` 文件，详细可参见[配置示例](./utils/filex/embed/go-musicfox.ini)。
+配置文件路径为用户配置目录下的 `config.toml` 文件，详细可参见[配置示例](./utils/filex/embed/config.toml)。
 
 > 用户配置目录路径：
 >
@@ -602,6 +601,8 @@ song = "分享{{if .SongArtists}}{{.SongArtists}}的{{end}}单曲《{{.SongName}
 > 你可以通过设置 `MUSICFOX_ROOT` 环境变量来自定义用户配置的存储位置
 >
 > 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
+
+> **注意**：配置文件格式已从 INI 迁移至 TOML。如果您的旧版本配置文件仍为 INI 格式，请运行 `musicfox migrate` 命令进行迁移，或运行 `musicfox help migrate` 查看更多选项。
 
 </details>
 <details>

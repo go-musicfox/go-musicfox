@@ -5,6 +5,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+func firstCharOrDefault(s, defaultStr string) rune {
+	if len(s) > 0 {
+		return []rune(s)[0]
+	}
+	return []rune(defaultStr)[0]
+}
+
 type ProgressOptions struct {
 	model.ProgressOptions
 }
