@@ -2,6 +2,7 @@ package ui
 
 import (
 	"strings"
+	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
@@ -9,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 )
@@ -23,7 +25,8 @@ type LyricRenderer struct {
 	lyricStartRow     int
 	lyrics            [5]string // A fixed-size array to hold lines for rendering
 	lyricNowScrollBar *app.XScrollBar
-	currentTimeMs     int64 // Current playback time in milliseconds for YRC rendering
+	currentTimeMs     int64     // Current playback time in milliseconds for YRC rendering
+	lastViewTime      time.Time // For debug logging
 }
 
 // NewLyricRenderer creates a new lyric renderer component.
@@ -74,31 +77,91 @@ func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 // buildYRCLineString constructs a displayable string from YRC line with word progress highlighting.
 // If currentTimeMs >= 0, highlights words based on their timing with ANSI colors.
 func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64, showTranslation bool) string {
-	var result strings.Builder
+	// Get render mode from config (default: "simple" for smooth word-by-word rendering)
+	renderMode := "simple"
+	if configs.AppConfig.Main.Lyric.YrcRenderMode != "" {
+		renderMode = configs.AppConfig.Main.Lyric.YrcRenderMode
+	}
 
-	for _, word := range line.Words {
-		if currentTimeMs >= 0 && currentTimeMs < word.StartTime {
-			// Word not yet played: gray color
-			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightBlack))
-		} else if currentTimeMs >= 0 && currentTimeMs >= word.EndTime {
-			// Word fully played: cyan color
-			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightCyan))
-		} else if currentTimeMs >= 0 && currentTimeMs >= word.StartTime {
-			// Word currently playing: bright yellow/green for emphasis
-			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightYellow))
-		} else {
-			// No time tracking (non-current line): gray color
-			result.WriteString(util.SetFgStyle(word.Word, termenv.ANSIBrightBlack))
+	// For non-current lines (no time tracking), use simple gray rendering
+	if currentTimeMs < 0 {
+		var result strings.Builder
+		for _, word := range line.Words {
+			result.WriteString(util.SetFgStyle(word.Word, termenv.RGBColor(string(LyricInactiveColor))))
 		}
+		if showTranslation && line.TranslatedLyric != "" {
+			result.WriteString(" ")
+			result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.RGBColor(string(LyricInactiveColor))))
+		}
+		return result.String()
+	}
+
+	// Prepare word timing data for rendering
+	var words []wordWithTiming
+	var currentWordIndex int = -1
+	var playedWords, totalWords int
+	totalWords = len(line.Words)
+
+	// Apply frame rate compensation for smoother animation
+	frameCompensation := int64(configs.AppConfig.Main.FrameRate.DurationMs() / 2)
+	adjustedTimeMs := currentTimeMs + frameCompensation
+
+	for i, word := range line.Words {
+		var state wordState
+		var interpolation float64
+		if adjustedTimeMs < word.StartTime {
+			state = wordStateNotPlayed
+			interpolation = 0.0
+		} else if adjustedTimeMs >= word.EndTime {
+			state = wordStatePlayed
+			playedWords++
+			interpolation = 1.0
+		} else {
+			state = wordStatePlaying
+			currentWordIndex = i
+			playedWords++
+			// Calculate interpolation progress within the word (0.0 - 1.0)
+			wordDuration := word.EndTime - word.StartTime
+			if wordDuration > 0 {
+				interpolation = float64(adjustedTimeMs-word.StartTime) / float64(wordDuration)
+			}
+		}
+		words = append(words, wordWithTiming{text: word.Word, state: state, interpolation: interpolation})
+	}
+
+	// Calculate progress for smooth/wave modes
+	progress := 0.0
+	if totalWords > 0 {
+		progress = float64(playedWords) / float64(totalWords)
+	}
+
+	// Render based on mode
+	var result string
+	// Use currentTimeMs as animation time for smoother effects (in milliseconds)
+	animationTime := float64(currentTimeMs) * 0.001 // Convert to seconds
+	switch renderMode {
+	case "simple":
+		result = renderSimple(words)
+	case "smooth":
+		result = renderSmooth(words, progress)
+	case "wave":
+		result = renderWave(words, progress, animationTime)
+	case "glow":
+		if currentWordIndex < 0 {
+			currentWordIndex = playedWords - 1
+		}
+		result = renderGlow(words, currentWordIndex, animationTime)
+	default:
+		// Default to simple mode
+		result = renderSimple(words)
 	}
 
 	// Append translation if available and enabled (gray color)
 	if showTranslation && line.TranslatedLyric != "" {
-		result.WriteString(" ")
-		result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.ANSIBrightBlack))
+		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.RGBColor(string(LyricInactiveColor)))
 	}
 
-	return result.String()
+	return result
 }
 
 // stripAnsiCodes removes ANSI escape sequences from a string to get visible content
@@ -143,9 +206,7 @@ func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 
 // View renders the lyric component.
 func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
-	var (
-		endRow = r.netease.WindowHeight() - 4
-	)
+	endRow := r.netease.WindowHeight() - 4
 
 	if r.lyricLines == 0 {
 		if endRow-main.MenuBottomRow() > 0 {
@@ -196,11 +257,17 @@ func (r *LyricRenderer) prepareLyricLines() {
 		return
 	}
 
-	// Otherwise, render traditional LRC
+	// Otherwise, render traditional LRC (no render mode for LRC as it lacks word-level timing)
 	if state.CurrentIndex < 0 {
 		return
 	}
 
+	r.renderLRCStandard(state, centerIndex)
+}
+
+// renderLRCStandard renders LRC lyrics without render modes (plain text with line-level display).
+// LRC only has line-level timestamps, so we don't use character-level render modes.
+func (r *LyricRenderer) renderLRCStandard(state lyric.State, centerIndex int) {
 	// Fill current line
 	currentFrag := state.Fragments[state.CurrentIndex]
 	line := currentFrag.Content
@@ -270,9 +337,9 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 		// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
 		if !strings.Contains(line, "\033[") {
 			if i == highlightLine {
-				line = util.SetFgStyle(line, termenv.ANSIBrightCyan)
+				line = util.SetFgStyle(line, termenv.RGBColor(string(LyricActiveColor)))
 			} else {
-				line = util.SetFgStyle(line, termenv.ANSIBrightBlack)
+				line = util.SetFgStyle(line, termenv.RGBColor(string(LyricInactiveColor)))
 			}
 		}
 		lyricBuilder.WriteString(line)
@@ -312,9 +379,9 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 			// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
 			if !strings.Contains(lyricLine, "\033[") {
 				if i == 2 {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan)
+					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricActiveColor)))
 				} else {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack)
+					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricInactiveColor)))
 				}
 			}
 			lyricBuilder.WriteString(lyricLine)
@@ -349,9 +416,9 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 			// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
 			if !strings.Contains(lyricLine, "\033[") {
 				if i == 2 {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightCyan)
+					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricActiveColor)))
 				} else {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.ANSIBrightBlack)
+					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricInactiveColor)))
 				}
 			}
 			lyricBuilder.WriteString(lyricLine)

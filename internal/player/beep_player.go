@@ -208,7 +208,7 @@ func (p *beepPlayer) listen() {
 			// 计时器
 			p.timer = timex.NewTimer(timex.Options{
 				Duration:       8760 * time.Hour,
-				TickerInternal: 200 * time.Millisecond,
+				TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
 				OnRun:          func(started bool) {},
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},

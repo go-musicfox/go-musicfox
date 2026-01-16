@@ -12,6 +12,7 @@ import (
 
 	"github.com/fhs/gompd/v2/mpd"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
@@ -228,7 +229,7 @@ func (p *mpdPlayer) listen() {
 			// 计时器
 			p.timer = timex.NewTimer(timex.Options{
 				Duration:       8760 * time.Hour,
-				TickerInternal: 200 * time.Millisecond,
+				TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
 				OnRun:          func(started bool) {},
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
@@ -346,6 +347,7 @@ func (p *mpdPlayer) PlayedTime() time.Duration {
 	}
 	return p.timer.ActualRuntime()
 }
+
 func (p *mpdPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }

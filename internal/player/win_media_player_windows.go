@@ -195,7 +195,7 @@ func (p *winMediaPlayer) listen() {
 			// 计时器
 			p.timer = NewTimer(Options{
 				Duration:       8760 * time.Hour,
-				TickerInternal: 500 * time.Millisecond,
+				TickerInternal: 50 * time.Millisecond, // 20 FPS for smoother lyric animation
 				OnRun:          func(started bool) {},
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},

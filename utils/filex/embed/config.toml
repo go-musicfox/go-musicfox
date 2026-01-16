@@ -23,11 +23,13 @@ checkUpdate = true
 # 主界面与核心功能配置
 [main]
 # altScreen 显示模式
-altScreen=true
+altScreen = true
 # 是否在界面中启用鼠标事件
 enableMouseEvent = true
 # 是否开启 Debug 模式
 debug = false
+# 播放时 UI 刷新帧率（建议 30-60，更高帧率可使 YRC 歌词动画更平滑）
+frameRate = 30
 
 
 # 桌面通知相关设置
@@ -49,6 +51,9 @@ showTranslation = true
 offset = 0
 # 忽略歌词解析错误
 skipParseErr = false
+# YRC 歌词渲染模式（仅对逐字歌词有效）
+# 可选: "simple"(简单，默认), "smooth"(平滑), "wave"(波浪), "glow"(发光)
+yrcRenderMode = "smooth"
 
 # Go性能分析工具pprof的相关设置
 [main.pprof]
@@ -241,8 +246,8 @@ useDefaultKeyBindings = true
 help = ["?", "？"]
 pageUp = ["ctrl+u", "pgup"]
 pageDown = ["ctrl+d", "pgdown"]
-playOrToggle = ["space"] # 空格
-toggle = [] # 空数组表示取消此功能的快捷键
+playOrToggle = ["space"]        # 空格
+toggle = []                     # 空数组表示取消此功能的快捷键
 previous = ["[", "【"]
 next = ["]", "】"]
 backwardFiveSec = ["X"]

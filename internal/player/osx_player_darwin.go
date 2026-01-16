@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/avcore"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
@@ -88,7 +89,7 @@ func (p *osxPlayer) listen() {
 				// 计时器
 				p.timer = timex.NewTimer(timex.Options{
 					Duration:       8760 * time.Hour,
-					TickerInternal: 500 * time.Millisecond,
+					TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
 					OnRun:          func(started bool) {},
 					OnPause:        func() {},
 					OnDone:         func(stopped bool) {},

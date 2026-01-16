@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -269,7 +270,7 @@ func (p *mpvPlayer) Play(music URLMusic) {
 
 // startTicker 启动定期同步 ticker
 func (p *mpvPlayer) startTicker() {
-	p.ticker = time.NewTicker(200 * time.Millisecond)
+	p.ticker = time.NewTicker(configs.AppConfig.Main.FrameRate.Interval())
 	p.tickerDone = make(chan bool)
 
 	go func() {
