@@ -49,6 +49,7 @@ type Netease struct {
 	lyricRenderer    *LyricRenderer
 	songInfoRenderer *SongInfoRenderer
 	progressRenderer *ProgressRenderer
+	coverRenderer    *CoverRenderer
 
 	player       *Player
 	shareSvc     *composer.ShareService
@@ -80,6 +81,7 @@ func NewNetease(app *model.App) *Netease {
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
 	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
 	n.progressRenderer = NewProgressRenderer(n, n.player)
+	n.coverRenderer = NewCoverRenderer(n, n.player)
 
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
@@ -92,6 +94,19 @@ func NewNetease(app *model.App) *Netease {
 }
 
 func (n *Netease) Components() []model.Component {
+	// CoverRenderer uses absolute positioning and returns 0 lines,
+	// so it doesn't affect the layout of other components.
+	// It should be rendered LAST to overlay the cover image after normal layout.
+	if n.coverRenderer.IsEnabled() {
+		return []model.Component{
+			n.lyricRenderer,
+			n.songInfoRenderer,
+			n.progressRenderer,
+			n.coverRenderer,
+		}
+	}
+
+	// Default: just lyrics without cover
 	return []model.Component{
 		n.lyricRenderer,
 		n.songInfoRenderer,
@@ -285,6 +300,22 @@ func (n *Netease) CloseHook(_ *model.App) {
 
 func (n *Netease) Player() *Player {
 	return n.player
+}
+
+// GetCoverWidth returns the cover image width in columns, or 0 if cover is disabled.
+func (n *Netease) GetCoverWidth() int {
+	if n.coverRenderer == nil {
+		return 0
+	}
+	return n.coverRenderer.GetCoverWidth()
+}
+
+// GetCoverEndColumn returns the column where the cover ends, or 0 if cover is disabled.
+func (n *Netease) GetCoverEndColumn() int {
+	if n.coverRenderer == nil {
+		return 0
+	}
+	return n.coverRenderer.GetCoverEndColumn()
 }
 
 func (n *Netease) LoginCallback() error {

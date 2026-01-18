@@ -358,11 +358,25 @@ func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, cu
 // buildLyricsCentered contains the rendering logic for the centered layout.
 func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings.Builder) {
 	windowWidth := r.netease.WindowWidth()
+	coverEndCol := r.netease.GetCoverEndColumn()
+
+	// Adjust available width for lyrics when cover is displayed
+	// coverEndCol is the column where cover ends (1-indexed), so we need to offset by coverEndCol
+	lyricStartCol := coverEndCol
+	if lyricStartCol > 0 {
+		lyricStartCol += 2 // Add some padding after cover
+	}
+	availableWidth := windowWidth - lyricStartCol
+
 	highlightLine := 2
 	startLine := highlightLine - (r.lyricLines-1)/2
 	endLine := highlightLine + (r.lyricLines-1)/2
-	extraPadding := 8 + max(0, (windowWidth-40)/5)
-	lyricsMaxLength := windowWidth - extraPadding
+	extraPadding := 8 + max(0, (availableWidth-40)/5)
+	lyricsMaxLength := availableWidth - extraPadding
+	if lyricsMaxLength < 20 {
+		lyricsMaxLength = 20
+	}
+
 	for i := startLine; i <= endLine; i++ {
 		line := r.lyrics[i]
 		// 中心行如果是普通 LRC，可以滚动；如果含 ANSI 颜色码（YRC 高亮），禁止滚动避免破坏转义序列
@@ -380,8 +394,11 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 			visibleLine = stripAnsiCodes(line)
 		}
 		lineLength := runewidth.StringWidth(visibleLine)
-		paddingLeft := (windowWidth - lineLength) / 2
+
+		// Calculate padding: cover end column + centered padding within remaining space
+		paddingLeft := lyricStartCol + (availableWidth-lineLength)/2
 		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
+
 		// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
 		if !strings.Contains(line, "\033[") {
 			if i == highlightLine {
@@ -398,6 +415,8 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 
 // buildLyricsTraditional contains the rendering logic for the traditional layout.
 func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.Builder) {
+	coverEndCol := r.netease.GetCoverEndColumn()
+
 	var startCol int
 	if main.IsDualColumn() {
 		startCol = main.MenuStartColumn() + 3
@@ -405,7 +424,15 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		startCol = main.MenuStartColumn() - 4
 	}
 
+	// Add cover offset to start column if needed
+	if coverEndCol > 0 && startCol < coverEndCol+2 {
+		startCol = coverEndCol + 2 // Add some padding after cover
+	}
+
 	maxLen := r.netease.WindowWidth() - startCol - 4
+	if maxLen < 20 {
+		maxLen = 20
+	}
 	switch r.lyricLines {
 	case 3:
 		for i := 1; i <= 3; i++ {

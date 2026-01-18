@@ -71,6 +71,14 @@ type LyricConfig struct {
 	SkipParseErr bool `koanf:"skipParseErr"`
 	// 歌词渲染模式：smooth(平滑), wave(波浪), glow(发光)
 	RenderMode string `koanf:"renderMode"`
+	// 封面图设置
+	Cover CoverConfig `koanf:"cover"`
+}
+
+// CoverConfig 封面图显示设置
+type CoverConfig struct {
+	// 是否显示封面图（需要支持Kitty图形协议的终端）
+	Show bool `koanf:"show"`
 }
 
 // PprofConfig Go 性能分析工具 pprof 的相关设置

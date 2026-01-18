@@ -55,6 +55,11 @@ skipParseErr = false
 # 可选: "simple"(简单，默认), "smooth"(平滑), "wave"(波浪), "glow"(发光)
 renderMode = "smooth"
 
+# 封面图显示设置（需要支持Kitty图形协议的终端，如Kitty、WezTerm、Ghostty等）
+[main.lyric.cover]
+# 是否显示封面图
+show = false
+
 # Go性能分析工具pprof的相关设置
 [main.pprof]
 # pprof 服务监听的端口，通过 --pprof 命令行选项启用
