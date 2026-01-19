@@ -15,6 +15,7 @@ import (
 	"github.com/saltosystems/winrt-go/windows/media/core"
 	"github.com/saltosystems/winrt-go/windows/media/playback"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
@@ -195,7 +196,7 @@ func (p *winMediaPlayer) listen() {
 			// 计时器
 			p.timer = NewTimer(Options{
 				Duration:       8760 * time.Hour,
-				TickerInternal: 50 * time.Millisecond, // 20 FPS for smoother lyric animation
+				TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
 				OnRun:          func(started bool) {},
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},

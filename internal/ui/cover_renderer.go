@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
@@ -335,4 +337,62 @@ func getCoverUrl(song structs.Song) string {
 	}
 	// Add resize parameter for better performance (request smaller image)
 	return app.AddResizeParamForPicUrl(picUrl, 512)
+}
+
+// Close cleans up the cover renderer, clearing any displayed images.
+// This should be called when the application exits.
+func (r *CoverRenderer) Close() {
+	if !r.kittySupport {
+		return
+	}
+
+	r.mu.Lock()
+	wasRendered := r.imageRendered
+	r.mu.Unlock()
+
+	// Only attempt cleanup if an image was actually rendered
+	if !wasRendered {
+		r.ClearCache()
+		return
+	}
+
+	// Delete all Kitty graphics images
+	_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
+
+	// In non-alt-screen mode, we need to be more aggressive with cleanup.
+	// Move cursor to where the image was and clear that area.
+	r.mu.Lock()
+	if r.lastStartRow > 0 && r.lastStartCol > 0 && r.rows > 0 {
+		// Build cleanup sequence
+		var cleanup strings.Builder
+
+		// Save cursor position
+		cleanup.WriteString("\x1b[s")
+
+		// Move to where the image started
+		cleanup.WriteString(fmt.Sprintf("\x1b[%d;%dH", r.lastStartRow, r.lastStartCol))
+
+		// Clear the area where the image was (clear each line)
+		for i := 0; i < r.rows; i++ {
+			cleanup.WriteString("\x1b[2K") // Clear entire line
+			if i < r.rows-1 {
+				cleanup.WriteString("\x1b[B") // Move down one line
+			}
+		}
+
+		// Restore cursor position
+		cleanup.WriteString("\x1b[u")
+
+		_, _ = os.Stdout.WriteString(cleanup.String())
+	}
+	r.mu.Unlock()
+
+	// Flush to ensure everything is written before exit
+	_ = os.Stdout.Sync()
+
+	// Small delay to ensure terminal processes the commands
+	// This is especially important in non-alt-screen mode
+	time.Sleep(10 * time.Millisecond)
+
+	r.ClearCache()
 }
