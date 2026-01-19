@@ -152,31 +152,17 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Calculate the starting row for the cover
-	// Align with the center of the lyrics area
+	// Position it at the very bottom, may overlap with song info
 	windowHeight := r.netease.WindowHeight()
 	menuBottomRow := main.MenuBottomRow()
-	spaceHeight := windowHeight - 5 - menuBottomRow
 
-	var coverStartRow int
-	if spaceHeight >= 5 {
-		// For 5-line lyrics, center the cover with the lyrics
-		// Lyrics start at (windowHeight-3+menuBottomRow)/2 - 3
-		// Add offset to align cover with lyrics center
-		coverStartRow = (windowHeight-3+menuBottomRow)/2 - 1
-	} else {
-		coverStartRow = (windowHeight-3+menuBottomRow)/2 - 1
-	}
+	// Position cover to end at the very bottom (windowHeight - 1)
+	// This puts it as low as possible, overlapping song info area if needed
+	coverStartRow := windowHeight - 2 - r.rows
 
-	// Ensure the start row is valid
+	// Ensure it doesn't go above the menu
 	if coverStartRow <= menuBottomRow {
 		coverStartRow = menuBottomRow + 1
-	}
-
-	// Ensure the cover fits within the visible area
-	// Leave room for the progress bar at the bottom (last 3 rows)
-	maxStartRow := windowHeight - 3 - r.rows
-	if coverStartRow > maxStartRow {
-		coverStartRow = maxStartRow
 	}
 	if coverStartRow < 1 {
 		coverStartRow = 1

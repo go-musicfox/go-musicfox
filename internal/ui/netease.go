@@ -296,6 +296,10 @@ func (n *Netease) InitHook(_ *model.App) {
 func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
 	n.lastfm.Close()
+
+	if n.coverRenderer != nil {
+		n.coverRenderer.Close()
+	}
 }
 
 func (n *Netease) Player() *Player {
