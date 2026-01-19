@@ -256,7 +256,11 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		if skip {
 			logger.Info("已拦截无效播放")
 		} else {
-			logger.Error("Play song error", slog.Any("err", err))
+			if song.IsCloud {
+				logger.Error("Cloud song play failed, please re-enter cloud menu to refresh session", "songId", song.Id, "songName", song.Name, "error", err)
+			} else {
+				logger.Error("Play song error", slog.Any("err", err))
+			}
 		}
 		if p.playErrCount >= configs.AppConfig.Player.MaxPlayErrCount {
 			return
@@ -442,6 +446,9 @@ func (p *Player) Close() error {
 func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
 	source, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
 	if err != nil || source.Info == nil {
+		if song.IsCloud {
+			slog.Warn("Cloud song fetch failed, may need to re-authenticate", "songId", song.Id, "songName", song.Name, "error", err)
+		}
 		return "", "", err
 	}
 	url := source.Info.URL

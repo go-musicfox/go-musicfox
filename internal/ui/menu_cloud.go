@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"log/slog"
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -29,6 +30,13 @@ func NewCloudMenu(base baseMenu) *CloudMenu {
 	}
 }
 
+func (m *CloudMenu) ClearCache() {
+	m.menus = nil
+	m.songs = nil
+	m.offset = 0
+	m.hasMore = true
+}
+
 func (m *CloudMenu) IsSearchable() bool {
 	return true
 }
@@ -48,13 +56,9 @@ func (m *CloudMenu) MenuViews() []model.MenuItem {
 func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		if _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
+			slog.Info("Cloud menu requires login, redirecting to login page")
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
-		}
-
-		// 不重复请求
-		if len(m.menus) > 0 && len(m.songs) > 0 {
-			return true, nil
 		}
 
 		cloudService := service.UserCloudService{
@@ -64,9 +68,11 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
+			slog.Warn("Cloud session expired, redirecting to login page")
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
+			slog.Error("Failed to fetch cloud songs", "code", code, "response", string(response))
 			return false, nil
 		}
 
@@ -76,6 +82,7 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 
 		m.songs = _struct.GetSongsOfCloud(response)
 		m.menus = menux.GetViewFromSongs(m.songs)
+		slog.Info("Cloud songs loaded successfully", "count", len(m.songs))
 
 		return true, nil
 	}
@@ -95,12 +102,14 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
+			slog.Warn("Cloud session expired while loading more songs, redirecting to login page")
 			page, _ := m.netease.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})
 			return false, page
 		} else if codeType != _struct.Success {
+			slog.Error("Failed to fetch more cloud songs", "code", code, "offset", m.offset)
 			return false, nil
 		}
 
@@ -113,6 +122,7 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 
 		m.songs = append(m.songs, songs...)
 		m.menus = append(m.menus, menus...)
+		slog.Info("More cloud songs loaded", "count", len(songs), "total", len(m.songs))
 
 		return true, nil
 	}

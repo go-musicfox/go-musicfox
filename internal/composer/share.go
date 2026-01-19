@@ -67,8 +67,8 @@ func (s *ShareService) Share(data any) (string, error) {
 		props := NewPropsBuilder().WithDjRadio(v).Build()
 		return s.tplManager.Execute(tplShareDjRadio, props)
 	case structs.Song:
-		if v.UnMatched {
-			return "", fmt.Errorf("无法分享未匹配的云盘歌曲")
+		if v.IsCloud {
+			return "", fmt.Errorf("无法分享云盘歌曲")
 		}
 		if v.DjRadio.Privacy {
 			return "", fmt.Errorf("无法分享私密播客中的节目")

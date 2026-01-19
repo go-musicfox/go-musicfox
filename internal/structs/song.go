@@ -18,6 +18,7 @@ type Song struct {
 	DjRadioEpisodeId int64   `json:"djRadioEpisodeId"` // 若为播客，则非 0
 	DjRadio          DjRadio `json:"djRadio"`          // 播客，电台使用
 	UnMatched        bool    `json:"unMatched"`        // 云盘内资源匹配状态
+	IsCloud          bool    `json:"isCloud"`          // 是否来自云盘
 }
 
 func (s Song) ArtistName() string {
@@ -228,6 +229,8 @@ func NewSongFromCloudJson(json []byte) (Song, error) {
 	if matchType, err := jsonparser.GetString(json, "matchType"); err == nil {
 		song.UnMatched = (matchType == "unmatched")
 	}
+
+	song.IsCloud = true
 
 	_, _ = jsonparser.ArrayEach(json, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		artist, err := NewArtist(value)
