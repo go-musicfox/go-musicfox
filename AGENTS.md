@@ -125,6 +125,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 - `PlaylistDetailMenu` - 歌单详情
 - `AlbumDetailMenu` - 专辑详情
 - `ArtistDetailMenu` - 歌手详情
+- `DjRadioDetailMenu` - 电台/播客节目详情（支持按时间升序/降序排序）
 - 等等...
 
 ### 4. 事件处理
@@ -145,6 +146,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 | `/` | 搜索 |
 | `q` | 退出 |
 | `r` | 重新渲染 |
+| `|` | 切换电台/播客节目列表排序顺序（升序/降序） |
 
 ### 5. 音频播放引擎
 
