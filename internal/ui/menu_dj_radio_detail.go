@@ -28,7 +28,7 @@ func NewDjRadioDetailMenu(base baseMenu, djRadioId int64) *DjRadioDetailMenu {
 	return &DjRadioDetailMenu{
 		baseMenu:  base,
 		djRadioId: djRadioId,
-		limit:     500,
+		limit:     300,
 		sortOrder: "true",
 	}
 }
