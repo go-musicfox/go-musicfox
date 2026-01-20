@@ -222,6 +222,18 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		shareItem(h.netease, false)
 	case keybindings.OpShareSelectItem:
 		shareItem(h.netease, true)
+	case keybindings.OpToggleSortOrder:
+		if djMenu, ok := menu.(*DjRadioDetailMenu); ok {
+			djMenu.ToggleSortOrder()
+			loading := model.NewLoading(h.netease.MustMain())
+			loading.Start()
+			defer loading.Complete()
+			reloadSuccess, _ := djMenu.Reload()
+			if reloadSuccess {
+				main.RefreshMenuList()
+				return true, main, app.RerenderCmd(true)
+			}
+		}
 	default:
 		return false, nil, nil
 	}

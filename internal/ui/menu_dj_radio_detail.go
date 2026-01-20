@@ -21,13 +21,23 @@ type DjRadioDetailMenu struct {
 	limit     int
 	offset    int
 	total     int
+	sortOrder string
 }
 
 func NewDjRadioDetailMenu(base baseMenu, djRadioId int64) *DjRadioDetailMenu {
 	return &DjRadioDetailMenu{
 		baseMenu:  base,
 		djRadioId: djRadioId,
-		limit:     500,
+		limit:     300,
+		sortOrder: "true",
+	}
+}
+
+func (m *DjRadioDetailMenu) ToggleSortOrder() {
+	if m.sortOrder == "true" {
+		m.sortOrder = "false"
+	} else {
+		m.sortOrder = "true"
 	}
 }
 
@@ -53,7 +63,7 @@ func (m *DjRadioDetailMenu) BeforeEnterMenuHook() model.Hook {
 			RID:    strconv.FormatInt(m.djRadioId, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
-			Asc:    "true",
+			Asc:    m.sortOrder,
 		}
 		code, response := djProgramService.DjProgram()
 		codeType := _struct.CheckCode(code)
@@ -80,7 +90,7 @@ func (m *DjRadioDetailMenu) BottomOutHook() model.Hook {
 			RID:    strconv.FormatInt(m.djRadioId, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(offset),
-			Asc:    "true",
+			Asc:    m.sortOrder,
 		}
 		code, response := djProgramService.DjProgram()
 		codeType := _struct.CheckCode(code)
@@ -102,4 +112,26 @@ func (m *DjRadioDetailMenu) Songs() []structs.Song {
 
 func (m *DjRadioDetailMenu) DjRadioId() int64 {
 	return m.djRadioId
+}
+
+func (m *DjRadioDetailMenu) Reload() (bool, model.Page) {
+	m.offset = 0
+	djProgramService := service.DjProgramService{
+		RID:    strconv.FormatInt(m.djRadioId, 10),
+		Limit:  strconv.Itoa(m.limit),
+		Offset: "0",
+		Asc:    m.sortOrder,
+	}
+	code, response := djProgramService.DjProgram()
+	codeType := _struct.CheckCode(code)
+	if codeType != _struct.Success {
+		return false, nil
+	}
+	m.songs = _struct.GetSongsOfDjRadio(response)
+	if total, err := jsonparser.GetInt(response, "count"); err == nil {
+		m.total = int(total)
+	}
+	m.menus = menux.GetViewFromSongs(m.songs)
+
+	return true, nil
 }
