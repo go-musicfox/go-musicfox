@@ -489,6 +489,7 @@ $ musicfox
 | `simiSongsOfSelectedSong`           | 与选中歌曲相似的歌曲          | `F`                                             |
 | `actionOfSelected`                  | 对于选中项或当前播放的操作    | `m`                                          |
 | `actionOfPlayingSong`               | 对于当前播放的操作            | `M`                                          |
+| `toggleSortOrder`                   | 切换排序顺序（电台/播客列表） | `|`                                          |
 
 注意：
 - 非字符快捷键大小写不敏感，如 `shift+tab` 等同 `Shift+Tab`，但 `a` 与 `A` 不同
