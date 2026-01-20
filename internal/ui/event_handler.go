@@ -230,6 +230,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			defer loading.Complete()
 			reloadSuccess, _ := djMenu.Reload()
 			if reloadSuccess {
+				main.RefreshMenuList()
 				return true, main, app.RerenderCmd(true)
 			}
 		}
