@@ -125,6 +125,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 - `PlaylistDetailMenu` - 歌单详情
 - `AlbumDetailMenu` - 专辑详情
 - `ArtistDetailMenu` - 歌手详情
+- `DjRadioDetailMenu` - 电台/播客节目详情（支持按时间升序/降序排序）
 - 等等...
 
 ### 4. 事件处理
@@ -145,6 +146,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 | `/` | 搜索 |
 | `q` | 退出 |
 | `r` | 重新渲染 |
+| `|` | 切换电台/播客节目列表排序顺序（升序/降序） |
 
 ### 5. 音频播放引擎
 
@@ -320,6 +322,7 @@ type Player interface {
 - 更改 API 接口或配置格式
 - 添加新的播放器引擎、菜单类型、渲染模式
 - 修改关键路径或重要流程
+- **快捷键变更**：新增、删除或修改快捷键后，必须同步更新 README 中的快捷键说明部分（help 菜单是动态从 keybindings 配置生成的，无需手动修改）
 
 #### 2. 更新检查清单
 - [ ] 目录结构是否准确反映当前项目结构

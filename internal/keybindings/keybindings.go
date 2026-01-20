@@ -103,6 +103,7 @@ const (
 	OpOpenSimiSongsOfSelectedSong
 	OpSharePlayingItem
 	OpShareSelectItem
+	OpToggleSortOrder
 
 	OpActionOfSelected
 	OpActionOfPlayingSong
@@ -171,6 +172,7 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpOpenSimiSongsOfSelectedSong:    {name: "simiSongsOfSelectedSong", desc: "与选中歌曲相似的歌曲"},
 	OpSharePlayingItem:               {name: "sharePlayingItem", desc: "分享当前播放"},
 	OpShareSelectItem:                {name: "shareSelectItem", desc: "分享当前选中"},
+	OpToggleSortOrder:                {name: "toggleSortOrder", desc: "切换排序顺序"},
 
 	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
 	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},
@@ -240,6 +242,7 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 
 	OpActionOfSelected:    {"m"},
 	OpActionOfPlayingSong: {"M"},
+	OpToggleSortOrder:     {"|"},
 }
 
 var userOperateToKeys map[OperateType][]string
