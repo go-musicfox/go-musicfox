@@ -447,8 +447,14 @@ func (l *LoginPage) View(a *model.App) string {
 		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 	}
 
-	tab1 := activeTabStyle.Render("手机号/邮箱登录")
-	tab2 := tabStyle.Render("Cookie 登录")
+	var tab1, tab2 string
+	if l.tabIndex == tabAccount {
+		tab1 = activeTabStyle.Render("手机号/邮箱登录")
+		tab2 = tabStyle.Render("Cookie 登录")
+	} else {
+		tab1 = tabStyle.Render("手机号/邮箱登录")
+		tab2 = activeTabStyle.Render("Cookie 登录")
+	}
 
 	tabRow := lipgloss.JoinHorizontal(
 		lipgloss.Top,
