@@ -79,6 +79,8 @@ type LyricConfig struct {
 type CoverConfig struct {
 	// 是否显示封面图（需要支持Kitty图形协议的终端）
 	Show bool `koanf:"show"`
+	// 封面图宽度占窗口宽度的比例（取值范围 0.1-0.8）
+	WidthRatio float64 `koanf:"widthRatio"`
 }
 
 // PprofConfig Go 性能分析工具 pprof 的相关设置

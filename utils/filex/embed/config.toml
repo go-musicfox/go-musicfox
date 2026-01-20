@@ -59,6 +59,8 @@ renderMode = "smooth"
 [main.lyric.cover]
 # 是否显示封面图
 show = false
+# 封面图宽度占窗口宽度的比例（取值范围 0.1-0.8，默认 0.3）
+widthRatio = 0.3
 
 # Go性能分析工具pprof的相关设置
 [main.pprof]
