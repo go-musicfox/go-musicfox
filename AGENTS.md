@@ -119,7 +119,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 
 **主要菜单类型**（72个 UI 文件）：
 - `MenuMain` - 主菜单
-- `LoginPage` - 登录页面
+- `LoginPage` - 登录页面（支持手机号/邮箱登录、Cookie 登录，二维码登录）
 - `SearchPage` - 搜索页面
 - `CurPlaylist` - 当前播放列表
 - `PlaylistDetailMenu` - 歌单详情
@@ -147,6 +147,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 | `q` | 退出 |
 | `r` | 重新渲染 |
 | `|` | 切换电台/播客节目列表排序顺序（升序/降序） |
+| `Tab` | 登录页面：切换登录方式（手机号/邮箱 ↔ Cookie） |
 
 ### 5. 音频播放引擎
 
@@ -371,6 +372,7 @@ type Player interface {
 ```toml
 [startup]      # 启动选项
 [main]         # 主界面设置
+[main.account] # 账号相关配置（如 Cookie 登录）
 [theme]        # 主题颜色
 [storage]      # 存储路径
 [player]       # 播放器配置
@@ -380,6 +382,19 @@ type Player interface {
 [keybindings]  # 快捷键
 [share]        # 分享模板
 ```
+
+### 账号配置
+
+```toml
+[main.account]
+# 网易云音乐的登录 Cookie（用于 Cookie 登录方式）
+neteaseCookie = ""
+```
+
+**登录方式**：
+1. **手机号/邮箱登录**：在 TUI 中输入手机号或邮箱及密码
+2. **Cookie 登录**：在 TUI 中直接输入网易云音乐 Cookie，或通过配置文件设置 `neteaseCookie`
+3. **二维码登录**：使用手机网易云扫描二维码登录
 
 ## 构建与发布
 

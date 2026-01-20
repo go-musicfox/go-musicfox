@@ -2,6 +2,8 @@ package ui
 
 import (
 	"log/slog"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -11,10 +13,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/netease-music/service"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -24,6 +28,45 @@ const LoginPageType model.PageType = "login"
 const (
 	submitIndex  = 2 // skip account and password input
 	qrLoginIndex = 3
+	tabAccount   = 0
+	tabCookie    = 1
+	tabCount     = 2
+)
+
+var (
+	activeTabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      " ",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┘",
+		BottomRight: "└",
+	}
+
+	tabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      "─",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┴",
+		BottomRight: "┴",
+	}
+
+	tabStyle = lipgloss.NewStyle().
+			Border(tabBorder, true).
+			BorderForeground(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}).
+			Padding(0, 1)
+
+	activeTabStyle = tabStyle.Border(activeTabBorder, true)
+
+	tabGapStyle = tabStyle.
+			BorderTop(false).
+			BorderLeft(false).
+			BorderRight(false)
 )
 
 // login tick
@@ -40,8 +83,10 @@ type LoginPage struct {
 
 	menuTitle     *model.MenuItem
 	index         int
+	tabIndex      int
 	accountInput  textinput.Model
 	passwordInput textinput.Model
+	cookieInput   textinput.Model
 	submitButton  string
 	qrLoginButton string
 	qrLoginStep   int
@@ -51,11 +96,17 @@ type LoginPage struct {
 	// 以下字段用于鼠标点击区域的计算与命中
 	accountRowY  int // 账号输入框所在的行号（1-based）
 	passwordRowY int // 密码输入框所在的行号（1-based）
+	cookieRowY   int // Cookie输入框所在的行号（1-based）
 	buttonsRowY  int // 提交/扫码按钮所在行号（1-based）
 	submitStartX int // 提交按钮起始 X（0-based）
 	submitEndX   int // 提交按钮结束 X（0-based，闭区间）
 	qrStartX     int // 扫码按钮起始 X（0-based）
 	qrEndX       int // 扫码按钮结束 X（0-based，闭区间）
+	cookieStartX int // Cookie按钮起始 X（0-based）
+	cookieEndX   int // Cookie按钮结束 X（0-based，闭区间）
+	tabStartX    int // Tab 区域起始 X（0-based）
+	tabEndX      int // Tab 区域结束 X（0-based，闭区间）
+	tabsRowY     int // Tab 所在行号（1-based）
 }
 
 func NewLoginPage(netease *Netease) (login *LoginPage) {
@@ -73,11 +124,17 @@ func NewLoginPage(netease *Netease) (login *LoginPage) {
 	passwordInput.EchoCharacter = '•'
 	passwordInput.CharLimit = 32
 
+	cookieInput := textinput.New()
+	cookieInput.Placeholder = " 请输入 Cookie"
+	cookieInput.Prompt = "> "
+	cookieInput.CharLimit = 512
+
 	login = &LoginPage{
 		netease:       netease,
 		menuTitle:     &model.MenuItem{Title: "用户登录", Subtitle: "手机号或邮箱"},
 		accountInput:  accountInput,
 		passwordInput: passwordInput,
+		cookieInput:   cookieInput,
 		submitButton:  model.GetBlurredSubmitButton(),
 	}
 	login.qrLoginButton = model.GetBlurredButton(login.qrButtonTextByStep())
@@ -94,9 +151,11 @@ func (l *LoginPage) Type() model.PageType {
 }
 
 func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
-	inputs := []*textinput.Model{
-		&l.accountInput,
-		&l.passwordInput,
+	var inputs []*textinput.Model
+	if l.tabIndex == tabAccount {
+		inputs = []*textinput.Model{&l.accountInput, &l.passwordInput}
+	} else {
+		inputs = []*textinput.Model{&l.cookieInput}
 	}
 
 	var (
@@ -116,66 +175,84 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			y := mouse.Y + 1
 			x := mouse.X
 
-			// 点击输入框：设置焦点
-			if y == l.accountRowY {
-				l.index = 0
-				// 焦点与样式更新
-				l.accountInput.Focus()
-				l.accountInput.Prompt = model.GetFocusedPrompt()
-				l.accountInput.TextStyle = util.GetPrimaryFontStyle()
-
-				l.passwordInput.Blur()
-				l.passwordInput.Prompt = model.GetBlurredPrompt()
-				l.passwordInput.TextStyle = lipgloss.NewStyle()
-
-				// 按钮样式同步
-				l.submitButton = model.GetBlurredSubmitButton()
-				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
-				return l, tickLogin(time.Nanosecond)
-			}
-			if y == l.passwordRowY {
-				l.index = 1
-				// 焦点与样式更新
-				l.passwordInput.Focus()
-				l.passwordInput.Prompt = model.GetFocusedPrompt()
-				l.passwordInput.TextStyle = util.GetPrimaryFontStyle()
-
-				l.accountInput.Blur()
-				l.accountInput.Prompt = model.GetBlurredPrompt()
-				l.accountInput.TextStyle = lipgloss.NewStyle()
-
-				// 按钮样式同步
-				l.submitButton = model.GetBlurredSubmitButton()
-				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
-				return l, tickLogin(time.Nanosecond)
-			}
-
-			// 点击按钮：触发提交或扫码登录
-			if y == l.buttonsRowY {
-				// 命中提交按钮
-				if x >= l.submitStartX && x <= l.submitEndX {
-					l.index = submitIndex
-					return l.enterHandler()
+			// 点击 Tab 区域
+			if y == l.tabsRowY && x >= l.tabStartX && x <= l.tabEndX {
+				tabWidth1 := lipgloss.Width(activeTabStyle.Render("手机号/邮箱登录"))
+				_ = tabWidth1
+				if x < l.tabStartX+tabWidth1 {
+					l.tabIndex = tabAccount
+				} else {
+					l.tabIndex = tabCookie
 				}
-				// 命中扫码按钮
-				if x >= l.qrStartX && x <= l.qrEndX {
-					l.index = qrLoginIndex
-					return l.enterHandler()
+				l.updateTabStyle()
+				return l, tickLogin(time.Nanosecond)
+			}
+
+			if l.tabIndex == tabAccount {
+				// 点击输入框：设置焦点
+				if y == l.accountRowY {
+					l.index = 0
+					l.focusAccountInputs()
+					return l, tickLogin(time.Nanosecond)
+				}
+				if y == l.passwordRowY {
+					l.index = 1
+					l.focusAccountInputs()
+					return l, tickLogin(time.Nanosecond)
+				}
+
+				// 点击按钮：触发提交或扫码登录
+				if y == l.buttonsRowY {
+					if x >= l.submitStartX && x <= l.submitEndX {
+						l.index = submitIndex
+						return l.enterHandler()
+					}
+					if x >= l.qrStartX && x <= l.qrEndX {
+						l.index = qrLoginIndex
+						return l.enterHandler()
+					}
+				}
+			} else {
+				// Cookie 登录模式
+				if y == l.cookieRowY {
+					l.index = 0
+					l.cookieInput.Focus()
+					l.cookieInput.Prompt = model.GetFocusedPrompt()
+					l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+					l.submitButton = model.GetBlurredSubmitButton()
+					return l, tickLogin(time.Nanosecond)
+				}
+
+				// 点击按钮：触发 Cookie 登录
+				if y == l.buttonsRowY {
+					if x >= l.submitStartX && x <= l.submitEndX {
+						l.index = submitIndex
+						return l.enterHandler()
+					}
 				}
 			}
 		}
 		// 其他鼠标事件交给输入框以便光标闪烁等
-		return l.updateLoginInputs(mouse)
+		if l.tabIndex == tabAccount {
+			return l.updateLoginInputs(msg)
+		}
+		return l.updateCookieInput(msg)
 	}
 
 	if key, ok = msg.(tea.KeyMsg); !ok {
-		return l.updateLoginInputs(msg)
+		if l.tabIndex == tabAccount {
+			return l.updateLoginInputs(msg)
+		}
+		return l.updateCookieInput(msg)
 	}
 
 	switch key.String() {
 	case "b":
 		if l.index != submitIndex && l.index != qrLoginIndex {
-			return l.updateLoginInputs(msg)
+			if l.tabIndex == tabAccount {
+				return l.updateLoginInputs(msg)
+			}
+			return l.updateCookieInput(msg)
 		}
 		fallthrough
 	case "esc":
@@ -190,6 +267,66 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 	case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 		s := key.String()
 
+		// Tab 切换
+		if s == "tab" {
+			l.tabIndex = (l.tabIndex + 1) % tabCount
+			l.index = 0
+			l.updateTabStyle()
+			if l.tabIndex == tabAccount {
+				l.focusAccountInputs()
+			} else {
+				l.cookieInput.Focus()
+				l.cookieInput.Prompt = model.GetFocusedPrompt()
+				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				l.submitButton = model.GetBlurredSubmitButton()
+			}
+			return l, nil
+		}
+		if s == "shift+tab" {
+			l.tabIndex = (l.tabIndex - 1 + tabCount) % tabCount
+			l.index = 0
+			l.updateTabStyle()
+			if l.tabIndex == tabAccount {
+				l.focusAccountInputs()
+			} else {
+				l.cookieInput.Focus()
+				l.cookieInput.Prompt = model.GetFocusedPrompt()
+				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				l.submitButton = model.GetBlurredSubmitButton()
+			}
+			return l, nil
+		}
+		// 右键从最后一个元素切换到下一Tab
+		if s == "right" && ((l.tabIndex == tabAccount && l.index == submitIndex) || l.index < 0) {
+			l.tabIndex = (l.tabIndex + 1) % tabCount
+			l.index = 0
+			l.updateTabStyle()
+			if l.tabIndex == tabAccount {
+				l.focusAccountInputs()
+			} else {
+				l.cookieInput.Focus()
+				l.cookieInput.Prompt = model.GetFocusedPrompt()
+				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				l.submitButton = model.GetBlurredSubmitButton()
+			}
+			return l, nil
+		}
+		// 左键从第一个元素切换到上一Tab
+		if s == "left" && ((l.tabIndex == tabCookie && l.index == 0) || l.index < 0) {
+			l.tabIndex = (l.tabIndex - 1 + tabCount) % tabCount
+			l.index = 0
+			l.updateTabStyle()
+			if l.tabIndex == tabAccount {
+				l.focusAccountInputs()
+			} else {
+				l.cookieInput.Focus()
+				l.cookieInput.Prompt = model.GetFocusedPrompt()
+				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				l.submitButton = model.GetBlurredSubmitButton()
+			}
+			return l, nil
+		}
+
 		// Did the user press enter while the submit button was focused?
 		// If so, exit.
 		if s == "enter" && l.index >= submitIndex {
@@ -199,13 +336,15 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 		// 当focus在button上时，左右按键的特殊处理
 		switch s {
 		case "left", "right":
-			if l.index < submitIndex {
+			if l.index < 0 {
 				return l.updateLoginInputs(msg)
 			}
-			if s == "left" && l.index == qrLoginIndex {
-				l.index--
-			} else if s == "right" && l.index == submitIndex {
-				l.index++
+			if l.tabIndex == tabAccount {
+				if s == "left" && l.index == qrLoginIndex {
+					l.index--
+				} else if s == "right" && l.index == submitIndex {
+					l.index++
+				}
 			}
 		case "up", "shift+tab":
 			l.index--
@@ -213,46 +352,65 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			l.index++
 		}
 
-		if l.index > qrLoginIndex {
-			l.index = 0
-		} else if l.index < 0 {
-			l.index = qrLoginIndex
-		}
-
-		for i := 0; i <= len(inputs)-1; i++ {
-			if i != l.index {
-				// Remove focused state
-				inputs[i].Blur()
-				inputs[i].Prompt = model.GetBlurredPrompt()
-				inputs[i].TextStyle = lipgloss.NewStyle()
-				continue
+		if l.tabIndex == tabAccount {
+			if l.index > qrLoginIndex {
+				l.index = 0
+			} else if l.index < 0 {
+				l.index = qrLoginIndex
 			}
-			// Set focused state
-			inputs[i].Focus()
-			inputs[i].Prompt = model.GetFocusedPrompt()
-			inputs[i].TextStyle = util.GetPrimaryFontStyle()
-		}
 
-		// l.accountInput = *inputs[0]
-		// l.passwordInput = *inputs[1]
+			for i := 0; i <= len(inputs)-1; i++ {
+				if i != l.index {
+					inputs[i].Blur()
+					inputs[i].Prompt = model.GetBlurredPrompt()
+					inputs[i].TextStyle = lipgloss.NewStyle()
+					continue
+				}
+				inputs[i].Focus()
+				inputs[i].Prompt = model.GetFocusedPrompt()
+				inputs[i].TextStyle = util.GetPrimaryFontStyle()
+			}
 
-		if l.index == submitIndex {
-			l.submitButton = model.GetFocusedSubmitButton()
+			if l.index == submitIndex {
+				l.submitButton = model.GetFocusedSubmitButton()
+			} else {
+				l.submitButton = model.GetBlurredSubmitButton()
+			}
+
+			if l.index == qrLoginIndex {
+				l.qrLoginButton = model.GetFocusedButton(l.qrButtonTextByStep())
+			} else {
+				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+			}
 		} else {
-			l.submitButton = model.GetBlurredSubmitButton()
-		}
+			// Cookie 登录模式
+			if l.index > submitIndex {
+				l.index = 0
+			} else if l.index < 0 {
+				l.index = submitIndex
+			}
 
-		if l.index == qrLoginIndex {
-			l.qrLoginButton = model.GetFocusedButton(l.qrButtonTextByStep())
-		} else {
-			l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+			if l.index == submitIndex {
+				l.submitButton = model.GetFocusedSubmitButton()
+				l.cookieInput.Blur()
+				l.cookieInput.Prompt = model.GetBlurredPrompt()
+				l.cookieInput.TextStyle = lipgloss.NewStyle()
+			} else {
+				l.submitButton = model.GetBlurredSubmitButton()
+				l.cookieInput.Focus()
+				l.cookieInput.Prompt = model.GetFocusedPrompt()
+				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+			}
 		}
 
 		return l, nil
 	}
 
 	// Handle character input and blinks
-	return l.updateLoginInputs(msg)
+	if l.tabIndex == tabAccount {
+		return l.updateLoginInputs(msg)
+	}
+	return l.updateCookieInput(msg)
 }
 
 func (l *LoginPage) View(a *model.App) string {
@@ -278,9 +436,56 @@ func (l *LoginPage) View(a *model.App) string {
 
 	// menu title
 	write(mainPage.MenuTitleView(a, &top, l.menuTitle))
-	write("\n\n\n")
-	top += 2
+	write("\n")
+	top++
 
+	// 记录 Tab 所在行（1-based）
+	l.tabsRowY = curRow()
+
+	// Tab 渲染
+	if mainPage.MenuStartColumn() > 0 {
+		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+	}
+
+	tab1 := activeTabStyle.Render("手机号/邮箱登录")
+	tab2 := tabStyle.Render("Cookie 登录")
+
+	tabRow := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		tab1,
+		tab2,
+	)
+
+	tabGap := tabGapStyle.Render(strings.Repeat(" ", 2))
+	tabRow = lipgloss.JoinHorizontal(lipgloss.Bottom, tabRow, tabGap)
+
+	write(tabRow)
+
+	// 记录 Tab 区域的起止 X 坐标（0-based）
+	l.tabStartX = mainPage.MenuStartColumn()
+	if l.tabStartX < 0 {
+		l.tabStartX = 0
+	}
+	l.tabEndX = l.tabStartX + lipgloss.Width(tabRow) - 1
+
+	write("\n\n")
+	top++
+
+	// 根据当前 Tab 渲染不同的登录表单
+	if l.tabIndex == tabAccount {
+		l.renderAccountLoginView(a, &builder, &top, mainPage, write, curRow)
+	} else {
+		l.renderCookieLoginView(a, &builder, &top, mainPage, write, curRow)
+	}
+
+	if a.WindowHeight() > top+3 {
+		write(strings.Repeat("\n", a.WindowHeight()-top-3))
+	}
+
+	return builder.String()
+}
+
+func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builder, top *int, mainPage *model.Main, write func(string), curRow func() int) {
 	inputs := []*textinput.Model{
 		&l.accountInput,
 		&l.passwordInput,
@@ -310,22 +515,22 @@ func (l *LoginPage) View(a *model.App) string {
 			l.passwordRowY = curRow()
 		}
 
-		top++
+		(*top)++
 
 		if i < len(inputs)-1 {
 			write("\n\n")
-			top++
+			(*top)++
 		}
 	}
 
 	write("\n\n")
-	top++
+	(*top)++
 	if mainPage.MenuStartColumn() > 0 {
 		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 	}
 	write(l.tips)
 	write("\n\n")
-	top++
+	(*top)++
 	if mainPage.MenuStartColumn() > 0 {
 		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 	}
@@ -358,12 +563,60 @@ func (l *LoginPage) View(a *model.App) string {
 		write(strings.Repeat(" ", spaceLen))
 	}
 	write("\n")
+}
 
-	if a.WindowHeight() > top+3 {
-		write(strings.Repeat("\n", a.WindowHeight()-top-3))
+func (l *LoginPage) renderCookieLoginView(a *model.App, builder *strings.Builder, top *int, mainPage *model.Main, write func(string), curRow func() int) {
+	if mainPage.MenuStartColumn() > 0 {
+		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
 	}
 
-	return builder.String()
+	write(l.cookieInput.View())
+
+	var valueLen int
+	if l.cookieInput.Value() == "" {
+		valueLen = runewidth.StringWidth(l.cookieInput.Placeholder)
+	} else {
+		valueLen = runewidth.StringWidth(l.cookieInput.Value())
+	}
+	if spaceLen := l.netease.WindowWidth() - mainPage.MenuStartColumn() - valueLen - 3; spaceLen > 0 {
+		write(strings.Repeat(" ", spaceLen))
+	}
+
+	// 记录输入框所在行号（1-based）
+	l.cookieRowY = curRow()
+
+	(*top)++
+
+	write("\n\n")
+	(*top)++
+	if mainPage.MenuStartColumn() > 0 {
+		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+	}
+	write(l.tips)
+	write("\n\n")
+	(*top)++
+	if mainPage.MenuStartColumn() > 0 {
+		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+	}
+	// 记录按钮所在行（1-based）
+	l.buttonsRowY = curRow()
+
+	// 计算按钮的起止 X 坐标（0-based）
+	submitX := mainPage.MenuStartColumn()
+	if submitX < 0 {
+		submitX = 0
+	}
+	submitW := lipgloss.Width(l.submitButton)
+	l.submitStartX = submitX
+	l.submitEndX = submitX + submitW - 1
+
+	write(l.submitButton)
+
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(l.submitButton)
+	if spaceLen > 0 {
+		write(strings.Repeat(" ", spaceLen))
+	}
+	write("\n")
 }
 
 func (l *LoginPage) Msg() tea.Msg {
@@ -404,6 +657,9 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 
 	switch l.index {
 	case submitIndex:
+		if l.tabIndex == tabCookie {
+			return l.loginByCookie()
+		}
 		// 提交
 		if len(l.accountInput.Value()) <= 0 || len(l.passwordInput.Value()) <= 0 {
 			l.tips = util.SetFgStyle("请输入账号或密码", termenv.ANSIBrightRed)
@@ -489,4 +745,61 @@ func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
 		newPage = l.AfterLogin()
 	}
 	return newPage
+}
+
+func (l *LoginPage) updateTabStyle() {
+	if l.tabIndex == tabAccount {
+		l.menuTitle.Subtitle = "手机号/邮箱登录"
+	} else {
+		l.menuTitle.Subtitle = "Cookie 登录"
+	}
+}
+
+func (l *LoginPage) focusAccountInputs() {
+	l.accountInput.Focus()
+	l.accountInput.Prompt = model.GetFocusedPrompt()
+	l.accountInput.TextStyle = util.GetPrimaryFontStyle()
+
+	l.passwordInput.Blur()
+	l.passwordInput.Prompt = model.GetBlurredPrompt()
+	l.passwordInput.TextStyle = lipgloss.NewStyle()
+
+	l.submitButton = model.GetBlurredSubmitButton()
+	l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+}
+
+func (l *LoginPage) updateCookieInput(msg tea.Msg) (model.Page, tea.Cmd) {
+	var cmd tea.Cmd
+	l.cookieInput, cmd = l.cookieInput.Update(msg)
+	return l, cmd
+}
+
+func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
+	cookieStr := l.cookieInput.Value()
+	if len(cookieStr) <= 0 {
+		l.tips = util.SetFgStyle("请输入 Cookie", termenv.ANSIBrightRed)
+		return l, nil
+	}
+
+	cookies, err := http.ParseCookie(cookieStr)
+	if err != nil {
+		l.tips = util.SetFgStyle("Cookie 格式错误："+err.Error(), termenv.ANSIBrightRed)
+		return l, nil
+	}
+
+	neteaseutil.GetGlobalCookieJar().SetCookies(
+		errorx.Must1(url.Parse("https://music.163.com")),
+		cookies,
+	)
+
+	if err := l.netease.LoginCallback(); err != nil {
+		l.tips = util.SetFgStyle("Cookie 登录失败："+err.Error(), termenv.ANSIBrightRed)
+		return l, tickLogin(time.Nanosecond)
+	}
+
+	l.tips = ""
+	if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
+		return newPage, l.netease.Tick(time.Nanosecond)
+	}
+	return l.netease.MustMain(), model.TickMain(time.Nanosecond)
 }
