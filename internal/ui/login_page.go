@@ -36,13 +36,13 @@ const (
 var (
 	activeTabBorder = lipgloss.Border{
 		Top:         "─",
-		Bottom:      " ",
+		Bottom:      "─",
 		Left:        "│",
 		Right:       "│",
 		TopLeft:     "╭",
 		TopRight:    "╮",
-		BottomLeft:  "┘",
-		BottomRight: "└",
+		BottomLeft:  "╰",
+		BottomRight: "╯",
 	}
 
 	tabBorder = lipgloss.Border{
@@ -467,15 +467,15 @@ func (l *LoginPage) View(a *model.App) string {
 
 	write(tabRow)
 
+	// Add blank line between tab bar and form
+	write("\n\n")
+
 	// 记录 Tab 区域的起止 X 坐标（0-based）
 	l.tabStartX = mainPage.MenuStartColumn()
 	if l.tabStartX < 0 {
 		l.tabStartX = 0
 	}
 	l.tabEndX = l.tabStartX + lipgloss.Width(tabRow) - 1
-
-	write("\n\n")
-	top++
 
 	// 根据当前 Tab 渲染不同的登录表单
 	if l.tabIndex == tabAccount {
