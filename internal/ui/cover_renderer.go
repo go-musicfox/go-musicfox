@@ -95,8 +95,11 @@ func (r *CoverRenderer) calculateDimensions() {
 		return
 	}
 
-	// Calculate columns based on fixed width ratio (30%)
-	const widthRatio = 0.3
+	// Get width ratio from config, default to 0.3 if not set or invalid
+	widthRatio := configs.AppConfig.Main.Lyric.Cover.WidthRatio
+	if widthRatio <= 0 || widthRatio > 1 {
+		widthRatio = 0.3
+	}
 
 	windowWidth := r.netease.WindowWidth()
 	r.cols = int(float64(windowWidth) * widthRatio)
