@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -34,39 +35,19 @@ const (
 )
 
 var (
-	activeTabBorder = lipgloss.Border{
-		Top:         "─",
-		Bottom:      "─",
-		Left:        "│",
-		Right:       "│",
-		TopLeft:     "╭",
-		TopRight:    "╮",
-		BottomLeft:  "╰",
-		BottomRight: "╯",
-	}
-
-	tabBorder = lipgloss.Border{
-		Top:         "─",
-		Bottom:      "─",
-		Left:        "│",
-		Right:       "│",
-		TopLeft:     "╭",
-		TopRight:    "╮",
-		BottomLeft:  "┴",
-		BottomRight: "┴",
-	}
-
 	tabStyle = lipgloss.NewStyle().
-			Border(tabBorder, true).
-			BorderForeground(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}).
-			Padding(0, 1)
+			Border(lipgloss.RoundedBorder(), true).
+			Foreground(lipgloss.Color(termenv.ANSIBrightBlack.String())).
+			BorderForeground(lipgloss.Color(termenv.ANSIBrightBlack.String())).
+			Padding(0, 0)
 
-	activeTabStyle = tabStyle.Border(activeTabBorder, true)
-
-	tabGapStyle = tabStyle.
-			BorderTop(false).
-			BorderLeft(false).
-			BorderRight(false)
+	activeTabStyleGetter = sync.OnceValue(func() lipgloss.Style {
+		return lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder(), true).
+			Foreground(lipgloss.Color(configs.AppConfig.Theme.PrimaryColor)).
+			BorderForeground(lipgloss.Color(configs.AppConfig.Theme.PrimaryColor)).
+			Padding(0, 0)
+	})
 )
 
 // login tick
@@ -127,7 +108,7 @@ func NewLoginPage(netease *Netease) (login *LoginPage) {
 	cookieInput := textinput.New()
 	cookieInput.Placeholder = " 请输入 Cookie"
 	cookieInput.Prompt = "> "
-	cookieInput.CharLimit = 512
+	cookieInput.CharLimit = 5000
 
 	login = &LoginPage{
 		netease:       netease,
@@ -177,7 +158,7 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 			// 点击 Tab 区域
 			if y == l.tabsRowY && x >= l.tabStartX && x <= l.tabEndX {
-				tabWidth1 := lipgloss.Width(activeTabStyle.Render("手机号/邮箱登录"))
+				tabWidth1 := lipgloss.Width(activeTabStyleGetter().Render("手机号/邮箱登录"))
 				_ = tabWidth1
 				if x < l.tabStartX+tabWidth1 {
 					l.tabIndex = tabAccount
@@ -442,28 +423,24 @@ func (l *LoginPage) View(a *model.App) string {
 	// 记录 Tab 所在行（1-based）
 	l.tabsRowY = curRow()
 
-	// Tab 渲染
-	if mainPage.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
-	}
+	write("\n")
 
+	// Tab 渲染
 	var tab1, tab2 string
 	if l.tabIndex == tabAccount {
-		tab1 = activeTabStyle.Render("手机号/邮箱登录")
+		tab1 = activeTabStyleGetter().Render("手机号/邮箱登录")
 		tab2 = tabStyle.Render("Cookie 登录")
 	} else {
 		tab1 = tabStyle.Render("手机号/邮箱登录")
-		tab2 = activeTabStyle.Render("Cookie 登录")
+		tab2 = activeTabStyleGetter().Render("Cookie 登录")
 	}
 
-	tabRow := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		tab1,
-		tab2,
-	)
+	filledSpace := ""
+	if mainPage.MenuStartColumn() > 0 {
+		filledSpace = strings.Repeat(" ", mainPage.MenuStartColumn())
+	}
 
-	tabGap := tabGapStyle.Render(strings.Repeat(" ", 2))
-	tabRow = lipgloss.JoinHorizontal(lipgloss.Bottom, tabRow, tabGap)
+	tabRow := lipgloss.JoinHorizontal(lipgloss.Top, filledSpace, tab1, tab2)
 
 	write(tabRow)
 
@@ -786,6 +763,9 @@ func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 		l.tips = util.SetFgStyle("请输入 Cookie", termenv.ANSIBrightRed)
 		return l, nil
 	}
+
+	// clear
+	l.cookieInput.SetValue("")
 
 	cookies, err := http.ParseCookie(cookieStr)
 	if err != nil {
