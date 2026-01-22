@@ -81,6 +81,8 @@ type CoverConfig struct {
 	Show bool `koanf:"show"`
 	// 封面图宽度占窗口宽度的比例（取值范围 0.1-0.8）
 	WidthRatio float64 `koanf:"widthRatio"`
+	// 封面图圆角半径百分比（取值范围 0-100，默认 8 即 8%）
+	CornerRadius int `koanf:"cornerRadius"`
 }
 
 // PprofConfig Go 性能分析工具 pprof 的相关设置

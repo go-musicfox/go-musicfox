@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -12,6 +13,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
 const (
@@ -83,8 +86,15 @@ func (c *ImageCache) GetOrFetch(ctx context.Context, url string, cols, rows int)
 	targetSize := 512
 	resized := resizeImageSquare(img, targetSize)
 
+	// Apply rounded corners based on config
+	radiusPercent := float64(configs.AppConfig.Main.Lyric.Cover.CornerRadius) / 100.0 / 2.0
+	if radiusPercent >= 0.5 {
+		radiusPercent = 0.5
+	}
+	rounded := applyRoundedCorners(resized, radiusPercent)
+
 	// Generate kitty sequence
-	kittySeq, err := TransmitAndDisplay(resized, cols, rows)
+	kittySeq, err := TransmitAndDisplay(rounded, cols, rows)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate kitty sequence: %w", err)
 	}
@@ -92,7 +102,7 @@ func (c *ImageCache) GetOrFetch(ctx context.Context, url string, cols, rows int)
 	// Store in cache
 	c.mu.Lock()
 	c.cache[cacheKey] = &cacheEntry{
-		img:      resized,
+		img:      rounded,
 		cols:     cols,
 		rows:     rows,
 		kittySeq: kittySeq,
@@ -277,4 +287,81 @@ func bilinearInterp(c00, c10, c01, c11 uint32, xWeight, yWeight float64) uint32 
 	bottom := float64(c01)*(1-xWeight) + float64(c11)*xWeight
 	// Interpolate in y direction
 	return uint32(top*(1-yWeight) + bottom*yWeight)
+}
+
+// applyRoundedCorners applies rounded corners to an image.
+// radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
+func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Calculate corner radius
+	minDim := width
+	if height < minDim {
+		minDim = height
+	}
+	radius := int(float64(minDim) * radiusPercent)
+	if radius <= 0 {
+		return src
+	}
+
+	// Create output image with alpha channel
+	dst := image.NewRGBA(bounds)
+
+	// Draw the source image
+	draw.Draw(dst, bounds, src, bounds.Min, draw.Src)
+
+	// Apply rounded corners by making corner pixels transparent
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if shouldMaskCorner(x, y, width, height, radius) {
+				dst.SetRGBA(x, y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	return dst
+}
+
+// shouldMaskCorner determines if a pixel should be masked (made transparent)
+// based on its distance from the nearest corner arc center.
+func shouldMaskCorner(x, y, width, height, radius int) bool {
+	// Check top-left corner
+	if x < radius && y < radius {
+		dx := float64(radius - x)
+		dy := float64(radius - y)
+		if dx*dx+dy*dy > float64(radius*radius) {
+			return true
+		}
+	}
+
+	// Check top-right corner
+	if x >= width-radius && y < radius {
+		dx := float64(x - (width - radius - 1))
+		dy := float64(radius - y)
+		if dx*dx+dy*dy > float64(radius*radius) {
+			return true
+		}
+	}
+
+	// Check bottom-left corner
+	if x < radius && y >= height-radius {
+		dx := float64(radius - x)
+		dy := float64(y - (height - radius - 1))
+		if dx*dx+dy*dy > float64(radius*radius) {
+			return true
+		}
+	}
+
+	// Check bottom-right corner
+	if x >= width-radius && y >= height-radius {
+		dx := float64(x - (width - radius - 1))
+		dy := float64(y - (height - radius - 1))
+		if dx*dx+dy*dy > float64(radius*radius) {
+			return true
+		}
+	}
+
+	return false
 }
