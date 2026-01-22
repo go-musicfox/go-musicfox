@@ -29,9 +29,10 @@ const LoginPageType model.PageType = "login"
 const (
 	submitIndex  = 2 // skip account and password input
 	qrLoginIndex = 3
-	tabAccount   = 0
-	tabCookie    = 1
-	tabCount     = 2
+
+	tabAccount = 0
+	tabCookie  = 1
+	tabCount   = 2
 )
 
 var (
@@ -245,11 +246,11 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
 		}
 		return l.netease.MustMain(), l.netease.RerenderCmd(true)
-	case "tab", "shift+tab", "enter", "up", "down", "left", "right":
+	case "tab", "shift+tab", "enter", "up", "down", "left", "right", "]", "[":
 		s := key.String()
 
-		// Tab 切换
-		if s == "tab" {
+		// 登录 tab 切换 - 使用 [ 和 ] 切换登录方式
+		if s == "]" {
 			l.tabIndex = (l.tabIndex + 1) % tabCount
 			l.index = 0
 			l.updateTabStyle()
@@ -263,37 +264,7 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			}
 			return l, nil
 		}
-		if s == "shift+tab" {
-			l.tabIndex = (l.tabIndex - 1 + tabCount) % tabCount
-			l.index = 0
-			l.updateTabStyle()
-			if l.tabIndex == tabAccount {
-				l.focusAccountInputs()
-			} else {
-				l.cookieInput.Focus()
-				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
-				l.submitButton = model.GetBlurredSubmitButton()
-			}
-			return l, nil
-		}
-		// 右键从最后一个元素切换到下一Tab
-		if s == "right" && ((l.tabIndex == tabAccount && l.index == submitIndex) || l.index < 0) {
-			l.tabIndex = (l.tabIndex + 1) % tabCount
-			l.index = 0
-			l.updateTabStyle()
-			if l.tabIndex == tabAccount {
-				l.focusAccountInputs()
-			} else {
-				l.cookieInput.Focus()
-				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
-				l.submitButton = model.GetBlurredSubmitButton()
-			}
-			return l, nil
-		}
-		// 左键从第一个元素切换到上一Tab
-		if s == "left" && ((l.tabIndex == tabCookie && l.index == 0) || l.index < 0) {
+		if s == "[" {
 			l.tabIndex = (l.tabIndex - 1 + tabCount) % tabCount
 			l.index = 0
 			l.updateTabStyle()
@@ -314,23 +285,27 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			return l.enterHandler()
 		}
 
-		// 当focus在button上时，左右按键的特殊处理
+		// 焦点切换：Tab/Shift+Tab/Left/Right 在输入框和按钮间切换
 		switch s {
+		case "tab", "down":
+			l.index++
+		case "shift+tab", "up":
+			l.index--
 		case "left", "right":
-			if l.index < 0 {
-				return l.updateLoginInputs(msg)
-			}
+			// 左右键仅作用于按钮间切换（不触发 tab 切换）
 			if l.tabIndex == tabAccount {
 				if s == "left" && l.index == qrLoginIndex {
 					l.index--
 				} else if s == "right" && l.index == submitIndex {
 					l.index++
 				}
+			} else {
+				if s == "left" && l.index == submitIndex {
+					l.index--
+				} else if s == "right" && l.index == 0 {
+					l.index++
+				}
 			}
-		case "up", "shift+tab":
-			l.index--
-		default:
-			l.index++
 		}
 
 		if l.tabIndex == tabAccount {
