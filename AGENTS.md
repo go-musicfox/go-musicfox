@@ -119,7 +119,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 
 **主要菜单类型**（72个 UI 文件）：
 - `MenuMain` - 主菜单
-- `LoginPage` - 登录页面
+- `LoginPage` - 登录页面（支持手机号/邮箱登录、Cookie 登录，二维码登录）
 - `SearchPage` - 搜索页面
 - `CurPlaylist` - 当前播放列表
 - `PlaylistDetailMenu` - 歌单详情
@@ -147,6 +147,7 @@ type ArtistsMenu interface { Artists() []structs.Artist }
 | `q` | 退出 |
 | `r` | 重新渲染 |
 | `|` | 切换电台/播客节目列表排序顺序（升序/降序） |
+| `Tab` | 登录页面：切换登录方式（手机号/邮箱 ↔ Cookie） |
 
 ### 5. 音频播放引擎
 
@@ -360,6 +361,70 @@ type Player interface {
 - 文档失去参考价值
 - 维护成本增加
 
+## Git 提交规范
+
+### 重要准则：Git Commit Message 必须遵循 Conventional Commits 规范
+
+**所有贡献者在提交代码时，必须遵循 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) 规范。**
+
+#### 提交格式
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+#### Type 类型
+
+| Type | 说明 |
+|------|------|
+| `feat` | 新功能开发 |
+| `fix` | Bug 修复 |
+| `docs` | 文档更新 |
+| `style` | 代码格式调整（不影响功能） |
+| `refactor` | 代码重构（既不修复bug也不添加功能） |
+| `perf` | 性能优化 |
+| `test` | 测试相关 |
+| `chore` | 构建工具、辅助工具、配置变更 |
+| `revert` | 回滚提交 |
+
+#### 示例
+
+```
+feat(player): 添加 MPV 播放引擎支持
+
+- 支持多种音频格式
+- 实现播放进度控制
+- 优化内存使用
+
+Closes #123
+```
+
+```
+fix(lyric): 修复 YRC 歌词时间戳解析错误
+
+导致部分歌词无法正确显示逐字时间
+
+Closes #456
+```
+
+```
+docs: 更新 AGENTS.md 文档维护准则
+
+添加文档更新的检查清单和维护建议
+```
+
+#### 规范要求
+
+1. **必须使用英文**：提交信息、描述均使用英文
+2. **动词开头**：描述部分以动词开头，使用现在时态
+3. **长度限制**：标题不超过 50 字符
+4. **Body 可选**：复杂变更可添加详细说明，每行不超过 72 字符
+5. **引用 Issues**：在 footer 中使用 `Closes #xxx` 关联 Issue
+
 ## 配置文件
 
 **路径**：
@@ -371,6 +436,7 @@ type Player interface {
 ```toml
 [startup]      # 启动选项
 [main]         # 主界面设置
+[main.account] # 账号相关配置（如 Cookie 登录）
 [theme]        # 主题颜色
 [storage]      # 存储路径
 [player]       # 播放器配置
@@ -380,6 +446,19 @@ type Player interface {
 [keybindings]  # 快捷键
 [share]        # 分享模板
 ```
+
+### 账号配置
+
+```toml
+[main.account]
+# 网易云音乐的登录 Cookie（用于 Cookie 登录方式）
+neteaseCookie = ""
+```
+
+**登录方式**：
+1. **手机号/邮箱登录**：在 TUI 中输入手机号或邮箱及密码
+2. **Cookie 登录**：在 TUI 中直接输入网易云音乐 Cookie，或通过配置文件设置 `neteaseCookie`
+3. **二维码登录**：使用手机网易云扫描二维码登录
 
 ## 构建与发布
 
