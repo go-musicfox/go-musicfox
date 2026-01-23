@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http/cookiejar"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,8 +25,10 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 	"github.com/go-musicfox/netease-music/service"
+	"github.com/go-musicfox/netease-music/util"
 	"github.com/skratchdot/open-golang/open"
 )
 
@@ -59,25 +62,41 @@ func getTargetSong(n *Netease, isSelected bool) (structs.Song, bool) {
 
 // logout 登出
 func logout() {
+
+	logout_service := service.LogoutService{}
+	code, _, err := logout_service.Logout()
+	if err != nil {
+		slog.Error("调用退出登录api错误", slog.String("error", err.Error()))
+	} else if code != 200 {
+		slog.Warn("退出登录接口返回状态非200", "code", code)
+	}
+
 	table := storage.NewTable()
-	_ = table.DeleteByKVModel(storage.User{})
+	if err := table.DeleteByKVModel(storage.User{}); err != nil {
+		slog.Error("清理用户数据库失败", slogx.Error(err))
+	}
+
+	if emptyJar, err := cookiejar.New(nil); err == nil {
+		util.SetGlobalCookieJar(emptyJar)
+	}
+
+	cookieFile := filepath.Join(app.DataDir(), "cookie")
+	err = os.Remove(cookieFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			slog.Error("删除Cookie文件失败", slog.String("path", cookieFile), slogx.Error(err))
+		}
+	} else {
+		slog.Info("Cookie文件已成功删除")
+	}
+
 	notify.Notify(notify.NotifyContent{
 		Title:   "登出成功",
 		Text:    "已清理用户信息",
 		Url:     types.AppGithubUrl,
 		GroupId: types.GroupID,
 	})
-	_ = os.Remove(filepath.Join(app.DataDir(), "cookie"))
 
-	// 调用退出登录api
-	logout_service := service.LogoutService{}
-	code, _, err := logout_service.Logout()
-	if err != nil {
-		slog.Error("调用退出登录api错误", slog.String("error", err.Error()))
-	}
-	if code != 200 {
-		slog.Error("退出登录状态异常")
-	}
 }
 
 // getSelectedPlaylist 获取选中的歌单
