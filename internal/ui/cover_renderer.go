@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -36,9 +37,25 @@ type CoverRenderer struct {
 	forceRerender bool   // Force re-render on next View call (set after resize)
 	skipFrames    int    // Number of View calls to skip before rendering (for resize timing)
 
+	animImageID     uint32      // ID for animated cover
+	lastAngle       float64     // Last rendered rotation angle
+	lastPlayerState types.State // Track player state to control animation
+
+	renderingID int64              // Song ID currently being rendered in background
+	renderChan  chan renderResult  // Channel for async render results
+	cancelFunc  context.CancelFunc // Function to cancel the current rendering goroutine
+
 	// Display dimensions
 	cols int
 	rows int
+}
+
+type renderResult struct {
+	songID   int64
+	sequence string
+	startRow int
+	startCol int
+	animID   uint32
 }
 
 // NewCoverRenderer creates a new cover image renderer component.
@@ -50,6 +67,8 @@ func NewCoverRenderer(netease *Netease, state playerRendererState) *CoverRendere
 		state:        state,
 		imageCache:   kitty.NewImageCache(10),
 		kittySupport: kittySupport,
+		animImageID:  kitty.NewImageID(),
+		renderChan:   make(chan renderResult, 1),
 	}
 	return r
 }
@@ -195,6 +214,250 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	songChanged := song.Id != r.currentSongId
 	positionChanged := r.lastStartRow != coverStartRow || r.lastStartCol != coverStartCol
 
+	spin := configs.AppConfig.Main.Lyric.Cover.Spin
+
+	if spin {
+		// Native Animation Mode
+		// 1. Check for Async Results (Non-blocking)
+		select {
+		case res := <-r.renderChan:
+			// Verify this result is for the song we still want to show
+			if res.songID == song.Id {
+				// Apply to terminal
+				_, _ = os.Stdout.WriteString(res.sequence)
+				_ = os.Stdout.Sync()
+
+				r.currentSongId = res.songID
+				r.animImageID = res.animID
+				r.lastStartRow = res.startRow
+				r.lastStartCol = res.startCol
+				r.imageRendered = true
+				r.forceRerender = false
+				r.renderingID = 0               // Clear rendering flag
+				r.lastPlayerState = playerState // Initialize player state
+
+				// Successfully updated, return immediately to avoid re-triggering logic below
+				r.mu.Unlock()
+				return "", 0
+			} else {
+				// Old result for different song, ignore but clear flag if it matched
+				if r.renderingID == res.songID {
+					r.renderingID = 0
+				}
+			}
+		default:
+			// No results pending
+		}
+
+		// Check if player state changed (pause/resume)
+		stateChanged := playerState != r.lastPlayerState
+		if stateChanged && r.imageRendered && r.animImageID != 0 {
+			if playerState == types.Paused {
+				// Pause animation
+				_, _ = os.Stdout.WriteString(kitty.StopAnimation(r.animImageID))
+				_ = os.Stdout.Sync()
+			} else if playerState == types.Playing && r.lastPlayerState == types.Paused {
+				// Resume animation
+				_, _ = os.Stdout.WriteString(kitty.StartAnimation(r.animImageID))
+				_ = os.Stdout.Sync()
+			}
+			r.lastPlayerState = playerState
+		}
+
+		// 2. Short-circuit if state is perfect
+		if !forceRerender && !songChanged && !positionChanged && r.imageRendered && song.Id != 0 {
+			r.mu.Unlock()
+			return "", 0
+		}
+
+		// 3. If we are already generating this song, just wait
+		if r.renderingID == song.Id {
+			r.mu.Unlock()
+			return "", 0
+		}
+
+		// 4. Start Async Generation
+		// Only if we actually have something to render
+		if (songChanged || forceRerender || !r.imageRendered || positionChanged) && song.Id != 0 {
+			// Cancel previous work if any
+			if r.cancelFunc != nil {
+				r.cancelFunc()
+			}
+			// Create cancellable context
+			ctx, cancel := context.WithCancel(context.Background())
+			r.cancelFunc = cancel
+
+			r.renderingID = song.Id
+
+			// Use double-buffering: Prepare new ID, then swap and delete old
+			// Capture current (old) ID to delete later
+			oldAnimID := r.animImageID
+			newAnimID := kitty.NewImageID()
+
+			r.mu.Unlock() // Release lock before spawning goroutine
+
+			// Capture variables for closure
+			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32) {
+				// Fetch image with timeout (derived from cancellable context)
+				fetchCtx, fetchCancel := context.WithTimeout(ctx, 15*time.Second)
+				defer fetchCancel()
+
+				img, err := r.imageCache.GetImage(fetchCtx, bgUrl, bgCols, bgRows)
+				if err != nil || img == nil {
+					// Log error but don't reset renderingID to avoid retry loops.
+					// If we failed, we failed. Wait for song change.
+					return
+				}
+
+				// Check for cancellation after network call
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				// Read FPS from config (default 30, max 60)
+				fps := configs.AppConfig.Main.Lyric.Cover.SpinFPS
+				if fps <= 0 || fps > 60 {
+					fps = 30
+				}
+				// Calculate frame duration in milliseconds
+				frameDuration := 1000 / fps
+
+				// Read rotation duration from config (default 6, range 1-30)
+				spinDuration := configs.AppConfig.Main.Lyric.Cover.SpinDuration
+				if spinDuration <= 0 || spinDuration > 30 {
+					spinDuration = 6
+				}
+
+				// Dynamic frame count calculation based on FPS and duration
+				// frameCount = fps * rotationDuration
+				frameCount := fps * spinDuration
+
+				// Calculate step size (degrees per frame) to complete 360 degrees
+				step := 360.0 / float64(frameCount)
+
+				// Use ALL available CPU cores
+				numWorkers := runtime.NumCPU()
+				if numWorkers < 4 {
+					numWorkers = 4 // Minimum 4 workers
+				}
+				// Set GOMAXPROCS to ensure all cores are used
+				runtime.GOMAXPROCS(numWorkers)
+
+				// Task and result structures
+				type frameTask struct {
+					index int
+					angle float64
+				}
+
+				// Larger buffers to avoid blocking
+				tasks := make(chan frameTask, numWorkers*2)
+
+				// Pre-allocate result slice to avoid allocation overhead
+				frameSeqs := make([]string, frameCount)
+				var resultMu sync.Mutex
+
+				// Launch worker goroutines
+				var wg sync.WaitGroup
+				for i := 0; i < numWorkers; i++ {
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						for task := range tasks {
+							// Check cancellation less frequently
+							if task.index%50 == 0 {
+								select {
+								case <-ctx.Done():
+									return
+								default:
+								}
+							}
+
+							// Generate rotated image and encode
+							rotated := kitty.RotateImage(img, task.angle)
+							var seq string
+							if task.index == 0 {
+								// First frame is base image
+								seq, _ = kitty.TransmitImage(rotated, bgCols, bgRows, bgAnimID)
+							} else {
+								// Subsequent frames
+								seq, _ = kitty.TransmitFrame(rotated, bgAnimID, frameDuration)
+							}
+
+							// Write directly to slice with lock
+							resultMu.Lock()
+							frameSeqs[task.index] = seq
+							resultMu.Unlock()
+						}
+					}()
+				}
+
+				// Dispatch tasks (inline to avoid goroutine overhead)
+				for i := 0; i < frameCount; i++ {
+					angle := float64(i) * step
+					tasks <- frameTask{index: i, angle: angle}
+				}
+				close(tasks)
+
+				// Wait for completion
+				wg.Wait()
+
+				// Check cancellation before assembly
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				// Assemble final sequence
+				var sb strings.Builder
+
+				// 1. DO NOT DeleteAllImages at start (Double Buffering)
+				// Instead, we will overwrite/place new ID, then delete old ID
+
+				// 2. Write all frames in order (Using bgAnimID which is the NEW ID)
+				for _, seq := range frameSeqs {
+					sb.WriteString(seq)
+				}
+
+				// 3. Setup Animation (NEW ID)
+				sb.WriteString(kitty.SetFrameGap(bgAnimID, 1, frameDuration))
+				sb.WriteString(kitty.StartAnimation(bgAnimID))
+
+				// 4. Placement (NEW ID) - This will draw over the old one
+				sb.WriteString("\x1b[s")
+				sb.WriteString(fmt.Sprintf("\x1b[%d;%dH", bgRow, bgCol))
+				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0)) // 0 rows = auto height
+				sb.WriteString("\x1b[u")
+
+				// 5. Delete OLD ID to free resources (if different)
+				if oldBgAnimID != 0 && oldBgAnimID != bgAnimID {
+					sb.WriteString(kitty.DeleteImage(oldBgAnimID))
+				}
+
+				// Send result (only if not cancelled)
+				select {
+				case <-ctx.Done():
+					return
+				case r.renderChan <- renderResult{
+					songID:   bgSong.Id,
+					sequence: sb.String(),
+					startRow: bgRow,
+					startCol: bgCol,
+					animID:   bgAnimID,
+				}:
+				}
+			}(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID)
+
+			return "", 0
+		}
+
+		r.mu.Unlock()
+		return "", 0
+	}
+
+	// Static Logic
 	// If force rerender is set (e.g., after resize), skip all caching logic
 	if !forceRerender {
 		// If nothing changed and image is already rendered, skip
