@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -16,8 +17,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
+	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/pkg/errors"
-	"github.com/telanflow/cookiejar"
 
 	"github.com/go-musicfox/go-musicfox/internal/automator"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
@@ -35,6 +36,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	"github.com/go-musicfox/go-musicfox/utils/version"
 )
+
+var appCookieJar *cookiejar.Jar
 
 type Netease struct {
 	user   *structs.User
@@ -131,8 +134,16 @@ func (n *Netease) InitHook(_ *model.App) {
 	dataDir := app.DataDir()
 
 	// 全局文件Jar
-	cookieJar, _ := cookiejar.NewFileJar(filepath.Join(dataDir, "cookie"), nil)
-	util.SetGlobalCookieJar(cookieJar)
+	jar, err := cookiejar.New(&cookiejar.Options{
+		Filename: filepath.Join(dataDir, "cookie"),
+	})
+	if err != nil {
+		slog.Error("无法创建 cookie jar", slogx.Error(err))
+		panic("failed to create persistent cookie jar")
+	}
+
+	appCookieJar = jar
+	util.SetGlobalCookieJar(appCookieJar)
 
 	// 获取用户信息
 	errorx.Go(func() {
@@ -155,7 +166,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			if err != nil {
 				slog.Error("网易云 cookies 格式错误", "error", err)
 			} else {
-				cookieJar.SetCookies(
+				jar.SetCookies(
 					errorx.Must1(url.Parse("https://music.163.com")),
 					cookies,
 				)
@@ -224,6 +235,24 @@ func (n *Netease) InitHook(_ *model.App) {
 			n.Rerender(false)
 		}
 
+		// 刷新登录状态
+		if n.user != nil {
+			refreshLoginService := service.LoginRefreshService{}
+			code, _, err := refreshLoginService.LoginRefresh()
+
+			if err != nil {
+				slog.Error("Token 刷新网络请求失败", slogx.Error(err))
+			} else if code == 200 {
+				if err := appCookieJar.Save(); err != nil {
+					slog.Error("Token 刷新成功但保存失败", slogx.Error(err))
+				} else {
+					slog.Info("Token 已刷新并保存成功")
+				}
+			} else {
+				slog.Error(fmt.Sprintf("Token 刷新失败, Code: %d", int(code)))
+			}
+		}
+
 		// 签到
 		if config.Startup.SignIn {
 			var lastSignIn int
@@ -232,32 +261,46 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 			today, err := strconv.Atoi(time.Now().Format("20060102"))
 			if n.user != nil && err == nil && lastSignIn != today {
+				var notifyMsg string
 				// 手机签到
 				signInService := service.DailySigninService{}
 				signInService.Type = "0"
 				signInService.DailySignin()
+				notifyMsg += "手机✅ "
 				// PC签到
 				signInService.Type = "1"
 				signInService.DailySignin()
+				notifyMsg += "PC✅ "
 				// 云贝签到
-				ybSignService := service.YunbeiSigninService{}
-				ybSignService.Signin()
+				yunbeiService := service.YunbeiService{}
+				result, err := yunbeiService.Sign()
+
+				var yunbeiResult string
+				if err != nil {
+					slog.Error("云贝签到网络/接口错误", slogx.Error(err))
+					yunbeiResult = "云贝:异常❌"
+				} else if result.Code != 200 {
+					slog.Warn("云贝签到返回非200", "code", result.Code, "msg", result.Message)
+					yunbeiResult = "云贝:失败❌"
+				} else {
+					if result.Data.YunbeiNum > 0 {
+						yunbeiResult = fmt.Sprintf("云贝:+%d✅", result.Data.YunbeiNum)
+						slog.Info("云贝签到成功", "数量", result.Data.YunbeiNum)
+					} else {
+						yunbeiResult = "云贝:无奖励✅"
+					}
+				}
+				notifyMsg += yunbeiResult
 
 				_ = table.SetByKVModel(storage.LastSignIn{}, today)
 
 				notify.Notify(notify.NotifyContent{
-					Title:   "签到成功",
-					Text:    "今日手机、PC端签到成功",
+					Title:   "自动签到完成",
+					Text:    notifyMsg,
 					Url:     types.AppGithubUrl,
 					GroupId: types.GroupID,
 				})
 			}
-		}
-
-		// 刷新登录状态
-		if n.user != nil {
-			refreshLoginService := service.LoginRefreshService{}
-			refreshLoginService.LoginRefresh()
 		}
 
 		// 检查更新
@@ -349,6 +392,13 @@ func (n *Netease) LoginCallback() error {
 	// 写入本地数据库
 	table := storage.NewTable()
 	_ = table.SetByKVModel(storage.User{}, user)
+
+	// 持久化存储
+	if err := appCookieJar.Save(); err != nil {
+		slog.Error("登录成功，但持久化 cookie 到文件失败", slogx.Error(err))
+	} else {
+		slog.Info("登录成功，会话Cookie成功保存")
+	}
 
 	// 更新like list
 	go likelist.RefreshLikeList(user.UserId)
