@@ -1,14 +1,13 @@
 package kitty
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"image"
 	"image/png"
 	"strings"
 	"sync/atomic"
-
-	"bytes"
 )
 
 const (
@@ -23,6 +22,11 @@ const (
 
 var imageIDCounter uint32
 
+// NewImageID returns the next unique image ID.
+func NewImageID() uint32 {
+	return nextImageID()
+}
+
 // nextImageID returns the next unique image ID.
 func nextImageID() uint32 {
 	return atomic.AddUint32(&imageIDCounter, 1)
@@ -30,57 +34,20 @@ func nextImageID() uint32 {
 
 // TransmitAndDisplay transmits an image and displays it at the current cursor position.
 // Returns the escape sequence string that should be written to the terminal.
-// cols specifies the display width in terminal cells.
-// rows is kept for interface compatibility but not used - Kitty calculates rows
-// automatically based on the image's aspect ratio.
-// For a visually square display, send a 2:1 stretched image (width = height * 2).
 func TransmitAndDisplay(img image.Image, cols, rows int) (string, error) {
-	// Encode image to PNG
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return "", fmt.Errorf("failed to encode image to PNG: %w", err)
-	}
+	return TransmitAndDisplayWithID(img, cols, rows, nextImageID())
+}
 
-	// Base64 encode the PNG data
-	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+// TransmitAndDisplayWithID transmits an image with a specific ID.
+// Useful for updating an existing image (animation).
+func TransmitAndDisplayWithID(img image.Image, cols, rows int, imageID uint32) (string, error) {
+	return transmit(img, cols, rows, imageID, "T", 0)
+}
 
-	// Generate unique image ID
-	imageID := nextImageID()
-
-	// Build the kitty graphics command
-	var result strings.Builder
-
-	// For small images, we can send in one chunk
-	if len(encoded) <= maxChunkSize {
-		// a=T: transmit and display
-		// f=100: PNG format
-		// t=d: direct data transmission
-		// i=<id>: image ID
-		// c=<cols>: display columns (rows calculated automatically from image aspect ratio)
-		// q=2: suppress responses
-		result.WriteString(fmt.Sprintf("%sa=T,f=100,t=d,i=%d,c=%d,q=2;%s%s",
-			apcStart, imageID, cols, encoded, st))
-	} else {
-		// Multi-chunk transmission
-		chunks := splitIntoChunks(encoded, maxChunkSize)
-		for i, chunk := range chunks {
-			if i == 0 {
-				// First chunk: m=1 means more data follows
-				result.WriteString(fmt.Sprintf("%sa=T,f=100,t=d,i=%d,c=%d,m=1,q=2;%s%s",
-					apcStart, imageID, cols, chunk, st))
-			} else if i == len(chunks)-1 {
-				// Last chunk: m=0 means no more data
-				result.WriteString(fmt.Sprintf("%sm=0;%s%s",
-					apcStart, chunk, st))
-			} else {
-				// Middle chunks: m=1 means more data follows
-				result.WriteString(fmt.Sprintf("%sm=1;%s%s",
-					apcStart, chunk, st))
-			}
-		}
-	}
-
-	return result.String(), nil
+// TransmitImage transmits an image without displaying it.
+// Returns the escape sequence string.
+func TransmitImage(img image.Image, cols, rows int, imageID uint32) (string, error) {
+	return transmit(img, cols, rows, imageID, "t", 0)
 }
 
 // DeleteImage deletes an image by its ID.
@@ -128,6 +95,118 @@ func Placeholder(cols, rows int) string {
 		}
 	}
 	return result.String()
+}
+
+// splitIntoChunks splits a string into chunks of the specified size.
+// transmit handles the common logic for transmitting image data.
+func transmit(img image.Image, cols, rows int, imageID uint32, action string, gapMS int) (string, error) {
+	// Encode image to PNG
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return "", fmt.Errorf("failed to encode image to PNG: %w", err)
+	}
+
+	// Base64 encode the PNG data
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	// Build the kitty graphics command
+	var result strings.Builder
+
+	// Parameters builder
+	var params strings.Builder
+	params.WriteString(fmt.Sprintf("a=%s,f=100", action))
+
+	// For transmission (t or T), we generally use 'd' (direct) if not specified, but the protocol default is 'd'.
+	// Adding t=d explicitly is fine.
+	if action == "T" || action == "t" || action == "f" {
+		params.WriteString(",t=d")
+	}
+
+	params.WriteString(fmt.Sprintf(",i=%d", imageID))
+
+	if cols > 0 {
+		params.WriteString(fmt.Sprintf(",c=%d", cols))
+	}
+
+	if gapMS > 0 {
+		params.WriteString(fmt.Sprintf(",z=%d", gapMS))
+	}
+
+	params.WriteString(",q=2") // Suppress responses
+
+	// For small images, we can send in one chunk
+	if len(encoded) <= maxChunkSize {
+		result.WriteString(fmt.Sprintf("%s%s;%s%s", apcStart, params.String(), encoded, st))
+	} else {
+		// Multi-chunk transmission
+		chunks := splitIntoChunks(encoded, maxChunkSize)
+		for i, chunk := range chunks {
+			if i == 0 {
+				// First chunk: m=1 means more data follows
+				result.WriteString(fmt.Sprintf("%s%s,m=1;%s%s", apcStart, params.String(), chunk, st))
+			} else if i == len(chunks)-1 {
+				// Last chunk: m=0 means no more data
+				if action == "f" {
+					result.WriteString(fmt.Sprintf("%sa=f,m=0;%s%s", apcStart, chunk, st))
+				} else {
+					result.WriteString(fmt.Sprintf("%sm=0;%s%s", apcStart, chunk, st))
+				}
+			} else {
+				// Middle chunks: m=1
+				if action == "f" {
+					result.WriteString(fmt.Sprintf("%sa=f,m=1;%s%s", apcStart, chunk, st))
+				} else {
+					result.WriteString(fmt.Sprintf("%sm=1;%s%s", apcStart, chunk, st))
+				}
+			}
+		}
+	}
+
+	return result.String(), nil
+}
+
+// TransmitFrame transmits a frame for an existing animation.
+// imageID is the ID of the base image.
+// gapMS is the duration of this frame in milliseconds.
+func TransmitFrame(img image.Image, imageID uint32, gapMS int) (string, error) {
+	return transmit(img, 0, 0, imageID, "f", gapMS) // a=f for frame data
+}
+
+// StartAnimation starts the animation playback.
+func StartAnimation(imageID uint32) string {
+	// a=a: animation control
+	// s=3: start (loop mode)
+	return fmt.Sprintf("%sa=a,i=%d,s=3,q=2%s", apcStart, imageID, st)
+}
+
+// StopAnimation stops the animation playback.
+func StopAnimation(imageID uint32) string {
+	// a=a: animation control
+	// s=1: stop
+	return fmt.Sprintf("%sa=a,i=%d,s=1,q=2%s", apcStart, imageID, st)
+}
+
+// SetFrameGap sets the gap (duration) for a specific frame.
+// frameIdx: 1-based frame index (1 is root/base frame).
+func SetFrameGap(imageID uint32, frameIdx int, gapMS int) string {
+	// a=a: animation control
+	// r=<frame>: target frame
+	// z=<gap>: duration in ms
+	return fmt.Sprintf("%sa=a,i=%d,r=%d,z=%d,q=2%s", apcStart, imageID, frameIdx, gapMS, st)
+}
+
+// PlaceImage generates a command to display (place) an already transmitted image at the current cursor position.
+func PlaceImage(imageID uint32, cols, rows int) string {
+	// a=p: placement action
+	// i=<id>: image ID to place
+	// c=<cols>: columns
+	// r=<rows>: rows
+	// C=1: do not move cursor
+	// If rows is 0, let Kitty calculate height based on image aspect ratio (square) and cols
+	if rows == 0 {
+		return fmt.Sprintf("%sa=p,i=%d,c=%d,C=1,q=2%s", apcStart, imageID, cols, st)
+	}
+	return fmt.Sprintf("%sa=p,i=%d,c=%d,r=%d,C=1,q=2%s", apcStart, imageID, cols, rows, st)
 }
 
 // splitIntoChunks splits a string into chunks of the specified size.
