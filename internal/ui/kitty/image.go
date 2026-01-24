@@ -316,6 +316,8 @@ func bilinearInterp(c00, c10, c01, c11 uint32, xWeight, yWeight float64) uint32 
 
 // applyRoundedCorners applies rounded corners to an image.
 // radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
+// applyRoundedCorners applies rounded corners to an image with anti-aliasing.
+// radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
 func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
 	bounds := src.Bounds()
 	width := bounds.Dx()
@@ -326,7 +328,7 @@ func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
 	if height < minDim {
 		minDim = height
 	}
-	radius := int(float64(minDim) * radiusPercent)
+	radius := float64(minDim) * radiusPercent // Use float for precision
 	if radius <= 0 {
 		return src
 	}
@@ -334,14 +336,30 @@ func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
 	// Create output image with alpha channel
 	dst := image.NewRGBA(bounds)
 
-	// Draw the source image
+	// Draw the source image first
 	draw.Draw(dst, bounds, src, bounds.Min, draw.Src)
 
-	// Apply rounded corners by making corner pixels transparent
+	// Scan only the corner regions to apply transparency
+	// This optimization avoids calculating sqrt for the center of the image
+	intRadius := int(math.Ceil(radius))
+
 	for y := 0; y < height; y++ {
+		if y >= intRadius && y < height-intRadius {
+			continue
+		}
+
 		for x := 0; x < width; x++ {
-			if shouldMaskCorner(x, y, width, height, radius) {
-				dst.SetRGBA(x, y, color.RGBA{0, 0, 0, 0})
+			if x >= intRadius && x < width-intRadius {
+				continue
+			}
+			factor := getCornerAlphaFactor(x, y, width, height, radius)
+			if factor < 1.0 {
+				r, g, b, a := dst.At(x, y).RGBA()
+				newA := uint8((float64(a>>8) * factor))
+				newR := uint8((float64(r>>8) * factor))
+				newG := uint8((float64(g>>8) * factor))
+				newB := uint8((float64(b>>8) * factor))
+				dst.SetRGBA(x, y, color.RGBA{R: newR, G: newG, B: newB, A: newA})
 			}
 		}
 	}
@@ -349,46 +367,40 @@ func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
 	return dst
 }
 
-// shouldMaskCorner determines if a pixel should be masked (made transparent)
+// getCornerAlphaFactor calculates the alpha factor for a pixel at (x, y).
 // based on its distance from the nearest corner arc center.
-func shouldMaskCorner(x, y, width, height, radius int) bool {
-	// Check top-left corner
-	if x < radius && y < radius {
-		dx := float64(radius - x)
-		dy := float64(radius - y)
-		if dx*dx+dy*dy > float64(radius*radius) {
-			return true
-		}
+// Returns a value between 0.0 (fully transparent) and 1.0 (fully opaque).
+func getCornerAlphaFactor(x, y, width, height int, radius float64) float64 {
+	// Determine which corner we are checking
+	var cx, cy float64 // Center of the corner circle
+
+	if x < int(radius) {
+		cx = radius
+	} else if x >= width-int(radius) {
+		cx = float64(width) - radius
+	} else {
+		return 1.0
 	}
 
-	// Check top-right corner
-	if x >= width-radius && y < radius {
-		dx := float64(x - (width - radius - 1))
-		dy := float64(radius - y)
-		if dx*dx+dy*dy > float64(radius*radius) {
-			return true
-		}
+	if y < int(radius) {
+		cy = radius
+	} else if y >= height-int(radius) {
+		cy = float64(height) - radius
+	} else {
+		return 1.0
 	}
 
-	// Check bottom-left corner
-	if x < radius && y >= height-radius {
-		dx := float64(radius - x)
-		dy := float64(y - (height - radius - 1))
-		if dx*dx+dy*dy > float64(radius*radius) {
-			return true
-		}
-	}
+	dx := float64(x) + 0.5 - cx
+	dy := float64(y) + 0.5 - cy
+	distance := math.Sqrt(dx*dx + dy*dy)
 
-	// Check bottom-right corner
-	if x >= width-radius && y >= height-radius {
-		dx := float64(x - (width - radius - 1))
-		dy := float64(y - (height - radius - 1))
-		if dx*dx+dy*dy > float64(radius*radius) {
-			return true
-		}
+	if distance < radius-0.5 {
+		return 1.0
+	} else if distance > radius+0.5 {
+		return 0.0
+	} else {
+		return 1.0 - (distance - (radius - 0.5))
 	}
-
-	return false
 }
 
 // RotateImage rotates an image by the given angle in degrees.
