@@ -475,6 +475,112 @@ make lint       # 代码检查
 - 支持跨平台编译
 - 提供 Homebrew、Scoop、Flatpak 等包管理器支持
 
+## 代码风格指南
+
+### Go 代码规范
+
+- 遵循 [Effective Go](https://golang.org/doc/effective_go) 指南
+- 使用 `gofmt` 进行代码格式化
+- 遵循项目现有的 import 分组顺序
+- 避免使用魔法数字，使用常量定义
+
+### 代码组织
+
+- 每个包应有明确的职责
+- 避免循环依赖
+- 公开接口应有文档注释
+- 错误处理：优先使用有意义的错误消息
+
+### 命名规范
+
+- 包名：简短、全小写、使用单数
+- 变量名：使用驼峰命名，避免缩写
+- 常量名：使用全大写加下划线
+- 接口名：以 `er` 结尾（如 `Player`、`Reader`）
+
+### 注释规范
+
+- 公开函数和类型必须有文档注释
+- 注释使用英文，首字母大写
+- 示例注释格式：
+  ```go
+  // PlayerInterface 定义了音频播放器的核心接口
+  type PlayerInterface interface {
+      // Play 播放指定音乐
+      Play(music URLMusic)
+  }
+  ```
+
+## 测试说明
+
+### 测试命令
+
+```sh
+make test           # 运行所有测试
+make test-coverage  # 运行测试并生成覆盖率报告
+go test ./...       # 直接运行所有包的测试
+```
+
+### 测试规范
+
+- 单元测试文件命名：`*_test.go`
+- 测试函数命名：`Test*`
+- 使用表驱动测试（table-driven tests）提高可读性
+- 每个核心功能应有对应的测试用例
+
+### 测试示例
+
+```go
+func TestNextSong(t *testing.T) {
+    tests := []struct {
+        name     string
+        playlist []int
+        current  int
+        expect   int
+    }{
+        {"normal case", []int{0, 1, 2}, 1, 2},
+        {"wrap around", []int{0, 1, 2}, 2, 0},
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // test logic
+        })
+    }
+}
+```
+
+### 测试覆盖目标
+
+- 核心业务逻辑：80%+
+- 播放列表管理：90%+
+- 工具函数：100%
+
+## 安全考虑
+
+### 敏感信息处理
+
+- **绝不**在代码中硬编码 API 密钥、密码或 Token
+- 使用环境变量或配置文件管理敏感信息
+- 日志输出时自动脱敏（Cookie、密码等）
+
+### 依赖安全
+
+- 定期检查依赖漏洞：`go sec vet`
+- 使用依赖锁定（vendor 目录）
+- 避免使用已知存在安全问题的包
+
+### 网络安全
+
+- 所有网络请求使用 HTTPS
+- 验证服务器证书（网易云音乐 API）
+- 实现请求重试和超时机制
+
+### 本地存储
+
+- 用户凭证使用加密存储
+- 定期清理过期数据
+- BoltDB 文件权限设置（仅用户可读写）
+
 ## 技术栈
 
 - **UI 框架**：bubbletea + foxful-cli
