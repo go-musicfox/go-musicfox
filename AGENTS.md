@@ -195,6 +195,9 @@ type Player interface {
 | 无限随机 | `infinite_random.go` | 持续随机播放 |
 | 智能模式 | `intelligent.go` | 网易云心动模式 |
 
+**Bug 修复记录**：
+- **2026-01-24**：修复列表随机播放模式下单曲列表无法循环播放的问题（`list_random.go:28-52`）。在 `NextSong` 和 `PreviousSong` 方法中添加了对播放列表长度为1时的处理，返回索引0以实现循环播放。
+
 ### 7. 歌词系统
 
 **歌词服务**：`internal/lyric/service.go`
