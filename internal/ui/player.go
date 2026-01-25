@@ -279,6 +279,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	// 上报开始播放
