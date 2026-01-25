@@ -1,5 +1,34 @@
 # go-musicfox 项目架构文档
 
+## 沟通语言准则
+
+### 重要准则：与用户交流必须使用中文
+
+**所有贡献者、开发者以及 AI 助手在与用户交流时，必须使用中文。**
+
+#### 适用场景
+- 代码审查意见和反馈
+- Issue 回复和讨论
+- Pull Request 描述和评论
+- 文档编写（README、CHANGELOG 等除外，代码注释和提交信息仍使用英文）
+- AI 助手与用户的对话
+
+#### 例外情况
+- **代码注释**：使用英文（保持代码可读性和国际化标准）
+- **Git Commit Message**：使用英文（遵循 Conventional Commits 规范）
+- **代码变量/函数命名**：使用英文（遵循 Go 语言惯例）
+- **API 文档和错误消息**：根据实际情况使用中文或英文
+
+#### 示例
+
+```markdown
+✓ 正确示例（中文交流）：
+"这个 PR 修复了歌词封面图圆角功能的性能问题，优化后 CPU 占用从 10% 降至 2%。"
+
+✗ 错误示例（英文交流）：
+"This PR fixes the performance issue with lyric cover cornerRadius feature..."
+```
+
 ## 项目概述
 
 go-musicfox 是一个基于 Go 语言开发的网易云音乐命令行客户端，支持 macOS、Linux 和 Windows 平台。应用采用 TUI（文本用户界面）架构，提供了丰富的音乐播放功能。

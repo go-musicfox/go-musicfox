@@ -32,6 +32,9 @@ type ImageCache struct {
 	order      []string // LRU order: oldest at front, newest at back
 	maxSize    int
 	httpClient *http.Client
+	// Precomputed corner mask cache for performance
+	cornerMaskCache map[string]*image.Alpha
+	cornerMaskMu    sync.RWMutex
 }
 
 type cacheEntry struct {
@@ -47,12 +50,11 @@ func NewImageCache(maxSize int) *ImageCache {
 		maxSize = DefaultCacheSize
 	}
 	return &ImageCache{
-		cache:   make(map[string]*cacheEntry),
-		order:   make([]string, 0, maxSize),
-		maxSize: maxSize,
-		httpClient: &http.Client{
-			Timeout: DefaultHTTPTimeout,
-		},
+		cache:           make(map[string]*cacheEntry),
+		order:           make([]string, 0, maxSize),
+		maxSize:         maxSize,
+		httpClient:      &http.Client{Timeout: DefaultHTTPTimeout},
+		cornerMaskCache: make(map[string]*image.Alpha),
 	}
 }
 
@@ -110,12 +112,15 @@ func (c *ImageCache) getOrFetchEntry(ctx context.Context, url string, cols, rows
 	}
 	resized := resizeImageSquare(img, targetSize)
 
-	// Apply rounded corners based on config
+	// Get precomputed corner mask for this size (cached for performance)
 	radiusPercent := float64(configs.AppConfig.Main.Lyric.Cover.CornerRadius) / 100.0 / 2.0
 	if radiusPercent >= 0.5 {
 		radiusPercent = 0.5
 	}
-	rounded := applyRoundedCorners(resized, radiusPercent)
+	mask := c.getOrCreateCornerMask(targetSize, radiusPercent)
+
+	// Apply rounded corners using precomputed mask (much faster than pixel-by-pixel)
+	rounded := applyRoundedCornersFast(resized, mask)
 
 	// Generate kitty sequence
 	kittySeq, err := TransmitAndDisplay(rounded, cols, rows)
@@ -194,6 +199,177 @@ func (c *ImageCache) Clear() {
 
 	c.cache = make(map[string]*cacheEntry)
 	c.order = c.order[:0]
+}
+
+// getOrCreateCornerMask returns a cached corner mask or creates a new one.
+// The mask is precomputed once per (size, radiusPercent) combination.
+func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *image.Alpha {
+	if radiusPercent <= 0 {
+		return nil
+	}
+
+	// Create cache key from size and radius percent
+	cacheKey := fmt.Sprintf("%d_%.3f", size, radiusPercent)
+
+	// Check cache first
+	c.cornerMaskMu.RLock()
+	if mask, ok := c.cornerMaskCache[cacheKey]; ok {
+		c.cornerMaskMu.RUnlock()
+		return mask
+	}
+	c.cornerMaskMu.RUnlock()
+
+	// Create new corner mask (only for corners, not for full image)
+	c.cornerMaskMu.Lock()
+	defer c.cornerMaskMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if mask, ok := c.cornerMaskCache[cacheKey]; ok {
+		return mask
+	}
+
+	// Precompute corner radius
+	radius := int(float64(size) * radiusPercent)
+	if radius <= 0 {
+		return nil
+	}
+
+	// Create a minimal alpha mask containing only the corner regions
+	// This is more memory efficient than a full-size mask
+	mask := &image.Alpha{
+		Pix:    make([]uint8, size*size), // 1 byte per pixel for Alpha
+		Stride: size,
+		Rect:   image.Rect(0, 0, size, size),
+	}
+
+	// Precompute radius squared to avoid repeated calculation
+	radiusSq := radius * radius
+
+	// Top-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := radius - x
+			dy := radius - y
+			offset := y*mask.Stride + x
+			if dx*dx+dy*dy > radiusSq {
+				// Transparent corner - set alpha to 0
+				mask.Pix[offset] = 0
+			} else {
+				// Opaque - set alpha to 255
+				mask.Pix[offset] = 255
+			}
+		}
+	}
+
+	// Top-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := x
+			dy := radius - y
+			col := size - radius + x
+			offset := y*mask.Stride + col
+			if dx*dx+dy*dy > radiusSq {
+				mask.Pix[offset] = 0
+			} else {
+				mask.Pix[offset] = 255
+			}
+		}
+	}
+
+	// Bottom-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := radius - x
+			dy := y
+			row := size - radius + y
+			offset := row*mask.Stride + x
+			if dx*dx+dy*dy > radiusSq {
+				mask.Pix[offset] = 0
+			} else {
+				mask.Pix[offset] = 255
+			}
+		}
+	}
+
+	// Bottom-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := x
+			dy := y
+			col := size - radius + x
+			row := size - radius + y
+			offset := row*mask.Stride + col
+			if dx*dx+dy*dy > radiusSq {
+				mask.Pix[offset] = 0
+			} else {
+				mask.Pix[offset] = 255
+			}
+		}
+	}
+
+	c.cornerMaskCache[cacheKey] = mask
+	return mask
+}
+
+// applyRoundedCornersFast applies rounded corners using a precomputed alpha mask.
+func applyRoundedCornersFast(src image.Image, mask *image.Alpha) image.Image {
+	if mask == nil {
+		return src
+	}
+
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	dst := image.NewRGBA(bounds)
+	draw.Draw(dst, bounds, src, bounds.Min, draw.Src)
+
+	maskPix := mask.Pix
+	maskStride := mask.Stride
+	maskSize := mask.Bounds().Dx()
+	radius := maskSize / 2
+
+	// Top-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := y*maskStride + x
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(x, y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	// Top-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := y*maskStride + (radius + x)
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(width-radius+x, y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	// Bottom-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := (radius+y)*maskStride + x
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(x, height-radius+y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	// Bottom-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := (radius+y)*maskStride + (radius + x)
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(width-radius+x, height-radius+y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	return dst
 }
 
 // resizeImageSquare resizes an image to a square of the given size.
