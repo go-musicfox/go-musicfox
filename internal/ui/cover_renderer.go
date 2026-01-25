@@ -121,18 +121,12 @@ func (r *CoverRenderer) calculateDimensions() {
 	}
 
 	windowWidth := r.netease.WindowWidth()
-	r.cols = int(float64(windowWidth) * widthRatio)
-	if r.cols < 10 {
-		r.cols = 10 // Minimum width
-	}
+	r.cols = max(int(float64(windowWidth)*widthRatio), 10) // Minimum width
 
 	// Calculate rows to maintain square visual aspect ratio
 	// Terminal cells are typically 2:1 (twice as tall as wide, e.g., 8x16 pixels)
 	// So rows = cols / 2 makes the image appear visually square
-	r.rows = r.cols / 2
-	if r.rows < 3 {
-		r.rows = 3
-	}
+	r.rows = max(r.cols/2, 3)
 	// Don't exceed available space
 	if r.rows > spaceHeight {
 		r.rows = spaceHeight
@@ -196,10 +190,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Calculate start column to align with menu arrow (same as song info start)
-	coverStartCol := main.MenuStartColumn()
-	if coverStartCol < 1 {
-		coverStartCol = 1
-	}
+	coverStartCol := max(main.MenuStartColumn(), 1)
 
 	song := r.state.CurSong()
 	picUrl := getCoverUrl(song)
@@ -341,10 +332,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				step := 360.0 / float64(frameCount)
 
 				// Use ALL available CPU cores
-				numWorkers := runtime.NumCPU()
-				if numWorkers < 4 {
-					numWorkers = 4 // Minimum 4 workers
-				}
+				numWorkers := max(runtime.NumCPU(), 4) // Minimum 4 workers
 				// Set GOMAXPROCS to ensure all cores are used
 				runtime.GOMAXPROCS(numWorkers)
 
@@ -363,7 +351,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 				// Launch worker goroutines
 				var wg sync.WaitGroup
-				for i := 0; i < numWorkers; i++ {
+				for range numWorkers {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
@@ -397,7 +385,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				}
 
 				// Dispatch tasks (inline to avoid goroutine overhead)
-				for i := 0; i < frameCount; i++ {
+				for i := range frameCount {
 					angle := float64(i) * step
 					tasks <- frameTask{index: i, angle: angle}
 				}
@@ -434,7 +422,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 				// Placement
 				sb.WriteString("\x1b[s")
-				sb.WriteString(fmt.Sprintf("\x1b[%d;%dH", bgRow, bgCol))
+				fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
 				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0))
 				sb.WriteString("\x1b[u")
 
@@ -610,10 +598,7 @@ func (r *CoverRenderer) GetCoverEndColumn() int {
 		return 0
 	}
 	main := r.netease.MustMain()
-	startCol := main.MenuStartColumn()
-	if startCol < 1 {
-		startCol = 1
-	}
+	startCol := max(main.MenuStartColumn(), 1)
 	if r.cols == 0 {
 		r.calculateDimensions()
 	}
@@ -661,7 +646,7 @@ func (r *CoverRenderer) Close() {
 		cleanup.WriteString("\x1b[s")
 
 		// Move to where the image started
-		cleanup.WriteString(fmt.Sprintf("\x1b[%d;%dH", r.lastStartRow, r.lastStartCol))
+		fmt.Fprintf(&cleanup, "\x1b[%d;%dH", r.lastStartRow, r.lastStartCol)
 
 		// Clear the area where the image was (clear each line)
 		for i := 0; i < r.rows; i++ {

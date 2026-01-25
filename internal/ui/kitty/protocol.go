@@ -70,7 +70,7 @@ func DeleteAllImages() string {
 func ClearImageArea(rows int) string {
 	var result strings.Builder
 	// Move up and clear each row
-	for i := 0; i < rows; i++ {
+	for i := range rows {
 		result.WriteString("\x1b[2K") // Clear entire line
 		if i < rows-1 {
 			result.WriteString("\x1b[1B") // Move down one line
@@ -78,7 +78,7 @@ func ClearImageArea(rows int) string {
 	}
 	// Move back up to starting position
 	if rows > 1 {
-		result.WriteString(fmt.Sprintf("\x1b[%dA", rows-1))
+		fmt.Fprintf(&result, "\x1b[%dA", rows-1)
 	}
 	return result.String()
 }
@@ -88,7 +88,7 @@ func ClearImageArea(rows int) string {
 func Placeholder(cols, rows int) string {
 	var result strings.Builder
 	space := strings.Repeat(" ", cols)
-	for i := 0; i < rows; i++ {
+	for i := range rows {
 		result.WriteString(space)
 		if i < rows-1 {
 			result.WriteString("\n")
@@ -114,7 +114,7 @@ func transmit(img image.Image, cols, rows int, imageID uint32, action string, ga
 
 	// Parameters builder
 	var params strings.Builder
-	params.WriteString(fmt.Sprintf("a=%s,f=100", action))
+	fmt.Fprintf(&params, "a=%s,f=100", action)
 
 	// For transmission (t or T), we generally use 'd' (direct) if not specified, but the protocol default is 'd'.
 	// Adding t=d explicitly is fine.
@@ -122,41 +122,41 @@ func transmit(img image.Image, cols, rows int, imageID uint32, action string, ga
 		params.WriteString(",t=d")
 	}
 
-	params.WriteString(fmt.Sprintf(",i=%d", imageID))
+	fmt.Fprintf(&params, ",i=%d", imageID)
 
 	if cols > 0 {
-		params.WriteString(fmt.Sprintf(",c=%d", cols))
+		fmt.Fprintf(&params, ",c=%d", cols)
 	}
 
 	if gapMS > 0 {
-		params.WriteString(fmt.Sprintf(",z=%d", gapMS))
+		fmt.Fprintf(&params, ",z=%d", gapMS)
 	}
 
 	params.WriteString(",q=2") // Suppress responses
 
 	// For small images, we can send in one chunk
 	if len(encoded) <= maxChunkSize {
-		result.WriteString(fmt.Sprintf("%s%s;%s%s", apcStart, params.String(), encoded, st))
+		fmt.Fprintf(&result, "%s%s;%s%s", apcStart, params.String(), encoded, st)
 	} else {
 		// Multi-chunk transmission
 		chunks := splitIntoChunks(encoded, maxChunkSize)
 		for i, chunk := range chunks {
 			if i == 0 {
 				// First chunk: m=1 means more data follows
-				result.WriteString(fmt.Sprintf("%s%s,m=1;%s%s", apcStart, params.String(), chunk, st))
+				fmt.Fprintf(&result, "%s%s,m=1;%s%s", apcStart, params.String(), chunk, st)
 			} else if i == len(chunks)-1 {
 				// Last chunk: m=0 means no more data
 				if action == "f" {
-					result.WriteString(fmt.Sprintf("%sa=f,m=0;%s%s", apcStart, chunk, st))
+					fmt.Fprintf(&result, "%sa=f,m=0;%s%s", apcStart, chunk, st)
 				} else {
-					result.WriteString(fmt.Sprintf("%sm=0;%s%s", apcStart, chunk, st))
+					fmt.Fprintf(&result, "%sm=0;%s%s", apcStart, chunk, st)
 				}
 			} else {
 				// Middle chunks: m=1
 				if action == "f" {
-					result.WriteString(fmt.Sprintf("%sa=f,m=1;%s%s", apcStart, chunk, st))
+					fmt.Fprintf(&result, "%sa=f,m=1;%s%s", apcStart, chunk, st)
 				} else {
-					result.WriteString(fmt.Sprintf("%sm=1;%s%s", apcStart, chunk, st))
+					fmt.Fprintf(&result, "%sm=1;%s%s", apcStart, chunk, st)
 				}
 			}
 		}

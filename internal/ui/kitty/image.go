@@ -606,8 +606,8 @@ func RotateImage(src image.Image, angle float64) image.Image {
 	dstCenterX := float64(dstW) / 2.0
 	dstCenterY := float64(dstH) / 2.0
 
-	for y := 0; y < dstH; y++ {
-		for x := 0; x < dstW; x++ {
+	for y := range dstH {
+		for x := range dstW {
 			// Inverse mapping
 			dx := float64(x) - dstCenterX
 			dy := float64(y) - dstCenterY

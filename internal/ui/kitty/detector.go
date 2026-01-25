@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	kittySupported     bool
-	kittyDetectedOnce  sync.Once
+	kittySupported    bool
+	kittyDetectedOnce sync.Once
 )
 
 // IsSupported returns whether the current terminal supports the Kitty graphics protocol.
@@ -25,7 +25,7 @@ func IsSupported() bool {
 func detectKittySupport() bool {
 	term := os.Getenv("TERM")
 	termProgram := os.Getenv("TERM_PROGRAM")
-	kittyWindowId := os.Getenv("KITTY_WINDOW_ID")
+	kittyWindowID := os.Getenv("KITTY_WINDOW_ID")
 
 	// Check for terminal multiplexers that don't pass through kitty graphics
 	// tmux and screen typically don't support kitty graphics passthrough
@@ -37,7 +37,7 @@ func detectKittySupport() bool {
 	}
 
 	// Kitty terminal
-	if kittyWindowId != "" {
+	if kittyWindowID != "" {
 		return true
 	}
 	if strings.Contains(strings.ToLower(term), "kitty") {
