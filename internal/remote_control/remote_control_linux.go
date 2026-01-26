@@ -40,11 +40,12 @@ func (m *MediaPlayer2) Quit() *dbus.Error {
 }
 
 type RemoteControl struct {
-	player Controller
-	name   string
-	dbus   *dbus.Conn
-	props  *prop.Properties
-	once   sync.Once
+	player       Controller
+	name         string
+	dbus         *dbus.Conn
+	props        *prop.Properties
+	once         sync.Once
+	currentTrack dbus.ObjectPath
 }
 
 func NewRemoteControl(p Controller, nowInfo PlayingInfo) *RemoteControl {
@@ -273,29 +274,34 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 	if s.props == nil {
 		return
 	}
-	// Playback Status
-	go func() {
-		playbackStatus, err := PlaybackStatusFromPlayer(info.State)
-		if err == nil {
-			s.setProp("org.mpris.MediaPlayer2.Player", "PlaybackStatus", dbus.MakeVariant(playbackStatus))
-		}
 
-		// Current song metadata
-		if info.TrackID != 0 {
-			s.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromPlayingInfo(info)))
-		}
+	playbackStatus, err := PlaybackStatusFromPlayer(info.State)
+	if err == nil {
+		s.setProp("org.mpris.MediaPlayer2.Player", "PlaybackStatus", dbus.MakeVariant(playbackStatus))
+	}
 
-		// Volume
-		newVolume := math.Max(0, float64(info.Volume)/100.0)
-		s.setProp("org.mpris.MediaPlayer2.Player", "Volume", dbus.MakeVariant(newVolume))
-	}()
+	if info.TrackID != 0 {
+		s.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromPlayingInfo(info)))
+		s.currentTrack = dbus.ObjectPath(fmt.Sprintf("/org/mpd/Tracks/%d", info.TrackID))
+	}
+
+	newVolume := math.Max(0, float64(info.Volume)/100.0)
+	s.setProp("org.mpris.MediaPlayer2.Player", "Volume", dbus.MakeVariant(newVolume))
+
+	s.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(info.PassedDuration)))
 }
 
 func (s *RemoteControl) SetPosition(duration time.Duration) {
 	if s.props == nil {
 		return
 	}
-	s.props.SetMust("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(duration)))
+
+	position := UsFromDuration(duration)
+	s.props.SetMust("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(position))
+
+	if s.dbus != nil {
+		_ = s.dbus.Emit("/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player.Seeked", position)
+	}
 }
 
 func (s *RemoteControl) setProp(iface, name string, value dbus.Variant) {

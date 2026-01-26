@@ -344,7 +344,7 @@ func (p *beepPlayer) Volume() int {
 	p.l.Lock()
 	defer p.l.Unlock()
 	floatVolume := (p.volume.Volume + 5) * 100 / 5
-	return int(math.Round(floatVolume)) // 转为0~100存储
+	return int(math.Floor(floatVolume + 0.5 + 1e-9)) // 转为0~100存储
 }
 
 func (p *beepPlayer) SetVolume(volume int) {
