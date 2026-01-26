@@ -16,7 +16,7 @@ require (
 	github.com/frolovo22/tag v0.0.2
 	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
 	github.com/go-flac/flacpicture v0.3.0
-	github.com/go-musicfox/netease-music v1.4.10
+	github.com/go-musicfox/netease-music v1.5.0
 	github.com/go-musicfox/notificator v0.1.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/go-viper/mapstructure/v2 v2.4.0
@@ -102,7 +102,7 @@ replace (
 	// github.com/cnsilvan/UnblockNeteaseMusic => ../UnblockNeteaseMusic
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 	github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
-	github.com/go-musicfox/netease-music => github.com/Kaguya233qwq/netease-music v1.0.9
+	// github.com/go-musicfox/netease-music => github.com/Kaguya233qwq/netease-music v1.0.9
 	// github.com/go-musicfox/netease-music => ../netease-music
 	// github.com/go-musicfox/requests => ../requests
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
