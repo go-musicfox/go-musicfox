@@ -57,7 +57,9 @@ func (service *LoginQRService) CheckQR() (float64, []byte, error) {
 	}
 
 	api := "https://music.163.com/weapi/login/qrcode/client/login"
-	code, bodyBytes, err := util.CallWeapi(api, data)
+	cookieJar := util.GetGlobalCookieJar()
+	util.ApplyRequestStrategy(cookieJar)
+	code, bodyBytes, err := util.CallWeapi(api, data, cookieJar)
 	if err != nil {
 		return code, bodyBytes, err
 	}

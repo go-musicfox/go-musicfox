@@ -26,6 +26,16 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
+func ApplyRequestStrategy(jar http.CookieJar) {
+	// 注入反风控参数
+	strategyCookies := []*http.Cookie{
+		{Name: "os", Value: "pc"},
+		{Name: "NMTID", Value: "some_random_id_from_strategy"},
+	}
+	targetUrl, _ := url.Parse("https://music.163.com")
+	jar.SetCookies(targetUrl, strategyCookies)
+}
+
 func StringOr(a, b string, others ...string) string {
 	if a != "" {
 		return a
@@ -64,6 +74,30 @@ func GetCsrfToken(cookieJar http.CookieJar) string {
 		}
 	}
 	return csrfToken
+}
+
+// ParseCookieString 将 "key=value; key2=value2" 格式的字符串转换为 map
+func ParseCookieString(cookieStr string) map[string]string {
+	result := make(map[string]string)
+	if cookieStr == "" {
+		return result
+	}
+
+	parts := strings.Split(cookieStr, ";")
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+
+		if part == "" {
+			continue
+		}
+		key, value, found := strings.Cut(part, "=")
+
+		if found {
+			result[key] = value
+		}
+	}
+	return result
 }
 
 // 将 cookies 添加到指定的 CookieJar 中

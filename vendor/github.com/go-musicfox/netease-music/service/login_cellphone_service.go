@@ -48,7 +48,9 @@ func (service *LoginCellphoneService) LoginCellphone() (float64, []byte, error) 
 	data["rememberLogin"] = "true"
 
 	api := "https://music.163.com/weapi/login/cellphone"
-	code, bodyBytes, err := util.CallWeapi(api, data)
+	cookieJar := util.GetGlobalCookieJar()
+	util.ApplyRequestStrategy(cookieJar)
+	code, bodyBytes, err := util.CallWeapi(api, data, cookieJar)
 	return code, bodyBytes, err
 }
 
