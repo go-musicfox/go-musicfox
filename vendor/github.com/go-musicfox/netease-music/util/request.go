@@ -286,14 +286,16 @@ type request struct {
 	Params  map[string]string
 	Datas   map[string]string
 	Json    map[string]string
-	Proxy   string
 }
 
-// 初始化并返回一个request结构体以进行发送请求前的准备
-func NewRequest(url string, proxy ...string) *request {
+// NewRequest 初始化并返回一个request结构体以进行发送请求前的准备
+func NewRequest(url string, cookie ...http.CookieJar) *request {
 	req := requests.Requests()
-	cookieJar := GetGlobalCookieJar()
-	req.Client.Jar = cookieJar
+
+	if len(cookie) > 0 {
+		req.Client.Jar = cookie[0]
+	}
+
 	r := &request{
 		Req: req,
 		Url: url,
@@ -304,11 +306,6 @@ func NewRequest(url string, proxy ...string) *request {
 		Params: map[string]string{},
 		Datas:  map[string]string{},
 		Json:   map[string]string{},
-	}
-	// 如果传入了代理地址，则设置代理
-	if len(proxy) > 0 && proxy[0] != "" {
-		r.Proxy = proxy[0]
-		r.Req.Proxy(r.Proxy)
 	}
 	return r
 }
@@ -359,20 +356,71 @@ func (req *request) SendPost() (Response *http.Response, err error) {
 
 // CallWeapi 调用网易云音乐的 web 端 API。
 //
-// 用法：传入需要调用的 API 路径以及 map 形式的 form data。
+// 用法：传入需要调用的 API 路径以及 map 形式的 form data。可选参数：cookie jar
 //
 // 返回：
 //   - code: API 响应中的业务状态码。
 //   - bodyBytes: 完整的 API 响应体。
 //   - err: 如果在请求过程中发生任何错误，则返回非 nil 的 error。
-func CallWeapi(api string, data map[string]interface{}, proxy ...string) (code float64, bodyBytes []byte, err error) {
+func CallWeapi(api string, data map[string]interface{}, cookie ...http.CookieJar) (code float64, bodyBytes []byte, err error) {
 	encodedParams, err := ApiParamsEncode(data)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to encode api params: %w", err)
 	}
-	req := NewRequest(api, proxy...)
+	var current_cookie http.CookieJar
+	if len(cookie) == 0 {
+		current_cookie = GetGlobalCookieJar()
+	} else {
+		current_cookie = cookie[0]
+	}
+	req := NewRequest(api, current_cookie)
 	req.Datas = encodedParams
 
+	resp, err := req.SendPost()
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 读取响应体
+	bodyBytes, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// 解析并验证响应中的 'code'
+	var respData map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &respData); err != nil {
+		return 0, bodyBytes, fmt.Errorf("error unmarshaling response JSON: %w", err)
+	}
+
+	codeValue, codeExists := respData["code"]
+	if !codeExists {
+		return 0, bodyBytes, fmt.Errorf("response JSON does not contain 'code' field")
+	}
+
+	code, ok := codeValue.(float64)
+	if !ok {
+		return 0, bodyBytes, fmt.Errorf("'code' field is not a number, got type: %T", codeValue)
+	}
+
+	return code, bodyBytes, nil
+}
+
+// CallApi 调用网易云音乐的移动端API。
+func CallApi(api string, data map[string]interface{}, cookie ...http.CookieJar) (code float64, bodyBytes []byte, err error) {
+	var current_cookie http.CookieJar
+	if len(cookie) == 0 {
+		current_cookie = GetGlobalCookieJar()
+	} else {
+		current_cookie = cookie[0]
+	}
+	req := NewRequest(api, current_cookie)
+	formData := make(map[string]string)
+	for k, v := range data {
+		formData[k] = fmt.Sprintf("%v", v)
+	}
+	req.Datas = formData
 	resp, err := req.SendPost()
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to send request: %w", err)

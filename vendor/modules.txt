@@ -78,6 +78,8 @@ github.com/fogleman/ease
 # github.com/forgoer/openssl v1.6.0
 ## explicit; go 1.13
 github.com/forgoer/openssl
+# github.com/frankban/quicktest v1.14.6
+## explicit; go 1.13
 # github.com/frolovo22/tag v0.0.2 => github.com/go-musicfox/tag v1.0.2
 ## explicit; go 1.17
 github.com/frolovo22/tag
@@ -94,7 +96,7 @@ github.com/go-flac/flacpicture
 # github.com/go-flac/go-flac v1.0.0
 ## explicit; go 1.12
 github.com/go-flac/go-flac
-# github.com/go-musicfox/netease-music v1.4.10
+# github.com/go-musicfox/netease-music v1.5.0
 ## explicit; go 1.22
 github.com/go-musicfox/netease-music/service
 github.com/go-musicfox/netease-music/util
@@ -119,9 +121,6 @@ github.com/go-viper/mapstructure/v2/internal/errors
 github.com/godbus/dbus/v5
 github.com/godbus/dbus/v5/introspect
 github.com/godbus/dbus/v5/prop
-# github.com/gomodule/redigo v1.8.9
-## explicit; go 1.16
-github.com/gomodule/redigo/redis
 # github.com/gookit/color v1.5.3
 ## explicit; go 1.18
 github.com/gookit/color
@@ -188,9 +187,12 @@ github.com/jfreymuth/oggvorbis
 # github.com/jfreymuth/vorbis v1.0.2
 ## explicit; go 1.15
 github.com/jfreymuth/vorbis
-# github.com/json-iterator/go v1.1.12
-## explicit; go 1.12
-github.com/json-iterator/go
+# github.com/juju/go4 v0.0.0-20160222163258-40d72ab9641a
+## explicit
+github.com/juju/go4/lock
+# github.com/juju/persistent-cookiejar v1.0.0
+## explicit
+github.com/juju/persistent-cookiejar
 # github.com/knadh/koanf/maps v0.1.2
 ## explicit; go 1.18
 github.com/knadh/koanf/maps
@@ -245,12 +247,6 @@ github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.2
 ## explicit
 github.com/mitchellh/reflectwalk
-# github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
-## explicit
-github.com/modern-go/concurrent
-# github.com/modern-go/reflect2 v1.0.2
-## explicit; go 1.12
-github.com/modern-go/reflect2
 # github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
 ## explicit; go 1.17
 github.com/muesli/ansi
@@ -335,9 +331,6 @@ github.com/skratchdot/open-golang/open
 # github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af
 ## explicit
 github.com/tadvi/systray
-# github.com/telanflow/cookiejar v0.0.0-20190719062046-114449e86aa5
-## explicit
-github.com/telanflow/cookiejar
 # github.com/tidwall/gjson v1.17.1
 ## explicit; go 1.12
 github.com/tidwall/gjson
@@ -364,6 +357,9 @@ go.etcd.io/bbolt
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 ## explicit; go 1.20
+# golang.org/x/net v0.47.0
+## explicit; go 1.24.0
+golang.org/x/net/publicsuffix
 # golang.org/x/sync v0.18.0
 ## explicit; go 1.24.0
 golang.org/x/sync/errgroup
@@ -389,6 +385,12 @@ golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
+# gopkg.in/errgo.v1 v1.0.1
+## explicit
+gopkg.in/errgo.v1
+# gopkg.in/retry.v1 v1.0.3
+## explicit; go 1.12
+gopkg.in/retry.v1
 # rsc.io/qr v0.2.0
 ## explicit
 rsc.io/qr
