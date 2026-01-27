@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 )
+
+var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
 // LyricRenderer is a dedicated UI component for rendering lyrics.
 type LyricRenderer struct {
@@ -164,23 +167,7 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 
 // stripAnsiCodes removes ANSI escape sequences from a string to get visible content
 func stripAnsiCodes(s string) string {
-	var result strings.Builder
-	inEscape := false
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\033' && i+1 < len(s) && s[i+1] == '[' {
-			inEscape = true
-			i++ // skip '['
-			continue
-		}
-		if inEscape {
-			if (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= 'a' && s[i] <= 'z') {
-				inEscape = false
-			}
-			continue
-		}
-		result.WriteByte(s[i])
-	}
-	return result.String()
+	return ansiEscapeRegex.ReplaceAllString(s, "")
 }
 
 // Update handles UI messages, primarily for resizing and configuration updates.
@@ -379,28 +366,27 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 
 	for i := startLine; i <= endLine; i++ {
 		line := r.lyrics[i]
-		// 中心行如果是普通 LRC，可以滚动；如果含 ANSI 颜色码（YRC 高亮），禁止滚动避免破坏转义序列
-		if i == highlightLine && !strings.Contains(line, "\033[") {
+		hasAnsi := strings.Contains(line, "\033[")
+
+		if i == highlightLine && !hasAnsi {
 			line = r.lyricNowScrollBar.Tick(lyricsMaxLength, line)
 			line = strings.Trim(line, " ")
 		}
-		// 不对带 ANSI 颜色码的行做截断（YRC 模式），否则会截掉 ESC 导致 "[96m" 之类残留
-		if !strings.Contains(line, "\033[") {
+
+		if !hasAnsi {
 			line = runewidth.Truncate(line, lyricsMaxLength, "")
 		}
-		// 计算可见宽度（去除 ANSI 码）
+
 		visibleLine := line
-		if strings.Contains(line, "\033[") {
+		if hasAnsi {
 			visibleLine = stripAnsiCodes(line)
 		}
 		lineLength := runewidth.StringWidth(visibleLine)
 
-		// Calculate padding: cover end column + centered padding within remaining space
 		paddingLeft := lyricStartCol + (availableWidth-lineLength)/2
 		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
 
-		// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
-		if !strings.Contains(line, "\033[") {
+		if !hasAnsi {
 			if i == highlightLine {
 				line = util.SetFgStyle(line, termenv.RGBColor(string(LyricActiveColor)))
 			} else {
@@ -433,81 +419,55 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 	if maxLen < 20 {
 		maxLen = 20
 	}
+
+	renderLine := func(idx int, isHighlight bool) {
+		if startCol > 0 {
+			lyricBuilder.WriteString(strings.Repeat(" ", startCol))
+		}
+
+		line := r.lyrics[idx]
+		hasAnsi := strings.Contains(line, "\033[")
+
+		var lyricLine string
+		if isHighlight && !hasAnsi {
+			lyricLine = r.lyricNowScrollBar.Tick(maxLen, line)
+		} else if hasAnsi {
+			lyricLine = line
+		} else {
+			lyricLine = runewidth.Truncate(runewidth.FillRight(line, maxLen), maxLen, "")
+		}
+
+		lineHasAnsi := hasAnsi || strings.Contains(lyricLine, "\033[")
+		if !lineHasAnsi {
+			if isHighlight {
+				lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricActiveColor)))
+			} else {
+				lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricInactiveColor)))
+			}
+		}
+
+		lyricBuilder.WriteString(lyricLine)
+
+		visibleLine := lyricLine
+		if lineHasAnsi {
+			visibleLine = stripAnsiCodes(lyricLine)
+		}
+		lineLen := runewidth.StringWidth(visibleLine)
+		remainingWidth := r.netease.WindowWidth() - startCol - lineLen
+		if remainingWidth > 0 {
+			lyricBuilder.WriteString(strings.Repeat(" ", remainingWidth))
+		}
+		lyricBuilder.WriteString("\n")
+	}
+
 	switch r.lyricLines {
 	case 3:
 		for i := 1; i <= 3; i++ {
-			if startCol > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
-			}
-			var lyricLine string
-			if i == 2 && !strings.Contains(r.lyrics[i], "\033[") {
-				// 只有普通 LRC 中行允许滚动；YRC 有 ANSI 颜色码时禁止滚动
-				lyricLine = r.lyricNowScrollBar.Tick(maxLen, r.lyrics[i])
-			} else {
-				// Don't truncate lines with ANSI codes (YRC mode) as it breaks escape sequences
-				if strings.Contains(r.lyrics[i], "\033[") {
-					lyricLine = r.lyrics[i]
-				} else {
-					lyricLine = runewidth.Truncate(runewidth.FillRight(r.lyrics[i], maxLen), maxLen, "")
-				}
-			}
-			// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
-			if !strings.Contains(lyricLine, "\033[") {
-				if i == 2 {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricActiveColor)))
-				} else {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricInactiveColor)))
-				}
-			}
-			lyricBuilder.WriteString(lyricLine)
-			// 计算可见宽度并填充空格到行末，避免残留
-			visibleLine := lyricLine
-			if strings.Contains(lyricLine, "\033[") {
-				visibleLine = stripAnsiCodes(lyricLine)
-			}
-			lineLen := runewidth.StringWidth(visibleLine)
-			remainingWidth := r.netease.WindowWidth() - startCol - lineLen
-			if remainingWidth > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", remainingWidth))
-			}
-			lyricBuilder.WriteString("\n")
+			renderLine(i, i == 2)
 		}
 	case 5:
 		for i := range 5 {
-			if startCol > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", startCol))
-			}
-			var lyricLine string
-			if i == 2 && !strings.Contains(r.lyrics[i], "\033[") {
-				lyricLine = r.lyricNowScrollBar.Tick(maxLen, r.lyrics[i])
-			} else {
-				// Don't truncate lines with ANSI codes (YRC mode) as it breaks escape sequences
-				if strings.Contains(r.lyrics[i], "\033[") {
-					lyricLine = r.lyrics[i]
-				} else {
-					lyricLine = runewidth.Truncate(runewidth.FillRight(r.lyrics[i], maxLen), maxLen, "")
-				}
-			}
-			// Only apply uniform color if line doesn't already have ANSI codes (YRC mode)
-			if !strings.Contains(lyricLine, "\033[") {
-				if i == 2 {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricActiveColor)))
-				} else {
-					lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricInactiveColor)))
-				}
-			}
-			lyricBuilder.WriteString(lyricLine)
-			// 计算可见宽度并填充空格到行末，避免残留
-			visibleLine := lyricLine
-			if strings.Contains(lyricLine, "\033[") {
-				visibleLine = stripAnsiCodes(lyricLine)
-			}
-			lineLen := runewidth.StringWidth(visibleLine)
-			remainingWidth := r.netease.WindowWidth() - startCol - lineLen
-			if remainingWidth > 0 {
-				lyricBuilder.WriteString(strings.Repeat(" ", remainingWidth))
-			}
-			lyricBuilder.WriteString("\n")
+			renderLine(i, i == 2)
 		}
 	}
 }

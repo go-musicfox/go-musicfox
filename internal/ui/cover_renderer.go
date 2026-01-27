@@ -349,14 +349,14 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				frameSeqs := make([]string, frameCount)
 				var resultMu sync.Mutex
 
-				// Launch worker goroutines
+				srcRGBA := kitty.EnsureRGBA(img)
+
 				var wg sync.WaitGroup
 				for range numWorkers {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
 						for task := range tasks {
-							// Check cancellation less frequently
 							if task.index%50 == 0 {
 								select {
 								case <-ctx.Done():
@@ -365,18 +365,16 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 								}
 							}
 
-							// Generate rotated image and encode
-							rotated := kitty.RotateImage(img, task.angle)
-							var seq string
-							if task.index == 0 {
-								// Skip frame 0 - static image is already displayed
-								seq = ""
-							} else {
-								// Subsequent frames
-								seq, _ = kitty.TransmitFrame(rotated, bgAnimID, frameDuration)
-							}
+							seq := func() string {
+								rotated := kitty.RotateImagePooled(srcRGBA, task.angle)
+								defer kitty.PutPooledRGBA(rotated)
+								if task.index == 0 {
+									return ""
+								}
+								s, _ := kitty.TransmitFrame(rotated, bgAnimID, frameDuration)
+								return s
+							}()
 
-							// Write directly to slice with lock
 							resultMu.Lock()
 							frameSeqs[task.index] = seq
 							resultMu.Unlock()
