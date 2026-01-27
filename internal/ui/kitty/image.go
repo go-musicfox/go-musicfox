@@ -242,10 +242,15 @@ func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *ima
 		Rect:   image.Rect(0, 0, size, size),
 	}
 
+	// Initialize all pixels to opaque (255) - we only want to transparent corners
+	for i := range mask.Pix {
+		mask.Pix[i] = 255
+	}
+
 	// Precompute radius squared to avoid repeated calculation
 	radiusSq := radius * radius
 
-	// Top-left corner
+	// Top-left corner - set transparent pixels outside the corner arc
 	for y := 0; y < radius; y++ {
 		for x := 0; x < radius; x++ {
 			dx := radius - x
@@ -254,9 +259,6 @@ func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *ima
 			if dx*dx+dy*dy > radiusSq {
 				// Transparent corner - set alpha to 0
 				mask.Pix[offset] = 0
-			} else {
-				// Opaque - set alpha to 255
-				mask.Pix[offset] = 255
 			}
 		}
 	}
@@ -270,8 +272,6 @@ func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *ima
 			offset := y*mask.Stride + col
 			if dx*dx+dy*dy > radiusSq {
 				mask.Pix[offset] = 0
-			} else {
-				mask.Pix[offset] = 255
 			}
 		}
 	}
@@ -285,8 +285,6 @@ func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *ima
 			offset := row*mask.Stride + x
 			if dx*dx+dy*dy > radiusSq {
 				mask.Pix[offset] = 0
-			} else {
-				mask.Pix[offset] = 255
 			}
 		}
 	}
@@ -301,8 +299,6 @@ func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *ima
 			offset := row*mask.Stride + col
 			if dx*dx+dy*dy > radiusSq {
 				mask.Pix[offset] = 0
-			} else {
-				mask.Pix[offset] = 255
 			}
 		}
 	}
