@@ -5,13 +5,17 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"math"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
 const (
@@ -56,8 +60,26 @@ func NewImageCache(maxSize int) *ImageCache {
 // cols and rows specify the desired display size in terminal cells.
 // Returns the kitty escape sequence ready to be written to the terminal.
 func (c *ImageCache) GetOrFetch(ctx context.Context, url string, cols, rows int) (string, error) {
+	entry, err := c.getOrFetchEntry(ctx, url, cols, rows)
+	if err != nil {
+		return "", err
+	}
+	return entry.kittySeq, nil
+}
+
+// GetImage retrieves an image from cache or fetches it from the URL.
+// It returns the processed image.Image (resized and rounded).
+func (c *ImageCache) GetImage(ctx context.Context, url string, cols, rows int) (image.Image, error) {
+	entry, err := c.getOrFetchEntry(ctx, url, cols, rows)
+	if err != nil {
+		return nil, err
+	}
+	return entry.img, nil
+}
+
+func (c *ImageCache) getOrFetchEntry(ctx context.Context, url string, cols, rows int) (*cacheEntry, error) {
 	if url == "" {
-		return "", nil
+		return nil, nil // Or error? GetOrFetch used to return "", nil
 	}
 
 	cacheKey := fmt.Sprintf("%s_%d_%d", url, cols, rows)
@@ -68,35 +90,48 @@ func (c *ImageCache) GetOrFetch(ctx context.Context, url string, cols, rows int)
 		c.mu.RUnlock()
 		// Move to end of LRU list (most recently used)
 		c.touch(cacheKey)
-		return entry.kittySeq, nil
+		return entry, nil
 	}
 	c.mu.RUnlock()
 
 	// Fetch and process the image
 	img, err := c.fetchImage(ctx, url)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Resize image for terminal display.
 	// Use 1:1 ratio (no stretch) - the image will be displayed as a square.
+	// 320px is usually enough for terminal covers (approx 30-40 columns)
+	// and much faster to process/encode for animations than 512px.
 	targetSize := 512
+	if configs.AppConfig.Main.Lyric.Cover.Spin {
+		targetSize = 320
+	}
 	resized := resizeImageSquare(img, targetSize)
 
+	// Apply rounded corners based on config
+	radiusPercent := float64(configs.AppConfig.Main.Lyric.Cover.CornerRadius) / 100.0 / 2.0
+	if radiusPercent >= 0.5 {
+		radiusPercent = 0.5
+	}
+	rounded := applyRoundedCorners(resized, radiusPercent)
+
 	// Generate kitty sequence
-	kittySeq, err := TransmitAndDisplay(resized, cols, rows)
+	kittySeq, err := TransmitAndDisplay(rounded, cols, rows)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate kitty sequence: %w", err)
+		return nil, fmt.Errorf("failed to generate kitty sequence: %w", err)
 	}
 
 	// Store in cache
 	c.mu.Lock()
-	c.cache[cacheKey] = &cacheEntry{
-		img:      resized,
+	entry := &cacheEntry{
+		img:      rounded,
 		cols:     cols,
 		rows:     rows,
 		kittySeq: kittySeq,
 	}
+	c.cache[cacheKey] = entry
 	c.order = append(c.order, cacheKey)
 
 	// Evict oldest entries if cache is full
@@ -107,7 +142,7 @@ func (c *ImageCache) GetOrFetch(ctx context.Context, url string, cols, rows int)
 	}
 	c.mu.Unlock()
 
-	return kittySeq, nil
+	return entry, nil
 }
 
 // touch moves a cache key to the end of the LRU list.
@@ -277,4 +312,168 @@ func bilinearInterp(c00, c10, c01, c11 uint32, xWeight, yWeight float64) uint32 
 	bottom := float64(c01)*(1-xWeight) + float64(c11)*xWeight
 	// Interpolate in y direction
 	return uint32(top*(1-yWeight) + bottom*yWeight)
+}
+
+// applyRoundedCorners applies rounded corners to an image.
+// radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
+// applyRoundedCorners applies rounded corners to an image with anti-aliasing.
+// radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
+func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Calculate corner radius
+	minDim := width
+	if height < minDim {
+		minDim = height
+	}
+	radius := float64(minDim) * radiusPercent // Use float for precision
+	if radius <= 0 {
+		return src
+	}
+
+	// Create output image with alpha channel
+	dst := image.NewRGBA(bounds)
+
+	// Draw the source image first
+	draw.Draw(dst, bounds, src, bounds.Min, draw.Src)
+
+	// Scan only the corner regions to apply transparency
+	// This optimization avoids calculating sqrt for the center of the image
+	intRadius := int(math.Ceil(radius))
+
+	for y := 0; y < height; y++ {
+		if y >= intRadius && y < height-intRadius {
+			continue
+		}
+
+		for x := 0; x < width; x++ {
+			if x >= intRadius && x < width-intRadius {
+				continue
+			}
+			factor := getCornerAlphaFactor(x, y, width, height, radius)
+			if factor < 1.0 {
+				r, g, b, a := dst.At(x, y).RGBA()
+				newA := uint8((float64(a>>8) * factor))
+				newR := uint8((float64(r>>8) * factor))
+				newG := uint8((float64(g>>8) * factor))
+				newB := uint8((float64(b>>8) * factor))
+				dst.SetRGBA(x, y, color.RGBA{R: newR, G: newG, B: newB, A: newA})
+			}
+		}
+	}
+
+	return dst
+}
+
+// getCornerAlphaFactor calculates the alpha factor for a pixel at (x, y).
+// based on its distance from the nearest corner arc center.
+// Returns a value between 0.0 (fully transparent) and 1.0 (fully opaque).
+func getCornerAlphaFactor(x, y, width, height int, radius float64) float64 {
+	// Determine which corner we are checking
+	var cx, cy float64 // Center of the corner circle
+
+	if x < int(radius) {
+		cx = radius
+	} else if x >= width-int(radius) {
+		cx = float64(width) - radius
+	} else {
+		return 1.0
+	}
+
+	if y < int(radius) {
+		cy = radius
+	} else if y >= height-int(radius) {
+		cy = float64(height) - radius
+	} else {
+		return 1.0
+	}
+
+	dx := float64(x) + 0.5 - cx
+	dy := float64(y) + 0.5 - cy
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	if distance < radius-0.5 {
+		return 1.0
+	} else if distance > radius+0.5 {
+		return 0.0
+	} else {
+		return 1.0 - (distance - (radius - 0.5))
+	}
+}
+
+// RotateImage rotates an image by the given angle in degrees.
+func RotateImage(src image.Image, angle float64) image.Image {
+	rad := angle * math.Pi / 180.0
+	sin, cos := math.Sin(rad), math.Cos(rad)
+
+	srcBounds := src.Bounds()
+	srcW := srcBounds.Dx()
+	srcH := srcBounds.Dy()
+
+	// Use the original max dimension as the canvas size to keep it consistent.
+	// We want the rotated image to fit WITHIN the original bounding box if we zoomed out,
+	// but here we just want a large enough canvas.
+	// Actually, just making the canvas larger (diagonal) makes the image visually shrink
+	// because kitty fits the whole canvas into the cell area.
+
+	// FIX: Use the SAME size as source.
+	// This means we will crop corners when rotating, BUT the visual size will remain constant and maximized.
+	// For a circle (rounded cover), rotating inside the square bounding box is perfect.
+	// Corners are transparent anyway.
+	dstW, dstH := srcW, srcH
+	dst := image.NewRGBA(image.Rect(0, 0, dstW, dstH))
+
+	centerX := float64(srcW) / 2.0
+	centerY := float64(srcH) / 2.0
+	dstCenterX := float64(dstW) / 2.0
+	dstCenterY := float64(dstH) / 2.0
+
+	for y := 0; y < dstH; y++ {
+		for x := 0; x < dstW; x++ {
+			// Inverse mapping
+			dx := float64(x) - dstCenterX
+			dy := float64(y) - dstCenterY
+
+			srcX := dx*cos + dy*sin + centerX
+			srcY := -dx*sin + dy*cos + centerY
+
+			if srcX < 0 || srcX >= float64(srcW)-1 || srcY < 0 || srcY >= float64(srcH)-1 {
+				continue
+			}
+
+			x0 := int(srcX)
+			y0 := int(srcY)
+			x1 := x0 + 1
+			y1 := y0 + 1
+
+			xWeight := srcX - float64(x0)
+			yWeight := srcY - float64(y0)
+
+			c00 := src.At(srcBounds.Min.X+x0, srcBounds.Min.Y+y0)
+			c10 := src.At(srcBounds.Min.X+x1, srcBounds.Min.Y+y0)
+			c01 := src.At(srcBounds.Min.X+x0, srcBounds.Min.Y+y1)
+			c11 := src.At(srcBounds.Min.X+x1, srcBounds.Min.Y+y1)
+
+			r00, g00, b00, a00 := c00.RGBA()
+			r10, g10, b10, a10 := c10.RGBA()
+			r01, g01, b01, a01 := c01.RGBA()
+			r11, g11, b11, a11 := c11.RGBA()
+
+			r := bilinearInterp(r00, r10, r01, r11, xWeight, yWeight)
+			g := bilinearInterp(g00, g10, g01, g11, xWeight, yWeight)
+			b := bilinearInterp(b00, b10, b01, b11, xWeight, yWeight)
+			a := bilinearInterp(a00, a10, a01, a11, xWeight, yWeight)
+
+			dst.SetRGBA(x, y, color.RGBA{
+				R: uint8(r >> 8),
+				G: uint8(g >> 8),
+				B: uint8(b >> 8),
+				A: uint8(a >> 8),
+			})
+		}
+	}
+
+	return dst
 }
