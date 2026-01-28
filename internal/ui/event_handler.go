@@ -5,11 +5,14 @@ import (
 	"log/slog"
 	"runtime"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/keybindings"
@@ -17,6 +20,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/mathx"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type EventHandler struct {
@@ -363,11 +367,26 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 					stateText = "_ z Z Z "
 				}
 				stateWidth := runewidth.StringWidth(stateText)
+
+				// 如果点击在播放状态区域，切换播放/暂停
+				stateStartX := leftPad + modeWidth + volWidth
+				if msg.X >= stateStartX && msg.X < stateStartX+stateWidth {
+					h.playOrToggleHandle()
+					return true, main, a.Tick(time.Nanosecond)
+				}
 				heartWidth := 0
 				if player.CurSong().Id > 0 {
 					// 仅宽度受影响，是否喜欢不影响字符宽度
 					_ = likelist.IsLikeSong(player.CurSong().Id)
 					heartWidth = runewidth.StringWidth("♥ ")
+				}
+
+				// 如果点击在心形区域，切换喜欢/取消喜欢
+				heartStartX := leftPad + modeWidth + volWidth + stateWidth
+				if heartWidth > 0 && msg.X >= heartStartX && msg.X < heartStartX+heartWidth {
+					isLiked := likelist.IsLikeSong(player.CurSong().Id)
+					newPage := likeSong(h.netease, !isLiked, false)
+					return true, newPage, a.Tick(time.Nanosecond)
 				}
 
 				// 歌曲名显示宽度（可能被截断）
@@ -382,6 +401,31 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 					if songShownWidth > maxSongWidth {
 						songShownWidth = maxSongWidth
 					}
+				}
+
+				// 点击歌曲名，按单曲搜索当前歌曲
+				songNameStartX := leftPad + modeWidth + volWidth + stateWidth + heartWidth
+				if msg.X >= songNameStartX && msg.X < songNameStartX+songShownWidth {
+					loading := model.NewLoading(main)
+					loading.Start()
+					defer loading.Complete()
+
+					searchService := service.SearchService{
+						S:     songName,
+						Type:  strconv.Itoa(int(StSingleSong)),
+						Limit: strconv.Itoa(types.SearchPageSize),
+					}
+					code, response := searchService.Search()
+					codeType := _struct.CheckCode(code)
+					if codeType != _struct.Success {
+						return true, main, a.Tick(time.Nanosecond)
+					}
+
+					h.netease.search.wordsInput.SetValue(songName)
+					h.netease.search.searchType = StSingleSong
+					h.netease.search.result = _struct.GetSongsOfSearchResult(response)
+
+					return true, main.EnterMenu(NewSearchResultMenu(newBaseMenu(h.netease), StSingleSong), &model.MenuItem{Title: "搜索结果"}), a.Tick(time.Nanosecond)
 				}
 
 				// 歌手区域起始 X（绝对坐标，0-based）：左对齐空格 + 前缀段 + 歌曲名 + 一个空格
