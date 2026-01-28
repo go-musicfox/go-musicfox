@@ -185,6 +185,10 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			title:  model.MenuItem{Title: "相似的歌曲"},
 			action: func() { findSimilarSongs(n, isSelected) },
 		},
+		{
+			title:  model.MenuItem{Title: "搜索歌名"},
+			action: func() { searchSong(n, isSelected) },
+		},
 	}
 	return items
 }
