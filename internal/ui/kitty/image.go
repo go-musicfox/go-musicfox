@@ -23,7 +23,66 @@ const (
 	DefaultCacheSize = 10
 	// DefaultHTTPTimeout is the default timeout for HTTP requests
 	DefaultHTTPTimeout = 10 * time.Second
+	// DefaultRotationSize is the target size for rotation animations
+	DefaultRotationSize = 320
 )
+
+// rgbaPool provides reusable RGBA image buffers for rotation frames.
+// Avoids 180+ allocations per song change when spinning cover is enabled.
+var rgbaPool = sync.Pool{
+	New: func() interface{} {
+		return image.NewRGBA(image.Rect(0, 0, DefaultRotationSize, DefaultRotationSize))
+	},
+}
+
+// getPooledRGBA retrieves an RGBA image from the pool and clears it.
+func getPooledRGBA() *image.RGBA {
+	img := rgbaPool.Get().(*image.RGBA)
+	// Clear pixel data to prevent ghost images
+	clear(img.Pix)
+	return img
+}
+
+// putPooledRGBA returns an RGBA image to the pool for reuse.
+func putPooledRGBA(img *image.RGBA) {
+	if img == nil {
+		return
+	}
+	bounds := img.Bounds()
+	if bounds.Dx() == DefaultRotationSize && bounds.Dy() == DefaultRotationSize {
+		rgbaPool.Put(img)
+	}
+}
+
+// RotateImagePooled rotates an image using a pooled destination buffer.
+// Returns a pooled RGBA image - caller should call PutPooledRGBA when done.
+func RotateImagePooled(src *image.RGBA, angle float64) *image.RGBA {
+	size := src.Bounds().Dx()
+	var dst *image.RGBA
+	if size == DefaultRotationSize {
+		dst = getPooledRGBA()
+	} else {
+		dst = image.NewRGBA(image.Rect(0, 0, size, size))
+	}
+	RotateImageFast(src, angle, dst)
+	return dst
+}
+
+// PutPooledRGBA returns an RGBA image to the pool for reuse.
+func PutPooledRGBA(img *image.RGBA) {
+	putPooledRGBA(img)
+}
+
+// EnsureRGBA converts an image.Image to *image.RGBA if needed.
+func EnsureRGBA(img image.Image) *image.RGBA {
+	if rgba, ok := img.(*image.RGBA); ok {
+		return rgba
+	}
+	bounds := img.Bounds()
+	rgba := image.NewRGBA(bounds)
+	draw.Draw(rgba, bounds, img, bounds.Min, draw.Src)
+	return rgba
+}
 
 // ImageCache manages downloaded and processed cover images.
 type ImageCache struct {
@@ -32,6 +91,9 @@ type ImageCache struct {
 	order      []string // LRU order: oldest at front, newest at back
 	maxSize    int
 	httpClient *http.Client
+	// Precomputed corner mask cache for performance
+	cornerMaskCache map[string]*image.Alpha
+	cornerMaskMu    sync.RWMutex
 }
 
 type cacheEntry struct {
@@ -47,12 +109,11 @@ func NewImageCache(maxSize int) *ImageCache {
 		maxSize = DefaultCacheSize
 	}
 	return &ImageCache{
-		cache:   make(map[string]*cacheEntry),
-		order:   make([]string, 0, maxSize),
-		maxSize: maxSize,
-		httpClient: &http.Client{
-			Timeout: DefaultHTTPTimeout,
-		},
+		cache:           make(map[string]*cacheEntry),
+		order:           make([]string, 0, maxSize),
+		maxSize:         maxSize,
+		httpClient:      &http.Client{Timeout: DefaultHTTPTimeout},
+		cornerMaskCache: make(map[string]*image.Alpha),
 	}
 }
 
@@ -110,12 +171,15 @@ func (c *ImageCache) getOrFetchEntry(ctx context.Context, url string, cols, rows
 	}
 	resized := resizeImageSquare(img, targetSize)
 
-	// Apply rounded corners based on config
+	// Get precomputed corner mask for this size (cached for performance)
 	radiusPercent := float64(configs.AppConfig.Main.Lyric.Cover.CornerRadius) / 100.0 / 2.0
 	if radiusPercent >= 0.5 {
 		radiusPercent = 0.5
 	}
-	rounded := applyRoundedCorners(resized, radiusPercent)
+	mask := c.getOrCreateCornerMask(targetSize, radiusPercent)
+
+	// Apply rounded corners using precomputed mask (much faster than pixel-by-pixel)
+	rounded := applyRoundedCornersFast(resized, mask)
 
 	// Generate kitty sequence
 	kittySeq, err := TransmitAndDisplay(rounded, cols, rows)
@@ -194,6 +258,173 @@ func (c *ImageCache) Clear() {
 
 	c.cache = make(map[string]*cacheEntry)
 	c.order = c.order[:0]
+}
+
+// getOrCreateCornerMask returns a cached corner mask or creates a new one.
+// The mask is precomputed once per (size, radiusPercent) combination.
+func (c *ImageCache) getOrCreateCornerMask(size int, radiusPercent float64) *image.Alpha {
+	if radiusPercent <= 0 {
+		return nil
+	}
+
+	// Create cache key from size and radius percent
+	cacheKey := fmt.Sprintf("%d_%.3f", size, radiusPercent)
+
+	// Check cache first
+	c.cornerMaskMu.RLock()
+	if mask, ok := c.cornerMaskCache[cacheKey]; ok {
+		c.cornerMaskMu.RUnlock()
+		return mask
+	}
+	c.cornerMaskMu.RUnlock()
+
+	// Create new corner mask (only for corners, not for full image)
+	c.cornerMaskMu.Lock()
+	defer c.cornerMaskMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if mask, ok := c.cornerMaskCache[cacheKey]; ok {
+		return mask
+	}
+
+	// Precompute corner radius
+	radius := int(float64(size) * radiusPercent)
+	if radius <= 0 {
+		return nil
+	}
+
+	// Create a minimal alpha mask containing only the corner regions
+	// This is more memory efficient than a full-size mask
+	mask := &image.Alpha{
+		Pix:    make([]uint8, size*size), // 1 byte per pixel for Alpha
+		Stride: size,
+		Rect:   image.Rect(0, 0, size, size),
+	}
+
+	// Initialize all pixels to opaque (255) - we only want to transparent corners
+	for i := range mask.Pix {
+		mask.Pix[i] = 255
+	}
+
+	// Precompute radius squared to avoid repeated calculation
+	radiusSq := radius * radius
+
+	// Top-left corner - set transparent pixels outside the corner arc
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := radius - x
+			dy := radius - y
+			offset := y*mask.Stride + x
+			if dx*dx+dy*dy > radiusSq {
+				// Transparent corner - set alpha to 0
+				mask.Pix[offset] = 0
+			}
+		}
+	}
+
+	// Top-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := x
+			dy := radius - y
+			col := size - radius + x
+			offset := y*mask.Stride + col
+			if dx*dx+dy*dy > radiusSq {
+				mask.Pix[offset] = 0
+			}
+		}
+	}
+
+	// Bottom-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := radius - x
+			dy := y
+			row := size - radius + y
+			offset := row*mask.Stride + x
+			if dx*dx+dy*dy > radiusSq {
+				mask.Pix[offset] = 0
+			}
+		}
+	}
+
+	// Bottom-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			dx := x
+			dy := y
+			col := size - radius + x
+			row := size - radius + y
+			offset := row*mask.Stride + col
+			if dx*dx+dy*dy > radiusSq {
+				mask.Pix[offset] = 0
+			}
+		}
+	}
+
+	c.cornerMaskCache[cacheKey] = mask
+	return mask
+}
+
+// applyRoundedCornersFast applies rounded corners using a precomputed alpha mask.
+func applyRoundedCornersFast(src image.Image, mask *image.Alpha) image.Image {
+	if mask == nil {
+		return src
+	}
+
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	dst := image.NewRGBA(bounds)
+	draw.Draw(dst, bounds, src, bounds.Min, draw.Src)
+
+	maskPix := mask.Pix
+	maskStride := mask.Stride
+	maskSize := mask.Bounds().Dx()
+	radius := maskSize / 2
+
+	// Top-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := y*maskStride + x
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(x, y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	// Top-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := y*maskStride + (radius + x)
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(width-radius+x, y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	// Bottom-left corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := (radius+y)*maskStride + x
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(x, height-radius+y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	// Bottom-right corner
+	for y := 0; y < radius; y++ {
+		for x := 0; x < radius; x++ {
+			maskOffset := (radius+y)*maskStride + (radius + x)
+			if maskPix[maskOffset] == 0 {
+				dst.SetRGBA(width-radius+x, height-radius+y, color.RGBA{0, 0, 0, 0})
+			}
+		}
+	}
+
+	return dst
 }
 
 // resizeImageSquare resizes an image to a square of the given size.
@@ -404,42 +635,67 @@ func getCornerAlphaFactor(x, y, width, height int, radius float64) float64 {
 }
 
 // RotateImage rotates an image by the given angle in degrees.
+// This is the legacy interface that allocates a new image each time.
 func RotateImage(src image.Image, angle float64) image.Image {
+	// Convert to RGBA if needed
+	srcRGBA, ok := src.(*image.RGBA)
+	if !ok {
+		bounds := src.Bounds()
+		srcRGBA = image.NewRGBA(bounds)
+		draw.Draw(srcRGBA, bounds, src, bounds.Min, draw.Src)
+	}
+
+	// Use pooled rotation for better performance
+	return RotateImagePooled(srcRGBA, angle)
+}
+
+// RotateImageFast rotates an RGBA image by the given angle in degrees.
+// Optimized version: directly operates on pixel arrays to avoid interface overhead.
+// The dst buffer must be the same size as src.
+func RotateImageFast(src *image.RGBA, angle float64, dst *image.RGBA) {
 	rad := angle * math.Pi / 180.0
 	sin, cos := math.Sin(rad), math.Cos(rad)
 
 	srcBounds := src.Bounds()
 	srcW := srcBounds.Dx()
 	srcH := srcBounds.Dy()
+	dstW := dst.Bounds().Dx()
+	dstH := dst.Bounds().Dy()
 
-	// Use the original max dimension as the canvas size to keep it consistent.
-	// We want the rotated image to fit WITHIN the original bounding box if we zoomed out,
-	// but here we just want a large enough canvas.
-	// Actually, just making the canvas larger (diagonal) makes the image visually shrink
-	// because kitty fits the whole canvas into the cell area.
-
-	// FIX: Use the SAME size as source.
-	// This means we will crop corners when rotating, BUT the visual size will remain constant and maximized.
-	// For a circle (rounded cover), rotating inside the square bounding box is perfect.
-	// Corners are transparent anyway.
-	dstW, dstH := srcW, srcH
-	dst := image.NewRGBA(image.Rect(0, 0, dstW, dstH))
+	// Direct access to pixel data
+	srcPix := src.Pix
+	srcStride := src.Stride
+	dstPix := dst.Pix
+	dstStride := dst.Stride
 
 	centerX := float64(srcW) / 2.0
 	centerY := float64(srcH) / 2.0
 	dstCenterX := float64(dstW) / 2.0
 	dstCenterY := float64(dstH) / 2.0
 
-	for y := 0; y < dstH; y++ {
-		for x := 0; x < dstW; x++ {
-			// Inverse mapping
-			dx := float64(x) - dstCenterX
-			dy := float64(y) - dstCenterY
+	srcWf := float64(srcW) - 1
+	srcHf := float64(srcH) - 1
 
+	for y := 0; y < dstH; y++ {
+		dy := float64(y) - dstCenterY
+		// Pre-calculate row offset
+		rowOffset := y * dstStride
+
+		for x := 0; x < dstW; x++ {
+			dx := float64(x) - dstCenterX
+
+			// Inverse mapping
 			srcX := dx*cos + dy*sin + centerX
 			srcY := -dx*sin + dy*cos + centerY
 
-			if srcX < 0 || srcX >= float64(srcW)-1 || srcY < 0 || srcY >= float64(srcH)-1 {
+			dstOffset := rowOffset + x*4
+
+			if srcX < 0 || srcX >= srcWf || srcY < 0 || srcY >= srcHf {
+				// Transparent pixel
+				dstPix[dstOffset] = 0
+				dstPix[dstOffset+1] = 0
+				dstPix[dstOffset+2] = 0
+				dstPix[dstOffset+3] = 0
 				continue
 			}
 
@@ -450,30 +706,30 @@ func RotateImage(src image.Image, angle float64) image.Image {
 
 			xWeight := srcX - float64(x0)
 			yWeight := srcY - float64(y0)
+			xWeight1 := 1 - xWeight
+			yWeight1 := 1 - yWeight
 
-			c00 := src.At(srcBounds.Min.X+x0, srcBounds.Min.Y+y0)
-			c10 := src.At(srcBounds.Min.X+x1, srcBounds.Min.Y+y0)
-			c01 := src.At(srcBounds.Min.X+x0, srcBounds.Min.Y+y1)
-			c11 := src.At(srcBounds.Min.X+x1, srcBounds.Min.Y+y1)
+			// Direct pixel access (4 bytes per pixel: RGBA)
+			off00 := y0*srcStride + x0*4
+			off10 := y0*srcStride + x1*4
+			off01 := y1*srcStride + x0*4
+			off11 := y1*srcStride + x1*4
 
-			r00, g00, b00, a00 := c00.RGBA()
-			r10, g10, b10, a10 := c10.RGBA()
-			r01, g01, b01, a01 := c01.RGBA()
-			r11, g11, b11, a11 := c11.RGBA()
+			// Bilinear interpolation weights
+			w00 := xWeight1 * yWeight1
+			w10 := xWeight * yWeight1
+			w01 := xWeight1 * yWeight
+			w11 := xWeight * yWeight
 
-			r := bilinearInterp(r00, r10, r01, r11, xWeight, yWeight)
-			g := bilinearInterp(g00, g10, g01, g11, xWeight, yWeight)
-			b := bilinearInterp(b00, b10, b01, b11, xWeight, yWeight)
-			a := bilinearInterp(a00, a10, a01, a11, xWeight, yWeight)
-
-			dst.SetRGBA(x, y, color.RGBA{
-				R: uint8(r >> 8),
-				G: uint8(g >> 8),
-				B: uint8(b >> 8),
-				A: uint8(a >> 8),
-			})
+			// Inline bilinear interpolation for performance
+			dstPix[dstOffset] = uint8(float64(srcPix[off00])*w00 + float64(srcPix[off10])*w10 +
+				float64(srcPix[off01])*w01 + float64(srcPix[off11])*w11)
+			dstPix[dstOffset+1] = uint8(float64(srcPix[off00+1])*w00 + float64(srcPix[off10+1])*w10 +
+				float64(srcPix[off01+1])*w01 + float64(srcPix[off11+1])*w11)
+			dstPix[dstOffset+2] = uint8(float64(srcPix[off00+2])*w00 + float64(srcPix[off10+2])*w10 +
+				float64(srcPix[off01+2])*w01 + float64(srcPix[off11+2])*w11)
+			dstPix[dstOffset+3] = uint8(float64(srcPix[off00+3])*w00 + float64(srcPix[off10+3])*w10 +
+				float64(srcPix[off01+3])*w01 + float64(srcPix[off11+3])*w11)
 		}
 	}
-
-	return dst
 }

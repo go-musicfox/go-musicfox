@@ -121,18 +121,12 @@ func (r *CoverRenderer) calculateDimensions() {
 	}
 
 	windowWidth := r.netease.WindowWidth()
-	r.cols = int(float64(windowWidth) * widthRatio)
-	if r.cols < 10 {
-		r.cols = 10 // Minimum width
-	}
+	r.cols = max(int(float64(windowWidth)*widthRatio), 10) // Minimum width
 
 	// Calculate rows to maintain square visual aspect ratio
 	// Terminal cells are typically 2:1 (twice as tall as wide, e.g., 8x16 pixels)
 	// So rows = cols / 2 makes the image appear visually square
-	r.rows = r.cols / 2
-	if r.rows < 3 {
-		r.rows = 3
-	}
+	r.rows = max(r.cols/2, 3)
 	// Don't exceed available space
 	if r.rows > spaceHeight {
 		r.rows = spaceHeight
@@ -196,10 +190,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Calculate start column to align with menu arrow (same as song info start)
-	coverStartCol := main.MenuStartColumn()
-	if coverStartCol < 1 {
-		coverStartCol = 1
-	}
+	coverStartCol := max(main.MenuStartColumn(), 1)
 
 	song := r.state.CurSong()
 	picUrl := getCoverUrl(song)
@@ -296,6 +287,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 			r.mu.Unlock() // Release lock before spawning goroutine
 
+			// IMPORTANT: Render static image IMMEDIATELY while animation is being calculated
+			// This avoids a blank cover during the calculation time
+			renderStaticForAnimation(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID)
+
 			// Capture variables for closure
 			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32) {
 				// Fetch image with timeout (derived from cancellable context)
@@ -325,23 +320,19 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				frameDuration := 1000 / fps
 
 				// Read rotation duration from config (default 6, range 1-30)
-				spinDuration := configs.AppConfig.Main.Lyric.Cover.SpinDuration
-				if spinDuration <= 0 || spinDuration > 30 {
-					spinDuration = 6
+				_spinDuration := configs.AppConfig.Main.Lyric.Cover.SpinDuration
+				if _spinDuration <= 0 || _spinDuration > 30 {
+					_spinDuration = 6
 				}
 
 				// Dynamic frame count calculation based on FPS and duration
-				// frameCount = fps * rotationDuration
-				frameCount := fps * spinDuration
+				frameCount := fps * _spinDuration
 
 				// Calculate step size (degrees per frame) to complete 360 degrees
 				step := 360.0 / float64(frameCount)
 
 				// Use ALL available CPU cores
-				numWorkers := runtime.NumCPU()
-				if numWorkers < 4 {
-					numWorkers = 4 // Minimum 4 workers
-				}
+				numWorkers := max(runtime.NumCPU(), 4) // Minimum 4 workers
 				// Set GOMAXPROCS to ensure all cores are used
 				runtime.GOMAXPROCS(numWorkers)
 
@@ -358,14 +349,14 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				frameSeqs := make([]string, frameCount)
 				var resultMu sync.Mutex
 
-				// Launch worker goroutines
+				srcRGBA := kitty.EnsureRGBA(img)
+
 				var wg sync.WaitGroup
-				for i := 0; i < numWorkers; i++ {
+				for range numWorkers {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
 						for task := range tasks {
-							// Check cancellation less frequently
 							if task.index%50 == 0 {
 								select {
 								case <-ctx.Done():
@@ -374,18 +365,16 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 								}
 							}
 
-							// Generate rotated image and encode
-							rotated := kitty.RotateImage(img, task.angle)
-							var seq string
-							if task.index == 0 {
-								// First frame is base image
-								seq, _ = kitty.TransmitImage(rotated, bgCols, bgRows, bgAnimID)
-							} else {
-								// Subsequent frames
-								seq, _ = kitty.TransmitFrame(rotated, bgAnimID, frameDuration)
-							}
+							seq := func() string {
+								rotated := kitty.RotateImagePooled(srcRGBA, task.angle)
+								defer kitty.PutPooledRGBA(rotated)
+								if task.index == 0 {
+									return ""
+								}
+								s, _ := kitty.TransmitFrame(rotated, bgAnimID, frameDuration)
+								return s
+							}()
 
-							// Write directly to slice with lock
 							resultMu.Lock()
 							frameSeqs[task.index] = seq
 							resultMu.Unlock()
@@ -394,7 +383,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				}
 
 				// Dispatch tasks (inline to avoid goroutine overhead)
-				for i := 0; i < frameCount; i++ {
+				for i := range frameCount {
 					angle := float64(i) * step
 					tasks <- frameTask{index: i, angle: angle}
 				}
@@ -410,28 +399,32 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				default:
 				}
 
-				// Assemble final sequence
-				var sb strings.Builder
-
-				// 1. DO NOT DeleteAllImages at start (Double Buffering)
-				// Instead, we will overwrite/place new ID, then delete old ID
-
-				// 2. Write all frames in order (Using bgAnimID which is the NEW ID)
+				// Transmit frames (skipping frame 0 which is already visible)
+				var frameData strings.Builder
 				for _, seq := range frameSeqs {
-					sb.WriteString(seq)
+					if seq != "" {
+						frameData.WriteString(seq)
+					}
+				}
+				if frameData.Len() > 0 {
+					_, _ = os.Stdout.WriteString(frameData.String())
+					_ = os.Stdout.Sync()
 				}
 
-				// 3. Setup Animation (NEW ID)
+				// Assemble minimal sequence for animation playback
+				var sb strings.Builder
+
+				// Setup Animation
 				sb.WriteString(kitty.SetFrameGap(bgAnimID, 1, frameDuration))
 				sb.WriteString(kitty.StartAnimation(bgAnimID))
 
-				// 4. Placement (NEW ID) - This will draw over the old one
+				// Placement
 				sb.WriteString("\x1b[s")
-				sb.WriteString(fmt.Sprintf("\x1b[%d;%dH", bgRow, bgCol))
-				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0)) // 0 rows = auto height
+				fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
+				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0))
 				sb.WriteString("\x1b[u")
 
-				// 5. Delete OLD ID to free resources (if different)
+				// Delete OLD ID
 				if oldBgAnimID != 0 && oldBgAnimID != bgAnimID {
 					sb.WriteString(kitty.DeleteImage(oldBgAnimID))
 				}
@@ -542,6 +535,38 @@ func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int,
 	_ = os.Stdout.Sync()
 }
 
+// renderStaticForAnimation renders a static (non-spinning) version of the cover image
+// immediately while the animation is being calculated in the background.
+// Animation frames will overwrite this static image when ready.
+func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32) {
+	img, err := r.imageCache.GetImage(ctx, picUrl, cols, rows)
+	if err != nil || img == nil {
+		return
+	}
+
+	// Transmit and display the static image
+	kittySeq, err := kitty.TransmitAndDisplayWithID(img, cols, rows, animID)
+	if err != nil {
+		return
+	}
+
+	output := "\x1b[s"
+	output += fmt.Sprintf("\x1b[%d;%dH", startRow, startCol)
+	output += kittySeq
+	output += "\x1b[u"
+
+	_, _ = os.Stdout.WriteString(output)
+	_ = os.Stdout.Sync()
+
+	r.mu.Lock()
+	r.currentSongId = song.Id
+	r.cachedSeq = kittySeq
+	r.lastStartRow = startRow
+	r.lastStartCol = startCol
+	r.imageRendered = true
+	r.mu.Unlock()
+}
+
 // ClearCache clears the image cache.
 func (r *CoverRenderer) ClearCache() {
 	r.imageCache.Clear()
@@ -571,10 +596,7 @@ func (r *CoverRenderer) GetCoverEndColumn() int {
 		return 0
 	}
 	main := r.netease.MustMain()
-	startCol := main.MenuStartColumn()
-	if startCol < 1 {
-		startCol = 1
-	}
+	startCol := max(main.MenuStartColumn(), 1)
 	if r.cols == 0 {
 		r.calculateDimensions()
 	}
@@ -622,7 +644,7 @@ func (r *CoverRenderer) Close() {
 		cleanup.WriteString("\x1b[s")
 
 		// Move to where the image started
-		cleanup.WriteString(fmt.Sprintf("\x1b[%d;%dH", r.lastStartRow, r.lastStartCol))
+		fmt.Fprintf(&cleanup, "\x1b[%d;%dH", r.lastStartRow, r.lastStartCol)
 
 		// Clear the area where the image was (clear each line)
 		for i := 0; i < r.rows; i++ {

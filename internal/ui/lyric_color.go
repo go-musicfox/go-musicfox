@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"math"
 	"strings"
 
@@ -12,37 +11,78 @@ import (
 
 // Lyric color definitions (true color / RGB)
 var (
-	// LyricActiveColor is the color for played/active lyrics (soft cyan)
-	LyricActiveColor = lipgloss.Color("#7EC8E3")
-	// LyricTransitionColor is the color for transitioning lyrics (soft lavender)
+	LyricActiveColor     = lipgloss.Color("#7EC8E3")
 	LyricTransitionColor = lipgloss.Color("#C9B1D4")
-	// LyricInactiveColor is the color for unplayed/inactive lyrics (soft gray)
-	LyricInactiveColor = lipgloss.Color("#6B6B6B")
-	// LyricWhiteColor is white color for glow effects (soft white)
-	LyricWhiteColor = lipgloss.Color("#E8E8E8")
+	LyricInactiveColor   = lipgloss.Color("#6B6B6B")
+	LyricWhiteColor      = lipgloss.Color("#E8E8E8")
 )
 
+// colorRGB holds pre-computed RGB values for fast blending
+type colorRGB struct {
+	R, G, B uint8
+}
+
+// Pre-computed RGB values - avoid parsing hex every frame
+var (
+	lyricActiveRGB     = colorRGB{0x7E, 0xC8, 0xE3}
+	lyricTransitionRGB = colorRGB{0xC9, 0xB1, 0xD4}
+	lyricInactiveRGB   = colorRGB{0x6B, 0x6B, 0x6B}
+	lyricWhiteRGB      = colorRGB{0xE8, 0xE8, 0xE8}
+)
+
+// hexDigits for fast hex encoding
+const hexDigits = "0123456789ABCDEF"
+
+// blendColorFast mixes two pre-computed RGB colors with ratio t (0.0 - 1.0).
+func blendColorFast(c1, c2 colorRGB, t float64) lipgloss.Color {
+	t1 := 1 - t
+	r := uint8(float64(c1.R)*t1 + float64(c2.R)*t)
+	g := uint8(float64(c1.G)*t1 + float64(c2.G)*t)
+	b := uint8(float64(c1.B)*t1 + float64(c2.B)*t)
+
+	// Fast hex encoding without fmt.Sprintf
+	var buf [7]byte
+	buf[0] = '#'
+	buf[1] = hexDigits[r>>4]
+	buf[2] = hexDigits[r&0x0F]
+	buf[3] = hexDigits[g>>4]
+	buf[4] = hexDigits[g&0x0F]
+	buf[5] = hexDigits[b>>4]
+	buf[6] = hexDigits[b&0x0F]
+
+	return lipgloss.Color(string(buf[:]))
+}
+
 // blendColor mixes two lipgloss.Color with a given ratio t (0.0 - 1.0).
+// Legacy function for backward compatibility.
 func blendColor(c1, c2 lipgloss.Color, t float64) lipgloss.Color {
 	r1, g1, b1 := hexToRGB(string(c1))
 	r2, g2, b2 := hexToRGB(string(c2))
-
-	r := uint8(float64(r1)*(1-t) + float64(r2)*t)
-	g := uint8(float64(g1)*(1-t) + float64(g2)*t)
-	b := uint8(float64(b1)*(1-t) + float64(b2)*t)
-
-	return lipgloss.Color(fmt.Sprintf("#%02X%02X%02X", r, g, b))
+	return blendColorFast(colorRGB{r1, g1, b1}, colorRGB{r2, g2, b2}, t)
 }
 
-// hexToRGB converts a hex color string to RGB values.
 func hexToRGB(hex string) (uint8, uint8, uint8) {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
-		return 128, 128, 128 // Default gray
+		return 128, 128, 128
 	}
 
-	var r, g, b uint8
-	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	hexToByte := func(c byte) uint8 {
+		switch {
+		case c >= '0' && c <= '9':
+			return c - '0'
+		case c >= 'a' && c <= 'f':
+			return c - 'a' + 10
+		case c >= 'A' && c <= 'F':
+			return c - 'A' + 10
+		default:
+			return 0
+		}
+	}
+
+	r := hexToByte(hex[0])<<4 | hexToByte(hex[1])
+	g := hexToByte(hex[2])<<4 | hexToByte(hex[3])
+	b := hexToByte(hex[4])<<4 | hexToByte(hex[5])
 	return r, g, b
 }
 
@@ -66,14 +106,8 @@ func renderSmooth(words []wordWithTiming, progress float64) string {
 		return ""
 	}
 
-	// Use defined colors
-	activeColor := LyricActiveColor
-	inactiveColor := LyricInactiveColor
-
-	// Transition area width (in words) - matching reference implementation
 	fadeWidth := 2.0
 
-	// Find the currently playing word index and its interpolation
 	currentWordIdx := -1
 	var currentWordInterpolation float64
 	for i, w := range words {
@@ -84,45 +118,35 @@ func renderSmooth(words []wordWithTiming, progress float64) string {
 		}
 	}
 
-	// Calculate precise position - this drives the continuous gradient
 	var preciseCurrentPos float64
 	if currentWordIdx >= 0 {
-		// Use word index + interpolation within that word for sub-word precision
 		preciseCurrentPos = float64(currentWordIdx) + currentWordInterpolation
 	} else {
-		// Fallback to progress-based calculation when no word is playing
 		preciseCurrentPos = float64(totalWords) * progress
 	}
 
-	// All words participate in gradient calculation - no skipping
 	for i, w := range words {
 		pos := float64(i)
 
-		// Calculate activation level (0.0 - 1.0) based on position
 		var activation float64
 		if pos < preciseCurrentPos-fadeWidth {
-			activation = 1.0 // Fully activated (past the fade zone)
+			activation = 1.0
 		} else if pos > preciseCurrentPos {
-			activation = 0.0 // Not activated (ahead of current position)
+			activation = 0.0
 		} else {
-			// In transition area - linear interpolation for smooth gradient
 			activation = (preciseCurrentPos - pos) / fadeWidth
 			activation = clamp(activation, 0, 1)
 		}
 
-		// For the currently playing word, ensure color reflects actual progress
-		// This prevents the word from appearing darker than its interpolation
 		if w.state == wordStatePlaying && w.interpolation > activation {
 			activation = w.interpolation
 		}
 
-		// For played words, ensure they stay fully active
 		if w.state == wordStatePlayed {
 			activation = 1.0
 		}
 
-		// Blend color based on activation level
-		color := blendColor(inactiveColor, activeColor, activation)
+		color := blendColorFast(lyricInactiveRGB, lyricActiveRGB, activation)
 		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
 	}
 
@@ -138,12 +162,6 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 		return ""
 	}
 
-	// Use defined colors
-	activeColor := LyricActiveColor
-	transitionColor := LyricTransitionColor
-	inactiveColor := LyricInactiveColor
-
-	// Find the currently playing word and use precise position
 	var currentWordIdx int = -1
 	var currentWordInterpolation float64
 	for i, w := range words {
@@ -154,7 +172,6 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 		}
 	}
 
-	// Calculate precise current position using linear interpolation
 	var preciseCurrentPos float64
 	if currentWordIdx >= 0 {
 		preciseCurrentPos = float64(currentWordIdx) + currentWordInterpolation
@@ -165,7 +182,6 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 	for i, w := range words {
 		pos := float64(i)
 
-		// Calculate activation with linear transition
 		var activation float64
 		if pos < preciseCurrentPos-1 {
 			activation = 1.0
@@ -176,29 +192,23 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 			activation = clamp(activation, 0, 1)
 		}
 
-		// For the currently playing word, ensure color reflects actual progress
 		if w.state == wordStatePlaying && w.interpolation > activation {
 			activation = w.interpolation
 		}
 
-		// For played words, ensure they stay fully active
 		if w.state == wordStatePlayed {
 			activation = 1.0
 		}
 
 		var color lipgloss.Color
 		if activation >= 1.0 {
-			// Add wave effect for fully played words
 			wave := math.Sin(animationTime*3.0 - float64(i)*0.5)
-			wave = (wave + 1) / 2 // Normalize to 0-1
-
-			// Oscillate between active color and transition color
-			color = blendColor(transitionColor, activeColor, wave)
+			wave = (wave + 1) / 2
+			color = blendColorFast(lyricTransitionRGB, lyricActiveRGB, wave)
 		} else if activation > 0 {
-			// Transitioning word - direct linear blend
-			color = blendColor(inactiveColor, activeColor, activation)
+			color = blendColorFast(lyricInactiveRGB, lyricActiveRGB, activation)
 		} else {
-			color = inactiveColor
+			color = LyricInactiveColor
 		}
 
 		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
@@ -213,62 +223,45 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 func renderGlow(words []wordWithTiming, currentWordIndex int, animationTime float64) string {
 	var sb strings.Builder
 
-	// Use defined colors
-	activeColor := LyricActiveColor
-	transitionColor := LyricTransitionColor
-	inactiveColor := LyricInactiveColor
-	whiteColor := LyricWhiteColor
-
-	// Get current word's interpolation for transition calculations
 	var currentInterpolation float64
 	if currentWordIndex >= 0 && currentWordIndex < len(words) {
 		currentInterpolation = words[currentWordIndex].interpolation
 	}
 
-	// Glow pulse - simple sin wave for smooth animation
 	pulse := (math.Sin(animationTime*2.0) + 1) / 2
-
-	// Preheat intensity - how much the next word lights up before playing
 	const preheatMax = 0.4
 
 	for i, w := range words {
 		var color lipgloss.Color
 
 		if i < currentWordIndex-1 {
-			// Words played long ago - use active color
-			color = activeColor
+			color = LyricActiveColor
 		} else if i == currentWordIndex-1 {
-			// Just finished word - fade out glow smoothly
-			// Use current word's interpolation to control fade out
-			// When currentInterpolation = 0, still show glow (just finished)
-			// When currentInterpolation approaches 1, glow fades to activeColor
 			fadeOut := currentInterpolation
 			glowStrength := (1 - fadeOut) * (0.3 + pulse*0.15)
-			color = blendColor(activeColor, whiteColor, glowStrength)
+			color = blendColorFast(lyricActiveRGB, lyricWhiteRGB, glowStrength)
 		} else if i == currentWordIndex {
-			// Current playing word - glow effect with smooth entry
-			// interpolation = 0: color should be close to preheat end state
-			// interpolation = 1: color should be full glow
+			preheatEndRGB := colorRGB{
+				R: uint8(float64(lyricInactiveRGB.R)*(1-preheatMax) + float64(lyricTransitionRGB.R)*preheatMax),
+				G: uint8(float64(lyricInactiveRGB.G)*(1-preheatMax) + float64(lyricTransitionRGB.G)*preheatMax),
+				B: uint8(float64(lyricInactiveRGB.B)*(1-preheatMax) + float64(lyricTransitionRGB.B)*preheatMax),
+			}
 
-			// Preheat end color (what the word looked like just before playing)
-			preheatEndColor := blendColor(inactiveColor, transitionColor, preheatMax)
+			baseRGB := colorRGB{
+				R: uint8(float64(preheatEndRGB.R)*(1-w.interpolation) + float64(lyricActiveRGB.R)*w.interpolation),
+				G: uint8(float64(preheatEndRGB.G)*(1-w.interpolation) + float64(lyricActiveRGB.G)*w.interpolation),
+				B: uint8(float64(preheatEndRGB.B)*(1-w.interpolation) + float64(lyricActiveRGB.B)*w.interpolation),
+			}
 
-			// Base color transitions from preheat end to active
-			baseColor := blendColor(preheatEndColor, activeColor, w.interpolation)
-
-			// Glow strength increases with interpolation
 			glowStrength := 0.15 + w.interpolation*0.5 + pulse*0.15
 			glowStrength = clamp(glowStrength, 0, 0.8)
 
-			color = blendColor(baseColor, whiteColor, glowStrength)
+			color = blendColorFast(baseRGB, lyricWhiteRGB, glowStrength)
 		} else if i == currentWordIndex+1 {
-			// Next word - preheat based on current word's progress
-			// Lights up gradually as current word plays
 			preheatStrength := currentInterpolation * preheatMax
-			color = blendColor(inactiveColor, transitionColor, preheatStrength)
+			color = blendColorFast(lyricInactiveRGB, lyricTransitionRGB, preheatStrength)
 		} else {
-			// Words not yet played
-			color = inactiveColor
+			color = LyricInactiveColor
 		}
 
 		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
@@ -307,22 +300,23 @@ const (
 // renderLRCLineSmooth renders LRC lyrics with smooth mode - smooth color gradient transition.
 // Uses eased interpolation for more natural color transitions.
 func renderLRCLineSmooth(line string, progress float64) string {
-	// Use eased progress for smoother color transition
 	easedProgress := easeInOutCubic(progress)
-	color := blendColor(LyricInactiveColor, LyricActiveColor, easedProgress)
+	color := blendColorFast(lyricInactiveRGB, lyricActiveRGB, easedProgress)
 	return util.SetFgStyle(line, termenv.RGBColor(string(color)))
 }
 
 // renderLRCWave renders LRC lyrics with wave mode - dynamic wave effect across the line.
 // Adds animated wave effect that pulses with the music.
 func renderLRCWave(line string, progress float64, animationTime float64) string {
-	// Calculate base color from progress
-	baseColor := blendColor(LyricInactiveColor, LyricActiveColor, progress)
+	baseRGB := colorRGB{
+		R: uint8(float64(lyricInactiveRGB.R)*(1-progress) + float64(lyricActiveRGB.R)*progress),
+		G: uint8(float64(lyricInactiveRGB.G)*(1-progress) + float64(lyricActiveRGB.G)*progress),
+		B: uint8(float64(lyricInactiveRGB.B)*(1-progress) + float64(lyricActiveRGB.B)*progress),
+	}
 
-	// Add dynamic wave effect
 	wave := math.Sin(animationTime*2.0) * 0.1
-	// Blend between transition color and base color based on wave
-	finalColor := blendColor(LyricTransitionColor, baseColor, 0.5+wave)
+	blendFactor := 0.5 + wave
+	finalColor := blendColorFast(lyricTransitionRGB, baseRGB, blendFactor)
 
 	return util.SetFgStyle(line, termenv.RGBColor(string(finalColor)))
 }
@@ -330,19 +324,17 @@ func renderLRCWave(line string, progress float64, animationTime float64) string 
 // renderLRCGlow renders LRC lyrics with glow mode - soft glow effect.
 // The line has a soft glow that pulses gently.
 func renderLRCGlow(line string, progress float64, animationTime float64) string {
-	// Calculate base color from progress
-	baseColor := blendColor(LyricInactiveColor, LyricActiveColor, progress)
+	baseRGB := colorRGB{
+		R: uint8(float64(lyricInactiveRGB.R)*(1-progress) + float64(lyricActiveRGB.R)*progress),
+		G: uint8(float64(lyricInactiveRGB.G)*(1-progress) + float64(lyricActiveRGB.G)*progress),
+		B: uint8(float64(lyricInactiveRGB.B)*(1-progress) + float64(lyricActiveRGB.B)*progress),
+	}
 
-	// Calculate glow pulse
-	pulse := (math.Sin(animationTime*2.0) + 1) / 2 // 0-1 sine wave
-
-	// Glow strength based on progress (more progress = stronger glow)
+	pulse := (math.Sin(animationTime*2.0) + 1) / 2
 	glowStrength := 0.1 + progress*0.2 + pulse*0.1
 	glowStrength = clamp(glowStrength, 0, 0.4)
 
-	// Blend base color with white for glow effect
-	finalColor := blendColor(baseColor, LyricWhiteColor, glowStrength)
-
+	finalColor := blendColorFast(baseRGB, lyricWhiteRGB, glowStrength)
 	return util.SetFgStyle(line, termenv.RGBColor(string(finalColor)))
 }
 
