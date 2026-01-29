@@ -471,3 +471,12 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		}
 	}
 }
+
+// GetLyricPosition returns the current lyric display position.
+// Returns (startRow, lineCount). If lyrics are not visible, returns (0, 0).
+func (r *LyricRenderer) GetLyricPosition() (startRow int, lineCount int) {
+	if !r.isVisible || r.lyricLines == 0 {
+		return 0, 0
+	}
+	return r.lyricStartRow, r.lyricLines
+}

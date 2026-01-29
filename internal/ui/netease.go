@@ -365,6 +365,15 @@ func (n *Netease) GetCoverEndColumn() int {
 	return n.coverRenderer.GetCoverEndColumn()
 }
 
+// GetLyricPosition returns the current lyric display position.
+// Returns (startRow, lineCount). If lyrics are not visible, returns (0, 0).
+func (n *Netease) GetLyricPosition() (startRow int, lineCount int) {
+	if n.lyricRenderer == nil {
+		return 0, 0
+	}
+	return n.lyricRenderer.GetLyricPosition()
+}
+
 func (n *Netease) LoginCallback() error {
 	code, resp := (&service.UserAccountService{}).AccountInfo()
 	if code != 200 {

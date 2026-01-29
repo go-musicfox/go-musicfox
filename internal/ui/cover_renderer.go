@@ -167,21 +167,27 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	// Calculate the starting row for the cover
-	// Position it at the very bottom, may overlap with song info
 	windowHeight := r.netease.WindowHeight()
 	menuBottomRow := main.MenuBottomRow()
 
-	// Position cover to end at the very bottom (windowHeight - 1)
-	// This puts it as low as possible, overlapping song info area if needed
-	coverStartRow := windowHeight - 2 - r.rows
+	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	// Ensure it doesn't go above the menu
+	var coverStartRow int
+	if lyricLines > 0 {
+		lyricCenterRow := lyricStartRow + lyricLines
+		coverStartRow = lyricCenterRow - r.rows/2
+	} else {
+		coverStartRow = windowHeight - 2 - r.rows
+	}
+
 	if coverStartRow <= menuBottomRow {
 		coverStartRow = menuBottomRow + 1
 	}
 	if coverStartRow < 1 {
 		coverStartRow = 1
+	}
+	if coverStartRow+r.rows > windowHeight-1 {
+		coverStartRow = windowHeight - 1 - r.rows
 	}
 
 	// If cover can't fit at all, skip rendering
