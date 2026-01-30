@@ -2,8 +2,6 @@ package ui
 
 import (
 	"log/slog"
-	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +17,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
@@ -33,6 +32,9 @@ const (
 	tabAccount = 0
 	tabCookie  = 1
 	tabCount   = 2
+
+	idxTabAccount = -2 // 账号登录 Tab 的焦点索引
+	idxTabCookie  = -1 // Cookie 登录 Tab 的焦点索引
 )
 
 var (
@@ -133,12 +135,6 @@ func (l *LoginPage) Type() model.PageType {
 }
 
 func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
-	var inputs []*textinput.Model
-	if l.tabIndex == tabAccount {
-		inputs = []*textinput.Model{&l.accountInput, &l.passwordInput}
-	} else {
-		inputs = []*textinput.Model{&l.cookieInput}
-	}
 
 	var (
 		key tea.KeyMsg
@@ -160,14 +156,15 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			// 点击 Tab 区域
 			if y == l.tabsRowY && x >= l.tabStartX && x <= l.tabEndX {
 				tabWidth1 := lipgloss.Width(activeTabStyleGetter().Render("手机号/邮箱登录"))
-				_ = tabWidth1
+
 				if x < l.tabStartX+tabWidth1 {
 					l.tabIndex = tabAccount
+					l.index = idxTabAccount
 				} else {
 					l.tabIndex = tabCookie
+					l.index = idxTabCookie
 				}
 				l.updateTabStyle()
-				return l, tickLogin(time.Nanosecond)
 			}
 
 			if l.tabIndex == tabAccount {
@@ -249,36 +246,6 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 	case "tab", "shift+tab", "enter", "up", "down", "left", "right", "]", "[":
 		s := key.String()
 
-		// 登录 tab 切换 - 使用 [ 和 ] 切换登录方式
-		if s == "]" {
-			l.tabIndex = (l.tabIndex + 1) % tabCount
-			l.index = 0
-			l.updateTabStyle()
-			if l.tabIndex == tabAccount {
-				l.focusAccountInputs()
-			} else {
-				l.cookieInput.Focus()
-				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
-				l.submitButton = model.GetBlurredSubmitButton()
-			}
-			return l, nil
-		}
-		if s == "[" {
-			l.tabIndex = (l.tabIndex - 1 + tabCount) % tabCount
-			l.index = 0
-			l.updateTabStyle()
-			if l.tabIndex == tabAccount {
-				l.focusAccountInputs()
-			} else {
-				l.cookieInput.Focus()
-				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
-				l.submitButton = model.GetBlurredSubmitButton()
-			}
-			return l, nil
-		}
-
 		// Did the user press enter while the submit button was focused?
 		// If so, exit.
 		if s == "enter" && l.index >= submitIndex {
@@ -287,44 +254,122 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 		// 焦点切换：Tab/Shift+Tab/Left/Right 在输入框和按钮间切换
 		switch s {
-		case "tab", "down":
-			l.index++
-		case "shift+tab", "up":
-			l.index--
-		case "left", "right":
-			// 左右键仅作用于按钮间切换（不触发 tab 切换）
-			if l.tabIndex == tabAccount {
-				if s == "left" && l.index == qrLoginIndex {
-					l.index--
-				} else if s == "right" && l.index == submitIndex {
-					l.index++
+		case "up", "shift+tab":
+			switch l.index {
+			case idxTabAccount, idxTabCookie:
+			case 0:
+				if l.tabIndex == tabAccount {
+					l.index = idxTabAccount
+				} else {
+					l.index = idxTabCookie
 				}
-			} else {
-				if s == "left" && l.index == submitIndex {
-					l.index--
-				} else if s == "right" && l.index == 0 {
-					l.index++
+
+			case 1:
+				l.index = 0
+
+			case submitIndex:
+				if l.tabIndex == tabCookie {
+					l.index = 0
+				} else {
+					l.index = 1
+				}
+
+			case qrLoginIndex:
+				l.index = 1
+			}
+
+		case "down", "tab":
+			switch l.index {
+			case idxTabAccount:
+				l.index = 0
+			case idxTabCookie:
+				l.index = 0
+
+			case 0:
+				if l.tabIndex == tabCookie {
+					l.index = submitIndex
+				} else {
+					l.index = 1
+				}
+
+			case 1:
+				l.index = submitIndex
+
+			case submitIndex, qrLoginIndex:
+				if l.tabIndex == tabAccount {
+					l.index = idxTabAccount
+				} else {
+					l.index = idxTabCookie
+				}
+			}
+
+		case "left":
+			switch l.index {
+			case idxTabCookie:
+				l.index = idxTabAccount
+				l.tabIndex = tabAccount
+				l.updateTabStyle()
+
+			case qrLoginIndex:
+				l.index = submitIndex
+			case submitIndex:
+				if l.tabIndex == tabCookie {
+					l.index = 0
+				}
+			}
+
+		case "right":
+			switch l.index {
+			case idxTabAccount:
+				l.index = idxTabCookie
+				l.tabIndex = tabCookie
+				l.updateTabStyle()
+			case submitIndex:
+				if l.tabIndex == tabAccount {
+					l.index = qrLoginIndex
+				}
+			case 0:
+				if l.tabIndex == tabCookie {
+					l.index = submitIndex
 				}
 			}
 		}
 
+		// 全部失焦
+		if l.index < 0 {
+			l.accountInput.Blur()
+			l.passwordInput.Blur()
+			l.cookieInput.Blur()
+
+			l.accountInput.Prompt = model.GetBlurredPrompt()
+			l.accountInput.TextStyle = lipgloss.NewStyle()
+			l.passwordInput.Prompt = model.GetBlurredPrompt()
+			l.passwordInput.TextStyle = lipgloss.NewStyle()
+			l.cookieInput.Prompt = model.GetBlurredPrompt()
+			l.cookieInput.TextStyle = lipgloss.NewStyle()
+
+			l.submitButton = model.GetBlurredSubmitButton()
+			l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+
+			return l, nil
+		}
+
 		if l.tabIndex == tabAccount {
 			if l.index > qrLoginIndex {
-				l.index = 0
-			} else if l.index < 0 {
 				l.index = qrLoginIndex
 			}
 
-			for i := 0; i <= len(inputs)-1; i++ {
-				if i != l.index {
+			inputs := []*textinput.Model{&l.accountInput, &l.passwordInput}
+			for i := 0; i < len(inputs); i++ {
+				if i == l.index {
+					inputs[i].Focus()
+					inputs[i].Prompt = model.GetFocusedPrompt()
+					inputs[i].TextStyle = util.GetPrimaryFontStyle()
+				} else {
 					inputs[i].Blur()
 					inputs[i].Prompt = model.GetBlurredPrompt()
 					inputs[i].TextStyle = lipgloss.NewStyle()
-					continue
 				}
-				inputs[i].Focus()
-				inputs[i].Prompt = model.GetFocusedPrompt()
-				inputs[i].TextStyle = util.GetPrimaryFontStyle()
 			}
 
 			if l.index == submitIndex {
@@ -332,30 +377,28 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			} else {
 				l.submitButton = model.GetBlurredSubmitButton()
 			}
-
 			if l.index == qrLoginIndex {
 				l.qrLoginButton = model.GetFocusedButton(l.qrButtonTextByStep())
 			} else {
 				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
 			}
+
 		} else {
-			// Cookie 登录模式
-			if l.index > submitIndex {
+			if l.index == 1 {
 				l.index = 0
-			} else if l.index < 0 {
-				l.index = submitIndex
 			}
 
-			if l.index == submitIndex {
-				l.submitButton = model.GetFocusedSubmitButton()
-				l.cookieInput.Blur()
-				l.cookieInput.Prompt = model.GetBlurredPrompt()
-				l.cookieInput.TextStyle = lipgloss.NewStyle()
-			} else {
-				l.submitButton = model.GetBlurredSubmitButton()
+			switch l.index {
+			case 0:
 				l.cookieInput.Focus()
 				l.cookieInput.Prompt = model.GetFocusedPrompt()
 				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				l.submitButton = model.GetBlurredSubmitButton()
+			case submitIndex:
+				l.cookieInput.Blur()
+				l.cookieInput.Prompt = model.GetBlurredPrompt()
+				l.cookieInput.TextStyle = lipgloss.NewStyle()
+				l.submitButton = model.GetFocusedSubmitButton()
 			}
 		}
 
@@ -401,14 +444,24 @@ func (l *LoginPage) View(a *model.App) string {
 	write("\n")
 
 	// Tab 渲染
-	var tab1, tab2 string
+	var accountStyle, cookieStyle lipgloss.Style
 	if l.tabIndex == tabAccount {
-		tab1 = activeTabStyleGetter().Render("手机号/邮箱登录")
-		tab2 = tabStyle.Render("Cookie 登录")
+		accountStyle = activeTabStyleGetter()
+		cookieStyle = tabStyle
 	} else {
-		tab1 = tabStyle.Render("手机号/邮箱登录")
-		tab2 = activeTabStyleGetter().Render("Cookie 登录")
+		accountStyle = tabStyle
+		cookieStyle = activeTabStyleGetter()
 	}
+
+	if l.index == idxTabAccount {
+		accountStyle = accountStyle.Copy().Bold(true)
+	}
+	if l.index == idxTabCookie {
+		cookieStyle = cookieStyle.Copy().Bold(true)
+	}
+
+	tab1 := accountStyle.Render("手机号/邮箱登录")
+	tab2 := cookieStyle.Render("Cookie 登录")
 
 	filledSpace := ""
 	if mainPage.MenuStartColumn() > 0 {
@@ -429,7 +482,6 @@ func (l *LoginPage) View(a *model.App) string {
 	}
 	l.tabEndX = l.tabStartX + lipgloss.Width(tabRow) - 1
 
-	// 根据当前 Tab 渲染不同的登录表单
 	if l.tabIndex == tabAccount {
 		l.renderAccountLoginView(a, &builder, &top, mainPage, write, curRow)
 	} else {
@@ -740,27 +792,34 @@ func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 	}
 
 	// clear
+	l.tips = ""
 	l.cookieInput.SetValue("")
 
-	cookies, err := http.ParseCookie(cookieStr)
-	if err != nil {
-		l.tips = util.SetFgStyle("Cookie 格式错误："+err.Error(), termenv.ANSIBrightRed)
-		return l, nil
-	}
+	errorx.Go(func() {
+		// 将cookie反序列化到全局实例的cookiejar
+		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+		if err != nil {
+			l.tips = util.SetFgStyle("Cookie 格式错误："+err.Error(), termenv.ANSIBrightRed)
+		}
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
 
-	neteaseutil.GetGlobalCookieJar().SetCookies(
-		errorx.Must1(url.Parse("https://music.163.com")),
-		cookies,
+		// 正确的写法应该是立即用反序列化的cookie去刷新token
+		jar, err := apputils.RefreshCookieJar()
+		if err != nil {
+			l.tips = util.SetFgStyle("Cookie 登录失败："+err.Error(), termenv.ANSIBrightRed)
+			slog.Error("Cookie 登录失败", slogx.Error(err))
+		}
+		appCookieJar = jar
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
+	})
+
+	cleanCmd := tea.Batch(
+		tea.ClearScreen,
+		model.TickMain(time.Nanosecond),
+		l.netease.RerenderCmd(true),
 	)
-
-	if err := l.netease.LoginCallback(); err != nil {
-		l.tips = util.SetFgStyle("Cookie 登录失败："+err.Error(), termenv.ANSIBrightRed)
-		return l, tickLogin(time.Nanosecond)
-	}
-
-	l.tips = ""
 	if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
-		return newPage, l.netease.Tick(time.Nanosecond)
+		return newPage, cleanCmd
 	}
 	return l.netease.MustMain(), model.TickMain(time.Nanosecond)
 }
