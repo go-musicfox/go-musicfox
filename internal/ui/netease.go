@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/pkg/errors"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
@@ -134,12 +134,26 @@ func (n *Netease) InitHook(_ *model.App) {
 	dataDir := app.DataDir()
 
 	// 全局文件Jar
+	cookiePath := filepath.Join(dataDir, "cookie")
 	jar, err := cookiejar.New(&cookiejar.Options{
-		Filename: filepath.Join(dataDir, "cookie"),
+		Filename: cookiePath,
 	})
 	if err != nil {
-		slog.Error("无法创建 cookie jar", slogx.Error(err))
-		panic("failed to create persistent cookie jar")
+		slog.Warn("检测到旧版或损坏的 Cookie 文件，开始重置", slogx.Error(err))
+		if removeErr := os.Remove(cookiePath); removeErr != nil && !os.IsNotExist(removeErr) {
+			slog.Error("无法删除损坏的 Cookie 文件", slogx.Error(removeErr))
+			panic("failed to remove broken cookie file")
+		}
+
+		jar, err = cookiejar.New(&cookiejar.Options{
+			Filename: cookiePath,
+		})
+		if err != nil {
+			slog.Error("重置后仍旧无法创建 cookie jar", slogx.Error(err))
+			panic("failed to create persistent cookie jar after reset")
+		}
+
+		slog.Info("Cookie 文件已重置，请重新登陆")
 	}
 
 	appCookieJar = jar
@@ -162,17 +176,20 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 		if n.user == nil && cookieStr != "" {
 			// 使用cookie登录
-			cookies, err := http.ParseCookie(cookieStr)
+
+			err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
 			if err != nil {
 				slog.Error("网易云 cookies 格式错误", "error", err)
-			} else {
-				jar.SetCookies(
-					errorx.Must1(url.Parse("https://music.163.com")),
-					cookies,
-				)
-				if err := n.LoginCallback(); err != nil {
-					slog.Warn("使用cookie登录失败", slogx.Error(err))
-				}
+			}
+			neteaseutil.SetGlobalCookieJar(appCookieJar)
+			jar, err := apputils.RefreshCookieJar()
+			if err != nil {
+				slog.Error("使用配置项的cookie登录失败", slogx.Error(err))
+			}
+			appCookieJar = jar
+			neteaseutil.SetGlobalCookieJar(appCookieJar)
+			if err := n.LoginCallback(); err != nil {
+				slog.Warn("使用配置项的cookie登录失败", slogx.Error(err))
 			}
 		}
 
@@ -237,19 +254,16 @@ func (n *Netease) InitHook(_ *model.App) {
 
 		// 刷新登录状态
 		if n.user != nil {
-			refreshLoginService := service.LoginRefreshService{}
-			code, _, err := refreshLoginService.LoginRefresh()
-
+			jar, err := apputils.RefreshCookieJar()
 			if err != nil {
-				slog.Error("Token 刷新网络请求失败", slogx.Error(err))
-			} else if code == 200 {
-				if err := appCookieJar.Save(); err != nil {
-					slog.Error("Token 刷新成功但保存失败", slogx.Error(err))
-				} else {
-					slog.Info("Token 已刷新并保存成功")
-				}
-			} else {
-				slog.Error(fmt.Sprintf("Token 刷新失败, Code: %d", int(code)))
+				slog.Error("刷新token失败: ", slogx.Error(err))
+			}
+			appCookieJar = jar
+			neteaseutil.SetGlobalCookieJar(appCookieJar)
+			slog.Info("Token 刷新成功~")
+			// 尝试触发登录回调，更新用户信息
+			if err := n.LoginCallback(); err != nil {
+				slog.Warn("触发登录回调失败", slogx.Error(err))
 			}
 		}
 
