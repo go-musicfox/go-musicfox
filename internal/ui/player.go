@@ -272,6 +272,11 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 
 	errorx.Go(func() {
 		p.lyricService.SetSong(context.Background(), song)
+		// 等待状态监听器dbus结束
+		time.Sleep(100 * time.Millisecond)
+		if p.stateHandler != nil {
+			p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+		}
 	}, true)
 
 	p.Play(player.URLMusic{
@@ -279,7 +284,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	// 上报开始播放
