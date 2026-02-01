@@ -801,16 +801,18 @@ func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 		if err != nil {
 			l.tips = util.SetFgStyle("Cookie 格式错误："+err.Error(), termenv.ANSIBrightRed)
 		}
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
 
 		// 正确的写法应该是立即用反序列化的cookie去刷新token
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
 		jar, err := apputils.RefreshCookieJar()
 		if err != nil {
 			l.tips = util.SetFgStyle("Cookie 登录失败："+err.Error(), termenv.ANSIBrightRed)
 			slog.Error("Cookie 登录失败", slogx.Error(err))
+		} else {
+			slog.Info("使用 Cookie 登录成功")
+			appCookieJar = jar
+			neteaseutil.SetGlobalCookieJar(appCookieJar)
 		}
-		appCookieJar = jar
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
 	})
 
 	cleanCmd := tea.Batch(

@@ -180,16 +180,38 @@ func (n *Netease) InitHook(_ *model.App) {
 			err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
 			if err != nil {
 				slog.Error("网易云 cookies 格式错误", "error", err)
+			} else {
+				neteaseutil.SetGlobalCookieJar(appCookieJar)
+				newJar, err := apputils.RefreshCookieJar()
+				if err != nil {
+					slog.Error("使用配置项的cookie登录/刷新失败，将以游客模式启动", slogx.Error(err))
+					n.user = nil
+				} else {
+					appCookieJar = newJar
+					neteaseutil.SetGlobalCookieJar(appCookieJar)
+					if err := n.LoginCallback(); err != nil {
+						slog.Warn("使用配置项的cookie获取用户信息失败", slogx.Error(err))
+						n.user = nil
+					}
+				}
 			}
-			neteaseutil.SetGlobalCookieJar(appCookieJar)
-			jar, err := apputils.RefreshCookieJar()
+		}
+
+		if n.user != nil {
+			newJar, err := apputils.RefreshCookieJar()
 			if err != nil {
-				slog.Error("使用配置项的cookie登录失败", slogx.Error(err))
-			}
-			appCookieJar = jar
-			neteaseutil.SetGlobalCookieJar(appCookieJar)
-			if err := n.LoginCallback(); err != nil {
-				slog.Warn("使用配置项的cookie登录失败", slogx.Error(err))
+				slog.Error("Token 刷新失败，Cookie已彻底失效，降级为游客模式", slogx.Error(err))
+				n.user = nil
+				_ = table.DeleteByKVModel(storage.User{})
+				_ = os.Remove(cookiePath)
+			} else {
+				appCookieJar = newJar
+				neteaseutil.SetGlobalCookieJar(appCookieJar)
+				slog.Info("Token 刷新成功~")
+
+				if err := n.LoginCallback(); err != nil {
+					slog.Warn("触发登录回调失败", slogx.Error(err))
+				}
 			}
 		}
 
@@ -250,21 +272,6 @@ func (n *Netease) InitHook(_ *model.App) {
 		if n.user != nil {
 			likelist.RefreshLikeList(n.user.UserId)
 			n.Rerender(false)
-		}
-
-		// 刷新登录状态
-		if n.user != nil {
-			jar, err := apputils.RefreshCookieJar()
-			if err != nil {
-				slog.Error("刷新token失败: ", slogx.Error(err))
-			}
-			appCookieJar = jar
-			neteaseutil.SetGlobalCookieJar(appCookieJar)
-			slog.Info("Token 刷新成功~")
-			// 尝试触发登录回调，更新用户信息
-			if err := n.LoginCallback(); err != nil {
-				slog.Warn("触发登录回调失败", slogx.Error(err))
-			}
 		}
 
 		// 签到
