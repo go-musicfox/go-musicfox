@@ -641,9 +641,6 @@ See [CHANGELOG.md](./CHANGELOG.md)
 * [gcli](https://github.com/gookit/gcli)
 * ...
 
-感谢 [JetBrains Open Source](https://www.jetbrains.com/zh-cn/opensource/?from=archery) 为项目提供免费的 IDE 授权
-[<img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" width="200"/>](https://www.jetbrains.com/opensource/)
-
 </details>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=go-musicfox/go-musicfox&type=Date)](https://star-history.com/#go-musicfox/go-musicfox&Date)
