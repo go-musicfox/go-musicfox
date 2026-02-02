@@ -139,21 +139,33 @@ func (n *Netease) InitHook(_ *model.App) {
 		Filename: cookiePath,
 	})
 	if err != nil {
-		slog.Warn("检测到旧版或损坏的 Cookie 文件，开始重置", slogx.Error(err))
-		if removeErr := os.Remove(cookiePath); removeErr != nil && !os.IsNotExist(removeErr) {
-			slog.Error("无法删除损坏的 Cookie 文件", slogx.Error(removeErr))
-			panic("failed to remove broken cookie file")
+		slog.Warn("检测到旧版或损坏的 Cookie 文件，准备备份并重置", slogx.Error(err))
+
+		// 备份旧文件
+		timestamp := time.Now().Format("20060102-150405")
+		backupPath := fmt.Sprintf("%s.bak.%s", cookiePath, timestamp)
+
+		if renameErr := os.Rename(cookiePath, backupPath); renameErr != nil && !os.IsNotExist(renameErr) {
+			slog.Error("无法备份损坏的 Cookie 文件", slogx.Error(renameErr))
+			n.user = nil
+		} else {
+			slog.Info("已将损坏的 Cookie 文件备份", "backup_path", backupPath)
 		}
 
+		// 重新初始化
 		jar, err = cookiejar.New(&cookiejar.Options{
 			Filename: cookiePath,
 		})
 		if err != nil {
-			slog.Error("重置后仍旧无法创建 cookie jar", slogx.Error(err))
-			panic("failed to create persistent cookie jar after reset")
-		}
+			slog.Error("无法创建持久化 Cookie Jar，将降级为临时会话，重启后将丢失登录状态", slogx.Error(err))
+			// 降级为内存模式
+			memJar, _ := cookiejar.New(nil)
+			jar = memJar
 
-		slog.Info("Cookie 文件已重置，请重新登陆")
+			n.user = nil
+		} else {
+			slog.Info("Cookie 文件已重置，请重新登陆")
+		}
 	}
 
 	appCookieJar = jar
