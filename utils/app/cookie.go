@@ -14,6 +14,8 @@ import (
 
 var ParseCookieError = errors.New("解析cookie失败")
 
+const ExpiresDuration = 365 * 24 * time.Hour
+
 // ParseCookieFromStr 从字符串解析 Cookie 并存入 CookieJar
 func ParseCookieFromStr(cookieStr string, jar http.CookieJar) error {
 	cookies, err := http.ParseCookie(cookieStr)
@@ -27,7 +29,7 @@ func ParseCookieFromStr(cookieStr string, jar http.CookieJar) error {
 
 	for _, c := range cookies {
 		c.Path = "/"
-		c.Expires = time.Now().Add(365 * 24 * time.Hour)
+		c.Expires = time.Now().Add(ExpiresDuration)
 		finalCookies = append(finalCookies, c)
 	}
 	if jar != nil {

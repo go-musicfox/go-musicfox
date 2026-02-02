@@ -756,8 +756,8 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 		if resp.Msg == "" {
 			resp.Msg = resp.Message
 		}
-		if resp.Message == "" {
-			resp.Message = fmt.Sprintf("未知错误，请稍后再试！code: %d", resp.Code)
+		if resp.Msg == "" {
+			resp.Msg = fmt.Sprintf("未知错误，请稍后再试！code: %d", resp.Code)
 		}
 	}
 
@@ -787,6 +787,15 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 			case -462:
 				slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
 				return LoginMsg{err: fmt.Errorf("请求过于频繁，请稍后再试~")}
+			case 502:
+				slog.Error("登录失败, 账号或密码错误", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("账号或密码错误，请重试")}
+			case 8821:
+				slog.Error("登录失败, 客户端版本过低", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("客户端版本过低，请升级到最新版本后重试")}
+			case 8830:
+				slog.Error("登录失败, 需要二阶段验证", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("账号需要二阶段验证，目前暂不支持该功能")}
 			case 200:
 				// 登录成功
 				return LoginMsg{err: nil}
