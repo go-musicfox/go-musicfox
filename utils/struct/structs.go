@@ -16,6 +16,7 @@ const (
 	NetworkError
 	NeedLogin
 	PasswordError
+	TooManyRequests
 )
 
 // CheckCode 验证响应码
@@ -25,6 +26,8 @@ func CheckCode(code float64) ResCode {
 		return NeedLogin
 	case 520:
 		return NetworkError
+	case -462:
+		return TooManyRequests
 	case 200:
 		return Success
 	}

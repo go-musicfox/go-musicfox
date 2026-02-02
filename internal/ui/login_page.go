@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -18,7 +20,6 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
-	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -93,6 +94,11 @@ type LoginPage struct {
 	tabsRowY     int // Tab 所在行号（1-based）
 }
 
+// 执行登录操作回显的信息结构体
+type LoginMsg struct {
+	err error
+}
+
 func NewLoginPage(netease *Netease) (login *LoginPage) {
 	accountInput := textinput.New()
 	accountInput.Placeholder = " 手机号或邮箱"
@@ -143,6 +149,22 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 	if _, ok = msg.(tickLoginMsg); ok {
 		return l, nil
+	}
+
+	if loginMsg, ok := msg.(LoginMsg); ok {
+		if loginMsg.err != nil {
+			l.tips = util.SetFgStyle(loginMsg.err.Error(), termenv.ANSIBrightRed)
+			return l, nil
+		}
+
+		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
+			return newPage, tea.Batch(
+				tea.ClearScreen,
+				model.TickMain(time.Nanosecond),
+				l.netease.RerenderCmd(true),
+			)
+		}
+		return l.netease.MustMain(), model.TickMain(time.Nanosecond)
 	}
 
 	// 鼠标事件处理
@@ -684,10 +706,18 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 	return l, tickLogin(time.Nanosecond)
 }
 
+// 登录api返回信息的结构体
+type loginResponse struct {
+	Code    int    `json:"code"`
+	Msg     string `json:"msg"`
+	Message string `json:"message"`
+}
+
 func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 	var (
-		code float64
-		err  error
+		code      float64
+		bodyBytes []byte
+		err       error
 	)
 
 	if strings.ContainsRune(l.accountInput.Value(), '@') {
@@ -695,7 +725,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 			Email:    l.accountInput.Value(),
 			Password: l.passwordInput.Value(),
 		}
-		code, _ = loginService.LoginEmail()
+		code, bodyBytes = loginService.LoginEmail()
 	} else {
 		var (
 			phone       = l.accountInput.Value()
@@ -711,31 +741,63 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 			Password:    l.passwordInput.Value(),
 			Countrycode: countryCode,
 		}
-		code, _, err = loginService.LoginCellphone()
+		code, bodyBytes, err = loginService.LoginCellphone()
+
 		if err != nil {
-			l.tips = util.SetFgStyle("登录失败："+err.Error(), termenv.ANSIBrightRed)
+			l.tips = util.SetFgStyle("使用账号密码登录失败："+err.Error(), termenv.ANSIBrightRed)
+			slog.Error("使用账号密码登录失败", slogx.Error(err))
 			return l, tickLogin(time.Nanosecond)
 		}
 	}
 
-	codeType := _struct.CheckCode(code)
-	switch codeType {
-	case _struct.UnknownError:
-		l.tips = util.SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
-		return l, tickLogin(time.Nanosecond)
-	case _struct.NetworkError:
-		l.tips = util.SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
-		return l, tickLogin(time.Nanosecond)
-	case _struct.Success:
-		l.tips = ""
-		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
-			return newPage, l.netease.Tick(time.Nanosecond)
+	var resp loginResponse
+	// 尝试解析 body 获取具体的错误信息
+	if jsonErr := json.Unmarshal(bodyBytes, &resp); jsonErr == nil {
+		if resp.Msg == "" {
+			resp.Msg = resp.Message
 		}
-		return l.netease.MustMain(), model.TickMain(time.Nanosecond)
-	default:
-		l.tips = util.SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIBrightRed) +
-			util.SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)
-		return l, tickLogin(time.Nanosecond)
+		if resp.Message == "" {
+			resp.Message = fmt.Sprintf("未知错误，请稍后再试！code: %d", resp.Code)
+		}
+	}
+
+	return l, checkLoginCmd(code, resp)
+}
+
+func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
+	return func() tea.Msg {
+		codeType := _struct.CheckCode(code)
+		switch codeType {
+		case _struct.UnknownError:
+			slog.Error("登录失败, 未知错误", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("未知错误，code: %d", int(code))}
+		case _struct.NetworkError:
+			slog.Error("登录失败, 网络异常", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("网络异常，请检查后重试")}
+		case _struct.TooManyRequests:
+			slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("请求过于频繁，请稍后再试~")}
+		case _struct.Success:
+			// http状态码200， 但是：
+			// 账号密码错误时api状态码为502
+			// 请求频繁时api状态码为-462
+			// 低版本时api状态码为8821
+			// 需要二阶段验证时api状态码为8830
+			switch resp.Code {
+			case -462:
+				slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("请求过于频繁，请稍后再试~")}
+			case 200:
+				// 登录成功
+				return LoginMsg{err: nil}
+			default:
+				slog.Error("登录失败, api状态码异常", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("登录失败: %s", resp.Message)}
+			}
+		default:
+			slog.Error("登录失败, 未知错误", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("未知错误, code: %d", int(code))}
+		}
 	}
 }
 
@@ -784,6 +846,33 @@ func (l *LoginPage) updateCookieInput(msg tea.Msg) (model.Page, tea.Cmd) {
 	return l, cmd
 }
 
+func checkCookieCmd(cookieStr string) tea.Cmd {
+	return func() tea.Msg {
+		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+		if err != nil {
+			return LoginMsg{err: fmt.Errorf("Cookie 格式错误: %w", err)}
+		}
+
+		// 正确的写法应该是立即用反序列化的cookie去刷新token
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		jar, err := apputils.RefreshCookieJar()
+		if err != nil {
+			slog.Error("Cookie 登录失败", slogx.Error(err))
+			return LoginMsg{err: fmt.Errorf("Cookie 登录失败: %w", err)}
+		}
+
+		slog.Info("使用 Cookie 登录成功")
+		appCookieJar = jar
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		err = appCookieJar.Save()
+		if err != nil {
+			slog.Warn("刷新token成功但保存 Cookie 失败", slogx.Error(err))
+		}
+
+		return LoginMsg{err: nil}
+	}
+}
+
 func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 	cookieStr := l.cookieInput.Value()
 	if len(cookieStr) <= 0 {
@@ -791,37 +880,8 @@ func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 		return l, nil
 	}
 
-	// clear
-	l.tips = ""
+	l.tips = util.SetFgStyle("正在验证 Cookie...", termenv.ANSIBrightCyan)
 	l.cookieInput.SetValue("")
 
-	errorx.Go(func() {
-		// 将cookie反序列化到全局实例的cookiejar
-		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
-		if err != nil {
-			l.tips = util.SetFgStyle("Cookie 格式错误："+err.Error(), termenv.ANSIBrightRed)
-		}
-
-		// 正确的写法应该是立即用反序列化的cookie去刷新token
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
-		jar, err := apputils.RefreshCookieJar()
-		if err != nil {
-			l.tips = util.SetFgStyle("Cookie 登录失败："+err.Error(), termenv.ANSIBrightRed)
-			slog.Error("Cookie 登录失败", slogx.Error(err))
-		} else {
-			slog.Info("使用 Cookie 登录成功")
-			appCookieJar = jar
-			neteaseutil.SetGlobalCookieJar(appCookieJar)
-		}
-	})
-
-	cleanCmd := tea.Batch(
-		tea.ClearScreen,
-		model.TickMain(time.Nanosecond),
-		l.netease.RerenderCmd(true),
-	)
-	if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
-		return newPage, cleanCmd
-	}
-	return l.netease.MustMain(), model.TickMain(time.Nanosecond)
+	return l, checkCookieCmd(cookieStr)
 }
