@@ -1,9 +1,9 @@
 package ui
 
 import (
+	"encoding/json"
+	"fmt"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -19,7 +19,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -33,6 +33,9 @@ const (
 	tabAccount = 0
 	tabCookie  = 1
 	tabCount   = 2
+
+	idxTabAccount = -2 // 账号登录 Tab 的焦点索引
+	idxTabCookie  = -1 // Cookie 登录 Tab 的焦点索引
 )
 
 var (
@@ -91,6 +94,11 @@ type LoginPage struct {
 	tabsRowY     int // Tab 所在行号（1-based）
 }
 
+// 执行登录操作回显的信息结构体
+type LoginMsg struct {
+	err error
+}
+
 func NewLoginPage(netease *Netease) (login *LoginPage) {
 	accountInput := textinput.New()
 	accountInput.Placeholder = " 手机号或邮箱"
@@ -133,12 +141,6 @@ func (l *LoginPage) Type() model.PageType {
 }
 
 func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
-	var inputs []*textinput.Model
-	if l.tabIndex == tabAccount {
-		inputs = []*textinput.Model{&l.accountInput, &l.passwordInput}
-	} else {
-		inputs = []*textinput.Model{&l.cookieInput}
-	}
 
 	var (
 		key tea.KeyMsg
@@ -147,6 +149,22 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 	if _, ok = msg.(tickLoginMsg); ok {
 		return l, nil
+	}
+
+	if loginMsg, ok := msg.(LoginMsg); ok {
+		if loginMsg.err != nil {
+			l.tips = util.SetFgStyle(loginMsg.err.Error(), termenv.ANSIBrightRed)
+			return l, nil
+		}
+
+		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
+			return newPage, tea.Batch(
+				tea.ClearScreen,
+				model.TickMain(time.Nanosecond),
+				l.netease.RerenderCmd(true),
+			)
+		}
+		return l.netease.MustMain(), model.TickMain(time.Nanosecond)
 	}
 
 	// 鼠标事件处理
@@ -160,14 +178,15 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			// 点击 Tab 区域
 			if y == l.tabsRowY && x >= l.tabStartX && x <= l.tabEndX {
 				tabWidth1 := lipgloss.Width(activeTabStyleGetter().Render("手机号/邮箱登录"))
-				_ = tabWidth1
+
 				if x < l.tabStartX+tabWidth1 {
 					l.tabIndex = tabAccount
+					l.index = idxTabAccount
 				} else {
 					l.tabIndex = tabCookie
+					l.index = idxTabCookie
 				}
 				l.updateTabStyle()
-				return l, tickLogin(time.Nanosecond)
 			}
 
 			if l.tabIndex == tabAccount {
@@ -249,36 +268,6 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 	case "tab", "shift+tab", "enter", "up", "down", "left", "right", "]", "[":
 		s := key.String()
 
-		// 登录 tab 切换 - 使用 [ 和 ] 切换登录方式
-		if s == "]" {
-			l.tabIndex = (l.tabIndex + 1) % tabCount
-			l.index = 0
-			l.updateTabStyle()
-			if l.tabIndex == tabAccount {
-				l.focusAccountInputs()
-			} else {
-				l.cookieInput.Focus()
-				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
-				l.submitButton = model.GetBlurredSubmitButton()
-			}
-			return l, nil
-		}
-		if s == "[" {
-			l.tabIndex = (l.tabIndex - 1 + tabCount) % tabCount
-			l.index = 0
-			l.updateTabStyle()
-			if l.tabIndex == tabAccount {
-				l.focusAccountInputs()
-			} else {
-				l.cookieInput.Focus()
-				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
-				l.submitButton = model.GetBlurredSubmitButton()
-			}
-			return l, nil
-		}
-
 		// Did the user press enter while the submit button was focused?
 		// If so, exit.
 		if s == "enter" && l.index >= submitIndex {
@@ -287,44 +276,122 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 		// 焦点切换：Tab/Shift+Tab/Left/Right 在输入框和按钮间切换
 		switch s {
-		case "tab", "down":
-			l.index++
-		case "shift+tab", "up":
-			l.index--
-		case "left", "right":
-			// 左右键仅作用于按钮间切换（不触发 tab 切换）
-			if l.tabIndex == tabAccount {
-				if s == "left" && l.index == qrLoginIndex {
-					l.index--
-				} else if s == "right" && l.index == submitIndex {
-					l.index++
+		case "up", "shift+tab":
+			switch l.index {
+			case idxTabAccount, idxTabCookie:
+			case 0:
+				if l.tabIndex == tabAccount {
+					l.index = idxTabAccount
+				} else {
+					l.index = idxTabCookie
 				}
-			} else {
-				if s == "left" && l.index == submitIndex {
-					l.index--
-				} else if s == "right" && l.index == 0 {
-					l.index++
+
+			case 1:
+				l.index = 0
+
+			case submitIndex:
+				if l.tabIndex == tabCookie {
+					l.index = 0
+				} else {
+					l.index = 1
+				}
+
+			case qrLoginIndex:
+				l.index = 1
+			}
+
+		case "down", "tab":
+			switch l.index {
+			case idxTabAccount:
+				l.index = 0
+			case idxTabCookie:
+				l.index = 0
+
+			case 0:
+				if l.tabIndex == tabCookie {
+					l.index = submitIndex
+				} else {
+					l.index = 1
+				}
+
+			case 1:
+				l.index = submitIndex
+
+			case submitIndex, qrLoginIndex:
+				if l.tabIndex == tabAccount {
+					l.index = idxTabAccount
+				} else {
+					l.index = idxTabCookie
+				}
+			}
+
+		case "left":
+			switch l.index {
+			case idxTabCookie:
+				l.index = idxTabAccount
+				l.tabIndex = tabAccount
+				l.updateTabStyle()
+
+			case qrLoginIndex:
+				l.index = submitIndex
+			case submitIndex:
+				if l.tabIndex == tabCookie {
+					l.index = 0
+				}
+			}
+
+		case "right":
+			switch l.index {
+			case idxTabAccount:
+				l.index = idxTabCookie
+				l.tabIndex = tabCookie
+				l.updateTabStyle()
+			case submitIndex:
+				if l.tabIndex == tabAccount {
+					l.index = qrLoginIndex
+				}
+			case 0:
+				if l.tabIndex == tabCookie {
+					l.index = submitIndex
 				}
 			}
 		}
 
+		// 全部失焦
+		if l.index < 0 {
+			l.accountInput.Blur()
+			l.passwordInput.Blur()
+			l.cookieInput.Blur()
+
+			l.accountInput.Prompt = model.GetBlurredPrompt()
+			l.accountInput.TextStyle = lipgloss.NewStyle()
+			l.passwordInput.Prompt = model.GetBlurredPrompt()
+			l.passwordInput.TextStyle = lipgloss.NewStyle()
+			l.cookieInput.Prompt = model.GetBlurredPrompt()
+			l.cookieInput.TextStyle = lipgloss.NewStyle()
+
+			l.submitButton = model.GetBlurredSubmitButton()
+			l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
+
+			return l, nil
+		}
+
 		if l.tabIndex == tabAccount {
 			if l.index > qrLoginIndex {
-				l.index = 0
-			} else if l.index < 0 {
 				l.index = qrLoginIndex
 			}
 
-			for i := 0; i <= len(inputs)-1; i++ {
-				if i != l.index {
+			inputs := []*textinput.Model{&l.accountInput, &l.passwordInput}
+			for i := 0; i < len(inputs); i++ {
+				if i == l.index {
+					inputs[i].Focus()
+					inputs[i].Prompt = model.GetFocusedPrompt()
+					inputs[i].TextStyle = util.GetPrimaryFontStyle()
+				} else {
 					inputs[i].Blur()
 					inputs[i].Prompt = model.GetBlurredPrompt()
 					inputs[i].TextStyle = lipgloss.NewStyle()
-					continue
 				}
-				inputs[i].Focus()
-				inputs[i].Prompt = model.GetFocusedPrompt()
-				inputs[i].TextStyle = util.GetPrimaryFontStyle()
 			}
 
 			if l.index == submitIndex {
@@ -332,30 +399,28 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			} else {
 				l.submitButton = model.GetBlurredSubmitButton()
 			}
-
 			if l.index == qrLoginIndex {
 				l.qrLoginButton = model.GetFocusedButton(l.qrButtonTextByStep())
 			} else {
 				l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
 			}
+
 		} else {
-			// Cookie 登录模式
-			if l.index > submitIndex {
+			if l.index == 1 {
 				l.index = 0
-			} else if l.index < 0 {
-				l.index = submitIndex
 			}
 
-			if l.index == submitIndex {
-				l.submitButton = model.GetFocusedSubmitButton()
-				l.cookieInput.Blur()
-				l.cookieInput.Prompt = model.GetBlurredPrompt()
-				l.cookieInput.TextStyle = lipgloss.NewStyle()
-			} else {
-				l.submitButton = model.GetBlurredSubmitButton()
+			switch l.index {
+			case 0:
 				l.cookieInput.Focus()
 				l.cookieInput.Prompt = model.GetFocusedPrompt()
 				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				l.submitButton = model.GetBlurredSubmitButton()
+			case submitIndex:
+				l.cookieInput.Blur()
+				l.cookieInput.Prompt = model.GetBlurredPrompt()
+				l.cookieInput.TextStyle = lipgloss.NewStyle()
+				l.submitButton = model.GetFocusedSubmitButton()
 			}
 		}
 
@@ -401,14 +466,24 @@ func (l *LoginPage) View(a *model.App) string {
 	write("\n")
 
 	// Tab 渲染
-	var tab1, tab2 string
+	var accountStyle, cookieStyle lipgloss.Style
 	if l.tabIndex == tabAccount {
-		tab1 = activeTabStyleGetter().Render("手机号/邮箱登录")
-		tab2 = tabStyle.Render("Cookie 登录")
+		accountStyle = activeTabStyleGetter()
+		cookieStyle = tabStyle
 	} else {
-		tab1 = tabStyle.Render("手机号/邮箱登录")
-		tab2 = activeTabStyleGetter().Render("Cookie 登录")
+		accountStyle = tabStyle
+		cookieStyle = activeTabStyleGetter()
 	}
+
+	if l.index == idxTabAccount {
+		accountStyle = accountStyle.Copy().Bold(true)
+	}
+	if l.index == idxTabCookie {
+		cookieStyle = cookieStyle.Copy().Bold(true)
+	}
+
+	tab1 := accountStyle.Render("手机号/邮箱登录")
+	tab2 := cookieStyle.Render("Cookie 登录")
 
 	filledSpace := ""
 	if mainPage.MenuStartColumn() > 0 {
@@ -429,7 +504,6 @@ func (l *LoginPage) View(a *model.App) string {
 	}
 	l.tabEndX = l.tabStartX + lipgloss.Width(tabRow) - 1
 
-	// 根据当前 Tab 渲染不同的登录表单
 	if l.tabIndex == tabAccount {
 		l.renderAccountLoginView(a, &builder, &top, mainPage, write, curRow)
 	} else {
@@ -632,10 +706,18 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 	return l, tickLogin(time.Nanosecond)
 }
 
+// 登录api返回信息的结构体
+type loginResponse struct {
+	Code    int    `json:"code"`
+	Msg     string `json:"msg"`
+	Message string `json:"message"`
+}
+
 func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 	var (
-		code float64
-		err  error
+		code      float64
+		bodyBytes []byte
+		err       error
 	)
 
 	if strings.ContainsRune(l.accountInput.Value(), '@') {
@@ -643,7 +725,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 			Email:    l.accountInput.Value(),
 			Password: l.passwordInput.Value(),
 		}
-		code, _ = loginService.LoginEmail()
+		code, bodyBytes = loginService.LoginEmail()
 	} else {
 		var (
 			phone       = l.accountInput.Value()
@@ -659,31 +741,72 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 			Password:    l.passwordInput.Value(),
 			Countrycode: countryCode,
 		}
-		code, _, err = loginService.LoginCellphone()
+		code, bodyBytes, err = loginService.LoginCellphone()
+
 		if err != nil {
-			l.tips = util.SetFgStyle("登录失败："+err.Error(), termenv.ANSIBrightRed)
+			l.tips = util.SetFgStyle("使用账号密码登录失败："+err.Error(), termenv.ANSIBrightRed)
+			slog.Error("使用账号密码登录失败", slogx.Error(err))
 			return l, tickLogin(time.Nanosecond)
 		}
 	}
 
-	codeType := _struct.CheckCode(code)
-	switch codeType {
-	case _struct.UnknownError:
-		l.tips = util.SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
-		return l, tickLogin(time.Nanosecond)
-	case _struct.NetworkError:
-		l.tips = util.SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
-		return l, tickLogin(time.Nanosecond)
-	case _struct.Success:
-		l.tips = ""
-		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
-			return newPage, l.netease.Tick(time.Nanosecond)
+	var resp loginResponse
+	// 尝试解析 body 获取具体的错误信息
+	if jsonErr := json.Unmarshal(bodyBytes, &resp); jsonErr == nil {
+		if resp.Msg == "" {
+			resp.Msg = resp.Message
 		}
-		return l.netease.MustMain(), model.TickMain(time.Nanosecond)
-	default:
-		l.tips = util.SetFgStyle("你是个好人，但我们不合适(╬▔皿▔)凸 ", termenv.ANSIBrightRed) +
-			util.SetFgStyle("(账号或密码错误)", termenv.ANSIBrightBlack)
-		return l, tickLogin(time.Nanosecond)
+		if resp.Msg == "" {
+			resp.Msg = fmt.Sprintf("未知错误，请稍后再试！code: %d", resp.Code)
+		}
+	}
+
+	return l, checkLoginCmd(code, resp)
+}
+
+func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
+	return func() tea.Msg {
+		codeType := _struct.CheckCode(code)
+		switch codeType {
+		case _struct.UnknownError:
+			slog.Error("登录失败, 未知错误", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("未知错误，code: %d", int(code))}
+		case _struct.NetworkError:
+			slog.Error("登录失败, 网络异常", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("网络异常，请检查后重试")}
+		case _struct.TooManyRequests:
+			slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("请求过于频繁，请稍后再试~")}
+		case _struct.Success:
+			// http状态码200， 但是：
+			// 账号密码错误时api状态码为502
+			// 请求频繁时api状态码为-462
+			// 低版本时api状态码为8821
+			// 需要二阶段验证时api状态码为8830
+			switch resp.Code {
+			case -462:
+				slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("请求过于频繁，请稍后再试~")}
+			case 502:
+				slog.Error("登录失败, 账号或密码错误", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("账号或密码错误，请重试")}
+			case 8821:
+				slog.Error("登录失败, 客户端版本过低", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("客户端版本过低，请升级到最新版本后重试")}
+			case 8830:
+				slog.Error("登录失败, 需要二阶段验证", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("账号需要二阶段验证，目前暂不支持该功能")}
+			case 200:
+				// 登录成功
+				return LoginMsg{err: nil}
+			default:
+				slog.Error("登录失败, api状态码异常", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("登录失败: %s", resp.Message)}
+			}
+		default:
+			slog.Error("登录失败, 未知错误", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("未知错误, code: %d", int(code))}
+		}
 	}
 }
 
@@ -732,6 +855,33 @@ func (l *LoginPage) updateCookieInput(msg tea.Msg) (model.Page, tea.Cmd) {
 	return l, cmd
 }
 
+func checkCookieCmd(cookieStr string) tea.Cmd {
+	return func() tea.Msg {
+		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+		if err != nil {
+			return LoginMsg{err: fmt.Errorf("Cookie 格式错误: %w", err)}
+		}
+
+		// 正确的写法应该是立即用反序列化的cookie去刷新token
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		jar, err := apputils.RefreshCookieJar()
+		if err != nil {
+			slog.Error("Cookie 登录失败", slogx.Error(err))
+			return LoginMsg{err: fmt.Errorf("Cookie 登录失败: %w", err)}
+		}
+
+		slog.Info("使用 Cookie 登录成功")
+		appCookieJar = jar
+		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		err = appCookieJar.Save()
+		if err != nil {
+			slog.Warn("刷新token成功但保存 Cookie 失败", slogx.Error(err))
+		}
+
+		return LoginMsg{err: nil}
+	}
+}
+
 func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 	cookieStr := l.cookieInput.Value()
 	if len(cookieStr) <= 0 {
@@ -739,28 +889,8 @@ func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 		return l, nil
 	}
 
-	// clear
+	l.tips = util.SetFgStyle("正在验证 Cookie...", termenv.ANSIBrightCyan)
 	l.cookieInput.SetValue("")
 
-	cookies, err := http.ParseCookie(cookieStr)
-	if err != nil {
-		l.tips = util.SetFgStyle("Cookie 格式错误："+err.Error(), termenv.ANSIBrightRed)
-		return l, nil
-	}
-
-	neteaseutil.GetGlobalCookieJar().SetCookies(
-		errorx.Must1(url.Parse("https://music.163.com")),
-		cookies,
-	)
-
-	if err := l.netease.LoginCallback(); err != nil {
-		l.tips = util.SetFgStyle("Cookie 登录失败："+err.Error(), termenv.ANSIBrightRed)
-		return l, tickLogin(time.Nanosecond)
-	}
-
-	l.tips = ""
-	if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
-		return newPage, l.netease.Tick(time.Nanosecond)
-	}
-	return l.netease.MustMain(), model.TickMain(time.Nanosecond)
+	return l, checkCookieCmd(cookieStr)
 }
