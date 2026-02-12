@@ -331,66 +331,8 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 		if msg.Action == tea.MouseActionPress {
 			// 计算播放模式显示位置
 			// 播放模式在歌曲信息行，位于窗口底部往上第3行（进度条是最后一行，往上数第3行）
-			playModeRow := a.WindowHeight() - 3
-			menuStartColumn := main.MenuStartColumn()
-
-			if msg.Y == playModeRow {
-				// 检查是否点击在播放模式区域
-				if menuStartColumn > 4 { // 确保有足够空间显示播放模式
-					// 播放模式名称最长约5个字符（如"列表循环"、"顺序播放"等）
-					playModeEndX := menuStartColumn + 5
-					if msg.X >= menuStartColumn-4 && msg.X <= playModeEndX {
-						player.SwitchMode()
-						return true, main, a.Tick(time.Nanosecond)
-					}
-				}
-				leftPad := 0
-				if !main.CenterEverything() && main.MenuStartColumn()-4 > 0 {
-					leftPad = main.MenuStartColumn() - 4
-				}
-
-				// 前缀段宽度：模式/音量/状态/心形与空格（模式/音量仅在 menuStartColumn-4>0 时显示）
-				modeWidth := 0
-				volWidth := 0
-				if main.MenuStartColumn()-4 > 0 {
-					modeWidth = runewidth.StringWidth(fmt.Sprintf("[%s] ", player.Mode().Name()))
-					volWidth = runewidth.StringWidth(fmt.Sprintf("%d%% ", player.Volume()))
-				}
-				var stateText string
-				if player.State() == types.Playing {
-					stateText = "♫ ♪ ♫ ♪ "
-				} else {
-					stateText = "_ z Z Z "
-				}
-				stateWidth := runewidth.StringWidth(stateText)
-				heartWidth := 0
-				if player.CurSong().Id > 0 {
-					// 仅宽度受影响，是否喜欢不影响字符宽度
-					_ = likelist.IsLikeSong(player.CurSong().Id)
-					heartWidth = runewidth.StringWidth("♥ ")
-				}
-
-				// 歌曲名显示宽度（可能被截断）
-				songName := player.CurSong().Name
-				songShownWidth := runewidth.StringWidth(songName)
-				if !main.CenterEverything() {
-					prefixLen := 10
-					if main.MenuStartColumn()-4 > 0 {
-						prefixLen += 12
-					}
-					maxSongWidth := a.WindowWidth() - main.MenuStartColumn() - prefixLen
-					if songShownWidth > maxSongWidth {
-						songShownWidth = maxSongWidth
-					}
-				}
-
-				// 歌手区域起始 X（绝对坐标，0-based）：左对齐空格 + 前缀段 + 歌曲名 + 一个空格
-				artistStartX := leftPad + modeWidth + volWidth + stateWidth + heartWidth + songShownWidth + 1
-				if msg.X >= artistStartX {
-					// 歌手区域，进入当前播放歌曲的歌手详情
-					goToArtistOfSong(h.netease, false)
-					return true, main, a.Tick(time.Nanosecond)
-				}
+			if handled, page, cmd := h.handlePlayerBarClick(msg, a, main); handled {
+				return true, page, cmd
 			}
 		}
 
@@ -547,142 +489,25 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 
 // handleSingleClick 处理鼠标单击事件，单击菜单项时改变焦点
 func (h *EventHandler) handleSingleClick(msg tea.MouseMsg, a *model.App, main *model.Main) bool {
-	menu := main.CurMenu()
-	menuViews := menu.MenuViews()
-
-	// 获取菜单显示区域的行范围
-	menuStartRow := main.MenuStartRow()
-	menuBottomRow := main.MenuBottomRow()
-	menuStartColumn := main.MenuStartColumn()
-
-	// 检查点击是否在菜单区域内
-	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较（参考进度条的 y+1）
-	y := msg.Y + 1
-	if y < menuStartRow || y >= menuBottomRow {
+	index, ok := h.getClickedIndexFromPosition(msg, a, main)
+	if !ok {
 		return false
 	}
-
-	// X坐标：检查是否在菜单的有效区域内
-	if msg.X < menuStartColumn-4 {
-		return false
-	}
-
-	// 计算点击对应的菜单项索引
-	// menuStartRow 即第一个菜单项所在行
-	actualMenuStartRow := menuStartRow
-	relativeRow := y - actualMenuStartRow
-
-	if relativeRow < 0 {
-		return false
-	}
-
-	pageStartIndex := (main.CurPage() - 1) * main.PageSize()
-
-	var clickedIndex int
-
-	if main.IsDualColumn() {
-		// 双列模式：需要判断点击是左列还是右列
-		// 参考 foxful-cli/model/main.go menuItemView 的逻辑
-		windowWidth := a.WindowWidth()
-		var leftColumnWidth int
-		if windowWidth <= 88 {
-			// 窗口较窄时，左右列平分
-			leftColumnWidth = (windowWidth - menuStartColumn - 4) / 2
-		} else {
-			// 窗口较宽时，左列固定44字符
-			leftColumnWidth = 44
-		}
-
-		if msg.X < menuStartColumn+leftColumnWidth {
-			// 左列
-			clickedIndex = pageStartIndex + relativeRow*2
-		} else {
-			// 右列
-			clickedIndex = pageStartIndex + relativeRow*2 + 1
-		}
-	} else {
-		// 单列模式：每行一个菜单项
-		clickedIndex = pageStartIndex + relativeRow
-	}
-
-	// 验证索引是否有效
-	if clickedIndex < 0 || clickedIndex >= len(menuViews) {
-		return false
-	}
-
-	// 设置选中索引
-	main.SetSelectedIndex(clickedIndex)
+	main.SetSelectedIndex(index)
 	return true
 }
 
 // handleDoubleClick 处理鼠标双击事件，双击菜单项时进入该菜单
 func (h *EventHandler) handleDoubleClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page) {
-	menu := main.CurMenu()
-	menuViews := menu.MenuViews()
-
-	// 获取菜单显示区域的行范围
-	menuStartRow := main.MenuStartRow()
-	menuBottomRow := main.MenuBottomRow()
-	menuStartColumn := main.MenuStartColumn()
-
-	// 检查点击是否在菜单区域内
-	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较（参考进度条的 y+1）
-	y := msg.Y + 1
-	if y < menuStartRow || y >= menuBottomRow {
-		return false, nil
-	}
-
-	// X坐标：检查是否在菜单的有效区域内
-	// 菜单项前面有4个空格用于显示序号和选中标记
-	if msg.X < menuStartColumn-4 {
-		return false, nil
-	}
-
-	// 计算点击对应的菜单项索引
-	// menuStartRow 即第一个菜单项所在行
-	actualMenuStartRow := menuStartRow
-	relativeRow := y - actualMenuStartRow
-
-	if relativeRow < 0 {
-		return false, nil
-	}
-
-	pageStartIndex := (main.CurPage() - 1) * main.PageSize()
-
-	var clickedIndex int
-
-	if main.IsDualColumn() {
-		// 双列模式：每行显示两个菜单项
-		// 参考 foxful-cli/model/main.go menuItemView 的逻辑
-		windowWidth := a.WindowWidth()
-		var leftColumnWidth int
-		if windowWidth <= 88 {
-			// 窗口较窄时，左右列平分
-			leftColumnWidth = (windowWidth - menuStartColumn - 4) / 2
-		} else {
-			// 窗口较宽时，左列固定44字符
-			leftColumnWidth = 44
-		}
-
-		if msg.X < menuStartColumn+leftColumnWidth {
-			// 左列
-			clickedIndex = pageStartIndex + relativeRow*2
-		} else {
-			// 右列
-			clickedIndex = pageStartIndex + relativeRow*2 + 1
-		}
-	} else {
-		// 单列模式：每行一个菜单项
-		clickedIndex = pageStartIndex + relativeRow
-	}
-
-	// 验证索引是否有效
-	if clickedIndex < 0 || clickedIndex >= len(menuViews) {
+	clickedIndex, ok := h.getClickedIndexFromPosition(msg, a, main)
+	if !ok {
 		return false, nil
 	}
 
 	// 设置选中索引
 	main.SetSelectedIndex(clickedIndex)
+	menu := main.CurMenu()
+	menuViews := menu.MenuViews()
 
 	// 如果是歌曲菜单，双击播放歌曲
 	if songsMenu, ok := menu.(SongsMenu); ok {
@@ -710,4 +535,177 @@ func (h *EventHandler) handleDoubleClick(msg tea.MouseMsg, a *model.App, main *m
 	}
 
 	return false, nil
+}
+
+// getClickedIndexFromPosition 根据鼠标位置计算点击的菜单项索引
+func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.App, main *model.Main) (int, bool) {
+	menu := main.CurMenu()
+	menuViews := menu.MenuViews()
+
+	// 获取菜单显示区域的行范围
+	menuStartRow := main.MenuStartRow()
+	menuBottomRow := main.MenuBottomRow()
+	menuStartColumn := main.MenuStartColumn()
+
+	// 检查点击是否在菜单区域内
+	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较
+	y := msg.Y + 1
+	if y < menuStartRow || y >= menuBottomRow {
+		return 0, false
+	}
+
+	// X坐标：检查是否在菜单的有效区域内
+	if msg.X < menuStartColumn-4 {
+		return 0, false
+	}
+
+	// 计算点击对应的菜单项索引
+	actualMenuStartRow := menuStartRow
+	relativeRow := y - actualMenuStartRow
+
+	if relativeRow < 0 {
+		return 0, false
+	}
+
+	pageStartIndex := (main.CurPage() - 1) * main.PageSize()
+	var clickedIndex int
+
+	// 双列模式
+	if main.IsDualColumn() {
+		windowWidth := a.WindowWidth()
+		var leftColumnWidth int
+		if windowWidth <= 88 {
+			leftColumnWidth = (windowWidth - menuStartColumn - 4) / 2
+		} else {
+			leftColumnWidth = 44
+		}
+
+		if msg.X < menuStartColumn+leftColumnWidth {
+			clickedIndex = pageStartIndex + relativeRow*2
+		} else {
+			clickedIndex = pageStartIndex + relativeRow*2 + 1
+		}
+	} else {
+		clickedIndex = pageStartIndex + relativeRow
+	}
+
+	if clickedIndex < 0 || clickedIndex >= len(menuViews) {
+		return 0, false
+	}
+
+	return clickedIndex, true
+}
+
+// handlePlayerBarClick 处理播放栏点击事件
+func (h *EventHandler) handlePlayerBarClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
+	playModeRow := a.WindowHeight() - 3
+	if msg.Y != playModeRow {
+		return false, nil, nil
+	}
+
+	// 播放模式点击
+	if handled, page, cmd := h.handlePlayModeClick(msg, a, main); handled {
+		return handled, page, cmd
+	}
+
+	// 播放栏其他元素点击
+	return h.handlePlayerBarElementsClick(msg, a, main)
+}
+
+// handlePlayModeClick 播放模式点击
+func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
+	player := h.netease.player
+	menuStartColumn := main.MenuStartColumn()
+
+	if menuStartColumn > 4 {
+		playModeEndX := menuStartColumn + 5
+		if msg.X >= menuStartColumn-4 && msg.X <= playModeEndX {
+			player.SwitchMode()
+			return true, main, a.Tick(time.Nanosecond)
+		}
+	}
+	return false, nil, nil
+}
+
+// handlePlayerBarElementsClick 播放栏其他元素点击
+func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
+	player := h.netease.player
+	curSong := player.CurSong()
+
+	if curSong.Id == 0 {
+		return false, nil, nil
+	}
+
+	menuStartColumn := main.MenuStartColumn()
+	leftPad := 0
+	if !main.CenterEverything() && menuStartColumn-4 > 0 {
+		leftPad = menuStartColumn - 4
+	}
+
+	currentX := leftPad
+
+	// Mode & Volume 宽度
+	if menuStartColumn-4 > 0 {
+		modeStr := fmt.Sprintf("[%s] ", player.Mode().Name())
+		modeWidth := runewidth.StringWidth(modeStr)
+		volStr := fmt.Sprintf("%d%% ", player.Volume())
+		volWidth := runewidth.StringWidth(volStr)
+		currentX += modeWidth + volWidth
+	}
+
+	// 播放状态
+	stateText := "_ z Z Z "
+	if player.State() == types.Playing {
+		stateText = "♫ ♪ ♫ ♪ "
+	}
+	stateWidth := runewidth.StringWidth(stateText)
+
+	if msg.X >= currentX && msg.X < currentX+stateWidth {
+		h.playOrToggleHandle()
+		return true, main, a.Tick(time.Nanosecond)
+	}
+	currentX += stateWidth
+
+	// 喜欢状态
+	heartWidth := 0
+	if curSong.Id > 0 {
+		_ = likelist.IsLikeSong(curSong.Id)
+		heartWidth = runewidth.StringWidth("♥ ")
+	}
+	if heartWidth > 0 {
+		if msg.X >= currentX && msg.X < currentX+heartWidth {
+			isLiked := likelist.IsLikeSong(curSong.Id)
+			newPage := likeSong(h.netease, !isLiked, false)
+			return true, newPage, a.Tick(time.Nanosecond)
+		}
+		currentX += heartWidth
+	}
+
+	// 歌曲名
+	songName := curSong.Name
+	songShownWidth := runewidth.StringWidth(songName)
+	if !main.CenterEverything() {
+		prefixLen := 10
+		if main.MenuStartColumn()-4 > 0 {
+			prefixLen += 12
+		}
+		maxSongWidth := a.WindowWidth() - main.MenuStartColumn() - prefixLen
+		if songShownWidth > maxSongWidth {
+			songShownWidth = maxSongWidth
+		}
+	}
+
+	if msg.X >= currentX && msg.X < currentX+songShownWidth {
+		action(h.netease, true)
+		return true, main, a.Tick(time.Nanosecond)
+	}
+	currentX += songShownWidth + 1
+
+	// 歌手
+	if msg.X >= currentX {
+		goToArtistOfSong(h.netease, false)
+		return true, main, a.Tick(time.Nanosecond)
+	}
+
+	return false, nil, nil
 }

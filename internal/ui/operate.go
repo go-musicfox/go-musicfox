@@ -818,3 +818,32 @@ func shareItem(n *Netease, isSelected bool) {
 		})
 	}
 }
+
+// searchSong 搜索歌名
+func searchSong(n *Netease, isSelected bool) {
+	op := NewOperation(n, func(n *Netease) model.Page {
+		song, ok := getTargetSong(n, isSelected)
+		if !ok {
+			return nil
+		}
+
+		main := n.MustMain()
+		searchService := service.SearchService{
+			S:     song.Name,
+			Type:  strconv.Itoa(int(StSingleSong)),
+			Limit: strconv.Itoa(types.SearchPageSize),
+		}
+		code, response := searchService.Search()
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
+			return nil
+		}
+
+		n.search.wordsInput.SetValue(song.Name)
+		n.search.searchType = StSingleSong
+		n.search.result = _struct.GetSongsOfSearchResult(response)
+
+		return main.EnterMenu(NewSearchResultMenu(newBaseMenu(n), StSingleSong), &model.MenuItem{Title: "搜索结果"})
+	})
+	op.ShowLoading().Execute()
+}

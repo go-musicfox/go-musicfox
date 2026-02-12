@@ -541,6 +541,17 @@ curPlaylist = "ctrl+p"
 <details>
 <summary>
 
+
+### 鼠标支持
+</summary>
+
+* 确保`enableMouseEvent`设置为`true`
+* 详见 [鼠标支持说明](./docs/mouse_support.md)
+
+</details>
+<details>
+<summary>
+
 ### 自定义分享模板
 </summary>
 
