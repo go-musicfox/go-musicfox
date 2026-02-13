@@ -1,3 +1,418 @@
+- semver: 4.8.0
+  date: 2026-02-13T20:19:58+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 53878c52b3b5cfaa976805155cbb474ae860c64b
+      note: |-
+        修复列表随机播放模式索引越界 (#548)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: b98445a405cabc2f5a68ff3d1f36986caf7bf4e6
+      note: '✨feat: 增强鼠标事件处理 (#543)'
+      author:
+        name: SUI
+        email: 59269350+lrst6963@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 77f2793f4a552aa279db4a408a2ae7efeca6b11b
+      note: 'chore: change default `widthRadio` for cover'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d800e11a6dbb323fa380ded4960a59faf819ca58
+      note: 'fix: 修复重复发送SetPlayingInfo导致歌词被覆盖的问题 (#546)'
+      author:
+        name: DBeidachazi
+        email: 63102882+DBeidachazi@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6c3fee3d7aeb6b0170a2239b8c79309ccbecb91c
+      note: "fix know issues & improve UX (#544)\n\n* \U0001F3A8 refactor: migrate legacy cookie storage format\n\n* \U0001F41Bfix(auth&ui): cookie login issues & improve login page UX\n\n* \U0001F41B fix(auth): handle token refresh failure gracefully\n\n* \U0001F41Bfix: handle broken cookie files gracefully with backup and fallback\n\n* ✨ feat(login): enhance error handling accuracy and refactor auth flow\n\n* \U0001F41Bfix: known issues"
+      author:
+        name: 辉夜sama
+        email: 53631287+Kaguya233qwq@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6a32cdba8f4778c2e8bc165c2212b2929d40a162
+      note: |-
+        Remove JetBrains Open Source acknowledgment
+
+        Removed JetBrains Open Source acknowledgment from README.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c413ff5d27542129be0c520326786ccffd78f72e
+      note: 'chore(ci): change opencode llm model'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9e56aa4a0d08f32aca6f19ae444ba4dc016dba2c
+      note: 'optimize: 封面图大小 & 位置调整'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9c9eecfa3a2b883217f9765df3859973d05db676
+      note: 'optimize(cover): optimize cover render'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b5b96ef8a5c397a250a67ee96ebe7a68aaa10a16
+      note: |-
+        ✨feat: 为封面添加圆角及旋转 (#532)
+
+        * ✨feat: 为封面添加圆角
+
+        * ✨feat: 为封面添加旋转
+
+        * fix: 使用 Alpha 混合抗锯齿
+      author:
+        name: weiyangzhen
+        email: 59269350+lrst6963@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 821bfd8b9a37f25c6d4f80fa194b014125763a60
+      note: 'fix(cover): render error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 307d1475ba5d96d9b354fb33cfddfbb5a272087f
+      note: |-
+        chore(vendor): sync go vendor directory (#542)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1695bc61bfc4b8924cdae4345d84186b230959c9
+      note: "fix: issue of token refresh, logout and Yunbei-sign (#541)\n\n* \U0001F41Bfix(logout): logout and clear session safely\n\n* \U0001F41Bfix(api): Resolve auth failures and improve cookie persistence\n\n* ⬆️update dependencies"
+      author:
+        name: 辉夜sama
+        email: 53631287+Kaguya233qwq@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 008181a7ba45ec72501c8d6e7403ed123a9578c5
+      note: Fixed MPRIS status and position sync (#539)
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d5da143f4435e0ffa4e05fd00ccdbdaafe323f03
+      note: 修复切歌后playerctl状态不同步问题 (#540)
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 5c7e5a81c1657c7465fc0a679fbe0c885a7e03b5
+      note: 'feat(cover): optimize cover spin render'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6c05b2f3a616a2ebb79e0fc35c8ca26f90aa565e
+      note: 'feat(cover): optimize cover spin render'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 312a2c26bf5f77bfda985615ce8fa27a661a456c
+      note: |-
+        Fix beep player volume precision (#537)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: b5c9a6e0d1907c7baa8166538558645d4648907d
+      note: 'fix: 使用 Alpha 混合抗锯齿'
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: 2484375b4044f863cb4b5c9663062ea9a13859f8
+      note: '✨feat: 为封面添加旋转'
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: 16cc4ddd1f8cb0c658c8d43b7b3f36bca885df3c
+      note: '✨feat: 为封面添加圆角'
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: b3f8b789c20f6bef07482fbd3d26d45563ba0f30
+      note: |-
+        实现 TUI Cookie 登录，Tab 布局切换 (#531)
+
+        * feat(dj): Added sort toggle with | key (#530)
+
+        * Added sort toggle with | key
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * Added RefreshMenuList() for Reload UI
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * 快捷键变更同步更新README
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * chore(dj): page size
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot]
+        <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@88.com>
+
+        * feat(login): 实现 TUI Cookie 登录，Tab 布局切换
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * fix(login): 修复Tab UI渲染问题，动态切换激活状态样式
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * fix(login): Tab UI fixes: border, spacing, verified
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * fix(login): optimize ui render for cookie login
+
+        * chore(ai): add git commit message guidelines
+
+        * feat(login): change hot key
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <219766164+opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@88.com>
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 17fc5898a0598d7803dacd371f011e190aabf99b
+      note: 'feat(cover): add config item(ratio) for cover'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5622056203d3288f32bbb4ed8576cbdc488f7861
+      note: |-
+        Added sort toggle with | key (#530)
+
+        * Added sort toggle with | key
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * Added RefreshMenuList() for Reload UI
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * 快捷键变更同步更新README
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * chore(dj): page size
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@88.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6466060397c8bd1ac0dc547a235b5d6b17ae9a3a
+      note: 'chore(ci): change llm model for ci'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c0e4341e83824929218e7b3d90d4211f921eb5fb
+      note: 'fix(cover): cover position'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4ff73308ea76b194c87cb5ebff6f216b58f40656
+      note: 'fix(cover): clean image'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d75a949f681afa2a86cc4890d1e3ea9ce51888c3
+      note: 'fix(ci): change checkout action 6 => 5'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: fd7524af4fc8a8b0320168dbf7ec7771343b1dd7
+      note: 'feat(ci): add opencode action tools'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b3df3d1629baa4944539387136f0f73fe055725f
+      note: 'feat(ui): support kitty graph render'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a99e65718b0cbe630b35bff5991e40e0448d1118
+      note: 'feat(config)!: config migrate & clean up useless code'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ccec91ea3d77e65cb930ecb1e1720f52c1b93046
+      note: 'feat: optimize progress renderer'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: caa2a7c7acc1ab58de7ee0a782bac3a374443c61
+      note: 'feat: optimize YRC renderer'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e6db63b78a9efe89454aa29a953c1af780ded672
+      note: 'optimize: dj_radio_detail order `desc` => `asc`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5b1bb7939c1de5fe13c330a6276047b1b43c328c
+      note: fix:修复showLyricTranslation=false不工作 (#528)
+      author:
+        name: weiyangzhen
+        email: 59269350+lrst6963@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 829f802b2546a6345665bef31581829a31424855
+      note: '✨feat: 更多的鼠标点击事件 (#525)'
+      author:
+        name: weiyangzhen
+        email: 59269350+lrst6963@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 44c4bb26fa322806369919b3ac547990cc982b6f
+      note: '✨feat: 添加YRC(逐字歌词)支持'
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: lrst6963
+        email: lrsts@qq.com
+    - commit: 001f3d73bbc1129f1a5317e421a484e6b8ed2459
+      note: 优化互斥锁
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 760a112e30421114d9868abef78be5209c6066ba
+      note: 'fix: 修复进度溢出并优化mpv'
+      author:
+        name: lrst6963
+        email: lrsts@qq.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d7ac9fe76572eeef9fb4c8113d52243430497790
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.7.2
   date: 2025-12-19T13:38:57+08:00
   packager: go-musicfox

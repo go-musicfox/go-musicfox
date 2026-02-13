@@ -1,4 +1,49 @@
 
+4.8.0
+=============
+2026-02-13
+
+* 修复列表随机播放模式索引越界 (#548) (53878c52)
+* ✨feat: 增强鼠标事件处理 (#543) (b98445a4)
+* chore: change default `widthRadio` for cover (77f2793f)
+* fix: 修复重复发送SetPlayingInfo导致歌词被覆盖的问题 (#546) (d800e11a)
+* fix know issues & improve UX (#544) (6c3fee3d)
+* Remove JetBrains Open Source acknowledgment (6a32cdba)
+* chore(ci): change opencode llm model (c413ff5d)
+* optimize: 封面图大小 & 位置调整 (9e56aa4a)
+* optimize(cover): optimize cover render (9c9eecfa)
+* ✨feat: 为封面添加圆角及旋转 (#532) (b5b96ef8)
+* fix(cover): render error (821bfd8b)
+* chore(vendor): sync go vendor directory (#542) (307d1475)
+* fix: issue of token refresh, logout and Yunbei-sign (#541) (1695bc61)
+* Fixed MPRIS status and position sync (#539) (008181a7)
+* 修复切歌后playerctl状态不同步问题 (#540) (d5da143f)
+* feat(cover): optimize cover spin render (5c7e5a81)
+* feat(cover): optimize cover spin render (6c05b2f3)
+* Fix beep player volume precision (#537) (312a2c26)
+* fix: 使用 Alpha 混合抗锯齿 (b5c9a6e0)
+* ✨feat: 为封面添加旋转 (2484375b)
+* ✨feat: 为封面添加圆角 (16cc4ddd)
+* 实现 TUI Cookie 登录，Tab 布局切换 (#531) (b3f8b789)
+* feat(cover): add config item(ratio) for cover (17fc5898)
+* Added sort toggle with | key (#530) (56220562)
+* chore(ci): change llm model for ci (64660603)
+* fix(cover): cover position (c0e4341e)
+* fix(cover): clean image (4ff73308)
+* fix(ci): change checkout action 6 => 5 (d75a949f)
+* feat(ci): add opencode action tools (fd7524af)
+* feat(ui): support kitty graph render (b3df3d16)
+* feat(config)!: config migrate & clean up useless code (a99e6571)
+* feat: optimize progress renderer (ccec91ea)
+* feat: optimize YRC renderer (caa2a7c7)
+* optimize: dj_radio_detail order `desc` => `asc` (e6db63b7)
+* fix:修复showLyricTranslation=false不工作 (#528) (5b1bb793)
+* ✨feat: 更多的鼠标点击事件 (#525) (829f802b)
+* ✨feat: 添加YRC(逐字歌词)支持 (44c4bb26)
+* 优化互斥锁 (001f3d73)
+* fix: 修复进度溢出并优化mpv (760a112e)
+* chore: update scoop config & changelog (d7ac9fe7)
+
 4.7.2
 =============
 2025-12-19
