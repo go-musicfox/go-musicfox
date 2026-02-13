@@ -44,7 +44,16 @@ func (l *ListRandomPlayMode) NextSong(currentIndex int, playlist []structs.Song,
 		return -1, ErrNoNextSong
 	}
 
-	return l.randomOrder[l.currentPos], nil
+	index := l.randomOrder[l.currentPos]
+
+	// 边界检查：确保索引在有效范围内
+	if index < 0 || index >= len(playlist) {
+		// 索引无效，重置到第一个位置
+		l.currentPos = 0
+		index = l.randomOrder[0]
+	}
+
+	return index, nil
 }
 
 // PreviousSong 获取上一首歌曲的索引
@@ -68,7 +77,16 @@ func (l *ListRandomPlayMode) PreviousSong(currentIndex int, playlist []structs.S
 		return -1, ErrNoPreviousSong
 	}
 
-	return l.randomOrder[l.currentPos], nil
+	index := l.randomOrder[l.currentPos]
+
+	// 边界检查：确保索引在有效范围内
+	if index < 0 || index >= len(playlist) {
+		// 索引无效，重置到最后一个位置
+		l.currentPos = len(l.randomOrder) - 1
+		index = l.randomOrder[l.currentPos]
+	}
+
+	return index, nil
 }
 
 // Initialize 初始化播放模式
@@ -79,7 +97,12 @@ func (l *ListRandomPlayMode) Initialize(currentIndex int, playlist []structs.Son
 
 	// 生成随机播放顺序
 	l.generateRandomOrder(len(playlist))
-	
+
+	// 确保 currentIndex 在有效范围内
+	if currentIndex < 0 || currentIndex >= len(playlist) {
+		currentIndex = 0
+	}
+
 	// 找到当前歌曲在随机序列中的位置
 	l.currentPos = l.findCurrentPosition(currentIndex)
 
@@ -106,7 +129,12 @@ func (l *ListRandomPlayMode) OnPlaylistChanged(currentIndex int, playlist []stru
 
 	// 重新生成随机播放顺序
 	l.generateRandomOrder(len(playlist))
-	
+
+	// 确保 currentIndex 在有效范围内
+	if currentIndex < 0 || currentIndex >= len(playlist) {
+		currentIndex = 0
+	}
+
 	// 找到当前歌曲在新的随机序列中的位置
 	l.currentPos = l.findCurrentPosition(currentIndex)
 
@@ -117,7 +145,7 @@ func (l *ListRandomPlayMode) OnPlaylistChanged(currentIndex int, playlist []stru
 // 使用Fisher-Yates洗牌算法
 func (l *ListRandomPlayMode) generateRandomOrder(length int) {
 	l.randomOrder = make([]int, length)
-	
+
 	// 初始化顺序数组
 	for i := 0; i < length; i++ {
 		l.randomOrder[i] = i
