@@ -383,7 +383,7 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 		}
 		lineLength := runewidth.StringWidth(visibleLine)
 
-		paddingLeft := lyricStartCol + (availableWidth-lineLength)/2
+		paddingLeft := max(0, lyricStartCol+(availableWidth-lineLength)/2)
 		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
 
 		if !hasAnsi {
@@ -394,7 +394,7 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 			}
 		}
 		lyricBuilder.WriteString(line)
-		lyricBuilder.WriteString(strings.Repeat(" ", windowWidth-paddingLeft-lineLength))
+		lyricBuilder.WriteString(strings.Repeat(" ", max(0, windowWidth-paddingLeft-lineLength)))
 		lyricBuilder.WriteString("\n")
 	}
 }
