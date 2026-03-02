@@ -63,8 +63,8 @@ func NewMpvPlayer(conf *MpvConfig) *mpvPlayer {
 		binPath:   binPath, // 保存自定义路径
 		volume:    50,      // 默认音量
 		state:     types.Stopped,
-		timeChan:  make(chan time.Duration),
-		stateChan: make(chan types.State),
+		timeChan:  make(chan time.Duration, 1),
+		stateChan: make(chan types.State, 10),
 		close:     make(chan struct{}),
 	}
 

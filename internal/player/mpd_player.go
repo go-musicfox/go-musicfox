@@ -106,9 +106,9 @@ func NewMpdPlayer(conf *MpdConfig) *mpdPlayer {
 		conf:      conf,
 		watcher:   watcher,
 		state:     types.Stopped,
-		timeChan:  make(chan time.Duration),
-		stateChan: make(chan types.State),
-		musicChan: make(chan URLMusic),
+		timeChan:  make(chan time.Duration, 1),
+		stateChan: make(chan types.State, 10),
+		musicChan: make(chan URLMusic, 1),
 		close:     make(chan struct{}),
 	}
 
