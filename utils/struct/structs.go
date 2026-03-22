@@ -118,8 +118,16 @@ func GetSongsOfPlaylist(data []byte) (list []structs.Song) {
 
 // GetSongsOfAlbum 获取专辑的歌曲
 func GetSongsOfAlbum(data []byte) (list []structs.Song) {
+	var album structs.Album
+	if parsedAlbum, err := structs.NewAlbumFromJson(data, "album"); err == nil {
+		album = parsedAlbum
+	}
+
 	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromAlbumSongsJson(value); err == nil {
+			if song.PicUrl == "" && album.PicUrl != "" {
+				song.Album.PicUrl = album.PicUrl
+			}
 			list = append(list, song)
 		}
 
