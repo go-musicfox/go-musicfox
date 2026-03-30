@@ -272,11 +272,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 
 	errorx.Go(func() {
 		p.lyricService.SetSong(context.Background(), song)
-		// 等待状态监听器dbus结束
-		time.Sleep(100 * time.Millisecond)
-		if p.stateHandler != nil {
-			p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-		}
 	}, true)
 
 	p.Play(player.URLMusic{

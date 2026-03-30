@@ -164,8 +164,9 @@ func (p *mpvPlayer) listenMpvEvent() {
 				break
 			}
 			msg := string(buf[:n])
-			if strings.Contains(msg, `"event":"end-file"`) {
-				// 歌曲播放结束
+			if strings.Contains(msg, `"event":"start-file"`) {
+				p.setState(types.Playing)
+			} else if strings.Contains(msg, `"event":"end-file"`) {
 				p.setState(types.Stopped)
 			}
 		}
