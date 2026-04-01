@@ -1,4 +1,14 @@
 
+4.8.1
+=============
+2026-03-31
+
+* fix(player): update Now Playing info on MPV auto-change (ac19bdff)
+* fix(player): update Now Playing info on MPV auto-change (c25e39ec)
+* fix(struct): fallback to album cover for album songs (#558) (6a7a4a5b)
+* Fix #556: clamp repeat counts in buildLyricsCentered to prevent panic (#557) (b7b5e80f)
+* chore: update scoop config & changelog (d3d34af8)
+
 4.8.0
 =============
 2026-02-13

@@ -1,3 +1,75 @@
+- semver: 4.8.1
+  date: 2026-04-01T00:15:19+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ac19bdffcc7c46cff6f0bb10c614a9c7725bfd03
+      note: |-
+        fix(player): update Now Playing info on MPV auto-change
+
+        - Add start-file event handling in listenMpvEvent() to detect when
+          MPV actually starts playing a new song and emit Playing state
+        - Remove unreliable 100ms delayed goroutine in PlaySong() that could
+          cause SetPlayingInfo() to be called with stale song data during
+          auto-change
+
+        Previously, Now Playing only updated for the first manually played
+        song. When songs auto-changed, the 100ms delay was arbitrary and
+        didn't guarantee MPV had started playing, causing race conditions.
+
+        Now the state listener calls SetPlayingInfo() when receiving Playing
+        state from start-file event, ensuring correct timing and song info.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c25e39ecb667bd1627bebb410e8675eca6ed99eb
+      note: |-
+        fix(player): update Now Playing info on MPV auto-change
+
+        - Add start-file event handling in listenMpvEvent() to detect when
+          MPV actually starts playing a new song and emit Playing state
+        - Remove unreliable 100ms delayed goroutine in PlaySong() that could
+          cause SetPlayingInfo() to be called with stale song data during
+          auto-change
+
+        Previously, Now Playing only updated for the first manually played
+        song. When songs auto-changed, the 100ms delay was arbitrary and
+        didn't guarantee MPV had started playing, causing race conditions.
+
+        Now the state listener calls SetPlayingInfo() when receiving Playing
+        state from start-file event, ensuring correct timing and song info.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6a7a4a5b7b14be5cb1e897c7540c7685034aa693
+      note: 'fix(struct): fallback to album cover for album songs (#558)'
+      author:
+        name: cola-prince
+        email: 41108397+cola-prince@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: b7b5e80fb164a351d111c295891c3064146904a7
+      note: 'Fix #556: clamp repeat counts in buildLyricsCentered to prevent panic (#557)'
+      author:
+        name: Uğur Tafralı
+        email: tafraliugur@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d3d34af89821d0368948a90a9310eb1ef5750c5a
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.8.0
   date: 2026-02-13T20:19:58+08:00
   packager: go-musicfox
