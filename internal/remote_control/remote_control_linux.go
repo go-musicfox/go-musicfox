@@ -297,7 +297,7 @@ func (s *RemoteControl) SetPosition(duration time.Duration) {
 	}
 
 	position := UsFromDuration(duration)
-	s.props.SetMust("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(position))
+	_ = s.props.Set("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(position))
 
 	if s.dbus != nil {
 		_ = s.dbus.Emit("/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player.Seeked", position)

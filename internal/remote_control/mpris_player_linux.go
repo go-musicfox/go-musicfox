@@ -85,7 +85,7 @@ func (p *Player) createStatus(info PlayingInfo) {
 		"Volume":         newProp(volume, p.OnVolume),
 		"Position": {
 			Value:    UsFromDuration(info.PassedDuration),
-			Writable: false,
+			Writable: true,
 			Emit:     prop.EmitFalse,
 			Callback: nil,
 		},

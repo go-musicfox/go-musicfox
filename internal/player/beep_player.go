@@ -59,9 +59,9 @@ func NewBeepPlayer() *beepPlayer {
 	p := &beepPlayer{
 		state: types.Stopped,
 
-		timeChan:  make(chan time.Duration),
-		stateChan: make(chan types.State),
-		musicChan: make(chan URLMusic),
+		timeChan:  make(chan time.Duration, 1),
+		stateChan: make(chan types.State, 10),
+		musicChan: make(chan URLMusic, 1),
 		ctrl: &beep.Ctrl{
 			Paused: false,
 		},
@@ -125,6 +125,7 @@ func (p *beepPlayer) listen() {
 
 			if prevSongId != p.curMusic.Id || !filex.FileOrDirExists(cacheFile) {
 				// FIXME: 先这样处理，暂时没想到更好的办法
+				_ = os.Remove(cacheFile)
 				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
 					panic(err)
 				}

@@ -36,9 +36,9 @@ type osxPlayer struct {
 func NewOsxPlayer() *osxPlayer {
 	p := &osxPlayer{
 		state:     types.Stopped,
-		timeChan:  make(chan time.Duration),
-		stateChan: make(chan types.State),
-		musicChan: make(chan URLMusic),
+		timeChan:  make(chan time.Duration, 1),
+		stateChan: make(chan types.State, 10),
+		musicChan: make(chan URLMusic, 1),
 		close:     make(chan struct{}),
 		volume:    100,
 	}

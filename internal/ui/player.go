@@ -100,7 +100,7 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 		netease:         n,
 		lyricService:    lyricService,
 		playlistManager: playlist.NewPlaylistManager(),
-		ctrl:            make(chan CtrlSignal),
+		ctrl:            make(chan CtrlSignal, 10),
 		reporter:        reporter.NewService(reporterOptions...),
 	}
 	var ctx context.Context
