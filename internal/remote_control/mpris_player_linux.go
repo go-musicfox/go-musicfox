@@ -72,15 +72,34 @@ func (p *Player) OnVolume(c *prop.Change) *dbus.Error {
 	return nil
 }
 
+// OnLoopStatus handles loop status changes.
+func (p *Player) OnLoopStatus(c *prop.Change) *dbus.Error {
+	p.RemoteControl.player.CtrlRepeat()
+	return nil
+}
+
+// OnShuffle handles shuffle state changes.
+func (p *Player) OnShuffle(c *prop.Change) *dbus.Error {
+	p.RemoteControl.player.CtrlShuffle()
+	return nil
+}
+
 func (p *Player) createStatus(info PlayingInfo) {
 	playStatus, _ := PlaybackStatusFromPlayer(info.State)
 	volume := math.Max(0, float64(info.Volume)/100.0)
 
+	// Default values for LoopStatus and Shuffle if not provided
+	loopStatus := info.LoopStatus
+	if loopStatus == "" {
+		loopStatus = "None"
+	}
+	shuffle := info.Shuffle
+
 	p.props = map[string]*prop.Prop{
 		"PlaybackStatus": newProp(playStatus, nil),
-		"LoopStatus":     newProp("None", nil),
+		"LoopStatus":     newProp(loopStatus, p.OnLoopStatus),
 		"Rate":           newProp(1.0, nil),
-		"Shuffle":        newProp(false, nil),
+		"Shuffle":        newProp(shuffle, p.OnShuffle),
 		"Metadata":       newProp(MapFromPlayingInfo(info), nil),
 		"Volume":         newProp(volume, p.OnVolume),
 		"Position": {

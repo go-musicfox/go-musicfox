@@ -18,4 +18,6 @@ type PlayingInfo struct {
 	Album          string
 	AlbumArtist    string
 	LRCText        string
+	LoopStatus     string // "None", "Track", "Playlist"
+	Shuffle        bool
 }

@@ -1,6 +1,10 @@
 package remote_control
 
-import "time"
+import (
+	"time"
+
+	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
+)
 
 type Controller interface {
 	CtrlPause()
@@ -13,4 +17,8 @@ type Controller interface {
 	CtrlSetVolume(volume int)
 	CtrlLikeNowPlaying()
 	CtrlDislikeNowPlaying()
+	CtrlShuffle()
+	CtrlRepeat()
+	CtrlSetRepeat(mode mediaplayer.MPRepeatType)
+	CtrlSetShuffle(mode mediaplayer.MPShuffleType)
 }

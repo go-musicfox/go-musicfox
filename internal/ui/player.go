@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
+	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/playlist"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
@@ -37,8 +38,10 @@ const (
 type CtrlType string
 
 type CtrlSignal struct {
-	Type     CtrlType
-	Duration time.Duration
+	Type        CtrlType
+	Duration    time.Duration
+	RepeatType  mediaplayer.MPRepeatType
+	ShuffleType mediaplayer.MPShuffleType
 }
 
 const (
@@ -50,6 +53,8 @@ const (
 	CtrlNext     CtrlType = "Next"
 	CtrlSeek     CtrlType = "Seek"
 	CtrlRerender CtrlType = "Rerender"
+	CtrlShuffle  CtrlType = "Shuffle"
+	CtrlRepeat   CtrlType = "Repeat"
 )
 
 // playerRendererState 提高 UI 渲染所需的歌曲信息
@@ -426,6 +431,58 @@ func (p *Player) SwitchMode() {
 	p.SetMode(supportedModes[index])
 }
 
+// toggleShuffle toggles between shuffle on (PmListRandom) and shuffle off (PmListLoop)
+func (p *Player) toggleShuffle() {
+	mode := p.Mode()
+	if mode == types.PmListRandom {
+		p.SetMode(types.PmListLoop)
+	} else {
+		p.SetMode(types.PmListRandom)
+	}
+}
+
+// cycleRepeat cycles through repeat modes: PmOrdered -> PmListLoop -> PmSingleLoop -> PmOrdered
+func (p *Player) cycleRepeat() {
+	mode := p.Mode()
+	switch mode {
+	case types.PmOrdered:
+		p.SetMode(types.PmListLoop)
+	case types.PmListLoop:
+		p.SetMode(types.PmSingleLoop)
+	case types.PmSingleLoop:
+		p.SetMode(types.PmOrdered)
+	default:
+		// For other modes (like PmListRandom), set to PmListLoop
+		p.SetMode(types.PmListLoop)
+	}
+}
+
+// setRepeat sets the repeat mode directly based on MPRepeatType
+func (p *Player) setRepeat(repeatType mediaplayer.MPRepeatType) {
+	switch repeatType {
+	case mediaplayer.MPRepeatTypeOff:
+		p.SetMode(types.PmOrdered)
+	case mediaplayer.MPRepeatTypeOne:
+		p.SetMode(types.PmSingleLoop)
+	case mediaplayer.MPRepeatTypeAll:
+		p.SetMode(types.PmListLoop)
+	}
+}
+
+// setShuffle sets the shuffle mode directly based on MPShuffleType
+func (p *Player) setShuffle(shuffleType mediaplayer.MPShuffleType) {
+	switch shuffleType {
+	case mediaplayer.MPShuffleTypeOff:
+		// Keep current repeat mode but disable shuffle
+		mode := p.Mode()
+		if mode == types.PmListRandom {
+			p.SetMode(types.PmListLoop)
+		}
+	case mediaplayer.MPShuffleTypeItems, mediaplayer.MPShuffleTypeCollections:
+		p.SetMode(types.PmListRandom)
+	}
+}
+
 // Close 关闭
 func (p *Player) Close() error {
 	// 退出前上报
@@ -556,11 +613,24 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 		p.Seek(signal.Duration)
 	case CtrlRerender:
 		p.netease.Rerender(false)
+	case CtrlShuffle:
+		if signal.ShuffleType != 0 {
+			p.setShuffle(signal.ShuffleType)
+		} else {
+			p.toggleShuffle()
+		}
+	case CtrlRepeat:
+		if signal.RepeatType != 0 {
+			p.setRepeat(signal.RepeatType)
+		} else {
+			p.cycleRepeat()
+		}
 	}
 }
 
 func (p *Player) PlayingInfo() control.PlayingInfo {
 	song := p.CurSong()
+	loopStatus, shuffle := modeToLoopStatusAndShuffle(p.Mode())
 	return control.PlayingInfo{
 		TotalDuration:  song.Duration,
 		PassedDuration: p.PassedTime(),
@@ -573,6 +643,24 @@ func (p *Player) PlayingInfo() control.PlayingInfo {
 		Artist:         song.ArtistName(),
 		AlbumArtist:    song.Album.ArtistName(),
 		LRCText:        p.lyricService.State().FormatAsLRC(),
+		LoopStatus:     loopStatus,
+		Shuffle:        shuffle,
+	}
+}
+
+// modeToLoopStatusAndShuffle converts types.Mode to MPRIS LoopStatus and Shuffle values.
+func modeToLoopStatusAndShuffle(mode types.Mode) (loopStatus string, shuffle bool) {
+	switch mode {
+	case types.PmOrdered:
+		return "None", false
+	case types.PmListLoop, types.PmInfRandom, types.PmIntelligent:
+		return "Playlist", false
+	case types.PmSingleLoop:
+		return "Track", false
+	case types.PmListRandom:
+		return "Playlist", true
+	default:
+		return "None", false
 	}
 }
 

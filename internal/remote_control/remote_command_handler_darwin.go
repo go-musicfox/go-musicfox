@@ -3,6 +3,7 @@
 package remote_control
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/ebitengine/purego/objc"
@@ -189,10 +190,26 @@ func handlePreviousTrackCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediapl
 }
 
 func handleChangeRepeatModeCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPRemoteCommandHandlerStatus {
+	if _playerController == nil {
+		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
+	}
+	var repeatType mediaplayer.MPRepeatType
+	core.Autorelease(func() {
+		repeatType = objc.Send[mediaplayer.MPRepeatType](event, objc.RegisterName("repeatType"))
+	})
+	_playerController.CtrlSetRepeat(repeatType)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
 func handleChangeShuffleModeCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPRemoteCommandHandlerStatus {
+	if _playerController == nil {
+		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
+	}
+	var shuffleType mediaplayer.MPShuffleType
+	core.Autorelease(func() {
+		shuffleType = objc.Send[mediaplayer.MPShuffleType](event, objc.RegisterName("shuffleType"))
+	})
+	_playerController.CtrlSetShuffle(shuffleType)
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }
 
@@ -234,6 +251,7 @@ func handleLikeCommand(id objc.ID, cmd objc.SEL, event objc.ID) mediaplayer.MPRe
 	if _playerController == nil {
 		return mediaplayer.MPRemoteCommandHandlerStatusCommandFailed
 	}
+	slog.Debug("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 	_playerController.CtrlLikeNowPlaying()
 	return mediaplayer.MPRemoteCommandHandlerStatusSuccess
 }

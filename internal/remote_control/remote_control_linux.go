@@ -289,6 +289,13 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 	s.setProp("org.mpris.MediaPlayer2.Player", "Volume", dbus.MakeVariant(newVolume))
 
 	s.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(info.PassedDuration)))
+
+	loopStatus := info.LoopStatus
+	if loopStatus == "" {
+		loopStatus = "None"
+	}
+	s.setProp("org.mpris.MediaPlayer2.Player", "LoopStatus", dbus.MakeVariant(loopStatus))
+	s.setProp("org.mpris.MediaPlayer2.Player", "Shuffle", dbus.MakeVariant(info.Shuffle))
 }
 
 func (s *RemoteControl) SetPosition(duration time.Duration) {

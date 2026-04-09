@@ -19,6 +19,8 @@ var (
 )
 
 var (
+	sel_isEnabled              = objc.RegisterName("isEnabled")
+	sel_setEnabled             = objc.RegisterName("setEnabled:")
 	sel_isActive               = objc.RegisterName("isActive")
 	sel_setActive              = objc.RegisterName("setActive:")
 	sel_localizedTitle         = objc.RegisterName("localizedTitle")
@@ -31,9 +33,18 @@ type MPFeedbackCommand struct {
 	MPRemoteCommand
 }
 
+func (cmd MPFeedbackCommand) IsEnabled() bool {
+	return objc.Send[bool](cmd.ID, sel_isEnabled)
+}
+
+func (cmd MPFeedbackCommand) SetEnabled(enabled bool) {
+	cmd.Send(sel_setEnabled, enabled)
+}
+
 func (cmd MPFeedbackCommand) IsActive() bool {
 	return objc.Send[bool](cmd.ID, sel_isActive)
 }
+
 func (cmd MPFeedbackCommand) SetActive(active bool) {
 	cmd.Send(sel_setActive, active)
 }
