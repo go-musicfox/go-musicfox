@@ -172,25 +172,25 @@ archives:
       - go-musicfox-darwin-app-amd64
     name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_amd64.app"
     formats: [zip]
-    partial_to_file:
-      - path: "{{ .ProjectName }}.app/Contents/Info.plist"
-        source: deploy/musicfox.app/Contents/Info.plist
-      - path: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
-        source: deploy/musicfox.app/Contents/Resources/Musicfox.icns
-      - path: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
-        source: "{{ .Binary }}"
+    files:
+      - src: deploy/musicfox.app/Contents/Info.plist
+        dst: "{{ .ProjectName }}.app/Contents/Info.plist"
+      - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
+        dst: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
+      - src: "{{ .Binary }}"
+        dst: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
   - id: musicfox-darwin-app-arm64
     ids:
       - go-musicfox-darwin-app-arm64
     name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_arm64.app"
     formats: [zip]
-    partial_to_file:
-      - path: "{{ .ProjectName }}.app/Contents/Info.plist"
-        source: deploy/musicfox.app/Contents/Info.plist
-      - path: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
-        source: deploy/musicfox.app/Contents/Resources/Musicfox.icns
-      - path: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
-        source: "{{ .Binary }}"
+    files:
+      - src: deploy/musicfox.app/Contents/Info.plist
+        dst: "{{ .ProjectName }}.app/Contents/Info.plist"
+      - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
+        dst: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
+      - src: "{{ .Binary }}"
+        dst: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
 
 nfpms:
   - id: go-musicfox
