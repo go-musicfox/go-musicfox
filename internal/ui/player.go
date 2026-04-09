@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
-	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/playlist"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
@@ -40,8 +39,8 @@ type CtrlType string
 type CtrlSignal struct {
 	Type        CtrlType
 	Duration    time.Duration
-	RepeatType  mediaplayer.MPRepeatType
-	ShuffleType mediaplayer.MPShuffleType
+	RepeatType  any
+	ShuffleType any
 }
 
 const (
@@ -458,27 +457,31 @@ func (p *Player) cycleRepeat() {
 }
 
 // setRepeat sets the repeat mode directly based on MPRepeatType
-func (p *Player) setRepeat(repeatType mediaplayer.MPRepeatType) {
-	switch repeatType {
-	case mediaplayer.MPRepeatTypeOff:
+// repeatType should be int (0=off, 1=one, 2=all)
+func (p *Player) setRepeat(repeatType any) {
+	mode := int(repeatType.(int))
+	switch mode {
+	case 0: // MPRepeatTypeOff
 		p.SetMode(types.PmOrdered)
-	case mediaplayer.MPRepeatTypeOne:
+	case 1: // MPRepeatTypeOne
 		p.SetMode(types.PmSingleLoop)
-	case mediaplayer.MPRepeatTypeAll:
+	case 2: // MPRepeatTypeAll
 		p.SetMode(types.PmListLoop)
 	}
 }
 
 // setShuffle sets the shuffle mode directly based on MPShuffleType
-func (p *Player) setShuffle(shuffleType mediaplayer.MPShuffleType) {
-	switch shuffleType {
-	case mediaplayer.MPShuffleTypeOff:
+// shuffleType should be int (0=off, 1=items, 2=collections)
+func (p *Player) setShuffle(shuffleType any) {
+	mode := int(shuffleType.(int))
+	switch mode {
+	case 0: // MPShuffleTypeOff
 		// Keep current repeat mode but disable shuffle
-		mode := p.Mode()
-		if mode == types.PmListRandom {
+		currentMode := p.Mode()
+		if currentMode == types.PmListRandom {
 			p.SetMode(types.PmListLoop)
 		}
-	case mediaplayer.MPShuffleTypeItems, mediaplayer.MPShuffleTypeCollections:
+	case 1, 2: // MPShuffleTypeItems, MPShuffleTypeCollections
 		p.SetMode(types.PmListRandom)
 	}
 }

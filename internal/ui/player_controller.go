@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
 	"github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
@@ -155,11 +154,11 @@ func (p *Player) CtrlRepeat() {
 }
 
 // Deprecated: Only remote_control.Handler can call this method, others please use Player instead.
-func (p *Player) CtrlSetRepeat(mode mediaplayer.MPRepeatType) {
+func (p *Player) CtrlSetRepeat(mode any) {
 	p.ctrl <- CtrlSignal{Type: CtrlRepeat, RepeatType: mode}
 }
 
 // Deprecated: Only remote_control.Handler can call this method, others please use Player instead.
-func (p *Player) CtrlSetShuffle(mode mediaplayer.MPShuffleType) {
+func (p *Player) CtrlSetShuffle(mode any) {
 	p.ctrl <- CtrlSignal{Type: CtrlShuffle, ShuffleType: mode}
 }
