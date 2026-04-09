@@ -18,7 +18,7 @@ var (
 )
 
 var (
-	sel_valueForKey = objc.RegisterName("valueForKey:")
+	SEL_valueForKey = objc.RegisterName("valueForKey:")
 )
 
 type NSDictionary struct {
@@ -30,5 +30,5 @@ func NSDictionary_init() NSDictionary {
 }
 
 func (d NSDictionary) ValueForKey(key NSString) objc.ID {
-	return d.Send(sel_valueForKey, key.ID)
+	return d.Send(SEL_valueForKey, key.ID)
 }

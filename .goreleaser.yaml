@@ -121,6 +121,36 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
+  - id: go-musicfox-darwin-app-amd64
+    main: ./cmd/musicfox.go
+    binary: musicfox
+    goarch:
+      - amd64
+    goos:
+      - darwin
+    ldflags:
+      - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
+      - macapp
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+  - id: go-musicfox-darwin-app-arm64
+    main: ./cmd/musicfox.go
+    binary: musicfox
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    ldflags:
+      - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
+    tags:
+      - enable_global_hotkey
+      - macapp
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
 
 archives:
   - id: musicfox
@@ -137,6 +167,30 @@ archives:
     formats: [zip]
     files:
       - none*
+  - id: musicfox-darwin-app-amd64
+    ids:
+      - go-musicfox-darwin-app-amd64
+    name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_amd64.app"
+    formats: [zip]
+    partial_to_file:
+      - path: "{{ .ProjectName }}.app/Contents/Info.plist"
+        source: deploy/musicfox.app/Contents/Info.plist
+      - path: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
+        source: deploy/musicfox.app/Contents/Resources/Musicfox.icns
+      - path: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
+        source: "{{ .Binary }}"
+  - id: musicfox-darwin-app-arm64
+    ids:
+      - go-musicfox-darwin-app-arm64
+    name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_arm64.app"
+    formats: [zip]
+    partial_to_file:
+      - path: "{{ .ProjectName }}.app/Contents/Info.plist"
+        source: deploy/musicfox.app/Contents/Info.plist
+      - path: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
+        source: deploy/musicfox.app/Contents/Resources/Musicfox.icns
+      - path: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
+        source: "{{ .Binary }}"
 
 nfpms:
   - id: go-musicfox

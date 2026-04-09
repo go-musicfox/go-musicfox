@@ -1,3 +1,5 @@
+//go:build !macapp
+
 package notify
 
 import (
@@ -159,7 +161,7 @@ func Notify(content NotifyContent) {
 		call := notfiy.Call("org.freedesktop.Notifications.Notify", 0, types.AppName, uint32(0),
 			content.Icon, content.Title, content.Text, []string{},
 			map[string]dbus.Variant{}, int32(5000))
-		//Notify spec  https://specifications.freedesktop.org/notification-spec/1.3/protocol.html#command-notify
+		// Notify spec  https://specifications.freedesktop.org/notification-spec/1.3/protocol.html#command-notify
 		if call.Err != nil {
 			log.Printf("connect org.freedesktop.Notifications failed: %+v", errors.WithStack(call.Err))
 		}
@@ -215,7 +217,7 @@ func getLocalFileName(icon string) (string, error) {
 	fileName := hashed + ".jpg"
 	// Use /tmp/musicfox to temporarily store the album cover
 	localDir := filepath.Join(os.TempDir(), "musicfox")
-	err = os.MkdirAll(localDir, 0777)
+	err = os.MkdirAll(localDir, 0o777)
 	if err != nil {
 		return "", err
 	}
@@ -231,11 +233,11 @@ func useAppIcon(content *NotifyContent) {
 		return
 	}
 	if runtime.GOOS == "linux" {
-		content.Icon, _ = xdg.SearchDataFile("pixmaps/musicfox.png") //old systems,power by systems packing
-		//app need in XDG_DATA_DIRS hicolor 16 24 32 48 64 96 128 192 256 512
-		//icons/hicolor/scalable/apps can use  svg
-		//see https://specifications.freedesktop.org/icon-theme-spec/latest/#directory_layout
-		//and see https://gitlab.freedesktop.org/xdg/default-icon-theme
+		content.Icon, _ = xdg.SearchDataFile("pixmaps/musicfox.png") // old systems,power by systems packing
+		// app need in XDG_DATA_DIRS hicolor 16 24 32 48 64 96 128 192 256 512
+		// icons/hicolor/scalable/apps can use  svg
+		// see https://specifications.freedesktop.org/icon-theme-spec/latest/#directory_layout
+		// and see https://gitlab.freedesktop.org/xdg/default-icon-theme
 		sizeOne := [10]string{"16", "24", "32", "48", "64", "96", "128", "192", "256", "512"}
 		for _, size := range sizeOne {
 			sizexsize := size + "x" + size
@@ -246,10 +248,10 @@ func useAppIcon(content *NotifyContent) {
 			}
 		}
 		if content.Icon == "" {
-			content.Icon = filepath.Join(xdg.DataHome, "icons", "hicolor", "512x512", "apps", "musicfox.png") //user dir can write
+			content.Icon = filepath.Join(xdg.DataHome, "icons", "hicolor", "512x512", "apps", "musicfox.png") // user dir can write
 		}
 		if _, err := os.Stat(content.Icon); os.IsNotExist(err) {
-			err := os.MkdirAll(filepath.Join(xdg.DataHome, "icons", "hicolor", "512x512", "apps"), 0777)
+			err := os.MkdirAll(filepath.Join(xdg.DataHome, "icons", "hicolor", "512x512", "apps"), 0o777)
 			if err != nil {
 				log.Printf("\n filed to mkdir XDG_DATA_DIRS/icons/hicolor/512x512/apps  , err: %+v", errors.WithStack(err))
 			}

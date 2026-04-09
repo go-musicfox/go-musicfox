@@ -20,6 +20,7 @@ var (
 var (
 	sel_sharedWorkspace    = objc.RegisterName("sharedWorkspace")
 	sel_notificationCenter = objc.RegisterName("notificationCenter")
+	sel_openURL            = objc.RegisterName("openURL:")
 )
 
 type NSWorkspace struct {
@@ -37,4 +38,8 @@ func NSWorkspace_sharedWorkspace() NSWorkspace {
 func (w NSWorkspace) NotificationCenter() (nc NSNotificationCenter) {
 	nc.SetObjcID(w.Send(sel_notificationCenter))
 	return
+}
+
+func (w NSWorkspace) OpenURL(url core.NSURL) {
+	w.Send(sel_openURL, url.ID)
 }

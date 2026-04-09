@@ -66,6 +66,7 @@ func musicfox() {
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
 	app.Add(commands.NewMigrateCommand())
+	registerPlatformCommands(app)
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()
