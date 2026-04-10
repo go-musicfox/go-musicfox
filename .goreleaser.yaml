@@ -248,6 +248,14 @@ brews:
       owner: go-musicfox
       name: homebrew-go-musicfox
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    ids:
+      - go-musicfox-linux-amd64
+      - go-musicfox-linux-arm64
+      - go-musicfox-linux-arm
+      - go-musicfox-darwin-amd64
+      - go-musicfox-darwin-arm64
+      - go-musicfox-windows-amd64
+      - go-musicfox-windows-arm64
     url_template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/go-musicfox/go-musicfox"
     description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
@@ -278,11 +286,40 @@ homebrew_casks:
       owner: go-musicfox
       name: homebrew-go-musicfox
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    ids:
+      - go-musicfox-linux-amd64
+      - go-musicfox-linux-arm64
+      - go-musicfox-linux-arm
+      - go-musicfox-darwin-amd64
+      - go-musicfox-darwin-arm64
+      - go-musicfox-windows-amd64
+      - go-musicfox-windows-arm6
     binary: musicfox
     url:
       template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/go-musicfox/go-musicfox"
     description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
+    commit_author:
+      name: anhoder
+      email: anhoder@88.com
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Casks
+    hooks:
+      post:
+        install: |
+          system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/go-musicfox/go-musicfox \033[0m"
+  - name: "{{ .Env.HOMEBREW_NAME }}-macapp"
+    repository:
+      owner: go-musicfox
+      name: homebrew-go-musicfox
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    ids:
+      - go-musicfox-darwin-app-amd64
+      - go-musicfox-darwin-app-arm64
+    url:
+      template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://github.com/go-musicfox/go-musicfox"
+    description: "go-musicfox MacApp版本，使用Go编写的网易云音乐命令行程序。"
     commit_author:
       name: anhoder
       email: anhoder@88.com
