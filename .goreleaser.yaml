@@ -177,7 +177,7 @@ archives:
         dst: "{{ .ProjectName }}.app/Contents/Info.plist"
       - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
         dst: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
-      - src: "{{ .Binary }}"
+      - src: "dist/go-musicfox-darwin-app-amd64/{{ .Binary }}"
         dst: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
   - id: musicfox-darwin-app-arm64
     ids:
@@ -189,7 +189,7 @@ archives:
         dst: "{{ .ProjectName }}.app/Contents/Info.plist"
       - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
         dst: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
-      - src: "{{ .Binary }}"
+      - src: "dist/go-musicfox-darwin-app-arm64/{{ .Binary }}"
         dst: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
 
 nfpms:
