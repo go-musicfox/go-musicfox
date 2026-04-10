@@ -7,7 +7,7 @@ env:
 
 builds:
   - id: go-musicfox-linux-amd64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     env:
       - CC=x86_64-linux-gnu-gcc
@@ -24,7 +24,7 @@ builds:
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-linux-arm64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - arm64
@@ -41,7 +41,7 @@ builds:
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-linux-arm
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - arm
@@ -58,7 +58,7 @@ builds:
     ldflags:
       - -s -w -X github.com/go-musicfox/go-musicfox/internal/types.AppVersion={{.Tag}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmKey={{.Env.LASTFM_KEY}} -X github.com/go-musicfox/go-musicfox/internal/types.LastfmSecret={{.Env.LASTFM_SECRET}}
   - id: go-musicfox-windows-amd64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - amd64
@@ -76,7 +76,7 @@ builds:
       - LDFLAGS="-L/usr/local/mingw/x86_64-w64-mingw32/lib $LDFLAGS"
       - CGO_LDFLAGS="-L/usr/local/mingw/x86_64-w64-mingw32/lib $CGO_LDFLAGS"
   - id: go-musicfox-windows-arm64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - arm64
@@ -94,7 +94,7 @@ builds:
       - LDFLAGS="-L/usr/local/mingw/aarch64-w64-mingw32/lib $LDFLAGS"
       - CGO_LDFLAGS="-L/usr/local/mingw/aarch64-w64-mingw32/lib $CGO_LDFLAGS"
   - id: go-musicfox-darwin-amd64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - amd64
@@ -108,7 +108,7 @@ builds:
       - CC=o64-clang
       - CXX=o64-clang++
   - id: go-musicfox-darwin-arm64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - arm64
@@ -122,7 +122,7 @@ builds:
       - CC=oa64-clang
       - CXX=oa64-clang++
   - id: go-musicfox-darwin-app-amd64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - amd64
@@ -137,7 +137,7 @@ builds:
       - CC=o64-clang
       - CXX=o64-clang++
   - id: go-musicfox-darwin-app-arm64
-    main: ./cmd/musicfox.go
+    main: ./cmd
     binary: musicfox
     goarch:
       - arm64
