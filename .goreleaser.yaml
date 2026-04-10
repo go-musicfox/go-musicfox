@@ -174,11 +174,11 @@ archives:
     formats: [zip]
     files:
       - src: deploy/musicfox.app/Contents/Info.plist
-        dst: "{{ .ProjectName }}.app/Contents/Info.plist"
+        dst: "musicfox.app/Contents/Info.plist"
       - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
-        dst: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
-      - src: "dist/go-musicfox-darwin-app-amd64/{{ .Binary }}"
-        dst: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
+        dst: "musicfox.app/Contents/Resources/Musicfox.icns"
+      - src: "dist/go-musicfox-darwin-app-amd64_darwin_amd64_v1/{{ .Binary }}"
+        dst: "musicfox.app/Contents/MacOS/musicfox"
   - id: musicfox-darwin-app-arm64
     ids:
       - go-musicfox-darwin-app-arm64
@@ -186,11 +186,11 @@ archives:
     formats: [zip]
     files:
       - src: deploy/musicfox.app/Contents/Info.plist
-        dst: "{{ .ProjectName }}.app/Contents/Info.plist"
+        dst: "musicfox.app/Contents/Info.plist"
       - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
-        dst: "{{ .ProjectName }}.app/Contents/Resources/Musicfox.icns"
-      - src: "dist/go-musicfox-darwin-app-arm64/{{ .Binary }}"
-        dst: "{{ .ProjectName }}.app/Contents/MacOS/musicfox"
+        dst: "musicfox.app/Contents/Resources/Musicfox.icns"
+      - src: "dist/go-musicfox-darwin-app-arm64_darwin_arm64_v8.0/{{ .Binary }}"
+        dst: "musicfox.app/Contents/MacOS/musicfox"
 
 nfpms:
   - id: go-musicfox
