@@ -459,7 +459,13 @@ func (p *Player) cycleRepeat() {
 // setRepeat sets the repeat mode directly based on MPRepeatType
 // repeatType should be int (0=off, 1=one, 2=all)
 func (p *Player) setRepeat(repeatType any) {
-	mode := int(repeatType.(int))
+	if repeatType == nil {
+		return
+	}
+	mode, ok := repeatType.(int)
+	if !ok {
+		return
+	}
 	switch mode {
 	case 0: // MPRepeatTypeOff
 		p.SetMode(types.PmOrdered)
@@ -473,7 +479,13 @@ func (p *Player) setRepeat(repeatType any) {
 // setShuffle sets the shuffle mode directly based on MPShuffleType
 // shuffleType should be int (0=off, 1=items, 2=collections)
 func (p *Player) setShuffle(shuffleType any) {
-	mode := int(shuffleType.(int))
+	if shuffleType == nil {
+		return
+	}
+	mode, ok := shuffleType.(int)
+	if !ok {
+		return
+	}
 	switch mode {
 	case 0: // MPShuffleTypeOff
 		// Keep current repeat mode but disable shuffle
