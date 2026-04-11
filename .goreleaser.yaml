@@ -254,8 +254,6 @@ brews:
       - go-musicfox-linux-arm
       - go-musicfox-darwin-amd64
       - go-musicfox-darwin-arm64
-      - go-musicfox-windows-amd64
-      - go-musicfox-windows-arm64
     url_template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/go-musicfox/go-musicfox"
     description: "go-musicfox是musicfox的重写版，使用Go编写的网易云音乐命令行程序。"
@@ -292,8 +290,6 @@ homebrew_casks:
       - go-musicfox-linux-arm
       - go-musicfox-darwin-amd64
       - go-musicfox-darwin-arm64
-      - go-musicfox-windows-amd64
-      - go-musicfox-windows-arm6
     binary: musicfox
     url:
       template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
