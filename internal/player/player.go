@@ -63,8 +63,13 @@ func NewPlayerFromConfig() Player {
 			panic(fmt.Sprintf("MPV不可用: %v, 输出: %s", err, string(output)))
 		}
 		player = NewMpvPlayer(&MpvConfig{
-			BinPath: cfg.Player.Mpv.Bin, // 使用配置文件中的mpv路径
+			BinPath: cfg.Player.Mpv.Bin,
 		})
+	case types.DlnaPlayer:
+		if cfg.Player.Dlna.DeviceUrl == "" {
+			panic("缺少DLNA配置: deviceUrl")
+		}
+		player = NewDlnaPlayer(cfg.Player.Dlna.DeviceUrl)
 	default:
 		panic("unknown player engine")
 	}
