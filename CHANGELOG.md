@@ -1,4 +1,27 @@
 
+4.8.2
+=============
+2026-04-12
+
+* fix(ci): rename `.release-env` => `.release-env.example` (7896b401)
+* fix(ci): update goreleaser config (a3adc3b7)
+* chore: add .release-env (20a8f0c3)
+* fix(ci): update goreleaser config (64952f8b)
+* fix(ci): update goreleaser config (b7e9e822)
+* fix(ci): update goreleaser config (fb873ab1)
+* fix(ci): update goreleaser config (fbc4f7a5)
+* fix: 修复setRepeat崩溃和goreleaser构建问题 (#566) (a39c5096)
+* fix(ci): update goreleaser config (5b4f235e)
+* fix: goreleaser config err (a09a4001)
+* fix: goreleaser config err (73a9e6eb)
+* feat: support remote control play mode (8d3cfa5a)
+* feat(mac): macapp (3cd7455b)
+* fix: resolve song switching and MPRIS property update issues (#552) (f3195d02)
+* chore(deps): bump github.com/buger/jsonparser from 1.1.1 to 1.1.2 (#563) (c6e42ea6)
+* fix: 添加 mutex 保护 likelist map 并发访问 (#564) (80e9c131)
+* chore(ci): change opencode model (87540649)
+* chore: update scoop config & changelog (6d31699e)
+
 4.8.1
 =============
 2026-03-31

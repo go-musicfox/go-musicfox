@@ -1,3 +1,189 @@
+- semver: 4.8.2
+  date: 2026-04-12T23:11:30+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 7896b401d5f4d88f562d76acc088448c0132679d
+      note: 'fix(ci): rename `.release-env` => `.release-env.example`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a3adc3b7d49fc6635f7ab0b1afd9ace490036b36
+      note: 'fix(ci): update goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 20a8f0c38e85414ac9a2947768ebbf24c24dbf87
+      note: 'chore: add .release-env'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 64952f8b5e1c6a91769c3bc626bf2c002fdb76af
+      note: 'fix(ci): update goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b7e9e8220fb97700e99c20195ecff185521da7ad
+      note: 'fix(ci): update goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fb873ab15031bb8aa3db16fd030a0709c9e78fb1
+      note: 'fix(ci): update goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fbc4f7a5206895ebfd954daf65c65b3afe768592
+      note: 'fix(ci): update goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a39c5096c9acd515fcf6aac7d5de5f2f025de76d
+      note: |-
+        fix: 修复setRepeat崩溃和goreleaser构建问题 (#566)
+
+        * 修复setRepeat崩溃和goreleaser构建问题
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * chore: add comment
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@88.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 5b4f235e4bd20b8a4cbb4babf75e8d0069e70ea8
+      note: 'fix(ci): update goreleaser config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a09a40012decac6e8a49dd661eda2faaf9a5eb61
+      note: 'fix: goreleaser config err'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 73a9e6eb186a4a3c165ebbf9ada98d9cc866be0d
+      note: 'fix: goreleaser config err'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8d3cfa5af969c62e8d14a7899ab53eb6234e9d26
+      note: 'feat: support remote control play mode'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 3cd7455b25fb63e2a1726e81a421bd0ed081643b
+      note: 'feat(mac): macapp'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f3195d02a49ee914d140e6492cee46b3ce26aa44
+      note: |-
+        fix: resolve song switching and MPRIS property update issues (#552)
+
+        - Fix MPRIS Position property ReadOnly error and panic by making it internally writable and using Set instead of SetMust.
+        - Resolve Beep engine playback glitch where previous song would repeat at the start of a new song by unlinking the cache file before reuse.
+        - Add buffering to state, time, music, and control channels across all player engines and UI to prevent deadlocks and lost events during system slowness.
+
+        Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+        Co-authored-by: Aurora-Nasa-1 <183775324+Aurora-Nasa-1@users.noreply.github.com>
+      author:
+        name: AuroraNasa
+        email: b04031010@outlook.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c6e42ea6576196c5b4b6deb9b757a3868b254af7
+      note: |-
+        chore(deps): bump github.com/buger/jsonparser from 1.1.1 to 1.1.2 (#563)
+
+        Bumps [github.com/buger/jsonparser](https://github.com/buger/jsonparser) from 1.1.1 to 1.1.2.
+        - [Release notes](https://github.com/buger/jsonparser/releases)
+        - [Commits](https://github.com/buger/jsonparser/compare/v1.1.1...v1.1.2)
+
+        ---
+        updated-dependencies:
+        - dependency-name: github.com/buger/jsonparser
+          dependency-version: 1.1.2
+          dependency-type: direct:production
+        ...
+        Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 80e9c131bee695c3b5fc8df30291136d2f391b48
+      note: |-
+        fix: 添加 mutex 保护 likelist map 并发访问 (#564)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 87540649b1be946e3fb3d9663dfbdffbc6c16b6e
+      note: 'chore(ci): change opencode model'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6d31699eb7b663aebca8e040f6d3d07ac66ea2fc
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.8.1
   date: 2026-04-01T00:15:19+08:00
   packager: go-musicfox
