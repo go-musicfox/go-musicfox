@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,16 +32,42 @@ const playBody = `<u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
   <Speed>1</Speed>
 </u:Play>`
 
+const pauseBody = `<u:Pause xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+  <InstanceID>0</InstanceID>
+</u:Pause>`
+
+const stopBody = `<u:Stop xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+  <InstanceID>0</InstanceID>
+</u:Stop>`
+
+const seekBody = `<u:Seek xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+  <InstanceID>0</InstanceID>
+  <Unit>REL_TIME</Unit>
+  <Target>%s</Target>
+</u:Seek>`
+
+const getPositionInfoBody = `<u:GetPositionInfo xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+  <InstanceID>0</InstanceID>
+</u:GetPositionInfo>`
+
+const getTransportInfoBody = `<u:GetTransportInfo xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+  <InstanceID>0</InstanceID>
+</u:GetTransportInfo>`
+
 type dlnaPlayer struct {
 	deviceUrl  string
 	controlUrl string
 	audioUrl   string
+	audioDur   time.Duration
 	httpClient *http.Client
 	state      types.State
 	stateChan  chan types.State
 	musicChan  chan URLMusic
 	closed     chan struct{}
 	ready      chan struct{}
+
+	curPos   time.Duration
+	timeChan chan time.Duration
 }
 
 func NewDlnaPlayer(deviceUrl string) *dlnaPlayer {
@@ -52,6 +79,7 @@ func NewDlnaPlayer(deviceUrl string) *dlnaPlayer {
 		musicChan:  make(chan URLMusic, 10),
 		closed:     make(chan struct{}),
 		ready:      make(chan struct{}),
+		timeChan:   make(chan time.Duration, 1),
 	}
 	go p.initControlUrl()
 	return p
@@ -117,6 +145,76 @@ func (p *dlnaPlayer) initControlUrl() {
 	slog.Error("DLNA: AVTransport service not found")
 }
 
+func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
+	body := getPositionInfoBody
+	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
+	req, err := http.NewRequest("POST", p.controlUrl, bytes.NewBufferString(envelope))
+	if err != nil {
+		return 0, 0, err
+	}
+	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
+	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:AVTransport:1#GetPositionInfo"`)
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return 0, 0, fmt.Errorf("GetPositionInfo failed: %d", resp.StatusCode)
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	type positionInfoResponse struct {
+		Track         string `xml:"Track"`
+		TrackDuration string `xml:"TrackDuration"`
+		RelTime       string `xml:"RelTime"`
+		AbsTime       string `xml:"AbsTime"`
+		RelCount      string `xml:"RelCount"`
+		AbsCount      string `xml:"AbsCount"`
+	}
+
+	type envelopeResponse struct {
+		Body struct {
+			GetPositionInfoResponse positionInfoResponse `xml:"GetPositionInfoResponse"`
+		} `xml:"Body"`
+	}
+
+	var env envelopeResponse
+	if err := xml.Unmarshal(respBody, &env); err != nil {
+		slog.Debug("DLNA: failed to parse position info", "error", err, "body", string(respBody))
+		return 0, 0, err
+	}
+
+	curPos := parseTime(env.Body.GetPositionInfoResponse.RelTime)
+	totalDur := parseTime(env.Body.GetPositionInfoResponse.TrackDuration)
+
+	slog.Debug("DLNA: position info", "relTime", env.Body.GetPositionInfoResponse.RelTime, "trackDuration", env.Body.GetPositionInfoResponse.TrackDuration, "parsedCurPos", curPos, "parsedTotal", totalDur)
+
+	return curPos, totalDur, nil
+}
+
+func parseTime(t string) time.Duration {
+	if t == "" || t == "NOT_IMPLEMENTED" {
+		return 0
+	}
+	parts := strings.Split(t, ":")
+	if len(parts) != 3 {
+		return 0
+	}
+	h, _ := strconv.Atoi(parts[0])
+	m, _ := strconv.Atoi(parts[1])
+	f := strings.Split(parts[2], ".")
+	s, _ := strconv.Atoi(f[0])
+	var ms int
+	if len(f) > 1 {
+		ms, _ = strconv.Atoi(f[1])
+	}
+	return time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second + time.Duration(ms)*time.Millisecond
+}
+
 func (p *dlnaPlayer) soapRequest(action, body string) error {
 	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
 	req, err := http.NewRequest("POST", p.controlUrl, bytes.NewBufferString(envelope))
@@ -145,6 +243,7 @@ func (p *dlnaPlayer) soapRequest(action, body string) error {
 
 func (p *dlnaPlayer) Play(music URLMusic) {
 	p.audioUrl = music.URL
+	p.audioDur = music.Duration
 	p.musicChan <- music
 
 	select {
@@ -173,23 +272,71 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 
 	p.state = types.Playing
 	p.stateChan <- p.state
+
+	go p.pollPositionInfo()
+}
+
+func (p *dlnaPlayer) pollPositionInfo() {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			curPos, _, err := p.getPositionInfo()
+			if err == nil && curPos > 0 {
+				p.curPos = curPos
+				select {
+				case p.timeChan <- curPos:
+				default:
+				}
+			}
+		case <-p.closed:
+			return
+		}
+	}
 }
 
 func (p *dlnaPlayer) CurMusic() URLMusic {
-	return URLMusic{URL: p.audioUrl}
+	music := URLMusic{
+		URL: p.audioUrl,
+	}
+	music.Duration = p.audioDur
+	return music
 }
 
 func (p *dlnaPlayer) Pause() {
+	if p.controlUrl == "" {
+		return
+	}
+	if err := p.soapRequest("Pause", pauseBody); err != nil {
+		slog.Error("DLNA: Pause failed", "error", err)
+		return
+	}
 	p.state = types.Paused
 	p.stateChan <- p.state
 }
 
 func (p *dlnaPlayer) Resume() {
+	if p.controlUrl == "" {
+		return
+	}
+	if err := p.soapRequest("Play", playBody); err != nil {
+		slog.Error("DLNA: Resume failed", "error", err)
+		return
+	}
 	p.state = types.Playing
 	p.stateChan <- p.state
 }
 
 func (p *dlnaPlayer) Stop() {
+	if p.controlUrl == "" {
+		return
+	}
+	if err := p.soapRequest("Stop", stopBody); err != nil {
+		slog.Error("DLNA: Stop failed", "error", err)
+		return
+	}
+	p.curPos = 0
 	p.state = types.Stopped
 	p.stateChan <- p.state
 }
@@ -202,14 +349,24 @@ func (p *dlnaPlayer) Toggle() {
 	}
 }
 
-func (p *dlnaPlayer) Seek(duration time.Duration) {}
+func (p *dlnaPlayer) Seek(duration time.Duration) {
+	if p.controlUrl == "" {
+		return
+	}
+	seekTime := formatDuration(duration)
+	if err := p.soapRequest("Seek", fmt.Sprintf(seekBody, seekTime)); err != nil {
+		slog.Debug("DLNA: Seek not supported", "error", err)
+	}
+}
 
-func (p *dlnaPlayer) PassedTime() time.Duration { return 0 }
+func (p *dlnaPlayer) PassedTime() time.Duration {
+	return p.curPos
+}
 
 func (p *dlnaPlayer) PlayedTime() time.Duration { return 0 }
 
 func (p *dlnaPlayer) TimeChan() <-chan time.Duration {
-	return make(chan time.Duration)
+	return p.timeChan
 }
 
 func (p *dlnaPlayer) State() types.State { return p.state }
@@ -226,4 +383,12 @@ func (p *dlnaPlayer) DownVolume() {}
 
 func (p *dlnaPlayer) Close() {
 	close(p.closed)
+}
+
+func formatDuration(d time.Duration) string {
+	totalSeconds := d.Seconds()
+	hours := int(totalSeconds) / 3600
+	minutes := (int(totalSeconds) % 3600) / 60
+	seconds := totalSeconds - float64(hours*3600+minutes*60)
+	return fmt.Sprintf("%02d:%02d:%06.3f", hours, minutes, seconds)
 }
