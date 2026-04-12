@@ -68,6 +68,8 @@ type dlnaPlayer struct {
 
 	curPos   time.Duration
 	timeChan chan time.Duration
+
+	polling bool
 }
 
 func NewDlnaPlayer(deviceUrl string) *dlnaPlayer {
@@ -273,7 +275,10 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	p.state = types.Playing
 	p.stateChan <- p.state
 
-	go p.pollPositionInfo()
+	if !p.polling {
+		p.polling = true
+		go p.pollPositionInfo()
+	}
 }
 
 func (p *dlnaPlayer) pollPositionInfo() {
@@ -282,8 +287,14 @@ func (p *dlnaPlayer) pollPositionInfo() {
 	for {
 		select {
 		case <-ticker.C:
-			curPos, _, err := p.getPositionInfo()
-			if err == nil && curPos > 0 {
+			state, _ := p.getTransportInfo()
+			if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
+				p.state = types.Stopped
+				p.stateChan <- p.state
+				continue
+			}
+			curPos, _, _ := p.getPositionInfo()
+			if curPos > 0 {
 				p.curPos = curPos
 				select {
 				case p.timeChan <- curPos:
@@ -294,6 +305,45 @@ func (p *dlnaPlayer) pollPositionInfo() {
 			return
 		}
 	}
+}
+
+func (p *dlnaPlayer) getTransportInfo() (string, error) {
+	envelope := fmt.Sprintf(soapEnvelopeTpl, getTransportInfoBody)
+	req, err := http.NewRequest("POST", p.controlUrl, bytes.NewBufferString(envelope))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
+	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:AVTransport:1#GetTransportInfo"`)
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("GetTransportInfo failed: %d", resp.StatusCode)
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	type transportInfoResponse struct {
+		CurrentTransportState string `xml:"CurrentTransportState"`
+	}
+
+	type envelopeResponse struct {
+		Body struct {
+			GetTransportInfoResponse transportInfoResponse `xml:"GetTransportInfoResponse"`
+		} `xml:"Body"`
+	}
+
+	var env envelopeResponse
+	if err := xml.Unmarshal(respBody, &env); err != nil {
+		return "", err
+	}
+
+	return env.Body.GetTransportInfoResponse.CurrentTransportState, nil
 }
 
 func (p *dlnaPlayer) CurMusic() URLMusic {
