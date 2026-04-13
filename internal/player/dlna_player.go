@@ -103,7 +103,7 @@ func NewDlnaPlayer(deviceURL, localIP string) *dlnaPlayer {
 	p := &dlnaPlayer{
 		deviceURL:  deviceURL,
 		localIP:    localIP,
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{Timeout: 1 * time.Second},
 		state:      types.Stopped,
 		stateChan:  make(chan types.State, 10),
 		musicChan:  make(chan URLMusic, 10),
@@ -191,9 +191,6 @@ func (p *dlnaPlayer) initControlURL() {
 }
 
 func (p *dlnaPlayer) startHTTPServer() {
-	if p.localIP == "" {
-		panic("DLNA: localIP is required in config [player.dlna].localIP")
-	}
 	for i := 0; i < 10; i++ {
 		listener, err := net.Listen("tcp", p.localIP+":0")
 		if err != nil {
@@ -407,11 +404,6 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	if err := p.soapRequest("AVTransport", "SetAVTransportURI", fmt.Sprintf(setAvTransportURIBody, p.audioURL)); err != nil {
 		slog.Error("DLNA: SetAVTransportURI failed", "error", err)
 		return
-	}
-
-	// 同步获取当前位置，确保 PassedTime() 立即准确
-	if curPos, _, err := p.getPositionInfo(); err == nil {
-		p.curPos = curPos
 	}
 
 	slog.Info("DLNA: starting playback")
