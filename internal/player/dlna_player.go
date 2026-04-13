@@ -591,24 +591,13 @@ func (p *dlnaPlayer) getVolume() (int, error) {
 	return volume, nil
 }
 
-func (p *dlnaPlayer) setVolume(volume int) error {
-	body := fmt.Sprintf(setVolumeBody, volume)
-	_, _, err := p.renderControlSOAPRequest("SetVolume", body)
-	return err
-}
-
 func (p *dlnaPlayer) Volume() int {
 	return p.cachedVolume
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
-	if volume < 0 {
-		volume = 0
-	}
-	if volume > 100 {
-		volume = 100
-	}
-	if err := p.setVolume(volume); err != nil {
+	body := fmt.Sprintf(setVolumeBody, volume)
+	if err := p.soapRequest("RenderingControl", "SetVolume", body); err != nil {
 		slog.Error("DLNA: SetVolume failed", "error", err)
 		return
 	}
@@ -616,17 +605,11 @@ func (p *dlnaPlayer) SetVolume(volume int) {
 }
 
 func (p *dlnaPlayer) UpVolume() {
-	current := p.Volume()
-	if current < 100 {
-		p.SetVolume(current + 1)
-	}
+	p.SetVolume(p.Volume() + 1)
 }
 
 func (p *dlnaPlayer) DownVolume() {
-	current := p.Volume()
-	if current > 0 {
-		p.SetVolume(current - 1)
-	}
+	p.SetVolume(p.Volume() - 1)
 }
 
 func (p *dlnaPlayer) Close() {
