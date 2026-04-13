@@ -69,7 +69,10 @@ func NewPlayerFromConfig() Player {
 		if cfg.Player.Dlna.DeviceUrl == "" {
 			panic("缺少DLNA配置: deviceUrl")
 		}
-		player = NewDlnaPlayer(cfg.Player.Dlna.DeviceUrl)
+		if cfg.Player.Dlna.LocalIP == "" {
+			panic("缺少DLNA配置: localIP (必须指定本机局域网IP)")
+		}
+		player = NewDlnaPlayer(cfg.Player.Dlna.DeviceUrl, cfg.Player.Dlna.LocalIP)
 	default:
 		panic("unknown player engine")
 	}

@@ -3,12 +3,15 @@ package player
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -70,11 +73,18 @@ type dlnaPlayer struct {
 	timeChan chan time.Duration
 
 	polling bool
+
+	httpServer *http.Server
+	httpPort   int
+	localIP    string
+	fileMap    map[int64]string
+	fileMapMu  sync.RWMutex
 }
 
-func NewDlnaPlayer(deviceUrl string) *dlnaPlayer {
+func NewDlnaPlayer(deviceUrl, localIP string) *dlnaPlayer {
 	p := &dlnaPlayer{
 		deviceUrl:  deviceUrl,
+		localIP:    localIP,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		state:      types.Stopped,
 		stateChan:  make(chan types.State, 10),
@@ -82,7 +92,9 @@ func NewDlnaPlayer(deviceUrl string) *dlnaPlayer {
 		closed:     make(chan struct{}),
 		ready:      make(chan struct{}),
 		timeChan:   make(chan time.Duration, 1),
+		fileMap:    make(map[int64]string),
 	}
+	p.startHTTPServer()
 	go p.initControlUrl()
 	return p
 }
@@ -145,6 +157,40 @@ func (p *dlnaPlayer) initControlUrl() {
 		}
 	}
 	slog.Error("DLNA: AVTransport service not found")
+}
+
+func (p *dlnaPlayer) startHTTPServer() {
+	if p.localIP == "" {
+		panic("DLNA: localIP is required in config [player.dlna].localIP")
+	}
+	for i := 0; i < 10; i++ {
+		listener, err := net.Listen("tcp", p.localIP+":0")
+		if err != nil {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		p.httpPort = listener.Addr().(*net.TCPAddr).Port
+		mux := http.NewServeMux()
+		mux.HandleFunc("/dlna/", p.serveLocalFile)
+		p.httpServer = &http.Server{Handler: mux}
+		go func() {
+			if err := p.httpServer.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("DLNA: HTTP server error", "error", err)
+			}
+		}()
+		slog.Info("DLNA: HTTP server started", "bind", p.localIP, "port", p.httpPort)
+		return
+	}
+	panic("DLNA: failed to start HTTP server after 10 attempts")
+}
+
+func (p *dlnaPlayer) serveLocalFile(w http.ResponseWriter, r *http.Request) {
+	songIDStr := strings.TrimPrefix(r.URL.Path, "/dlna/")
+	songID, _ := strconv.ParseInt(songIDStr, 10, 64)
+	p.fileMapMu.RLock()
+	path := p.fileMap[songID]
+	p.fileMapMu.RUnlock()
+	http.ServeFile(w, r, path)
 }
 
 func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
@@ -244,7 +290,23 @@ func (p *dlnaPlayer) soapRequest(action, body string) error {
 }
 
 func (p *dlnaPlayer) Play(music URLMusic) {
-	p.audioUrl = music.URL
+	// 清理 fileMap，避免内存泄漏
+	p.fileMapMu.Lock()
+	p.fileMap = make(map[int64]string)
+	p.fileMapMu.Unlock()
+
+	audioURL := music.URL
+
+	if strings.HasPrefix(audioURL, "file://") {
+		localPath := strings.TrimPrefix(audioURL, "file://")
+		p.fileMapMu.Lock()
+		p.fileMap[music.Id] = localPath
+		p.fileMapMu.Unlock()
+		audioURL = fmt.Sprintf("http://%s:%d/dlna/%d", p.localIP, p.httpPort, music.Id)
+		slog.Debug("DLNA: converted file URL", "original", music.URL, "converted", audioURL)
+	}
+
+	p.audioUrl = audioURL
 	p.audioDur = music.Duration
 	p.musicChan <- music
 
@@ -433,6 +495,9 @@ func (p *dlnaPlayer) DownVolume() {}
 
 func (p *dlnaPlayer) Close() {
 	close(p.closed)
+	if p.httpServer != nil {
+		p.httpServer.Close()
+	}
 }
 
 func formatDuration(d time.Duration) string {

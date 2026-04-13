@@ -200,10 +200,23 @@ type Player interface {
 | 引擎 | 文件 | 平台 | 特点 |
 |------|------|------|------|
 | **Beep** | `beep_player.go` | 跨平台 | 默认，依赖 go-mp3/go-flac |
+| **DLNA** | `dlna_player.go` | 跨平台 | DLNA 设备投送，file:// URL 自动转为内置 HTTP server |
 | **MPV** | `mpv_player.go` | 跨平台 | IPC 控制，音视频分离 |
 | **MPD** | `mpd_player.go` | Linux | 远程 MPD 服务器 |
 | **AVFoundation** | `osx_player_darwin.go` | macOS | 原生系统集成 |
 | **MediaPlayer** | `win_media_player_windows.go` | Windows | WinRT API |
+
+**DLNA 配置**（`internal/configs/player.go`）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `deviceUrl` | string | DLNA 设备描述 URL |
+| `localIP` | string | 本机局域网 IP（用于内置 HTTP server） |
+
+**DLNA 特性**：
+- 支持 `file://` URL：自动启动内置 HTTP server，提供文件服务
+- 支持 `http://`/`https://` URL：直接透传给 DLNA 设备
+- 切换曲目时自动清理 fileMap，避免内存泄漏
 
 **音频格式支持**（`beep_decoder.go`）：
 - MP3（支持 minimp3 轻量解码器）
@@ -303,6 +316,7 @@ type Player interface {
 |------|------|
 | `internal/player/player.go` | 接口与工厂 |
 | `internal/player/beep_player.go` | Beep 引擎 |
+| `internal/player/dlna_player.go` | DLNA 引擎 |
 | `internal/player/mpv_player.go` | MPV 引擎 |
 | `internal/player/mpd_player.go` | MPD 引擎 |
 

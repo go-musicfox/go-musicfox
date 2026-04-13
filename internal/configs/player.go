@@ -62,6 +62,6 @@ type MpvConfig struct {
 
 // DlnaConfig `dlna` 引擎专属配置
 type DlnaConfig struct {
-	// 设备描述 URL
-	DeviceUrl string `koanf:"deviceUrl"`
+	DeviceUrl string `toml:"deviceUrl" mapstructure:"deviceUrl"`
+	LocalIP   string `toml:"localIP" mapstructure:"localIP"`
 }
