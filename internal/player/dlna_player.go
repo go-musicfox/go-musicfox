@@ -294,6 +294,15 @@ func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
 	return curPos, totalDur, nil
 }
 
+// sendState 非阻塞发送状态更新，带 2 秒超时
+func (p *dlnaPlayer) sendState() {
+	select {
+	case p.stateChan <- p.state:
+	case <-time.After(time.Second * 2):
+		slog.Warn("DLNA: stateChan send timeout, drop state update")
+	}
+}
+
 func (p *dlnaPlayer) Play(music URLMusic) {
 	// 清理 fileMap，避免内存泄漏
 	p.fileMapMu.Lock()
@@ -335,7 +344,7 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	}
 
 	p.state = types.Playing
-	p.stateChan <- p.state
+	p.sendState()
 
 	// 初始化播放计时
 	p.startTime = time.Now()
@@ -352,7 +361,7 @@ func (p *dlnaPlayer) pollState() {
 			state, _ := p.getTransportInfo()
 			if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
 				p.state = types.Stopped
-				p.stateChan <- p.state
+				p.sendState()
 				continue
 			}
 			curPos, _, _ := p.getPositionInfo()
@@ -414,7 +423,7 @@ func (p *dlnaPlayer) Pause() {
 		return
 	}
 	p.state = types.Paused
-	p.stateChan <- p.state
+	p.sendState()
 
 	// 记录暂停时刻
 	p.pauseStart = time.Now()
@@ -426,7 +435,7 @@ func (p *dlnaPlayer) Resume() {
 		return
 	}
 	p.state = types.Playing
-	p.stateChan <- p.state
+	p.sendState()
 
 	// 累加暂停时长
 	p.pausedTime += time.Since(p.pauseStart)
@@ -439,7 +448,7 @@ func (p *dlnaPlayer) Stop() {
 	}
 	p.curPos = 0
 	p.state = types.Stopped
-	p.stateChan <- p.state
+	p.sendState()
 
 	// 重置播放计时
 	p.startTime = time.Time{}
