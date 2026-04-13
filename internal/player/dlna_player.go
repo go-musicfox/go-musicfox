@@ -58,17 +58,29 @@ const getTransportInfoBody = `<u:GetTransportInfo xmlns:u="urn:schemas-upnp-org:
   <InstanceID>0</InstanceID>
 </u:GetTransportInfo>`
 
+const getVolumeBody = `<u:GetVolume xmlns:u="urn:schemas-upnp-org:service:RenderingControl:1">
+  <InstanceID>0</InstanceID>
+  <Channel>Master</Channel>
+</u:GetVolume>`
+
+const setVolumeBody = `<u:SetVolume xmlns:u="urn:schemas-upnp-org:service:RenderingControl:1">
+  <InstanceID>0</InstanceID>
+  <Channel>Master</Channel>
+  <DesiredVolume>%d</DesiredVolume>
+</u:SetVolume>`
+
 type dlnaPlayer struct {
-	deviceUrl  string
-	controlUrl string
-	audioUrl   string
-	audioDur   time.Duration
-	httpClient *http.Client
-	state      types.State
-	stateChan  chan types.State
-	musicChan  chan URLMusic
-	closed     chan struct{}
-	ready      chan struct{}
+	deviceUrl           string
+	controlUrl          string
+	renderingControlUrl string
+	audioUrl            string
+	audioDur            time.Duration
+	httpClient          *http.Client
+	state               types.State
+	stateChan           chan types.State
+	musicChan           chan URLMusic
+	closed              chan struct{}
+	ready               chan struct{}
 
 	curPos   time.Duration
 	timeChan chan time.Duration
@@ -147,17 +159,30 @@ func (p *dlnaPlayer) initControlUrl() {
 
 	for _, svc := range r.Device.Services {
 		slog.Debug("DLNA: found service", "type", svc.ServiceType, "controlUrl", svc.ControlURL)
-		if svc.ServiceType == "urn:schemas-upnp-org:service:AVTransport:1" {
+		switch svc.ServiceType {
+		case "urn:schemas-upnp-org:service:AVTransport:1":
 			controlUrl := svc.ControlURL
 			if controlUrl != "" && !bytes.HasPrefix([]byte(controlUrl), []byte("http")) {
 				controlUrl = base + controlUrl
 			}
 			p.controlUrl = controlUrl
 			slog.Info("DLNA: found AVTransport control URL", "url", controlUrl)
-			return
+		case "urn:schemas-upnp-org:service:RenderingControl:1":
+			controlUrl := svc.ControlURL
+			if controlUrl != "" && !bytes.HasPrefix([]byte(controlUrl), []byte("http")) {
+				controlUrl = base + controlUrl
+			}
+			p.renderingControlUrl = controlUrl
+			slog.Info("DLNA: found RenderingControl control URL", "url", controlUrl)
 		}
 	}
-	slog.Error("DLNA: AVTransport service not found")
+
+	if p.controlUrl == "" {
+		slog.Error("DLNA: AVTransport service not found")
+	}
+	if p.renderingControlUrl == "" {
+		slog.Error("DLNA: RenderingControl service not found")
+	}
 }
 
 func (p *dlnaPlayer) startHTTPServer() {
@@ -264,16 +289,28 @@ func parseTime(t string) time.Duration {
 	return time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second + time.Duration(ms)*time.Millisecond
 }
 
-func (p *dlnaPlayer) soapRequest(action, body string) error {
+func (p *dlnaPlayer) soapRequest(service, action, body string) error {
 	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
-	req, err := http.NewRequest("POST", p.controlUrl, bytes.NewBufferString(envelope))
+	var controlUrl string
+	switch service {
+	case "AVTransport":
+		controlUrl = p.controlUrl
+	case "RenderingControl":
+		controlUrl = p.renderingControlUrl
+	default:
+		return fmt.Errorf("unknown service: %s", service)
+	}
+	if controlUrl == "" {
+		return fmt.Errorf("control URL for service %s not available", service)
+	}
+	req, err := http.NewRequest("POST", controlUrl, bytes.NewBufferString(envelope))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
-	req.Header.Set("SOAPAction", fmt.Sprintf(`"urn:schemas-upnp-org:service:AVTransport:1#%s"`, action))
+	req.Header.Set("SOAPAction", fmt.Sprintf(`"urn:schemas-upnp-org:service:%s:1#%s"`, service, action))
 
-	slog.Debug("DLNA: SOAP request", "action", action, "url", p.controlUrl)
+	slog.Debug("DLNA: SOAP request", "action", action, "url", controlUrl)
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
 		slog.Error("DLNA: SOAP request failed", "action", action, "error", err)
@@ -354,13 +391,13 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	}
 
 	slog.Info("DLNA: setting AVTransport URI", "audioUrl", p.audioUrl)
-	if err := p.soapRequest("SetAVTransportURI", fmt.Sprintf(setAvTransportUriBody, p.audioUrl)); err != nil {
+	if err := p.soapRequest("AVTransport", "SetAVTransportURI", fmt.Sprintf(setAvTransportUriBody, p.audioUrl)); err != nil {
 		slog.Error("DLNA: SetAVTransportURI failed", "error", err)
 		return
 	}
 
 	slog.Info("DLNA: starting playback")
-	if err := p.soapRequest("Play", playBody); err != nil {
+	if err := p.soapRequest("AVTransport", "Play", playBody); err != nil {
 		slog.Error("DLNA: Play failed", "error", err)
 		return
 	}
@@ -455,7 +492,7 @@ func (p *dlnaPlayer) Pause() {
 	if p.controlUrl == "" {
 		return
 	}
-	if err := p.soapRequest("Pause", pauseBody); err != nil {
+	if err := p.soapRequest("AVTransport", "Pause", pauseBody); err != nil {
 		slog.Error("DLNA: Pause failed", "error", err)
 		return
 	}
@@ -470,7 +507,7 @@ func (p *dlnaPlayer) Resume() {
 	if p.controlUrl == "" {
 		return
 	}
-	if err := p.soapRequest("Play", playBody); err != nil {
+	if err := p.soapRequest("AVTransport", "Play", playBody); err != nil {
 		slog.Error("DLNA: Resume failed", "error", err)
 		return
 	}
@@ -482,7 +519,7 @@ func (p *dlnaPlayer) Stop() {
 	if p.controlUrl == "" {
 		return
 	}
-	if err := p.soapRequest("Stop", stopBody); err != nil {
+	if err := p.soapRequest("AVTransport", "Stop", stopBody); err != nil {
 		slog.Error("DLNA: Stop failed", "error", err)
 		return
 	}
@@ -507,7 +544,7 @@ func (p *dlnaPlayer) Seek(duration time.Duration) {
 		return
 	}
 	seekTime := formatDuration(duration)
-	if err := p.soapRequest("Seek", fmt.Sprintf(seekBody, seekTime)); err != nil {
+	if err := p.soapRequest("AVTransport", "Seek", fmt.Sprintf(seekBody, seekTime)); err != nil {
 		slog.Debug("DLNA: Seek not supported", "error", err)
 	}
 }
@@ -526,13 +563,111 @@ func (p *dlnaPlayer) State() types.State { return p.state }
 
 func (p *dlnaPlayer) StateChan() <-chan types.State { return p.stateChan }
 
-func (p *dlnaPlayer) Volume() int { return 0 }
+func (p *dlnaPlayer) getVolume() (int, error) {
+	if p.renderingControlUrl == "" {
+		return 0, errors.New("RenderingControl service not available")
+	}
+	body := getVolumeBody
+	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
+	req, err := http.NewRequest("POST", p.renderingControlUrl, bytes.NewBufferString(envelope))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
+	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:RenderingControl:1#GetVolume"`)
 
-func (p *dlnaPlayer) SetVolume(volume int) {}
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
 
-func (p *dlnaPlayer) UpVolume() {}
+	if resp.StatusCode >= 400 {
+		return 0, fmt.Errorf("GetVolume failed: %d", resp.StatusCode)
+	}
 
-func (p *dlnaPlayer) DownVolume() {}
+	respBody, _ := io.ReadAll(resp.Body)
+
+	type volumeResponse struct {
+		CurrentVolume string `xml:"CurrentVolume"`
+	}
+
+	type envelopeResponse struct {
+		Body struct {
+			GetVolumeResponse volumeResponse `xml:"GetVolumeResponse"`
+		} `xml:"Body"`
+	}
+
+	var env envelopeResponse
+	if err := xml.Unmarshal(respBody, &env); err != nil {
+		slog.Debug("DLNA: failed to parse volume", "error", err, "body", string(respBody))
+		return 0, err
+	}
+
+	volume, _ := strconv.Atoi(env.Body.GetVolumeResponse.CurrentVolume)
+	return volume, nil
+}
+
+func (p *dlnaPlayer) setVolume(volume int) error {
+	if p.renderingControlUrl == "" {
+		return errors.New("RenderingControl service not available")
+	}
+	body := fmt.Sprintf(setVolumeBody, volume)
+	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
+	req, err := http.NewRequest("POST", p.renderingControlUrl, bytes.NewBufferString(envelope))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
+	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:RenderingControl:1#SetVolume"`)
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("SetVolume failed: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (p *dlnaPlayer) Volume() int {
+	vol, err := p.getVolume()
+	if err != nil {
+		slog.Debug("DLNA: failed to get volume", "error", err)
+		return 0
+	}
+	return vol
+}
+
+func (p *dlnaPlayer) SetVolume(volume int) {
+	if volume < 0 {
+		volume = 0
+	}
+	if volume > 100 {
+		volume = 100
+	}
+	if err := p.setVolume(volume); err != nil {
+		slog.Error("DLNA: SetVolume failed", "error", err)
+	}
+}
+
+func (p *dlnaPlayer) UpVolume() {
+	current := p.Volume()
+	if current < 100 {
+		p.SetVolume(current + 1)
+	}
+}
+
+func (p *dlnaPlayer) DownVolume() {
+	current := p.Volume()
+	if current > 0 {
+		p.SetVolume(current - 1)
+	}
+}
 
 func (p *dlnaPlayer) Close() {
 	close(p.closed)
