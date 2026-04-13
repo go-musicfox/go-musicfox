@@ -85,8 +85,6 @@ type dlnaPlayer struct {
 	curPos   time.Duration
 	timeChan chan time.Duration
 
-	polling bool
-
 	httpServer *http.Server
 	httpPort   int
 	localIP    string
@@ -183,6 +181,9 @@ func (p *dlnaPlayer) initControlUrl() {
 	if p.renderingControlUrl == "" {
 		slog.Error("DLNA: RenderingControl service not found")
 	}
+
+	// 初始化完成後啟動輪詢，保持連接活躍
+	go p.pollPositionInfo()
 }
 
 func (p *dlnaPlayer) startHTTPServer() {
@@ -396,6 +397,11 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 		return
 	}
 
+	// 同步获取当前位置，确保 PassedTime() 立即准确
+	if curPos, _, err := p.getPositionInfo(); err == nil {
+		p.curPos = curPos
+	}
+
 	slog.Info("DLNA: starting playback")
 	if err := p.soapRequest("AVTransport", "Play", playBody); err != nil {
 		slog.Error("DLNA: Play failed", "error", err)
@@ -404,11 +410,6 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 
 	p.state = types.Playing
 	p.stateChan <- p.state
-
-	if !p.polling {
-		p.polling = true
-		go p.pollPositionInfo()
-	}
 }
 
 func (p *dlnaPlayer) pollPositionInfo() {
@@ -417,10 +418,7 @@ func (p *dlnaPlayer) pollPositionInfo() {
 	for {
 		select {
 		case <-ticker.C:
-			// 仅在播放状态时执行轮询
-			if !p.polling {
-				return
-			}
+			// 保持連接活躍：DLNA 設備空閒會關閉連接，需持續輪詢避免
 			state, _ := p.getTransportInfo()
 			if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
 				p.state = types.Stopped
@@ -498,9 +496,6 @@ func (p *dlnaPlayer) Pause() {
 	}
 	p.state = types.Paused
 	p.stateChan <- p.state
-
-	// 暂停时停止轮询
-	p.polling = false
 }
 
 func (p *dlnaPlayer) Resume() {
@@ -526,9 +521,6 @@ func (p *dlnaPlayer) Stop() {
 	p.curPos = 0
 	p.state = types.Stopped
 	p.stateChan <- p.state
-
-	// 停止时停止轮询
-	p.polling = false
 }
 
 func (p *dlnaPlayer) Toggle() {
