@@ -187,7 +187,7 @@ func (p *dlnaPlayer) initControlURL() {
 		slog.Error("DLNA: RenderingControl service not found")
 	}
 
-	// 初始化完成後啟動輪詢，保持連接活躍
+	// Start polling after initialization to keep connection alive
 	go p.pollState()
 }
 
@@ -275,7 +275,7 @@ func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
 	}
 
 	parse := func(t string) time.Duration {
-		if t == "" || t == "NOT_IMPLEMENTED" {
+		if t == "" || strings.HasPrefix(t, "NOT_IMPLEMENTED") {
 			return 0
 		}
 		parts := strings.Split(t, ":")
@@ -308,9 +308,11 @@ func (p *dlnaPlayer) sendState() {
 }
 
 func (p *dlnaPlayer) Play(music URLMusic) {
-	// 清理 fileMap，避免内存泄漏
+	// Clear fileMap to avoid memory leak
 	p.fileMapMu.Lock()
-	p.fileMap = make(map[int64]string)
+	for k := range p.fileMap {
+		delete(p.fileMap, k)
+	}
 	p.fileMapMu.Unlock()
 
 	audioURL := music.URL
@@ -522,12 +524,14 @@ func (p *dlnaPlayer) Volume() int {
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
-	body := fmt.Sprintf(setVolumeBody, volume)
-	if _, err := p.doSOAP("RenderingControl", "SetVolume", body); err != nil {
-		slog.Error("DLNA: SetVolume failed", "error", err)
-		return
+	if volume >= 0 && volume <= 100 && volume != p.cachedVolume {
+		body := fmt.Sprintf(setVolumeBody, volume)
+		if _, err := p.doSOAP("RenderingControl", "SetVolume", body); err != nil {
+			slog.Error("DLNA: SetVolume failed", "error", err)
+			return
+		}
+		p.cachedVolume = volume
 	}
-	p.cachedVolume = volume
 }
 
 func (p *dlnaPlayer) UpVolume() {
