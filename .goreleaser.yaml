@@ -180,6 +180,8 @@ archives:
         dst: "musicfox.app/Contents/Resources/Musicfox.icns"
       - src: "dist/{{ .ProjectName }}-{{ .Os }}-app-{{ .Arch }}_{{ .Target }}/{{ .Binary }}"
         dst: "musicfox.app/Contents/MacOS/musicfox"
+      - src: deploy/musicfox-app.wrapper.sh
+        dst: "musicfox.app/Contents/MacOS/musicfox-app.wrapper.sh"
 
 nfpms:
   - id: go-musicfox
@@ -292,7 +294,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     ids:
       - musicfox-darwin-app
-    binary: musicfox.app/Contents/MacOS/musicfox
+    binary: musicfox.app/Contents/MacOS/musicfox-app.wrapper.sh
     url:
       template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/go-musicfox/go-musicfox"
