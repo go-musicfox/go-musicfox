@@ -242,7 +242,11 @@ func (p *dlnaPlayer) doSOAP(service, action, body string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("DLNA: failed to close response body", "error", err)
+		}
+	}()
 
 	if resp.StatusCode >= 400 {
 		return nil, fmt.Errorf("soap request failed: %d", resp.StatusCode)
