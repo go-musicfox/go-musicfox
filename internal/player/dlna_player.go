@@ -182,7 +182,7 @@ func (p *dlnaPlayer) initControlURL() {
 	}
 
 	if p.controlURL == "" {
-		slog.Error("DLNA: AVTransport service not found")
+		panic("DLNA: AVTransport service not found or invalid")
 	}
 	if p.renderingControlURL == "" {
 		slog.Error("DLNA: RenderingControl service not found")
@@ -302,17 +302,12 @@ func parseTime(t string) time.Duration {
 
 func (p *dlnaPlayer) soapRequest(service, action, body string) error {
 	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
-	var controlURL string
-	switch service {
-	case "AVTransport":
-		controlURL = p.controlURL
-	case "RenderingControl":
+	controlURL := p.controlURL
+	if service == "RenderingControl" {
 		controlURL = p.renderingControlURL
-	default:
-		return fmt.Errorf("unknown service: %s", service)
-	}
-	if controlURL == "" {
-		return fmt.Errorf("control URL for service %s not available", service)
+		if controlURL == "" {
+			return fmt.Errorf("RenderingControl service not available")
+		}
 	}
 	req, err := http.NewRequest("POST", controlURL, bytes.NewBufferString(envelope))
 	if err != nil {
@@ -363,7 +358,7 @@ func (p *dlnaPlayer) waitForFileReady(path string) {
 		if isFileReady(path) {
 			return
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 }
 
@@ -397,11 +392,6 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	case <-p.ready:
 	case <-time.After(2 * time.Second):
 		slog.Error("DLNA: timeout waiting for control URL init")
-		return
-	}
-
-	if p.controlURL == "" {
-		slog.Error("DLNA: control URL not found")
 		return
 	}
 
@@ -505,9 +495,6 @@ func (p *dlnaPlayer) CurMusic() URLMusic {
 }
 
 func (p *dlnaPlayer) Pause() {
-	if p.controlURL == "" {
-		return
-	}
 	if err := p.soapRequest("AVTransport", "Pause", pauseBody); err != nil {
 		slog.Error("DLNA: Pause failed", "error", err)
 		return
@@ -517,9 +504,6 @@ func (p *dlnaPlayer) Pause() {
 }
 
 func (p *dlnaPlayer) Resume() {
-	if p.controlURL == "" {
-		return
-	}
 	if err := p.soapRequest("AVTransport", "Play", playBody); err != nil {
 		slog.Error("DLNA: Resume failed", "error", err)
 		return
@@ -529,9 +513,6 @@ func (p *dlnaPlayer) Resume() {
 }
 
 func (p *dlnaPlayer) Stop() {
-	if p.controlURL == "" {
-		return
-	}
 	if err := p.soapRequest("AVTransport", "Stop", stopBody); err != nil {
 		slog.Error("DLNA: Stop failed", "error", err)
 		return
@@ -550,9 +531,6 @@ func (p *dlnaPlayer) Toggle() {
 }
 
 func (p *dlnaPlayer) Seek(duration time.Duration) {
-	if p.controlURL == "" {
-		return
-	}
 	seekTime := formatDuration(duration)
 	if err := p.soapRequest("AVTransport", "Seek", fmt.Sprintf(seekBody, seekTime)); err != nil {
 		slog.Debug("DLNA: Seek not supported", "error", err)
