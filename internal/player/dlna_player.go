@@ -577,22 +577,21 @@ func (p *dlnaPlayer) State() types.State { return p.state }
 
 func (p *dlnaPlayer) StateChan() <-chan types.State { return p.stateChan }
 
-func (p *dlnaPlayer) getVolume() (int, error) {
+func (p *dlnaPlayer) renderControlSOAPRequest(action, body string) (*http.Response, []byte, error) {
 	if p.renderingControlURL == "" {
-		return 0, errors.New("RenderingControl service not available")
+		return nil, nil, errors.New("RenderingControl service not available")
 	}
-	body := getVolumeBody
 	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
 	req, err := http.NewRequest("POST", p.renderingControlURL, bytes.NewBufferString(envelope))
 	if err != nil {
-		return 0, err
+		return nil, nil, err
 	}
 	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
-	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:RenderingControl:1#GetVolume"`)
+	req.Header.Set("SOAPAction", fmt.Sprintf(`"urn:schemas-upnp-org:service:RenderingControl:1#%s"`, action))
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return 0, err
+		return nil, nil, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -601,15 +600,25 @@ func (p *dlnaPlayer) getVolume() (int, error) {
 	}()
 
 	if resp.StatusCode >= 400 {
-		return 0, fmt.Errorf("GetVolume failed: %d", resp.StatusCode)
+		return nil, nil, fmt.Errorf("%s failed: %d", action, resp.StatusCode)
 	}
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp, respBody, nil
+}
+
+func (p *dlnaPlayer) getVolume() (int, error) {
+	_, respBody, err := p.renderControlSOAPRequest("GetVolume", getVolumeBody)
+	if err != nil {
+		return 0, err
+	}
 
 	type volumeResponse struct {
 		CurrentVolume string `xml:"CurrentVolume"`
 	}
-
 	type envelopeResponse struct {
 		Body struct {
 			GetVolumeResponse volumeResponse `xml:"GetVolumeResponse"`
@@ -627,33 +636,9 @@ func (p *dlnaPlayer) getVolume() (int, error) {
 }
 
 func (p *dlnaPlayer) setVolume(volume int) error {
-	if p.renderingControlURL == "" {
-		return errors.New("RenderingControl service not available")
-	}
 	body := fmt.Sprintf(setVolumeBody, volume)
-	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
-	req, err := http.NewRequest("POST", p.renderingControlURL, bytes.NewBufferString(envelope))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
-	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:RenderingControl:1#SetVolume"`)
-
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("DLNA: failed to close response body", "error", err)
-		}
-	}()
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("SetVolume failed: %d", resp.StatusCode)
-	}
-
-	return nil
+	_, _, err := p.renderControlSOAPRequest("SetVolume", body)
+	return err
 }
 
 func (p *dlnaPlayer) Volume() int {
