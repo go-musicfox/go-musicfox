@@ -168,19 +168,12 @@ func (p *dlnaPlayer) initControlURL() {
 
 	for _, svc := range r.Device.Services {
 		slog.Debug("DLNA: found service", "type", svc.ServiceType, "controlURL", svc.ControlURL)
+		controlURL := p.normalizeURL(base, svc.ControlURL)
 		switch svc.ServiceType {
 		case "urn:schemas-upnp-org:service:AVTransport:1":
-			controlURL := svc.ControlURL
-			if controlURL != "" && !bytes.HasPrefix([]byte(controlURL), []byte("http")) {
-				controlURL = base + controlURL
-			}
 			p.controlURL = controlURL
 			slog.Info("DLNA: found AVTransport control URL", "url", controlURL)
 		case "urn:schemas-upnp-org:service:RenderingControl:1":
-			controlURL := svc.ControlURL
-			if controlURL != "" && !bytes.HasPrefix([]byte(controlURL), []byte("http")) {
-				controlURL = base + controlURL
-			}
 			p.renderingControlURL = controlURL
 			slog.Info("DLNA: found RenderingControl control URL", "url", controlURL)
 		}
@@ -231,19 +224,18 @@ func (p *dlnaPlayer) serveLocalFile(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
-	body := getPositionInfoBody
+func (p *dlnaPlayer) executeSOAPRequest(controlURL, action, body string) ([]byte, error) {
 	envelope := fmt.Sprintf(soapEnvelopeTpl, body)
-	req, err := http.NewRequest("POST", p.controlURL, bytes.NewBufferString(envelope))
+	req, err := http.NewRequest("POST", controlURL, bytes.NewBufferString(envelope))
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
-	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:AVTransport:1#GetPositionInfo"`)
+	req.Header.Set("SOAPAction", fmt.Sprintf(`"urn:schemas-upnp-org:service:%s"`, action))
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -252,10 +244,21 @@ func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
 	}()
 
 	if resp.StatusCode >= 400 {
-		return 0, 0, fmt.Errorf("GetPositionInfo failed: %d", resp.StatusCode)
+		return nil, fmt.Errorf("%s failed: %d", action, resp.StatusCode)
 	}
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return respBody, nil
+}
+
+func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
+	respBody, err := p.executeSOAPRequest(p.controlURL, "AVTransport:1#GetPositionInfo", getPositionInfoBody)
+	if err != nil {
+		return 0, 0, err
+	}
 
 	type positionInfoResponse struct {
 		Track         string `xml:"Track"`
@@ -454,29 +457,10 @@ func (p *dlnaPlayer) pollPositionInfo() {
 }
 
 func (p *dlnaPlayer) getTransportInfo() (string, error) {
-	envelope := fmt.Sprintf(soapEnvelopeTpl, getTransportInfoBody)
-	req, err := http.NewRequest("POST", p.controlURL, bytes.NewBufferString(envelope))
+	respBody, err := p.executeSOAPRequest(p.controlURL, "AVTransport:1#GetTransportInfo", getTransportInfoBody)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("Content-Type", `text/xml; charset="utf-8"`)
-	req.Header.Set("SOAPAction", `"urn:schemas-upnp-org:service:AVTransport:1#GetTransportInfo"`)
-
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("DLNA: failed to close response body", "error", err)
-		}
-	}()
-
-	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("GetTransportInfo failed: %d", resp.StatusCode)
-	}
-
-	respBody, _ := io.ReadAll(resp.Body)
 
 	type transportInfoResponse struct {
 		CurrentTransportState string `xml:"CurrentTransportState"`
@@ -494,6 +478,13 @@ func (p *dlnaPlayer) getTransportInfo() (string, error) {
 	}
 
 	return env.Body.GetTransportInfoResponse.CurrentTransportState, nil
+}
+
+func (p *dlnaPlayer) normalizeURL(base, controlURL string) string {
+	if controlURL != "" && !bytes.HasPrefix([]byte(controlURL), []byte("http")) {
+		controlURL = base + controlURL
+	}
+	return controlURL
 }
 
 func (p *dlnaPlayer) CurMusic() URLMusic {
