@@ -380,6 +380,10 @@ func (p *dlnaPlayer) pollPositionInfo() {
 	for {
 		select {
 		case <-ticker.C:
+			// 仅在播放状态时执行轮询
+			if !p.polling {
+				return
+			}
 			state, _ := p.getTransportInfo()
 			if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
 				p.state = types.Stopped
@@ -457,6 +461,9 @@ func (p *dlnaPlayer) Pause() {
 	}
 	p.state = types.Paused
 	p.stateChan <- p.state
+
+	// 暂停时停止轮询
+	p.polling = false
 }
 
 func (p *dlnaPlayer) Resume() {
@@ -482,6 +489,9 @@ func (p *dlnaPlayer) Stop() {
 	p.curPos = 0
 	p.state = types.Stopped
 	p.stateChan <- p.state
+
+	// 停止时停止轮询
+	p.polling = false
 }
 
 func (p *dlnaPlayer) Toggle() {
