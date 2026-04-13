@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -289,6 +290,31 @@ func (p *dlnaPlayer) soapRequest(action, body string) error {
 	return nil
 }
 
+func isFileReady(path string) bool {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	if fi.Size() == 0 {
+		return false
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	_ = f.Close()
+	return true
+}
+
+func (p *dlnaPlayer) waitForFileReady(path string) {
+	for i := 0; i < 10; i++ {
+		if isFileReady(path) {
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func (p *dlnaPlayer) Play(music URLMusic) {
 	// 清理 fileMap，避免内存泄漏
 	p.fileMapMu.Lock()
@@ -299,6 +325,11 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 
 	if strings.HasPrefix(audioURL, "file://") {
 		localPath := strings.TrimPrefix(audioURL, "file://")
+		p.waitForFileReady(localPath)
+		if !isFileReady(localPath) {
+			slog.Error("DLNA: cache file not ready", "path", localPath)
+			return
+		}
 		p.fileMapMu.Lock()
 		p.fileMap[music.Id] = localPath
 		p.fileMapMu.Unlock()
@@ -344,7 +375,7 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 }
 
 func (p *dlnaPlayer) pollPositionInfo() {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
