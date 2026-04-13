@@ -100,7 +100,7 @@ type dlnaPlayer struct {
 	cachedVolume int
 }
 
-func NewDlnaPlayer(deviceURL, localIP string) *dlnaPlayer {
+func NewDlnaPlayer(deviceURL, localIP string) (Player, error) {
 	p := &dlnaPlayer{
 		deviceURL:  deviceURL,
 		localIP:    localIP,
@@ -113,9 +113,14 @@ func NewDlnaPlayer(deviceURL, localIP string) *dlnaPlayer {
 		timeChan:   make(chan time.Duration, 1),
 		fileMap:    make(map[int64]string),
 	}
-	p.startHTTPServer()
-	go p.initControlURL()
-	return p
+	if err := p.startHTTPServer(); err != nil {
+		return nil, err
+	}
+	if err := p.initControlURL(); err != nil {
+		p.Close()
+		return nil, err
+	}
+	return p, nil
 }
 
 type dlnaRoot struct {
@@ -133,14 +138,14 @@ type dlnaService struct {
 	ControlURL  string `xml:"controlURL"`
 }
 
-func (p *dlnaPlayer) initControlURL() {
+func (p *dlnaPlayer) initControlURL() error {
 	defer close(p.ready)
 
 	slog.Debug("DLNA: fetching device description", "url", p.deviceURL)
 	resp, err := p.httpClient.Get(p.deviceURL)
 	if err != nil {
 		slog.Error("DLNA: failed to fetch device description", "error", err)
-		return
+		return err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -150,14 +155,14 @@ func (p *dlnaPlayer) initControlURL() {
 	xmlData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		slog.Error("DLNA: failed to read device description", "error", err)
-		return
+		return err
 	}
 
 	var r dlnaRoot
 	if err := xml.Unmarshal(xmlData, &r); err != nil {
 		slog.Error("DLNA: failed to parse device description", "error", err)
 		slog.Debug("DLNA: raw XML", "data", string(xmlData))
-		return
+		return err
 	}
 
 	base := r.URLBase
@@ -181,7 +186,7 @@ func (p *dlnaPlayer) initControlURL() {
 	}
 
 	if p.controlURL == "" {
-		panic("DLNA: AVTransport service not found or invalid")
+		return errors.New("DLNA: AVTransport service not found or invalid")
 	}
 	if p.renderingControlURL == "" {
 		slog.Error("DLNA: RenderingControl service not found")
@@ -189,9 +194,10 @@ func (p *dlnaPlayer) initControlURL() {
 
 	// Start polling after initialization to keep connection alive
 	go p.pollState()
+	return nil
 }
 
-func (p *dlnaPlayer) startHTTPServer() {
+func (p *dlnaPlayer) startHTTPServer() error {
 	for i := 0; i < 10; i++ {
 		listener, err := net.Listen("tcp", p.localIP+":0")
 		if err != nil {
@@ -208,9 +214,9 @@ func (p *dlnaPlayer) startHTTPServer() {
 			}
 		}()
 		slog.Info("DLNA: HTTP server started", "bind", p.localIP, "port", p.httpPort)
-		return
+		return nil
 	}
-	panic("DLNA: failed to start HTTP server after 10 attempts")
+	return errors.New("DLNA: failed to start HTTP server after 10 attempts")
 }
 
 func (p *dlnaPlayer) serveLocalFile(w http.ResponseWriter, r *http.Request) {
