@@ -92,6 +92,11 @@ type dlnaPlayer struct {
 	localIP    string
 	fileMap    map[int64]string
 	fileMapMu  sync.RWMutex
+
+	startTime     time.Time
+	pausedTime    time.Duration
+	pauseStart    time.Time
+	wasEverPlayed bool
 }
 
 func NewDlnaPlayer(deviceURL, localIP string) *dlnaPlayer {
@@ -414,6 +419,11 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 
 	p.state = types.Playing
 	p.stateChan <- p.state
+
+	// 初始化播放计时
+	p.startTime = time.Now()
+	p.pausedTime = 0
+	p.wasEverPlayed = true
 }
 
 func (p *dlnaPlayer) pollPositionInfo() {
@@ -501,6 +511,9 @@ func (p *dlnaPlayer) Pause() {
 	}
 	p.state = types.Paused
 	p.stateChan <- p.state
+
+	// 记录暂停时刻
+	p.pauseStart = time.Now()
 }
 
 func (p *dlnaPlayer) Resume() {
@@ -510,6 +523,9 @@ func (p *dlnaPlayer) Resume() {
 	}
 	p.state = types.Playing
 	p.stateChan <- p.state
+
+	// 累加暂停时长
+	p.pausedTime += time.Since(p.pauseStart)
 }
 
 func (p *dlnaPlayer) Stop() {
@@ -520,6 +536,11 @@ func (p *dlnaPlayer) Stop() {
 	p.curPos = 0
 	p.state = types.Stopped
 	p.stateChan <- p.state
+
+	// 重置播放计时
+	p.startTime = time.Time{}
+	p.pausedTime = 0
+	p.wasEverPlayed = false
 }
 
 func (p *dlnaPlayer) Toggle() {
@@ -541,7 +562,12 @@ func (p *dlnaPlayer) PassedTime() time.Duration {
 	return p.curPos
 }
 
-func (p *dlnaPlayer) PlayedTime() time.Duration { return 0 }
+func (p *dlnaPlayer) PlayedTime() time.Duration {
+	if !p.wasEverPlayed {
+		return 0
+	}
+	return time.Since(p.startTime) - p.pausedTime
+}
 
 func (p *dlnaPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
