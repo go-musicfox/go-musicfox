@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -97,6 +96,8 @@ type dlnaPlayer struct {
 	pausedTime    time.Duration
 	pauseStart    time.Time
 	wasEverPlayed bool
+
+	cachedVolume int
 }
 
 func NewDlnaPlayer(deviceURL, localIP string) *dlnaPlayer {
@@ -187,7 +188,7 @@ func (p *dlnaPlayer) initControlURL() {
 	}
 
 	// 初始化完成後啟動輪詢，保持連接活躍
-	go p.pollPositionInfo()
+	go p.pollState()
 }
 
 func (p *dlnaPlayer) startHTTPServer() {
@@ -342,31 +343,6 @@ func (p *dlnaPlayer) soapRequest(service, action, body string) error {
 	return nil
 }
 
-func isFileReady(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	if fi.Size() == 0 {
-		return false
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	_ = f.Close()
-	return true
-}
-
-func (p *dlnaPlayer) waitForFileReady(path string) {
-	for i := 0; i < 10; i++ {
-		if isFileReady(path) {
-			return
-		}
-		time.Sleep(3 * time.Second)
-	}
-}
-
 func (p *dlnaPlayer) Play(music URLMusic) {
 	// 清理 fileMap，避免内存泄漏
 	p.fileMapMu.Lock()
@@ -377,11 +353,6 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 
 	if strings.HasPrefix(audioURL, "file://") {
 		localPath := strings.TrimPrefix(audioURL, "file://")
-		p.waitForFileReady(localPath)
-		if !isFileReady(localPath) {
-			slog.Error("DLNA: cache file not ready", "path", localPath)
-			return
-		}
 		p.fileMapMu.Lock()
 		p.fileMap[music.Id] = localPath
 		p.fileMapMu.Unlock()
@@ -421,13 +392,12 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	p.wasEverPlayed = true
 }
 
-func (p *dlnaPlayer) pollPositionInfo() {
+func (p *dlnaPlayer) pollState() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			// 保持連接活躍：DLNA 設備空閒會關閉連接，需持續輪詢避免
 			state, _ := p.getTransportInfo()
 			if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
 				p.state = types.Stopped
@@ -441,6 +411,9 @@ func (p *dlnaPlayer) pollPositionInfo() {
 				case p.timeChan <- curPos:
 				default:
 				}
+			}
+			if vol, err := p.getVolume(); err == nil {
+				p.cachedVolume = vol
 			}
 		case <-p.closed:
 			return
@@ -625,12 +598,7 @@ func (p *dlnaPlayer) setVolume(volume int) error {
 }
 
 func (p *dlnaPlayer) Volume() int {
-	vol, err := p.getVolume()
-	if err != nil {
-		slog.Debug("DLNA: failed to get volume", "error", err)
-		return 0
-	}
-	return vol
+	return p.cachedVolume
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
@@ -642,7 +610,9 @@ func (p *dlnaPlayer) SetVolume(volume int) {
 	}
 	if err := p.setVolume(volume); err != nil {
 		slog.Error("DLNA: SetVolume failed", "error", err)
+		return
 	}
+	p.cachedVolume = volume
 }
 
 func (p *dlnaPlayer) UpVolume() {
