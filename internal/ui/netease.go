@@ -67,6 +67,7 @@ func NewNetease(app *model.App) *Netease {
 	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
 	nameGen := composer.NewFileNameGenerator()
 	nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
+	nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
 	n.trackManager = track.NewManager(
 		track.WithNameGenerator(nameGen),
 		track.WithCacher(track.NewCacher(maxSizeMB)),
