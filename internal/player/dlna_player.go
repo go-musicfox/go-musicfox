@@ -426,7 +426,7 @@ func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
 	return curPos, totalDur, nil
 }
 
-// sendState 非阻塞发送状态更新，带 2 秒超时
+// sendState sends state update non-blockingly, with 2 second timeout
 func (p *dlnaPlayer) sendState() {
 	select {
 	case p.stateChan <- p.state:
