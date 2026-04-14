@@ -70,6 +70,23 @@ const setVolumeBody = `<u:SetVolume xmlns:u="urn:schemas-upnp-org:service:Render
   <DesiredVolume>%d</DesiredVolume>
 </u:SetVolume>`
 
+type cmdType int
+
+const (
+	cmdPlay cmdType = iota
+	cmdPause
+	cmdResume
+	cmdStop
+	cmdSeek
+	cmdSetVolume
+)
+
+type command struct {
+	cmd    cmdType
+	param  any
+	result chan<- any
+}
+
 type dlnaPlayer struct {
 	deviceURL           string
 	controlURL          string
@@ -79,9 +96,8 @@ type dlnaPlayer struct {
 	httpClient          *http.Client
 	state               types.State
 	stateChan           chan types.State
-	musicChan           chan URLMusic
 	closed              chan struct{}
-	ready               chan struct{}
+	cmdQueue            chan command
 
 	curPos   time.Duration
 	timeChan chan time.Duration
@@ -107,11 +123,10 @@ func NewDlnaPlayer(deviceURL, localIP string) (Player, error) {
 		httpClient: &http.Client{Timeout: 1 * time.Second},
 		state:      types.Stopped,
 		stateChan:  make(chan types.State, 10),
-		musicChan:  make(chan URLMusic, 10),
 		closed:     make(chan struct{}),
-		ready:      make(chan struct{}),
 		timeChan:   make(chan time.Duration, 1),
 		fileMap:    make(map[int64]string),
+		cmdQueue:   make(chan command, 10),
 	}
 	if err := p.startHTTPServer(); err != nil {
 		return nil, err
@@ -120,6 +135,7 @@ func NewDlnaPlayer(deviceURL, localIP string) (Player, error) {
 		p.Close()
 		return nil, err
 	}
+	go p.worker()
 	return p, nil
 }
 
@@ -139,8 +155,6 @@ type dlnaService struct {
 }
 
 func (p *dlnaPlayer) initControlURL() error {
-	defer close(p.ready)
-
 	slog.Debug("DLNA: fetching device description", "url", p.deviceURL)
 	resp, err := p.httpClient.Get(p.deviceURL)
 	if err != nil {
@@ -192,9 +206,117 @@ func (p *dlnaPlayer) initControlURL() error {
 		slog.Error("DLNA: RenderingControl service not found")
 	}
 
-	// Start polling after initialization to keep connection alive
-	go p.pollState()
 	return nil
+}
+
+func (p *dlnaPlayer) worker() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			p.pollStateTask()
+		case cmd := <-p.cmdQueue:
+			p.executeCmd(cmd)
+		case <-p.closed:
+			return
+		}
+	}
+}
+
+func (p *dlnaPlayer) pollStateTask() {
+	state, _ := p.getTransportInfo()
+	if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
+		p.state = types.Stopped
+		p.sendState()
+		return
+	}
+	curPos, _, _ := p.getPositionInfo()
+	if curPos > 0 {
+		p.curPos = curPos
+		select {
+		case p.timeChan <- curPos:
+		default:
+		}
+	}
+	if vol, err := p.getVolume(); err == nil {
+		p.cachedVolume = vol
+	}
+}
+
+func (p *dlnaPlayer) executeCmd(cmd command) {
+	switch cmd.cmd {
+	case cmdPlay:
+		music := cmd.param.(URLMusic)
+		p.audioURL = music.URL
+		p.audioDur = music.Duration
+		p.fileMapMu.Lock()
+		for k := range p.fileMap {
+			delete(p.fileMap, k)
+		}
+		p.fileMapMu.Unlock()
+		audioURL := music.URL
+		if strings.HasPrefix(audioURL, "file://") {
+			localPath := strings.TrimPrefix(audioURL, "file://")
+			p.fileMapMu.Lock()
+			p.fileMap[music.Id] = localPath
+			p.fileMapMu.Unlock()
+			audioURL = fmt.Sprintf("http://%s:%d/dlna/%d", p.localIP, p.httpPort, music.Id)
+		}
+		p.audioURL = audioURL
+
+		slog.Info("DLNA: setting AVTransport URI", "audioURL", p.audioURL)
+		p.doSOAP("AVTransport", "SetAVTransportURI", fmt.Sprintf(setAvTransportURIBody, p.audioURL))
+
+		slog.Info("DLNA: starting playback")
+		p.doSOAP("AVTransport", "Play", playBody)
+
+		p.state = types.Playing
+		p.sendState()
+		p.startTime = time.Now()
+		p.pausedTime = 0
+		p.wasEverPlayed = true
+		cmd.result <- true
+
+	case cmdPause:
+		p.doSOAP("AVTransport", "Pause", pauseBody)
+		p.state = types.Paused
+		p.sendState()
+		p.pauseStart = time.Now()
+		cmd.result <- true
+
+	case cmdResume:
+		p.doSOAP("AVTransport", "Play", playBody)
+		p.state = types.Playing
+		p.sendState()
+		p.pausedTime += time.Since(p.pauseStart)
+		cmd.result <- true
+
+	case cmdStop:
+		p.doSOAP("AVTransport", "Stop", stopBody)
+		p.curPos = 0
+		p.state = types.Stopped
+		p.sendState()
+		p.startTime = time.Time{}
+		p.pausedTime = 0
+		p.wasEverPlayed = false
+		cmd.result <- true
+
+	case cmdSeek:
+		duration := cmd.param.(time.Duration)
+		seekTime := formatDuration(duration)
+		p.doSOAP("AVTransport", "Seek", fmt.Sprintf(seekBody, seekTime))
+		cmd.result <- true
+
+	case cmdSetVolume:
+		volume := cmd.param.(int)
+		if volume >= 0 && volume <= 100 && volume != p.cachedVolume {
+			body := fmt.Sprintf(setVolumeBody, volume)
+			p.doSOAP("RenderingControl", "SetVolume", body)
+			p.cachedVolume = volume
+		}
+		cmd.result <- true
+	}
 }
 
 func (p *dlnaPlayer) startHTTPServer() error {
@@ -314,83 +436,13 @@ func (p *dlnaPlayer) sendState() {
 }
 
 func (p *dlnaPlayer) Play(music URLMusic) {
-	// Clear fileMap to avoid memory leak
-	p.fileMapMu.Lock()
-	for k := range p.fileMap {
-		delete(p.fileMap, k)
+	result := make(chan any)
+	p.cmdQueue <- command{
+		cmd:    cmdPlay,
+		param:  music,
+		result: result,
 	}
-	p.fileMapMu.Unlock()
-
-	audioURL := music.URL
-
-	if strings.HasPrefix(audioURL, "file://") {
-		localPath := strings.TrimPrefix(audioURL, "file://")
-		p.fileMapMu.Lock()
-		p.fileMap[music.Id] = localPath
-		p.fileMapMu.Unlock()
-		audioURL = fmt.Sprintf("http://%s:%d/dlna/%d", p.localIP, p.httpPort, music.Id)
-		slog.Debug("DLNA: converted file URL", "original", music.URL, "converted", audioURL)
-	}
-
-	p.audioURL = audioURL
-	p.audioDur = music.Duration
-	p.musicChan <- music
-
-	select {
-	case <-p.ready:
-	case <-time.After(2 * time.Second):
-		slog.Error("DLNA: timeout waiting for control URL init")
-		return
-	}
-
-	slog.Info("DLNA: setting AVTransport URI", "audioURL", p.audioURL)
-	if _, err := p.doSOAP("AVTransport", "SetAVTransportURI", fmt.Sprintf(setAvTransportURIBody, p.audioURL)); err != nil {
-		slog.Error("DLNA: SetAVTransportURI failed", "error", err)
-		return
-	}
-
-	slog.Info("DLNA: starting playback")
-	if _, err := p.doSOAP("AVTransport", "Play", playBody); err != nil {
-		slog.Error("DLNA: Play failed", "error", err)
-		return
-	}
-
-	p.state = types.Playing
-	p.sendState()
-
-	// 初始化播放计时
-	p.startTime = time.Now()
-	p.pausedTime = 0
-	p.wasEverPlayed = true
-}
-
-func (p *dlnaPlayer) pollState() {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			state, _ := p.getTransportInfo()
-			if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
-				p.state = types.Stopped
-				p.sendState()
-				continue
-			}
-			curPos, _, _ := p.getPositionInfo()
-			if curPos > 0 {
-				p.curPos = curPos
-				select {
-				case p.timeChan <- curPos:
-				default:
-				}
-			}
-			if vol, err := p.getVolume(); err == nil {
-				p.cachedVolume = vol
-			}
-		case <-p.closed:
-			return
-		}
-	}
+	<-result
 }
 
 func (p *dlnaPlayer) getTransportInfo() (string, error) {
@@ -430,42 +482,21 @@ func (p *dlnaPlayer) CurMusic() URLMusic {
 }
 
 func (p *dlnaPlayer) Pause() {
-	if _, err := p.doSOAP("AVTransport", "Pause", pauseBody); err != nil {
-		slog.Error("DLNA: Pause failed", "error", err)
-		return
-	}
-	p.state = types.Paused
-	p.sendState()
-
-	// 记录暂停时刻
-	p.pauseStart = time.Now()
+	result := make(chan any)
+	p.cmdQueue <- command{cmd: cmdPause, result: result}
+	<-result
 }
 
 func (p *dlnaPlayer) Resume() {
-	if _, err := p.doSOAP("AVTransport", "Play", playBody); err != nil {
-		slog.Error("DLNA: Resume failed", "error", err)
-		return
-	}
-	p.state = types.Playing
-	p.sendState()
-
-	// 累加暂停时长
-	p.pausedTime += time.Since(p.pauseStart)
+	result := make(chan any)
+	p.cmdQueue <- command{cmd: cmdResume, result: result}
+	<-result
 }
 
 func (p *dlnaPlayer) Stop() {
-	if _, err := p.doSOAP("AVTransport", "Stop", stopBody); err != nil {
-		slog.Error("DLNA: Stop failed", "error", err)
-		return
-	}
-	p.curPos = 0
-	p.state = types.Stopped
-	p.sendState()
-
-	// 重置播放计时
-	p.startTime = time.Time{}
-	p.pausedTime = 0
-	p.wasEverPlayed = false
+	result := make(chan any)
+	p.cmdQueue <- command{cmd: cmdStop, result: result}
+	<-result
 }
 
 func (p *dlnaPlayer) Toggle() {
@@ -477,10 +508,9 @@ func (p *dlnaPlayer) Toggle() {
 }
 
 func (p *dlnaPlayer) Seek(duration time.Duration) {
-	seekTime := formatDuration(duration)
-	if _, err := p.doSOAP("AVTransport", "Seek", fmt.Sprintf(seekBody, seekTime)); err != nil {
-		slog.Debug("DLNA: Seek not supported", "error", err)
-	}
+	result := make(chan any)
+	p.cmdQueue <- command{cmd: cmdSeek, param: duration, result: result}
+	<-result
 }
 
 func (p *dlnaPlayer) PassedTime() time.Duration {
@@ -530,14 +560,9 @@ func (p *dlnaPlayer) Volume() int {
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
-	if volume >= 0 && volume <= 100 && volume != p.cachedVolume {
-		body := fmt.Sprintf(setVolumeBody, volume)
-		if _, err := p.doSOAP("RenderingControl", "SetVolume", body); err != nil {
-			slog.Error("DLNA: SetVolume failed", "error", err)
-			return
-		}
-		p.cachedVolume = volume
-	}
+	result := make(chan any)
+	p.cmdQueue <- command{cmd: cmdSetVolume, param: volume, result: result}
+	<-result
 }
 
 func (p *dlnaPlayer) UpVolume() {
