@@ -29,312 +29,158 @@
 "This PR fixes the performance issue with lyric cover cornerRadius feature..."
 ```
 
+## 编码行为准则
+
+本准则旨在减少 AI 编码常见的错误。**权衡原则**：这些准则偏向谨慎而非速度，对于简单任务可自行判断。
+
+> 本准则改编自 [andrej-karpathy-skills/CLAUDE.md](https://github.com/forrestchang/andrej-karpathy-skills/blob/main/CLAUDE.md)
+
+### 1. 三思而后行
+
+**不要假设。不要隐藏困惑。明确权衡。**
+
+在实现之前：
+- 明确陈述你的假设。如果不确定，先问。
+- 如果存在多种解释方案，全部提出——不要默默选择一个。
+- 如果存在更简单的方案，指出它。有理由时可以反驳。
+- 如果有不清楚的地方，停下来。说出哪里不清楚，然后问。
+
+### 2. 简单性优先
+
+**最小代码解决问题。不要 speculative。**
+
+- 不添加需求之外的功能。
+- 一次性使用的代码不抽象。
+- 不添加未被请求的"灵活性"或"可配置性"。
+- 不处理不可能发生的错误场景。
+- 如果写了 200 行而可以用 50 行完成，重写。
+
+问自己："高级工程师会觉得这过于复杂吗？"如果是，简化。
+
+### 3. 精准修改
+
+**只触碰必须改的。只清理自己造成的混乱。**
+
+编辑现有代码时：
+- 不"改进"相邻代码、注释或格式。
+- 不重构没坏的东西。
+- 匹配现有风格，即使你可能用不同方式实现。
+- 如果发现无关的死代码，指出它——不要删除它。
+
+当你的修改产生孤儿（不再使用的代码）时：
+- 移除因你的修改而不再使用的 import/变量/函数。
+- 不要移除预先存在的死代码，除非被要求。
+
+**检验标准**：每一行修改都应该能直接追溯到用户的请求。
+
+### 4. 目标驱动执行
+
+**定义成功标准。循环验证直到完成。**
+
+将任务转化为可验证的目标：
+
+| 模糊表述 | 可验证目标 |
+|---------|-----------|
+| "添加验证" | "为无效输入编写测试，然后让测试通过" |
+| "修复 bug" | "编写能复现问题的测试，然后让测试通过" |
+| "重构 X" | "确保重构前后测试都通过" |
+
+对于多步骤任务，简要陈述计划：
+
+```
+1. [步骤] → 验证: [检查点]
+2. [步骤] → 验证: [检查点]
+3. [步骤] → 验证: [检查点]
+```
+
+明确的目标让你能独立循环验证。模糊的目标（"让它能工作"）需要不断确认。
+
+---
+
+**这些准则生效的标志**：diff 中不必要的修改更少，因过度复杂而返工更少，澄清问题在错误之前而非错误之后提出。
+
 ## 项目概述
 
-go-musicfox 是一个基于 Go 语言开发的网易云音乐命令行客户端，支持 macOS、Linux 和 Windows 平台。应用采用 TUI（文本用户界面）架构，提供了丰富的音乐播放功能。
+go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持 macOS/Linux/Windows。
 
-### 核心特性
+**技术栈**：
+- **UI 框架**：bubbletea + foxful-cli（部分定制）
+- **音频处理**：beep、go-mp3、go-flac
+- **存储**：BoltDB
+- **配置**：TOML + mapstructure
+- **API**：netease-music SDK
 
-- **多平台支持**：macOS、Linux、Windows
-- **多种音频引擎**：Beep（默认）、MPV、MPD、macOS AVFoundation、Windows Media Player
-- **音频格式支持**：MP3、FLAC、OGG、WAV
-- **歌词显示**：支持 LRC 和 YRC（逐字歌词）格式
-- **播放模式**：列表循环、顺序播放、单曲循环、随机播放、无限随机、智能心动模式
-- **系统集成**：MPRIS（Linux）、Now Playing（macOS）、系统媒体控制（Windows）
-- **Last.fm 集成**：播放记录和收藏功能
-- **UnblockNeteaseMusic**：解锁灰色歌曲
-
-## 项目结构
-
-```
-go-musicfox/
-├── cmd/
-│   └── musicfox.go              # 程序入口点
-├── internal/                    # 核心业务逻辑（22个包）
-│   ├── automator/               # 自动播放功能
-│   ├── commands/                # CLI 命令定义
-│   ├── composer/                # 文件命名和分享模板
-│   ├── configs/                 # 配置管理
-│   ├── keybindings/             # 快捷键配置
-│   ├── lastfm/                  # Last.fm 集成
-│   ├── lyric/                   # 歌词解析服务
-│   ├── macdriver/               # macOS 原生集成
-│   ├── migration/               # 数据迁移
-│   ├── netease/                 # 网易云音乐 API 封装
-│   ├── player/                  # 音频播放引擎
-│   ├── playlist/                # 播放列表管理
-│   ├── remote_control/          # 远程控制集成
-│   ├── reporter/                # 播放报告服务
-│   ├── runtime/                 # 平台运行时
-│   ├── storage/                 # 本地存储
-│   ├── structs/                 # 数据模型
-│   ├── track/                   # 歌曲管理
-│   └── types/                   # 类型定义
-├── utils/                       # 工具函数包
-├── v2/                          # v2 开发工作区
-├── configs/                     # 嵌入式配置
-└── vendor/                      #  vendored 依赖
-```
+**项目结构**：`cmd/` 入口 | `internal/` 核心业务（22个包） | `utils/` 工具 | `configs/` 嵌入式配置
 
 ## 核心架构
 
-### 1. 应用入口与初始化
+### 应用入口与初始化
 
-**入口文件**：`cmd/musicfox.go`
+**入口**：`cmd/musicfox.go` → `runtime.Run()` → 加载配置 → 数据迁移 → 启动 TUI
 
-```go
-func main() {
-    runtime.Run(musicfox)  // 平台特定运行时
-}
+### UI 协调器
 
-func musicfox() {
-    app := gcli.NewApp()
-    // 1. 加载配置
-    loadConfig()
-    // 2. 检查并执行数据迁移
-    if needsMigration { migration.RunAndReport() }
-    // 3. 注册命令并运行
-    app.Add(playerCommand)
-    app.Run()
-}
-```
+**文件**：`internal/ui/netease.go`
 
-**初始化流程**：
-1. 加载配置（TOML 或迁移自旧版 INI）
-2. 检查数据迁移需求
-3. 初始化 Netease 应用
-4. 设置网易云音乐 API 参数
-5. 启动 TUI
+核心结构包含：login、search、player、lyricService、trackManager 等组件。
 
-### 2. UI 架构（bubbletea）
+### 核心接口
 
-**核心协调器**：`internal/ui/netease.go`
-
-```go
-type Netease struct {
-    *model.App                    // foxful-cli 应用框架
-    login      *LoginPage          // 登录页面
-    search     *SearchPage         // 搜索页面
-    player     *Player             // 播放器控制器
-    lyricService *lyric.Service    // 歌词服务
-    lyricRenderer *LyricRenderer   // 歌词渲染器
-    progressRenderer *ProgressRenderer  // 进度条渲染器
-    songInfoRenderer *SongInfoRenderer  // 歌曲信息渲染器
-    trackManager *track.Manager    // 歌曲管理器
-}
-```
-
-**组件渲染顺序**：
-1. 主菜单渲染
-2. 歌曲信息栏
-3. 播放进度条
-4. 歌词显示
-
-### 3. 菜单系统
-
-**核心接口**（`internal/ui/menu.go`）：
+**Menu 接口**（`internal/ui/menu.go`）：
 ```go
 type Menu interface {
-    model.Menu  // 基础菜单接口
+    model.Menu
     IsPlayable() bool
     IsLocatable() bool
 }
-
 type SongsMenu interface { Songs() []structs.Song }
 type PlaylistsMenu interface { Playlists() []structs.Playlist }
-type AlbumsMenu interface { Albums() []structs.Album }
-type ArtistsMenu interface { Artists() []structs.Artist }
 ```
 
-**主要菜单类型**（72个 UI 文件）：
-- `MenuMain` - 主菜单
-- `LoginPage` - 登录页面（支持手机号/邮箱登录、Cookie 登录，二维码登录）
-- `SearchPage` - 搜索页面
-- `CurPlaylist` - 当前播放列表
-- `PlaylistDetailMenu` - 歌单详情
-- `AlbumDetailMenu` - 专辑详情
-- `ArtistDetailMenu` - 歌手详情
-- `DjRadioDetailMenu` - 电台/播客节目详情（支持按时间升序/降序排序）
-- 等等...
-
-### 4. 事件处理
-
-**事件处理器**：`internal/ui/event_handler.go`
-
-- **键盘事件**：40+ 操作映射
-- **鼠标事件**：单击、双击、滚轮、右键
-- **快捷键系统**：可配置 + 内置
-
-**内置快捷键**：
-| 按键 | 功能 |
-|------|------|
-| `h/j/k/l` 或方向键 | 导航 |
-| `g` / `G` | 跳至顶部/底部 |
-| `n` / `Enter` | 进入 |
-| `b` / `Esc` | 返回 |
-| `/` | 搜索 |
-| `q` | 退出 |
-| `r` | 重新渲染 |
-| `|` | 切换电台/播客节目列表排序顺序（升序/降序） |
-| `Tab` | 登录页面：切换登录方式（手机号/邮箱 ↔ Cookie） |
-
-### 5. 音频播放引擎
-
-**核心接口**（`internal/player/player.go`）：
+**Player 接口**（`internal/player/player.go`）：
 ```go
 type Player interface {
     Play(music URLMusic)
     Pause()/Resume()/Stop()/Toggle()
     Seek(duration time.Duration)
     PassedTime()/PlayedTime() time.Duration
-    TimeChan() <-chan time.Duration
-    State() types.State
-    StateChan() <-chan types.State
     Volume()/SetVolume()/UpVolume()/DownVolume()
+    State() types.State
     Close()
 }
 ```
 
-**引擎实现**：
-
-| 引擎 | 文件 | 平台 | 特点 |
-|------|------|------|------|
-| **Beep** | `beep_player.go` | 跨平台 | 默认，依赖 go-mp3/go-flac |
-| **DLNA** | `dlna_player.go` | 跨平台 | DLNA 设备投送，file:// URL 自动转为内置 HTTP server |
-| **MPV** | `mpv_player.go` | 跨平台 | IPC 控制，音视频分离 |
-| **MPD** | `mpd_player.go` | Linux | 远程 MPD 服务器 |
-| **AVFoundation** | `osx_player_darwin.go` | macOS | 原生系统集成 |
-| **MediaPlayer** | `win_media_player_windows.go` | Windows | WinRT API |
-
-**DLNA 配置**（`internal/configs/player.go`）：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `deviceUrl` | string | DLNA 设备描述 URL |
-| `localIP` | string | 本机局域网 IP（用于内置 HTTP server） |
-
-**DLNA 特性**：
-- 支持 `file://` URL：自动启动内置 HTTP server，提供文件服务
-- 支持 `http://`/`https://` URL：直接透传给 DLNA 设备
-- 切换曲目时自动清理 fileMap，避免内存泄漏
-
-**音频格式支持**（`beep_decoder.go`）：
-- MP3（支持 minimp3 轻量解码器）
-- FLAC（无损）
-- OGG/Vorbis
-- WAV（PCM）
-
-### 6. 播放列表管理
-
-**播放模式**（`internal/playlist/`）：
-
-| 模式 | 文件 | 说明 |
-|------|------|------|
-| 列表循环 | `list_loop.go` | 循环播放整个列表 |
-| 顺序播放 | `ordered.go` | 按顺序播放 |
-| 单曲循环 | `single_loop.go` | 重复当前歌曲 |
-| 随机播放 | `list_random.go` | 随机打乱列表 |
-| 无限随机 | `infinite_random.go` | 持续随机播放 |
-| 智能模式 | `intelligent.go` | 网易云心动模式 |
-
-### 7. 歌词系统
-
-**歌词服务**：`internal/lyric/service.go`
-
-**支持格式**：
-- **LRC**：标准时间轴歌词
-- **YRC**：逐字歌词（带精确时间戳）
-
-**渲染模式**（`lyric_renderer.go`）：
-- 平滑（smooth）
-- 波浪（wave）
-- 发光（glow）
-
-### 8. 网易云音乐 API 集成
-
-**API 客户端**：使用 `github.com/go-musicfox/netease-music` 包
-
-**认证方式**：
-- 手机号登录
-- 邮箱登录
-- QR 码登录
-- Cookie 持久化
-
-**主要 API**：
-- 歌曲详情/播放链接
-- 歌单管理
-- 歌手/专辑搜索
-- 每日推荐
-- 用户收藏
-
-### 9. 本地存储
-
-**数据库**：BoltDB（`internal/storage/`）
-
-**存储内容**：
-- 用户信息
-- 播放状态（当前歌曲、播放模式、音量）
-- 播放列表快照
-- Last.fm 凭证
-- 最后登录日期
-
-### 10. 系统集成
-
-**远程控制**（`internal/remote_control/`）：
-
-| 平台 | 实现 | 功能 |
-|------|------|------|
-| Linux | `mpris_player_linux.go` | MPRIS D-Bus |
-| macOS | `remote_control_darwin.go` | Now Playing、Remote Command Center |
-| Windows | `remote_control_windows.go` | System Media Transport |
-
-**macDriver**（`internal/macdriver/`）：
-- Cocoa 框架集成
-- 通知中心
-- 工作空间
-- 睡眠/唤醒检测
-
-## 关键文件路径
-
-### 入口与配置
-| 文件 | 功能 |
-|------|------|
-| `cmd/musicfox.go` | 程序入口 |
-| `internal/configs/config.go` | 配置结构 |
-| `internal/types/constants.go` | 常量定义 |
-
-### UI 组件
-| 文件 | 功能 |
-|------|------|
-| `internal/ui/netease.go` | UI 协调器 |
-| `internal/ui/event_handler.go` | 事件处理 |
-| `internal/ui/menu_*.go` | 各菜单页面 |
-| `internal/ui/*_renderer.go` | 渲染器 |
-
 ### 播放引擎
-| 文件 | 功能 |
-|------|------|
-| `internal/player/player.go` | 接口与工厂 |
-| `internal/player/beep_player.go` | Beep 引擎 |
-| `internal/player/dlna_player.go` | DLNA 引擎 |
-| `internal/player/mpv_player.go` | MPV 引擎 |
-| `internal/player/mpd_player.go` | MPD 引擎 |
 
-### 数据管理
-| 文件 | 功能 |
-|------|------|
-| `internal/playlist/manager.go` | 播放列表 |
-| `internal/track/manager.go` | 歌曲管理 |
-| `internal/storage/local_db.go` | 本地存储 |
+| 引擎 | 平台 | 特点 |
+|------|------|------|
+| Beep（默认） | 跨平台 | MP3/FLAC/OGG/WAV |
+| DLNA | 跨平台 | 设备投送 |
+| MPV | 跨平台 | IPC 控制 |
+| MPD | Linux | 远程服务器 |
+| AVFoundation | macOS | 原生集成 |
+| MediaPlayer | Windows | WinRT API |
+
+### 事件处理
+
+**文件**：`internal/ui/event_handler.go`
+
+支持 40+ 键盘操作、鼠标事件（单击/双击/滚轮/右键）、可配置快捷键。
+
+### 其他模块
+
+- **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式
+- **播放列表**：列表循环/顺序/单曲循环/随机/无限随机/智能心动模式
+- **远程控制**：MPRIS(linux)、Now Playing(macOS)、System Media(Windows)
+- **存储**：BoltDB，存储用户信息、播放状态、播放列表快照
 
 ## 开发指南
 
 ### 添加新菜单
 
-1. 创建 `internal/ui/menu_new_feature.go`
-2. 嵌入 `baseMenu`
-3. 实现 `Menu` 接口
-4. 注册到导航系统
+1. 创建 `internal/ui/menu_new_feature.go`，嵌入 `baseMenu`
+2. 实现 `Menu` 接口
+3. 注册到导航系统
 
 ### 添加新播放器引擎
 
@@ -359,7 +205,7 @@ type Player interface {
 
 **所有贡献者在修改代码后，必须检查并更新 AGENTS.md 文档，防止文档腐化。**
 
-#### 1. 何时需要更新文档
+#### 何时需要更新文档
 - 添加、删除或重命名核心文件或目录
 - 新增功能模块或组件
 - 修改项目结构或架构
@@ -368,7 +214,7 @@ type Player interface {
 - 修改关键路径或重要流程
 - **快捷键变更**：新增、删除或修改快捷键后，必须同步更新 README 中的快捷键说明部分（help 菜单是动态从 keybindings 配置生成的，无需手动修改）
 
-#### 2. 更新检查清单
+#### 更新检查清单
 - [ ] 目录结构是否准确反映当前项目结构
 - [ ] 核心文件路径是否正确
 - [ ] 接口定义是否与代码一致
@@ -376,7 +222,7 @@ type Player interface {
 - [ ] 开发指南是否需要补充
 - [ ] 关键文件路径表格是否需要更新
 
-#### 3. 更新优先级
+#### 更新优先级
 | 变更类型 | 优先级 | 说明 |
 |---------|--------|------|
 | 架构变更 | **高** | 必须立即更新 |
@@ -384,25 +230,21 @@ type Player interface {
 | 文件路径变更 | **中** | 及时更新路径表 |
 | 细微修复 | **低** | 可批量更新 |
 
-#### 4. 维护建议
+#### 维护建议
 - 保持文档与代码同步，避免技术债务积累
 - 使用一致的术语和格式
 - 添加代码示例时确保与实际代码匹配
 - 定期（如每月）审查文档完整性
 - PR 审查时应包含文档检查
 
-#### 5. 文档腐化警告信号
+#### 文档腐化警告信号
 - 文件路径与实际不符
 - 过时的 API 接口描述
 - 已删除功能仍出现在文档中
 - 章节结构混乱或重复
 - 与 README/CHANGELOG 存在矛盾
 
-违反此准则可能导致：
-- 新贡献者无法理解项目结构
-- 开发效率降低
-- 文档失去参考价值
-- 维护成本增加
+违反此准则可能导致：新贡献者无法理解项目结构、开发效率降低、文档失去参考价值、维护成本增加。
 
 ## Git 提交规范
 
@@ -446,20 +288,6 @@ feat(player): 添加 MPV 播放引擎支持
 Closes #123
 ```
 
-```
-fix(lyric): 修复 YRC 歌词时间戳解析错误
-
-导致部分歌词无法正确显示逐字时间
-
-Closes #456
-```
-
-```
-docs: 更新 AGENTS.md 文档维护准则
-
-添加文档更新的检查清单和维护建议
-```
-
 #### 规范要求
 
 1. **必须使用英文**：提交信息、描述均使用英文
@@ -467,66 +295,3 @@ docs: 更新 AGENTS.md 文档维护准则
 3. **长度限制**：标题不超过 50 字符
 4. **Body 可选**：复杂变更可添加详细说明，每行不超过 72 字符
 5. **引用 Issues**：在 footer 中使用 `Closes #xxx` 关联 Issue
-
-## 配置文件
-
-**路径**：
-- macOS: `~/Library/Application Support/go-musicfox/config.toml`
-- Linux: `~/.config/go-musicfox/config.toml`
-- Windows: `%AppData%\go-musicfox\config.toml`
-
-**主要配置段**：
-```toml
-[startup]      # 启动选项
-[main]         # 主界面设置
-[main.account] # 账号相关配置（如 Cookie 登录）
-[theme]        # 主题颜色
-[storage]      # 存储路径
-[player]       # 播放器配置
-[autoplay]     # 自动播放
-[unm]          # UnblockNeteaseMusic
-[reporter]     # 播放报告
-[keybindings]  # 快捷键
-[share]        # 分享模板
-```
-
-### 账号配置
-
-```toml
-[main.account]
-# 网易云音乐的登录 Cookie（用于 Cookie 登录方式）
-neteaseCookie = ""
-```
-
-**登录方式**：
-1. **手机号/邮箱登录**：在 TUI 中输入手机号或邮箱及密码
-2. **Cookie 登录**：在 TUI 中直接输入网易云音乐 Cookie，或通过配置文件设置 `neteaseCookie`
-3. **二维码登录**：使用手机网易云扫描二维码登录
-
-## 构建与发布
-
-**构建命令**：
-```sh
-make build      # 编译到 bin/ 目录
-make install    # 安装到 $GOPATH/bin
-make test       # 运行测试
-make lint       # 代码检查
-```
-
-**发布**：
-- 使用 GoReleaser
-- 支持跨平台编译
-- 提供 Homebrew、Scoop、Flatpak 等包管理器支持
-
-## 技术栈
-
-- **UI 框架**：bubbletea + foxful-cli
-- **音频处理**：beep、go-mp3、go-flac
-- **存储**：BoltDB
-- **配置**：TOML + mapstructure
-- **API**：netease-music SDK
-- **系统集成**：CGO、WinRT、D-Bus
-
----
-
-这份文档涵盖了 go-musicfox 的完整架构，包括新增的**文档维护准则**，可以帮助开发者和贡献者快速理解项目结构并开始开发工作，同时确保文档与代码保持同步，避免腐化。
