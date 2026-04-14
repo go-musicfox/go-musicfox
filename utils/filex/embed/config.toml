@@ -148,7 +148,7 @@ limit = 0
 
 # 播放器引擎与行为配置
 [player]
-# 播放引擎，可选: "beep", "mpd", "mpv", "osx", "win_media", "auto"（根据系统自动选择）
+# 播放引擎，可选: "beep", "dlna", "mpd", "mpv", "osx", "win_media", "auto"（根据系统自动选择）
 # Mac 默认 "osx", Windows 默认 "win_media", 其他系统默认 "beep"
 engine = "auto"
 # 允许的最大连续失败重试次数
@@ -189,6 +189,14 @@ autoStart = true
 [player.mpv]
 # mpv 可执行文件的路径，如果为空，则在系统 PATH 中查找
 bin = "mpv"
+
+# `dlna` 引擎专属配置
+[player.dlna]
+# DLNA 设备描述 URL，例如：http://192.168.1.100:49152/description.xml
+# 使用 gupnp-tools 的 gupnp-universal-cp 工具可扫描并获取设备 URL
+deviceUrl = ""
+# 本机局域网 IP（用于内置 HTTP server）
+localIP = ""
 
 
 # 启动时自动播放相关配置

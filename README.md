@@ -1,6 +1,6 @@
 # go-musicfox | **另一个Spotify版 [Spotifox](https://github.com/go-musicfox/spotifox)**
 
-go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持各种音质级别、UnblockNeteaseMusic、Last.fm、MPRIS 和 macOS 交互响应（睡眠暂停、蓝牙耳机连接断开响应和菜单栏控制等）等功能特性。
+go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持各种音质级别、UnblockNeteaseMusic、Last.fm、MPRIS 和 macOS 交互响应（睡眠暂停、蓝牙耳机连接断开响应和菜单栏控制等）等功能特性，以及 DLNA 投送。
 
 > UI 基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) 进行了部分定制
 
@@ -408,6 +408,34 @@ $ musicfox
   自 [#453](https://github.com/go-musicfox/go-musicfox/pull/453) 起，提供了完整的 XDG 支持，部分文件路径变更，见 [XDG 支持说明](./docs/xdg_support.md)
 - 配置文件格式
   自 [#484](https://github.com/go-musicfox/go-musicfox/pull/484) 起，配置文件格式已由 INI 更换为 [TOML](https://toml.io/)
+
+</details>
+<details>
+<summary>
+
+### DLNA 投送
+</summary>
+
+DLNA 引擎允许你将音乐投送到兼容 DLNA 的设备（如智能电视、音响、游戏机等）。
+
+1. **获取设备 URL**
+   - 安装 `gupnp-tools`：`brew install gupnp-tools`（macOS）或 `sudo apt install gupnp-tools`（Linux）
+   - 运行 `gupnp-universal-cp`，扫描并复制设备的描述 URL（形如 `http://192.168.1.100:49152/description.xml`）
+
+2. **配置**
+   在 `config.toml` 中设置：
+   ```toml
+   [player]
+   engine = "dlna"
+
+   [player.dlna]
+   deviceUrl = "http://你的设备IP:端口/description.xml"
+   localIP = "本机局域网IP"  # 例如 192.168.1.50
+   ```
+
+3. **播放**
+   启动应用后，选择歌曲即可自动投送到 DLNA 设备。
+
 
 </details>
 <details>

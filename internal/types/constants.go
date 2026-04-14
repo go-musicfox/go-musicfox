@@ -44,6 +44,7 @@ const MpdPlayer = "mpd"            // mpd
 const MpvPlayer = "mpv"            // mpv player
 const OsxPlayer = "osx"            // osx
 const WinMediaPlayer = "win_media" // win media player
+const DlnaPlayer = "dlna"          // dlna
 
 const BeepGoMp3Decoder = "go-mp3"
 const BeepMiniMp3Decoder = "minimp3"

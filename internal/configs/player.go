@@ -31,6 +31,7 @@ type PlayerConfig struct {
 	Beep BeepConfig `koanf:"beep"`
 	Mpd  MpdConfig  `koanf:"mpd"`
 	Mpv  MpvConfig  `koanf:"mpv"`
+	Dlna DlnaConfig `koanf:"dlna"`
 }
 
 // BeepConfig `beep` 引擎专属配置
@@ -57,4 +58,10 @@ type MpdConfig struct {
 type MpvConfig struct {
 	// mpv路径
 	Bin string `koanf:"bin"`
+}
+
+// DlnaConfig `dlna` 引擎专属配置
+type DlnaConfig struct {
+	DeviceUrl string `koanf:"deviceUrl"`
+	LocalIP   string `koanf:"localIP"`
 }

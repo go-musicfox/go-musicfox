@@ -33,6 +33,7 @@ type Player interface {
 func NewPlayerFromConfig() Player {
 	cfg := configs.AppConfig
 	var player Player
+	var err error
 	switch cfg.Player.Engine {
 	case types.BeepPlayer:
 		player = NewBeepPlayer()
@@ -63,8 +64,19 @@ func NewPlayerFromConfig() Player {
 			panic(fmt.Sprintf("MPV不可用: %v, 输出: %s", err, string(output)))
 		}
 		player = NewMpvPlayer(&MpvConfig{
-			BinPath: cfg.Player.Mpv.Bin, // 使用配置文件中的mpv路径
+			BinPath: cfg.Player.Mpv.Bin,
 		})
+	case types.DlnaPlayer:
+		if cfg.Player.Dlna.DeviceUrl == "" {
+			panic("缺少DLNA配置: deviceUrl")
+		}
+		if cfg.Player.Dlna.LocalIP == "" {
+			panic("缺少DLNA配置: localIP (必须指定本机局域网IP)")
+		}
+		player, err = NewDlnaPlayer(cfg.Player.Dlna.DeviceUrl, cfg.Player.Dlna.LocalIP)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		panic("unknown player engine")
 	}
