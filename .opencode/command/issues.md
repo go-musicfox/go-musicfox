@@ -1,0 +1,22 @@
+---
+description: "find issue(s) on github"
+---
+
+Search through existing issues in go-musicfox/go-musicfox using the gh cli to find issues matching this query:
+
+$ARGUMENTS
+
+Consider:
+
+1. Similar titles or descriptions
+2. Same error messages or symptoms
+3. Related functionality or components
+4. Similar feature requests
+
+Please list any matching issues with:
+
+- Issue number and title
+- Brief explanation of why it matches the query
+- Link to the issue
+
+If no clear matches are found, say so.

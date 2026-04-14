@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v5.0.1
 
       - name: Run opencode
-        uses: anhoder/opencode/github@v1.4.4
+        uses: anomalyco/opencode/github@latest
         env:
           # ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}

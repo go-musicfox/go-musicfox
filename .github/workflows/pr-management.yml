@@ -1,0 +1,83 @@
+name: pr-management
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  check-duplicates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check team membership
+        id: team-check
+        run: |
+          LOGIN="${{ github.event.pull_request.user.login }}"
+          if [ "$LOGIN" = "opencode-agent[bot]" ] || [ "$LOGIN" = "dependabot[bot]" ] || [ "$LOGIN" = "renovate[bot]" ]; then
+            echo "is_team=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping: $LOGIN is a bot"
+          else
+            echo "is_team=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get PR info
+        if: steps.team-check.outputs.is_team != 'true'
+        id: pr-info
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "info=$(gh pr view "$PR_NUMBER" --json title,body --jq '{title: .title, body: .body}')" >> "$GITHUB_OUTPUT"
+
+      - name: Check for duplicate PRs
+        if: steps.team-check.outputs.is_team != 'true'
+        uses: anomalyco/opencode/github@latest
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          agent: duplicate-pr
+          prompt: |
+            Check for duplicate PRs related to this new PR:
+
+            CURRENT_PR_NUMBER: ${{ env.PR_NUMBER }}
+
+            Title: ${{ fromJson(steps.pr-info.outputs.info).title }}
+
+            Description:
+            ${{ fromJson(steps.pr-info.outputs.info).body }}
+
+            Search for potentially duplicate or related open PRs.
+            If duplicates are found, list them with their titles and URLs.
+            If no duplicates are found, say "No duplicate PRs found".
+
+  add-contributor-label:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Add Contributor Label
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const isPR = !!context.payload.pull_request;
+            const issueNumber = isPR ? context.payload.pull_request.number : context.payload.issue.number;
+            const authorAssociation = isPR ? context.payload.pull_request.author_association : context.payload.issue.author_association;
+
+            if (authorAssociation === 'CONTRIBUTOR') {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['contributor']
+              });
+            }
