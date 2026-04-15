@@ -202,6 +202,13 @@ func (n *Netease) InitHook(_ *model.App) {
 				} else {
 					appCookieJar = newJar
 					neteaseutil.SetGlobalCookieJar(appCookieJar)
+
+					// 先保存 cookie，确保 token 刷新成功后 cookie 被持久化
+					// 即使后续 LoginCallback 失败，cookie 也已保存
+					if err := appCookieJar.Save(); err != nil {
+						slog.Warn("持久化 Cookie 失败", slogx.Error(err))
+					}
+
 					if err := n.LoginCallback(); err != nil {
 						slog.Warn("使用配置项的cookie获取用户信息失败", slogx.Error(err))
 						n.user = nil
@@ -221,6 +228,12 @@ func (n *Netease) InitHook(_ *model.App) {
 				appCookieJar = newJar
 				neteaseutil.SetGlobalCookieJar(appCookieJar)
 				slog.Info("Token 刷新成功~")
+
+				// 先保存 cookie，确保 token 刷新成功后 cookie 被持久化
+				// 即使后续 LoginCallback 失败，cookie 也已保存
+				if err := appCookieJar.Save(); err != nil {
+					slog.Warn("持久化 Cookie 失败", slogx.Error(err))
+				}
 
 				if err := n.LoginCallback(); err != nil {
 					slog.Warn("触发登录回调失败", slogx.Error(err))
