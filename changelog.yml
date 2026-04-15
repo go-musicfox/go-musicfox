@@ -1,3 +1,240 @@
+- semver: 4.8.3
+  date: 2026-04-15T00:20:24+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 0f4f90d65934aa86457bc713152a0e78a0b3c4fe
+      note: |-
+        docs: add AI coding behavior guidelines to AGENTS.md
+
+        Adds clear guidelines for AI agents working on the codebase:
+        - Think twice before acting (verify assumptions, ask questions)
+        - Prefer simple solutions over complex ones
+        - Make precise, targeted changes only
+        - Define verifiable success criteria
+
+        These guidelines reduce AI coding errors by encouraging careful
+        planning, questioning unclear requirements, and avoiding speculative
+        features. Contributors get more reliable results when AI agents
+        follow disciplined coding practices.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ba623f5383b69c5c21028b83612e72a614bb2469
+      note: |-
+        chore(ci): update opencode action to use latest version
+
+        - Switch from pinned v1.4.4 to anomalyco/opencode@latest for automatic updates
+        - Add GitHub Actions workflows for PR/issue management and triage
+        - Add OpenCode configuration for agent commands and themes
+
+        Ensures CI always runs with the latest opencode version, providing faster access to bug fixes and new features without manual version bumps.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d9f4189631c0b45b231b753c6226bd07bc4a32ea
+      note: 'chore(ci): update macapp brew config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c6321cdd663ad3337febef5d6e9866b389f9806a
+      note: |-
+        feat(player): 添加 DLNA/UPnP 播放引擎支持及改进 (#571)
+
+        * feat(player): add DLNA/UPnP playback engine support
+
+        * feat(player): DLNA player progress display and song duration fix
+
+        * feat(player): DLNA song end detection and polling fix
+
+        * feat(dlna): add HTTP server for file:// URLs and memory leak fix
+
+        - DLNA player now handles file:// URLs by starting an internal HTTP server
+        - HTTP/HTTPS URLs are passed directly to DLNA device unchanged
+        - Added localIP config requirement for HTTP server binding
+        - Clear fileMap on each Play() to prevent memory leakage
+        - Updated AGENTS.md documentation
+
+        * fix(configs): align DlnaConfig tags with koanf convention
+
+        * fix(dlna_player): wait for cache file ready before playback
+
+        Cache hit may yield file:// URL before file write completes, causing DLNA device to receive empty file. Add isFileReady check with 10 retries (1s interval) to ensure file exists, non-empty, and readable.
+
+        * fix(player): stop DLNA polling when paused or stopped
+
+        - Add polling flag check in pollPositionInfo() to exit loop when not playing
+        - Set polling=false in Pause() and Stop() methods
+        - Prevents unnecessary HTTP requests during non-playing states
+
+        * feat(player): add volume control to DLNA player
+
+        - Add renderingControlUrl field
+        - Implement getVolume() and setVolume() via RenderingControl service
+        - Implement Volume(), SetVolume(), UpVolume(), DownVolume() interface methods
+        - Refactor soapRequest() to support multiple services
+        - Update initControlUrl() to discover RenderingControl service
+
+        * fix(dlna): sync position query in Play() for accurate PassedTime()
+
+        - Add getPositionInfo() call after SetAVTransportURI
+        - Remove polling flag; start continuous polling in initControlUrl()
+        - Ensures PassedTime() reflects actual position immediately
+
+        * fix(dlna_player): resolve lint issues
+
+        - Add package comment
+        - Fix naming conventions (Url -> URL)
+        - Check error returns for resp.Body.Close() and httpServer.Close()
+        - Handle all errcheck violations
+
+        * refactor(dlna): simplify controlURL validation logic
+
+        Remove redundant controlURL empty checks across all methods and
+        instead panic in initControlURL if AVTransport service is missing.
+
+        This follows the principle that if controlURL is unavailable during
+        initialization, the entire DLNA module is unusable and should fail
+        fast rather than silently return in every method.
+
+        Changes:
+        - initControlURL: panic when controlURL is empty
+        - Remove checks from Play, Pause, Resume, Stop, Seek
+        - Simplify soapRequest to direct assignment for AVTransport
+        - Keep RenderingControl optional with clear error message
+
+        Closes #xxx
+
+        * fix(player): implement dlnaPlayer.PlayedTime() to track actual playback duration\n\n- Add startTime, pausedTime, pauseStart, wasEverPlayed fields\n- Update Play(), Pause(), Resume(), Stop() to manage timing\n- PlayedTime() returns time.Since(startTime) - pausedTime
+
+        * refactor(player): extract common SOAP request logic for volume operations
+
+        Extract renderControlSOAPRequest to eliminate duplicate code between
+        getVolume and setVolume methods, improving maintainability while keeping
+        the same functionality.
+
+        * refactor(player): extract common SOAP request methods and URL normalizer
+
+        - renderControlSOAPRequest: shared RenderingControl SOAP calls
+        - executeSOAPRequest: generic SOAP request with response body
+        - normalizeURL: eliminate duplicate URL prefix logic
+
+        Reduced duplication in getPositionInfo, getTransportInfo, getVolume, setVolume, and initControlURL.
+
+        * cleanup
+
+        * refactor
+
+        * refactor(player): simplify volume control in DLNA player
+
+        - Remove redundant setVolume private method, inline logic into SetVolume
+        - Remove volume boundary checks that were unnecessary
+        - Simplify UpVolume and DownVolume methods by removing if guards
+
+        This reduces code duplication and makes the volume control flow more direct.
+
+        * refactor(player): simplify dlna_player implementation
+
+        - Merge executeSOAPRequest, soapRequest, renderControlSOAPRequest into doSOAP
+        - Inline parseTime into getPositionInfo
+        - Remove redundant debug logs and error handling
+        - Simplify XML structs to include only required fields
+        - Keep Player interface unchanged
+
+        Net -139 lines, improved maintainability
+
+        * fix(player): prevent DLNA stateChan blocking
+
+        dlnaPlayer previously sent state updates to stateChan without
+        timeout protection, causing indefinite blocking when channel
+        buffer was full and UI consumer was slow. This could cause
+        goroutine stalls and UI hangs during song switching.
+
+        Replace all direct stateChan sends with sendState() helper that
+        uses 2-second timeout and logs warning on timeout, consistent
+        with other player implementations.
+
+        * fix(player): check resp.Body.Close error in doSOAP
+
+        Wrap resp.Body.Close in a defer func to properly check and log
+        any error, satisfying errcheck linter. This is a minor cleanup
+        following the stateChan blocking fix.
+
+        * fix(player): address DLNA player code review issues
+
+        - Add [player.dlna] section to config.toml with gupnp-tools usage info
+        - Convert Traditional Chinese comment to English
+        - Add volume boundary checks (0-100) in UpVolume/DownVolume
+        - Clear fileMap with delete() instead of creating new map
+        - Fix NOT_IMPLEMENTED check to use HasPrefix for robustness
+        - Fix syntax error in SetVolume condition (=< to <=)
+
+        * docs: add DLNA player introduction to README
+
+        * fix(dlna): replace panic with error returns in NewDlnaPlayer
+
+        - Change NewDlnaPlayer signature to return (Player, error)
+        - Make startHTTPServer() and initControlURL() return errors
+        - Handle AVTransport service missing and HTTP server failures gracefully
+        - Update NewPlayerFromConfig to handle returned error
+
+        * refactor(dlna): use command queue worker pattern to avoid blocking UI
+
+        - add command queue and worker goroutine
+        - move SOAP calls to async execution
+        - merge pollState into worker ticker
+
+        * typo
+
+        ---------
+
+        Co-authored-by: norci <2986988+norci@users.noreply.github.com>
+      author:
+        name: norci
+        email: norci@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6ea474c2d77a6a40e9dbf7d2214b69a46d6cfa24
+      note: 'chore(ci): update build config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c8677005e61f9aaff7daadce582c0e076ee365e0
+      note: 'fix: lyric filename template registration (#570)'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: b1a96cb5f09f73020ba365643a48e7d20899a878
+      note: 'chore(ci): add [skip ci] to changelog commit message'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: cddf6e61fe466311b89c09d024a34053c15cf7fd
+      note: 'chore: update scoop config & changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.8.2
   date: 2026-04-12T23:11:30+08:00
   packager: go-musicfox

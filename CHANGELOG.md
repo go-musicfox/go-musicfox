@@ -1,4 +1,17 @@
 
+4.8.3
+=============
+2026-04-14
+
+* docs: add AI coding behavior guidelines to AGENTS.md (0f4f90d6)
+* chore(ci): update opencode action to use latest version (ba623f53)
+* chore(ci): update macapp brew config (d9f41896)
+* feat(player): 添加 DLNA/UPnP 播放引擎支持及改进 (#571) (c6321cdd)
+* chore(ci): update build config (6ea474c2)
+* fix: lyric filename template registration (#570) (c8677005)
+* chore(ci): add [skip ci] to changelog commit message (b1a96cb5)
+* chore: update scoop config & changelog (cddf6e61)
+
 4.8.2
 =============
 2026-04-12
