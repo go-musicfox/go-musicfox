@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	
+
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"github.com/cnsilvan/UnblockNeteaseMusic/utils"
 	"github.com/cnsilvan/UnblockNeteaseMusic/version"
@@ -33,6 +33,7 @@ var (
 	UnlockSoundEffects = flag.Bool("sef", false, "unlock SoundEffects")
 	QQCookieFile       = flag.String("qc", "./qq.cookie", "specify cookies file ,such as : \"qq.cookie\"")
 	LogWebTraffic      = flag.Bool("wl", false, "log request url and response")
+	ProxyUrl           = flag.String("px", "", "specify proxy URL,such as : \"http://127.0.0.1:7890\"")
 )
 
 func ValidParams() bool {
@@ -61,7 +62,7 @@ func ValidParams() bool {
 	for _, source := range sources {
 		common.Source = append(common.Source, source)
 	}
-	
+
 	currentPath, err := utils.GetCurrentPath()
 	if err != nil {
 		log.Println(err)

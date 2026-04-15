@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -17,8 +18,9 @@ import (
 )
 
 var (
-	httpClient   *http.Client
-	directClient *http.Client
+	httpClient     *http.Client
+	directClient   *http.Client
+	GlobalProxyUrl string
 )
 
 func init() {
@@ -54,6 +56,7 @@ type ClientRequest struct {
 	Body                 io.Reader
 	Cookies              []*http.Cookie
 	Proxy                bool
+	ProxyUrl             string
 	ConnectTimeout       time.Duration
 }
 
@@ -143,7 +146,31 @@ func Request(clientRequest *ClientRequest) (*http.Response, error) {
 	if _, ok := common.HostDomain[request.Host]; ok {
 		client = httpClient
 	}
-	// }
+	proxyUrlStr := clientRequest.ProxyUrl
+	if len(proxyUrlStr) == 0 {
+		proxyUrlStr = GlobalProxyUrl
+	}
+	if len(proxyUrlStr) > 0 {
+		proxyUrl, err := url.Parse(proxyUrlStr)
+		if err == nil {
+			tr := &http.Transport{
+				Proxy: http.ProxyURL(proxyUrl),
+				DialContext: (&net.Dialer{
+					Timeout:   5 * time.Second,
+					KeepAlive: 60 * time.Second,
+				}).DialContext,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          300,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   5 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+				ResponseHeaderTimeout: 5 * time.Second,
+				MaxConnsPerHost:       100,
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			}
+			client = &http.Client{Transport: tr}
+		}
+	}
 	resp, err = client.Do(request)
 	if err != nil {
 		// log.Println(request.Method, request.URL.String(), host)

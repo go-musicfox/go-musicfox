@@ -159,6 +159,7 @@ func Request(request *http.Request, remoteUrl string) (*http.Response, error) {
 		Header:    request.Header,
 		Body:      request.Body,
 		Proxy:     true,
+		ProxyUrl:  *config.ProxyUrl,
 	}
 	return network.Request(&clientRequest)
 }

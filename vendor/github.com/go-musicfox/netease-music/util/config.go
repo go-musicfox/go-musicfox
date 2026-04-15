@@ -5,6 +5,7 @@ import (
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"github.com/cnsilvan/UnblockNeteaseMusic/config"
+	"github.com/cnsilvan/UnblockNeteaseMusic/network"
 	"github.com/cnsilvan/UnblockNeteaseMusic/provider"
 )
 
@@ -16,6 +17,7 @@ var (
 	EnableLocalVip     bool
 	UnlockSoundEffects bool
 	QQCookieFile       string
+	ProxyUrl           string
 
 	providerInited = sync.Once{}
 )
@@ -33,6 +35,8 @@ func ConfigReload() {
 	config.EnableLocalVip = &EnableLocalVip
 	config.UnlockSoundEffects = &UnlockSoundEffects
 	config.QQCookieFile = &QQCookieFile
+	config.ProxyUrl = &ProxyUrl
+	network.GlobalProxyUrl = ProxyUrl
 
 	provider.Init()
 }

@@ -231,6 +231,8 @@ unlockSoundEffects = true
 qqCookieFile = ""
 # 检测到无效的歌（如提示酷我...）时跳过播放，该效果计入播放错误计数
 skipInvalidTracks = false
+# 代理URL，用于UNM请求，例如: "http://127.0.0.1:7890"
+proxyUrl = ""
 
 
 # 播放状态上报配置
