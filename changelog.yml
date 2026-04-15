@@ -1,3 +1,23 @@
+- semver: 4.8.4
+  date: 2026-04-16T00:06:15+08:00
+  packager: go-musicfox
+  changes:
+    - commit: e657fe4516b775ae0f714fafaac35423e6709b5a
+      note: 'chore(ci): update homebrew config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b2ebb8f11c23bf1e595c5615ff90dd47a4f9a249
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.8.3
   date: 2026-04-15T00:20:24+08:00
   packager: go-musicfox

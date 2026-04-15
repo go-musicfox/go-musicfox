@@ -1,4 +1,11 @@
 
+4.8.4
+=============
+2026-04-15
+
+* chore(ci): update homebrew config (e657fe45)
+* chore: update scoop config & changelog [skip ci] (b2ebb8f1)
+
 4.8.3
 =============
 2026-04-14
