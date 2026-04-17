@@ -8,6 +8,6 @@ REAL_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "$REAL_PATH")"
 
 # This script is in Contents/MacOS/, same directory as the musicfox binary
-APP_PATH="$SCRIPT_DIR/musicfox"
+APP_PATH="$SCRIPT_DIR/go-musicfox"
 
 exec "$APP_PATH" "$@"

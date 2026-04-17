@@ -171,7 +171,7 @@ archives:
     ids:
       - go-musicfox-darwin-app-amd64
       - go-musicfox-darwin-app-arm64
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.app"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}_macapp"
     formats: [zip]
     files:
       - src: deploy/musicfox.app/Contents/Info.plist
@@ -179,9 +179,9 @@ archives:
       - src: deploy/musicfox.app/Contents/Resources/Musicfox.icns
         dst: "musicfox.app/Contents/Resources/Musicfox.icns"
       - src: "dist/{{ .ProjectName }}-{{ .Os }}-app-{{ .Arch }}_{{ .Target }}/{{ .Binary }}"
-        dst: "musicfox.app/Contents/MacOS/musicfox"
+        dst: "musicfox.app/Contents/MacOS/go-musicfox"
       - src: deploy/musicfox-app.wrapper.sh
-        dst: "musicfox.app/Contents/MacOS/musicfox-app.wrapper.sh"
+        dst: "musicfox.app/Contents/MacOS/musicfox"
 
 nfpms:
   - id: go-musicfox
@@ -294,7 +294,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     ids:
       - musicfox-darwin-app
-    # binary: musicfox.app/Contents/MacOS/musicfox-app.wrapper.sh
+    binary: musicfox.app/Contents/MacOS/musicfox
     url:
       template: "https://github.com/go-musicfox/go-musicfox/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://github.com/go-musicfox/go-musicfox"
@@ -308,18 +308,7 @@ homebrew_casks:
       post:
         install: |
           system 'xattr', '-r', '-d', 'com.apple.quarantine', '--', "#{caskroom_path}/#{version}/musicfox.app"
-
-          # 定义源二进制文件的路径
-          source = "#{caskroom_path}/#{version}/musicfox.app/Contents/MacOS/musicfox-app.wrapper.sh"
-          # 定义目标命令的路径
-          target = ENV["HOMEBREW_PREFIX"] + "/bin/musicfox"
-
-          # 创建符号链接
-          FileUtils.ln_sf(source, target)
-
           system 'echo', '-e', "\033[1;33m给个star✨吧~\033[0m \033[4;36mhttps://github.com/go-musicfox/go-musicfox \033[0m"
-        uninstall: |
-          FileUtils.rm_f(ENV["HOMEBREW_PREFIX"] + "/bin/musicfox")
 
 winget:
   - name: go-musicfox
