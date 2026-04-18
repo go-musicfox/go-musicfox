@@ -25,9 +25,11 @@ build-macapp:
 	CGO_ENABLED=1 go build -tags "macapp enable_global_hotkey" -ldflags "-s -w" -o $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/cmd
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/Resources
-	@cp $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/musicfox
+	@cp $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/go-musicfox
+	@cp $(PACKAGE_ROOT)/deploy/musicfox-app.wrapper.sh $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/musicfox
 	@cp $(PACKAGE_ROOT)/deploy/musicfox.app/Contents/Info.plist $(PACKAGE_ROOT)/bin/musicfox.app/Contents/Info.plist
 	@cp $(PACKAGE_ROOT)/deploy/musicfox.app/Contents/Resources/Musicfox.icns $(PACKAGE_ROOT)/bin/musicfox.app/Contents/Resources/Musicfox.icns
+	@chmod +x $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/go-musicfox
 	@chmod +x $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/musicfox
 
 .PHONY: init
