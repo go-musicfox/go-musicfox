@@ -1,3 +1,31 @@
+- semver: 4.8.5
+  date: 2026-04-18T13:58:18+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 525209fe5c6680f4da6e8ca3929b889ffa937e09
+      note: 'chore(ci): update Makefile for macapp'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0219d2c620dd8bd1dbb9a481256cb334255a2e5d
+      note: 'chore(ci): update homebrew config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 41e41f6ea2358bf065a29954e0b1a6b25256dd97
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.8.4
   date: 2026-04-16T00:06:15+08:00
   packager: go-musicfox

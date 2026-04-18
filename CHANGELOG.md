@@ -1,4 +1,12 @@
 
+4.8.5
+=============
+2026-04-18
+
+* chore(ci): update Makefile for macapp (525209fe)
+* chore(ci): update homebrew config (0219d2c6)
+* chore: update scoop config & changelog [skip ci] (41e41f6e)
+
 4.8.4
 =============
 2026-04-15
