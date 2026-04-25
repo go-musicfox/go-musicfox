@@ -284,6 +284,12 @@ func (p *QRLoginPage) pollQRStatusCmd() tea.Msg {
 
 // loginSuccessHandle 登录成功函数
 func (p *QRLoginPage) loginSuccessHandle(n *Netease) model.Page {
+	// 先保存 cookie，确保登录成功后 cookie 被持久化
+	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
+	if err := appCookieJar.Save(); err != nil {
+		slog.Warn("持久化 Cookie 失败", slogx.Error(err))
+	}
+
 	if err := n.LoginCallback(); err != nil {
 		slog.Error("login callback error", slogx.Error(err))
 	}
