@@ -2,6 +2,7 @@ package util
 
 import (
 	"sync"
+	"time"
 
 	"github.com/cnsilvan/UnblockNeteaseMusic/common"
 	"github.com/cnsilvan/UnblockNeteaseMusic/config"
@@ -16,6 +17,8 @@ var (
 	EnableLocalVip     bool
 	UnlockSoundEffects bool
 	QQCookieFile       string
+	UNMProxyURL        string
+	HTTPClientTimeout  time.Duration
 
 	providerInited = sync.Once{}
 )
@@ -33,6 +36,10 @@ func ConfigReload() {
 	config.EnableLocalVip = &EnableLocalVip
 	config.UnlockSoundEffects = &UnlockSoundEffects
 	config.QQCookieFile = &QQCookieFile
+
+	if len(UNMProxyURL) > 0 {
+		UNMSwitch = false
+	}
 
 	provider.Init()
 }

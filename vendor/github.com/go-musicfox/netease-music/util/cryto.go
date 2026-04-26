@@ -162,11 +162,14 @@ func CheckSDeviceId(cookieJar http.CookieJar) string {
 	return ""
 }
 
-// GenerateSDeviceId 生成一个随机的 sDeviceId
+// GenerateSDeviceId 生成一个随机的 52 位 16 进制字符串设备 ID
 func GenerateSDeviceId() string {
-	randomNum := math_rand.IntN(1000000)
-	sDeviceId := fmt.Sprintf("unknown-%d", randomNum)
-	return sDeviceId
+	const hexChars = "0123456789ABCDEF"
+	b := make([]byte, 52)
+	for i := range b {
+		b[i] = hexChars[math_rand.IntN(len(hexChars))]
+	}
+	return string(b)
 }
 
 // GenerateChainID 生成chainID

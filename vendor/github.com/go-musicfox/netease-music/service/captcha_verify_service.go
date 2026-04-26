@@ -1,8 +1,6 @@
 package service
 
 import (
-	"net/http"
-
 	"github.com/go-musicfox/netease-music/util"
 )
 
@@ -13,14 +11,7 @@ type CaptchaVerifyService struct {
 }
 
 func (service *CaptchaVerifyService) CaptchaVerify() (float64, []byte) {
-
-	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
-
-	options := &util.Options{
-		Crypto:  "weapi",
-		Cookies: []*http.Cookie{cookiesOS},
-	}
-	data := make(map[string]string)
+	data := make(map[string]interface{})
 	if service.Ctcode == "" {
 		data["ctcode"] = "86"
 	} else {
@@ -29,7 +20,7 @@ func (service *CaptchaVerifyService) CaptchaVerify() (float64, []byte) {
 	data["cellphone"] = service.Cellphone
 	data["captcha"] = service.Captcha
 
-	code, reBody, _ := util.CreateRequest("POST", `https://music.163.com/weapi/sms/captcha/verify`, data, options)
+	code, reBody, _ := util.CallApi("https://music.163.com/api/sms/captcha/verify", data)
 
 	return code, reBody
 }

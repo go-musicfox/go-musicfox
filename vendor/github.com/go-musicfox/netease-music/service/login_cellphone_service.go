@@ -46,25 +46,12 @@ func (service *LoginCellphoneService) LoginCellphone() (float64, []byte, error) 
 		data["password"] = service.Md5password
 	}
 	data["rememberLogin"] = "true"
+	data["type"] = "1"
+	data["https"] = "true"
+	data["remember"] = "true"
 
 	api := "https://music.163.com/weapi/login/cellphone"
-	cookieJar := util.GetGlobalCookieJar()
-	util.ApplyRequestStrategy(cookieJar)
-	code, bodyBytes, err := util.CallWeapi(api, data, cookieJar)
-	return code, bodyBytes, err
-}
 
-// web端登录安全检查,需要获取checkToken的值
-func (service *LoginCellphoneService) loginSecure() (float64, []byte, error) {
-	data := make(map[string]interface{})
-	data["phone"] = service.Phone
-	if service.Countrycode != "" {
-		data["countrycode"] = service.Countrycode
-	} else {
-		data["countrycode"] = "86"
-	}
-	data["checkToken"] = "" // 需要动态生成
-	api := "https://music.163.com/api/user/login/secure"
 	code, bodyBytes, err := util.CallWeapi(api, data)
 	return code, bodyBytes, err
 }

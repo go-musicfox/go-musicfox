@@ -113,6 +113,12 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		options.Cookies = append(options.Cookies, globalCookieJar.Cookies(u)...)
 	}
 	req := requests.Requests()
+	if len(UNMProxyURL) > 0 {
+		req.Proxy(UNMProxyURL)
+	}
+	if HTTPClientTimeout > 0 {
+		req.Client.Timeout = HTTPClientTimeout
+	}
 
 	var (
 		os          = CookieValueByName(options.Cookies, "os", "ios")
@@ -291,6 +297,10 @@ type request struct {
 // NewRequest 初始化并返回一个request结构体以进行发送请求前的准备
 func NewRequest(url string, cookie ...http.CookieJar) *request {
 	req := requests.Requests()
+	
+	if HTTPClientTimeout > 0 {
+		req.Client.Timeout = HTTPClientTimeout
+	}
 
 	if len(cookie) > 0 {
 		req.Client.Jar = cookie[0]

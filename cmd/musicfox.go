@@ -61,12 +61,12 @@ func musicfox() {
 	neteaseutil.SearchLimit = configs.AppConfig.UNM.SearchLimit
 	neteaseutil.EnableLocalVip = configs.AppConfig.UNM.EnableLocalVip
 	neteaseutil.UnlockSoundEffects = configs.AppConfig.UNM.UnlockSoundEffects
+	neteaseutil.UNMProxyURL = configs.AppConfig.UNM.ProxyURL
 
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
 	app.Add(commands.NewMigrateCommand())
-	registerPlatformCommands(app)
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()

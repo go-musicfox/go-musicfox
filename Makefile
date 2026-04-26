@@ -22,7 +22,7 @@ build:
 .PHONY: build-macapp
 build-macapp:
 	@mkdir -p $(PACKAGE_ROOT)/bin
-	CGO_ENABLED=1 go build -tags "macapp enable_global_hotkey" -ldflags "-s -w" -o $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/cmd
+	BUILD_TAGS="enable_global_hotkey" $(PACKAGE_ROOT)/hack/build.sh build
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/Resources
 	@cp $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/go-musicfox

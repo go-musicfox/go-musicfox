@@ -16,6 +16,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 )
 
 func NewPlayerCommand() *gcli.Command {
@@ -39,6 +40,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	}
 
 	http.DefaultClient.Timeout = types.AppHttpTimeout
+	neteaseutil.HTTPClientTimeout = types.AppHttpTimeout
 	runewidth.DefaultCondition.EastAsianWidth = false
 
 	opts := model.DefaultOptions()

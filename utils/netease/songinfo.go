@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/utils/mathx"
 	"github.com/go-musicfox/netease-music/service"
 )
@@ -71,6 +72,12 @@ func FetchPlayableInfo(songID int64, quality service.SongQualityLevel) (Playable
 	musicType, _ := jsonparser.GetString(response, "data", "[0]", "type")
 	if musicType = strings.ToLower(musicType); musicType == "" {
 		musicType = "mp3"
+	}
+
+	if s, ok := strings.CutPrefix(url, "https://music.163.com/package/"); ok {
+		url = strings.TrimSuffix(configs.AppConfig.UNM.ProxyURL, "/") + "/package/" + s
+	} else if s, ok := strings.CutPrefix(url, "http://music.163.com/package/"); ok {
+		url = strings.TrimSuffix(configs.AppConfig.UNM.ProxyURL, "/") + "/package/" + s
 	}
 
 	return PlayableInfo{
