@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"reflect"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -114,7 +115,7 @@ func (p *Player) createStatus(info PlayingInfo) {
 		"CanGoPrevious": newProp(true, nil),
 		"CanPlay":       newProp(true, nil),
 		"CanPause":      newProp(true, nil),
-		"CanSeek":       newProp(false, nil),
+		"CanSeek":       newProp(true, nil),
 		"CanControl":    newProp(true, nil),
 	}
 }
@@ -168,6 +169,46 @@ func (p *Player) Stop() *dbus.Error {
 func (p *Player) PlayPause() *dbus.Error {
 	log.Printf("Play/Pause requested. Switching context...\n")
 	p.RemoteControl.player.CtrlToggle()
+	return nil
+}
+
+// Seek seeks by an offset relative to the current position.
+// https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Seek
+func (p *Player) Seek(offset int64) *dbus.Error {
+	log.Printf("Seek requested: offset=%d\n", offset)
+
+	// Get current position from properties
+	posVariant, dbusErr := p.RemoteControl.props.Get("org.mpris.MediaPlayer2.Player", "Position")
+	if dbusErr != nil {
+		return dbusErr
+	}
+
+	currentUs := reflect.ValueOf(posVariant.Value()).Int()
+
+	newUs := currentUs + offset
+	if newUs < 0 {
+		newUs = 0
+	}
+
+	p.RemoteControl.player.CtrlSeek(time.Duration(newUs) * time.Microsecond)
+	return nil
+}
+
+// SetPosition sets the absolute position of the current track.
+// https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:SetPosition
+func (p *Player) SetPosition(trackId dbus.ObjectPath, position int64) *dbus.Error {
+	log.Printf("SetPosition requested: trackId=%s, position=%d\n", trackId, position)
+
+	// MPRIS spec: if TrackId doesn't match the current track, ignore the request
+	if trackId != p.RemoteControl.currentTrack {
+		return nil
+	}
+
+	if position < 0 {
+		position = 0
+	}
+
+	p.RemoteControl.player.CtrlSeek(time.Duration(position) * time.Microsecond)
 	return nil
 }
 
