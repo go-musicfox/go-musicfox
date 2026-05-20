@@ -159,6 +159,9 @@ func (s *RemoteControl) SetPlayingInfo(info PlayingInfo) {
 func (s *RemoteControl) SetPosition(time.Duration) {
 }
 
+func (s *RemoteControl) EmitSeeked(time.Duration) {
+}
+
 func (s *RemoteControl) Release() {
 	s.nowPlayingCenter.Release()
 	s.remoteCommandCenter.Release()

@@ -388,6 +388,7 @@ func (p *Player) PreviousSong(manual bool) {
 func (p *Player) Seek(duration time.Duration) {
 	p.Player.Seek(duration)
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	p.stateHandler.EmitSeeked(duration)
 }
 
 // SetMode 设置播放模式

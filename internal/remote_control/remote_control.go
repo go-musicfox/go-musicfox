@@ -14,6 +14,9 @@ func NewRemoteControl(Controller, PlayingInfo) *RemoteControl {
 func (s *RemoteControl) SetPosition(time.Duration) {
 }
 
+func (s *RemoteControl) EmitSeeked(time.Duration) {
+}
+
 func (s *RemoteControl) SetPlayingInfo(PlayingInfo) {
 }
 

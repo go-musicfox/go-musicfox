@@ -305,10 +305,15 @@ func (s *RemoteControl) SetPosition(duration time.Duration) {
 
 	position := UsFromDuration(duration)
 	_ = s.props.Set("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(position))
+}
 
-	if s.dbus != nil {
-		_ = s.dbus.Emit("/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player.Seeked", position)
+// EmitSeeked 发送 Seeked 信号，仅在用户主动 seek 时调用
+// https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Signal:Seeked
+func (s *RemoteControl) EmitSeeked(position time.Duration) {
+	if s.dbus == nil {
+		return
 	}
+	_ = s.dbus.Emit("/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player.Seeked", UsFromDuration(position))
 }
 
 func (s *RemoteControl) setProp(iface, name string, value dbus.Variant) {
