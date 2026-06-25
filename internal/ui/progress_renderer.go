@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
@@ -17,7 +18,7 @@ type ProgressRenderer struct {
 	state   playerRendererState
 
 	progressLastWidth float64
-	progressRamp      []string
+	progressRamp      []color.Color
 }
 
 // NewProgressRenderer creates a new progress bar renderer component.

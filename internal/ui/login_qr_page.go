@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/utils/app"
@@ -135,10 +135,10 @@ func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 	case qrErrorMsg:
 		p.loading.Complete()
-		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), termenv.ANSIBrightRed)
+		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), lipgloss.BrightRed)
 		return p, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "b", "esc", "q":
 			if p.qrCodePath != "" {
@@ -149,7 +149,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			if p.qrCodePath != "" && !p.isExpired {
 				err := open.Start(p.qrCodePath)
 				if err != nil {
-					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), termenv.ANSIBrightRed)
+					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), lipgloss.BrightRed)
 				}
 			}
 		}
@@ -204,7 +204,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 		for _, line := range qrLines {
 			builder.WriteString(space)
 			if p.isExpired {
-				builder.WriteString(util.SetFgStyle(line, termenv.ANSIBrightRed))
+				builder.WriteString(util.SetFgStyle(line, lipgloss.BrightRed))
 			} else {
 				builder.WriteString(line)
 			}
@@ -229,7 +229,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 		padding = 0
 	}
 	builder.WriteString(strings.Repeat(" ", padding))
-	builder.WriteString(util.SetFgStyle(bottomTip, termenv.ANSIBrightBlack))
+	builder.WriteString(util.SetFgStyle(bottomTip, lipgloss.BrightBlack))
 	builder.WriteString("\n")
 
 	if p.qrCodePath != "" {
@@ -239,7 +239,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 			padding = 0
 		}
 		builder.WriteString(strings.Repeat(" ", padding))
-		builder.WriteString(util.SetFgStyle(viewTip, termenv.ANSIBrightBlack))
+		builder.WriteString(util.SetFgStyle(viewTip, lipgloss.BrightBlack))
 		builder.WriteString("\n")
 	} else {
 		builder.WriteString("\n")

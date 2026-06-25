@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/model"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/mattn/go-runewidth"
 )
 

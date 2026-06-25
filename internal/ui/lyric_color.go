@@ -1,12 +1,12 @@
 package ui
 
 import (
+	"image/color"
 	"math"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
 )
 
 // Lyric color definitions (true color / RGB)
@@ -24,66 +24,42 @@ type colorRGB struct {
 
 // Pre-computed RGB values - avoid parsing hex every frame
 var (
-	lyricActiveRGB     = colorRGB{0x7E, 0xC8, 0xE3}
-	lyricTransitionRGB = colorRGB{0xC9, 0xB1, 0xD4}
-	lyricInactiveRGB   = colorRGB{0x6B, 0x6B, 0x6B}
-	lyricWhiteRGB      = colorRGB{0xE8, 0xE8, 0xE8}
+	lyricActiveRGB     = color.RGBA{R: 0x7E, G: 0xC8, B: 0xE3, A: 255}
+	lyricTransitionRGB = color.RGBA{R: 0xC9, G: 0xB1, B: 0xD4, A: 255}
+	lyricInactiveRGB   = color.RGBA{R: 0x6B, G: 0x6B, B: 0x6B, A: 255}
+	lyricWhiteRGB      = color.RGBA{R: 0xE8, G: 0xE8, B: 0xE8, A: 255}
 )
 
-// hexDigits for fast hex encoding
-const hexDigits = "0123456789ABCDEF"
-
 // blendColorFast mixes two pre-computed RGB colors with ratio t (0.0 - 1.0).
-func blendColorFast(c1, c2 colorRGB, t float64) lipgloss.Color {
+func blendColorFast(c1, c2 color.RGBA, t float64) color.Color {
 	t1 := 1 - t
-	r := uint8(float64(c1.R)*t1 + float64(c2.R)*t)
-	g := uint8(float64(c1.G)*t1 + float64(c2.G)*t)
-	b := uint8(float64(c1.B)*t1 + float64(c2.B)*t)
-
-	// Fast hex encoding without fmt.Sprintf
-	var buf [7]byte
-	buf[0] = '#'
-	buf[1] = hexDigits[r>>4]
-	buf[2] = hexDigits[r&0x0F]
-	buf[3] = hexDigits[g>>4]
-	buf[4] = hexDigits[g&0x0F]
-	buf[5] = hexDigits[b>>4]
-	buf[6] = hexDigits[b&0x0F]
-
-	return lipgloss.Color(string(buf[:]))
+	return color.RGBA{
+		R: uint8(float64(c1.R)*t1 + float64(c2.R)*t),
+		G: uint8(float64(c1.G)*t1 + float64(c2.G)*t),
+		B: uint8(float64(c1.B)*t1 + float64(c2.B)*t),
+		A: 255,
+	}
 }
 
-// blendColor mixes two lipgloss.Color with a given ratio t (0.0 - 1.0).
+// blendColor mixes two color.Color with a given ratio t (0.0 - 1.0).
 // Legacy function for backward compatibility.
-func blendColor(c1, c2 lipgloss.Color, t float64) lipgloss.Color {
-	r1, g1, b1 := hexToRGB(string(c1))
-	r2, g2, b2 := hexToRGB(string(c2))
-	return blendColorFast(colorRGB{r1, g1, b1}, colorRGB{r2, g2, b2}, t)
+func blendColor(c1, c2 color.Color, t float64) color.Color {
+	rgb1 := toRGBA(c1)
+	rgb2 := toRGBA(c2)
+	return blendColorFast(rgb1, rgb2, t)
 }
 
-func hexToRGB(hex string) (uint8, uint8, uint8) {
-	hex = strings.TrimPrefix(hex, "#")
-	if len(hex) != 6 {
-		return 128, 128, 128
+func toRGBA(c color.Color) color.RGBA {
+	if rgba, ok := c.(color.RGBA); ok {
+		return rgba
 	}
-
-	hexToByte := func(c byte) uint8 {
-		switch {
-		case c >= '0' && c <= '9':
-			return c - '0'
-		case c >= 'a' && c <= 'f':
-			return c - 'a' + 10
-		case c >= 'A' && c <= 'F':
-			return c - 'A' + 10
-		default:
-			return 0
-		}
+	r, g, b, _ := c.RGBA()
+	return color.RGBA{
+		R: uint8(r >> 8),
+		G: uint8(g >> 8),
+		B: uint8(b >> 8),
+		A: 255,
 	}
-
-	r := hexToByte(hex[0])<<4 | hexToByte(hex[1])
-	g := hexToByte(hex[2])<<4 | hexToByte(hex[3])
-	b := hexToByte(hex[4])<<4 | hexToByte(hex[5])
-	return r, g, b
 }
 
 // clamp restricts a value to a range.
@@ -147,7 +123,7 @@ func renderSmooth(words []wordWithTiming, progress float64) string {
 		}
 
 		color := blendColorFast(lyricInactiveRGB, lyricActiveRGB, activation)
-		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
+		sb.WriteString(util.SetFgStyle(w.text, color))
 	}
 
 	return sb.String()
@@ -200,18 +176,18 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 			activation = 1.0
 		}
 
-		var color lipgloss.Color
+		var lcolor color.Color
 		if activation >= 1.0 {
 			wave := math.Sin(animationTime*3.0 - float64(i)*0.5)
 			wave = (wave + 1) / 2
-			color = blendColorFast(lyricTransitionRGB, lyricActiveRGB, wave)
+			lcolor = blendColorFast(lyricTransitionRGB, lyricActiveRGB, wave)
 		} else if activation > 0 {
-			color = blendColorFast(lyricInactiveRGB, lyricActiveRGB, activation)
+			lcolor = blendColorFast(lyricInactiveRGB, lyricActiveRGB, activation)
 		} else {
-			color = LyricInactiveColor
+			lcolor = LyricInactiveColor
 		}
 
-		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
+		sb.WriteString(util.SetFgStyle(w.text, lcolor))
 	}
 
 	return sb.String()
@@ -232,39 +208,41 @@ func renderGlow(words []wordWithTiming, currentWordIndex int, animationTime floa
 	const preheatMax = 0.4
 
 	for i, w := range words {
-		var color lipgloss.Color
+		var lcolor color.Color
 
 		if i < currentWordIndex-1 {
-			color = LyricActiveColor
+			lcolor = LyricActiveColor
 		} else if i == currentWordIndex-1 {
 			fadeOut := currentInterpolation
 			glowStrength := (1 - fadeOut) * (0.3 + pulse*0.15)
-			color = blendColorFast(lyricActiveRGB, lyricWhiteRGB, glowStrength)
+			lcolor = blendColorFast(lyricActiveRGB, lyricWhiteRGB, glowStrength)
 		} else if i == currentWordIndex {
-			preheatEndRGB := colorRGB{
+			preheatEndRGB := color.RGBA{
 				R: uint8(float64(lyricInactiveRGB.R)*(1-preheatMax) + float64(lyricTransitionRGB.R)*preheatMax),
 				G: uint8(float64(lyricInactiveRGB.G)*(1-preheatMax) + float64(lyricTransitionRGB.G)*preheatMax),
 				B: uint8(float64(lyricInactiveRGB.B)*(1-preheatMax) + float64(lyricTransitionRGB.B)*preheatMax),
+				A: 255,
 			}
 
-			baseRGB := colorRGB{
+			baseRGB := color.RGBA{
 				R: uint8(float64(preheatEndRGB.R)*(1-w.interpolation) + float64(lyricActiveRGB.R)*w.interpolation),
 				G: uint8(float64(preheatEndRGB.G)*(1-w.interpolation) + float64(lyricActiveRGB.G)*w.interpolation),
 				B: uint8(float64(preheatEndRGB.B)*(1-w.interpolation) + float64(lyricActiveRGB.B)*w.interpolation),
+				A: 255,
 			}
 
 			glowStrength := 0.15 + w.interpolation*0.5 + pulse*0.15
 			glowStrength = clamp(glowStrength, 0, 0.8)
 
-			color = blendColorFast(baseRGB, lyricWhiteRGB, glowStrength)
+			lcolor = blendColorFast(baseRGB, lyricWhiteRGB, glowStrength)
 		} else if i == currentWordIndex+1 {
 			preheatStrength := currentInterpolation * preheatMax
-			color = blendColorFast(lyricInactiveRGB, lyricTransitionRGB, preheatStrength)
+			lcolor = blendColorFast(lyricInactiveRGB, lyricTransitionRGB, preheatStrength)
 		} else {
-			color = LyricInactiveColor
+			lcolor = LyricInactiveColor
 		}
 
-		sb.WriteString(util.SetFgStyle(w.text, termenv.RGBColor(string(color))))
+		sb.WriteString(util.SetFgStyle(w.text, lcolor))
 	}
 
 	return sb.String()
@@ -302,32 +280,34 @@ const (
 func renderLRCLineSmooth(line string, progress float64) string {
 	easedProgress := easeInOutCubic(progress)
 	color := blendColorFast(lyricInactiveRGB, lyricActiveRGB, easedProgress)
-	return util.SetFgStyle(line, termenv.RGBColor(string(color)))
+	return util.SetFgStyle(line, color)
 }
 
 // renderLRCWave renders LRC lyrics with wave mode - dynamic wave effect across the line.
 // Adds animated wave effect that pulses with the music.
 func renderLRCWave(line string, progress float64, animationTime float64) string {
-	baseRGB := colorRGB{
+	baseRGB := color.RGBA{
 		R: uint8(float64(lyricInactiveRGB.R)*(1-progress) + float64(lyricActiveRGB.R)*progress),
 		G: uint8(float64(lyricInactiveRGB.G)*(1-progress) + float64(lyricActiveRGB.G)*progress),
 		B: uint8(float64(lyricInactiveRGB.B)*(1-progress) + float64(lyricActiveRGB.B)*progress),
+		A: 255,
 	}
 
 	wave := math.Sin(animationTime*2.0) * 0.1
 	blendFactor := 0.5 + wave
 	finalColor := blendColorFast(lyricTransitionRGB, baseRGB, blendFactor)
 
-	return util.SetFgStyle(line, termenv.RGBColor(string(finalColor)))
+	return util.SetFgStyle(line, finalColor)
 }
 
 // renderLRCGlow renders LRC lyrics with glow mode - soft glow effect.
 // The line has a soft glow that pulses gently.
 func renderLRCGlow(line string, progress float64, animationTime float64) string {
-	baseRGB := colorRGB{
+	baseRGB := color.RGBA{
 		R: uint8(float64(lyricInactiveRGB.R)*(1-progress) + float64(lyricActiveRGB.R)*progress),
 		G: uint8(float64(lyricInactiveRGB.G)*(1-progress) + float64(lyricActiveRGB.G)*progress),
 		B: uint8(float64(lyricInactiveRGB.B)*(1-progress) + float64(lyricActiveRGB.B)*progress),
+		A: 255,
 	}
 
 	pulse := (math.Sin(animationTime*2.0) + 1) / 2
@@ -335,7 +315,7 @@ func renderLRCGlow(line string, progress float64, animationTime float64) string 
 	glowStrength = clamp(glowStrength, 0, 0.4)
 
 	finalColor := blendColorFast(baseRGB, lyricWhiteRGB, glowStrength)
-	return util.SetFgStyle(line, termenv.RGBColor(string(finalColor)))
+	return util.SetFgStyle(line, finalColor)
 }
 
 // easeInOutCubic provides smooth easing for color transitions.

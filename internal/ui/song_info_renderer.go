@@ -2,13 +2,14 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
@@ -37,7 +38,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// This makes computing the total length of the song view easier
 	type Segment struct {
 		text  string
-		color termenv.Color
+		color color.Color
 	}
 
 	var (
@@ -47,40 +48,40 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	)
 
 	// Helper for adding a new segment
-	addSegment := func(text string, color termenv.Color) {
+	addSegment := func(text string, color color.Color) {
 		segments = append(segments, Segment{text, color})
 	}
 	// Helper for adding text whose color we don't care about
 	addText := func(text string) {
-		segments = append(segments, Segment{text, termenv.ANSIBrightBlack})
+		segments = append(segments, Segment{text, lipgloss.BrightBlack})
 	}
 
 	prefixLen := 10
 	if main.MenuStartColumn()-4 > 0 {
 		prefixLen += 12
 		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), termenv.ANSIBrightBlack)
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), lipgloss.BrightBlack)
 		}
 		{
 			msg := r.state.Mode().Name()
-			addSegment(fmt.Sprintf("[%s] ", msg), termenv.ANSIBrightMagenta)
+			addSegment(fmt.Sprintf("[%s] ", msg), lipgloss.BrightMagenta)
 		}
-		addSegment(fmt.Sprintf("%d%% ", r.state.Volume()), termenv.ANSIBrightBlue)
+		addSegment(fmt.Sprintf("%d%% ", r.state.Volume()), lipgloss.BrightBlue)
 	}
 	if r.state.State() == types.Playing {
-		addSegment("♫ ♪ ♫ ♪ ", termenv.ANSIBrightYellow)
+		addSegment("♫ ♪ ♫ ♪ ", lipgloss.BrightYellow)
 	} else {
-		addSegment("_ z Z Z ", termenv.ANSIYellow)
+		addSegment("_ z Z Z ", lipgloss.Yellow)
 	}
 
 	if song.Id > 0 {
-		var color termenv.ANSIColor
+		var icolor color.Color
 		if likelist.IsLikeSong(song.Id) {
-			color = termenv.ANSIRed
+			icolor = lipgloss.Red
 		} else {
-			color = termenv.ANSIWhite
+			icolor = lipgloss.White
 		}
-		addSegment("♥ ", color)
+		addSegment("♥ ", icolor)
 	}
 
 	if r.state.CurSongIndex() < len(r.state.Playlist()) {
@@ -108,7 +109,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 				runewidth.FillRight(artistString, remainLen),
 				remainLen, "")
 		}
-		addSegment(artistString, termenv.ANSIBrightBlack)
+		addSegment(artistString, lipgloss.BrightBlack)
 	}
 
 	if main.CenterEverything() {

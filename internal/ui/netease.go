@@ -12,7 +12,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
