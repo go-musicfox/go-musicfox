@@ -1,15 +1,13 @@
 package commands
 
 import (
-	"github.com/gookit/gcli/v2"
-
-	"github.com/charmbracelet/bubbles/table"
-
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/clipboard"
+	"github.com/gookit/gcli/v2"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 func NewConfigCommand() *gcli.Command {
@@ -39,7 +37,8 @@ func NewConfigCommand() *gcli.Command {
 				table.WithColumns(columns),
 				table.WithRows(rows),
 				table.WithFocused(true),
-				table.WithHeight(len(rows)),
+				table.WithHeight(len(rows)+1),
+				table.WithWidth(90),
 			)
 
 			s := table.DefaultStyles()
@@ -75,7 +74,7 @@ func (m configModel) Init() tea.Cmd { return nil }
 func (m configModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "esc":
 			if m.table.Focused() {
@@ -99,6 +98,8 @@ func (m configModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m configModel) View() string {
-	return baseStyle.Render(m.table.View()) + "\n"
+func (m configModel) View() tea.View {
+	var v tea.View
+	v.SetContent(baseStyle.Render(m.table.View()) + "\n")
+	return v
 }

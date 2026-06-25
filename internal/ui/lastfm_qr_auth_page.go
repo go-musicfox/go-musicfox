@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
@@ -88,10 +88,10 @@ func (p *LastfmQRAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cm
 
 	case lastfmQRErrorMsg:
 		p.loading.Complete()
-		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), termenv.ANSIBrightRed)
+		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), lipgloss.BrightRed)
 		return p, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "b", "esc":
 			if p.qrCodePath != "" {
@@ -102,7 +102,7 @@ func (p *LastfmQRAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cm
 			if p.qrCodePath != "" {
 				err := open.Start(p.qrCodePath)
 				if err != nil {
-					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), termenv.ANSIBrightRed)
+					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), lipgloss.BrightRed)
 				}
 			}
 		case "enter":
@@ -162,7 +162,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 			padding = 0
 		}
 		builder.WriteString(strings.Repeat(" ", padding))
-		builder.WriteString(util.SetFgStyle(confirmTip, termenv.ANSIBrightBlue))
+		builder.WriteString(util.SetFgStyle(confirmTip, lipgloss.BrightBlue))
 		builder.WriteString("\n")
 	}
 
@@ -172,7 +172,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 		padding = 0
 	}
 	builder.WriteString(strings.Repeat(" ", padding))
-	builder.WriteString(util.SetFgStyle(bottomTip, termenv.ANSIBrightBlack))
+	builder.WriteString(util.SetFgStyle(bottomTip, lipgloss.BrightBlack))
 	builder.WriteString("\n")
 
 	if p.qrCodePath != "" {
@@ -182,7 +182,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 			padding = 0
 		}
 		builder.WriteString(strings.Repeat(" ", padding))
-		builder.WriteString(util.SetFgStyle(viewTip, termenv.ANSIBrightBlack))
+		builder.WriteString(util.SetFgStyle(viewTip, lipgloss.BrightBlack))
 		builder.WriteString("\n")
 	} else {
 		builder.WriteString("\n")
@@ -230,7 +230,7 @@ func (p *LastfmQRAuthPage) confirmAuth() (model.Page, tea.Cmd) {
 	// 获取 session key
 	sessionKey, err := p.netease.lastfm.GetSession(p.token)
 	if err != nil {
-		p.statusMsg = util.SetFgStyle("获取授权失败，请确认已在浏览器中完成授权", termenv.ANSIBrightRed)
+		p.statusMsg = util.SetFgStyle("获取授权失败，请确认已在浏览器中完成授权", lipgloss.BrightRed)
 		slog.Error("sessionKey 获取失败", slogx.Error(err))
 		return p, nil
 	}
@@ -238,7 +238,7 @@ func (p *LastfmQRAuthPage) confirmAuth() (model.Page, tea.Cmd) {
 	// 获取用户信息
 	user, err := p.netease.lastfm.GetUserInfo(map[string]any{})
 	if err != nil {
-		p.statusMsg = util.SetFgStyle("用户信息获取失败", termenv.ANSIBrightRed)
+		p.statusMsg = util.SetFgStyle("用户信息获取失败", lipgloss.BrightRed)
 		slog.Error("用户信息获取失败", slogx.Error(err))
 		return p, nil
 	}

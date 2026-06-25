@@ -5,14 +5,13 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -64,7 +63,9 @@ func NewSearchPage(netease *Netease) (search *SearchPage) {
 	search.wordsInput.Placeholder = " 输入关键词"
 	search.wordsInput.Focus()
 	search.wordsInput.Prompt = model.GetFocusedPrompt()
-	search.wordsInput.TextStyle = util.GetPrimaryFontStyle()
+	s := textinput.DefaultStyles(true)
+	s.Focused.Text = util.GetPrimaryFontStyle()
+	search.wordsInput.SetStyles(s)
 	search.wordsInput.CharLimit = 32
 	return
 }
@@ -82,7 +83,7 @@ func (s *SearchPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 		return s, nil
 	}
 
-	key, ok := msg.(tea.KeyMsg)
+	key, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return s.updateSearchInputs(msg)
 	}
@@ -128,13 +129,17 @@ func (s *SearchPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 				// Set focused state
 				inputs[i].Focus()
 				inputs[i].Prompt = model.GetFocusedPrompt()
-				inputs[i].TextStyle = util.GetPrimaryFontStyle()
+				s := textinput.DefaultStyles(true)
+				s.Focused.Text = util.GetPrimaryFontStyle()
+				inputs[i].SetStyles(s)
 				continue
 			}
 			// Remove focused state
 			inputs[i].Blur()
 			inputs[i].Prompt = model.GetBlurredPrompt()
-			inputs[i].TextStyle = lipgloss.NewStyle()
+			s := textinput.DefaultStyles(true)
+			s.Focused.Text = lipgloss.NewStyle()
+			inputs[i].SetStyles(s)
 		}
 
 		s.wordsInput = inputs[0]
@@ -153,7 +158,7 @@ func (s *SearchPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 	if len(s.wordsInput.Value()) <= 0 {
-		s.tips = util.SetFgStyle("关键词不得为空", termenv.ANSIBrightRed)
+		s.tips = util.SetFgStyle("关键词不得为空", lipgloss.BrightRed)
 		return s, nil
 	}
 	loading := model.NewLoading(s.netease.MustMain(), s.menuTitle)
@@ -175,10 +180,10 @@ func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 	codeType := _struct.CheckCode(code)
 	switch codeType {
 	case _struct.UnknownError:
-		s.tips = util.SetFgStyle("未知错误，请稍后再试~", termenv.ANSIBrightRed)
+		s.tips = util.SetFgStyle("未知错误，请稍后再试~", lipgloss.BrightRed)
 		return s, tickSearch(time.Nanosecond)
 	case _struct.NetworkError:
-		s.tips = util.SetFgStyle("网络异常，请稍后再试~", termenv.ANSIBrightRed)
+		s.tips = util.SetFgStyle("网络异常，请稍后再试~", lipgloss.BrightRed)
 		return s, tickSearch(time.Nanosecond)
 	case _struct.Success:
 		s.result = response
@@ -294,7 +299,9 @@ func (s *SearchPage) Reset() {
 	s.index = 0
 	s.wordsInput.Focus()
 	s.wordsInput.Prompt = model.GetFocusedPrompt()
-	s.wordsInput.TextStyle = util.GetPrimaryFontStyle()
+	st := textinput.DefaultStyles(true)
+	st.Focused.Text = util.GetPrimaryFontStyle()
+	s.wordsInput.SetStyles(st)
 	s.wordsInput.CharLimit = 32
 	s.submitButton = model.GetBlurredSubmitButton()
 }

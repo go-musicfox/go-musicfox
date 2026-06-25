@@ -5,11 +5,10 @@ import (
 	"strings"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
@@ -90,11 +89,11 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 	if currentTimeMs < 0 {
 		var result strings.Builder
 		for _, word := range line.Words {
-			result.WriteString(util.SetFgStyle(word.Word, termenv.RGBColor(string(LyricInactiveColor))))
+			result.WriteString(util.SetFgStyle(word.Word, LyricInactiveColor))
 		}
 		if showTranslation && line.TranslatedLyric != "" {
 			result.WriteString(" ")
-			result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.RGBColor(string(LyricInactiveColor))))
+			result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor))
 		}
 		return result.String()
 	}
@@ -159,7 +158,7 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 
 	// Append translation if available and enabled (gray color)
 	if showTranslation && line.TranslatedLyric != "" {
-		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", termenv.RGBColor(string(LyricInactiveColor)))
+		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor)
 	}
 
 	return result
@@ -302,7 +301,7 @@ func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, cu
 
 	// Helper function to render plain gray text (for non-current lines)
 	renderPlainGray := func(content string) string {
-		return util.SetFgStyle(content, termenv.RGBColor(string(LyricInactiveColor)))
+		return util.SetFgStyle(content, LyricInactiveColor)
 	}
 
 	// Fill current line (with color gradient effect)
@@ -388,9 +387,9 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 
 		if !hasAnsi {
 			if i == highlightLine {
-				line = util.SetFgStyle(line, termenv.RGBColor(string(LyricActiveColor)))
+				line = util.SetFgStyle(line, LyricActiveColor)
 			} else {
-				line = util.SetFgStyle(line, termenv.RGBColor(string(LyricInactiveColor)))
+				line = util.SetFgStyle(line, LyricInactiveColor)
 			}
 		}
 		lyricBuilder.WriteString(line)
@@ -440,9 +439,9 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		lineHasAnsi := hasAnsi || strings.Contains(lyricLine, "\033[")
 		if !lineHasAnsi {
 			if isHighlight {
-				lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricActiveColor)))
+				lyricLine = util.SetFgStyle(lyricLine, LyricActiveColor)
 			} else {
-				lyricLine = util.SetFgStyle(lyricLine, termenv.RGBColor(string(LyricInactiveColor)))
+				lyricLine = util.SetFgStyle(lyricLine, LyricInactiveColor)
 			}
 		}
 

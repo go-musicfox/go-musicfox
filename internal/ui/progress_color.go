@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image/color"
 	"math"
 )
 
@@ -18,7 +19,7 @@ const (
 	progressRenderModeGlow   progressRenderMode = "glow"
 )
 
-func progressRampForMode(width int, fullSize int, animationTime float64, mode progressRenderMode) []string {
+func progressRampForMode(width int, fullSize int, animationTime float64, mode progressRenderMode) []color.Color {
 	if width <= 0 {
 		return nil
 	}
@@ -35,21 +36,21 @@ func progressRampForMode(width int, fullSize int, animationTime float64, mode pr
 	}
 }
 
-func progressRampWave(width int, animationTime float64) []string {
-	ramp := make([]string, width)
+func progressRampWave(width int, animationTime float64) []color.Color {
+	ramp := make([]color.Color, width)
 	for i := 0; i < width; i++ {
 		w := math.Sin(animationTime*2.0 - float64(i)*0.3)
 		w = (w + 1) / 2
 		c := blendColor(ProgressTransitionColor, ProgressActiveColor, w)
-		ramp[i] = string(c)
+		ramp[i] = c
 	}
 	return ramp
 }
 
-func progressRampGlow(width int, fullSize int, animationTime float64) []string {
-	ramp := make([]string, width)
+func progressRampGlow(width int, fullSize int, animationTime float64) []color.Color {
+	ramp := make([]color.Color, width)
 	for i := range ramp {
-		ramp[i] = string(ProgressActiveColor)
+		ramp[i] = ProgressActiveColor
 	}
 	if fullSize <= 0 {
 		return ramp
@@ -63,10 +64,10 @@ func progressRampGlow(width int, fullSize int, animationTime float64) []string {
 	idx := fullSize - 1
 	strength := 0.25 + pulse*0.35
 	strength = clamp(strength, 0, 0.8)
-	ramp[idx] = string(blendColor(ProgressActiveColor, ProgressWhiteColor, strength))
+	ramp[idx] = blendColor(ProgressActiveColor, ProgressWhiteColor, strength)
 
 	if idx-1 >= 0 {
-		ramp[idx-1] = string(blendColor(ProgressActiveColor, ProgressWhiteColor, 0.08+pulse*0.12))
+		ramp[idx-1] = blendColor(ProgressActiveColor, ProgressWhiteColor, 0.08+pulse*0.12)
 	}
 	return ramp
 }

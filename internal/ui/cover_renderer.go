@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"

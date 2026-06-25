@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
-	"slices"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -325,19 +324,27 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 		return false, nil, nil
 	}
 
-	switch msg.Button {
-	case tea.MouseButtonLeft:
-		// Handle play mode click
-		if msg.Action == tea.MouseActionPress {
+	mouse := msg.Mouse()
+	switch msg.(type) {
+	case tea.MouseClickMsg:
+		slog.Info("click", "X", mouse.X, "Y", mouse.Y)
+		switch mouse.Button {
+		case tea.MouseLeft:
+			slog.Info("click", "X", mouse.X, "Y", mouse.Y)
+			// Handle play mode click
 			// 计算播放模式显示位置
 			// 播放模式在歌曲信息行，位于窗口底部往上第3行（进度条是最后一行，往上数第3行）
 			if handled, page, cmd := h.handlePlayerBarClick(msg, a, main); handled {
 				return true, page, cmd
 			}
-		}
 
-		// Handle single and double-click detection for menu items
-		if msg.Action == tea.MouseActionPress {
+			// Handle progress bar seeking
+			if handled, m, cmd := h.handleProgressBarSeek(msg, a, main); handled {
+				return handled, m, cmd
+			}
+
+			// Handle single and double-click detection for menu items
+
 			now := time.Now()
 			// 根据操作系统设置双击间隔阈值
 			var doubleClickInterval time.Duration
@@ -351,11 +358,11 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 			}
 
 			// 计算坐标差的绝对值
-			deltaX := msg.X - h.lastClickX
+			deltaX := mouse.X - h.lastClickX
 			if deltaX < 0 {
 				deltaX = -deltaX
 			}
-			deltaY := msg.Y - h.lastClickY
+			deltaY := mouse.Y - h.lastClickY
 			if deltaY < 0 {
 				deltaY = -deltaY
 			}
@@ -380,75 +387,14 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 
 			// 更新最后点击信息
 			h.lastClickTime = now
-			h.lastClickX = msg.X
-			h.lastClickY = msg.Y
-		}
+			h.lastClickX = mouse.X
+			h.lastClickY = mouse.Y
 
-		// Handle progress bar seeking
-		if slices.Contains([]tea.MouseAction{tea.MouseActionPress, tea.MouseActionMotion}, msg.Action) {
-			x, y := msg.X, msg.Y
-			progressBarWidth := a.WindowWidth() - 14
-			if y+1 == a.WindowHeight() && x+1 <= progressBarWidth {
-				allDuration := int(player.CurMusic().Duration.Seconds())
-				if allDuration == 0 {
-					return true, main, nil
-				}
-				duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(progressBarWidth)
-				player.Seek(time.Second * time.Duration(duration))
-				if player.State() != types.Playing {
-					player.Resume()
-				}
-				return true, main, a.Tick(time.Nanosecond)
-			}
-		}
-	case tea.MouseButtonWheelDown:
-		if msg.Ctrl {
-			currentVolume := player.Volume()
-			newVolume := max(currentVolume-h.mouseVolumeStep, 0)
-			player.SetVolume(newVolume)
-		} else {
-			player.DownVolume()
-		}
-	case tea.MouseButtonWheelUp:
-		if msg.Ctrl {
-			currentVolume := player.Volume()
-			newVolume := min(currentVolume+h.mouseVolumeStep, 100)
-			player.SetVolume(newVolume)
-		} else {
-			player.UpVolume()
-		}
-	case tea.MouseButtonWheelLeft:
-		player.PreviousSong(true)
-	case tea.MouseButtonWheelRight:
-		player.NextSong(true)
-	case tea.MouseButtonForward:
-		// 鼠标前进键：上一页
-		if msg.Action == tea.MouseActionPress {
-			oldPage := main.CurPage()
-			main.PrePage()
-			if oldPage != main.CurPage() {
-				curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
-				main.SetSelectedIndex(curIndex)
-			}
-			return true, main, a.Tick(time.Nanosecond)
-		}
-	case tea.MouseButtonBackward:
-		// 鼠标后退键：下一页
-		if msg.Action == tea.MouseActionPress {
-			oldPage := main.CurPage()
-			main.NextPage()
-			if oldPage != main.CurPage() {
-				curIndex := mathx.Min(main.SelectedIndex()+main.PageSize(), len(main.CurMenu().MenuViews())-1)
-				main.SetSelectedIndex(curIndex)
-			}
-			return true, main, a.Tick(time.Nanosecond)
-		}
-	case tea.MouseButtonRight:
-		// 鼠标右键：根据点击位置判断是菜单还是歌曲信息区域
-		if msg.Action == tea.MouseActionPress {
+		case tea.MouseRight:
+			// 鼠标右键：根据点击位置判断是菜单还是歌曲信息区域
 			// 歌曲信息行：等同于对“当前播放”按 m
 			playModeRow := a.WindowHeight() - 3
-			if msg.Y == playModeRow {
+			if mouse.Y == playModeRow {
 				action(h.netease, true)
 				return true, main, a.Tick(time.Nanosecond)
 			}
@@ -456,7 +402,7 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 			// 菜单区域：先切换焦点；若当前是“可播放歌曲菜单”，则打开选中项操作菜单
 			menuStartRow := main.MenuStartRow()
 			menuBottomRow := main.MenuBottomRow()
-			y := msg.Y + 1 // 1-based
+			y := mouse.Y + 1 // 1-based
 			isInMenuArea := y >= menuStartRow && y < menuBottomRow
 			if isInMenuArea {
 				h.handleSingleClick(msg, a, main)
@@ -475,16 +421,64 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 			// 非菜单区域：默认触发“当前播放”的操作菜单
 			action(h.netease, true)
 			return true, main, a.Tick(time.Nanosecond)
-		}
-	case tea.MouseButtonMiddle:
-		// 鼠标中键：返回上一级（等同于ESC键）
-		if msg.Action == tea.MouseActionPress {
+
+		case tea.MouseBackward:
+			oldPage := main.CurPage()
+			main.NextPage()
+			if oldPage != main.CurPage() {
+				curIndex := mathx.Min(main.SelectedIndex()+main.PageSize(), len(main.CurMenu().MenuViews())-1)
+				main.SetSelectedIndex(curIndex)
+			}
+			return true, main, a.Tick(time.Nanosecond)
+
+		case tea.MouseForward:
+			oldPage := main.CurPage()
+			main.PrePage()
+			if oldPage != main.CurPage() {
+				curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
+				main.SetSelectedIndex(curIndex)
+			}
+			return true, main, a.Tick(time.Nanosecond)
+
+		case tea.MouseMiddle:
+			// 鼠标中键：返回上一级（等同于ESC键）
 			main.BackMenu()
 			return true, main, a.Tick(time.Nanosecond)
+		}
+
+	case tea.MouseWheelMsg:
+		switch mouse.Button {
+		case tea.MouseWheelDown:
+			if mouse.Mod == tea.ModCtrl {
+				currentVolume := player.Volume()
+				newVolume := max(currentVolume-h.mouseVolumeStep, 0)
+				player.SetVolume(newVolume)
+			} else {
+				player.DownVolume()
+			}
+		case tea.MouseWheelUp:
+			if mouse.Mod == tea.ModCtrl {
+				currentVolume := player.Volume()
+				newVolume := min(currentVolume+h.mouseVolumeStep, 100)
+				player.SetVolume(newVolume)
+			} else {
+				player.UpVolume()
+			}
+		case tea.MouseWheelLeft:
+			player.PreviousSong(true)
+		case tea.MouseWheelRight:
+			player.NextSong(true)
+		}
+
+	case tea.MouseMotionMsg:
+		// Handle progress bar seeking
+		if handled, m, cmd := h.handleProgressBarSeek(msg, a, main); handled {
+			return handled, m, cmd
 		}
 	}
 
 	return true, main, a.Tick(time.Nanosecond)
+
 }
 
 // handleSingleClick 处理鼠标单击事件，单击菜单项时改变焦点
@@ -547,15 +541,17 @@ func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.Ap
 	menuBottomRow := main.MenuBottomRow()
 	menuStartColumn := main.MenuStartColumn()
 
+	mouse := msg.Mouse()
+
 	// 检查点击是否在菜单区域内
 	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较
-	y := msg.Y + 1
+	y := mouse.Y + 1
 	if y < menuStartRow || y >= menuBottomRow {
 		return 0, false
 	}
 
 	// X坐标：检查是否在菜单的有效区域内
-	if msg.X < menuStartColumn-4 {
+	if mouse.X < menuStartColumn-4 {
 		return 0, false
 	}
 
@@ -580,7 +576,7 @@ func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.Ap
 			leftColumnWidth = 44
 		}
 
-		if msg.X < menuStartColumn+leftColumnWidth {
+		if mouse.X < menuStartColumn+leftColumnWidth {
 			clickedIndex = pageStartIndex + relativeRow*2
 		} else {
 			clickedIndex = pageStartIndex + relativeRow*2 + 1
@@ -599,7 +595,7 @@ func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.Ap
 // handlePlayerBarClick 处理播放栏点击事件
 func (h *EventHandler) handlePlayerBarClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
 	playModeRow := a.WindowHeight() - 3
-	if msg.Y != playModeRow {
+	if msg.Mouse().Y != playModeRow {
 		return false, nil, nil
 	}
 
@@ -619,7 +615,7 @@ func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main 
 
 	if menuStartColumn > 4 {
 		playModeEndX := menuStartColumn + 5
-		if msg.X >= menuStartColumn-4 && msg.X <= playModeEndX {
+		if msg.Mouse().X >= menuStartColumn-4 && msg.Mouse().X <= playModeEndX {
 			player.SwitchMode()
 			return true, main, a.Tick(time.Nanosecond)
 		}
@@ -631,6 +627,8 @@ func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main 
 func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
 	player := h.netease.player
 	curSong := player.CurSong()
+
+	mouse := msg.Mouse()
 
 	if curSong.Id == 0 {
 		return false, nil, nil
@@ -660,7 +658,7 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 	}
 	stateWidth := runewidth.StringWidth(stateText)
 
-	if msg.X >= currentX && msg.X < currentX+stateWidth {
+	if mouse.X >= currentX && mouse.X < currentX+stateWidth {
 		h.playOrToggleHandle()
 		return true, main, a.Tick(time.Nanosecond)
 	}
@@ -673,7 +671,7 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 		heartWidth = runewidth.StringWidth("♥ ")
 	}
 	if heartWidth > 0 {
-		if msg.X >= currentX && msg.X < currentX+heartWidth {
+		if mouse.X >= currentX && mouse.X < currentX+heartWidth {
 			isLiked := likelist.IsLikeSong(curSong.Id)
 			newPage := likeSong(h.netease, !isLiked, false)
 			return true, newPage, a.Tick(time.Nanosecond)
@@ -695,17 +693,36 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 		}
 	}
 
-	if msg.X >= currentX && msg.X < currentX+songShownWidth {
+	if mouse.X >= currentX && mouse.X < currentX+songShownWidth {
 		action(h.netease, true)
 		return true, main, a.Tick(time.Nanosecond)
 	}
 	currentX += songShownWidth + 1
 
 	// 歌手
-	if msg.X >= currentX {
+	if mouse.X >= currentX {
 		goToArtistOfSong(h.netease, false)
 		return true, main, a.Tick(time.Nanosecond)
 	}
 
 	return false, nil, nil
+}
+
+func (h *EventHandler) handleProgressBarSeek(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
+	player := h.netease.player
+	x, y := msg.Mouse().X, msg.Mouse().Y
+	progressBarWidth := a.WindowWidth() - 14
+	if y+1 == a.WindowHeight() && x+1 <= progressBarWidth {
+		allDuration := int(player.CurMusic().Duration.Seconds())
+		if allDuration == 0 {
+			return true, main, nil
+		}
+		duration := float64(x) * player.CurMusic().Duration.Seconds() / float64(progressBarWidth)
+		player.Seek(time.Second * time.Duration(duration))
+		if player.State() != types.Playing {
+			player.Resume()
+		}
+		return true, main, a.Tick(time.Nanosecond)
+	}
+	return false, main, nil
 }

@@ -8,15 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/go-musicfox/netease-music/service"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
@@ -41,8 +40,8 @@ const (
 var (
 	tabStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder(), true).
-			Foreground(lipgloss.Color(termenv.ANSIBrightBlack.String())).
-			BorderForeground(lipgloss.Color(termenv.ANSIBrightBlack.String())).
+			Foreground(lipgloss.BrightBlack).
+			BorderForeground(lipgloss.BrightBlack).
 			Padding(0, 0)
 
 	activeTabStyleGetter = sync.OnceValue(func() lipgloss.Style {
@@ -104,7 +103,9 @@ func NewLoginPage(netease *Netease) (login *LoginPage) {
 	accountInput.Placeholder = " 手机号或邮箱"
 	accountInput.Focus()
 	accountInput.Prompt = model.GetFocusedPrompt()
-	accountInput.TextStyle = util.GetPrimaryFontStyle()
+	s := textinput.DefaultStyles(true)
+	s.Focused.Text = util.GetPrimaryFontStyle()
+	accountInput.SetStyles(s)
 	accountInput.CharLimit = 32
 
 	passwordInput := textinput.New()
@@ -153,7 +154,7 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 	if loginMsg, ok := msg.(LoginMsg); ok {
 		if loginMsg.err != nil {
-			l.tips = util.SetFgStyle(loginMsg.err.Error(), termenv.ANSIBrightRed)
+			l.tips = util.SetFgStyle(loginMsg.err.Error(), lipgloss.BrightRed)
 			return l, nil
 		}
 
@@ -168,9 +169,10 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 	}
 
 	// 鼠标事件处理
-	if mouse, ok := msg.(tea.MouseMsg); ok {
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		// 仅处理左键按下的点击
-		if mouse.Button == tea.MouseButtonLeft && mouse.Action == tea.MouseActionPress {
+		mouse := msg.Mouse()
+		if mouse.Button == tea.MouseLeft {
 			// 行坐标转换为 1-based 与 View 中记录的行号一致
 			y := mouse.Y + 1
 			x := mouse.X
@@ -219,7 +221,9 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 					l.index = 0
 					l.cookieInput.Focus()
 					l.cookieInput.Prompt = model.GetFocusedPrompt()
-					l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+					s := textinput.DefaultStyles(true)
+					s.Focused.Text = util.GetPrimaryFontStyle()
+					l.cookieInput.SetStyles(s)
 					l.submitButton = model.GetBlurredSubmitButton()
 					return l, tickLogin(time.Nanosecond)
 				}
@@ -364,11 +368,15 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			l.cookieInput.Blur()
 
 			l.accountInput.Prompt = model.GetBlurredPrompt()
-			l.accountInput.TextStyle = lipgloss.NewStyle()
+			s := textinput.DefaultStyles(true)
+			s.Focused.Text = util.GetPrimaryFontStyle()
+			l.accountInput.SetStyles(s)
 			l.passwordInput.Prompt = model.GetBlurredPrompt()
-			l.passwordInput.TextStyle = lipgloss.NewStyle()
+			s = textinput.DefaultStyles(true)
+			s.Focused.Text = lipgloss.NewStyle()
+			l.passwordInput.SetStyles(s)
 			l.cookieInput.Prompt = model.GetBlurredPrompt()
-			l.cookieInput.TextStyle = lipgloss.NewStyle()
+			l.cookieInput.SetStyles(s)
 
 			l.submitButton = model.GetBlurredSubmitButton()
 			l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
@@ -386,11 +394,15 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 				if i == l.index {
 					inputs[i].Focus()
 					inputs[i].Prompt = model.GetFocusedPrompt()
-					inputs[i].TextStyle = util.GetPrimaryFontStyle()
+					s := textinput.DefaultStyles(true)
+					s.Focused.Text = util.GetPrimaryFontStyle()
+					inputs[i].SetStyles(s)
 				} else {
 					inputs[i].Blur()
 					inputs[i].Prompt = model.GetBlurredPrompt()
-					inputs[i].TextStyle = lipgloss.NewStyle()
+					s := textinput.DefaultStyles(true)
+					s.Focused.Text = lipgloss.NewStyle()
+					inputs[i].SetStyles(s)
 				}
 			}
 
@@ -414,12 +426,16 @@ func (l *LoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			case 0:
 				l.cookieInput.Focus()
 				l.cookieInput.Prompt = model.GetFocusedPrompt()
-				l.cookieInput.TextStyle = util.GetPrimaryFontStyle()
+				s := textinput.DefaultStyles(true)
+				s.Focused.Text = util.GetPrimaryFontStyle()
+				l.cookieInput.SetStyles(s)
 				l.submitButton = model.GetBlurredSubmitButton()
 			case submitIndex:
 				l.cookieInput.Blur()
 				l.cookieInput.Prompt = model.GetBlurredPrompt()
-				l.cookieInput.TextStyle = lipgloss.NewStyle()
+				s := textinput.DefaultStyles(true)
+				s.Focused.Text = lipgloss.NewStyle()
+				l.cookieInput.SetStyles(s)
 				l.submitButton = model.GetFocusedSubmitButton()
 			}
 		}
@@ -694,7 +710,7 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 		}
 		// 提交
 		if len(l.accountInput.Value()) <= 0 || len(l.passwordInput.Value()) <= 0 {
-			l.tips = util.SetFgStyle("请输入账号或密码", termenv.ANSIBrightRed)
+			l.tips = util.SetFgStyle("请输入账号或密码", lipgloss.BrightRed)
 			return l, nil
 		}
 		return l.loginByAccount()
@@ -744,7 +760,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 		code, bodyBytes, err = loginService.LoginCellphone()
 
 		if err != nil {
-			l.tips = util.SetFgStyle("使用账号密码登录失败："+err.Error(), termenv.ANSIBrightRed)
+			l.tips = util.SetFgStyle("使用账号密码登录失败："+err.Error(), lipgloss.BrightRed)
 			slog.Error("使用账号密码登录失败", slogx.Error(err))
 			return l, tickLogin(time.Nanosecond)
 		}
@@ -845,11 +861,14 @@ func (l *LoginPage) updateTabStyle() {
 func (l *LoginPage) focusAccountInputs() {
 	l.accountInput.Focus()
 	l.accountInput.Prompt = model.GetFocusedPrompt()
-	l.accountInput.TextStyle = util.GetPrimaryFontStyle()
-
+	s := textinput.DefaultStyles(true)
+	s.Focused.Text = util.GetPrimaryFontStyle()
+	l.accountInput.SetStyles(s)
 	l.passwordInput.Blur()
 	l.passwordInput.Prompt = model.GetBlurredPrompt()
-	l.passwordInput.TextStyle = lipgloss.NewStyle()
+	s = textinput.DefaultStyles(true)
+	s.Focused.Text = lipgloss.NewStyle()
+	l.passwordInput.SetStyles(s)
 
 	l.submitButton = model.GetBlurredSubmitButton()
 	l.qrLoginButton = model.GetBlurredButton(l.qrButtonTextByStep())
@@ -891,11 +910,11 @@ func checkCookieCmd(cookieStr string) tea.Cmd {
 func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 	cookieStr := l.cookieInput.Value()
 	if len(cookieStr) <= 0 {
-		l.tips = util.SetFgStyle("请输入 Cookie", termenv.ANSIBrightRed)
+		l.tips = util.SetFgStyle("请输入 Cookie", lipgloss.BrightRed)
 		return l, nil
 	}
 
-	l.tips = util.SetFgStyle("正在验证 Cookie...", termenv.ANSIBrightCyan)
+	l.tips = util.SetFgStyle("正在验证 Cookie...", lipgloss.BrightCyan)
 	l.cookieInput.SetValue("")
 
 	return l, checkCookieCmd(cookieStr)

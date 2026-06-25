@@ -197,7 +197,7 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpHelp:           {"?", "？"},
 	OpPageUp:         {"ctrl+u", "pgup"},
 	OpPageDown:       {"ctrl+d", "pgdown"},
-	OpPlayOrToggle:   {"space", " ", "　"},
+	OpPlayOrToggle:   {"space", "　"},
 	OpToggle:         {},
 	OpPrevious:       {"[", "【"},
 	OpNext:           {"]", "】"},
@@ -397,8 +397,8 @@ func ProcessUserBindings(userKeyBindings map[string][]string) map[OperateType][]
 				key = strings.ToLower(key)
 			}
 
-			if key == "space" {
-				key = " "
+			if key == " " {
+				key = "space"
 			}
 			normalizedKeys = append(normalizedKeys, key)
 		}
@@ -561,8 +561,8 @@ func splitKeys(s string) []string {
 		if len(trimmedKey) > 1 {
 			trimmedKey = strings.ToLower(trimmedKey)
 		}
-		if trimmedKey == "space" {
-			trimmedKey = " "
+		if trimmedKey == " " {
+			trimmedKey = "space"
 		}
 		trimmedKeys = append(trimmedKeys, trimmedKey)
 	}

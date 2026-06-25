@@ -1,8 +1,8 @@
 package configs
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
@@ -29,11 +29,10 @@ func (cfg *Config) FillToModelOpts(opts *model.Options) {
 	opts.LoadingText = cfg.Theme.LoadingText
 	opts.PrimaryColor = cfg.Theme.PrimaryColor
 	opts.DualColumn = cfg.Theme.DoubleColumn
+	opts.AltScreen = cfg.Main.AltScreen
 
-	if cfg.Main.EnableMouseEvent {
-		opts.TeaOptions = append(opts.TeaOptions, tea.WithMouseCellMotion())
-	}
-	if cfg.Main.AltScreen {
-		opts.TeaOptions = append(opts.TeaOptions, tea.WithAltScreen())
+	opts.MouseMode = tea.MouseModeCellMotion
+	if !cfg.Main.EnableMouseEvent {
+		opts.MouseMode = tea.MouseModeNone
 	}
 }
