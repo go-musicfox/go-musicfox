@@ -2,16 +2,17 @@ package model
 
 import (
 	"fmt"
-	"github.com/anhoder/foxful-cli/util"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/anhoder/foxful-cli/util"
+	"github.com/mattn/go-runewidth"
 )
 
 type Main struct {
@@ -74,7 +75,9 @@ func NewMain(app *App, options *Options) (m *Main) {
 	m.menuList = m.menu.MenuViews()
 	m.searchInput.Placeholder = " " + SearchPlaceholder
 	m.searchInput.Prompt = util.GetFocusedPrompt()
-	m.searchInput.TextStyle = util.GetPrimaryFontStyle()
+	s := textinput.DefaultStyles(true)
+	s.Focused.Text = util.GetPrimaryFontStyle()
+	m.searchInput.SetStyles(s)
 	m.searchInput.CharLimit = 32
 
 	return
@@ -358,7 +361,7 @@ func (m *Main) MenuTitleView(a *App, top *int, menuTitle *MenuItem) string {
 			menuTitleBuilder.WriteString(strings.Repeat(" ", m.menuTitleStartColumn))
 		}
 	}
-	menuTitleBuilder.WriteString(util.SetFgStyle(title, termenv.ANSIBrightGreen))
+	menuTitleBuilder.WriteString(util.SetFgStyle(title, lipgloss.BrightGreen))
 
 	if top != nil {
 		*top = m.menuTitleStartRow
@@ -412,7 +415,7 @@ func (m *Main) forceEntryLength(item *MenuItem, targetLength int) string {
 	subtitle := runewidth.Truncate(string(s), subtitleSpace, "")
 	// Fill with space in case we have 1 space remaining but the next rune has width 2
 	subtitle = runewidth.FillRight(subtitle, subtitleSpace)
-	return item.Title + " " + util.SetFgStyle(subtitle, termenv.ANSIBrightBlack)
+	return item.Title + " " + util.SetFgStyle(subtitle, lipgloss.BrightBlack)
 }
 
 func (m *Main) formatEntry(item *MenuItem, index int, targetLength int) string {
@@ -674,16 +677,16 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 		tmp = runewidth.Truncate(string(s), itemMaxLen-menuTitleLen, "")
 		tmp = runewidth.FillRight(tmp, itemMaxLen-menuTitleLen)
 		if isSelected {
-			menuName = util.SetFgStyle(menuTitle, util.GetPrimaryColor()) + util.SetFgStyle(tmp, termenv.ANSIBrightBlack)
+			menuName = util.SetFgStyle(menuTitle, util.GetPrimaryColor()) + util.SetFgStyle(tmp, lipgloss.BrightBlack)
 		} else {
-			menuName = util.SetNormalStyle(menuTitle) + util.SetFgStyle(tmp, termenv.ANSIBrightBlack)
+			menuName = util.SetNormalStyle(menuTitle) + util.SetFgStyle(tmp, lipgloss.BrightBlack)
 		}
 	} else {
 		tmp = runewidth.FillRight(m.menuList[index].Subtitle, itemMaxLen-menuTitleLen)
 		if isSelected {
-			menuName = util.SetFgStyle(menuTitle, util.GetPrimaryColor()) + util.SetFgStyle(tmp, termenv.ANSIBrightBlack)
+			menuName = util.SetFgStyle(menuTitle, util.GetPrimaryColor()) + util.SetFgStyle(tmp, lipgloss.BrightBlack)
 		} else {
-			menuName = util.SetNormalStyle(menuTitle) + util.SetFgStyle(tmp, termenv.ANSIBrightBlack)
+			menuName = util.SetNormalStyle(menuTitle) + util.SetFgStyle(tmp, lipgloss.BrightBlack)
 		}
 	}
 

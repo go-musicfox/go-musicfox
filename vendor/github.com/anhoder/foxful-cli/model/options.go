@@ -3,8 +3,8 @@ package model
 import (
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type Options struct {
@@ -36,6 +36,9 @@ type Options struct {
 
 	InitHook  func(a *App)
 	CloseHook func(a *App)
+
+	AltScreen bool
+	MouseMode tea.MouseMode
 }
 
 type StartupOptions struct {
@@ -74,6 +77,8 @@ func DefaultOptions() *Options {
 		LoadingText:         util.LoadingText,
 		PrimaryColor:        util.RandomColor,
 		MainMenu:            &DefaultMenu{},
+		AltScreen:           true,
+		MouseMode:           tea.MouseModeCellMotion,
 	}
 }
 

@@ -2,51 +2,47 @@ package util
 
 import (
 	"fmt"
+	"image/color"
 	"math/rand"
+	"os"
 	"strconv"
-	"strings"
+	"sync"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/lucasb-eyer/go-colorful"
-	"github.com/muesli/termenv"
 )
 
 var (
-	TermProfile      = termenv.ColorProfile()
+	TermProfile      = colorprofile.Detect(os.Stdout, os.Environ())
 	PrimaryColor     string
-	_primaryColor    termenv.Color
+	_primaryColor    color.Color
 	_primaryColorStr string
+	primaryColorOnce sync.Once
 )
 
 // GetPrimaryColor get random color
-func GetPrimaryColor() termenv.Color {
-	if _primaryColor != nil {
-		return _primaryColor
-	}
-	initPrimaryColor()
+func GetPrimaryColor() color.Color {
+	ensurePrimaryColorInit()
 	return _primaryColor
 }
 
 func GetPrimaryColorString() string {
-	if _primaryColorStr != "" {
-		return _primaryColorStr
-	}
-	initPrimaryColor()
+	ensurePrimaryColorInit()
 	return _primaryColorStr
 }
 
-func initPrimaryColor() {
-	if _primaryColorStr != "" && _primaryColor != nil {
-		return
-	}
-	if PrimaryColor == "" || PrimaryColor == RandomColor {
-		rand.New(rand.NewSource(time.Now().UnixNano()))
-		_primaryColorStr = strconv.Itoa(rand.Intn(228-17) + 17)
-	} else {
-		_primaryColorStr = PrimaryColor
-	}
-	_primaryColor = TermProfile.Color(GetPrimaryColorString())
+func ensurePrimaryColorInit() {
+	primaryColorOnce.Do(func() {
+		if PrimaryColor == "" || PrimaryColor == RandomColor {
+			rand.New(rand.NewSource(time.Now().UnixNano()))
+			_primaryColorStr = strconv.Itoa(rand.Intn(228-17) + 17)
+		} else {
+			_primaryColorStr = PrimaryColor
+		}
+		_primaryColor = lipgloss.Color(_primaryColorStr)
+	})
 }
 
 // GetRandomRgbColor get random rgb color
@@ -75,19 +71,18 @@ func GetRandomRgbColor(isRange bool) (string, string) {
 }
 
 // SetFgStyle Return a function that will colorize the foreground of a given string.
-func SetFgStyle(content string, color termenv.Color) string {
-	return termenv.Style{}.Foreground(color).Styled(content)
+func SetFgStyle(content string, fg color.Color) string {
+	return lipgloss.NewStyle().Foreground(fg).Render(content)
 }
 
 // SetFgBgStyle Color a string's foreground and background with the given value.
-func SetFgBgStyle(content string, fg, bg termenv.Color) string {
-	return termenv.Style{}.Foreground(fg).Background(bg).Styled(content)
+func SetFgBgStyle(content string, fg, bg color.Color) string {
+	return lipgloss.NewStyle().Foreground(fg).Background(bg).Render(content)
 }
 
 // SetNormalStyle don't set any style
 func SetNormalStyle(content string) string {
-	seq := strings.Join([]string{"0"}, ";")
-	return fmt.Sprintf("%s%sm%s%sm", termenv.CSI, seq, content, termenv.CSI+termenv.ResetSeq)
+	return fmt.Sprintf("\x1b[0m%s\x1b[0m", content)
 }
 
 func GetPrimaryFontStyle() lipgloss.Style {
@@ -95,27 +90,13 @@ func GetPrimaryFontStyle() lipgloss.Style {
 }
 
 // MakeRamp Generate a blend of colors.
-func MakeRamp(colorA, colorB string, steps float64) (s []string) {
+func MakeRamp(colorA, colorB string, steps float64) (s []color.Color) {
 	cA, _ := colorful.Hex(colorA)
 	cB, _ := colorful.Hex(colorB)
 
 	for i := 0.0; i < steps; i++ {
 		c := cA.BlendLuv(cB, i/steps)
-		s = append(s, colorToHex(c))
-	}
-	return
-}
-
-// Convert a colorful.Color to a hexidecimal format compatible with termenv.
-func colorToHex(c colorful.Color) string {
-	return fmt.Sprintf("#%s%s%s", colorFloatToHex(c.R), colorFloatToHex(c.G), colorFloatToHex(c.B))
-}
-
-// Helper function for converting colors to hex. Assumes a value between 0 and 1.
-func colorFloatToHex(f float64) (s string) {
-	s = strconv.FormatInt(int64(f*255), 16)
-	if len(s) == 1 {
-		s = "0" + s
+		s = append(s, c)
 	}
 	return
 }

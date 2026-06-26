@@ -2,19 +2,20 @@ package model
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fogleman/ease"
-	"github.com/muesli/termenv"
 )
 
 var (
-	progressRamp       []string
+	progressRamp       []color.Color
 	progressLastWidth  float64
 	progressStartColor string
 	progressEndColor   string
@@ -159,7 +160,7 @@ func (s *StartupPage) tipsView(a *App) string {
 		strings.Repeat(" ", left),
 		float64(s.options.LoadingDuration-s.loadedDuration)/float64(time.Second))
 
-	return util.SetFgStyle(tips, termenv.ANSIBrightBlack)
+	return util.SetFgStyle(tips, lipgloss.BrightBlack)
 }
 
 func (s *StartupPage) progressView(a *App) string {

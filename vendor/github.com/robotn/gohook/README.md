@@ -45,7 +45,11 @@ func add() {
 
 	fmt.Println("--- Please press w---")
 	hook.Register(hook.KeyDown, []string{"w"}, func(e hook.Event) {
-		fmt.Println("w")
+		fmt.Println("keyDown: ", "w")
+	})
+
+	hook.Register(hook.KeyUp, []string{"w"}, func(e hook.Event) {
+		fmt.Println("keyUp: ", "w")
 	})
 
 	s := hook.Start()
