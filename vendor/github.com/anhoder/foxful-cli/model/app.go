@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/util"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -94,7 +94,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Make sure these keys always quit
 	switch msgWithType := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		var k = msgWithType.String()
 		if k != "q" && k != "Q" && k != "ctrl+c" {
 			break
@@ -115,12 +115,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, cmd
 }
 
-func (a *App) View() string {
+func (a *App) View() tea.View {
+	var v tea.View
+	v.AltScreen = a.options.AltScreen
+	v.MouseMode = a.options.MouseMode
+
 	if a.quiting || a.WindowHeight() <= 0 || a.WindowWidth() <= 0 {
-		return ""
+		return v
 	}
 
-	return a.page.View(a)
+	v.SetContent(a.page.View(a))
+	return v
 }
 
 func (a *App) Run() error {
@@ -142,7 +147,7 @@ func (a *App) Run() error {
 		ListenGlobalKeys(a, a.options.GlobalKeyHandlers)
 	}
 
-	a.program = tea.ReplaceWithFoxfulRenderer(tea.NewProgram(a, a.options.TeaOptions...))
+	a.program = tea.NewProgram(a, a.options.TeaOptions...)
 	_, err := a.program.Run()
 	return err
 }

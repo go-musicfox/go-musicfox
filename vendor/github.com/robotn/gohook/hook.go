@@ -14,7 +14,7 @@ package hook
 #cgo darwin CFLAGS: -x objective-c -Wno-deprecated-declarations
 #cgo darwin LDFLAGS: -framework Cocoa
 
-#cgo linux CFLAGS:-I/usr/src
+#cgo linux CFLAGS:-I/usr/src -std=gnu99
 #cgo linux LDFLAGS: -L/usr/src -lX11 -lXtst
 #cgo linux LDFLAGS: -lX11-xcb -lxcb -lxcb-xkb -lxkbcommon -lxkbcommon-x11
 //#cgo windows LDFLAGS: -lgdi32 -luser32
@@ -28,14 +28,6 @@ import (
 	"sync"
 	"time"
 	"unsafe"
-
-	// Just for import header files when 'go vendor'
-	_ "github.com/robotn/gohook/chan"
-	_ "github.com/robotn/gohook/event"
-	_ "github.com/robotn/gohook/hook"
-	_ "github.com/robotn/gohook/hook/darwin"
-	_ "github.com/robotn/gohook/hook/windows"
-	_ "github.com/robotn/gohook/hook/x11"
 )
 
 const (
@@ -46,13 +38,14 @@ const (
 	HookEnabled  = 1 // iota
 	HookDisabled = 2
 
-	KeyDown = 3
-	KeyHold = 4
-	KeyUp   = 5
+	KeyDown = 4 // 3
+	KeyHold = 3 // 4
+	KeyUp   = 5 // 5
 
-	MouseUp    = 6
-	MouseHold  = 7
-	MouseDown  = 8
+	MouseDown = 7 // 6
+	MouseHold = 8 // 7
+	MouseUp   = 6 // 8
+
 	MouseMove  = 9
 	MouseDrag  = 10
 	MouseWheel = 11
@@ -100,10 +93,12 @@ var (
 
 	lck sync.RWMutex
 
-	pressed = make(map[uint16]bool, 256)
-	used    = []int{}
+	pressed   = make(map[uint16]bool, 256)
+	uppressed = make(map[uint16]bool, 256)
+	used      = []int{}
 
 	keys   = map[int][]uint16{}
+	upkeys = map[int][]uint16{}
 	cbs    = map[int]func(Event){}
 	events = map[uint8][]int{}
 )
@@ -124,12 +119,17 @@ func Register(when uint8, cmds []string, cb func(Event)) {
 	key := len(used)
 	used = append(used, key)
 	tmp := []uint16{}
+	uptmp := []uint16{}
 
 	for _, v := range cmds {
+		if when == KeyUp {
+			uptmp = append(uptmp, Keycode[v])
+		}
 		tmp = append(tmp, Keycode[v])
 	}
 
 	keys[key] = tmp
+	upkeys[key] = uptmp
 	cbs[key] = cb
 	events[when] = append(events[when], key)
 	// return
@@ -142,6 +142,7 @@ func Process(evChan <-chan Event) (out chan bool) {
 		for ev := range evChan {
 			if ev.Kind == KeyDown || ev.Kind == KeyHold {
 				pressed[ev.Keycode] = true
+				uppressed[ev.Keycode] = true
 			} else if ev.Kind == KeyUp {
 				pressed[ev.Keycode] = false
 			}
@@ -153,6 +154,12 @@ func Process(evChan <-chan Event) (out chan bool) {
 
 				if allPressed(pressed, keys[v]...) {
 					cbs[v](ev)
+				} else if ev.Kind == KeyUp {
+					//uppressed[ev.Keycode] = true
+					if allPressed(uppressed, upkeys[v]...) {
+						uppressed = make(map[uint16]bool, 256)
+						cbs[v](ev)
+					}
 				}
 			}
 		}
@@ -171,40 +178,32 @@ func (e Event) String() string {
 		return fmt.Sprintf("%v - Event: {Kind: HookEnabled}", e.When)
 	case HookDisabled:
 		return fmt.Sprintf("%v - Event: {Kind: HookDisabled}", e.When)
+	case KeyDown:
+		return fmt.Sprintf("%v - Event: {Kind: KeyDown, Rawcode: %v, Keychar: %v}",
+			e.When, e.Rawcode, e.Keychar)
+	case KeyHold:
+		return fmt.Sprintf("%v - Event: {Kind: KeyHold, Rawcode: %v, Keychar: %v}",
+			e.When, e.Rawcode, e.Keychar)
 	case KeyUp:
 		return fmt.Sprintf("%v - Event: {Kind: KeyUp, Rawcode: %v, Keychar: %v}",
 			e.When, e.Rawcode, e.Keychar)
-	case KeyHold:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: KeyHold, Rawcode: %v, Keychar: %v}",
-			e.When, e.Rawcode, e.Keychar)
-	case KeyDown:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: KeyDown, Rawcode: %v, Keychar: %v}",
-			e.When, e.Rawcode, e.Keychar)
-	case MouseUp:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: MouseUp, Button: %v, X: %v, Y: %v, Clicks: %v}",
+	case MouseDown:
+		return fmt.Sprintf("%v - Event: {Kind: MouseDown, Button: %v, X: %v, Y: %v, Clicks: %v}",
 			e.When, e.Button, e.X, e.Y, e.Clicks)
 	case MouseHold:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: MouseHold, Button: %v, X: %v, Y: %v, Clicks: %v}",
+		return fmt.Sprintf("%v - Event: {Kind: MouseHold, Button: %v, X: %v, Y: %v, Clicks: %v}",
 			e.When, e.Button, e.X, e.Y, e.Clicks)
-	case MouseDown:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: MouseDown, Button: %v, X: %v, Y: %v, Clicks: %v}",
+	case MouseUp:
+		return fmt.Sprintf("%v - Event: {Kind: MouseUp, Button: %v, X: %v, Y: %v, Clicks: %v}",
 			e.When, e.Button, e.X, e.Y, e.Clicks)
 	case MouseMove:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: MouseMove, Button: %v, X: %v, Y: %v, Clicks: %v}",
+		return fmt.Sprintf("%v - Event: {Kind: MouseMove, Button: %v, X: %v, Y: %v, Clicks: %v}",
 			e.When, e.Button, e.X, e.Y, e.Clicks)
 	case MouseDrag:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: MouseDrag, Button: %v, X: %v, Y: %v, Clicks: %v}",
+		return fmt.Sprintf("%v - Event: {Kind: MouseDrag, Button: %v, X: %v, Y: %v, Clicks: %v}",
 			e.When, e.Button, e.X, e.Y, e.Clicks)
 	case MouseWheel:
-		return fmt.Sprintf(
-			"%v - Event: {Kind: MouseWheel, Amount: %v, Rotation: %v, Direction: %v}",
+		return fmt.Sprintf("%v - Event: {Kind: MouseWheel, Amount: %v, Rotation: %v, Direction: %v}",
 			e.When, e.Amount, e.Rotation, e.Direction)
 	case FakeEvent:
 		return fmt.Sprintf("%v - Event: {Kind: FakeEvent}", e.When)
@@ -228,9 +227,14 @@ func KeychartoRawcode(kc string) uint16 {
 
 // Start adds global event hook to OS
 // returns event channel
-func Start() chan Event {
+func Start(tm ...int) chan Event {
 	ev = make(chan Event, 1024)
 	go C.start_ev()
+
+	tm1 := 50
+	if len(tm) > 0 {
+		tm1 = tm[0]
+	}
 
 	asyncon = true
 	go func() {
@@ -240,7 +244,7 @@ func Start() chan Event {
 			}
 
 			C.pollEv()
-			time.Sleep(time.Millisecond * 50)
+			time.Sleep(time.Millisecond * time.Duration(tm1))
 			//todo: find smallest time that does not destroy the cpu utilization
 		}
 	}()
@@ -261,6 +265,7 @@ func End() {
 	close(ev)
 
 	pressed = make(map[uint16]bool, 256)
+	uppressed = make(map[uint16]bool, 256)
 	used = []int{}
 
 	keys = map[int][]uint16{}

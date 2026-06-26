@@ -3,8 +3,8 @@ package model
 import (
 	"fmt"
 
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/muesli/termenv"
 )
 
 var (
@@ -19,7 +19,7 @@ func GetFocusedPrompt() string {
 		return focusedPrompt
 	}
 
-	focusedPrompt = termenv.String("> ").Foreground(util.GetPrimaryColor()).String()
+	focusedPrompt = lipgloss.NewStyle().Foreground(util.GetPrimaryColor()).Render("> ")
 
 	return focusedPrompt
 }
@@ -35,11 +35,11 @@ func GetBlurredPrompt() string {
 }
 
 func GetFocusedButton(text string) string {
-	return fmt.Sprintf("[ %s ]", termenv.String(text).Foreground(util.GetPrimaryColor()).String())
+	return fmt.Sprintf("[ %s ]", lipgloss.NewStyle().Foreground(util.GetPrimaryColor()).Render(text))
 }
 
 func GetBlurredButton(text string) string {
-	return fmt.Sprintf("[ %s ]", termenv.String(text).Foreground(termenv.ANSIBrightBlack).String())
+	return fmt.Sprintf("[ %s ]", lipgloss.NewStyle().Foreground(lipgloss.BrightBlack).Render(text))
 }
 
 func GetFocusedSubmitButton() string {

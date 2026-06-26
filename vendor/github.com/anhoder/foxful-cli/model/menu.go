@@ -3,8 +3,8 @@ package model
 import (
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/muesli/termenv"
 )
 
 type Hook func(main *Main) (bool, Page)
@@ -25,7 +25,7 @@ func (item *MenuItem) String() string {
 	if item.Subtitle == "" {
 		return item.Title
 	}
-	return item.Title + " " + util.SetFgStyle(item.Subtitle, termenv.ANSIBrightBlack)
+	return item.Title + " " + util.SetFgStyle(item.Subtitle, lipgloss.BrightBlack)
 }
 
 // Menu menu interface

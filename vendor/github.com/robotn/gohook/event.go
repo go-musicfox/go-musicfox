@@ -71,7 +71,6 @@ func AddEvents(key string, arr ...string) bool {
 		if l > 0 {
 			for i := 0; i < l; i++ {
 				ukey := Keycode[arr[i]]
-
 				if e.Kind == KeyHold && e.Keycode == ukey {
 					k++
 				}

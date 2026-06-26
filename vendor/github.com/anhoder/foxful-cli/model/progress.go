@@ -1,10 +1,11 @@
 package model
 
 import (
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/muesli/termenv"
 )
 
 type ProgressOptions struct {
@@ -18,17 +19,18 @@ type ProgressOptions struct {
 	LastFullChar       rune
 }
 
-func Progress(options *ProgressOptions, width, fullSize int, progressRamp []string) string {
+func Progress(options *ProgressOptions, width, fullSize int, progressRamp []color.Color) string {
 	var fullCells strings.Builder
 	for i := 0; i < fullSize && i < len(progressRamp); i++ {
+		style := lipgloss.NewStyle().Foreground(progressRamp[i])
 		if i == 0 {
-			fullCells.WriteString(termenv.String(string(options.FullCharWhenFirst)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
+			fullCells.WriteString(style.Render(string(options.FullCharWhenFirst)))
 		} else if i >= width-1 {
-			fullCells.WriteString(termenv.String(string(options.FullCharWhenLast)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
+			fullCells.WriteString(style.Render(string(options.FullCharWhenLast)))
 		} else if i == fullSize-1 {
-			fullCells.WriteString(termenv.String(string(options.LastFullChar)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
+			fullCells.WriteString(style.Render(string(options.LastFullChar)))
 		} else {
-			fullCells.WriteString(termenv.String(string(options.FullChar)).Foreground(util.TermProfile.Color(progressRamp[i])).String())
+			fullCells.WriteString(style.Render(string(options.FullChar)))
 		}
 	}
 
@@ -52,5 +54,5 @@ func Progress(options *ProgressOptions, width, fullSize int, progressRamp []stri
 			emptyCells.WriteRune(options.EmptyCharWhenLast)
 		}
 	}
-	return fullCells.String() + util.SetFgStyle(emptyCells.String(), termenv.ANSIBrightBlack)
+	return fullCells.String() + util.SetFgStyle(emptyCells.String(), lipgloss.BrightBlack)
 }
