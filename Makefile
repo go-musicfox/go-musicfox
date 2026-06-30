@@ -11,6 +11,9 @@ GORELEASER_IMAGE      ?= alanalbert/goreleaser-musicfox:$(GOLANG_CROSS_VERSION)
 SYSROOT_DIR     ?= sysroots
 SYSROOT_ARCHIVE ?= sysroots.tar.bz2
 
+# modvendor 用于在 go mod vendor 后复制 C/C++ 头文件等非 Go 文件
+MODVENDOR_BIN := $(shell go env GOPATH)/bin/modvendor
+
 ifneq ($(REGISTRY),)
 	GORELEASER_IMAGE := $(REGISTRY)/go-musicfox/goreleaser-musicfox:$(GOLANG_CROSS_VERSION)
 endif
@@ -61,6 +64,19 @@ test:
 	go test ./internal/... ./utils/... \
 		-coverpkg=./internal/...,./utils/... \
 		-covermode=atomic -coverprofile=coverage.txt
+
+.PHONY: modvendor-tool
+modvendor-tool:
+	@which modvendor >/dev/null 2>&1 || { \
+		echo "Installing modvendor..."; \
+		go install github.com/goware/modvendor@latest; \
+	}
+
+.PHONY: vendor
+vendor: modvendor-tool
+	go mod vendor
+	@echo "Copying C/C++ header files for CGo dependencies..."
+	modvendor -copy="**/*.h **/*.c" -v
 
 .PHONY: sysroot-pack
 sysroot-pack:

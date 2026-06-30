@@ -27,10 +27,14 @@ jobs:
         with:
           go-version: "^1.22.0"
 
-      - name: Run go mod vendor
+      - name: Install modvendor
+        run: go install github.com/goware/modvendor@latest
+
+      - name: Run go mod vendor (with C/C++ file sync)
         run: |
           go mod tidy
           go mod vendor
+          modvendor -copy="**/*.h **/*.c" -v
 
       - name: Stage files and check for changes
         id: check_changes
