@@ -574,7 +574,10 @@ func (p *dlnaPlayer) DownVolume() {
 }
 
 func (p *dlnaPlayer) Close() {
-	close(p.closed)
+	if p.closed != nil {
+		close(p.closed)
+		p.closed = nil
+	}
 	if p.httpServer != nil {
 		if err := p.httpServer.Close(); err != nil {
 			slog.Error("DLNA: failed to close HTTP server", "error", err)
