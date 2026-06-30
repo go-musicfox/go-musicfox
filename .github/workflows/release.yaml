@@ -45,10 +45,11 @@ jobs:
         with:
           go-version: "^1.22.0"
 
+      - name: Install modvendor
+        run: go install github.com/goware/modvendor@latest
+
       - name: Sync Go Modules and Vendor
-        run: |
-          go mod tidy
-          go mod vendor
+        run: make vendor
 
       - name: branch name
         id: branch_name

@@ -74,6 +74,7 @@ modvendor-tool:
 
 .PHONY: vendor
 vendor: modvendor-tool
+	go mod tidy
 	go mod vendor
 	@echo "Copying C/C++ header files for CGo dependencies..."
 	modvendor -copy="**/*.h **/*.c" -v

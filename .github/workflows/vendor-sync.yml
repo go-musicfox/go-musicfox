@@ -5,9 +5,9 @@ on:
     branches:
       - master
     paths:
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/vendor-sync.yml'
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/vendor-sync.yml"
 
 jobs:
   vendor-sync:
@@ -27,20 +27,14 @@ jobs:
         with:
           go-version: "^1.22.0"
 
-      - name: Install modvendor
-        run: go install github.com/goware/modvendor@latest
-
       - name: Run go mod vendor (with C/C++ file sync)
-        run: |
-          go mod tidy
-          go mod vendor
-          modvendor -copy="**/*.h **/*.c" -v
+        run: make vendor
 
       - name: Stage files and check for changes
         id: check_changes
         run: |
           git add go.mod go.sum vendor/
-          
+
           if ! git diff --cached --quiet; then
             echo "Changes detected in vendor directory or go modules."
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -56,14 +50,14 @@ jobs:
           commit-message: "chore(vendor): sync go vendor directory"
           committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-          
+
           title: "Chore: Automate vendor sync"
           body: |
             An automatic workflow has detected changes in `go.mod` or `go.sum` and updated the vendor directory accordingly.
-            
+
             This PR is automatically generated. Please review and merge.
-          
+
           branch: "bot/vendor-sync"
-          
+
           labels: |
             dependencies
