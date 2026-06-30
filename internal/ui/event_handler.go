@@ -87,9 +87,17 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpSeekForward10s:
 		player.Seek(player.PassedTime() + time.Second*10)
 	case keybindings.OpSeekBackward1s:
-		player.Seek(player.PassedTime() - time.Second*1)
+		newTime := player.PassedTime() - time.Second*1
+		if newTime < 0 {
+			newTime = 0
+		}
+		player.Seek(newTime)
 	case keybindings.OpSeekBackward5s:
-		player.Seek(player.PassedTime() - time.Second*5)
+		newTime := player.PassedTime() - time.Second*5
+		if newTime < 0 {
+			newTime = 0
+		}
+		player.Seek(newTime)
 	case keybindings.OpPrevious:
 		player.PreviousSong(true)
 	case keybindings.OpNext:
