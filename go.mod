@@ -110,7 +110,7 @@ replace (
 	github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
 	github.com/gopxl/beep v1.4.0 => github.com/go-musicfox/beep v1.4.1
 	github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
-	github.com/robotn/gohook v0.41.0 => github.com/go-musicfox/gohook v0.41.1
+	// github.com/robotn/gohook v0.41.0 => github.com/go-musicfox/gohook v0.41.1
 	github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.4
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 )
