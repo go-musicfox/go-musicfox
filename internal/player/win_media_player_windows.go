@@ -247,7 +247,9 @@ func (p *winMediaPlayer) Pause() {
 		return
 	}
 	Must(p.player.Pause())
-	p.timer.Pause()
+	if p.timer != nil {
+		p.timer.Pause()
+	}
 }
 
 func (p *winMediaPlayer) Resume() {
@@ -256,7 +258,9 @@ func (p *winMediaPlayer) Resume() {
 	if p.state == types.Playing {
 		return
 	}
-	go p.timer.Run()
+	if p.timer != nil {
+		go p.timer.Run()
+	}
 	Must(p.player.Play())
 }
 
@@ -267,7 +271,9 @@ func (p *winMediaPlayer) Stop() {
 		return
 	}
 	Must(p.player.Pause())
-	p.timer.Pause()
+	if p.timer != nil {
+		p.timer.Pause()
+	}
 }
 
 func (p *winMediaPlayer) Toggle() {
