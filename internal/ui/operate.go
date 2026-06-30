@@ -483,6 +483,119 @@ func collectSelectedPlaylist(n *Netease, isCollect bool) model.Page {
 	return NewOperation(n, coreLogic).ShowLoading().NeedsAuth().Execute()
 }
 
+// subscribeAlbum 收藏或取消收藏歌曲的专辑
+// isSub: true 为收藏, false 为取消收藏。
+// isSelected: true 操作选中的歌曲, false 操作正在播放的歌曲。
+func subscribeAlbum(n *Netease, isSub bool, isSelected bool) model.Page {
+	coreLogic := func(n *Netease) model.Page {
+		song, ok := getTargetSong(n, isSelected)
+		if !ok {
+			return nil
+		}
+		if song.Album.Id == 0 {
+			notify.Notify(notify.NotifyContent{
+				Title:   "操作失败",
+				Text:    "歌曲没有专辑信息",
+				Url:     types.AppGithubUrl,
+				GroupId: types.GroupID,
+			})
+			return nil
+		}
+		t := "1"
+		if !isSub {
+			t = "2" // API 中 '1' 为收藏, '2'（或任何非 1）为取消收藏
+		}
+		s := service.AlbumSubService{ID: strconv.FormatInt(song.Album.Id, 10), T: t}
+		if code, resp := s.AlbumSub(); code != 200 {
+			var msg string
+			if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
+				msg, _ = jsonparser.GetString(resp, "data", "message")
+			}
+			if msg == "" {
+				msg = "操作失败"
+			}
+			notify.Notify(notify.NotifyContent{
+				Title:   msg,
+				Text:    song.Album.Name,
+				Url:     types.AppGithubUrl,
+				GroupId: types.GroupID,
+			})
+			return nil
+		}
+		title := "已收藏专辑"
+		if !isSub {
+			title = "已取消收藏专辑"
+		}
+		notify.Notify(notify.NotifyContent{
+			Title:   title,
+			Text:    song.Album.Name,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
+			Icon:    "",
+		})
+		return nil
+	}
+	return NewOperation(n, coreLogic).ShowLoading().NeedsAuth().Execute()
+}
+
+// subscribeArtist 收藏或取消收藏歌曲的歌手
+// isSub: true 为收藏, false 为取消收藏。
+// isSelected: true 操作选中的歌曲, false 操作正在播放的歌曲。
+func subscribeArtist(n *Netease, isSub bool, isSelected bool) model.Page {
+	coreLogic := func(n *Netease) model.Page {
+		song, ok := getTargetSong(n, isSelected)
+		if !ok {
+			return nil
+		}
+		if len(song.Artists) == 0 {
+			notify.Notify(notify.NotifyContent{
+				Title:   "操作失败",
+				Text:    "歌曲没有歌手信息",
+				Url:     types.AppGithubUrl,
+				GroupId: types.GroupID,
+			})
+			return nil
+		}
+
+		artist := song.Artists[0]
+
+		t := "1"
+		if !isSub {
+			t = "2" // API 中 '1' 为收藏, '2'（或任何非 1）为取消收藏
+		}
+		s := service.ArtistSubService{T: t, Id: strconv.FormatInt(artist.Id, 10)}
+		if code, resp := s.ArtistSub(); code != 200 {
+			var msg string
+			if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
+				msg, _ = jsonparser.GetString(resp, "data", "message")
+			}
+			if msg == "" {
+				msg = "操作失败"
+			}
+			notify.Notify(notify.NotifyContent{
+				Title:   msg,
+				Text:    artist.Name,
+				Url:     types.AppGithubUrl,
+				GroupId: types.GroupID,
+			})
+			return nil
+		}
+		title := "已收藏歌手"
+		if !isSub {
+			title = "已取消收藏歌手"
+		}
+		notify.Notify(notify.NotifyContent{
+			Title:   title,
+			Text:    artist.Name,
+			Url:     types.AppGithubUrl,
+			GroupId: types.GroupID,
+			Icon:    "",
+		})
+		return nil
+	}
+	return NewOperation(n, coreLogic).ShowLoading().NeedsAuth().Execute()
+}
+
 // appendSongsToCurPlaylist 添加歌曲到播放列表
 func appendSongsToCurPlaylist(n *Netease, addToNext bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
