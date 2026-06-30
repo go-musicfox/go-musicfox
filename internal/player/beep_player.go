@@ -429,7 +429,10 @@ func (p *beepPlayer) Close() {
 	if p.timer != nil {
 		p.timer.Stop()
 	}
-	close(p.close)
+	if p.close != nil {
+		close(p.close)
+		p.close = nil
+	}
 	speaker.Clear()
 	speaker.Close()
 }
