@@ -27,7 +27,9 @@ jobs:
         uses: anomalyco/opencode/github@latest
         env:
           # ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          # MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         with:
           # model: zhipuai-coding-plan/glm-4.7
-          model: minimax-cn/MiniMax-M2.7
+          # model: minimax-cn/MiniMax-M2.7
+          model: deepseek/deepseek-v4-flash
