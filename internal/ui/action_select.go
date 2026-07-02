@@ -154,6 +154,22 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			action: func() { goToArtistOfSong(n, isSelected) },
 		},
 		{
+			title: model.MenuItem{Title: "收藏专辑"},
+			page:  func() model.Page { return subscribeAlbum(n, true, isSelected) },
+		},
+		{
+			title: model.MenuItem{Title: "取消收藏专辑"},
+			page:  func() model.Page { return subscribeAlbum(n, false, isSelected) },
+		},
+		{
+			title: model.MenuItem{Title: "收藏歌手"},
+			page:  func() model.Page { return subscribeArtist(n, true, isSelected) },
+		},
+		{
+			title: model.MenuItem{Title: "取消收藏歌手"},
+			page:  func() model.Page { return subscribeArtist(n, false, isSelected) },
+		},
+		{
 			title:  model.MenuItem{Title: "下载"},
 			action: func() { downloadSong(n, isSelected) },
 		},

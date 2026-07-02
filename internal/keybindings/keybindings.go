@@ -105,6 +105,15 @@ const (
 	OpShareSelectItem
 	OpToggleSortOrder
 
+	OpSubscribeAlbumOfPlayingSong
+	OpUnsubscribeAlbumOfPlayingSong
+	OpSubscribeArtistOfPlayingSong
+	OpUnsubscribeArtistOfPlayingSong
+	OpSubscribeAlbumOfSelectedSong
+	OpUnsubscribeAlbumOfSelectedSong
+	OpSubscribeArtistOfSelectedSong
+	OpUnsubscribeArtistOfSelectedSong
+
 	OpActionOfSelected
 	OpActionOfPlayingSong
 )
@@ -173,6 +182,15 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpSharePlayingItem:               {name: "sharePlayingItem", desc: "分享当前播放"},
 	OpShareSelectItem:                {name: "shareSelectItem", desc: "分享当前选中"},
 	OpToggleSortOrder:                {name: "toggleSortOrder", desc: "切换排序顺序"},
+
+	OpSubscribeAlbumOfPlayingSong:       {name: "subscribeAlbumOfPlayingSong", desc: "收藏播放中歌曲的专辑"},
+	OpUnsubscribeAlbumOfPlayingSong:     {name: "unsubscribeAlbumOfPlayingSong", desc: "取消收藏播放中歌曲的专辑"},
+	OpSubscribeArtistOfPlayingSong:      {name: "subscribeArtistOfPlayingSong", desc: "收藏播放中歌曲的歌手"},
+	OpUnsubscribeArtistOfPlayingSong:    {name: "unsubscribeArtistOfPlayingSong", desc: "取消收藏播放中歌曲的歌手"},
+	OpSubscribeAlbumOfSelectedSong:      {name: "subscribeAlbumOfSelectedSong", desc: "收藏选中歌曲的专辑"},
+	OpUnsubscribeAlbumOfSelectedSong:    {name: "unsubscribeAlbumOfSelectedSong", desc: "取消收藏选中歌曲的专辑"},
+	OpSubscribeArtistOfSelectedSong:     {name: "subscribeArtistOfSelectedSong", desc: "收藏选中歌曲的歌手"},
+	OpUnsubscribeArtistOfSelectedSong:   {name: "unsubscribeArtistOfSelectedSong", desc: "取消收藏选中歌曲的歌手"},
 
 	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
 	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},
