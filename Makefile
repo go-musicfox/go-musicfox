@@ -1,6 +1,6 @@
 PACKAGE_NAME          := go-musicfox
 PACKAGE_ROOT          := $(shell pwd)
-GOLANG_CROSS_VERSION  ?= v1.24.4
+GOLANG_CROSS_VERSION  ?= v1.26.3
 INJECT_PACKAGE        ?= github.com/go-musicfox/go-musicfox/internal/types
 LDFLAGS               := -s -w
 LASTFM_KEY            ?=
