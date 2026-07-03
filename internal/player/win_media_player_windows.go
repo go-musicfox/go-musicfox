@@ -3,11 +3,14 @@
 package player
 
 import (
+	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
 	. "github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	. "github.com/go-musicfox/go-musicfox/utils/timex"
 	"github.com/go-ole/go-ole"
 	"github.com/saltosystems/winrt-go"
@@ -56,6 +59,7 @@ type winMediaPlayer struct {
 
 	volume    int
 	state     types.State
+	failed    atomic.Bool
 	timeChan  chan time.Duration
 	stateChan chan types.State
 	musicChan chan URLMusic
@@ -126,8 +130,17 @@ func (p *winMediaPlayer) buildWinPlayer() {
 				p.Pause()
 				p.setState(types.Paused)
 			case playback.MediaPlayerStateStopped:
+				if p.failed.Load() {
+					p.Stop()
+					p.setState(types.Interrupted)
+					return
+				}
 				p.Stop()
-				p.setState(types.Stopped)
+				if p.playbackEnded() {
+					p.setState(types.Stopped)
+				} else {
+					p.setState(types.Interrupted)
+				}
 			}
 		},
 	)
@@ -138,6 +151,7 @@ func (p *winMediaPlayer) buildWinPlayer() {
 	finishedHandler := foundation.NewTypedEventHandler(
 		ole.NewGUID(playerEventGUID),
 		func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
+			p.failed.Store(false)
 			p.Stop()
 			p.setState(types.Stopped)
 		},
@@ -145,9 +159,19 @@ func (p *winMediaPlayer) buildWinPlayer() {
 	defer finishedHandler.Release()
 	failedHandler := foundation.NewTypedEventHandler(
 		ole.NewGUID(playerFailedEventGUID),
-		func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
+		func(_ *foundation.TypedEventHandler, _, args unsafe.Pointer) {
+			failedArgs := (*playback.MediaPlayerFailedEventArgs)(args)
+			mediaErr, err := failedArgs.GetError()
+			if err != nil {
+				slog.Error("win media player failed", slogx.Error(err))
+			} else {
+				extendedErr, _ := failedArgs.GetExtendedErrorCode()
+				message, _ := failedArgs.GetErrorMessage()
+				slog.Error("win media player failed", slog.Any("media_error", mediaErr), slog.Any("extended_error", extendedErr), slog.String("message", message))
+			}
+			p.failed.Store(true)
 			p.Stop()
-			p.setState(types.Stopped)
+			p.setState(types.Interrupted)
 		},
 	)
 	defer failedHandler.Release()
@@ -188,6 +212,7 @@ func (p *winMediaPlayer) listen() {
 		case p.curMusic = <-p.musicChan:
 			p.Pause()
 			reset()
+			p.failed.Store(false)
 
 			uri = Must1(foundation.UriCreateUri(p.curMusic.URL))
 			mediaSource = Must1(core.MediaSourceCreateFromUri(uri))
@@ -217,6 +242,14 @@ func (p *winMediaPlayer) listen() {
 			p.Resume()
 		}
 	}
+}
+
+func (p *winMediaPlayer) playbackEnded() bool {
+	duration := p.curMusic.Duration
+	if duration <= 0 {
+		return false
+	}
+	return duration-p.PassedTime() <= time.Second*3
 }
 
 func (p *winMediaPlayer) setState(state types.State) {
