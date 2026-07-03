@@ -500,6 +500,14 @@ DLNA 引擎允许你将音乐投送到兼容 DLNA 的设备（如智能电视、
 | `openSelectedItemInWeb`             | 网页打开选中歌曲/专辑...      | `O`                                             |
 | `collectSelectedPlaylist`           | 收藏选中歌单                  | `;`, `:`, `：`, `；`                        |
 | `discollectSelectedPlaylist`        | 取消收藏选中歌单              | `'`, `"`                                        |
+| `subscribeAlbumOfPlayingSong`       | 收藏播放中歌曲的专辑          | *(无)*                                          |
+| `unsubscribeAlbumOfPlayingSong`     | 取消收藏播放中歌曲的专辑      | *(无)*                                          |
+| `subscribeArtistOfPlayingSong`      | 收藏播放中歌曲的歌手          | *(无)*                                          |
+| `unsubscribeArtistOfPlayingSong`    | 取消收藏播放中歌曲的歌手      | *(无)*                                          |
+| `subscribeAlbumOfSelectedSong`      | 收藏选中歌曲的专辑            | *(无)*                                          |
+| `unsubscribeAlbumOfSelectedSong`    | 取消收藏选中歌曲的专辑        | *(无)*                                          |
+| `subscribeArtistOfSelectedSong`     | 收藏选中歌曲的歌手            | *(无)*                                          |
+| `unsubscribeArtistOfSelectedSong`   | 取消收藏选中歌曲的歌手        | *(无)*                                          |
 | `simiSongsOfSelectedSong`           | 与选中歌曲相似的歌曲          | `F`                                             |
 | `actionOfSelected`                  | 对于选中项或当前播放的操作    | `m`                                          |
 | `actionOfPlayingSong`               | 对于当前播放的操作            | `M`                                          |
