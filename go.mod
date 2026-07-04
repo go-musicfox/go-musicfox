@@ -90,10 +90,10 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	gopkg.in/errgo.v1 v1.0.1 // indirect
 	gopkg.in/retry.v1 v1.0.3 // indirect
 	rsc.io/qr v0.2.0 // indirect
