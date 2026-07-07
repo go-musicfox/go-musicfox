@@ -128,8 +128,8 @@
     .nav-dropdown{position:relative;cursor:pointer}
     .nav-dropdown-trigger{display:flex;align-items:center;gap:4px;color:var(--text-secondary);font-family:var(--font-mono);font-size:.8125rem;padding:6px 10px;border:1px solid transparent;border-radius:var(--radius-sm);transition:color 150ms var(--ease-out),border-color 150ms var(--ease-out),background 150ms var(--ease-out)}
     .nav-dropdown-trigger:hover{color:var(--accent)}
-    .nav-dropdown-trigger .arrow{font-size:.5rem;transition:transform 200ms var(--ease-out)}
-    .nav-dropdown.active .nav-dropdown-trigger .arrow{transform:rotate(180deg)}
+    .nav-dropdown-trigger .arrow{display:flex;align-items:center;line-height:0;transition:transform 200ms var(--ease-out)}
+    .nav-dropdown.active .nav-dropdown-trigger .arrow{transform:rotate(90deg)}
     .nav-dropdown.active .nav-dropdown-trigger{color:var(--accent)}
     .nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:160px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:4px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out),visibility 200ms;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.4);backdrop-filter:blur(12px)}
     .nav-dropdown.active .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
@@ -146,13 +146,25 @@
     .hero h1{font-size:clamp(1.2rem,2.8vw,1.7rem);margin-bottom:12px}
     .terminal-wrap:hover{transform:rotateY(0)}
     .terminal{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.03),0 4px 24px rgba(0,0,0,.4),0 0 80px var(--accent-glow);transform:rotateX(2deg);transition:transform 400ms var(--ease-out)}
-    .terminal-hd{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)}
-    .win-dot{width:10px;height:10px;border-radius:50%}
+    .terminal-hd{display:flex;align-items:center;padding:12px 16px;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)}
+    .win-dots{display:flex;gap:7px;margin-right:10px}
+    .win-dot{width:11px;height:11px;border-radius:50%}
+    .win-dot.r{background:#FF5F57}
+    .win-dot.y{background:#FEBC2E}
+    .win-dot.g{background:#28C840}
+    .win-title{font-size:.6875rem;color:var(--text-tertiary);font-weight:500}
     .terminal-wrap{flex:1 1 auto;max-width:720px;min-width:400px;perspective:1000px;transform:rotateY(3deg);transition:transform 400ms var(--ease-out)}
 
 
     .install-cmd{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.8125rem;cursor:pointer;transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
-    .cast-wrap{line-height:0;border-radius:var(--radius-md);overflow:hidden;min-height:380px}
+    .cast-wrap{line-height:0;border-radius:var(--radius-md);overflow:hidden}
+    .audio-ctrl{position:fixed;bottom:24px;right:24px;z-index:60;width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 200ms var(--ease-out),box-shadow 200ms var(--ease-out);box-shadow:0 0 20px var(--accent-glow);border:none;opacity:.7}
+    .audio-ctrl:hover{transform:scale(1.12);opacity:1;box-shadow:0 0 32px var(--accent-glow)}
+    .audio-ctrl.playing{opacity:0.85;animation:audioPulse 2s ease-in-out infinite}
+    @keyframes audioPulse{0%,100%{box-shadow:0 0 20px var(--accent-glow)}50%{box-shadow:0 0 40px var(--accent-glow)}}
+    .audio-ctrl.playing svg{transform:scale(1)}
+    .audio-label{position:fixed;bottom:32px;right:72px;z-index:60;font-family:var(--font-mono);font-size:.65rem;color:var(--text-tertiary);pointer-events:none;opacity:0;transition:opacity 300ms var(--ease-out);white-space:nowrap}
+    .audio-label.show{opacity:1}
     .install-cmd .prompt{color:var(--accent);user-select:none}
     .install-cmd .cmd-text{color:var(--text-primary)}
     .install-cmd .copy-hint{font-size:.625rem;color:var(--text-tertiary);opacity:0;transition:opacity 150ms var(--ease-out)}
@@ -192,7 +204,8 @@
     .engines-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
     .eng-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:32px 24px 28px;text-align:center;transition:border-color 250ms var(--ease-out),background 250ms var(--ease-out),transform 250ms var(--ease-out)}
     .eng-card:hover{border-color:var(--accent);background:var(--bg-elevated);transform:translateY(-2px);box-shadow:0 0 24px var(--accent-glow)}
-    .eng-icon{font-size:2rem;color:var(--accent);margin-bottom:12px;display:block;transition:transform 300ms var(--ease-out),color 300ms var(--ease-out)}
+    .eng-icon{color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;height:36px;transition:transform 300ms var(--ease-out),color 300ms var(--ease-out)}
+    .eng-icon svg{width:32px;height:32px}
     .eng-card:hover .eng-icon{transform:scale(1.12);color:#F0605F}
     .eng-card h3{margin-bottom:6px}
     .eng-platform{font-family:var(--font-mono);font-size:.6875rem;color:var(--text-tertiary)}
@@ -245,6 +258,15 @@
     .reveal{opacity:0;transform:translateY(32px);transition:opacity 700ms var(--ease-out),transform 700ms var(--ease-out)}
     .reveal.visible{opacity:1;transform:translateY(0)}
 
+    /* Contributors in Ecosystem */
+    .eco-contributors{margin-top:52px;padding-top:44px}
+    .eco-contributors h3{font-family:var(--font-mono);font-size:.9375rem;color:var(--text-secondary);margin-bottom:20px;font-weight:500;letter-spacing:-.01em}
+    .eco-contributors .contrib-image{display:inline-block;border-radius:var(--radius-lg);overflow:hidden;transition:opacity 200ms var(--ease-out)}
+    .eco-contributors .contrib-image:hover{opacity:.7}
+    .eco-contributors .contrib-image img{display:block;max-width:100%;height:auto;border-radius:var(--radius-lg)}
+    .eco-contributors .contrib-link{display:inline-block;margin-top:20px;font-family:var(--font-mono);font-size:.8125rem;color:var(--text-tertiary);padding:8px 20px;transition:color 150ms var(--ease-out)}
+    .eco-contributors .contrib-link:hover{color:var(--accent)}
+
     /* Responsive */
     @media(max-width:768px){
       section{min-height:auto;padding:80px 0;scroll-snap-align:none}
@@ -274,6 +296,11 @@
 <body>
   <!-- Background 3D Spectrum -->
   <div class="bg-anim" aria-hidden="true"><canvas id="bgCanvas"></canvas></div>
+  <audio id="bgAudio" src="audio.mp3" loop preload="auto" crossorigin="anonymous"></audio>
+  <div class="audio-ctrl" id="audioCtrl" title="播放钢琴曲 (Canon in D)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" id="audioIcon"><path d="M8 5v14l11-7z"/></svg>
+  </div>
+  <div class="audio-label" id="audioLabel">♩ Canon in D</div>
   <nav class="nav">
     <div class="nav-inner">
       <a href="#" class="nav-logo">
@@ -283,17 +310,17 @@
       <div class="nav-links">
         <div class="nav-dropdown" id="navDropdown">
           <span class="nav-dropdown-trigger">
-            相关链接 <span class="arrow">▾</span>
+            <span class="arrow"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2.5 1.5L5.5 4L2.5 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 相关链接
           </span>
           <div class="nav-dropdown-menu">
+            <a href="/contribute.html">贡献者</a>
             <a href="https://anhoder.com" target="_blank" rel="noopener">anhoder.com</a>
             <a href="https://github.com/anhoder" target="_blank" rel="noopener">@anhoder</a>
-            <a href="/contribute.html">贡献者</a>
           </div>
         </div>
         <a href="https://github.com/go-musicfox/go-musicfox" class="nav-gh" target="_blank" rel="noopener">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          <span>Star</span>
+          <span id="ghStars">--</span>
         </a>
       </div>
     </div>
@@ -311,7 +338,7 @@
         <div class="terminal-wrap">
           <div class="terminal">
             <div class="terminal-hd">
-              <span class="win-dot r"></span><span class="win-dot y"></span><span class="win-dot g"></span>
+              <span class="win-dots"><span class="win-dot r"></span><span class="win-dot y"></span><span class="win-dot g"></span></span>
               <span class="win-title">musicfox — zsh — 104×25</span>
             </div>
             <div class="terminal-body">
@@ -420,12 +447,12 @@
         <p>每个平台都有最优解——也可以纯粹因为偏好选择一个。</p>
       </div>
       <div class="engines-grid reveal">
-        <div class="eng-card"><span class="eng-icon">&gt;_</span><h3>Beep</h3><div class="eng-platform">全平台 · 默认引擎</div><div class="eng-desc-inner"><p>纯 Go 实现，零外部依赖。内置支持 MP3、FLAC、OGG、WAV 格式解码。开箱即用，无需安装任何额外组件。</p></div></div>
-        <div class="eng-card"><span class="eng-icon">⎘</span><h3>MPV</h3><div class="eng-platform">全平台 · IPC 控制</div><div class="eng-desc-inner"><p>通过 mpv 的 IPC 接口控制播放。支持几乎所有音频格式，性能卓越。适合已使用 mpv 的用户，享受其强大的音频处理管线。</p></div></div>
-        <div class="eng-card"><span class="eng-icon">⌂</span><h3>DLNA</h3><div class="eng-platform">全平台 · 投送引擎</div><div class="eng-desc-inner"><p>将音乐投送到智能电视、Hi-Fi 音响、游戏机等 DLNA 兼容设备。家庭音乐中心的不二之选。</p></div></div>
-        <div class="eng-card"><span class="eng-icon">♫</span><h3>MPD</h3><div class="eng-platform">Linux · 远程服务</div><div class="eng-desc-inner"><p>连接本地或远程 MPD 服务器。完美适配 NAS、树莓派等无头音乐服务器场景，多个设备共享一个播放队列。</p></div></div>
-        <div class="eng-card"><span class="eng-icon"></span><h3>AVFoundation</h3><div class="eng-platform">macOS · 原生引擎</div><div class="eng-desc-inner"><p>调用 macOS 原生音频框架，系统级集成最佳。支持音频路由自动切换（蓝牙耳机、外放）。配合 Now Playing 和菜单栏，体验如原生应用般顺滑。</p></div></div>
-        <div class="eng-card"><span class="eng-icon">⊞</span><h3>MediaPlayer</h3><div class="eng-platform">Windows · WinRT</div><div class="eng-desc-inner"><p>基于 Windows Runtime API，与系统媒体控件、通知中心和任务栏深度集成。原生 Windows 体验。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 9 12 4 7"/><line x1="13" y1="19" x2="20" y2="19"/></svg></span><h3>Beep</h3><div class="eng-platform">全平台 · 默认引擎</div><div class="eng-desc-inner"><p>纯 Go 实现，零外部依赖。内置支持 MP3、FLAC、OGG、WAV 格式解码。开箱即用，无需安装任何额外组件。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none"/></svg></span><h3>MPV</h3><div class="eng-platform">全平台 · IPC 控制</div><div class="eng-desc-inner"><p>通过 mpv 的 IPC 接口控制播放。支持几乎所有音频格式，性能卓越。适合已使用 mpv 的用户，享受其强大的音频处理管线。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 21h10"/><path d="M12 17v4"/><path d="M2 16.1A5 5 0 0 1 5.9 20"/><path d="M2 12.05A9 9 0 0 1 9.95 20"/></svg></span><h3>DLNA</h3><div class="eng-platform">全平台 · 投送引擎</div><div class="eng-desc-inner"><p>将音乐投送到智能电视、Hi-Fi 音响、游戏机等 DLNA 兼容设备。家庭音乐中心的不二之选。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></span><h3>MPD</h3><div class="eng-platform">Linux · 远程服务</div><div class="eng-desc-inner"><p>连接本地或远程 MPD 服务器。完美适配 NAS、树莓派等无头音乐服务器场景，多个设备共享一个播放队列。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><h3>AVFoundation</h3><div class="eng-platform">macOS · 原生引擎</div><div class="eng-desc-inner"><p>调用 macOS 原生音频框架，系统级集成最佳。支持音频路由自动切换（蓝牙耳机、外放）。配合 Now Playing 和菜单栏，体验如原生应用般顺滑。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="15" rx="2"/><polygon points="9 8 15 12 9 16" fill="currentColor" stroke="none"/></svg></span><h3>MediaPlayer</h3><div class="eng-platform">Windows · WinRT</div><div class="eng-desc-inner"><p>基于 Windows Runtime API，与系统媒体控件、通知中心和任务栏深度集成。原生 Windows 体验。</p></div></div>
       </div>
     </div>
   </section>
@@ -463,6 +490,14 @@
         <span class="eco-badge">📦 Flatpak</span>
         <span class="eco-badge">🍥 Debian / Ubuntu</span>
       </div>
+      <div class="eco-contributors reveal">
+        <h3>贡献者</h3>
+        <a href="https://github.com/go-musicfox/go-musicfox/graphs/contributors" target="_blank" rel="noopener" class="contrib-image">
+          <img src="https://contrib.rocks/image?repo=go-musicfox/go-musicfox&max=60" alt="go-musicfox contributors" loading="lazy">
+        </a>
+        <br>
+        <a href="/contribute.html" class="contrib-link">查看全部贡献者 →</a>
+      </div>
     </div>
     <footer class="footer">
       <div class="footer-links">
@@ -478,7 +513,7 @@
   </section>
 
   <script>
-  // ===== 3D Cube Spectrum Background =====
+  // ===== 3D Spectrum with Isometric Cubes =====
   (function() {
     var canvas = document.getElementById('bgCanvas');
     if (!canvas) return;
@@ -492,6 +527,82 @@
     var cubes = [];
     var time = 0;
 
+    // ---- Audio context & analyser (lazy init) ----
+    var audioEl = document.getElementById('bgAudio');
+    var audioCtx = null, analyser = null, source = null, freqData = null;
+    var audioPlaying = false;
+    var audioBtn = document.getElementById('audioCtrl');
+    var audioIcon = document.getElementById('audioIcon');
+    var audioLabel = document.getElementById('audioLabel');
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source = audioCtx.createMediaElementSource(audioEl);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+      } catch(e) { console.warn('Audio init failed:', e); }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) initAudio();
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioEl.paused) {
+        audioEl.play().then(function() {
+          audioPlaying = true;
+          audioBtn.classList.add('playing');
+          audioIcon.setAttribute('viewBox', '0 0 24 24');
+          audioIcon.innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+          audioLabel.classList.add('show');
+        }).catch(function(e) { console.warn('Audio play fail:', e); });
+      } else {
+        audioEl.pause();
+        audioPlaying = false;
+        audioBtn.classList.remove('playing');
+        audioIcon.setAttribute('viewBox', '0 0 24 24');
+        audioIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+        audioLabel.classList.remove('show');
+      }
+    }
+    if (audioBtn) audioBtn.addEventListener('click', toggleAudio);
+    // Graceful fallback on audio error
+    audioEl.addEventListener('error', function() { audioPlaying = false; });
+    audioEl.addEventListener('ended', function() {
+      audioPlaying = false;
+      audioBtn.classList.remove('playing');
+      audioIcon.setAttribute('viewBox', '0 0 24 24');
+      audioIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+      audioLabel.classList.remove('show');
+    });
+
+    // ---- 10 energetic rhythm patterns (8 fast, 2 moderate) ----
+    var rhythms = [
+      //                beat expo depth bass treble  atk  dec  sub
+      { key:'dnb',         b:1.8, e:2.2, d:0.65, lo:0.25, hi:3.5, a:1.2, c:1.3, s:0.0 },
+      { key:'glitch',      b:2.8, e:4.0, d:0.78, lo:0.55, hi:4.5, a:1.3, c:1.5, s:0.0 },
+      { key:'doubleTime',  b:2.0, e:2.0, d:0.60, lo:0.45, hi:3.2, a:1.1, c:1.2, s:0.0 },
+      { key:'speedCore',   b:3.2, e:3.0, d:0.75, lo:0.60, hi:5.0, a:1.4, c:1.6, s:0.0 },
+      { key:'electro',     b:1.7, e:2.5, d:0.66, lo:0.50, hi:3.8, a:1.2, c:1.2, s:0.0 },
+      { key:'techno',      b:1.5, e:2.0, d:0.62, lo:0.35, hi:2.8, a:1.1, c:1.0, s:0.25 },
+      { key:'edm',         b:1.5, e:2.5, d:0.70, lo:0.35, hi:2.8, a:1.0, c:1.0, s:0.0 },
+      { key:'breakbeat',   b:1.3, e:2.5, d:0.68, lo:0.40, hi:3.0, a:1.1, c:1.1, s:0.15 },
+      { key:'house',       b:1.4, e:2.0, d:0.58, lo:0.30, hi:2.5, a:1.0, c:1.0, s:0.20 },
+      { key:'futureBass',  b:1.3, e:2.0, d:0.58, lo:0.40, hi:3.2, a:1.1, c:1.1, s:0.10 },
+    ];
+    var R = rhythms[Math.floor(Math.random() * rhythms.length)];
+    console.log('🎵 rhythm:', R.key);
+
+    // envelope ranges multiplied by rhythm's attack/decay bias
+    var ATK_BASE  = 0.45 * R.a, ATK_RANGE = 0.30 * R.a;
+    var DEC_BASE  = 0.030 * R.c, DEC_RANGE = 0.045 * R.c;
+
+    var MAX_H   = CUBE_SIZE * 7.5;
+
     function resize() {
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth; H = window.innerHeight;
@@ -500,86 +611,165 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    // Init cube grid with wave parameters
+    // ---- initialise cube grid ----
     for (var r = 0; r < ROWS; r++) {
       for (var c = 0; c < COLS; c++) {
-        var cx = (c - COLS/2) * CELL;
-        var cz = (r - ROWS/2) * CELL;
-        var dist = Math.sqrt(cx*cx + cz*cz) / (CELL * Math.max(COLS,ROWS)/2);
+        var cx = (c - COLS / 2) * CELL;
+        var cz = (r - ROWS / 2) * CELL;
         cubes.push({
+          col: c, row: r,
           gx: cx, gz: cz,
-          freq: 1.5 + Math.random() * 3,
-          phase: Math.random() * Math.PI * 2,
-          amp: 0.4 + Math.random() * 0.6,
-          dist: dist
+          amp:   0.6 + Math.random() * 1.0,
+          // randomised attack/decay per cube → varied speed
+          attSpd: ATK_BASE + Math.random() * ATK_RANGE,
+          decSpd: DEC_BASE + Math.random() * DEC_RANGE,
+          // tiny jitter so same‑column cubes aren't identical
+          jitFreq: 0.5 + Math.random() * 1.5,
+          jitPhase: Math.random() * Math.PI * 2,
+          // envelope
+          visH: 0,
         });
       }
     }
 
-    // Wave sources that move slowly
-    var waves = [
-      { x: 0, z: 0, freq: 0.4, amp: 1.0 },
-      { x: 150, z: 80, freq: 0.55, amp: 0.7 },
-      { x: -120, z: -60, freq: 0.35, amp: 0.6 },
-      { x: 80, z: -100, freq: 0.5, amp: 0.5 }
-    ];
-
     function isoX(x, z) { return (x - z) * ISO_X; }
     function isoY(x, y, z) { return (x + z) * ISO_Y - y; }
 
+    // ---- main loop ----
     function draw() {
       ctx.clearRect(0, 0, W, H);
-      time += 0.013;
+      time += 0.016;
 
-      // Center origin, slight orbit
-      var orbitAngle = time * 0.05;
-      ox = W/2 + Math.cos(orbitAngle) * 30;
+      // camera orbit
+      ox = W / 2 + Math.cos(time * 0.05) * 30;
       oy = H * 0.58 + Math.sin(time * 0.03) * 10;
 
-      var maxH = CUBE_SIZE * 5;
-      var visibleCubes = [];
+      var list = [];
 
-      for (var i = 0; i < cubes.length; i++) {
-        var cb = cubes[i];
-        // Sum wave contributions
-        var h = 0;
-        for (var w = 0; w < waves.length; w++) {
-          var wave = waves[w];
-          var dx = cb.gx - wave.x, dz = cb.gz - wave.z;
-          var dist = Math.sqrt(dx*dx + dz*dz);
-          h += wave.amp * Math.sin(dist * 0.015 - time * wave.freq + cb.phase) * maxH;
+      // ---- Real-time FFT spectrum when audio plays, otherwise procedural ----
+      var spec = [];
+      if (audioPlaying && freqData) {
+        analyser.getByteFrequencyData(freqData);
+
+        // All 28 columns map to the low-frequency range where piano energy lives
+        // (~0-2400 Hz = first 14 bins at 44100 Hz sample rate).
+        // Higher bins (above ~3 kHz) contain negligible piano energy and would
+        // leave columns dark — so we simply don't use them.
+        var activeBins = 14;
+        for (var c = 0; c < COLS; c++) {
+          var startNorm = Math.sqrt(c / COLS);
+          var endNorm   = Math.sqrt((c + 1) / COLS);
+          var startBin  = Math.floor(startNorm * activeBins);
+          var endBin    = Math.min(Math.ceil(endNorm * activeBins), freqData.length);
+          var sum = 0, count = 0;
+          for (var b = startBin; b < endBin; b++) { sum += freqData[b]; count++; }
+          spec[c] = count > 0 ? (sum / count) / 255 : 0;
         }
-        h = Math.max(2, h * cb.amp);
-        var sx = isoX(cb.gx, cb.gz) + ox;
-        var sy = isoY(cb.gx, 0, cb.gz) + oy;
-        var topY = isoY(cb.gx, h, cb.gz) + oy;
-        visibleCubes.push({ i: i, sx: sx, sy: sy, topY: topY, h: h, gz: cb.gz });
+
+        // Energy spreading → spectral continuity across columns
+        for (var c = 1; c < COLS - 1; c++) {
+          spec[c] = spec[c] * 0.5 + spec[c-1] * 0.25 + spec[c+1] * 0.25;
+        }
+
+        // Normalise + gamma (gentle boost so quieter columns stay visible)
+        var maxV = 0;
+        for (var c = 0; c < COLS; c++) if (spec[c] > maxV) maxV = spec[c];
+        maxV = Math.max(maxV, 0.01);
+        for (var c = 0; c < COLS; c++) {
+          spec[c] = Math.pow(spec[c] / maxV, 0.5);
+        }
+      } else {
+        // ---- Procedural fallback (rhythm-driven) ----
+        for (var c = 0; c < COLS; c++) {
+          var fPos = c / COLS;
+          var bSpeed = R.lo + fPos * (R.hi - R.lo);
+          var v =
+            0.55 * Math.abs(Math.sin(time * bSpeed * 0.6 + c * 0.4)) +
+            0.30 * Math.abs(Math.sin(time * bSpeed * 1.4 + c * 1.1 + 0.5)) +
+            0.15 * Math.abs(Math.sin(time * bSpeed * 2.3 + c * 1.8 + 1.3));
+          spec[c] = v;
+        }
+        // smooth adjacency → spectral continuity
+        for (var c = 0; c < COLS; c++) {
+          var s = spec[c] * 0.5;
+          if (c > 0) s += spec[c-1] * 0.25;
+          if (c < COLS-1) s += spec[c+1] * 0.25;
+          spec[c] = s;
+        }
       }
 
-      // Sort back to front (by gz for isometric)
-      visibleCubes.sort(function(a, b) { return a.gz - b.gz; });
+      // energy pulse (FFT-based or rhythm-based)
+      var energy;
+      if (audioPlaying) {
+        // dynamic range from overall FFT loudness
+        if (freqData) {
+          var total = 0;
+          for (var b = 0; b < freqData.length; b++) total += freqData[b];
+          energy = 0.4 + 0.6 * Math.pow(total / freqData.length / 255, 0.5);
+        } else {
+          energy = 0.8;
+        }
+      } else {
+        var rawPulse = Math.sin(time * R.b);
+        if (R.s > 0) rawPulse += R.s * Math.sin(time * R.b * 0.5 + 1.2);
+        energy = Math.pow(0.5 + 0.5 * rawPulse, R.e);
+        energy = energy * R.d + (1 - R.d);
+      }
+
+      // ---- Phase 2: per‑cube height from spectrum ----
+      for (var i = 0; i < cubes.length; i++) {
+        var cb = cubes[i];
+
+        var baseH = spec[cb.col] * energy;
+        // row (depth) variation → subtle Z‑axis texture
+        var rowFactor = 0.85 + 0.15 * (0.5 + 0.5 * Math.sin(time * 0.15 + cb.row * 0.6));
+        // per‑cube jitter → organic individuality
+        var jit = 1 + 0.06 * Math.sin(time * cb.jitFreq + cb.jitPhase);
+
+        var tgt = Math.max(2, baseH * rowFactor * jit * cb.amp * MAX_H);
+
+        // per‑cube envelope (randomised speed = varied rhythm)
+        if (tgt > cb.visH) {
+          cb.visH += (tgt - cb.visH) * cb.attSpd;
+        } else {
+          cb.visH += (tgt - cb.visH) * cb.decSpd;
+        }
+        cb.visH = Math.max(2, cb.visH);
+        var h = cb.visH;
+
+        var sx   = isoX(cb.gx, cb.gz) + ox;
+        var sy   = isoY(cb.gx, 0, cb.gz) + oy;
+        var topY = isoY(cb.gx, h, cb.gz) + oy;
+
+        list.push({
+          sx: sx, sy: sy, topY: topY,
+          h: h, gz: cb.gz, idx: i,
+        });
+      }
+
+      // iso-depth sort (back → front)
+      list.sort(function (a, b) { return a.gz - b.gz; });
 
       var hs = CUBE_SIZE * ISO_Y;
       var ws = CUBE_SIZE * ISO_X;
 
-      for (var v = 0; v < visibleCubes.length; v++) {
-        var c = visibleCubes[v];
+      // ---- Phase 2: render ----
+      for (var v = 0; v < list.length; v++) {
+        var c = list[v];
         if (c.h < 1) continue;
 
-        var hNorm = c.h / maxH;
-        // Colors: dark at bottom, brighter at top, red-tinted
-        var r = Math.floor(30 + hNorm * 110);
-        var g = Math.floor(5 + hNorm * 15);
-        var b = Math.floor(5 + hNorm * 15);
+        var hn = c.h / MAX_H;
+        var r = Math.floor(30 + hn * 110);
+        var g = Math.floor(5  + hn * 15);
+        var b = Math.floor(5  + hn * 15);
 
-        var topR = r + 60, topG = g + 20, topB = b + 10;
-        var leftR = Math.floor(r * 0.55), leftG = Math.floor(g * 0.55), leftB = Math.floor(b * 0.55);
-        var rightR = Math.floor(r * 0.35), rightG = Math.floor(g * 0.35), rightB = Math.floor(b * 0.35);
+        var tR = r + 60, tG = g + 20, tB = b + 10;
+        var lR = Math.floor(r * 0.55), lG = Math.floor(g * 0.55), lB = Math.floor(b * 0.55);
+        var rR = Math.floor(r * 0.35), rG = Math.floor(g * 0.35), rB = Math.floor(b * 0.35);
+        var al = 0.22 + hn * 0.18;
 
-        var alpha = 0.22 + hNorm * 0.18;
-
-        // Draw right face
-        ctx.fillStyle = 'rgba(' + rightR + ',' + rightG + ',' + rightB + ',' + alpha + ')';
+        // --- cube right face ---
+        ctx.fillStyle = 'rgba(' + rR + ',' + rG + ',' + rB + ',' + al + ')';
         ctx.beginPath();
         ctx.moveTo(c.sx + ws, c.sy - hs);
         ctx.lineTo(c.sx, c.sy);
@@ -588,8 +778,8 @@
         ctx.closePath();
         ctx.fill();
 
-        // Draw left face
-        ctx.fillStyle = 'rgba(' + leftR + ',' + leftG + ',' + leftB + ',' + alpha + ')';
+        // --- cube left face ---
+        ctx.fillStyle = 'rgba(' + lR + ',' + lG + ',' + lB + ',' + al + ')';
         ctx.beginPath();
         ctx.moveTo(c.sx - ws, c.sy - hs);
         ctx.lineTo(c.sx, c.sy);
@@ -598,8 +788,8 @@
         ctx.closePath();
         ctx.fill();
 
-        // Draw top face
-        ctx.fillStyle = 'rgba(' + topR + ',' + topG + ',' + topB + ',' + (alpha * 1.5) + ')';
+        // --- cube top face ---
+        ctx.fillStyle = 'rgba(' + tR + ',' + tG + ',' + tB + ',' + (al * 1.5) + ')';
         ctx.beginPath();
         ctx.moveTo(c.sx - ws, c.topY - hs);
         ctx.lineTo(c.sx, c.topY);
@@ -608,23 +798,15 @@
         ctx.closePath();
         ctx.fill();
 
-        // Subtle edge highlight on top face
-        if (hNorm > 0.4) {
-          ctx.strokeStyle = 'rgba(255,100,100,' + (alpha * 0.3) + ')';
+        // edge highlight
+        if (hn > 0.4) {
+          ctx.strokeStyle = 'rgba(255,100,100,' + (al * 0.3) + ')';
           ctx.lineWidth = 0.5;
           ctx.stroke();
         }
-      }
 
-      // Move wave sources slowly
-      waves[0].x = Math.sin(time * 0.2) * 200;
-      waves[0].z = Math.cos(time * 0.25) * 150;
-      waves[1].x = Math.cos(time * 0.3) * 180;
-      waves[1].z = Math.sin(time * 0.22) * 160;
-      waves[2].x = Math.sin(time * 0.28) * 220;
-      waves[2].z = Math.cos(time * 0.2) * 140;
-      waves[3].x = Math.cos(time * 0.22) * 160;
-      waves[3].z = Math.sin(time * 0.3) * 180;
+        // }} single cube faces
+      }
 
       requestAnimationFrame(draw);
     }
@@ -828,5 +1010,21 @@
       document.addEventListener('click', function(e) {
         if (!dd.contains(e.target)) dd.classList.remove('active');
       });
+    })();
+
+    // Fetch GitHub star count
+    (function(){
+      var el = document.getElementById('ghStars');
+      if (!el) return;
+      fetch('https://api.github.com/repos/go-musicfox/go-musicfox')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var stars = data.stargazers_count;
+          if (stars === undefined) throw new Error();
+          el.textContent = stars >= 1000 ? (stars / 1000).toFixed(1) + 'k' : stars;
+        })
+        .catch(function() {
+          el.textContent = '2.4k';
+        });
     })();
   </script>
