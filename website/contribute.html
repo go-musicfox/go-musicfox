@@ -37,24 +37,16 @@
     .nav-logo{display:flex;align-items:center;gap:0;font-family:var(--font-mono);font-weight:700;font-size:1rem;color:var(--text-primary);text-decoration:none}
     .nav-logo img{width:24px;height:24px;border-radius:4px;margin-right:8px}
     .nav-prompt{color:var(--accent);font-weight:400}
-    .container{max-width:820px;margin:0 auto;padding:80px 24px 48px}
+    .container{max-width:820px;margin:0 auto;padding:80px 24px 48px;text-align:center}
     h1{font-family:var(--font-mono);font-size:1.5rem;font-weight:600;margin-bottom:8px;letter-spacing:-.02em}
-    .subtitle{font-size:.9375rem;color:var(--text-tertiary);margin-bottom:8px}
-    .stats-line{font-size:.8125rem;color:var(--text-tertiary);margin-bottom:40px;font-family:var(--font-mono)}
+    .subtitle{font-size:.9375rem;color:var(--text-tertiary);margin-bottom:40px}
     .back{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:.8125rem;color:var(--text-tertiary);margin-bottom:24px}
     .back:hover{color:var(--accent)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-top:8px}
-    .card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 16px 16px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);text-decoration:none;transition:border-color 200ms var(--ease-out),background 200ms var(--ease-out),transform 200ms var(--ease-out)}
-    .card:hover{border-color:var(--accent);background:var(--bg-elevated);transform:translateY(-2px)}
-    .card img{width:56px;height:56px;border-radius:50%;border:2px solid var(--border-default);transition:border-color 200ms var(--ease-out)}
-    .card:hover img{border-color:var(--accent)}
-    .card .name{font-family:var(--font-mono);font-size:.8125rem;font-weight:500;color:var(--text-primary)}
-    .card .count{font-size:.6875rem;color:var(--text-tertiary)}
-    .loading{text-align:center;padding:80px 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:.875rem}
-    .loading .spinner{display:inline-block;width:24px;height:24px;border:2px solid var(--border-default);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .error{text-align:center;padding:80px 0;color:var(--text-tertiary);font-family:var(--font-mono);font-size:.875rem}
-    @media(max-width:600px){.grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}.card img{width:48px;height:48px}}
+    .contrib-image{display:inline-block;border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow:hidden;transition:border-color 200ms var(--ease-out)}
+    .contrib-image:hover{border-color:var(--accent)}
+    .contrib-image img{display:block;max-width:100%;height:auto}
+    .view-link{display:inline-block;margin-top:32px;font-family:var(--font-mono);font-size:.8125rem;color:var(--text-tertiary);padding:8px 20px;border:1px solid var(--border-default);border-radius:var(--radius-md);transition:color 150ms var(--ease-out),border-color 150ms var(--ease-out)}
+    .view-link:hover{color:var(--accent);border-color:var(--accent)}
   </style>
 </head>
 <body>
@@ -68,51 +60,16 @@
   </nav>
 
   <div class="container">
-    <a href="/" class="back">← 返回首页</a>
+    <div style="text-align:left"><a href="/" class="back">← 返回首页</a></div>
     <h1>贡献者</h1>
     <p class="subtitle">感谢每一位让 go-musicfox 变得更好的人。</p>
-    <div class="stats-line" id="stats"></div>
-    <div class="grid" id="contributors"><div class="loading"><div class="spinner"></div><br>正在加载贡献者...</div></div>
+
+    <a href="https://github.com/go-musicfox/go-musicfox/graphs/contributors" target="_blank" rel="noopener" class="contrib-image">
+      <img src="https://contrib.rocks/image?repo=go-musicfox/go-musicfox&max=100" alt="go-musicfox contributors">
+    </a>
+
+    <br>
+    <a href="https://github.com/go-musicfox/go-musicfox/graphs/contributors" target="_blank" rel="noopener" class="view-link">在 GitHub 上查看全部 →</a>
   </div>
-
-  <script>
-  (async function(){
-    var grid = document.getElementById('contributors');
-    var stats = document.getElementById('stats');
-    var all = [];
-
-    try {
-      // Fetch all pages of contributors
-      var page = 1;
-      while (true) {
-        var res = await fetch('https://api.github.com/repos/go-musicfox/go-musicfox/contributors?per_page=100&page=' + page);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var data = await res.json();
-        if (!data || data.length === 0) break;
-        all = all.concat(data);
-        page++;
-      }
-
-      if (all.length === 0) throw new Error('empty');
-
-      stats.textContent = '共 ' + all.length + ' 位贡献者';
-
-      grid.innerHTML = '';
-      all.forEach(function(c) {
-        var card = document.createElement('a');
-        card.className = 'card';
-        card.href = c.html_url;
-        card.target = '_blank';
-        card.rel = 'noopener';
-        card.innerHTML = '<img src="' + c.avatar_url + '&s=112" alt="' + c.login + '" loading="lazy">' +
-          '<div class="name">' + c.login + '</div>' +
-          '<div class="count">' + c.contributions + ' commits</div>';
-        grid.appendChild(card);
-      });
-    } catch(e) {
-      grid.innerHTML = '<div class="error">加载失败，请稍后重试或前往 <a href="https://github.com/go-musicfox/go-musicfox/graphs/contributors" target="_blank" rel="noopener">GitHub 查看</a></div>';
-    }
-  })();
-  </script>
 </body>
 </html>
