@@ -124,6 +124,18 @@
     .nav-gh{display:flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-default);border-radius:var(--radius-sm);transition:border-color 150ms var(--ease-out),background 150ms var(--ease-out)}
     .nav-gh:hover{border-color:var(--accent);background:var(--accent-glow)}
 
+    /* Dropdown */
+    .nav-dropdown{position:relative;cursor:pointer}
+    .nav-dropdown-trigger{display:flex;align-items:center;gap:4px;color:var(--text-secondary);font-family:var(--font-mono);font-size:.8125rem;padding:6px 10px;border:1px solid transparent;border-radius:var(--radius-sm);transition:color 150ms var(--ease-out),border-color 150ms var(--ease-out),background 150ms var(--ease-out)}
+    .nav-dropdown-trigger:hover{color:var(--accent)}
+    .nav-dropdown-trigger .arrow{font-size:.5rem;transition:transform 200ms var(--ease-out)}
+    .nav-dropdown.active .nav-dropdown-trigger .arrow{transform:rotate(180deg)}
+    .nav-dropdown.active .nav-dropdown-trigger{color:var(--accent)}
+    .nav-dropdown-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:160px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:4px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out),visibility 200ms;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.4);backdrop-filter:blur(12px)}
+    .nav-dropdown.active .nav-dropdown-menu{opacity:1;visibility:visible;transform:translateY(0)}
+    .nav-dropdown-menu a{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-sm);color:var(--text-secondary);font-size:.8125rem;transition:color 150ms var(--ease-out),background 150ms var(--ease-out)}
+    .nav-dropdown-menu a:hover{color:var(--text-primary);background:var(--bg-hover)}
+
     /* Hero */
     .hero-main{display:flex;align-items:center;justify-content:center;gap:36px;margin-bottom:28px;perspective:1200px;flex-wrap:nowrap}
     .hero-left{flex:0 0 300px;background:rgba(16,13,12,.3);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:24px 24px 20px;transform:rotateY(-3deg);transition:transform 400ms var(--ease-out),border-color 400ms var(--ease-out),box-shadow 400ms var(--ease-out);cursor:default}
@@ -269,6 +281,14 @@
         <span class="nav-prompt">$&nbsp;</span><span id="navTypewriter">musicfox</span><span class="nav-cursor">|</span>
       </a>
       <div class="nav-links">
+        <div class="nav-dropdown" id="navDropdown">
+          <span class="nav-dropdown-trigger">
+            相关链接 <span class="arrow">▾</span>
+          </span>
+          <div class="nav-dropdown-menu">
+            <a href="https://anhoder.com" target="_blank" rel="noopener">anhoder.com</a>
+          </div>
+        </div>
         <a href="https://github.com/go-musicfox/go-musicfox" class="nav-gh" target="_blank" rel="noopener">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           <span>Star</span>
@@ -790,5 +810,20 @@
         }
       }
       setTimeout(tick, 2000);
+    })();
+
+    // Dropdown toggle (click to open)
+    (function(){
+      var dd = document.getElementById('navDropdown');
+      if (!dd) return;
+      var trigger = dd.querySelector('.nav-dropdown-trigger');
+      if (!trigger) return;
+      trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dd.classList.toggle('active');
+      });
+      document.addEventListener('click', function(e) {
+        if (!dd.contains(e.target)) dd.classList.remove('active');
+      });
     })();
   </script>
