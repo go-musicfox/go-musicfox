@@ -1,0 +1,17 @@
+# go-musicfox
+> go-musicfox 是用 Go 编写的终端（TUI）音乐播放器，基于网易云音乐。多引擎播放、桌面歌词、DLNA 投送、MPRIS 控制，支持 macOS / Linux / Windows 全平台。
+
+## About
+- [GitHub Repository](https://github.com/go-musicfox/go-musicfox): Source code, issues, releases
+- [Official Website](https://musicfox.anhoder.com): Project introduction and installation guide
+- [Changelog](https://github.com/go-musicfox/go-musicfox/blob/main/CHANGELOG.md): Release history
+- [README](https://github.com/go-musicfox/go-musicfox#readme): Full documentation
+- [License: MIT](https://github.com/go-musicfox/go-musicfox/blob/main/LICENSE)
+
+## Key Facts
+- Written in Go, powered by bubbletea TUI framework
+- Supports 6 playback engines: Beep, MPV, MPD, DLNA, AVFoundation (macOS), MediaPlayer (Windows)
+- 8 audio quality levels from standard to premium Hi-Res
+- 40+ customizable keyboard shortcuts with Vim-style navigation
+- Available via 15+ package managers: Homebrew, AUR, Copr, Nix, Scoop, Flatpak, etc.
+- Open source under MIT License, started in 2021, 2000+ commits

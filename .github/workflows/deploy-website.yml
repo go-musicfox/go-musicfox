@@ -1,0 +1,32 @@
+# Deploy official website to Cloudflare Pages
+#
+# Required secrets (set in GitHub repo → Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — API token with Cloudflare Pages:Write permission
+#   CLOUDFLARE_ACCOUNT_ID  — Your Cloudflare account ID (find in Cloudflare Dashboard → right side)
+#
+# Cloudflare Pages project "musicfox" will be auto-created on first deploy.
+# After first deploy, set custom domain musicfox.anhoder.com in Cloudflare Dashboard.
+
+name: Deploy Website
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'website/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy website/ --project-name=musicfox

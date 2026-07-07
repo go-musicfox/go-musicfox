@@ -1,0 +1,22 @@
+# go-musicfox - robots.txt
+# https://musicfox.anhoder.com
+
+# Allow search engines to crawl everything
+User-agent: *
+Allow: /
+
+# Block AI training crawlers (optional - uncomment if desired)
+# User-agent: GPTBot
+# Disallow: /
+#
+# User-agent: ClaudeBot
+# Disallow: /
+#
+# User-agent: Google-Extended
+# Disallow: /
+#
+# User-agent: Bytespider
+# Disallow: /
+
+# Sitemap location
+Sitemap: https://musicfox.anhoder.com/sitemap.xml

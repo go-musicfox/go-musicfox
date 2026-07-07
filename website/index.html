@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>go-musicfox — 终端音乐播放器</title>
+  <meta name="description" content="go-musicfox 是用 Go 编写的终端音乐播放器。多引擎播放、桌面歌词、DLNA 投送、MPRIS 控制，macOS / Linux / Windows 全平台。">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-S0BZWY3123"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-S0BZWY3123');
+  </script>
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://musicfox.anhoder.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="go-musicfox — 终端音乐播放器">
+  <meta property="og:description" content="go-musicfox 是用 Go 编写的终端音乐播放器。多引擎播放、桌面歌词、DLNA 投送、MPRIS 控制，macOS / Linux / Windows 全平台。">
+  <meta property="og:url" content="https://musicfox.anhoder.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://musicfox.anhoder.com/logo.png">
+  <meta property="og:locale" content="zh_CN">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="go-musicfox — 终端音乐播放器">
+  <meta name="twitter:description" content="go-musicfox 是用 Go 编写的终端音乐播放器。多引擎播放、桌面歌词、DLNA 投送、MPRIS 控制，macOS / Linux / Windows 全平台。">
+  <meta name="twitter:image" content="https://musicfox.anhoder.com/logo.png">
+
+  <link rel="stylesheet" href="asciinema-player.css">
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "go-musicfox",
+    "url": "https://musicfox.anhoder.com",
+    "logo": "https://musicfox.anhoder.com/logo.png",
+    "description": "go-musicfox 是用 Go 编写的终端音乐播放器。多引擎播放、桌面歌词、DLNA 投送、MPRIS 控制，macOS / Linux / Windows 全平台。",
+    "sameAs": [
+      "https://github.com/go-musicfox/go-musicfox"
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "go-musicfox",
+    "operatingSystem": ["macOS", "Linux", "Windows"],
+    "applicationCategory": "MultimediaApplication",
+    "description": "Go 编写的终端音乐播放器。多引擎播放、桌面歌词、DLNA 投送、MPRIS 控制，macOS/Linux/Windows 全平台。",
+    "url": "https://musicfox.anhoder.com",
+    "downloadUrl": "https://github.com/go-musicfox/go-musicfox/releases",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg-deepest: #0B0808;
+      --bg-default: #100D0C;
+      --bg-surface: #171212;
+      --bg-elevated: #1E1717;
+      --bg-hover: #251C1C;
+      --text-primary: #EBE4E4;
+      --text-secondary: #A89898;
+      --text-tertiary: #6B5C5C;
+      --accent: #EA403F;
+      --accent-dim: #2A1212;
+      --accent-glow: rgba(234, 64, 63, 0.18);
+      --accent-amber: #D53115;
+      --accent-amber-dim: rgba(213, 49, 21, 0.13);
+      --border-subtle: #1E1616;
+      --border-default: #302020;
+      --font-mono: 'JetBrains Mono','Cascadia Code','Fira Code','SF Mono',monospace;
+      --font-body: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+      --ease-out: cubic-bezier(0.23,1,0.32,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-snap-type:y mandatory;scroll-behavior:smooth;-webkit-font-smoothing:antialiased;scrollbar-width:none}
+    body{background:var(--bg-deepest);color:var(--text-primary);font-family:var(--font-body);line-height:1.6;overflow-x:hidden;-ms-overflow-style:none}
+    body::-webkit-scrollbar{display:none}
+    body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);opacity:.4}
+    @media(prefers-reduced-motion:reduce){body::after{opacity:0}}
+
+    /* ===== Background 3D Spectrum Canvas ===== */
+    .bg-anim{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .bg-anim canvas{width:100%;height:100%;display:block}
+
+    h1,h2,h3,h4{font-family:var(--font-mono);font-weight:600;letter-spacing:-.02em;line-height:1.2}
+    h1{font-size:clamp(2rem,5vw,3.5rem)}
+    h2{font-size:clamp(1.5rem,3vw,2rem)}
+    h3{font-size:1.0625rem}
+    a{color:var(--accent);text-decoration:none;transition:color 150ms var(--ease-out)}
+    a:hover{color:#F0605F}
+    p{color:var(--text-secondary)}
+    .container{max-width:1100px;margin:0 auto;padding:0 24px;position:relative;z-index:1;width:100%}
+    section{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:80px 0;position:relative;scroll-snap-align:start}
+
+    /* Nav */
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(11,8,8,.82);border-bottom:1px solid var(--border-subtle)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto;padding:0 24px;height:56px}
+    .nav-logo{display:flex;align-items:center;gap:0;font-family:var(--font-mono);font-weight:700;font-size:1rem;color:var(--text-primary)}
+    .nav-logo img{width:24px;height:24px;border-radius:4px;margin-right:8px}
+    .nav-prompt{color:var(--accent);font-weight:400}
+    .nav-cursor{color:var(--accent);font-weight:400;animation:blink 1s step-end infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    .nav-links{display:flex;align-items:center;gap:24px;font-family:var(--font-mono);font-size:.8125rem;color:var(--text-secondary)}
+    .nav-links a{color:var(--text-secondary);transition:color 150ms var(--ease-out)}
+    .nav-links a:hover{color:var(--accent)}
+    .nav-gh{display:flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-default);border-radius:var(--radius-sm);transition:border-color 150ms var(--ease-out),background 150ms var(--ease-out)}
+    .nav-gh:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+    /* Hero */
+    .hero-main{display:flex;align-items:center;justify-content:center;gap:36px;margin-bottom:28px;perspective:1200px;flex-wrap:nowrap}
+    .hero-left{flex:0 0 300px;background:rgba(16,13,12,.3);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:24px 24px 20px;transform:rotateY(-3deg);transition:transform 400ms var(--ease-out),border-color 400ms var(--ease-out),box-shadow 400ms var(--ease-out);cursor:default}
+    .hero-left-text{text-align:left}
+    .hero-left:hover{transform:rotateY(0);border-color:var(--accent);box-shadow:0 0 32px var(--accent-glow)}
+    .hero-left h1{margin-top:0;margin-bottom:8px}
+    .hero-subtitle{font-size:.875rem;color:var(--text-secondary);line-height:1.5;margin:0}
+    .hero h1{font-size:clamp(1.2rem,2.8vw,1.7rem);margin-bottom:12px}
+    .terminal-wrap:hover{transform:rotateY(0)}
+    .terminal{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.03),0 4px 24px rgba(0,0,0,.4),0 0 80px var(--accent-glow);transform:rotateX(2deg);transition:transform 400ms var(--ease-out)}
+    .terminal-hd{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)}
+    .win-dot{width:10px;height:10px;border-radius:50%}
+    .terminal-wrap{flex:1 1 auto;max-width:720px;min-width:400px;perspective:1000px;transform:rotateY(3deg);transition:transform 400ms var(--ease-out)}
+
+
+    .install-cmd{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:.8125rem;cursor:pointer;transition:border-color 150ms var(--ease-out),box-shadow 150ms var(--ease-out)}
+    .cast-wrap{line-height:0;border-radius:var(--radius-md);overflow:hidden;min-height:380px}
+    .install-cmd .prompt{color:var(--accent);user-select:none}
+    .install-cmd .cmd-text{color:var(--text-primary)}
+    .install-cmd .copy-hint{font-size:.625rem;color:var(--text-tertiary);opacity:0;transition:opacity 150ms var(--ease-out)}
+    .install-cmd:hover .copy-hint{opacity:1}
+
+    .hero-stats{display:flex;justify-content:center;gap:36px;margin-top:32px;font-family:var(--font-mono)}
+    .stat-value{font-size:1.25rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
+    .stat-label{font-size:.625rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em}
+
+    /* Section headers */
+    .section-header{text-align:center;margin-bottom:64px}
+    .section-tag{font-family:var(--font-mono);font-size:.6875rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px}
+    .section-header h2{margin-bottom:12px}
+    .section-header p{max-width:480px;margin:0 auto;font-size:.9375rem}
+
+    /* Features */
+    .features{background:rgba(16,13,12,.3)}
+    .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border-subtle);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow:visible}
+    .feat-card{background:var(--bg-surface);padding:44px 28px 36px;text-align:center;cursor:default;transition:background 250ms var(--ease-out),transform 250ms var(--ease-out)}
+    .feat-card:hover{background:var(--bg-elevated);transform:translateY(-2px);z-index:1;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+    .feat-icon{font-size:2.25rem;line-height:1;margin-bottom:14px;color:var(--accent);display:block;transition:transform 300ms var(--ease-out),color 300ms var(--ease-out)}
+    .feat-card:hover .feat-icon{transform:scale(1.12);color:#F0605F}
+    .feat-card h3{margin-bottom:0;font-size:1rem}
+    .feat-desc-inner p{margin-top:10px;font-size:.8125rem;line-height:1.6;color:var(--text-secondary)}
+
+    /* Why CLI section */
+    .why{background:rgba(11,8,8,.3)}
+    .why-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+    .why-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:32px;transition:border-color 200ms var(--ease-out)}
+    .why-card:hover{border-color:var(--accent)}
+    .why-card .why-num{font-family:var(--font-mono);font-size:.6875rem;color:var(--accent);letter-spacing:.12em;margin-bottom:10px}
+    .why-card h3{margin-bottom:8px}
+    .why-card p{font-size:.875rem;line-height:1.6}
+
+    /* Engines */
+    .engines{background:rgba(16,13,12,.3)}
+    .engines-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .eng-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:32px 24px 28px;text-align:center;transition:border-color 250ms var(--ease-out),background 250ms var(--ease-out),transform 250ms var(--ease-out)}
+    .eng-card:hover{border-color:var(--accent);background:var(--bg-elevated);transform:translateY(-2px);box-shadow:0 0 24px var(--accent-glow)}
+    .eng-icon{font-size:2rem;color:var(--accent);margin-bottom:12px;display:block;transition:transform 300ms var(--ease-out),color 300ms var(--ease-out)}
+    .eng-card:hover .eng-icon{transform:scale(1.12);color:#F0605F}
+    .eng-card h3{margin-bottom:6px}
+    .eng-platform{font-family:var(--font-mono);font-size:.6875rem;color:var(--text-tertiary)}
+    .eng-desc-inner p{margin-top:10px;font-size:.8125rem;line-height:1.6;color:var(--text-secondary)}
+
+    /* Install section */
+    .install{background:rgba(11,8,8,.3)}
+    .install-tabs{display:flex;justify-content:center;gap:4px;margin-bottom:32px;padding:4px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);width:fit-content;margin-left:auto;margin-right:auto}
+    .inst-tab{font-family:var(--font-mono);font-size:.75rem;padding:8px 20px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:all 150ms var(--ease-out)}
+    .inst-tab:hover{color:var(--text-primary);background:var(--bg-elevated)}
+    .inst-tab.active{color:var(--accent);background:var(--accent-dim)}
+    .inst-code{max-width:620px;margin:0 auto;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden}
+    .inst-code-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)}
+    .inst-lang{font-family:var(--font-mono);font-size:.6875rem;color:var(--text-tertiary)}
+    .inst-copy-btn{font-family:var(--font-mono);font-size:.6875rem;color:var(--text-tertiary);background:none;border:none;cursor:pointer;padding:2px 8px;border-radius:var(--radius-sm);transition:color 150ms var(--ease-out)}
+    .inst-copy-btn:hover{color:var(--accent);background:var(--accent-dim)}
+    .inst-code pre{padding:20px 24px;font-family:var(--font-mono);font-size:.8125rem;line-height:1.8;color:var(--text-primary);overflow-x:auto;white-space:pre-wrap}
+    .inst-code .comment{color:var(--text-tertiary)}
+    .inst-code .cmd{color:var(--accent)}
+    .install-more{text-align:center;margin-top:24px;font-family:var(--font-mono);font-size:.8125rem}
+
+    /* Community / Ecosystem */
+    .ecosystem{background:rgba(16,13,12,.3)}
+    .eco-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .eco-card{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:28px 24px;text-align:center;transition:border-color 200ms var(--ease-out),background 200ms var(--ease-out)}
+    .eco-card:hover{border-color:var(--accent);background:var(--bg-elevated)}
+    .eco-card .eco-count{font-family:var(--font-mono);font-size:2rem;font-weight:700;color:var(--accent);margin-bottom:6px}
+    .eco-card .eco-label{font-size:.8125rem;color:var(--text-secondary);margin-bottom:12px}
+    .eco-card p{font-size:.75rem;line-height:1.5}
+    .eco-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:40px}
+    .eco-badge{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:100px;font-family:var(--font-mono);font-size:.6875rem;color:var(--text-secondary);transition:border-color 200ms var(--ease-out)}
+    .eco-badge:hover{border-color:var(--accent)}
+
+    /* Footer */
+    .ecosystem{background:rgba(16,13,12,.3);flex-direction:column;justify-content:flex-start;padding-bottom:0}
+    .ecosystem>.container{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center}
+    .footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:20px;font-family:var(--font-mono);font-size:.75rem}
+    .footer-links a{color:var(--text-secondary)}
+    .footer-links a:hover{color:var(--accent)}
+    .footer-copy{font-size:.75rem;color:var(--text-tertiary)}
+
+    /* Scroll indicator */
+    .scroll-dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:10px}
+    .scroll-dots .dot{width:8px;height:8px;border-radius:50%;background:var(--text-tertiary);transition:all 300ms var(--ease-out);cursor:pointer}
+    .scroll-dots .dot:hover{background:var(--text-secondary)}
+    .scroll-dots .dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent-glow);transform:scale(1.3)}
+    @media(max-width:768px){.scroll-dots{display:none}}
+    .footer{margin-top:auto;padding:48px 0;border-top:1px solid var(--border-subtle);text-align:center;width:100%}
+    /* Scroll reveal — enhanced for snap */
+    .reveal{opacity:0;transform:translateY(32px);transition:opacity 700ms var(--ease-out),transform 700ms var(--ease-out)}
+    .reveal.visible{opacity:1;transform:translateY(0)}
+
+    /* Responsive */
+    @media(max-width:768px){
+      section{min-height:auto;padding:80px 0;scroll-snap-align:none}
+      .hero{padding-top:100px}
+      .hero-main{flex-direction:column-reverse;gap:28px}
+      .hero h1 br{display:none}
+      .terminal-wrap{flex:0 0 auto;max-width:100%;width:100%}
+      .hero-left{flex:0 1 auto;text-align:center;flex-direction:column;gap:16px}
+      .engines-grid{grid-template-columns:1fr 1fr}
+      .features-grid{grid-template-columns:1fr}
+      .eco-grid{grid-template-columns:1fr}
+      .why-grid{grid-template-columns:1fr}
+      .hero-stats{gap:24px}
+    }
+    @media(max-width:480px){
+      .hero{padding-top:80px}
+      .hero h1{font-size:1.2rem}
+      .hero-subtitle{font-size:.8125rem}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .terminal{transform:none!important}
+      .bg-anim{display:none}
+      *{transition-duration:.01ms!important}
+    }
+  </style>
+</head>
+<body>
+  <!-- Background 3D Spectrum -->
+  <div class="bg-anim" aria-hidden="true"><canvas id="bgCanvas"></canvas></div>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <img src="logo.png" alt="go-musicfox" width="24" height="24">
+        <span class="nav-prompt">$&nbsp;</span><span id="navTypewriter">musicfox</span><span class="nav-cursor">|</span>
+      </a>
+      <div class="nav-links">
+        <a href="https://github.com/go-musicfox/go-musicfox" class="nav-gh" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>Star</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero hero-snap">
+    <div class="container">
+      <div class="hero-main reveal">
+        <div class="hero-left">
+          <div class="hero-left-text">
+            <h1>在<span class="highlight">终端</span>里听音乐</h1>
+            <p class="hero-subtitle">Go 编写的终端（TUI）音乐播放器，基于网易云音乐。多引擎播放、逐字同步歌词、DLNA 投送、MPRIS 远程控制——macOS、Linux、Windows 全平台。6 种播放引擎、8 级音质、40+ 可定制快捷键，一切都在终端里。</p>
+          </div>
+        </div>
+        <div class="terminal-wrap">
+          <div class="terminal">
+            <div class="terminal-hd">
+              <span class="win-dot r"></span><span class="win-dot y"></span><span class="win-dot g"></span>
+              <span class="win-title">musicfox — zsh — 104×25</span>
+            </div>
+            <div class="terminal-body">
+              <div class="cast-wrap" id="demo"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-stats reveal">
+        <div><div class="stat-value">2.4k+</div><div class="stat-label">GitHub Stars</div></div>
+        <div><div class="stat-value">6</div><div class="stat-label">播放引擎</div></div>
+        <div><div class="stat-value">8</div><div class="stat-label">音质级别</div></div>
+        <div><div class="stat-value">40+</div><div class="stat-label">快捷键操作</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="install" id="install">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">> package.manager install</div>
+        <h2>即刻安装</h2>
+        <p>一行命令，开始你的终端音乐之旅。</p>
+      </div>
+      <div class="install-tabs reveal">
+        <button class="inst-tab active" data-platform="macos">macOS</button>
+        <button class="inst-tab" data-platform="linux">Linux</button>
+        <button class="inst-tab" data-platform="windows">Windows</button>
+        <button class="inst-tab" data-platform="source">源码编译</button>
+      </div>
+      <div class="inst-code reveal" id="instCode">
+        <div class="inst-code-hd">
+          <span class="inst-lang" id="instLang">shell</span>
+          <button class="inst-copy-btn" onclick="copyCode()">复制</button>
+        </div>
+        <pre id="instContent"><span class="comment"># Homebrew (推荐)</span>
+<span class="cmd">brew</span> install anhoder/go-musicfox/go-musicfox
+
+<span class="comment"># 或直接下载二进制</span>
+<span class="comment"># https://github.com/go-musicfox/go-musicfox/releases/latest</span></pre>
+      </div>
+      <div class="install-more reveal">
+        <a href="https://github.com/go-musicfox/go-musicfox#%E5%AE%89%E8%A3%85" target="_blank" rel="noopener">查看完整安装文档 →</a>
+      </div>
+    </div>
+  </section>
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">> cat FEATURES.md</div>
+        <h2>不止是播放器</h2>
+        <p>键盘驱动的完整音乐体验——搜索、发现、管理，一切都在指尖。</p>
+      </div>
+      <div class="features-grid reveal">
+        <div class="feat-card"><span class="feat-icon">⊞</span><h3>多引擎播放</h3><div class="feat-desc-inner"><p>Beep、MPV、MPD、DLNA、AVFoundation、MediaPlayer——六套引擎按需切换，兼容几乎全部音频格式。从纯 Go 零依赖到系统原生框架，总有一套适合你的场景。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">♪</span><h3>逐字同步歌词</h3><div class="feat-desc-inner"><p>LRC / YRC 逐字时间轴解析，simple / smooth / wave / glow 四种视觉渲染模式。macOS 配合 LyricsX 实现浮动桌面歌词，听歌识曲从未如此沉浸。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">⌘</span><h3>系统深度集成</h3><div class="feat-desc-inner"><p>Linux MPRIS、macOS Now Playing 与菜单栏、Windows 媒体控件全平台覆盖。蓝牙断连自动暂停、系统休眠自动响应，与操作系统无缝协作。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">⇄</span><h3>智能播放模式</h3><div class="feat-desc-inner"><p>列表循环 / 顺序播放 / 单曲循环 / 随机播放 / 无限随机 / 心动模式——六种播放逻辑，一个快捷键循环切换。适配不同听歌心境。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">◈</span><h3>8 级音质解锁</h3><div class="feat-desc-inner"><p>标准品质到鲸云臻享，八档逐级提升。UNM 多源智能回退（酷我/酷狗/咪咕/QQ 音乐），灰色歌曲也能找到可用音源播放。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">⌨</span><h3>全键位可定制</h3><div class="feat-desc-inner"><p>40+ 内置操作全部支持自由重映射。全局快捷键 + TOML 配置，Vim 式 hjkl 导航，纯键盘流操作。鼠标支持单击/双击/滚轮/右键。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">◉</span><h3>Last.fm 记录</h3><div class="feat-desc-inner"><p>自动 scrobble 听歌历史到 Last.fm，可配置记录阈值防止短时切歌污染。保持你的音乐社交网络和 Scrobble 数据始终同步。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">▣</span><h3>Kitty 图形协议</h3><div class="feat-desc-inner"><p>终端内渲染真图形专辑封面——圆角裁剪、旋转动画。双列布局配合鼠标操作，TUI 颜值巅峰。Kitty、iTerm2 等终端原生支持。</p></div></div>
+        <div class="feat-card"><span class="feat-icon">↗</span><h3>自定义分享</h3><div class="feat-desc-inner"><p>Go text/template 驱动分享引擎。歌曲、专辑、歌手、歌单——自由定制模板，一键输出到剪贴板或文件。让音乐分享带上你的个性烙印。</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" id="why">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">> man musicfox</div>
+        <h2>为什么在终端里听歌？</h2>
+        <p>不是因为怀旧——是因为终端就是最高效的人机界面。</p>
+      </div>
+      <div class="why-grid reveal">
+        <div class="why-card">
+          <div class="why-num">01 / 纯粹</div>
+          <h3>零干扰的音乐体验</h3>
+          <p>没有弹窗、没有广告、没有算法推荐的焦虑。没有 Electron 的臃肿，没有浏览器内核的负担。只有你和音乐，以及一个 80 列的终端窗口。极简主义者的完美选择。</p>
+        </div>
+        <div class="why-card">
+          <div class="why-num">02 / 高效</div>
+          <h3>全键盘操作，手不离键盘</h3>
+          <p>Vim 式 hjkl 导航，40+ 操作全部支持自定义快捷键。切歌、搜歌、管理播放列表——一切都在指尖完成。一旦形成肌肉记忆，闭着眼睛也能流畅操作。</p>
+        </div>
+        <div class="why-card">
+          <div class="why-num">03 / 轻量</div>
+          <h3>Go 原生编译，单二进制分发</h3>
+          <p>无 Electron，无浏览器内核。一个数 MB 的单二进制文件，内存占用极低。树莓派、NAS、VPS、老旧笔记本——任何设备都能流畅运行。CPU 占用在日常使用中几乎可以忽略。</p>
+        </div>
+        <div class="why-card">
+          <div class="why-num">04 / 自由</div>
+          <h3>开源 MIT，完全透明</h3>
+          <p>代码完全开放，MIT 许可证。你可以审查每一行代码、修改功能、二次分发。不依赖任何云服务，你的听歌数据和隐私只属于你自己。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="engines" id="engines">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">> ls engines/</div>
+        <h2>六大播放引擎</h2>
+        <p>每个平台都有最优解——也可以纯粹因为偏好选择一个。</p>
+      </div>
+      <div class="engines-grid reveal">
+        <div class="eng-card"><span class="eng-icon">&gt;_</span><h3>Beep</h3><div class="eng-platform">全平台 · 默认引擎</div><div class="eng-desc-inner"><p>纯 Go 实现，零外部依赖。内置支持 MP3、FLAC、OGG、WAV 格式解码。开箱即用，无需安装任何额外组件。</p></div></div>
+        <div class="eng-card"><span class="eng-icon">⎘</span><h3>MPV</h3><div class="eng-platform">全平台 · IPC 控制</div><div class="eng-desc-inner"><p>通过 mpv 的 IPC 接口控制播放。支持几乎所有音频格式，性能卓越。适合已使用 mpv 的用户，享受其强大的音频处理管线。</p></div></div>
+        <div class="eng-card"><span class="eng-icon">⌂</span><h3>DLNA</h3><div class="eng-platform">全平台 · 投送引擎</div><div class="eng-desc-inner"><p>将音乐投送到智能电视、Hi-Fi 音响、游戏机等 DLNA 兼容设备。家庭音乐中心的不二之选。</p></div></div>
+        <div class="eng-card"><span class="eng-icon">♫</span><h3>MPD</h3><div class="eng-platform">Linux · 远程服务</div><div class="eng-desc-inner"><p>连接本地或远程 MPD 服务器。完美适配 NAS、树莓派等无头音乐服务器场景，多个设备共享一个播放队列。</p></div></div>
+        <div class="eng-card"><span class="eng-icon"></span><h3>AVFoundation</h3><div class="eng-platform">macOS · 原生引擎</div><div class="eng-desc-inner"><p>调用 macOS 原生音频框架，系统级集成最佳。支持音频路由自动切换（蓝牙耳机、外放）。配合 Now Playing 和菜单栏，体验如原生应用般顺滑。</p></div></div>
+        <div class="eng-card"><span class="eng-icon">⊞</span><h3>MediaPlayer</h3><div class="eng-platform">Windows · WinRT</div><div class="eng-desc-inner"><p>基于 Windows Runtime API，与系统媒体控件、通知中心和任务栏深度集成。原生 Windows 体验。</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ecosystem" id="ecosystem">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">> curl -s community/stats</div>
+        <h2>社区与生态</h2>
+        <p>来自全球开发者和音乐爱好者的信赖。</p>
+      </div>
+      <div class="eco-grid reveal">
+        <div class="eco-card">
+          <div class="eco-count">2.4k+</div>
+          <div class="eco-label">GitHub Stars</div>
+          <p>持续增长中，终端音乐播放器品类最活跃的项目之一</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-count">15+</div>
+          <div class="eco-label">包管理器支持</div>
+          <p>Homebrew · AUR · Copr · Nix · Scoop · Flatpak · 星火商店 · Termux 等</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-count">2021</div>
+          <div class="eco-label">项目始创</div>
+          <p>四年持续维护，2000+ commits，稳定的发版节奏</p>
+        </div>
+      </div>
+      <div class="eco-badges reveal">
+        <span class="eco-badge">🦀 Homebrew</span>
+        <span class="eco-badge">🐧 Arch Linux</span>
+        <span class="eco-badge">🎩 Fedora</span>
+        <span class="eco-badge">❄️ Nix / NixOS</span>
+        <span class="eco-badge">⊞ Scoop</span>
+        <span class="eco-badge">📦 Flatpak</span>
+        <span class="eco-badge">🍥 Debian / Ubuntu</span>
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="https://github.com/go-musicfox/go-musicfox" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/go-musicfox/go-musicfox/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+        <a href="https://github.com/go-musicfox/go-musicfox/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/go-musicfox/spotifox" target="_blank" rel="noopener">Spotifox</a>
+        <a href="/privacy.html">隐私政策</a>
+      </div>
+      <p class="footer-copy">go-musicfox — MIT License — Built with Go &amp; Bubble Tea</p>
+    </footer>
+  </section>
+
+  <script>
+  // ===== 3D Cube Spectrum Background =====
+  (function() {
+    var canvas = document.getElementById('bgCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    var COLS = 28, ROWS = 18;
+    var CUBE_SIZE = 28, GAP = 4, CELL = CUBE_SIZE + GAP;
+    var ISO_X = 0.866, ISO_Y = 0.5;
+    var W, H, ox, oy;
+    var cubes = [];
+    var time = 0;
+
+    function resize() {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; H = window.innerHeight;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Init cube grid with wave parameters
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var cx = (c - COLS/2) * CELL;
+        var cz = (r - ROWS/2) * CELL;
+        var dist = Math.sqrt(cx*cx + cz*cz) / (CELL * Math.max(COLS,ROWS)/2);
+        cubes.push({
+          gx: cx, gz: cz,
+          freq: 1.5 + Math.random() * 3,
+          phase: Math.random() * Math.PI * 2,
+          amp: 0.4 + Math.random() * 0.6,
+          dist: dist
+        });
+      }
+    }
+
+    // Wave sources that move slowly
+    var waves = [
+      { x: 0, z: 0, freq: 0.4, amp: 1.0 },
+      { x: 150, z: 80, freq: 0.55, amp: 0.7 },
+      { x: -120, z: -60, freq: 0.35, amp: 0.6 },
+      { x: 80, z: -100, freq: 0.5, amp: 0.5 }
+    ];
+
+    function isoX(x, z) { return (x - z) * ISO_X; }
+    function isoY(x, y, z) { return (x + z) * ISO_Y - y; }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      time += 0.013;
+
+      // Center origin, slight orbit
+      var orbitAngle = time * 0.05;
+      ox = W/2 + Math.cos(orbitAngle) * 30;
+      oy = H * 0.58 + Math.sin(time * 0.03) * 10;
+
+      var maxH = CUBE_SIZE * 5;
+      var visibleCubes = [];
+
+      for (var i = 0; i < cubes.length; i++) {
+        var cb = cubes[i];
+        // Sum wave contributions
+        var h = 0;
+        for (var w = 0; w < waves.length; w++) {
+          var wave = waves[w];
+          var dx = cb.gx - wave.x, dz = cb.gz - wave.z;
+          var dist = Math.sqrt(dx*dx + dz*dz);
+          h += wave.amp * Math.sin(dist * 0.015 - time * wave.freq + cb.phase) * maxH;
+        }
+        h = Math.max(2, h * cb.amp);
+        var sx = isoX(cb.gx, cb.gz) + ox;
+        var sy = isoY(cb.gx, 0, cb.gz) + oy;
+        var topY = isoY(cb.gx, h, cb.gz) + oy;
+        visibleCubes.push({ i: i, sx: sx, sy: sy, topY: topY, h: h, gz: cb.gz });
+      }
+
+      // Sort back to front (by gz for isometric)
+      visibleCubes.sort(function(a, b) { return a.gz - b.gz; });
+
+      var hs = CUBE_SIZE * ISO_Y;
+      var ws = CUBE_SIZE * ISO_X;
+
+      for (var v = 0; v < visibleCubes.length; v++) {
+        var c = visibleCubes[v];
+        if (c.h < 1) continue;
+
+        var hNorm = c.h / maxH;
+        // Colors: dark at bottom, brighter at top, red-tinted
+        var r = Math.floor(30 + hNorm * 110);
+        var g = Math.floor(5 + hNorm * 15);
+        var b = Math.floor(5 + hNorm * 15);
+
+        var topR = r + 60, topG = g + 20, topB = b + 10;
+        var leftR = Math.floor(r * 0.55), leftG = Math.floor(g * 0.55), leftB = Math.floor(b * 0.55);
+        var rightR = Math.floor(r * 0.35), rightG = Math.floor(g * 0.35), rightB = Math.floor(b * 0.35);
+
+        var alpha = 0.22 + hNorm * 0.18;
+
+        // Draw right face
+        ctx.fillStyle = 'rgba(' + rightR + ',' + rightG + ',' + rightB + ',' + alpha + ')';
+        ctx.beginPath();
+        ctx.moveTo(c.sx + ws, c.sy - hs);
+        ctx.lineTo(c.sx, c.sy);
+        ctx.lineTo(c.sx, c.topY);
+        ctx.lineTo(c.sx + ws, c.topY - hs);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw left face
+        ctx.fillStyle = 'rgba(' + leftR + ',' + leftG + ',' + leftB + ',' + alpha + ')';
+        ctx.beginPath();
+        ctx.moveTo(c.sx - ws, c.sy - hs);
+        ctx.lineTo(c.sx, c.sy);
+        ctx.lineTo(c.sx, c.topY);
+        ctx.lineTo(c.sx - ws, c.topY - hs);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw top face
+        ctx.fillStyle = 'rgba(' + topR + ',' + topG + ',' + topB + ',' + (alpha * 1.5) + ')';
+        ctx.beginPath();
+        ctx.moveTo(c.sx - ws, c.topY - hs);
+        ctx.lineTo(c.sx, c.topY);
+        ctx.lineTo(c.sx + ws, c.topY - hs);
+        ctx.lineTo(c.sx, c.topY - hs * 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle edge highlight on top face
+        if (hNorm > 0.4) {
+          ctx.strokeStyle = 'rgba(255,100,100,' + (alpha * 0.3) + ')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      // Move wave sources slowly
+      waves[0].x = Math.sin(time * 0.2) * 200;
+      waves[0].z = Math.cos(time * 0.25) * 150;
+      waves[1].x = Math.cos(time * 0.3) * 180;
+      waves[1].z = Math.sin(time * 0.22) * 160;
+      waves[2].x = Math.sin(time * 0.28) * 220;
+      waves[2].z = Math.cos(time * 0.2) * 140;
+      waves[3].x = Math.cos(time * 0.22) * 160;
+      waves[3].z = Math.sin(time * 0.3) * 180;
+
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(draw);
+  })();
+  </script>
+
+  <script src="asciinema-player.js"></script>
+  <script>
+    AsciinemaPlayer.create('./demo.cast', document.getElementById('demo'), {
+      cols: 104, rows: 25,
+      autoPlay: true, loop: true, preload: true,
+      idleTimeLimit: 0.5, speed: 1.2, fontSize: '11px',
+      theme: 'monokai'
+    });
+  </script>
+  <script>
+    const installData = {
+      macos: { lang:'shell', code:`<span class="comment"># Homebrew (推荐)</span>
+<span class="cmd">brew</span> install anhoder/go-musicfox/go-musicfox
+
+<span class="comment"># 或直接下载二进制</span>
+<span class="comment"># https://github.com/go-musicfox/go-musicfox/releases/latest</span>` },
+      linux: { lang:'shell', code:`<span class="comment"># Arch Linux (AUR)</span>
+<span class="cmd">paru</span> -S go-musicfox
+
+<span class="comment"># Fedora (Copr)</span>
+<span class="cmd">sudo dnf copr enable</span> poesty/go-musicfox
+<span class="cmd">sudo dnf install</span> go-musicfox
+
+<span class="comment"># Debian/Ubuntu (星火商店)</span>
+<span class="cmd">sudo aptss install</span> go-musicfox
+
+<span class="comment"># Flatpak</span>
+<span class="cmd">flatpak install</span> flathub io.github.go_musicfox.go-musicfox
+
+<span class="comment"># Nix</span>
+<span class="cmd">nix run</span> github:go-musicfox/go-musicfox` },
+      windows: { lang:'powershell', code:`<span class="comment"># Scoop</span>
+<span class="cmd">scoop bucket add</span> go-musicfox https://github.com/go-musicfox/go-musicfox.git
+<span class="cmd">scoop install</span> go-musicfox
+
+<span class="comment"># 或直接下载二进制</span>
+<span class="comment"># https://github.com/go-musicfox/go-musicfox/releases/latest</span>` },
+      source: { lang:'shell', code:`<span class="comment"># 需要 Go 1.22+</span>
+<span class="cmd">git clone</span> https://github.com/go-musicfox/go-musicfox
+<span class="cmd">cd</span> go-musicfox
+<span class="cmd">go mod download</span>
+<span class="cmd">make</span>          <span class="comment"># 编译到 bin/</span>
+<span class="cmd">make install</span>  <span class="comment"># 安装到 $GOPATH/bin</span>` }
+    };
+    let curPlatform = 'macos';
+    document.querySelectorAll('.inst-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.inst-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        curPlatform = tab.dataset.platform;
+        const d = installData[curPlatform];
+        document.getElementById('instLang').textContent = d.lang;
+        document.getElementById('instContent').innerHTML = d.code;
+      });
+    });
+    function copyInstall() {
+      navigator.clipboard.writeText('brew install anhoder/go-musicfox/go-musicfox').then(() => {
+        const h = document.getElementById('copyHint');
+        h.textContent = '已复制!'; h.style.opacity = '1';
+        setTimeout(() => { h.textContent = '复制'; h.style.opacity = ''; }, 2000);
+      });
+    }
+    function copyCode() {
+      const text = document.getElementById('instContent').textContent.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const b = document.querySelector('.inst-copy-btn');
+        b.textContent = '已复制!';
+        setTimeout(() => { b.textContent = '复制'; }, 2000);
+      });
+    }
+    // Scroll reveal
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    // Smooth nav
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        const href = link.getAttribute('href');
+        if (href === '#') return;
+        e.preventDefault();
+        const t = document.querySelector(href);
+        if (t) window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 76, behavior: 'smooth' });
+      });
+    });
+
+    // Scroll indicator dots
+    (function(){
+      var sections = document.querySelectorAll('section[id], .hero-snap');
+      if (sections.length === 0) return;
+      var dotsHtml = '<div class="scroll-dots">';
+      sections.forEach(function(s, i) {
+        dotsHtml += '<span class="dot' + (i === 0 ? ' active' : '') + '" data-index="' + i + '"></span>';
+      });
+      dotsHtml += '</div>';
+      document.body.insertAdjacentHTML('beforeend', dotsHtml);
+
+      var dots = document.querySelectorAll('.scroll-dots .dot');
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) {
+            var idx = Array.from(sections).indexOf(e.target);
+            dots.forEach(function(d) { d.classList.remove('active'); });
+            if (dots[idx]) dots[idx].classList.add('active');
+          }
+        });
+      }, { threshold: 0.4 });
+      sections.forEach(function(s) { observer.observe(s); });
+
+      dots.forEach(function(dot) {
+        dot.addEventListener('click', function() {
+          var idx = parseInt(this.dataset.index);
+          if (sections[idx]) {
+            sections[idx].scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      });
+
+      // Wheel-based page snapping (desktop only)
+      if (window.innerWidth >= 768) {
+        var scrollLocked = false;
+        var wheelAccum = 0;
+        var WHEEL_THRESHOLD = 50;
+        var LOCK_DURATION = 800;
+
+        window.addEventListener('wheel', function(e) {
+          if (scrollLocked) { e.preventDefault(); return; }
+
+          wheelAccum += e.deltaY;
+          if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
+
+          var direction = wheelAccum > 0 ? 1 : -1;
+          wheelAccum = 0;
+
+          // Find current section
+          var current = -1;
+          var viewMid = window.scrollY + window.innerHeight / 2;
+          sections.forEach(function(s, i) {
+            var top = s.offsetTop;
+            var bottom = top + s.offsetHeight;
+            if (viewMid >= top && viewMid < bottom) current = i;
+          });
+
+          if (current === -1) return;
+          var target = current + direction;
+          if (target < 0) target = 0;
+          if (target >= sections.length) target = sections.length - 1;
+          if (target === current) return;
+
+          scrollLocked = true;
+          e.preventDefault();
+          sections[target].scrollIntoView({ behavior: 'smooth' });
+          setTimeout(function() { scrollLocked = false; }, LOCK_DURATION);
+        }, { passive: false });
+      }
+    })();
+
+    // Nav typewriter
+    (function(){
+      var el = document.getElementById('navTypewriter');
+      if (!el) return;
+      var text = 'musicfox';
+      var i = text.length;
+      var deleting = true;
+      function tick() {
+        if (deleting) {
+          i--;
+          el.textContent = text.substring(0, i);
+          if (i === 0) { deleting = false; setTimeout(tick, 600); return; }
+          setTimeout(tick, 60);
+        } else {
+          i++;
+          el.textContent = text.substring(0, i);
+          if (i === text.length) { deleting = true; setTimeout(tick, 2500); return; }
+          setTimeout(tick, 100);
+        }
+      }
+      setTimeout(tick, 2000);
+    })();
+  </script>
