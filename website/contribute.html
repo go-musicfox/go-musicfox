@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>贡献指南 — go-musicfox</title>
+  <meta name="description" content="参与 go-musicfox 开源项目：代码贡献、问题反馈、文档改进、社区参与。">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deepest: #0B0808;
+      --bg-default: #100D0C;
+      --bg-surface: #171212;
+      --bg-elevated: #1E1717;
+      --text-primary: #EBE4E4;
+      --text-secondary: #A89898;
+      --text-tertiary: #6B5C5C;
+      --accent: #EA403F;
+      --accent-dim: #2A1212;
+      --accent-glow: rgba(234, 64, 63, 0.18);
+      --border-subtle: #1E1616;
+      --border-default: #302020;
+      --font-mono: 'JetBrains Mono','Cascadia Code','Fira Code','SF Mono',monospace;
+      --font-body: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+      --ease-out: cubic-bezier(0.23,1,0.32,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-font-smoothing:antialiased}
+    body{background:var(--bg-deepest);color:var(--text-primary);font-family:var(--font-body);line-height:1.7;padding:0}
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(11,8,8,.82);border-bottom:1px solid var(--border-subtle)}
+    .nav-inner{display:flex;align-items:center;max-width:760px;margin:0 auto;padding:0 24px;height:56px}
+    .nav-logo{display:flex;align-items:center;gap:0;font-family:var(--font-mono);font-weight:700;font-size:1rem;color:var(--text-primary);text-decoration:none}
+    .nav-logo img{width:24px;height:24px;border-radius:4px;margin-right:8px}
+    .nav-prompt{color:var(--accent);font-weight:400}
+    .container{max-width:760px;margin:0 auto;padding:80px 24px 48px}
+    h1{font-family:var(--font-mono);font-size:1.5rem;font-weight:600;margin-bottom:8px;letter-spacing:-.02em}
+    .subtitle{font-size:.9375rem;color:var(--text-tertiary);margin-bottom:40px}
+    h2{font-family:var(--font-mono);font-size:1rem;font-weight:600;margin-top:36px;margin-bottom:12px;color:var(--accent);display:flex;align-items:center;gap:8px}
+    h2 .num{color:var(--text-tertiary);font-weight:400}
+    p{margin-bottom:16px;color:var(--text-secondary);font-size:.9375rem}
+    ul,ol{margin-bottom:16px;padding-left:20px}
+    li{margin-bottom:6px;color:var(--text-secondary);font-size:.9375rem}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{color:#F0605F}
+    code{font-family:var(--font-mono);font-size:.8125rem;background:var(--bg-elevated);padding:2px 6px;border-radius:var(--radius-sm);color:var(--accent)}
+    pre{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:16px 20px;overflow-x:auto;margin-bottom:16px}
+    pre code{background:none;padding:0;font-size:.8125rem;line-height:1.7;color:var(--text-primary)}
+    hr{border:none;border-top:1px solid var(--border-subtle);margin:40px 0}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:100px;font-family:var(--font-mono);font-size:.6875rem;color:var(--accent)}
+    .back{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:.8125rem;color:var(--text-tertiary);margin-bottom:24px}
+    .back:hover{color:var(--accent)}
+    @media(max-width:480px){
+      .container{padding:72px 16px 32px}
+      h1{font-size:1.25rem}
+      pre{padding:12px 16px}
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="logo.png" alt="go-musicfox" width="24" height="24">
+        <span class="nav-prompt">$&nbsp;</span>musicfox
+      </a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <a href="/" class="back">← 返回首页</a>
+    <h1>贡献指南</h1>
+    <p class="subtitle">让 go-musicfox 变得更好——每个贡献都值得被感谢。</p>
+
+    <p>go-musicfox 是一个 MIT 开源项目，欢迎任何形式的贡献。无论是提交代码、报告 Bug、改进文档、还是参与社区讨论，你的参与都会让这个项目变得更好。</p>
+
+    <h2><span class="num">01</span> 行为准则</h2>
+    <p>在参与之前，请阅读并遵守我们的 <a href="https://github.com/go-musicfox/go-musicfox/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">行为准则</a>。我们致力于为每个人创造友好、尊重、包容的协作环境。</p>
+
+    <h2><span class="num">02</span> 寻找贡献方向</h2>
+    <p>不知道怎么开始？以下是几个常见的贡献方向：</p>
+    <ul>
+      <li><strong>报告 Bug</strong> — 在 <a href="https://github.com/go-musicfox/go-musicfox/issues" target="_blank" rel="noopener">GitHub Issues</a> 搜索是否已有相同报告，如果没有则创建新 Issue</li>
+      <li><strong>提交功能请求</strong> — 在 Discussions 中提出你的想法，获得维护者反馈后再实现</li>
+      <li><strong>改进文档</strong> — README、Wiki、注释或官网内容</li>
+      <li><strong>完善测试</strong> — 增加单元测试、集成测试覆盖</li>
+      <li><strong>代码贡献</strong> — 查看标记了 <span class="badge">good first issue</span> 或 <span class="badge">help wanted</span> 的 Issue</li>
+    </ul>
+
+    <h2><span class="num">03</span> 开发环境搭建</h2>
+    <p>确保已安装 <strong>Go 1.22+</strong>，然后克隆仓库：</p>
+    <pre><code>git clone https://github.com/go-musicfox/go-musicfox.git
+cd go-musicfox
+go mod download
+make          # 编译到 bin/
+make install  # 安装到 $GOPATH/bin</code></pre>
+
+    <h2><span class="num">04</span> 提交代码</h2>
+    <p>我们遵循 <strong>Feature Branch</strong> 工作流和 <strong>Conventional Commits</strong> 规范：</p>
+    <pre><code>git checkout -b feat/your-feature
+git commit -m "feat(xxx): 简短的描述"
+git push origin feat/your-feature</code></pre>
+    <p>然后在 GitHub 上创建 Pull Request，关联相关的 Issue 编号。</p>
+
+    <h3>提交类型速查</h3>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.875rem">
+      <tr><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--accent);font-family:var(--font-mono)">feat</td><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--text-secondary)">新功能</td></tr>
+      <tr><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--accent);font-family:var(--font-mono)">fix</td><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--text-secondary)">Bug 修复</td></tr>
+      <tr><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--accent);font-family:var(--font-mono)">docs</td><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--text-secondary)">文档更新</td></tr>
+      <tr><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--accent);font-family:var(--font-mono)">refactor</td><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--text-secondary)">代码重构</td></tr>
+      <tr><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--accent);font-family:var(--font-mono)">test</td><td style="padding:6px 12px;border:1px solid var(--border-default);color:var(--text-secondary)">测试相关</td></tr>
+    </table>
+
+    <h2><span class="num">05</span> Pull Request 流程</h2>
+    <ol>
+      <li>确保 PR 描述清晰，说明改动原因和实现方式</li>
+      <li>关联相关 Issue（如 <code>Closes #123</code>）</li>
+      <li>确保 CI 检查通过</li>
+      <li>至少一位维护者 Review 后合并</li>
+    </ol>
+
+    <h2><span class="num">06</span> 其他贡献方式</h2>
+    <ul>
+      <li><strong>Star 项目</strong> — 在 GitHub 上点亮 Star，帮助项目被更多人发现</li>
+      <li><strong>分享推荐</strong> — 在博客、社交媒体分享你的使用体验</li>
+      <li><strong>反馈问题</strong> — 使用中遇到任何问题，在 <a href="https://github.com/go-musicfox/go-musicfox/issues" target="_blank" rel="noopener">Issues</a> 中告诉我们</li>
+      <li><strong>参与讨论</strong> — 在 <a href="https://github.com/go-musicfox/go-musicfox/discussions" target="_blank" rel="noopener">Discussions</a> 中帮助其他用户</li>
+      <li><strong>打包分发</strong> — 为更多包管理器（Homebrew、AUR、Nix 等）维护打包文件</li>
+    </ul>
+
+    <hr>
+    <p style="font-size:.8125rem;color:var(--text-tertiary)">感谢你花时间贡献 go-musicfox ❤️</p>
+  </div>
+</body>
+</html>
