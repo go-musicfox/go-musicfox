@@ -358,7 +358,7 @@ github.com/xo/terminfo
 # go.etcd.io/bbolt v1.3.7
 ## explicit; go 1.17
 go.etcd.io/bbolt
-# golang.org/x/crypto v0.51.0
+# golang.org/x/crypto v0.52.0
 ## explicit; go 1.25.0
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.55.0
