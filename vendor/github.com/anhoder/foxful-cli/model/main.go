@@ -43,6 +43,13 @@ type Main struct {
 
 	loadingTips string // transient: set by MenuTips.DisplayTips, cleared by Recover
 
+	// Deferred menu entry: instead of running the BeforeEnterMenuHook
+	// synchronously (which blocks the Update cycle and prevents the
+	// loadingTips from being rendered), the hook is deferred to the
+	// next tick. This allows the current View() cycle to render the
+	// loading text before the hook executes.
+	pendingEnterMenu *enterMenuDeferred
+
 	menu Menu // current menu
 
 	components []Component
@@ -52,6 +59,17 @@ type Main struct {
 }
 
 type tickMainMsg struct{}
+
+// enterMenuDeferred holds the state for a deferred submenu entry.
+// Instead of executing BeforeEnterMenuHook synchronously (which blocks the
+// Update cycle), the hook is deferred to the next tick. This gives the
+// View() cycle a chance to render loadingTips before the hook runs.
+type enterMenuDeferred struct {
+	newMenu   Menu
+	newTitle  *MenuItem
+	loading   *Loading
+	stackItem *menuStackItem
+}
 
 func NewMain(app *App, options *Options) (m *Main) {
 	var mainMenuTitle *MenuItem
@@ -116,6 +134,39 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 	case tea.MouseMsg:
 		return m.mouseMsgHandle(msg, a)
 	case tickMainMsg:
+		if m.pendingEnterMenu != nil {
+			p := m.pendingEnterMenu
+			m.pendingEnterMenu = nil
+
+			var res bool
+			var newPage Page
+			if hook := p.newMenu.BeforeEnterMenuHook(); hook != nil {
+				if res, newPage = hook(m); !res {
+					p.loading.Complete()
+					m.menuStack.Pop()
+					if newPage != nil {
+						return newPage, func() tea.Msg { return newPage.Msg() }
+					}
+					return m, nil
+				}
+			}
+			p.loading.Complete()
+
+			if p.newMenu != nil {
+				p.newMenu.FormatMenuItem(p.newTitle)
+			}
+			menuList := p.newMenu.MenuViews()
+			m.menu = p.newMenu
+			m.menuList = menuList
+			m.menuTitle = p.newTitle
+			m.selectedIndex = 0
+			m.menuCurPage = 1
+
+			if newPage != nil {
+				return newPage, func() tea.Msg { return newPage.Msg() }
+			}
+			return m, a.RerenderCmd(true)
+		}
 		return m, nil
 	case tea.WindowSizeMsg:
 		m.isDualColumn = msg.Width >= 75 && m.options.DualColumn
@@ -824,7 +875,10 @@ func (m *Main) keyMsgHandle(msg tea.KeyMsg, a *App) (Page, tea.Cmd) {
 		}
 		target := start + num
 		if m.selectedIndex == target {
-			newPage = m.EnterMenu(nil, nil)
+			newPage = m.enterMenuWithLoading(nil, nil)
+			if m.pendingEnterMenu != nil {
+				return m, a.RerenderCmd(true)
+			}
 		} else {
 			m.selectedIndex = target
 		}
@@ -833,7 +887,10 @@ func (m *Main) keyMsgHandle(msg tea.KeyMsg, a *App) (Page, tea.Cmd) {
 	case "G":
 		newPage = m.MoveBottom()
 	case "n", "N", "enter":
-		newPage = m.EnterMenu(nil, nil)
+		newPage = m.enterMenuWithLoading(nil, nil)
+		if m.pendingEnterMenu != nil {
+			return m, a.RerenderCmd(true)
+		}
 	case "b", "B", "esc":
 		newPage = m.BackMenu()
 	case "r", "R":
@@ -1079,6 +1136,52 @@ func (m *Main) NextPage() Page {
 
 	m.menuCurPage++
 	return newPage
+}
+
+// enterMenuWithLoading initiates a deferred submenu entry. Unlike EnterMenu
+// which runs the BeforeEnterMenuHook synchronously, this method defers the hook
+// to the next tickMainMsg cycle. This gives the current View() cycle a chance
+// to render the loadingTips text before the (potentially slow) API call in the
+// hook blocks the event loop.
+//
+// Returns nil on success (the actual menu transition happens in the tick handler).
+// Returns a non-nil Page on immediate failure (e.g., login required).
+func (m *Main) enterMenuWithLoading(newMenu Menu, newTitle *MenuItem) Page {
+	if m.pendingEnterMenu != nil {
+		return nil // already pending, wait for completion
+	}
+
+	if newMenu == nil {
+		newMenu = m.menu.SubMenu(m.app, m.selectedIndex)
+	}
+	if newTitle == nil && m.selectedIndex < len(m.menuList) {
+		newTitle = &m.menuList[m.selectedIndex]
+	}
+
+	if newMenu == nil || newTitle == nil {
+		return nil
+	}
+
+	stackItem := &menuStackItem{
+		menuList:      m.menuList,
+		selectedIndex: m.selectedIndex,
+		menuCurPage:   m.menuCurPage,
+		menuTitle:     m.menuTitle,
+		menu:          m.menu,
+	}
+	m.menuStack.Push(stackItem)
+
+	loading := NewLoading(m)
+	loading.Start() // sets m.loadingTips so the next View() shows progress
+
+	m.pendingEnterMenu = &enterMenuDeferred{
+		newMenu:   newMenu,
+		newTitle:  newTitle,
+		loading:   loading,
+		stackItem: stackItem,
+	}
+
+	return nil
 }
 
 func (m *Main) EnterMenu(newMenu Menu, newTitle *MenuItem) Page {
