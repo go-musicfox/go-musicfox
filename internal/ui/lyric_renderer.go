@@ -221,7 +221,15 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		lyricBuilder.WriteString(strings.Repeat("\n", endRow-r.lyricStartRow-r.lyricLines))
 	}
 
-	return lyricBuilder.String(), r.lyricStartRow - main.MenuBottomRow() + r.lyricLines
+	// Return the view with the actual number of newlines in the output.
+	// Using the actual newline count ensures that Main.View()'s 'top' tracker
+	// reflects exactly how many rows were consumed, preventing both underfill
+	// and overfill. Previously, the returned lines value was based on
+	// r.lyricStartRow - MenuBottomRow + r.lyricLines, which could differ
+	// significantly from the actual output when lyrics are centered or when
+	// no lyrics are displayed.
+	viewResult := lyricBuilder.String()
+	return viewResult, strings.Count(viewResult, "\n")
 }
 
 // prepareLyricLines fetches the latest state from the service and prepares the `r.lyrics` array for rendering.

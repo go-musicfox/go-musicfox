@@ -230,11 +230,17 @@ func (m *Main) View(a *App) string {
 		top += lines
 	}
 
-	if top < windowHeight {
-		builder.WriteString(strings.Repeat("\n", windowHeight-top-1))
+	// Instead of relying on the 'top' tracker (which components can inflate),
+	// count actual newlines in the output to ensure it always fills the
+	// terminal height. An output shorter than the terminal causes the
+	// bubbletea renderer to leave cells from the previous frame uncleared,
+	// resulting in display corruption/overlay.
+	output := builder.String()
+	lineCount := strings.Count(output, "\n")
+	if lineCount < windowHeight-1 {
+		output += strings.Repeat("\n", windowHeight-1-lineCount)
 	}
-
-	return builder.String()
+	return output
 }
 
 func (m *Main) MenuTitleStartColumn() int {

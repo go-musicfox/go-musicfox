@@ -136,9 +136,12 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		}
 	}
 
-	// 使用一个较大的数字避免被 foxful-cli 的添加空行逻辑破坏
-	lines = a.WindowHeight() - main.MenuBottomRow()
+	// Return the actual number of lines: 1 content line + 1 blank line separator
+	// Do NOT inflate this value — foxful-cli's Main.View() uses it to advance 'top'
+	// and determine bottom-fill padding. An inflated value suppresses the bottom fill,
+	// resulting in a View output shorter than the terminal height, which leaves cells
+	// from the previous frame uncleared (causing display corruption/overlay).
+	lines = 2
 
-	// 换行为播放信息与进度条之间的空行
 	return builder.String() + "\n\n", lines
 }
