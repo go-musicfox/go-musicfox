@@ -41,6 +41,8 @@ type Main struct {
 	inSearching bool
 	searchInput textinput.Model
 
+	loadingTips string // transient: set by MenuTips.DisplayTips, cleared by Recover
+
 	menu Menu // current menu
 
 	components []Component
@@ -329,6 +331,18 @@ func (m *Main) MenuTitleView(a *App, top *int, menuTitle *MenuItem) string {
 
 	if menuTitle == nil {
 		menuTitle = m.menuTitle
+	}
+
+	// Inject transient loading/progress text into the subtitle so it
+	// renders through bubbletea's normal pipeline (no direct terminal writes).
+	if m.loadingTips != "" && top != nil {
+		tmp := *menuTitle
+		if tmp.Subtitle != "" {
+			tmp.Subtitle = tmp.Subtitle + " " + m.loadingTips
+		} else {
+			tmp.Subtitle = m.loadingTips
+		}
+		menuTitle = &tmp
 	}
 
 	if top != nil && m.menuTitleStartRow-*top > 0 {

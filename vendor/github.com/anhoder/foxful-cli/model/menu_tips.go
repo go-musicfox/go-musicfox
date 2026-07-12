@@ -1,11 +1,5 @@
 package model
 
-import (
-	"fmt"
-
-	"github.com/muesli/termenv"
-)
-
 type MenuTips struct {
 	main       *Main
 	originMenu *MenuItem
@@ -19,38 +13,16 @@ func NewMenuTips(m *Main, originMenu *MenuItem) *MenuTips {
 }
 
 func (t *MenuTips) DisplayTips(tips string) {
-	var (
-		subTitle  string
-		menuTitle *MenuItem
-	)
-	termenv.DefaultOutput().MoveCursor(t.main.MenuTitleStartRow(), 0)
-
-	if t.originMenu != nil {
-		menuTitle = t.originMenu
-	} else {
-		menuTitle = t.main.MenuTitle()
-	}
-
-	if menuTitle.Subtitle != "" {
-		subTitle = menuTitle.Subtitle + " " + tips
-	} else {
-		subTitle = tips
-	}
-	fmt.Print(t.main.MenuTitleView(t.main.app, nil, &MenuItem{
-		Title:    menuTitle.Title,
-		Subtitle: subTitle,
-	}))
-
-	termenv.DefaultOutput().MoveCursor(0, 0)
+	// Set a transient loading text on Main so that the next View() cycle
+	// renders it through bubbletea's normal diff-based pipeline.
+	// Direct terminal writes (fmt.Print, terrmenv.MoveCursor) are NOT used
+	// here because they bypass bubbletea's renderer and cause the
+	// diff algorithm to produce incorrect output, resulting in submenu
+	// layout corruption (title bar overwritten, items at wrong rows,
+	// stale main menu content ghosting through).
+	t.main.loadingTips = tips
 }
 
 func (t *MenuTips) Recover() {
-	termenv.DefaultOutput().MoveCursor(t.main.menuTitleStartRow, 0)
-
-	fmt.Print(t.main.MenuTitleView(t.main.app, nil, &MenuItem{
-		Title:    t.main.menuTitle.Title,
-		Subtitle: t.main.menuTitle.Subtitle,
-	}))
-
-	termenv.DefaultOutput().MoveCursor(0, 0)
+	t.main.loadingTips = ""
 }
