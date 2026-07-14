@@ -390,6 +390,8 @@ func (n *Netease) CloseHook(_ *model.App) {
 	if n.coverRenderer != nil {
 		n.coverRenderer.Close()
 	}
+
+	CloseGohookLogger()
 }
 
 func (n *Netease) Player() *Player {

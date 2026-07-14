@@ -9,3 +9,7 @@ import (
 func (h *EventHandler) RegisterGlobalHotkeys(_ *model.Options) {
 
 }
+
+// CloseGohookLogger is a no-op when global hotkey is disabled.
+func CloseGohookLogger() {
+}
