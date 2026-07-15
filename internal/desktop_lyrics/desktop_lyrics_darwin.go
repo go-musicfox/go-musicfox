@@ -626,18 +626,63 @@ func (c *darwinController) doTick() {
 // YRC word data is available, falling back to plain text.
 func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor) {
 	if len(line.Words) > 0 {
-		attrStr := c.buildAttributedLine(line, timeMs, activeColor, inactiveColor)
-		if attrStr.ID == 0 {
-			slog.Error("buildAttributedLine returned nil ID, falling back to plain text",
-				"wordCount", len(line.Words), "timeMs", timeMs)
-			label.SetStringValue(line.Text)
+		// Diagnostic: try simple attributed string first to isolate the issue
+		plainText := line.Text
+		if plainText == "" {
+			var sb strings.Builder
+			for _, w := range line.Words {
+				sb.WriteString(w.Word)
+			}
+			plainText = sb.String()
+		}
+
+		// Try creating a simple attributed string with one color for all text
+		testAttr := cocoa.NSMutableAttributedString_alloc()
+		if testAttr.ID == 0 {
+			slog.Error("desktop_lyrics: NSMutableAttributedString_alloc returned nil ID")
+			label.SetStringValue(plainText)
 			label.SetTextColor(activeColor)
 			return
 		}
-		label.SetAttributedStringValue(attrStr)
-		slog.Debug("desktop_lyrics: set attributed string",
-			"wordCount", len(line.Words), "timeMs", timeMs, "textLen", len(line.Text))
-		attrStr.Release()
+		testAttr.InitWithString(plainText)
+		if testAttr.ID == 0 {
+			slog.Error("desktop_lyrics: InitWithString returned nil ID", "textLen", len(plainText))
+			label.SetStringValue(plainText)
+			label.SetTextColor(activeColor)
+			return
+		}
+
+		// Apply word-by-word coloring
+		offset := 0
+		for _, w := range line.Words {
+			runeLen := utf8.RuneCountInString(w.Word)
+			if runeLen == 0 {
+				continue
+			}
+			rng := cocoa.NSRange{Location: offset, Length: runeLen}
+
+			var color cocoa.NSColor
+			switch {
+			case timeMs >= w.EndTime:
+				color = activeColor
+			case timeMs < w.StartTime:
+				color = inactiveColor
+			default:
+				wordDuration := w.EndTime - w.StartTime
+				t := 1.0
+				if wordDuration > 0 {
+					t = float64(timeMs-w.StartTime) / float64(wordDuration)
+				}
+				color = c.blendColor(inactiveColor, activeColor, t)
+			}
+			testAttr.AddAttribute(cocoa.NSForegroundColorAttributeName, color, rng)
+			offset += runeLen
+		}
+
+		label.SetAttributedStringValue(testAttr)
+		slog.Debug("desktop_lyrics: word-by-word attributed string applied",
+			"wordCount", len(line.Words), "timeMs", timeMs, "textLen", len(plainText))
+		testAttr.Release()
 	} else {
 		label.SetStringValue(line.Text)
 		label.SetTextColor(activeColor)
