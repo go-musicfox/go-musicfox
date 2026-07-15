@@ -34,7 +34,7 @@ const (
 	defaultFontSize      = 24.0
 	defaultWindowPadding = 16.0
 	defaultLineSpacing   = 4.0
-	inactiveAlpha        = 0.45
+	inactiveAlpha        = 0.65
 )
 
 // Position indices
@@ -300,7 +300,7 @@ func (c *darwinController) makeShadow() cocoa.NSShadow {
 	shadowR, shadowG, shadowB := parseHexRGB(c.cfg.ShadowColor)
 	radius := c.cfg.ShadowRadius
 	if radius <= 0 {
-		radius = 3.0
+		radius = 1.0
 	}
 	s := cocoa.NSShadow_alloc()
 	s.SetShadowBlurRadius(cocoa.CGFloat(radius))

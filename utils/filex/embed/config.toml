@@ -89,7 +89,7 @@ textColor = "#FFFFFF"
 # 文字阴影颜色（十六进制）
 shadowColor = "#00FFD5"
 # 阴影模糊半径（像素）
-shadowRadius = 3.0
+shadowRadius = 1.0
 # 背景颜色（十六进制）
 backgroundColor = "#000000"
 # 背景透明度（0.0-1.0，默认 0.60）
