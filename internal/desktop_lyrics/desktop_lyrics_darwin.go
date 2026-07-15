@@ -124,8 +124,8 @@ func (c *darwinController) createWindow() {
 	padding := defaultWindowPadding
 	lineH := fontSize + defaultLineSpacing
 
-	// Base window width (wide enough for typical 10-char line)
-	c.minWinW = fontSize * 20
+	// Minimum window width (dynamically adjusts with lyric length)
+	c.minWinW = fontSize * 5
 	if c.minWinW > c.screenW*0.9 {
 		c.minWinW = c.screenW * 0.9
 	}
@@ -453,12 +453,11 @@ func (c *darwinController) updateScrollNeed(pos int, line LyricLine) {
 	ss.pauseTimer = scrollInitialDelay
 	ss.offset = 0
 
-	if neededWinW > c.currentWinW {
-		// Expand window if within max
-		targetW := min(neededWinW, c.maxWinW)
-		if targetW > c.currentWinW {
-			c.resizeWindow(targetW)
-		}
+	// Dynamically resize window to fit text (both expand and shrink)
+	targetW := min(neededWinW, c.maxWinW)
+	targetW = max(targetW, c.minWinW)
+	if targetW != c.currentWinW {
+		c.resizeWindow(targetW)
 	}
 
 	// After resize, check if text still overflows
