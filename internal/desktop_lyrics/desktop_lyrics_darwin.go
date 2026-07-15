@@ -656,9 +656,8 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			return
 		}
 
-		// Apply word-by-word coloring with fade-in/fade-out animation
-		const fadeInMs int64 = 80
-		const fadeOutMs int64 = 200
+		// Apply word-by-word coloring with fade-in only
+		const fadeInMs int64 = 100
 
 		offset := 0
 		for _, w := range line.Words {
@@ -668,21 +667,18 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			}
 			rng := cocoa.NSRange{Location: offset, Length: runeLen}
 
-			// Calculate smooth progress: 0.0 = inactive, 1.0 = active
+			// Calculate progress: 0.0 = inactive (unplayed), 1.0 = active (played/playing)
+			// Once a word starts, it stays bright — no fade-out after
 			var progress float64
 			switch {
 			case timeMs < w.StartTime-fadeInMs:
-				progress = 0.0
+				progress = 0.0 // not yet: gray
 			case timeMs < w.StartTime:
-				// Fade in before the word
+				// Fade in: gray → bright
 				progress = float64(timeMs-(w.StartTime-fadeInMs)) / float64(fadeInMs)
-			case timeMs < w.EndTime:
-				progress = 1.0
-			case timeMs < w.EndTime+fadeOutMs:
-				// Fade out after the word
-				progress = 1.0 - float64(timeMs-w.EndTime)/float64(fadeOutMs)
 			default:
-				progress = 0.0
+				// Already playing or played: stay bright
+				progress = 1.0
 			}
 			color := c.blendColor(inactiveColor, activeColor, progress)
 
