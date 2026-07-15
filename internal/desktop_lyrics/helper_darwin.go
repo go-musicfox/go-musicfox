@@ -25,6 +25,7 @@ var (
 
 	sel_performSelectorOnMainThread = objc.RegisterName("performSelectorOnMainThread:withObject:waitUntilDone:")
 	sel_performAfterDelay           = objc.RegisterName("performSelector:withObject:afterDelay:")
+	sel_cancelPreviousPerform       = objc.RegisterName("cancelPreviousPerformRequestsWithTarget:selector:object:")
 
 	// Shared state for the callback to access the controller
 	dispatchMu   sync.Mutex
@@ -126,10 +127,8 @@ func scheduleAfter(sel objc.SEL, delay float64) {
 }
 
 // cancelScheduled cancels a previously scheduled performSelector:withObject:afterDelay:.
+// This is a class method (+cancelPreviousPerformRequestsWithTarget:selector:object:)
+// so we send it to the class, not the instance.
 func cancelScheduled(sel objc.SEL) {
-	// +cancelPreviousPerformRequestsWithTarget:selector:object: is a class method on NSObject
-	helperInst.Send(
-		objc.RegisterName("cancelPreviousPerformRequestsWithTarget:selector:object:"),
-		helperInst.ID, sel, objc.ID(0),
-	)
+	objc.ID(helperClass).Send(sel_cancelPreviousPerform, helperInst.ID, sel, objc.ID(0))
 }
