@@ -9,6 +9,8 @@ import (
 )
 
 func (p *Program) checkOptimizedMovements(s *term.State) {
-	p.useHardTabs = s.Oflag&unix.TABDLY == unix.TAB0
+	// Hard tabs turn precise space-based layout into terminal-dependent cursor moves.
+	// Disable them so TUI column positions remain stable across tab-stop settings.
+	p.useHardTabs = false
 	p.useBackspace = s.Lflag&unix.BSDLY == unix.BS0
 }

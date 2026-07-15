@@ -3,11 +3,9 @@
 
 package tea
 
-import (
-	"github.com/charmbracelet/x/term"
-	"golang.org/x/sys/unix"
-)
+import "github.com/charmbracelet/x/term"
 
 func (p *Program) checkOptimizedMovements(s *term.State) {
-	p.useHardTabs = s.Oflag&unix.TABDLY == unix.TAB0
+	// Keep layout independent of terminal tab-stop configuration.
+	p.useHardTabs = false
 }

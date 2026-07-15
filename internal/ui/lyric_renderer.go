@@ -55,9 +55,9 @@ func (r *LyricRenderer) SetCurrentTime(timeMs int64) {
 func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 	index := state.YRCLineIndex
 
-	// Fill current YRC line (with word-level details in a special format)
+	// Fill current YRC line with the same offset used by lyric service indexing.
 	currentLine := state.YRCLines[index]
-	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs, state.ShowTranslation)
+	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs+state.OffsetMs, state.ShowTranslation)
 
 	// Fill previous YRC lines
 	for i := 1; i <= centerIndex; i++ {
@@ -79,68 +79,33 @@ func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 // buildYRCLineString constructs a displayable string from YRC line with word progress highlighting.
 // If currentTimeMs >= 0, highlights words based on their timing with ANSI colors.
 func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64, showTranslation bool) string {
-	// Get render mode from config (default: "smooth")
 	renderMode := "smooth"
 	if configs.AppConfig.Main.Lyric.RenderMode != "" {
 		renderMode = configs.AppConfig.Main.Lyric.RenderMode
 	}
 
-	// For non-current lines (no time tracking), use simple gray rendering
 	if currentTimeMs < 0 {
-		var result strings.Builder
+		var text strings.Builder
 		for _, word := range line.Words {
-			result.WriteString(util.SetFgStyle(word.Word, LyricInactiveColor))
+			text.WriteString(word.Word)
 		}
 		if showTranslation && line.TranslatedLyric != "" {
-			result.WriteString(" ")
-			result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor))
+			text.WriteString(" [")
+			text.WriteString(line.TranslatedLyric)
+			text.WriteString("]")
 		}
-		return result.String()
+		return util.SetFgStyle(text.String(), LyricInactiveColor)
 	}
 
-	// Prepare word timing data for rendering
-	var words []wordWithTiming
-	var currentWordIndex int = -1
-	var playedWords, totalWords int
-	totalWords = len(line.Words)
-
-	// Apply frame rate compensation for smoother animation
-	frameCompensation := int64(configs.AppConfig.Main.FrameRate.DurationMs() / 2)
-	adjustedTimeMs := currentTimeMs + frameCompensation
-
-	for i, word := range line.Words {
-		var state wordState
-		var interpolation float64
-		if adjustedTimeMs < word.StartTime {
-			state = wordStateNotPlayed
-			interpolation = 0.0
-		} else if adjustedTimeMs >= word.EndTime {
-			state = wordStatePlayed
-			playedWords++
-			interpolation = 1.0
-		} else {
-			state = wordStatePlaying
-			currentWordIndex = i
-			playedWords++
-			// Calculate interpolation progress within the word (0.0 - 1.0)
-			wordDuration := word.EndTime - word.StartTime
-			if wordDuration > 0 {
-				interpolation = float64(adjustedTimeMs-word.StartTime) / float64(wordDuration)
-			}
-		}
-		words = append(words, wordWithTiming{text: word.Word, state: state, interpolation: interpolation})
-	}
-
-	// Calculate progress for smooth/wave modes
+	adjustedTimeMs := currentTimeMs + int64(configs.AppConfig.Main.FrameRate.DurationMs()/2)
+	words, currentWordIndex, playedWords := yrcWordTimings(line, adjustedTimeMs)
 	progress := 0.0
-	if totalWords > 0 {
-		progress = float64(playedWords) / float64(totalWords)
+	if len(words) > 0 {
+		progress = float64(playedWords) / float64(len(words))
 	}
 
-	// Render based on mode
+	animationTime := float64(currentTimeMs) * 0.001
 	var result string
-	// Use currentTimeMs as animation time for smoother effects (in milliseconds)
-	animationTime := float64(currentTimeMs) * 0.001 // Convert to seconds
 	switch renderMode {
 	case "smooth":
 		result = renderSmooth(words, progress)
@@ -152,16 +117,35 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 		}
 		result = renderGlow(words, currentWordIndex, animationTime)
 	default:
-		// Default to smooth mode
 		result = renderSmooth(words, progress)
 	}
 
-	// Append translation if available and enabled (gray color)
 	if showTranslation && line.TranslatedLyric != "" {
 		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor)
 	}
-
 	return result
+}
+
+func yrcWordTimings(line lyric.YRCLine, timeMs int64) ([]wordWithTiming, int, int) {
+	progress := lyric.ProgressYRCLineAtTimeMs(line, timeMs)
+	words := make([]wordWithTiming, len(line.Words))
+	for i, word := range line.Words {
+		words[i] = wordWithTiming{text: word.Word, state: wordStateNotPlayed}
+		switch {
+		case i < progress.CompletedWords:
+			words[i].state = wordStatePlayed
+			words[i].interpolation = 1
+		case i == progress.CurrentWord:
+			words[i].state = wordStatePlaying
+			words[i].interpolation = progress.CurrentProgress
+		}
+	}
+
+	playedWords := progress.CompletedWords
+	if progress.CurrentWord >= 0 {
+		playedWords++
+	}
+	return words, progress.CurrentWord, playedWords
 }
 
 // stripAnsiCodes removes ANSI escape sequences from a string to get visible content

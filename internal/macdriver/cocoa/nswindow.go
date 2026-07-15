@@ -169,6 +169,10 @@ func (w NSWindow) ContentView() NSView {
 	}
 }
 
+func (w NSWindow) Frame() NSRect {
+	return objc.Send[NSRect](w.ID, sel_frame)
+}
+
 func (w NSWindow) SetFrameDisplayTopLeft(frameRect NSRect, display bool) {
 	w.Send(sel_setFrameDisplay,
 		frameRect.Origin.X, frameRect.Origin.Y,

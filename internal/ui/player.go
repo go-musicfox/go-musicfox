@@ -135,6 +135,7 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 				return
 			case s := <-p.StateChan():
 				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+				p.updateDesktopLyrics()
 				if s != types.Stopped {
 					p.netease.Rerender(false)
 					break
@@ -693,28 +694,28 @@ func (p *Player) updateDesktopLyrics() {
 		return
 	}
 
-	// Handle HideOnPause
-	if configs.AppConfig.Main.Lyric.DesktopLyrics.HideOnPause && p.State() == types.Paused {
+	state := p.State()
+	curLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
+	hasContent := curLine.Text != "" || len(curLine.Words) > 0
+	currentTimeMs := p.PassedTime().Milliseconds()
+	if configs.AppConfig.Main.Lyric.DesktopLyrics.HideOnPause && state == types.Paused {
+		dl.Update(curLine, nextLine, currentIndex, currentTimeMs, false)
 		dl.Hide()
 		return
 	}
 
-	curLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
-	hasContent := curLine.Text != "" || len(curLine.Words) > 0
-	currentTimeMs := p.PassedTime().Milliseconds()
-
 	// Show/hide based on playback state
-	switch p.State() {
+	switch state {
 	case types.Playing:
 		if hasContent {
 			if !dl.IsVisible() {
 				dl.Show()
 			}
-			dl.Update(curLine, nextLine, currentIndex, currentTimeMs)
+			dl.Update(curLine, nextLine, currentIndex, currentTimeMs, true)
 		}
 	case types.Paused:
 		if hasContent {
-			dl.Update(curLine, nextLine, currentIndex, currentTimeMs)
+			dl.Update(curLine, nextLine, currentIndex, currentTimeMs, false)
 		}
 	case types.Stopped:
 		dl.Hide()

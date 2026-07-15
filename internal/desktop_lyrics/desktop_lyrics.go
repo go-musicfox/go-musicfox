@@ -25,9 +25,9 @@ type Controller interface {
 	Hide()
 	IsVisible() bool
 	// Update refreshes the desktop lyrics display.
-	// currentTimeMs is the current playback position in milliseconds,
-	// used for word-by-word coloring in YRC mode.
-	Update(curLine, nextLine LyricLine, currentIndex int, currentTimeMs int64)
+	// currentTimeMs is the current playback position in milliseconds.
+	// playing controls whether YRC highlight time may advance between updates.
+	Update(curLine, nextLine LyricLine, currentIndex int, currentTimeMs int64, playing bool)
 	Close()
 }
 
