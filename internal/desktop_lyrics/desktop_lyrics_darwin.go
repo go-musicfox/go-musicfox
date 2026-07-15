@@ -75,12 +75,14 @@ type darwinController struct {
 	origFontSz float64
 
 	// Dynamic sizing
-	screenW     float64 // cached screen width
-	screenH     float64 // cached screen height (for Y coord calc)
-	minWinW     float64 // minimum window width
-	maxWinW     float64 // maximum window width
-	currentWinW float64 // last set window width
-	labelBaseY  [2]float64 // stored Y position per label
+	screenW       float64 // cached screen width
+	screenH       float64 // cached screen height (for Y coord calc)
+	minWinW       float64 // minimum window width
+	maxWinW       float64 // maximum window width
+	currentWinW   float64 // last set window width
+	labelBaseY    [2]float64 // stored Y position per label
+	cachedCenterX float64 // window center X (preserved across resizes, initialized from config)
+	cachedCenterY float64 // window center Y (preserved across resizes, initialized from config)
 
 	// Scroll animation
 	scroll   [2]*scrollState // [0]=posFirst, [1]=posSecond
@@ -124,8 +126,17 @@ func (c *darwinController) createWindow() {
 	padding := defaultWindowPadding
 	lineH := fontSize + defaultLineSpacing
 
-	// Minimum window width (dynamically adjusts with lyric length)
-	c.minWinW = fontSize * 5
+	lineCount := 2
+	if c.cfg.OneLineMode {
+		lineCount = 1
+	}
+
+	// Minimum window width: tighter for one-line, wider for two-line to avoid pure vertical stacking
+	if c.cfg.OneLineMode {
+		c.minWinW = fontSize * 5
+	} else {
+		c.minWinW = fontSize * 12
+	}
 	if c.minWinW > c.screenW*0.9 {
 		c.minWinW = c.screenW * 0.9
 	}
@@ -143,10 +154,6 @@ func (c *darwinController) createWindow() {
 	winW := c.minWinW
 	c.currentWinW = winW
 
-	lineCount := 2
-	if c.cfg.OneLineMode {
-		lineCount = 1
-	}
 	winH := float64(lineCount)*(lineH) + padding*2
 
 	// Center-based positioning
@@ -170,6 +177,10 @@ func (c *darwinController) createWindow() {
 	if winY+winH > c.screenH {
 		winY = c.screenH - winH
 	}
+
+	// Cache the initial center point for position-preserving resizes
+	c.cachedCenterX = winX + winW/2
+	c.cachedCenterY = winY + winH/2
 
 	rect := cocoa.NSRect{
 		Origin: cocoa.CGPoint{X: winX, Y: winY},
@@ -472,7 +483,7 @@ func (c *darwinController) updateScrollNeed(pos int, line LyricLine) {
 }
 
 // resizeWindow resizes the window to the given width while preserving
-// the origin, and updates all subviews.
+// the window's center point (avoids resetting to config-specified position on every lyric change).
 func (c *darwinController) resizeWindow(newW float64) {
 	fontSize := c.origFontSz
 	padding := defaultWindowPadding
@@ -484,26 +495,25 @@ func (c *darwinController) resizeWindow(newW float64) {
 	}
 	newH := float64(lineCount)*(lineH) + padding*2
 
-	xFactor := c.cfg.XPositionFactor
-	if xFactor <= 0 {
-		xFactor = 0.5
-	}
-	yFactor := c.cfg.YPositionFactor
-
-	newX := c.screenW*xFactor - newW/2
+	// Preserve the window's current center point
+	newX := c.cachedCenterX - newW/2
 	if newX < 0 {
 		newX = 0
 	}
 	if newX+newW > c.screenW {
 		newX = c.screenW - newW
 	}
-	newY := c.screenH*yFactor - newH/2
+	newY := c.cachedCenterY - newH/2
 	if newY < 4 {
 		newY = 4
 	}
 	if newY+newH > c.screenH {
 		newY = c.screenH - newH
 	}
+
+	// Update cached center to match the actual (potentially clamped) frame
+	c.cachedCenterX = newX + newW/2
+	c.cachedCenterY = newY + newH/2
 
 	// Set window frame
 	c.window.SetFrameDisplayTopLeft(cocoa.NSRect{
