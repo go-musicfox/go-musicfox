@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -22,6 +23,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/automator"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -57,6 +59,8 @@ type Netease struct {
 	player       *Player
 	shareSvc     *composer.ShareService
 	trackManager *track.Manager
+
+	desktopLyrics desktop_lyrics.Controller
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -80,6 +84,10 @@ func NewNetease(app *model.App) *Netease {
 
 	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset, skipParseErr)
 	n.lyricService.EnableYRC(true) // Enable word-by-word lyrics
+
+	// Initialize desktop lyrics
+	n.desktopLyrics = desktop_lyrics.NewController(configs.AppConfig.Main.Lyric.DesktopLyrics)
+
 	n.player = NewPlayer(n, n.lyricService)
 
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
@@ -387,6 +395,10 @@ func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
 	n.lastfm.Close()
 
+	if n.desktopLyrics != nil {
+		n.desktopLyrics.Close()
+	}
+
 	if n.coverRenderer != nil {
 		n.coverRenderer.Close()
 	}
@@ -396,6 +408,108 @@ func (n *Netease) CloseHook(_ *model.App) {
 
 func (n *Netease) Player() *Player {
 	return n.player
+}
+
+// DesktopLyrics returns the desktop lyrics controller.
+func (n *Netease) DesktopLyrics() desktop_lyrics.Controller {
+	return n.desktopLyrics
+}
+
+// GetDesktopLyricsLines returns the current lyrics lines for desktop display.
+// Returns the current line, the next line, and the current index.
+func (n *Netease) GetDesktopLyricsLines() (currentLine, nextLine string, currentIndex int) {
+	if n.desktopLyrics == nil || n.lyricService == nil {
+		return "", "", -1
+	}
+
+	state := n.lyricService.State()
+	if !state.IsRunning {
+		return "", "", -1
+	}
+
+	// Helper to build display text
+	buildText := func(content, translation string) string {
+		if translation != "" {
+			return content + "\n" + translation
+		}
+		return content
+	}
+
+	if state.YRCEnabled && len(state.YRCLines) > 0 {
+		idx := state.YRCLineIndex
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(state.YRCLines) {
+			idx = len(state.YRCLines) - 1
+		}
+
+		// Current line
+		if idx < len(state.YRCLines) {
+			line := state.YRCLines[idx]
+			var sb strings.Builder
+			for _, w := range line.Words {
+				sb.WriteString(w.Word)
+			}
+			content := sb.String()
+			trans := ""
+			if state.ShowTranslation {
+				trans = line.TranslatedLyric
+			}
+			currentLine = buildText(content, trans)
+		}
+
+		// Next line
+		nextIdx := idx + 1
+		if nextIdx < len(state.YRCLines) {
+			line := state.YRCLines[nextIdx]
+			var sb strings.Builder
+			for _, w := range line.Words {
+				sb.WriteString(w.Word)
+			}
+			content := sb.String()
+			trans := ""
+			if state.ShowTranslation {
+				trans = line.TranslatedLyric
+			}
+			nextLine = buildText(content, trans)
+		}
+
+		return currentLine, nextLine, idx
+
+	} else if len(state.Fragments) > 0 {
+		idx := state.CurrentIndex
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(state.Fragments) {
+			idx = len(state.Fragments) - 1
+		}
+
+		// Current line
+		if idx < len(state.Fragments) {
+			f := state.Fragments[idx]
+			trans := ""
+			if state.ShowTranslation {
+				trans = state.TranslatedFragments[f.StartTimeMs]
+			}
+			currentLine = buildText(f.Content, trans)
+		}
+
+		// Next line
+		if idx+1 < len(state.Fragments) {
+			f := state.Fragments[idx+1]
+			trans := ""
+			if state.ShowTranslation {
+				trans = state.TranslatedFragments[f.StartTimeMs]
+			}
+			nextLine = buildText(f.Content, trans)
+		}
+
+		return currentLine, nextLine, idx
+	}
+
+	return "", "", -1
 }
 
 // GetCoverWidth returns the cover image width in columns, or 0 if cover is disabled.

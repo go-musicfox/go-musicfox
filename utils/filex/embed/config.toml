@@ -72,6 +72,39 @@ spinFPS = 30
 # 时长和帧率挂钩：60fps*6s=360帧，30fps*6s=180帧，30fps*12s=360帧
 spinDuration = 6
 
+# 桌面歌词设置（目前仅支持 macOS）
+[main.lyric.desktopLyrics]
+# 是否启用桌面歌词
+enable = false
+# X 位置系数（0.0-1.0，0.5 表示居中，0.0 最左，1.0 最右）
+xPositionFactor = 0.5
+# Y 位置系数（0.0-1.0，0.0 底部，1.0 顶部，默认 0.05 接近底部）
+yPositionFactor = 0.05
+# 字体大小（默认 24 匹配系统标签字体）
+fontSize = 24
+# 字体名称（留空使用系统默认字体）
+fontName = ""
+# 文字颜色（十六进制）
+textColor = "#FFFFFF"
+# 文字阴影颜色（十六进制）
+shadowColor = "#00FFD5"
+# 阴影模糊半径（像素）
+shadowRadius = 3.0
+# 背景颜色（十六进制）
+backgroundColor = "#000000"
+# 背景透明度（0.0-1.0，默认 0.60）
+backgroundAlpha = 0.60
+# 背景圆角半径（像素，0 使用默认胶囊形状 fontSize/2）
+cornerRadius = 0
+# 窗口整体透明度（0.0-1.0）
+windowAlpha = 1.0
+# 单行模式（只显示当前行）
+oneLineMode = false
+# 暂停时隐藏歌词
+hideOnPause = false
+# 允许拖拽移动歌词窗口
+draggable = false
+
 # Go性能分析工具pprof的相关设置
 [main.pprof]
 # pprof 服务监听的端口，通过 --pprof 命令行选项启用

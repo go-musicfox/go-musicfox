@@ -158,6 +158,9 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 
 				p.lyricService.UpdatePosition(duration)
 
+				// Update desktop lyrics
+				p.updateDesktopLyrics()
+
 				if p.renderTicker != nil {
 					select {
 					case p.renderTicker.c <- time.Now():
@@ -682,4 +685,36 @@ func modeToLoopStatusAndShuffle(mode types.Mode) (loopStatus string, shuffle boo
 
 func (p *Player) RenderTicker() model.Ticker {
 	return p.renderTicker
+}
+
+func (p *Player) updateDesktopLyrics() {
+	dl := p.netease.DesktopLyrics()
+	if dl == nil {
+		return
+	}
+
+	// Handle HideOnPause
+	if configs.AppConfig.Main.Lyric.DesktopLyrics.HideOnPause && p.State() == types.Paused {
+		dl.Hide()
+		return
+	}
+
+	currentLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
+
+	// Show/hide based on playback state
+	switch p.State() {
+	case types.Playing:
+		if currentLine != "" {
+			if !dl.IsVisible() {
+				dl.Show()
+			}
+			dl.Update(currentLine, nextLine, currentIndex)
+		}
+	case types.Paused:
+		if currentLine != "" {
+			dl.Update(currentLine, nextLine, currentIndex)
+		}
+	case types.Stopped:
+		dl.Hide()
+	}
 }

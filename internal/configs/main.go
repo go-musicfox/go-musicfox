@@ -73,6 +73,42 @@ type LyricConfig struct {
 	RenderMode string `koanf:"renderMode"`
 	// 封面图设置
 	Cover CoverConfig `koanf:"cover"`
+	// 桌面歌词设置
+	DesktopLyrics DesktopLyricsConfig `koanf:"desktopLyrics"`
+}
+
+// DesktopLyricsConfig 桌面歌词设置
+type DesktopLyricsConfig struct {
+	// 启用桌面歌词
+	Enable bool `koanf:"enable"`
+	// X 位置系数（0.0-1.0，0.5 表示居中）
+	XPositionFactor float64 `koanf:"xPositionFactor"`
+	// Y 位置系数（0.0-1.0，0 表示底部，1 表示顶部）
+	YPositionFactor float64 `koanf:"yPositionFactor"`
+	// 字体大小
+	FontSize float64 `koanf:"fontSize"`
+	// 字体名称
+	FontName string `koanf:"fontName"`
+	// 文字颜色（十六进制）
+	TextColor string `koanf:"textColor"`
+	// 文字阴影颜色（十六进制）
+	ShadowColor string `koanf:"shadowColor"`
+	// 阴影模糊半径
+	ShadowRadius float64 `koanf:"shadowRadius"`
+	// 背景颜色（十六进制）
+	BackgroundColor string `koanf:"backgroundColor"`
+	// 背景透明度（0.0-1.0）
+	BackgroundAlpha float64 `koanf:"backgroundAlpha"`
+	// 背景圆角半径（像素，0 表示无圆角）
+	CornerRadius float64 `koanf:"cornerRadius"`
+	// 窗口整体透明度（0.0-1.0）
+	WindowAlpha float64 `koanf:"windowAlpha"`
+	// 单行模式（只显示当前行）
+	OneLineMode bool `koanf:"oneLineMode"`
+	// 暂停时隐藏歌词
+	HideOnPause bool `koanf:"hideOnPause"`
+	// 允许拖拽移动歌词窗口
+	Draggable bool `koanf:"draggable"`
 }
 
 // CoverConfig 封面图显示设置
