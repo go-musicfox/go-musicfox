@@ -545,6 +545,9 @@ type Program struct {
 
 	// whether to use hard tabs to optimize cursor movements
 	useHardTabs bool
+	// useHardTabsSet indicates whether the user explicitly set useHardTabs
+	// via WithHardTabs. When true, automatic detection is skipped.
+	useHardTabsSet bool
 	// whether to use backspace to optimize cursor movements
 	useBackspace bool
 

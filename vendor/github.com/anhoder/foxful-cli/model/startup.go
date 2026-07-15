@@ -100,13 +100,19 @@ func (s *StartupPage) View(a *App) string {
 	}
 
 	var uiBuilder strings.Builder
-	if top > 0 {
-		uiBuilder.WriteString(strings.Repeat("\n", top))
+	if top > 1 {
+		uiBuilder.WriteString(strings.Repeat("\n", top-1))
 	}
 	uiBuilder.WriteString(s.logoView(a))
 	uiBuilder.WriteString("\n")
+	if top != 0 && bottom != 0 {
+		uiBuilder.WriteString("\n")
+	}
 	uiBuilder.WriteString(s.tipsView(a))
 	uiBuilder.WriteString("\n")
+	if top != 0 && bottom != 0 {
+		uiBuilder.WriteString("\n")
+	}
 	uiBuilder.WriteString(s.progressView(a))
 	uiBuilder.WriteString(strings.Repeat("\n", bottom))
 

@@ -6,6 +6,7 @@ import (
 	_ "net/http/pprof"
 	"strconv"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/gookit/gcli/v2"
 	"github.com/mattn/go-runewidth"
@@ -62,6 +63,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		model.WithHook(netease.InitHook, netease.CloseHook),
 		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
 		func(options *model.Options) {
+			options.TeaOptions = []tea.ProgramOption{
+				tea.WithHardTabs(false),
+			}
 			options.LocalSearchMenu = ui.NewLocalSearchMenu(netease)
 			options.Components = append(options.Components, netease.Components()...)
 			options.KBControllers = append(options.KBControllers, eventHandler)

@@ -4,14 +4,15 @@ go 1.25.0
 
 require (
 	charm.land/bubbles/v2 v2.1.0
-	charm.land/bubbletea/v2 v2.0.7
+	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.4
 	github.com/adrg/xdg v0.5.3
-	github.com/anhoder/foxful-cli v0.6.3
+	github.com/anhoder/foxful-cli v0.6.5
 	github.com/atotto/clipboard v0.1.4
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.2
-	github.com/ebitengine/purego v0.10.0
+	github.com/charmbracelet/x/ansi v0.11.7
+	github.com/ebitengine/purego v0.10.1
 	github.com/fhs/gompd/v2 v2.3.0
 	github.com/frolovo22/tag v0.0.2
 	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
@@ -32,21 +33,21 @@ require (
 	github.com/mattn/go-runewidth v0.0.23
 	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/pkg/errors v0.9.1
-	github.com/robotn/gohook v0.42.3
+	github.com/rivo/uniseg v0.4.7
+	github.com/robotn/gohook v1.0.0-beta1
 	github.com/saltosystems/winrt-go v0.0.0-20240320184339-289d313a74b7
 	github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/tosone/minimp3 v1.0.2
 	go.etcd.io/bbolt v1.3.7
-	golang.org/x/sync v0.20.0
-	golang.org/x/sys v0.45.0
+	golang.org/x/sync v0.21.0
+	golang.org/x/sys v0.46.0
 )
 
 require (
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260525132238-948f4557a654 // indirect
-	github.com/charmbracelet/x/ansi v0.11.7 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -66,6 +67,7 @@ require (
 	github.com/gookit/goutil v0.6.10 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
+	github.com/jezek/xgb v1.3.1 // indirect
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/juju/go4 v0.0.0-20160222163258-40d72ab9641a // indirect
@@ -79,13 +81,13 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/vcaesar/keycode v0.10.1 // indirect
+	github.com/vcaesar/go-wayland v0.40.0 // indirect
+	github.com/vcaesar/keycode v0.20.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
@@ -97,6 +99,7 @@ require (
 )
 
 replace (
+	charm.land/bubbletea/v2 v2.0.8 => github.com/go-musicfox/bubbletea/v2 v2.0.8-foxful
 	github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.6
 	// github.com/cnsilvan/UnblockNeteaseMusic => ../UnblockNeteaseMusic
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5

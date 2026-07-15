@@ -166,3 +166,13 @@ func WithWindowSize(width, height int) ProgramOption {
 		p.height = height
 	}
 }
+
+// WithHardTabs sets whether hard tabs should be used for optimizing cursor
+// movements. By default, Bubble Tea automatically detects terminal support for
+// hard tabs. Use this option to explicitly override the auto-detection.
+func WithHardTabs(v bool) ProgramOption {
+	return func(p *Program) {
+		p.useHardTabs = v
+		p.useHardTabsSet = true
+	}
+}

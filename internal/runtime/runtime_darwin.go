@@ -31,7 +31,7 @@ func Run(f func()) {
 		errorx.Go(func() {
 			core.Autorelease(func() {
 				f()
-				app.Terminate(0)
+				app.TerminateOnMainThread(objc.ID(0))
 			})
 		})
 	})
