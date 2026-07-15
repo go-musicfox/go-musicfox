@@ -627,7 +627,16 @@ func (c *darwinController) doTick() {
 func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor) {
 	if len(line.Words) > 0 {
 		attrStr := c.buildAttributedLine(line, timeMs, activeColor, inactiveColor)
+		if attrStr.ID == 0 {
+			slog.Error("buildAttributedLine returned nil ID, falling back to plain text",
+				"wordCount", len(line.Words), "timeMs", timeMs)
+			label.SetStringValue(line.Text)
+			label.SetTextColor(activeColor)
+			return
+		}
 		label.SetAttributedStringValue(attrStr)
+		slog.Debug("desktop_lyrics: set attributed string",
+			"wordCount", len(line.Words), "timeMs", timeMs, "textLen", len(line.Text))
 		attrStr.Release()
 	} else {
 		label.SetStringValue(line.Text)
