@@ -426,11 +426,6 @@ func (c *darwinController) doUpdateText() {
 		nextPos = posFirst
 	}
 
-	// Active line: left-aligned for readability + proper scroll direction
-	// Next line: right-aligned for diagonal visual contrast
-	c.labels[activePos].SetAlignment(0) // NSTextAlignmentLeft
-	c.labels[nextPos].SetAlignment(1)   // NSTextAlignmentRight
-
 	if c.labels[activePos].ID != 0 {
 		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor)
 		c.updateScrollNeed(activePos, curLine)
