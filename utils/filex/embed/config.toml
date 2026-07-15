@@ -104,6 +104,8 @@ oneLineMode = false
 hideOnPause = false
 # 允许拖拽移动歌词窗口
 draggable = false
+# 窗口最大宽度占屏幕比例（0.3-0.9，默认 0.7）
+maxWindowWidth = 0.7
 
 # Go性能分析工具pprof的相关设置
 [main.pprof]

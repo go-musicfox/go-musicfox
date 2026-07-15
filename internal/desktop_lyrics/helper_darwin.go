@@ -21,8 +21,10 @@ var (
 	sel_hideWindow   = objc.RegisterName("hideWindow")
 	sel_closeWindow  = objc.RegisterName("closeWindow")
 	sel_updateText   = objc.RegisterName("updateText")
+	sel_scrollTick   = objc.RegisterName("scrollTick")
 
 	sel_performSelectorOnMainThread = objc.RegisterName("performSelectorOnMainThread:withObject:waitUntilDone:")
+	sel_performAfterDelay           = objc.RegisterName("performSelector:withObject:afterDelay:")
 
 	// Shared state for the callback to access the controller
 	dispatchMu   sync.Mutex
@@ -44,6 +46,7 @@ func init() {
 			{Cmd: sel_hideWindow, Fn: handleHideWindow},
 			{Cmd: sel_closeWindow, Fn: handleCloseWindow},
 			{Cmd: sel_updateText, Fn: handleUpdateText},
+		{Cmd: sel_scrollTick, Fn: handleScrollTick},
 		},
 	)
 	if err != nil {
@@ -99,6 +102,12 @@ func handleUpdateText(id objc.ID, cmd objc.SEL) {
 	}
 }
 
+func handleScrollTick(id objc.ID, cmd objc.SEL) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		ctrl.doTick()
+	}
+}
+
 // ---- Dispatch functions ----
 
 // dispatchSync dispatches a selector synchronously on the main thread.
@@ -109,4 +118,18 @@ func dispatchSync(sel objc.SEL) {
 // dispatchAsync dispatches a selector asynchronously on the main thread.
 func dispatchAsync(sel objc.SEL) {
 	helperInst.Send(sel_performSelectorOnMainThread, sel, objc.ID(0), false)
+}
+
+// scheduleAfter schedules a one-shot selector call after the given delay in seconds.
+func scheduleAfter(sel objc.SEL, delay float64) {
+	helperInst.Send(sel_performAfterDelay, sel, objc.ID(0), delay)
+}
+
+// cancelScheduled cancels a previously scheduled performSelector:withObject:afterDelay:.
+func cancelScheduled(sel objc.SEL) {
+	// +cancelPreviousPerformRequestsWithTarget:selector:object: is a class method on NSObject
+	helperInst.Send(
+		objc.RegisterName("cancelPreviousPerformRequestsWithTarget:selector:object:"),
+		helperInst.ID, sel, objc.ID(0),
+	)
 }

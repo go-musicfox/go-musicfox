@@ -43,6 +43,20 @@ const (
 	posSecond = 1 // position B: active when currentIndex is odd
 )
 
+const (
+	scrollInitialDelay = 1.5  // seconds before starting scroll
+	scrollEndPause     = 1.0  // seconds to pause at the end before resetting
+	scrollSpeed        = 30.0 // points per second
+)
+
+// scrollState tracks horizontal scrolling for one text label.
+type scrollState struct {
+	active     bool    // whether scrolling is currently active
+	offset     float64 // current scroll offset (positive = scrolled left)
+	maxOffset  float64 // total overflow width to scroll through
+	pauseTimer float64 // countdown before starting/resuming scroll
+}
+
 type darwinController struct {
 	cfg       configs.DesktopLyricsConfig
 	window    cocoa.NSWindow
@@ -59,6 +73,18 @@ type darwinController struct {
 
 	font       cocoa.NSFont
 	origFontSz float64
+
+	// Dynamic sizing
+	screenW     float64 // cached screen width
+	screenH     float64 // cached screen height (for Y coord calc)
+	minWinW     float64 // minimum window width
+	maxWinW     float64 // maximum window width
+	currentWinW float64 // last set window width
+	labelBaseY  [2]float64 // stored Y position per label
+
+	// Scroll animation
+	scroll   [2]*scrollState // [0]=posFirst, [1]=posSecond
+	scrolling bool           // whether any label is currently scrolling
 }
 
 func newController(cfg configs.DesktopLyricsConfig) Controller {
@@ -73,6 +99,8 @@ func newController(cfg configs.DesktopLyricsConfig) Controller {
 	if c.origFontSz <= 0 {
 		c.origFontSz = defaultFontSize
 	}
+	c.scroll[posFirst] = &scrollState{}
+	c.scroll[posSecond] = &scrollState{}
 
 	setDispatchCtrl(c)
 	dispatchSync(sel_createWindow)
@@ -89,18 +117,31 @@ func newController(cfg configs.DesktopLyricsConfig) Controller {
 // ---- Main-thread operations ----
 
 func (c *darwinController) createWindow() {
-	screenW := float64(cocoa.CGDisplayPixelsWide(cocoa.CGMainDisplayID()))
-	screenH := float64(cocoa.CGDisplayPixelsHigh(cocoa.CGMainDisplayID()))
+	c.screenW = float64(cocoa.CGDisplayPixelsWide(cocoa.CGMainDisplayID()))
+	c.screenH = float64(cocoa.CGDisplayPixelsHigh(cocoa.CGMainDisplayID()))
 
 	fontSize := c.origFontSz
 	padding := defaultWindowPadding
 	lineH := fontSize + defaultLineSpacing
 
-	// Window: wide enough, fits 2 lines + padding
-	winW := fontSize * 20
-	if winW > screenW*0.9 {
-		winW = screenW * 0.9
+	// Base window width (wide enough for typical 10-char line)
+	c.minWinW = fontSize * 20
+	if c.minWinW > c.screenW*0.9 {
+		c.minWinW = c.screenW * 0.9
 	}
+
+	// Max window width
+	maxFactor := c.cfg.MaxWindowWidth
+	if maxFactor <= 0 || maxFactor > 0.9 {
+		maxFactor = 0.7
+	}
+	c.maxWinW = c.screenW * maxFactor
+	if c.maxWinW < c.minWinW {
+		c.maxWinW = c.minWinW
+	}
+
+	winW := c.minWinW
+	c.currentWinW = winW
 
 	lineCount := 2
 	if c.cfg.OneLineMode {
@@ -115,19 +156,19 @@ func (c *darwinController) createWindow() {
 	}
 	yFactor := c.cfg.YPositionFactor
 
-	winX := screenW*xFactor - winW/2
+	winX := c.screenW*xFactor - winW/2
 	if winX < 0 {
 		winX = 0
 	}
-	if winX+winW > screenW {
-		winX = screenW - winW
+	if winX+winW > c.screenW {
+		winX = c.screenW - winW
 	}
-	winY := screenH*yFactor - winH/2
+	winY := c.screenH*yFactor - winH/2
 	if winY < 4 {
 		winY = 4
 	}
-	if winY+winH > screenH {
-		winY = screenH - winH
+	if winY+winH > c.screenH {
+		winY = c.screenH - winH
 	}
 
 	rect := cocoa.NSRect{
@@ -205,34 +246,32 @@ func (c *darwinController) createWindow() {
 
 	shadow := c.makeShadow()
 
-	// Create two text fields with diagonal layout: top-left and bottom-right
-	textW := winW * 0.6 // each field takes ~60% of window width
+	// Create two text fields filling most of the window width
+	textW := winW - padding*2
 	textH := lineH + defaultLineSpacing
 
-	// posFirst: top-left (y = tall, x = left)
+	// posFirst: top-left
 	c.labels[posFirst] = c.makeTextField(
 		winH-padding-lineH, padding, textW, textH,
 		inactiveColor, shadow,
 	)
-	// Align text to the left within its frame
 	c.labels[posFirst].SetAlignment(0) // NSTextAlignmentLeft
 
-	// posSecond: bottom-right (y = low, x = right edge)
-	posSecondAlign := 1 // NSTextAlignmentRight (for two-line mode)
-	if c.cfg.OneLineMode {
-		posSecondAlign = 2 // NSTextAlignmentCenter
-	}
+	// posSecond: bottom-right (same width, positioned lower)
 	c.labels[posSecond] = c.makeTextField(
-		padding, winW-textW-padding, textW, textH,
+		padding, padding, textW, textH,
 		inactiveColor, shadow,
 	)
-	// Align text to the right (or center in single-line mode)
-	c.labels[posSecond].SetAlignment(posSecondAlign)
 
 	if !c.cfg.OneLineMode {
+		c.labels[posSecond].SetAlignment(1) // NSTextAlignmentRight for two-line mode
+		c.labelBaseY[posFirst] = winH - padding - lineH
+		c.labelBaseY[posSecond] = padding
 		c.bgView.AddSubview(c.labels[posFirst].NSView)
 		c.bgView.AddSubview(c.labels[posSecond].NSView)
 	} else {
+		c.labels[posSecond].SetAlignment(2) // NSTextAlignmentCenter
+		c.labelBaseY[posSecond] = padding
 		c.bgView.AddSubview(c.labels[posSecond].NSView)
 	}
 }
@@ -319,7 +358,9 @@ func (c *darwinController) doClose() {
 		return
 	}
 	c.closed = true
+	c.scrolling = false
 	c.pendingMu.Unlock()
+	cancelScheduled(sel_scrollTick)
 
 	for i := range c.labels {
 		if c.labels[i].ID != 0 {
@@ -366,9 +407,11 @@ func (c *darwinController) doUpdateText() {
 	if c.cfg.OneLineMode {
 		if c.labels[posSecond].ID != 0 {
 			c.setLabelText(c.labels[posSecond], curLine, timeMs, activeColor, inactiveColor)
+			c.updateScrollNeed(posSecond, curLine)
 		}
 		if c.labels[posFirst].ID != 0 {
 			c.labels[posFirst].SetStringValue("")
+			c.resetScroll(posFirst)
 		}
 		return
 	}
@@ -385,9 +428,197 @@ func (c *darwinController) doUpdateText() {
 
 	if c.labels[activePos].ID != 0 {
 		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor)
+		c.updateScrollNeed(activePos, curLine)
 	}
 	if c.labels[nextPos].ID != 0 {
 		c.setLabelPlainText(c.labels[nextPos], nextLine, inactiveColor)
+		c.resetScroll(nextPos)
+	}
+}
+
+// updateScrollNeed checks if the text needs horizontal scrolling and adjusts
+// the window width to accommodate it up to the max.
+func (c *darwinController) updateScrollNeed(pos int, line LyricLine) {
+	text := c.getLinePlainText(line)
+	textW := c.measureTextWidth(text)
+	padding := defaultWindowPadding
+	neededWinW := textW + padding*2
+
+	ss := c.scroll[pos]
+	ss.active = false
+	ss.pauseTimer = scrollInitialDelay
+	ss.offset = 0
+
+	if neededWinW > c.currentWinW {
+		// Expand window if within max
+		targetW := min(neededWinW, c.maxWinW)
+		if targetW > c.currentWinW {
+			c.resizeWindow(targetW)
+		}
+	}
+
+	// After resize, check if text still overflows
+	labelW := c.currentWinW - padding*2
+	if textW > labelW && c.currentWinW >= c.maxWinW {
+		ss.active = true
+		ss.maxOffset = textW - labelW + padding
+		c.startScrolling()
+	} else {
+		c.resetScroll(pos)
+	}
+}
+
+// resizeWindow resizes the window to the given width while preserving
+// the origin, and updates all subviews.
+func (c *darwinController) resizeWindow(newW float64) {
+	fontSize := c.origFontSz
+	padding := defaultWindowPadding
+	lineH := fontSize + defaultLineSpacing
+
+	lineCount := 2
+	if c.cfg.OneLineMode {
+		lineCount = 1
+	}
+	newH := float64(lineCount)*(lineH) + padding*2
+
+	xFactor := c.cfg.XPositionFactor
+	if xFactor <= 0 {
+		xFactor = 0.5
+	}
+	yFactor := c.cfg.YPositionFactor
+
+	newX := c.screenW*xFactor - newW/2
+	if newX < 0 {
+		newX = 0
+	}
+	if newX+newW > c.screenW {
+		newX = c.screenW - newW
+	}
+	newY := c.screenH*yFactor - newH/2
+	if newY < 4 {
+		newY = 4
+	}
+	if newY+newH > c.screenH {
+		newY = c.screenH - newH
+	}
+
+	// Set window frame
+	c.window.SetFrameDisplayTopLeft(cocoa.NSRect{
+		Origin: cocoa.CGPoint{X: newX, Y: newY},
+		Size:   cocoa.CGSize{Width: newW, Height: newH},
+	}, true)
+
+	// Resize background view
+	c.bgView.SetFrameSize(newW, newH)
+
+	// Resize text fields
+	textW := newW - padding*2
+	textH := lineH + defaultLineSpacing
+
+	c.labelBaseY[posFirst] = newH - padding - lineH
+	c.labelBaseY[posSecond] = padding
+
+	if c.labels[posFirst].ID != 0 {
+		c.labels[posFirst].SetFrameSize(textW, textH)
+		c.labels[posFirst].SetFrameOrigin(padding, c.labelBaseY[posFirst])
+	}
+	if c.labels[posSecond].ID != 0 {
+		c.labels[posSecond].SetFrameSize(textW, textH)
+		c.labels[posSecond].SetFrameOrigin(padding, c.labelBaseY[posSecond])
+	}
+
+	c.currentWinW = newW
+}
+
+// measureTextWidth estimates the rendered width of a string in points.
+func (c *darwinController) measureTextWidth(text string) float64 {
+	runes := utf8.RuneCountInString(text)
+	return c.origFontSz * float64(runes) * 0.7
+}
+
+// getLinePlainText extracts the display text from a LyricLine.
+func (c *darwinController) getLinePlainText(line LyricLine) string {
+	if line.Text != "" {
+		return line.Text
+	}
+	var sb strings.Builder
+	for _, w := range line.Words {
+		sb.WriteString(w.Word)
+	}
+	return sb.String()
+}
+
+func (c *darwinController) resetScroll(pos int) {
+	if c.scroll[pos].active {
+		c.scroll[pos].active = false
+		c.scroll[pos].offset = 0
+		if c.labels[pos].ID != 0 {
+			c.labels[pos].SetFrameOrigin(defaultWindowPadding, c.labelBaseY[pos])
+		}
+	}
+}
+
+// startScrolling ensures the scroll tick is running.
+func (c *darwinController) startScrolling() {
+	if c.scrolling {
+		return
+	}
+	c.scrolling = true
+	cancelScheduled(sel_scrollTick)
+	scheduleAfter(sel_scrollTick, 0.016)
+}
+
+// doTick advances the scroll animation and re-schedules.
+func (c *darwinController) doTick() {
+	c.pendingMu.Lock()
+	closed := c.closed
+	c.pendingMu.Unlock()
+	if closed {
+		return
+	}
+
+	anyActive := false
+	tickSec := 0.016 // ~60fps
+
+	for i := range c.scroll {
+		ss := c.scroll[i]
+		if !ss.active {
+			continue
+		}
+		anyActive = true
+
+		if ss.pauseTimer > 0 {
+			ss.pauseTimer -= tickSec
+			continue
+		}
+
+		// Advance scroll
+		if ss.offset < ss.maxOffset {
+			ss.offset += scrollSpeed * tickSec
+			if ss.offset > ss.maxOffset {
+				ss.offset = ss.maxOffset
+				ss.pauseTimer = scrollEndPause
+			}
+		} else {
+			// At end, pause then reset
+			if ss.pauseTimer <= 0 {
+				ss.offset = 0
+				ss.pauseTimer = scrollInitialDelay
+			}
+		}
+
+		// Apply offset to text field (negative x = scroll left)
+		padding := defaultWindowPadding
+		if c.labels[i].ID != 0 {
+			c.labels[i].SetFrameOrigin(padding-ss.offset, c.labelBaseY[i])
+		}
+	}
+
+	if anyActive {
+		cancelScheduled(sel_scrollTick)
+		scheduleAfter(sel_scrollTick, tickSec)
+	} else {
+		c.scrolling = false
 	}
 }
 

@@ -109,6 +109,8 @@ type DesktopLyricsConfig struct {
 	HideOnPause bool `koanf:"hideOnPause"`
 	// 允许拖拽移动歌词窗口
 	Draggable bool `koanf:"draggable"`
+	// 窗口最大宽度占屏幕比例（0.3-0.9，默认 0.7）
+	MaxWindowWidth float64 `koanf:"maxWindowWidth"`
 }
 
 // CoverConfig 封面图显示设置

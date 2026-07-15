@@ -17,10 +17,12 @@ func init() {
 var class_NSView objc.Class
 
 var (
-	sel_initWithFrame = objc.RegisterName("initWithFrame:")
-	sel_addSubview    = objc.RegisterName("addSubview:")
-	sel_setWantsLayer = objc.RegisterName("setWantsLayer:")
+	sel_initWithFrame       = objc.RegisterName("initWithFrame:")
+	sel_addSubview          = objc.RegisterName("addSubview:")
+	sel_setWantsLayer       = objc.RegisterName("setWantsLayer:")
 	sel_removeFromSuperview = objc.RegisterName("removeFromSuperview")
+	sel_setFrameOrigin      = objc.RegisterName("setFrameOrigin:")
+	sel_setFrameSize        = objc.RegisterName("setFrameSize:")
 )
 
 type NSView struct {
@@ -53,4 +55,14 @@ func (v NSView) SetWantsLayer(wantsLayer bool) {
 
 func (v NSView) RemoveFromSuperview() {
 	v.Send(sel_removeFromSuperview)
+}
+
+// SetFrameOrigin sets the view's frame origin (x, y) in its superview.
+func (v NSView) SetFrameOrigin(x, y CGFloat) {
+	v.Send(sel_setFrameOrigin, x, y)
+}
+
+// SetFrameSize sets the view's frame size (width, height).
+func (v NSView) SetFrameSize(w, h CGFloat) {
+	v.Send(sel_setFrameSize, w, h)
 }
