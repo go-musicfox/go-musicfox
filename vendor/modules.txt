@@ -18,7 +18,7 @@ charm.land/lipgloss/v2
 github.com/adrg/xdg
 github.com/adrg/xdg/internal/pathutil
 github.com/adrg/xdg/internal/userdirs
-# github.com/anhoder/foxful-cli v0.6.2
+# github.com/anhoder/foxful-cli v0.6.3
 ## explicit; go 1.25.0
 github.com/anhoder/foxful-cli/model
 github.com/anhoder/foxful-cli/util
