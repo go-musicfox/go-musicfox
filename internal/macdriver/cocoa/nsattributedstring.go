@@ -50,3 +50,10 @@ func (s NSMutableAttributedString) AddAttribute(attrName string, color NSColor, 
 	defer nsAttr.Release()
 	s.Send(sel_attrStrAddAttributeValueRange, nsAttr.ID, color.ID, rng.Location, rng.Length)
 }
+
+// AddParagraphStyle sets the paragraph style for the entire string range.
+func (s NSMutableAttributedString) AddParagraphStyle(style NSMutableParagraphStyle, rng NSRange) {
+	nsAttr := core.NSString_alloc().InitWithUTF8String(NSParagraphStyleAttributeName)
+	defer nsAttr.Release()
+	s.Send(sel_attrStrAddAttributeValueRange, nsAttr.ID, style.ID, rng.Location, rng.Length)
+}

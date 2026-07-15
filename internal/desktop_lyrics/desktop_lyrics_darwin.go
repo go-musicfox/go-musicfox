@@ -406,7 +406,7 @@ func (c *darwinController) doUpdateText() {
 
 	if c.cfg.OneLineMode {
 		if c.labels[posSecond].ID != 0 {
-			c.setLabelText(c.labels[posSecond], curLine, timeMs, activeColor, inactiveColor)
+			c.setLabelText(c.labels[posSecond], curLine, timeMs, activeColor, inactiveColor, 2) // center
 			c.updateScrollNeed(posSecond, curLine)
 		}
 		if c.labels[posFirst].ID != 0 {
@@ -427,17 +427,17 @@ func (c *darwinController) doUpdateText() {
 	}
 
 	if c.labels[activePos].ID != 0 {
-		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor)
+		align := 0 // posFirst (top) → left
+		if activePos == posSecond {
+			align = 1 // posSecond (bottom) → right
+		}
+		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor, align)
 		c.updateScrollNeed(activePos, curLine)
 	}
 	if c.labels[nextPos].ID != 0 {
 		c.setLabelPlainText(c.labels[nextPos], nextLine, inactiveColor)
 		c.resetScroll(nextPos)
 	}
-
-	// Enforce position-based alignment — AttributedString may reset it
-	c.labels[posFirst].SetAlignment(0)  // top row: left
-	c.labels[posSecond].SetAlignment(1) // bottom row: right
 }
 
 // updateScrollNeed checks if the text needs horizontal scrolling and adjusts
@@ -628,7 +628,8 @@ func (c *darwinController) doTick() {
 
 // setLabelText sets the label content, using word-by-word coloring when
 // YRC word data is available, falling back to plain text.
-func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor) {
+// alignment: 0=left, 1=right, 2=center (NSTextAlignment constants)
+func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor, alignment int) {
 	if len(line.Words) > 0 {
 		// Diagnostic: try simple attributed string first to isolate the issue
 		plainText := line.Text
@@ -685,6 +686,15 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			testAttr.AddAttribute(cocoa.NSForegroundColorAttributeName, color, rng)
 			offset += runeLen
 		}
+
+		// Apply paragraph style for correct alignment
+		paraRange := cocoa.NSRange{Location: 0, Length: offset}
+
+		// Apply paragraph style for correct alignment
+		paraStyle := cocoa.NewParagraphStyle()
+		paraStyle.SetAlignment(alignment)
+		testAttr.AddParagraphStyle(paraStyle, paraRange)
+		paraStyle.Release()
 
 		label.SetAttributedStringValue(testAttr)
 		slog.Debug("desktop_lyrics: word-by-word attributed string applied",
