@@ -434,6 +434,10 @@ func (c *darwinController) doUpdateText() {
 		c.setLabelPlainText(c.labels[nextPos], nextLine, inactiveColor)
 		c.resetScroll(nextPos)
 	}
+
+	// Enforce position-based alignment — AttributedString may reset it
+	c.labels[posFirst].SetAlignment(0)  // top row: left
+	c.labels[posSecond].SetAlignment(1) // bottom row: right
 }
 
 // updateScrollNeed checks if the text needs horizontal scrolling and adjusts
