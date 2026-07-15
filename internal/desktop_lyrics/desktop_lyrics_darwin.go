@@ -245,7 +245,8 @@ func (c *darwinController) makeTextField(yOff, xOff, w, h float64, color cocoa.N
 	tf.SetFont(c.font)
 	tf.SetTextColor(color)
 	cocoa.SetViewShadow(tf.NSView, shadow)
-	shadow.Release() // release alloc/init retain; each SetViewShadow already retains
+	// Note: -[NSView setShadow:] is deprecated and does not retain the NSShadow,
+	// so we must NOT release it here. The shadow lives with the window lifetime.
 	return tf
 }
 
