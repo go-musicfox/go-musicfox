@@ -7,7 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.4
 	github.com/adrg/xdg v0.5.3
-	github.com/anhoder/foxful-cli v0.6.1
+	github.com/anhoder/foxful-cli v0.6.2
 	github.com/atotto/clipboard v0.1.4
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.2
@@ -111,3 +111,5 @@ replace (
 	github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.4
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 )
+
+// replace github.com/anhoder/foxful-cli => ../foxful-cli
