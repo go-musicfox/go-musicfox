@@ -416,18 +416,19 @@ func (n *Netease) DesktopLyrics() desktop_lyrics.Controller {
 }
 
 // GetDesktopLyricsLines returns the current lyrics lines for desktop display.
-// Returns the current line, the next line, and the current index.
-func (n *Netease) GetDesktopLyricsLines() (currentLine, nextLine string, currentIndex int) {
+// Returns the current line, the next line (with word-level data when YRC is available),
+// and the current index.
+func (n *Netease) GetDesktopLyricsLines() (curLine, nextLine desktop_lyrics.LyricLine, currentIndex int) {
 	if n.desktopLyrics == nil || n.lyricService == nil {
-		return "", "", -1
+		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
 	}
 
 	state := n.lyricService.State()
 	if !state.IsRunning {
-		return "", "", -1
+		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
 	}
 
-	// Helper to build display text
+	// Helper to build display text including translation
 	buildText := func(content, translation string) string {
 		if translation != "" {
 			return content + "\n" + translation
@@ -444,19 +445,20 @@ func (n *Netease) GetDesktopLyricsLines() (currentLine, nextLine string, current
 			idx = len(state.YRCLines) - 1
 		}
 
-		// Current line
+		// Current line — with word data
 		if idx < len(state.YRCLines) {
 			line := state.YRCLines[idx]
 			var sb strings.Builder
-			for _, w := range line.Words {
+			words := make([]desktop_lyrics.LyricWord, len(line.Words))
+			for i, w := range line.Words {
 				sb.WriteString(w.Word)
+				words[i] = desktop_lyrics.LyricWord{
+					Word:      w.Word,
+					StartTime: w.StartTime,
+					EndTime:   w.EndTime,
+				}
 			}
-			content := sb.String()
-			trans := ""
-			if state.ShowTranslation {
-				trans = line.TranslatedLyric
-			}
-			currentLine = buildText(content, trans)
+			curLine = desktop_lyrics.LyricLine{Text: buildText(sb.String(), line.TranslatedLyric), Words: words}
 		}
 
 		// Next line
@@ -464,18 +466,19 @@ func (n *Netease) GetDesktopLyricsLines() (currentLine, nextLine string, current
 		if nextIdx < len(state.YRCLines) {
 			line := state.YRCLines[nextIdx]
 			var sb strings.Builder
-			for _, w := range line.Words {
+			nextWords := make([]desktop_lyrics.LyricWord, len(line.Words))
+			for i, w := range line.Words {
 				sb.WriteString(w.Word)
+				nextWords[i] = desktop_lyrics.LyricWord{
+					Word:      w.Word,
+					StartTime: w.StartTime,
+					EndTime:   w.EndTime,
+				}
 			}
-			content := sb.String()
-			trans := ""
-			if state.ShowTranslation {
-				trans = line.TranslatedLyric
-			}
-			nextLine = buildText(content, trans)
+			nextLine = desktop_lyrics.LyricLine{Text: buildText(sb.String(), line.TranslatedLyric), Words: nextWords}
 		}
 
-		return currentLine, nextLine, idx
+		return curLine, nextLine, idx
 
 	} else if len(state.Fragments) > 0 {
 		idx := state.CurrentIndex
@@ -486,14 +489,14 @@ func (n *Netease) GetDesktopLyricsLines() (currentLine, nextLine string, current
 			idx = len(state.Fragments) - 1
 		}
 
-		// Current line
+		// Current line — plain text (no word data for LRC)
 		if idx < len(state.Fragments) {
 			f := state.Fragments[idx]
 			trans := ""
 			if state.ShowTranslation {
 				trans = state.TranslatedFragments[f.StartTimeMs]
 			}
-			currentLine = buildText(f.Content, trans)
+			curLine = desktop_lyrics.LyricLine{Text: buildText(f.Content, trans)}
 		}
 
 		// Next line
@@ -503,13 +506,13 @@ func (n *Netease) GetDesktopLyricsLines() (currentLine, nextLine string, current
 			if state.ShowTranslation {
 				trans = state.TranslatedFragments[f.StartTimeMs]
 			}
-			nextLine = buildText(f.Content, trans)
+			nextLine = desktop_lyrics.LyricLine{Text: buildText(f.Content, trans)}
 		}
 
-		return currentLine, nextLine, idx
+		return curLine, nextLine, idx
 	}
 
-	return "", "", -1
+	return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
 }
 
 // GetCoverWidth returns the cover image width in columns, or 0 if cover is disabled.

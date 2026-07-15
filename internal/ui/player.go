@@ -699,20 +699,22 @@ func (p *Player) updateDesktopLyrics() {
 		return
 	}
 
-	currentLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
+	curLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
+	hasContent := curLine.Text != "" || len(curLine.Words) > 0
+	currentTimeMs := p.PassedTime().Milliseconds()
 
 	// Show/hide based on playback state
 	switch p.State() {
 	case types.Playing:
-		if currentLine != "" {
+		if hasContent {
 			if !dl.IsVisible() {
 				dl.Show()
 			}
-			dl.Update(currentLine, nextLine, currentIndex)
+			dl.Update(curLine, nextLine, currentIndex, currentTimeMs)
 		}
 	case types.Paused:
-		if currentLine != "" {
-			dl.Update(currentLine, nextLine, currentIndex)
+		if hasContent {
+			dl.Update(curLine, nextLine, currentIndex, currentTimeMs)
 		}
 	case types.Stopped:
 		dl.Hide()

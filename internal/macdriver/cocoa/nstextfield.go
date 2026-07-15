@@ -30,6 +30,7 @@ var (
 	sel_sizeToFit              = objc.RegisterName("sizeToFit")
 	sel_setMaximumNumberOfLines = objc.RegisterName("setMaximumNumberOfLines:")
 	sel_tfSetBackgroundColor   = objc.RegisterName("setBackgroundColor:")
+	sel_setAttributedStringValue = objc.RegisterName("setAttributedStringValue:")
 )
 
 type NSTextField struct {
@@ -112,4 +113,8 @@ func (t NSTextField) SizeToFit() {
 
 func (t NSTextField) SetMaximumNumberOfLines(n int) {
 	t.Send(sel_setMaximumNumberOfLines, n)
+}
+
+func (t NSTextField) SetAttributedStringValue(value NSMutableAttributedString) {
+	t.Send(sel_setAttributedStringValue, value.ID)
 }

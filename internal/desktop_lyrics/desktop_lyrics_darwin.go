@@ -7,10 +7,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 )
+
+// lerp performs linear interpolation between a and b by factor t (0.0-1.0).
+func lerp(a, b, t float64) float64 {
+	return a + (b-a)*t
+}
 
 // parseHexRGB parses a 6-char hex string into RGB (0.0-1.0).
 func parseHexRGB(hex string) (r, g, b float64) {
@@ -45,10 +51,11 @@ type darwinController struct {
 	visible   bool
 	closed    bool
 
-	pendingMu    sync.Mutex
-	pendingCur   string
-	pendingNext  string
-	pendingIndex int
+	pendingMu       sync.Mutex
+	pendingCurLine  LyricLine
+	pendingNextLine LyricLine
+	pendingIndex    int
+	pendingTimeMs   int64
 
 	font       cocoa.NSFont
 	origFontSz float64
@@ -342,9 +349,10 @@ func (c *darwinController) doUpdateText() {
 		c.pendingMu.Unlock()
 		return
 	}
-	cur := c.pendingCur
-	next := c.pendingNext
+	curLine := c.pendingCurLine
+	nextLine := c.pendingNextLine
 	idx := c.pendingIndex
+	timeMs := c.pendingTimeMs
 	c.pendingMu.Unlock()
 
 	fgR, fgG, fgB := parseHexRGB(c.cfg.TextColor)
@@ -356,10 +364,8 @@ func (c *darwinController) doUpdateText() {
 	)
 
 	if c.cfg.OneLineMode {
-		// One-line mode: only posSecond (centered) shows current line
 		if c.labels[posSecond].ID != 0 {
-			c.labels[posSecond].SetStringValue(cur)
-			c.labels[posSecond].SetTextColor(activeColor)
+			c.setLabelText(c.labels[posSecond], curLine, timeMs, activeColor, inactiveColor)
 		}
 		if c.labels[posFirst].ID != 0 {
 			c.labels[posFirst].SetStringValue("")
@@ -368,8 +374,6 @@ func (c *darwinController) doUpdateText() {
 	}
 
 	// Two-line alternating mode
-	// Even index (0,2,4...): active at posFirst (top), next at posSecond (bottom)
-	// Odd index  (1,3,5...): active at posSecond (bottom), next at posFirst (top)
 	var activePos, nextPos int
 	if idx%2 == 0 {
 		activePos = posFirst
@@ -380,13 +384,103 @@ func (c *darwinController) doUpdateText() {
 	}
 
 	if c.labels[activePos].ID != 0 {
-		c.labels[activePos].SetStringValue(cur)
-		c.labels[activePos].SetTextColor(activeColor)
+		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor)
 	}
-	if c.labels[nextPos].ID != 0 && next != "" {
-		c.labels[nextPos].SetStringValue(next)
-		c.labels[nextPos].SetTextColor(inactiveColor)
+	if c.labels[nextPos].ID != 0 {
+		c.setLabelPlainText(c.labels[nextPos], nextLine, inactiveColor)
 	}
+}
+
+// setLabelText sets the label content, using word-by-word coloring when
+// YRC word data is available, falling back to plain text.
+func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor) {
+	if len(line.Words) > 0 {
+		attrStr := c.buildAttributedLine(line, timeMs, activeColor, inactiveColor)
+		label.SetAttributedStringValue(attrStr)
+		attrStr.Release()
+	} else {
+		label.SetStringValue(line.Text)
+		label.SetTextColor(activeColor)
+	}
+}
+
+// setLabelPlainText sets the next-line label content (no word-level coloring).
+func (c *darwinController) setLabelPlainText(label cocoa.NSTextField, line LyricLine, inactiveColor cocoa.NSColor) {
+	text := line.Text
+	if text == "" && len(line.Words) > 0 {
+		var sb strings.Builder
+		for _, w := range line.Words {
+			sb.WriteString(w.Word)
+		}
+		text = sb.String()
+	}
+	if text != "" {
+		label.SetStringValue(text)
+		label.SetTextColor(inactiveColor)
+	}
+}
+
+// buildAttributedLine creates an NSAttributedString with per-word coloring.
+// Played words get activeColor, unplayed get inactiveColor, and the
+// currently-playing word is interpolated between the two.
+func (c *darwinController) buildAttributedLine(line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor) cocoa.NSMutableAttributedString {
+	// Build plain text from words
+	var totalText strings.Builder
+	for _, w := range line.Words {
+		totalText.WriteString(w.Word)
+	}
+	plainText := totalText.String()
+
+	attrStr := cocoa.NSMutableAttributedString_alloc().InitWithString(plainText)
+
+	offset := 0
+	for _, w := range line.Words {
+		runeLen := utf8.RuneCountInString(w.Word)
+		if runeLen == 0 {
+			continue
+		}
+		rng := cocoa.NSRange{Location: offset, Length: runeLen}
+
+		var color cocoa.NSColor
+		switch {
+		case timeMs >= w.EndTime:
+			// Fully played
+			color = activeColor
+		case timeMs < w.StartTime:
+			// Not yet played
+			color = inactiveColor
+		default:
+			// Currently playing — interpolate
+			wordDuration := w.EndTime - w.StartTime
+			t := 1.0
+			if wordDuration > 0 {
+				t = float64(timeMs-w.StartTime) / float64(wordDuration)
+			}
+			color = c.blendColor(inactiveColor, activeColor, t)
+		}
+
+		attrStr.AddAttribute(cocoa.NSForegroundColorAttributeName, color, rng)
+		offset += runeLen
+	}
+
+	return attrStr
+}
+
+// blendColor creates a new NSColor by linearly interpolating between two colors.
+// t=0.0 returns a, t=1.0 returns b.
+func (c *darwinController) blendColor(a, b cocoa.NSColor, t float64) cocoa.NSColor {
+	// Extract RGB from the hex config (we don't have direct NSColor component access)
+	aR, aG, aB := parseHexRGB(c.cfg.TextColor)                 // a = textColor @ inactiveAlpha
+	bR, bG, bB := parseHexRGB(c.cfg.TextColor)                 // b = textColor @ 1.0
+	aAlpha := inactiveAlpha
+	bAlpha := 1.0
+
+	return cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+		cocoa.CGFloat(lerp(aR*aAlpha, bR*bAlpha, t)),
+		cocoa.CGFloat(lerp(aG*aAlpha, bG*bAlpha, t)),
+		cocoa.CGFloat(lerp(aB*aAlpha, bB*bAlpha, t)),
+		cocoa.CGFloat(lerp(aAlpha, bAlpha, t)),
+	)
 }
 
 // ---- Public interface ----
@@ -426,7 +520,7 @@ func (c *darwinController) IsVisible() bool {
 	return c.visible
 }
 
-func (c *darwinController) Update(currentLine, nextLine string, currentIndex int) {
+func (c *darwinController) Update(curLine, nextLine LyricLine, currentIndex int, currentTimeMs int64) {
 	if c == nil {
 		return
 	}
@@ -438,9 +532,10 @@ func (c *darwinController) Update(currentLine, nextLine string, currentIndex int
 	c.pendingMu.Unlock()
 
 	c.pendingMu.Lock()
-	c.pendingCur = currentLine
-	c.pendingNext = nextLine
+	c.pendingCurLine = curLine
+	c.pendingNextLine = nextLine
 	c.pendingIndex = currentIndex
+	c.pendingTimeMs = currentTimeMs
 	c.pendingMu.Unlock()
 
 	dispatchAsync(sel_updateText)
