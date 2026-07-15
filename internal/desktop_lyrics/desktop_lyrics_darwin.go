@@ -426,10 +426,6 @@ func (c *darwinController) doUpdateText() {
 		nextPos = posFirst
 	}
 
-	// Active line: left-aligned; next line: right-aligned (diagonal visual)
-	c.labels[activePos].SetAlignment(0) // NSTextAlignmentLeft
-	c.labels[nextPos].SetAlignment(1)   // NSTextAlignmentRight
-
 	if c.labels[activePos].ID != 0 {
 		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor)
 		c.updateScrollNeed(activePos, curLine)
@@ -680,7 +676,7 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 				// Already playing or played: stay bright
 				progress = 1.0
 			}
-			color := c.blendColor(inactiveColor, activeColor, progress)
+			color := c.blendColor(progress)
 
 			testAttr.AddAttribute(cocoa.NSForegroundColorAttributeName, color, rng)
 			offset += runeLen
@@ -712,19 +708,18 @@ func (c *darwinController) setLabelPlainText(label cocoa.NSTextField, line Lyric
 	}
 }
 
-// blendColor creates a new NSColor by linearly interpolating between two colors.
-// t=0.0 returns a, t=1.0 returns b.
-func (c *darwinController) blendColor(a, b cocoa.NSColor, t float64) cocoa.NSColor {
-	// Extract RGB from the hex config (we don't have direct NSColor component access)
-	aR, aG, aB := parseHexRGB(c.cfg.TextColor)                 // a = textColor @ inactiveAlpha
-	bR, bG, bB := parseHexRGB(c.cfg.TextColor)                 // b = textColor @ 1.0
+// blendColor creates a new NSColor by interpolating only the alpha channel.
+// Both colors share the same RGB (textColor); we only fade opacity.
+// t=0.0 returns inactiveColor equivalent, t=1.0 returns fully opaque.
+func (c *darwinController) blendColor(t float64) cocoa.NSColor {
 	aAlpha := inactiveAlpha
 	bAlpha := 1.0
 
+	r, g, b := parseHexRGB(c.cfg.TextColor)
 	return cocoa.NSColor_ColorWithRedGreenBlueAlpha(
-		cocoa.CGFloat(lerp(aR*aAlpha, bR*bAlpha, t)),
-		cocoa.CGFloat(lerp(aG*aAlpha, bG*bAlpha, t)),
-		cocoa.CGFloat(lerp(aB*aAlpha, bB*bAlpha, t)),
+		cocoa.CGFloat(r),
+		cocoa.CGFloat(g),
+		cocoa.CGFloat(b),
 		cocoa.CGFloat(lerp(aAlpha, bAlpha, t)),
 	)
 }
