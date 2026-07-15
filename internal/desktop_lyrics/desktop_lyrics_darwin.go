@@ -426,6 +426,10 @@ func (c *darwinController) doUpdateText() {
 		nextPos = posFirst
 	}
 
+	// Active line: left-aligned; next line: right-aligned (diagonal visual)
+	c.labels[activePos].SetAlignment(0) // NSTextAlignmentLeft
+	c.labels[nextPos].SetAlignment(1)   // NSTextAlignmentRight
+
 	if c.labels[activePos].ID != 0 {
 		c.setLabelText(c.labels[activePos], curLine, timeMs, activeColor, inactiveColor)
 		c.updateScrollNeed(activePos, curLine)
@@ -652,7 +656,10 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			return
 		}
 
-		// Apply word-by-word coloring
+		// Apply word-by-word coloring with fade-in/fade-out animation
+		const fadeInMs int64 = 80
+		const fadeOutMs int64 = 200
+
 		offset := 0
 		for _, w := range line.Words {
 			runeLen := utf8.RuneCountInString(w.Word)
@@ -661,20 +668,24 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			}
 			rng := cocoa.NSRange{Location: offset, Length: runeLen}
 
-			var color cocoa.NSColor
+			// Calculate smooth progress: 0.0 = inactive, 1.0 = active
+			var progress float64
 			switch {
-			case timeMs >= w.EndTime:
-				color = activeColor
+			case timeMs < w.StartTime-fadeInMs:
+				progress = 0.0
 			case timeMs < w.StartTime:
-				color = inactiveColor
+				// Fade in before the word
+				progress = float64(timeMs-(w.StartTime-fadeInMs)) / float64(fadeInMs)
+			case timeMs < w.EndTime:
+				progress = 1.0
+			case timeMs < w.EndTime+fadeOutMs:
+				// Fade out after the word
+				progress = 1.0 - float64(timeMs-w.EndTime)/float64(fadeOutMs)
 			default:
-				wordDuration := w.EndTime - w.StartTime
-				t := 1.0
-				if wordDuration > 0 {
-					t = float64(timeMs-w.StartTime) / float64(wordDuration)
-				}
-				color = c.blendColor(inactiveColor, activeColor, t)
+				progress = 0.0
 			}
+			color := c.blendColor(inactiveColor, activeColor, progress)
+
 			testAttr.AddAttribute(cocoa.NSForegroundColorAttributeName, color, rng)
 			offset += runeLen
 		}
@@ -703,52 +714,6 @@ func (c *darwinController) setLabelPlainText(label cocoa.NSTextField, line Lyric
 		label.SetStringValue(text)
 		label.SetTextColor(inactiveColor)
 	}
-}
-
-// buildAttributedLine creates an NSAttributedString with per-word coloring.
-// Played words get activeColor, unplayed get inactiveColor, and the
-// currently-playing word is interpolated between the two.
-func (c *darwinController) buildAttributedLine(line LyricLine, timeMs int64, activeColor, inactiveColor cocoa.NSColor) cocoa.NSMutableAttributedString {
-	// Build plain text from words
-	var totalText strings.Builder
-	for _, w := range line.Words {
-		totalText.WriteString(w.Word)
-	}
-	plainText := totalText.String()
-
-	attrStr := cocoa.NSMutableAttributedString_alloc().InitWithString(plainText)
-
-	offset := 0
-	for _, w := range line.Words {
-		runeLen := utf8.RuneCountInString(w.Word)
-		if runeLen == 0 {
-			continue
-		}
-		rng := cocoa.NSRange{Location: offset, Length: runeLen}
-
-		var color cocoa.NSColor
-		switch {
-		case timeMs >= w.EndTime:
-			// Fully played
-			color = activeColor
-		case timeMs < w.StartTime:
-			// Not yet played
-			color = inactiveColor
-		default:
-			// Currently playing — interpolate
-			wordDuration := w.EndTime - w.StartTime
-			t := 1.0
-			if wordDuration > 0 {
-				t = float64(timeMs-w.StartTime) / float64(wordDuration)
-			}
-			color = c.blendColor(inactiveColor, activeColor, t)
-		}
-
-		attrStr.AddAttribute(cocoa.NSForegroundColorAttributeName, color, rng)
-		offset += runeLen
-	}
-
-	return attrStr
 }
 
 // blendColor creates a new NSColor by linearly interpolating between two colors.
