@@ -3,6 +3,7 @@
 package desktop_lyrics
 
 import (
+	"encoding/json"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
+	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
 
 // lerp performs linear interpolation between a and b by factor t (0.0-1.0).
@@ -50,7 +53,11 @@ const (
 	defaultFontSize      = 24.0
 	defaultWindowPadding = 16.0
 	defaultLineSpacing   = 4.0
-	inactiveAlpha        = 0.42
+	inactiveAlpha        = 0.58
+	// dynamicWidthFactor scales the measured lyric width when sizing the
+	// window, giving text extra horizontal breathing room (still clamped to
+	// maxWinW). Scroll detection continues to use the raw measured width.
+	dynamicWidthFactor = 1.5
 )
 
 // NSTextAlignment constants (modern macOS 10.12+ / unified with UIKit)
@@ -72,7 +79,7 @@ const (
 	scrollSpeed          = 50.0
 	scrollTickInterval   = 1.0 / 60.0
 	scrollMaxDelta       = 0.1
-	windowResizeDuration = 0.2
+	windowResizeDuration = 0.5
 	wordFadeDurationMs   = 160
 )
 
@@ -95,14 +102,6 @@ type wordAnimationState struct {
 	baseTimeMs int64
 	baseAt     time.Time
 }
-
-type windowResizeState struct {
-	active                  bool
-	startWidth, targetWidth float64
-	centerX, centerY        float64
-	startedAt               time.Time
-}
-
 type darwinController struct {
 	cfg     configs.DesktopLyricsConfig
 	window  cocoa.NSWindow
@@ -119,21 +118,24 @@ type darwinController struct {
 	pendingPlaying  bool
 	font            cocoa.NSFont
 	origFontSz      float64
+	measureCacheKey string  // last measured text
+	measureCacheW   float64 // cached width for measureCacheKey
 
 	// Dynamic sizing
-	screenW     float64    // cached screen width
-	screenH     float64    // cached screen height
-	minWinW     float64    // minimum window width
-	maxWinW     float64    // maximum window width
-	currentWinW float64    // current window width
-	targetWinW  float64    // requested window width after clamping
-	labelBaseY  [2]float64 // stored Y position per label
+	screenFrame cocoa.NSRect // cached bounds of the selected screen
+	minWinW     float64      // minimum window width
+	maxWinW     float64      // maximum window width
+	currentWinW float64      // current window width
+	targetWinW  float64      // requested window width after clamping
+	labelBaseY  [2]float64   // stored Y position per label
+
+	windowMovePending bool
 
 	// Animation state
 	scroll        [2]*scrollState // [0]=posFirst, [1]=posSecond
 	wordAnimation wordAnimationState
-	windowResize  windowResizeState
 	animating     bool
+	nextFrameAt   time.Time // scheduled deadline of the next animation frame
 }
 
 func newController(cfg configs.DesktopLyricsConfig) Controller {
@@ -166,8 +168,7 @@ func newController(cfg configs.DesktopLyricsConfig) Controller {
 // ---- Main-thread operations ----
 
 func (c *darwinController) createWindow() {
-	c.screenW = float64(cocoa.CGDisplayPixelsWide(cocoa.CGMainDisplayID()))
-	c.screenH = float64(cocoa.CGDisplayPixelsHigh(cocoa.CGMainDisplayID()))
+	c.screenFrame = cocoa.NSScreen_MainScreen().Frame()
 
 	fontSize := c.origFontSz
 	padding := defaultWindowPadding
@@ -184,8 +185,8 @@ func (c *darwinController) createWindow() {
 	} else {
 		c.minWinW = fontSize*12 + padding*2
 	}
-	if c.minWinW > c.screenW*0.9 {
-		c.minWinW = c.screenW * 0.9
+	if c.minWinW > c.screenFrame.Size.Width*0.9 {
+		c.minWinW = c.screenFrame.Size.Width * 0.9
 	}
 
 	// Max window width
@@ -193,7 +194,7 @@ func (c *darwinController) createWindow() {
 	if maxFactor <= 0 || maxFactor > 0.9 {
 		maxFactor = 0.7
 	}
-	c.maxWinW = c.screenW * maxFactor
+	c.maxWinW = c.screenFrame.Size.Width * maxFactor
 	if c.maxWinW < c.minWinW {
 		c.maxWinW = c.minWinW
 	}
@@ -211,20 +212,18 @@ func (c *darwinController) createWindow() {
 	}
 	yFactor := c.cfg.YPositionFactor
 
-	winX := c.screenW*xFactor - winW/2
-	if winX < 0 {
-		winX = 0
+	defaultOrigin := cocoa.CGPoint{
+		X: c.screenFrame.Origin.X + c.screenFrame.Size.Width*xFactor - winW/2,
+		Y: c.screenFrame.Origin.Y + c.screenFrame.Size.Height*yFactor - winH/2,
 	}
-	if winX+winW > c.screenW {
-		winX = c.screenW - winW
+	if position, ok := loadDesktopLyricsPosition(); ok {
+		if screen, found := cocoa.NSScreen_WithDisplayID(position.ScreenID); found {
+			c.screenFrame = screen.Frame()
+			defaultOrigin = desktopLyricsWindowOrigin(defaultOrigin, c.screenFrame, &position)
+		}
 	}
-	winY := c.screenH*yFactor - winH/2
-	if winY < 4 {
-		winY = 4
-	}
-	if winY+winH > c.screenH {
-		winY = c.screenH - winH
-	}
+	defaultOrigin = c.constrainWindowOrigin(defaultOrigin, winW, winH)
+	winX, winY := defaultOrigin.X, defaultOrigin.Y
 
 	rect := cocoa.NSRect{
 		Origin: cocoa.CGPoint{X: winX, Y: winY},
@@ -251,6 +250,7 @@ func (c *darwinController) createWindow() {
 			cocoa.NSWindowCollectionBehaviorStationary,
 	)
 	c.applyMouseBehavior()
+	c.observeWindowMovement()
 	c.window.SetBackgroundColor(cocoa.NSColor_ClearColor())
 
 	// Content view
@@ -375,6 +375,98 @@ func (c *darwinController) applyMouseBehavior() {
 	}
 }
 
+func desktopLyricsWindowOrigin(defaultOrigin cocoa.CGPoint, screenFrame cocoa.NSRect, position *storage.DesktopLyricsPosition) cocoa.CGPoint {
+	if position == nil {
+		return defaultOrigin
+	}
+	return cocoa.CGPoint{
+		X: screenFrame.Origin.X + position.X,
+		Y: screenFrame.Origin.Y + position.Y,
+	}
+}
+
+func desktopLyricsPositionFromFrame(windowFrame, screenFrame cocoa.NSRect, screenID uint32) storage.DesktopLyricsPosition {
+	return storage.DesktopLyricsPosition{
+		ScreenID: screenID,
+		X:        windowFrame.Origin.X - screenFrame.Origin.X,
+		Y:        windowFrame.Origin.Y - screenFrame.Origin.Y,
+	}
+}
+
+func loadDesktopLyricsPosition() (storage.DesktopLyricsPosition, bool) {
+	data, err := storage.NewTable().GetByKVModel(storage.DesktopLyricsPosition{})
+	if err != nil || len(data) == 0 {
+		return storage.DesktopLyricsPosition{}, false
+	}
+	var position storage.DesktopLyricsPosition
+	if err := json.Unmarshal(data, &position); err != nil || position.ScreenID == 0 {
+		return storage.DesktopLyricsPosition{}, false
+	}
+	return position, true
+}
+
+func (c *darwinController) constrainWindowOrigin(origin cocoa.CGPoint, width, height float64) cocoa.CGPoint {
+	if origin.X < c.screenFrame.Origin.X {
+		origin.X = c.screenFrame.Origin.X
+	}
+	if maxX := c.screenFrame.Origin.X + c.screenFrame.Size.Width - width; origin.X > maxX {
+		origin.X = maxX
+	}
+	if origin.Y < c.screenFrame.Origin.Y+4 {
+		origin.Y = c.screenFrame.Origin.Y + 4
+	}
+	if maxY := c.screenFrame.Origin.Y + c.screenFrame.Size.Height - height; origin.Y > maxY {
+		origin.Y = maxY
+	}
+	return origin
+}
+
+func (c *darwinController) observeWindowMovement() {
+	if !c.cfg.Draggable {
+		return
+	}
+	center := cocoa.NSNotificationCenter_defaultCenter()
+	willMove := core.String("NSWindowWillMoveNotification")
+	defer willMove.Release()
+	center.AddObserverSelectorNameObject(helperInst.ID, sel_windowWillMove, willMove, c.window.NSObject)
+	didMove := core.String("NSWindowDidMoveNotification")
+	defer didMove.Release()
+	center.AddObserverSelectorNameObject(helperInst.ID, sel_windowDidMove, didMove, c.window.NSObject)
+}
+
+func (c *darwinController) beginWindowMove() {
+	if !c.closed {
+		c.windowMovePending = true
+	}
+}
+
+func (c *darwinController) scheduleWindowPositionPersist() {
+	if !c.windowMovePending || c.closed {
+		return
+	}
+	cancelScheduled(sel_persistWindowPosition)
+	scheduleAfter(sel_persistWindowPosition, 0.2)
+}
+
+func (c *darwinController) persistWindowPosition() {
+	if !c.windowMovePending || c.closed || c.window.ID == 0 {
+		return
+	}
+	c.windowMovePending = false
+	screen := c.window.Screen()
+	screenID := screen.DisplayID()
+	if screen.ID == 0 || screenID == 0 {
+		return
+	}
+	screenFrame := screen.Frame()
+	position := desktopLyricsPositionFromFrame(c.window.Frame(), screenFrame, screenID)
+	if err := storage.NewTable().SetByKVModel(storage.DesktopLyricsPosition{}, position); err != nil {
+		slog.Error("Failed to persist desktop lyrics position", "error", err)
+		return
+	}
+	c.screenFrame = screenFrame
+}
+
 // ---- Handlers (main thread) ----
 
 func (c *darwinController) doShow() {
@@ -407,6 +499,9 @@ func (c *darwinController) doHide() {
 }
 
 func (c *darwinController) doClose() {
+	if c.windowMovePending {
+		c.persistWindowPosition()
+	}
 	c.pendingMu.Lock()
 	if c.closed {
 		c.pendingMu.Unlock()
@@ -414,10 +509,10 @@ func (c *darwinController) doClose() {
 	}
 	c.closed = true
 	c.wordAnimation.active = false
-	c.windowResize.active = false
 	c.animating = false
 	c.pendingMu.Unlock()
 	cancelScheduled(sel_scrollTick)
+	cancelScheduled(sel_persistWindowPosition)
 
 	for i := range c.labels {
 		if c.labels[i].ID != 0 {
@@ -515,7 +610,8 @@ func (c *darwinController) updateScrollNeed(pos int, line LyricLine) {
 	text := c.getLinePlainText(line)
 	textW := c.measureTextWidth(text)
 	padding := defaultWindowPadding
-	targetW := constrainWindowWidth(textW+padding*2, c.minWinW, c.maxWinW)
+	// Widen the window beyond the raw text extent so lyrics breathe.
+	targetW := constrainWindowWidth(textW*dynamicWidthFactor+padding*2, c.minWinW, c.maxWinW)
 	c.resizeWindow(targetW)
 
 	labelW := targetW - padding*2
@@ -550,44 +646,9 @@ func constrainWindowWidth(width, minWidth, maxWidth float64) float64 {
 	return min(max(width, minWidth), maxWidth)
 }
 
-func windowResizeWidth(startWidth, targetWidth, elapsed float64) (float64, bool) {
-	if elapsed <= 0 {
-		return startWidth, false
-	}
-	if elapsed >= windowResizeDuration {
-		return targetWidth, true
-	}
-	progress := elapsed / windowResizeDuration
-	progress = progress * progress * (3 - 2*progress)
-	return lerp(startWidth, targetWidth, progress), false
-}
-
-// resizeWindow animates to a new bounded width while preserving the current center.
-func (c *darwinController) resizeWindow(newW float64) {
-	newW = constrainWindowWidth(newW, c.minWinW, c.maxWinW)
-	if newW == c.targetWinW {
-		return
-	}
-
-	frame := c.window.Frame()
-	c.currentWinW = frame.Size.Width
-	c.targetWinW = newW
-	c.windowResize = windowResizeState{
-		active:      c.currentWinW != newW,
-		startWidth:  c.currentWinW,
-		targetWidth: newW,
-		centerX:     frame.Origin.X + frame.Size.Width/2,
-		centerY:     frame.Origin.Y + frame.Size.Height/2,
-		startedAt:   time.Now(),
-	}
-	if !c.windowResize.active {
-		c.applyWindowWidth(newW, c.windowResize.centerX, c.windowResize.centerY)
-		return
-	}
-	c.startAnimating()
-}
-
-func (c *darwinController) applyWindowWidth(newW, centerX, centerY float64) {
+// windowFrameForWidth computes the constrained window frame and derived text
+// metrics for a target width, preserving the given window center.
+func (c *darwinController) windowFrameForWidth(newW, centerX, centerY float64) (frame cocoa.NSRect, textW, textH, baseFirst, baseSecond float64) {
 	newW = constrainWindowWidth(newW, c.minWinW, c.maxWinW)
 	padding := defaultWindowPadding
 	lineH := c.origFontSz + defaultLineSpacing
@@ -597,85 +658,105 @@ func (c *darwinController) applyWindowWidth(newW, centerX, centerY float64) {
 	}
 	newH := float64(lineCount)*lineH + padding*2
 
-	newX := centerX - newW/2
-	if newX < 0 {
-		newX = 0
-	}
-	if newX+newW > c.screenW {
-		newX = c.screenW - newW
-	}
-	newY := centerY - newH/2
-	if newY < 4 {
-		newY = 4
-	}
-	if newY+newH > c.screenH {
-		newY = c.screenH - newH
-	}
+	origin := c.constrainWindowOrigin(cocoa.CGPoint{
+		X: centerX - newW/2,
+		Y: centerY - newH/2,
+	}, newW, newH)
 
-	c.window.SetFrameDisplayTopLeft(cocoa.NSRect{
-		Origin: cocoa.CGPoint{X: newX, Y: newY},
+	frame = cocoa.NSRect{
+		Origin: cocoa.CGPoint{X: origin.X, Y: origin.Y},
 		Size:   cocoa.CGSize{Width: newW, Height: newH},
-	}, true)
-	c.bgView.SetFrameSize(newW, newH)
+	}
+	textW = newW - padding*2
+	textH = lineH + defaultLineSpacing
+	baseFirst = newH - padding - lineH
+	baseSecond = padding
+	return
+}
 
-	textW := newW - padding*2
-	textH := lineH + defaultLineSpacing
-	c.labelBaseY[posFirst] = newH - padding - lineH
-	c.labelBaseY[posSecond] = padding
+// applyWindowFrame sets the window, background and label geometry immediately
+// without animation. display forces a synchronous window redraw.
+func (c *darwinController) applyWindowFrame(frame cocoa.NSRect, textW, textH float64, display bool) {
+	c.window.SetFrameDisplayTopLeft(frame, display)
+	c.bgView.SetFrameSize(frame.Size.Width, frame.Size.Height)
 	if c.labels[posFirst].ID != 0 {
 		c.labels[posFirst].SetFrameSize(textW, textH)
-		c.labels[posFirst].SetFrameOrigin(padding-c.scroll[posFirst].offset, c.labelBaseY[posFirst])
+		c.labels[posFirst].SetFrameOrigin(defaultWindowPadding-c.scroll[posFirst].offset, c.labelBaseY[posFirst])
 	}
 	if c.labels[posSecond].ID != 0 {
 		c.labels[posSecond].SetFrameSize(textW, textH)
-		c.labels[posSecond].SetFrameOrigin(padding-c.scroll[posSecond].offset, c.labelBaseY[posSecond])
+		c.labels[posSecond].SetFrameOrigin(defaultWindowPadding-c.scroll[posSecond].offset, c.labelBaseY[posSecond])
 	}
-	c.currentWinW = newW
+	c.currentWinW = frame.Size.Width
 }
 
-func (c *darwinController) tickWindowResize(now time.Time) bool {
-	state := &c.windowResize
-	if !state.active {
-		return false
+// resizeWindow animates the window to a new bounded width, co-animating the
+// background and lyric labels through Core Animation (NSAnimationContext +
+// animator proxies). This runs the interpolation on the window server's
+// display link rather than a hand-rolled per-frame timer, so the transition
+// tracks the real refresh rate (including ProMotion) without runloop jitter.
+func (c *darwinController) resizeWindow(newW float64) {
+	newW = constrainWindowWidth(newW, c.minWinW, c.maxWinW)
+	if newW == c.targetWinW {
+		return
 	}
-	width, done := windowResizeWidth(state.startWidth, state.targetWidth, now.Sub(state.startedAt).Seconds())
-	c.applyWindowWidth(width, state.centerX, state.centerY)
-	if done {
-		state.active = false
-	}
-	return !done
-}
 
-// measureTextWidth estimates the rendered width of a string in points.
-// CJK characters (Chinese, Japanese, Korean) are typically full-width (~1.0x fontSize),
-// while ASCII/Latin characters are narrower (~0.5x fontSize).
-func (c *darwinController) measureTextWidth(text string) float64 {
-	var cjkCount, otherCount int
-	for _, r := range text {
-		if isCJK(r) {
-			cjkCount++
-		} else {
-			otherCount++
+	cur := c.window.Frame()
+	centerX := cur.Origin.X + cur.Size.Width/2
+	centerY := cur.Origin.Y + cur.Size.Height/2
+	c.targetWinW = newW
+
+	frame, textW, textH, baseFirst, baseSecond := c.windowFrameForWidth(newW, centerX, centerY)
+	c.labelBaseY[posFirst] = baseFirst
+	c.labelBaseY[posSecond] = baseSecond
+
+	// Height is unchanged for a width-only resize; if the clamped width also
+	// lands on the current width there is nothing to animate.
+	if cur.Size.Width == frame.Size.Width {
+		c.applyWindowFrame(frame, textW, textH, true)
+		return
+	}
+
+	cocoa.NSAnimationContext_RunAnimationGroup(func(ctx cocoa.NSAnimationContext) {
+		ctx.SetDuration(windowResizeDuration)
+		ctx.SetTimingFunction(cocoa.CAMediaTimingFunction_FunctionWithName(cocoa.CAMediaTimingFunctionEaseInEaseOut))
+		ctx.SetAllowsImplicitAnimation(true)
+
+		c.window.Animator().SetFrameDisplayAnimated(frame, true)
+		c.bgView.Animator().SetFrameSize(frame.Size.Width, frame.Size.Height)
+		if c.labels[posFirst].ID != 0 {
+			la := c.labels[posFirst].Animator()
+			la.SetFrameSize(textW, textH)
+			la.SetFrameOrigin(defaultWindowPadding-c.scroll[posFirst].offset, baseFirst)
 		}
-	}
-	// CJK characters: ~1.0x fontSize (full-width)
-	// Non-CJK characters: ~0.5x fontSize (half-width, averaged for proportional fonts)
-	return c.origFontSz * (float64(cjkCount)*1.0 + float64(otherCount)*0.5)
+		if c.labels[posSecond].ID != 0 {
+			la := c.labels[posSecond].Animator()
+			la.SetFrameSize(textW, textH)
+			la.SetFrameOrigin(defaultWindowPadding-c.scroll[posSecond].offset, baseSecond)
+		}
+	}, nil)
+
+	c.currentWinW = frame.Size.Width
 }
 
-// isCJK checks if a rune is a CJK (Chinese, Japanese, Korean) character.
-func isCJK(r rune) bool {
-	return (r >= 0x4E00 && r <= 0x9FFF) || // CJK Unified Ideographs
-		(r >= 0x3400 && r <= 0x4DBF) || // CJK Unified Ideographs Extension A
-		(r >= 0x20000 && r <= 0x2A6DF) || // CJK Unified Ideographs Extension B
-		(r >= 0x2A700 && r <= 0x2B73F) || // CJK Unified Ideographs Extension C
-		(r >= 0x2B740 && r <= 0x2B81F) || // CJK Unified Ideographs Extension D
-		(r >= 0x2B820 && r <= 0x2CEAF) || // CJK Unified Ideographs Extension E
-		(r >= 0xF900 && r <= 0xFAFF) || // CJK Compatibility Ideographs
-		(r >= 0x2F800 && r <= 0x2FA1F) || // CJK Compatibility Ideographs Supplement
-		(r >= 0x3040 && r <= 0x309F) || // Hiragana
-		(r >= 0x30A0 && r <= 0x30FF) || // Katakana
-		(r >= 0xAC00 && r <= 0xD7AF) // Hangul Syllables
+// measureTextWidth returns the rendered width of text in points, measured with
+// the real display font via AppKit. This accounts for proportional Latin glyph
+// advances and full-width CJK / punctuation, eliminating the systematic
+// under-/over-estimation of the previous per-character heuristic.
+//
+// Called once per playback tick with a stable line, so a single-entry cache
+// avoids repeated Objective-C round-trips while the lyric line is unchanged.
+func (c *darwinController) measureTextWidth(text string) float64 {
+	if text == "" {
+		return 0
+	}
+	if text == c.measureCacheKey {
+		return c.measureCacheW
+	}
+	w := cocoa.MeasureTextSize(text, c.font).Width
+	c.measureCacheKey = text
+	c.measureCacheW = w
+	return w
 }
 
 // getLinePlainText extracts the display text from a LyricLine.
@@ -703,20 +784,41 @@ func (c *darwinController) resetScroll(pos int) {
 	}
 }
 
+// scheduleFrame arms the next animation tick, compensating for the latency of
+// the current handler and NSRunLoop so the cadence stays on the target grid
+// instead of drifting slower with every frame. delay is the desired inter-frame
+// interval; the actual sleep is shortened by however long we already overran
+// the previous deadline.
+func (c *darwinController) scheduleFrame(now time.Time, delay float64) {
+	sleep := delay
+	if !c.nextFrameAt.IsZero() {
+		// Overshoot of the previous deadline eats into this frame's budget.
+		if overshoot := now.Sub(c.nextFrameAt).Seconds(); overshoot > 0 {
+			sleep -= overshoot
+		}
+	}
+	if sleep < 0 {
+		sleep = 0
+	}
+	c.nextFrameAt = now.Add(time.Duration(sleep * float64(time.Second)))
+	cancelScheduled(sel_scrollTick)
+	scheduleAfter(sel_scrollTick, sleep)
+}
+
 // startAnimating ensures the shared animation tick is running.
 func (c *darwinController) startAnimating() {
 	if c.animating {
 		return
 	}
 	c.animating = true
-	cancelScheduled(sel_scrollTick)
-	scheduleAfter(sel_scrollTick, scrollTickInterval)
+	c.nextFrameAt = time.Time{}
+	c.scheduleFrame(time.Now(), scrollTickInterval)
 }
 
 func (c *darwinController) requestAnimationTick() {
 	c.animating = true
-	cancelScheduled(sel_scrollTick)
-	scheduleAfter(sel_scrollTick, scrollTickInterval)
+	c.nextFrameAt = time.Time{}
+	c.scheduleFrame(time.Now(), scrollTickInterval)
 }
 
 // advanceScroll advances one scroll state by elapsed seconds.
@@ -882,11 +984,6 @@ func (c *darwinController) doTick() {
 			c.labels[i].SetFrameOrigin(defaultWindowPadding-ss.offset, c.labelBaseY[i])
 		}
 	}
-
-	if c.tickWindowResize(now) {
-		hasAnimation = true
-	}
-
 	if delay, active := c.tickWordAnimation(now); active {
 		if !hasAnimation || delay < nextDelay {
 			nextDelay = delay
@@ -895,10 +992,10 @@ func (c *darwinController) doTick() {
 	}
 
 	if hasAnimation {
-		cancelScheduled(sel_scrollTick)
-		scheduleAfter(sel_scrollTick, nextDelay)
+		c.scheduleFrame(now, nextDelay)
 	} else {
 		c.animating = false
+		c.nextFrameAt = time.Time{}
 	}
 }
 
@@ -990,36 +1087,38 @@ func (c *darwinController) setLabelPlainText(label cocoa.NSTextField, line Lyric
 		}
 		text = sb.String()
 	}
-	if text != "" {
-		// Create attributed string to apply alignment
-		attrStr := cocoa.NSMutableAttributedString_alloc()
-		if attrStr.ID == 0 {
-			// Fallback to plain text if attributed string creation fails
-			label.SetStringValue(text)
-			label.SetTextColor(inactiveColor)
-			return
-		}
-		attrStr.InitWithString(text)
-		if attrStr.ID == 0 {
-			label.SetStringValue(text)
-			label.SetTextColor(inactiveColor)
-			return
-		}
-
-		// Apply color
-		textLen := utf16Length(text)
-		colorRange := cocoa.NSRange{Location: 0, Length: textLen}
-		attrStr.AddAttribute(cocoa.NSForegroundColorAttributeName, inactiveColor, colorRange)
-
-		// Apply alignment via paragraph style
-		paraStyle := cocoa.NewParagraphStyle()
-		paraStyle.SetAlignment(alignment)
-		attrStr.AddParagraphStyle(paraStyle, colorRange)
-		paraStyle.Release()
-
-		label.SetAttributedStringValue(attrStr)
-		attrStr.Release()
+	if text == "" {
+		label.SetStringValue("")
+		return
 	}
+	// Create attributed string to apply alignment
+	attrStr := cocoa.NSMutableAttributedString_alloc()
+	if attrStr.ID == 0 {
+		// Fallback to plain text if attributed string creation fails
+		label.SetStringValue(text)
+		label.SetTextColor(inactiveColor)
+		return
+	}
+	attrStr.InitWithString(text)
+	if attrStr.ID == 0 {
+		label.SetStringValue(text)
+		label.SetTextColor(inactiveColor)
+		return
+	}
+
+	// Apply color
+	textLen := utf16Length(text)
+	colorRange := cocoa.NSRange{Location: 0, Length: textLen}
+	attrStr.AddAttribute(cocoa.NSForegroundColorAttributeName, inactiveColor, colorRange)
+
+	// Apply alignment via paragraph style
+	paraStyle := cocoa.NewParagraphStyle()
+	paraStyle.SetAlignment(alignment)
+	attrStr.AddParagraphStyle(paraStyle, colorRange)
+	paraStyle.Release()
+
+	label.SetAttributedStringValue(attrStr)
+	attrStr.Release()
 }
 
 // blendColor creates a new NSColor by interpolating only the alpha channel.

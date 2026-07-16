@@ -167,27 +167,6 @@ func TestConstrainWindowWidth(t *testing.T) {
 	}
 }
 
-func TestWindowResizeWidth(t *testing.T) {
-	tests := []struct {
-		start, target, elapsed float64
-		want                   float64
-		done                   bool
-	}{
-		{start: 100, target: 300, elapsed: 0, want: 100, done: false},
-		{start: 100, target: 300, elapsed: 0.05, want: 131.25, done: false},
-		{start: 100, target: 300, elapsed: 0.1, want: 200, done: false},
-		{start: 100, target: 300, elapsed: 0.2, want: 300, done: true},
-		{start: 300, target: 100, elapsed: 0.1, want: 200, done: false},
-	}
-
-	for _, tt := range tests {
-		got, done := windowResizeWidth(tt.start, tt.target, tt.elapsed)
-		if math.Abs(got-tt.want) > 1e-9 || done != tt.done {
-			t.Errorf("windowResizeWidth(%v, %v, %v) = (%v, %t), want (%v, %t)", tt.start, tt.target, tt.elapsed, got, done, tt.want, tt.done)
-		}
-	}
-}
-
 func assertScrollState(t *testing.T, state *scrollState, wantOffset, wantPause float64) {
 	t.Helper()
 	if math.Abs(state.offset-wantOffset) > 1e-9 {

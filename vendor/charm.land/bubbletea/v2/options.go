@@ -101,6 +101,13 @@ func WithoutRenderer() ProgramOption {
 	}
 }
 
+// WithFoxfulRenderer selects the v0.25.0-foxful-compatible line renderer.
+func WithFoxfulRenderer() ProgramOption {
+	return func(p *Program) {
+		p.useFoxfulRenderer = true
+	}
+}
+
 // WithFilter supplies an event filter that will be invoked before Bubble Tea
 // processes a tea.Msg. The event filter can return any tea.Msg which will then
 // get handled by Bubble Tea instead of the original event. If the event filter

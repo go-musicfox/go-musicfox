@@ -156,25 +156,26 @@ func stripAnsiCodes(s string) string {
 // Update handles UI messages, primarily for resizing and configuration updates.
 func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 	main := r.netease.MustMain()
-	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow()
+	spectrumLines := r.netease.SpectrumLines(main)
+	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow() - spectrumLines
 
 	if !r.isVisible || spaceHeight < 3 {
 		r.lyricLines = 0
 		return
 	}
 
+	endRow := r.netease.WindowHeight() - 4 - spectrumLines
 	if spaceHeight >= 5 {
 		r.lyricLines = 5
-		r.lyricStartRow = (r.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 3
 	} else {
 		r.lyricLines = 3
-		r.lyricStartRow = (r.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 2
 	}
+	r.lyricStartRow = (main.MenuBottomRow() + endRow - r.lyricLines) / 2
 }
 
 // View renders the lyric component.
 func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
-	endRow := r.netease.WindowHeight() - 4
+	endRow := r.netease.WindowHeight() - 4 - r.netease.SpectrumLines(main)
 
 	if r.lyricLines == 0 {
 		if endRow-main.MenuBottomRow() > 0 {

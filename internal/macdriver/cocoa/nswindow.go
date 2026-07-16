@@ -18,37 +18,38 @@ var class_NSWindow objc.Class
 
 var (
 	sel_initWithContentRectStyleMaskBackingDefer = objc.RegisterName("initWithContentRect:styleMask:backing:defer:")
-	sel_setLevel                                = objc.RegisterName("setLevel:")
+	sel_setLevel                                 = objc.RegisterName("setLevel:")
 	sel_setBackgroundColor                       = objc.RegisterName("setBackgroundColor:")
-	sel_setAlphaValue                           = objc.RegisterName("setAlphaValue:")
-	sel_setIsVisible                            = objc.RegisterName("setIsVisible:")
-	sel_makeKeyAndOrderFront                    = objc.RegisterName("makeKeyAndOrderFront:")
-	sel_orderOut                                = objc.RegisterName("orderOut:")
-	sel_orderFront                              = objc.RegisterName("orderFront:")
-	sel_setCollectionBehavior                   = objc.RegisterName("setCollectionBehavior:")
-	sel_setMovableByWindowBackground            = objc.RegisterName("setMovableByWindowBackground:")
-	sel_setMovable                              = objc.RegisterName("setMovable:")
-	sel_setHasShadow                            = objc.RegisterName("setHasShadow:")
-	sel_setOpaque                               = objc.RegisterName("setOpaque:")
-	sel_setIgnoresMouseEvents                   = objc.RegisterName("setIgnoresMouseEvents:")
-	sel_setContentView                          = objc.RegisterName("setContentView:")
-	sel_contentView                             = objc.RegisterName("contentView")
-	sel_setFrameDisplay                         = objc.RegisterName("setFrame:display:")
-	sel_center                                  = objc.RegisterName("center")
-	sel_close                                   = objc.RegisterName("close")
-	sel_setTitlebarAppearsTransparent           = objc.RegisterName("setTitlebarAppearsTransparent:")
-	sel_setReleasedWhenClosed                   = objc.RegisterName("setReleasedWhenClosed:")
-	sel_setStyleMask                            = objc.RegisterName("setStyleMask:")
-	sel_orderBack                               = objc.RegisterName("orderBack:")
+	sel_setAlphaValue                            = objc.RegisterName("setAlphaValue:")
+	sel_setIsVisible                             = objc.RegisterName("setIsVisible:")
+	sel_makeKeyAndOrderFront                     = objc.RegisterName("makeKeyAndOrderFront:")
+	sel_orderOut                                 = objc.RegisterName("orderOut:")
+	sel_orderFront                               = objc.RegisterName("orderFront:")
+	sel_setCollectionBehavior                    = objc.RegisterName("setCollectionBehavior:")
+	sel_setMovableByWindowBackground             = objc.RegisterName("setMovableByWindowBackground:")
+	sel_setMovable                               = objc.RegisterName("setMovable:")
+	sel_setHasShadow                             = objc.RegisterName("setHasShadow:")
+	sel_setOpaque                                = objc.RegisterName("setOpaque:")
+	sel_setIgnoresMouseEvents                    = objc.RegisterName("setIgnoresMouseEvents:")
+	sel_setContentView                           = objc.RegisterName("setContentView:")
+	sel_contentView                              = objc.RegisterName("contentView")
+	sel_setFrameDisplay                          = objc.RegisterName("setFrame:display:")
+	sel_screen                                   = objc.RegisterName("screen")
+	sel_center                                   = objc.RegisterName("center")
+	sel_close                                    = objc.RegisterName("close")
+	sel_setTitlebarAppearsTransparent            = objc.RegisterName("setTitlebarAppearsTransparent:")
+	sel_setReleasedWhenClosed                    = objc.RegisterName("setReleasedWhenClosed:")
+	sel_setStyleMask                             = objc.RegisterName("setStyleMask:")
+	sel_orderBack                                = objc.RegisterName("orderBack:")
 )
 
 // NSWindowStyleMask values
 const (
-	NSWindowStyleMaskBorderless     uint = 0
-	NSWindowStyleMaskTitled         uint = 1 << 0
-	NSWindowStyleMaskClosable       uint = 1 << 1
-	NSWindowStyleMaskMiniaturizable uint = 1 << 2
-	NSWindowStyleMaskResizable      uint = 1 << 3
+	NSWindowStyleMaskBorderless          uint = 0
+	NSWindowStyleMaskTitled              uint = 1 << 0
+	NSWindowStyleMaskClosable            uint = 1 << 1
+	NSWindowStyleMaskMiniaturizable      uint = 1 << 2
+	NSWindowStyleMaskResizable           uint = 1 << 3
 	NSWindowStyleMaskFullSizeContentView uint = 1 << 15
 )
 
@@ -59,20 +60,20 @@ const (
 
 // NSWindowLevel
 const (
-	NSNormalWindowLevel     int = 0
-	NSFloatingWindowLevel   int = 3
+	NSNormalWindowLevel      int = 0
+	NSFloatingWindowLevel    int = 3
 	NSScreenSaverWindowLevel int = 1000
 )
 
 // NSWindowCollectionBehavior
 const (
-	NSWindowCollectionBehaviorDefault                    uint = 0
-	NSWindowCollectionBehaviorCanJoinAllSpaces           uint = 1 << 0
-	NSWindowCollectionBehaviorStationary                 uint = 1 << 4
-	NSWindowCollectionBehaviorFullScreenAuxiliary         uint = 1 << 17
-	NSWindowCollectionBehaviorFullScreenNone              uint = 1 << 9
-	NSWindowCollectionBehaviorFullScreenAllowsTiling      uint = 1 << 11
-	NSWindowCollectionBehaviorFullScreenDisallowsTiling   uint = 1 << 12
+	NSWindowCollectionBehaviorDefault                   uint = 0
+	NSWindowCollectionBehaviorCanJoinAllSpaces          uint = 1 << 0
+	NSWindowCollectionBehaviorStationary                uint = 1 << 4
+	NSWindowCollectionBehaviorFullScreenAuxiliary       uint = 1 << 17
+	NSWindowCollectionBehaviorFullScreenNone            uint = 1 << 9
+	NSWindowCollectionBehaviorFullScreenAllowsTiling    uint = 1 << 11
+	NSWindowCollectionBehaviorFullScreenDisallowsTiling uint = 1 << 12
 )
 
 type NSWindow struct {
@@ -171,6 +172,10 @@ func (w NSWindow) ContentView() NSView {
 
 func (w NSWindow) Frame() NSRect {
 	return objc.Send[NSRect](w.ID, sel_frame)
+}
+
+func (w NSWindow) Screen() NSScreen {
+	return NSScreen{NSObject: core.NSObject{ID: w.Send(sel_screen)}}
 }
 
 func (w NSWindow) SetFrameDisplayTopLeft(frameRect NSRect, display bool) {

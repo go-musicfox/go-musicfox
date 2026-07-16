@@ -4,11 +4,14 @@ package model
 
 import (
 	"strings"
+	"sync/atomic"
 
 	hook "github.com/robotn/gohook"
 )
 
 type GlobalKeyHandler func(hook.Event) Page
+
+var globalKeysStarted atomic.Bool
 
 func ListenGlobalKeys(app *App, handlers map[string]GlobalKeyHandler) {
 	for global, handler := range handlers {
@@ -23,5 +26,12 @@ func ListenGlobalKeys(app *App, handlers map[string]GlobalKeyHandler) {
 		})
 	}
 	s := hook.Start()
+	globalKeysStarted.Store(true)
 	hook.Process(s)
+}
+
+func stopGlobalKeys() {
+	if globalKeysStarted.Swap(false) {
+		hook.End()
+	}
 }

@@ -56,6 +56,10 @@ func (p *osxPlayer) StateChan() <-chan types.State {
 	return nil
 }
 
+func (*osxPlayer) Spectrum() SpectrumFrame {
+	return SpectrumFrame{}
+}
+
 func (p *osxPlayer) UpVolume() {
 }
 

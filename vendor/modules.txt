@@ -34,6 +34,9 @@ github.com/buger/jsonparser
 # github.com/charmbracelet/colorprofile v0.4.3
 ## explicit; go 1.25.0
 github.com/charmbracelet/colorprofile
+# github.com/charmbracelet/harmonica v0.2.0
+## explicit; go 1.16
+github.com/charmbracelet/harmonica
 # github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7
 ## explicit; go 1.25.0
 github.com/charmbracelet/ultraviolet

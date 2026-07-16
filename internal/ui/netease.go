@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
-	tea "charm.land/bubbletea/v2"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -55,6 +55,7 @@ type Netease struct {
 	songInfoRenderer *SongInfoRenderer
 	progressRenderer *ProgressRenderer
 	coverRenderer    *CoverRenderer
+	spectrumRenderer *SpectrumRenderer
 
 	player       *Player
 	shareSvc     *composer.ShareService
@@ -94,6 +95,7 @@ func NewNetease(app *model.App) *Netease {
 	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
 	n.progressRenderer = NewProgressRenderer(n, n.player)
 	n.coverRenderer = NewCoverRenderer(n, n.player)
+	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
@@ -106,24 +108,24 @@ func NewNetease(app *model.App) *Netease {
 }
 
 func (n *Netease) Components() []model.Component {
-	// CoverRenderer uses absolute positioning and returns 0 lines,
-	// so it doesn't affect the layout of other components.
-	// It should be rendered LAST to overlay the cover image after normal layout.
+	components := []model.Component{n.lyricRenderer}
+	if n.spectrumRenderer.IsEnabled() {
+		components = append(components, n.spectrumRenderer)
+	}
+	components = append(components, n.songInfoRenderer, n.progressRenderer)
+	// CoverRenderer uses absolute positioning and returns 0 lines, so it must
+	// be rendered last to overlay the normal layout.
 	if n.coverRenderer.IsEnabled() {
-		return []model.Component{
-			n.lyricRenderer,
-			n.songInfoRenderer,
-			n.progressRenderer,
-			n.coverRenderer,
-		}
+		components = append(components, n.coverRenderer)
 	}
+	return components
+}
 
-	// Default: just lyrics without cover
-	return []model.Component{
-		n.lyricRenderer,
-		n.songInfoRenderer,
-		n.progressRenderer,
+func (n *Netease) SpectrumLines(main *model.Main) int {
+	if n.spectrumRenderer == nil {
+		return 0
 	}
+	return n.spectrumRenderer.LineCount(n.WindowHeight(), main.MenuBottomRow())
 }
 
 // ToLoginPage 需要登录的处理

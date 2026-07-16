@@ -68,6 +68,7 @@ func (a *App) Init() tea.Cmd {
 }
 
 func (a *App) Close() {
+	stopGlobalKeys()
 	if a.options.CloseHook != nil {
 		a.options.CloseHook(a)
 	}
@@ -147,7 +148,7 @@ func (a *App) Run() error {
 		ListenGlobalKeys(a, a.options.GlobalKeyHandlers)
 	}
 
-	a.options.TeaOptions = append(a.options.TeaOptions, tea.WithHardTabs(false))
+	a.options.TeaOptions = append(a.options.TeaOptions, tea.WithHardTabs(false), tea.WithFoxfulRenderer())
 	a.program = tea.NewProgram(a, a.options.TeaOptions...)
 	_, err := a.program.Run()
 	return err

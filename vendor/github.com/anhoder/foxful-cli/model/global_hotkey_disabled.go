@@ -6,3 +6,6 @@ type GlobalKeyHandler interface{}
 
 func ListenGlobalKeys(_ *App, _ map[string]GlobalKeyHandler) {
 }
+
+func stopGlobalKeys() {
+}

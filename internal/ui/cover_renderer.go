@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anhoder/foxful-cli/model"
 	tea "charm.land/bubbletea/v2"
+	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
@@ -106,7 +106,7 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 // calculateDimensions calculates the cover image display dimensions.
 func (r *CoverRenderer) calculateDimensions() {
 	main := r.netease.MustMain()
-	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow()
+	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow() - r.netease.SpectrumLines(main)
 
 	if spaceHeight < 3 {
 		r.rows = 0
@@ -177,7 +177,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		lyricCenterRow := lyricStartRow + lyricLines
 		coverStartRow = lyricCenterRow - r.rows/2
 	} else {
-		coverStartRow = windowHeight - 2 - r.rows
+		coverStartRow = windowHeight - 2 - r.rows - r.netease.SpectrumLines(main)
 	}
 
 	if coverStartRow <= menuBottomRow {
@@ -186,12 +186,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if coverStartRow < 1 {
 		coverStartRow = 1
 	}
-	if coverStartRow+r.rows > windowHeight-1 {
-		coverStartRow = windowHeight - 1 - r.rows
+	if coverStartRow+r.rows > windowHeight-1-r.netease.SpectrumLines(main) {
+		coverStartRow = windowHeight - 1 - r.netease.SpectrumLines(main) - r.rows
 	}
 
 	// If cover can't fit at all, skip rendering
-	if r.rows > windowHeight-5 {
+	if r.rows > windowHeight-5-r.netease.SpectrumLines(main) {
 		return "", 0
 	}
 

@@ -8,7 +8,6 @@ import (
 	"github.com/ebitengine/purego/objc"
 
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
-	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 )
 
@@ -16,12 +15,15 @@ var (
 	helperClass objc.Class
 	helperInst  core.NSObject
 
-	sel_createWindow = objc.RegisterName("createWindow")
-	sel_showWindow   = objc.RegisterName("showWindow")
-	sel_hideWindow   = objc.RegisterName("hideWindow")
-	sel_closeWindow  = objc.RegisterName("closeWindow")
-	sel_updateText   = objc.RegisterName("updateText")
-	sel_scrollTick   = objc.RegisterName("scrollTick")
+	sel_createWindow          = objc.RegisterName("createWindow")
+	sel_showWindow            = objc.RegisterName("showWindow")
+	sel_hideWindow            = objc.RegisterName("hideWindow")
+	sel_closeWindow           = objc.RegisterName("closeWindow")
+	sel_updateText            = objc.RegisterName("updateText")
+	sel_scrollTick            = objc.RegisterName("scrollTick")
+	sel_windowWillMove        = objc.RegisterName("windowWillMove:")
+	sel_windowDidMove         = objc.RegisterName("windowDidMove:")
+	sel_persistWindowPosition = objc.RegisterName("persistWindowPosition")
 
 	sel_performSelectorOnMainThread = objc.RegisterName("performSelectorOnMainThread:withObject:waitUntilDone:")
 	sel_performAfterDelay           = objc.RegisterName("performSelector:withObject:afterDelay:")
@@ -33,7 +35,6 @@ var (
 )
 
 func init() {
-	cocoa.ImportCoreGraphics()
 
 	var err error
 	helperClass, err = objc.RegisterClass(
@@ -47,7 +48,10 @@ func init() {
 			{Cmd: sel_hideWindow, Fn: handleHideWindow},
 			{Cmd: sel_closeWindow, Fn: handleCloseWindow},
 			{Cmd: sel_updateText, Fn: handleUpdateText},
-		{Cmd: sel_scrollTick, Fn: handleScrollTick},
+			{Cmd: sel_scrollTick, Fn: handleScrollTick},
+			{Cmd: sel_windowWillMove, Fn: handleWindowWillMove},
+			{Cmd: sel_windowDidMove, Fn: handleWindowDidMove},
+			{Cmd: sel_persistWindowPosition, Fn: handlePersistWindowPosition},
 		},
 	)
 	if err != nil {
@@ -106,6 +110,24 @@ func handleUpdateText(id objc.ID, cmd objc.SEL) {
 func handleScrollTick(id objc.ID, cmd objc.SEL) {
 	if ctrl := getDispatchCtrl(); ctrl != nil {
 		ctrl.doTick()
+	}
+}
+
+func handleWindowWillMove(id objc.ID, cmd objc.SEL, notification objc.ID) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		ctrl.beginWindowMove()
+	}
+}
+
+func handleWindowDidMove(id objc.ID, cmd objc.SEL, notification objc.ID) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		ctrl.scheduleWindowPositionPersist()
+	}
+}
+
+func handlePersistWindowPosition(id objc.ID, cmd objc.SEL) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		ctrl.persistWindowPosition()
 	}
 }
 

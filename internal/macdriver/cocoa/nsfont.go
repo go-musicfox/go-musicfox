@@ -19,6 +19,7 @@ var (
 	sel_fontWithNameSize   = objc.RegisterName("fontWithName:size:")
 	sel_systemFontOfSize   = objc.RegisterName("systemFontOfSize:")
 	sel_boldSystemFontOfSize = objc.RegisterName("boldSystemFontOfSize:")
+	sel_sizeWithAttributes   = objc.RegisterName("sizeWithAttributes:")
 )
 
 type NSFont struct {
@@ -50,4 +51,26 @@ func NSFont_BoldSystemFontOfSize(fontSize CGFloat) NSFont {
 			ID: objc.ID(class_NSFont).Send(sel_boldSystemFontOfSize, fontSize),
 		},
 	}
+}
+
+// NSFontAttributeName is the attributed-string key for a font.
+// Its underlying Foundation string value is "NSFont".
+const NSFontAttributeName = "NSFont"
+
+// MeasureTextSize returns the rendered size of text drawn with font, using
+// -[NSString sizeWithAttributes:]. This reflects the font's real glyph advances
+// (proportional Latin widths, full-width CJK and punctuation) rather than a
+// per-character heuristic.
+func MeasureTextSize(text string, font NSFont) CGSize {
+	nsStr := core.NSString_alloc().InitWithUTF8String(text)
+	defer nsStr.Release()
+
+	key := core.NSString_alloc().InitWithUTF8String(NSFontAttributeName)
+	defer key.Release()
+
+	attrs := core.NSMutableDictionary_init()
+	defer attrs.Release()
+	attrs.SetValueForKey(key, font.NSObject)
+
+	return objc.Send[CGSize](nsStr.ID, sel_sizeWithAttributes, attrs.ID)
 }

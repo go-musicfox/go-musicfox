@@ -31,6 +31,17 @@ debug = false
 # 播放时 UI 刷新帧率（更高帧率可使动画更平滑，但消耗更多cpu）
 frameRate = 5
 
+# 实时频谱显示（目前仅支持 macOS 的 osx 播放引擎）
+[main.visualizer]
+# 是否显示实时频谱
+enable = false
+# 频谱最大行数（0 表示不限制；会随可用空间自动缩小）
+maxHeight = 0
+# 频谱半单元、满单元和空单元字符（每项仅使用首个 Unicode 字符）
+fullCharHalfBlock = "▌"
+fullCharFullBlock = "█"
+emptyCharBlock = " "
+
 
 # 桌面通知相关设置
 [main.notification]

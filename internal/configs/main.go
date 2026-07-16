@@ -1,8 +1,6 @@
 package configs
 
-import (
-	"github.com/go-musicfox/netease-music/service"
-)
+import "github.com/go-musicfox/netease-music/service"
 
 type MainOptions struct {
 	ShowTitle              bool                     // 主界面是否显示标题
@@ -41,7 +39,8 @@ type MainConfig struct {
 	// 是否启用 Debug
 	Debug bool `koanf:"debug"`
 	// 播放时 UI 刷新帧率
-	FrameRate FrameRate `koanf:"frameRate"`
+	FrameRate  FrameRate        `koanf:"frameRate"`
+	Visualizer VisualizerConfig `koanf:"visualizer"`
 
 	Notification NotificationConfig `koanf:"notification"`
 	Lyric        LyricConfig        `koanf:"lyric"`
@@ -57,6 +56,27 @@ type NotificationConfig struct {
 	Icon string `koanf:"icon"`
 	// 通知显示专辑封面
 	AlbumCover bool `koanf:"albumCover"`
+}
+
+// VisualizerConfig controls live spectrum rendering.
+type VisualizerConfig struct {
+	Enable            bool   `koanf:"enable"`
+	MaxHeight         int    `koanf:"maxHeight"`
+	FullCharHalfBlock string `koanf:"fullCharHalfBlock"`
+	FullCharFullBlock string `koanf:"fullCharFullBlock"`
+	EmptyCharBlock    string `koanf:"emptyCharBlock"`
+}
+
+// Characters returns the configured spectrum glyphs with Bubbles-style defaults.
+func (c VisualizerConfig) Characters() (halfBlock, fullBlock, emptyBlock rune) {
+	return firstCharOrDefault(c.FullCharHalfBlock, "▌"),
+		firstCharOrDefault(c.FullCharFullBlock, "█"),
+		firstCharOrDefault(c.EmptyCharBlock, " ")
+}
+
+// MaxBarHeight returns zero for an unlimited spectrum height.
+func (c VisualizerConfig) MaxBarHeight() int {
+	return max(0, c.MaxHeight)
 }
 
 // LyricConfig 歌词显示相关设置
