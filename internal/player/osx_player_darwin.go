@@ -315,8 +315,8 @@ func (p *osxPlayer) Close() {
 	if p.spectrum != nil {
 		p.spectrum.Close()
 	}
-	p.handler.Release()
-	if p.player != nil {
-		p.player.Release()
-	}
+	// Skip ObjC Release calls during shutdown to avoid SIGSEGV.
+	// During app termination the ObjC runtime may be in an inconsistent
+	// state, and calling release on ObjC objects can cause a segfault in
+	// the purego cgo bridge. The OS reclaims resources on process exit.
 }

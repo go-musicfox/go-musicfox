@@ -143,12 +143,15 @@ type darwinController struct {
 	labelBaseY      [2]float64   // stored Y position per label
 	needLargeHeight bool         // true when any visible line has \n (translation)
 
-	// Fullscreen + subview drag architecture (LyricsX-style)
 	containerView cocoa.NSView  // LyricsDragView subclass — content container
-	contentOrigin cocoa.CGPoint // current origin of containerView within window
+	contentOrigin cocoa.CGPoint // window's screen origin (bottom-left)
 	dragActive    bool          // true during mouse drag
-	dragOffsetX   float64       // mouse offset from container center at drag start (window coords)
-	dragOffsetY   float64
+
+	dragStartScreenMX float64 // screen mouse X at drag start
+	dragStartScreenMY float64 // screen mouse Y at drag start
+	dragStartXFactor  float64 // xFactor at drag start
+	dragStartYFactor  float64 // yFactor at drag start
+	currentContentH   float64 // cached content height for drag calculations
 
 	// LyricsX-style screen-relative center positioning (0–1).
 	// These factors survive resizes; absolute origin is derived from them.
@@ -204,11 +207,11 @@ func (c *darwinController) createWindow() {
 		lineCount = 1
 	}
 
-	// Use visible frame (excludes menu bar and Dock) for the fullscreen window.
+	// Cache screen visible frame for coordinate calculations.
 	visibleFrame := cocoa.NSScreen_MainScreen().VisibleFrame()
 	c.screenFrame = visibleFrame
 
-	// Minimum window width: tighter for one-line, wider for two-line.
+	// Minimum window width
 	if c.cfg.OneLineMode {
 		c.minWinW = fontSize * 5
 	} else {
@@ -231,13 +234,28 @@ func (c *darwinController) createWindow() {
 	c.currentWinW = c.minWinW
 	c.targetWinW = c.currentWinW
 
-	// ---- Fullscreen borderless window ----
-	rect := cocoa.NSRect{
-		Origin: visibleFrame.Origin,
-		Size:   visibleFrame.Size,
+	// Compute initial content size
+	labelH := 2*lineH + 2*defaultLineSpacing // needLargeHeight=true initially
+	contentW := c.currentWinW
+	contentH := float64(lineCount)*labelH + padding*2
+	if lineCount == 2 {
+		contentH += labelGap
+	}
+	c.currentContentH = contentH
+
+	// Compute initial window screen position from factors
+	originX := c.screenFrame.Origin.X + c.screenFrame.Size.Width*c.xFactor - contentW/2
+	originY := c.screenFrame.Origin.Y + c.screenFrame.Size.Height*c.yFactor - contentH/2
+	originX, originY = c.constrainWindowOrigin(originX, originY, contentW, contentH)
+	c.contentOrigin = cocoa.CGPoint{X: originX, Y: originY}
+
+	// ---- Content-sized borderless window ----
+	windowRect := cocoa.NSRect{
+		Origin: c.contentOrigin,
+		Size:   cocoa.CGSize{Width: contentW, Height: contentH},
 	}
 	c.window = cocoa.NSWindow_alloc().InitWithContentRectStyleMaskBackingDefer(
-		rect,
+		windowRect,
 		cocoa.NSWindowStyleMaskBorderless|cocoa.NSWindowStyleMaskFullSizeContentView,
 		cocoa.NSBackingStoreBuffered,
 		false,
@@ -256,35 +274,19 @@ func (c *darwinController) createWindow() {
 			cocoa.NSWindowCollectionBehaviorStationary,
 	)
 	c.window.SetBackgroundColor(cocoa.NSColor_ClearColor())
-	// When not draggable, let mouse events pass through to apps behind.
 	c.window.SetIgnoresMouseEvents(!c.cfg.Draggable)
 
 	// Content view (fills window)
 	contentView := c.window.ContentView()
 	contentView.SetWantsLayer(true)
 
-	// ---- LyricsDragView container ----
+	// ---- LyricsDragView container (at 0,0 within window) ----
 	dragViewID := objc.ID(dragViewClass).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init)
 	c.containerView = cocoa.NSView{NSObject: core.NSObject{ID: dragViewID}}
 	c.containerView.SetWantsLayer(true)
 
-	// Initial content size (large height as safe default for translations).
-	labelH := 2*lineH + 2*defaultLineSpacing
-	textH := labelH
-	textW := c.currentWinW - padding*2
-	contentH := float64(lineCount)*labelH + padding*2
-	if lineCount == 2 {
-		contentH += labelGap
-	}
-
-	// Position from factors
-	originX := c.screenFrame.Size.Width*c.xFactor - c.currentWinW/2
-	originY := c.screenFrame.Size.Height*c.yFactor - contentH/2
-	originX, originY = c.constrainWindowOrigin(originX, originY, c.currentWinW, contentH)
-	c.contentOrigin = cocoa.CGPoint{X: originX, Y: originY}
-
-	c.containerView.SetFrameOrigin(originX, originY)
-	c.containerView.SetFrameSize(c.currentWinW, contentH)
+	c.containerView.SetFrameOrigin(0, 0)
+	c.containerView.SetFrameSize(contentW, contentH)
 
 	// Font
 	c.font = cocoa.NSFont_SystemFontOfSize(cocoa.CGFloat(fontSize))
@@ -302,10 +304,10 @@ func (c *darwinController) createWindow() {
 	)
 	shadow := c.makeShadow()
 
-	// ---- bgView inside container ----
+	// ---- bgView inside container (at 0,0, same size) ----
 	bgRect := cocoa.NSRect{
 		Origin: cocoa.CGPoint{X: 0, Y: 0},
-		Size:   cocoa.CGSize{Width: c.currentWinW, Height: contentH},
+		Size:   cocoa.CGSize{Width: contentW, Height: contentH},
 	}
 	c.bgView = cocoa.NSView_alloc().InitWithFrame(bgRect)
 	c.bgView.SetWantsLayer(true)
@@ -327,23 +329,20 @@ func (c *darwinController) createWindow() {
 	c.containerView.AddSubview(c.bgView)
 
 	// ---- Labels ----
+	textW := contentW - padding*2
+	textH := labelH
 	if !c.cfg.OneLineMode {
-		// Two-line: posFirst at top (left-aligned), posSecond at bottom (right-aligned).
 		baseFirst := padding + textH + labelGap
 		baseSecond := padding
 		c.labelBaseY[posFirst] = baseFirst
 		c.labelBaseY[posSecond] = baseSecond
-
 		c.labels[posFirst] = c.makeTextField(baseFirst, padding, textW, textH, inactiveColor, shadow)
 		c.labels[posFirst].SetAlignment(nsTextAlignmentLeft)
-
 		c.labels[posSecond] = c.makeTextField(padding, padding, textW, textH, inactiveColor, shadow)
 		c.labels[posSecond].SetAlignment(nsTextAlignmentRight)
-
 		c.bgView.AddSubview(c.labels[posFirst].NSView)
 		c.bgView.AddSubview(c.labels[posSecond].NSView)
 	} else {
-		// One-line: only posSecond centered.
 		c.labelBaseY[posSecond] = padding
 		c.labels[posSecond] = c.makeTextField(padding, padding, textW, textH, inactiveColor, shadow)
 		c.labels[posSecond].SetAlignment(nsTextAlignmentCenter)
@@ -409,19 +408,21 @@ func loadDesktopLyricsPosition() (storage.DesktopLyricsPosition, bool) {
 	return position, true
 }
 
-// constrainWindowOrigin clamps origin (window-relative, i.e. relative to
-// screenFrame.Origin) so the content stays within the fullscreen window bounds.
+// constrainWindowOrigin clamps the window's screen origin so the content
+// stays within the screen's visible frame.
 func (c *darwinController) constrainWindowOrigin(originX, originY, width, height float64) (float64, float64) {
-	if originX < 0 {
-		originX = 0
-	}
-	if maxX := c.screenFrame.Size.Width - width; originX > maxX {
+	minX := c.screenFrame.Origin.X
+	maxX := c.screenFrame.Origin.X + c.screenFrame.Size.Width - width
+	if originX < minX {
+		originX = minX
+	} else if originX > maxX {
 		originX = maxX
 	}
-	if originY < 4 {
-		originY = 4
-	}
-	if maxY := c.screenFrame.Size.Height - height; originY > maxY {
+	minY := c.screenFrame.Origin.Y + 4
+	maxY := c.screenFrame.Origin.Y + c.screenFrame.Size.Height - height
+	if originY < minY {
+		originY = minY
+	} else if originY > maxY {
 		originY = maxY
 	}
 	return originX, originY
@@ -438,7 +439,7 @@ func (c *darwinController) doShow() {
 	c.pendingMu.Unlock()
 
 	c.window.SetIsVisible(true)
-	c.window.MakeKeyAndOrderFront(0)
+	c.window.OrderFront(0) // was MakeKeyAndOrderFront
 
 	c.pendingMu.Lock()
 	c.visible = true
@@ -622,8 +623,8 @@ func constrainWindowWidth(width, minWidth, maxWidth float64) float64 {
 	return min(max(width, minWidth), maxWidth)
 }
 
-// resizeWindow is a thin wrapper: it clamps the width and triggers an animated
-// content re-layout. The fullscreen window itself never changes size.
+// resizeWindow clamps the width and triggers an animated content re-layout.
+// The window frame is updated during layoutContent to match the new content size.
 func (c *darwinController) resizeWindow(newW float64) {
 	if c.closed || c.window.ID == 0 {
 		return
@@ -637,8 +638,8 @@ func (c *darwinController) resizeWindow(newW float64) {
 	c.layoutContent(true)
 }
 
-// layoutContent computes the containerView's frame from current factors and
-// content size, then applies it. If animate=true, uses NSAnimationContext.
+// layoutContent computes the window frame from current factors and content size,
+// then moves/resizes the window. If animate=true, uses NSAnimationContext.
 func (c *darwinController) layoutContent(animate bool) {
 	padding := defaultWindowPadding
 	lineH := c.origFontSz + defaultLineSpacing
@@ -655,17 +656,23 @@ func (c *darwinController) layoutContent(animate bool) {
 	if lineCount == 2 {
 		contentH += labelGap
 	}
+	c.currentContentH = contentH
 
-	// Compute container origin from screen-relative center factors.
-	originX := c.screenFrame.Size.Width*c.xFactor - contentW/2
-	originY := c.screenFrame.Size.Height*c.yFactor - contentH/2
+	// Compute window screen origin from factors
+	originX := c.screenFrame.Origin.X + c.screenFrame.Size.Width*c.xFactor - contentW/2
+	originY := c.screenFrame.Origin.Y + c.screenFrame.Size.Height*c.yFactor - contentH/2
 	originX, originY = c.constrainWindowOrigin(originX, originY, contentW, contentH)
 	c.contentOrigin = cocoa.CGPoint{X: originX, Y: originY}
 
-	// Compute label positions (relative to bgView).
+	windowRect := cocoa.NSRect{
+		Origin: c.contentOrigin,
+		Size:   cocoa.CGSize{Width: contentW, Height: contentH},
+	}
+
+	// Label positions (relative to bgView which is at 0,0)
 	textW := contentW - padding*2
 	textH := labelH
-	baseFirst := padding + textH + labelGap // only used in two-line mode
+	baseFirst := padding + textH + labelGap
 	baseSecond := padding
 	if lineCount == 2 {
 		c.labelBaseY[posFirst] = baseFirst
@@ -673,13 +680,17 @@ func (c *darwinController) layoutContent(animate bool) {
 	c.labelBaseY[posSecond] = baseSecond
 
 	if animate {
+		// Animate window frame and subviews together under a single
+		// NSAnimationContext so the bgView's cornerRadius stays in sync
+		// with the window bounds — avoids right-edge corner going square.
 		cocoa.NSAnimationContext_RunAnimationGroup(func(ctx cocoa.NSAnimationContext) {
 			ctx.SetDuration(0.3)
 			ctx.SetTimingFunction(cocoa.CAMediaTimingFunction_FunctionWithName(cocoa.CAMediaTimingFunctionEaseInEaseOut))
 			ctx.SetAllowsImplicitAnimation(true)
 
+			c.window.Animator().SetFrameDisplayAnimated(windowRect, true)
+
 			c.containerView.Animator().SetFrameSize(contentW, contentH)
-			c.containerView.Animator().SetFrameOrigin(originX, originY)
 			c.bgView.Animator().SetFrameSize(contentW, contentH)
 			if c.labels[posFirst].ID != 0 {
 				la := c.labels[posFirst].Animator()
@@ -693,8 +704,11 @@ func (c *darwinController) layoutContent(animate bool) {
 			}
 		}, nil)
 	} else {
+		// Immediate reposition (during drag or initial setup)
+		c.window.SetFrameDisplayTopLeft(windowRect, true)
+
 		c.containerView.SetFrameSize(contentW, contentH)
-		c.containerView.SetFrameOrigin(originX, originY)
+		c.containerView.SetFrameOrigin(0, 0)
 		c.bgView.SetFrameSize(contentW, contentH)
 		if c.labels[posFirst].ID != 0 {
 			c.labels[posFirst].SetFrameSize(textW, textH)
@@ -707,48 +721,36 @@ func (c *darwinController) layoutContent(animate bool) {
 	}
 }
 
-// ---- Drag handlers (LyricsX-style: subview drag via LyricsDragView) ----
+// ---- Drag handlers (delta-based for content-sized window) ----
 
-// handleDragStart records the offset from the mouse position to the container center.
+// handleDragStart records the starting screen mouse position and factors.
 func (c *darwinController) handleDragStart(mouseX, mouseY float64) {
 	if !c.cfg.Draggable || c.closed {
 		return
 	}
-	// Content height: compute from current needLargeHeight for center calc.
-	lineH := c.origFontSz + defaultLineSpacing
-	labelH := lineH + defaultLineSpacing
-	if c.needLargeHeight {
-		labelH = 2*lineH + 2*defaultLineSpacing
-	}
-	lineCount := 2
-	if c.cfg.OneLineMode {
-		lineCount = 1
-	}
-	contentH := float64(lineCount)*labelH + defaultWindowPadding*2
-	if lineCount == 2 {
-		contentH += labelGap
-	}
-	cx := c.contentOrigin.X + c.currentWinW/2
-	cy := c.contentOrigin.Y + contentH/2
-	c.dragOffsetX = cx - mouseX
-	c.dragOffsetY = cy - mouseY
+	// Convert window-relative mouse to screen coordinates
+	c.dragStartScreenMX = c.contentOrigin.X + mouseX
+	c.dragStartScreenMY = c.contentOrigin.Y + mouseY
+	c.dragStartXFactor = c.xFactor
+	c.dragStartYFactor = c.yFactor
 	c.dragActive = true
 }
 
-// handleDragMove updates the position factors based on mouse movement.
+// handleDragMove updates factors based on mouse delta from drag start.
 func (c *darwinController) handleDragMove(mouseX, mouseY float64) {
 	if !c.dragActive {
 		return
 	}
-	// Compute new center in window coordinates.
-	newCenterX := mouseX + c.dragOffsetX
-	newCenterY := mouseY + c.dragOffsetY
+	screenMouseX := c.contentOrigin.X + mouseX
+	screenMouseY := c.contentOrigin.Y + mouseY
 
-	// Convert to factors (0–1 range within screen).
-	c.xFactor = newCenterX / c.screenFrame.Size.Width
-	c.yFactor = newCenterY / c.screenFrame.Size.Height
+	deltaX := screenMouseX - c.dragStartScreenMX
+	deltaY := screenMouseY - c.dragStartScreenMY
 
-	// Clamp to valid range.
+	c.xFactor = c.dragStartXFactor + deltaX/c.screenFrame.Size.Width
+	c.yFactor = c.dragStartYFactor + deltaY/c.screenFrame.Size.Height
+
+	// Clamp to 0–1
 	if c.xFactor < 0 {
 		c.xFactor = 0
 	}
@@ -762,21 +764,22 @@ func (c *darwinController) handleDragMove(mouseX, mouseY float64) {
 		c.yFactor = 1
 	}
 
-	// Snap to center if within 8px.
-	centerSnapX := c.screenFrame.Size.Width / 2
-	centerSnapY := c.screenFrame.Size.Height / 2
-	if math.Abs(newCenterX-centerSnapX) < 8 {
+	// Snap to center if within 8px
+	centerScreenX := c.screenFrame.Origin.X + c.screenFrame.Size.Width/2
+	centerScreenY := c.screenFrame.Origin.Y + c.screenFrame.Size.Height/2
+	contentCenterX := c.contentOrigin.X + c.currentWinW/2
+	contentCenterY := c.contentOrigin.Y + c.currentContentH/2
+	if math.Abs(contentCenterX-centerScreenX) < 8 {
 		c.xFactor = 0.5
 	}
-	if math.Abs(newCenterY-centerSnapY) < 8 {
+	if math.Abs(contentCenterY-centerScreenY) < 8 {
 		c.yFactor = 0.5
 	}
 
-	// Reposition immediately (no animation during drag).
 	c.layoutContent(false)
 }
 
-// handleDragEnd persists the current factors and cleans up.
+// handleDragEnd persists factors and cleans up.
 func (c *darwinController) handleDragEnd() {
 	if !c.dragActive {
 		return
@@ -792,7 +795,7 @@ func (c *darwinController) persistPositionFactors() {
 	if screen.ID == 0 || screenID == 0 {
 		return
 	}
-	// Update screen frame cache (use visibleFrame since the window covers it).
+	// Update screen frame cache (contentOrigin is now window's screen origin).
 	c.screenFrame = screen.VisibleFrame()
 
 	position := storage.DesktopLyricsPosition{

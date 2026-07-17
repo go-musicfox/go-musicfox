@@ -119,7 +119,7 @@ const (
 	// SpectrumReservedLines is the number of lines reserved above the
 	// spectrum (for song info, progress bar, etc).
 	// 频谱上方预留的行数（用于歌曲信息、进度条等）。
-	SpectrumReservedLines = 2
+	SpectrumReservedLines = 1
 
 	// ---- Progress bar constants / 进度条常量 ----
 
