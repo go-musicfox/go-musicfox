@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/util"
+	"github.com/lucasb-eyer/go-colorful"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/player"
@@ -35,6 +36,9 @@ type SpectrumRenderer struct {
 	provider          player.SpectrumProvider
 	progressLastWidth float64
 	progressRamp      []color.Color
+	vertLastWidth     float64
+	vertLastHeight    int
+	vertRowRamps      [][]color.Color // per-row ramps for vertical gradient, nil when disabled
 }
 
 func NewSpectrumRenderer(state *Player) *SpectrumRenderer {
@@ -55,19 +59,32 @@ func (r *SpectrumRenderer) layout(windowHeight, menuBottomRow int) spectrumLayou
 	if !r.IsEnabled() {
 		return spectrumLayout{}
 	}
-	space := windowHeight - 5 - menuBottomRow
-	if space < 4 {
-		return spectrumLayout{}
+
+	var barLines int
+	space := windowHeight - FixedTopBottomRows - menuBottomRow
+
+	// Lyrics/cover take priority over spectrum; spectrum shrinks first.
+	// Works for both static and dynamic menu modes — when the window is
+	// small and DynamicMenuRows gives the menu fewer rows, spectrum
+	// auto-shrinks or hides to free up space.
+	neededLyricLines := 0
+	if space >= FullLyricLines {
+		neededLyricLines = FullLyricLines
+	} else if space >= CompactLyricLines {
+		neededLyricLines = CompactLyricLines
 	}
-	lyricLines := min(5, max(0, space-4))
-	barLines := space - lyricLines - 2
+	barLines = max(0, space-neededLyricLines-SpectrumReservedLines)
 	if maxHeight := configs.AppConfig.Main.Visualizer.MaxBarHeight(); maxHeight > 0 {
 		barLines = min(barLines, maxHeight)
 	}
+
+	if barLines == 0 {
+		return spectrumLayout{}
+	}
 	return spectrumLayout{
-		topPadding:    1,
+		topPadding:    SpectrumVerticalPadding,
 		barLines:      barLines,
-		bottomPadding: 1,
+		bottomPadding: SpectrumVerticalPadding,
 	}
 }
 
@@ -108,9 +125,14 @@ func (r *SpectrumRenderer) render(frame player.SpectrumFrame, width, height int)
 
 	halfBlock, fullBlock, emptyBlock := configs.AppConfig.Main.Visualizer.Characters()
 	progressRamp := r.ramp(width)
+	rowRamps := r.rowRamps(width, height)
 	for row := 0; row < height; row++ {
+		ramp := progressRamp
+		if len(rowRamps) > 0 {
+			ramp = rowRamps[row]
+		}
 		level := spectrumRowLevel(frame, row, height)
-		builder.WriteString(renderSpectrumBar(level, width, progressRamp, halfBlock, fullBlock, emptyBlock))
+		builder.WriteString(renderSpectrumBar(level, width, ramp, halfBlock, fullBlock, emptyBlock))
 		builder.WriteByte('\n')
 	}
 	return builder.String()
@@ -123,6 +145,44 @@ func (r *SpectrumRenderer) ramp(width int) []color.Color {
 		r.progressLastWidth = float64(width)
 	}
 	return r.progressRamp
+}
+
+// rowRamps returns precomputed per-row horizontal ramps blended with a vertical
+// gradient. When vertical gradient is disabled it returns nil and render() falls
+// back to the plain horizontal ramp.
+func (r *SpectrumRenderer) rowRamps(width, height int) [][]color.Color {
+	if !configs.AppConfig.Main.Visualizer.VerticalGradient {
+		return nil
+	}
+	if r.vertLastWidth == float64(width) && r.vertLastHeight == height && len(r.vertRowRamps) > 0 {
+		return r.vertRowRamps
+	}
+	if height <= 1 {
+		return nil
+	}
+
+	baseRamp := r.ramp(width)
+
+	// Generate independent color pair for vertical gradient with wider color span.
+	vertStart, vertEnd := util.GetRandomRgbColor(true)
+	cStart, _ := colorful.Hex(vertStart)
+	cEnd, _ := colorful.Hex(vertEnd)
+
+	r.vertRowRamps = make([][]color.Color, height)
+	for row := 0; row < height; row++ {
+		t := float64(row) / float64(height-1) // 0=top, 1=bottom
+		vColor := cStart.BlendLuv(cEnd, t)    // top→start, bottom→end
+
+		rowRamp := make([]color.Color, len(baseRamp))
+		for i, c := range baseRamp {
+			hColor, _ := colorful.MakeColor(c)
+			rowRamp[i] = hColor.BlendLuv(vColor, 0.65)
+		}
+		r.vertRowRamps[row] = rowRamp
+	}
+	r.vertLastWidth = float64(width)
+	r.vertLastHeight = height
+	return r.vertRowRamps
 }
 
 func renderSpectrumBar(level float64, width int, progressRamp []color.Color, halfBlock, fullBlock, emptyBlock rune) string {

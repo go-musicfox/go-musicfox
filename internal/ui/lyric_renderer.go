@@ -25,7 +25,7 @@ type LyricRenderer struct {
 	isVisible         bool
 	lyricLines        int // 3 or 5
 	lyricStartRow     int
-	lyrics            [5]string // A fixed-size array to hold lines for rendering
+	lyrics            []string // Dynamic-size slice to hold lines for rendering
 	lyricNowScrollBar *app.XScrollBar
 	currentTimeMs     int64     // Current playback time in milliseconds for YRC rendering
 	lastViewTime      time.Time // For debug logging
@@ -156,30 +156,32 @@ func stripAnsiCodes(s string) string {
 // Update handles UI messages, primarily for resizing and configuration updates.
 func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 	main := r.netease.MustMain()
-	spectrumLines := r.netease.SpectrumLines(main)
-	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow() - spectrumLines
+	specLines := r.netease.SpectrumLines(main)
+	spaceHeight := r.netease.WindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - specLines
 
-	if !r.isVisible || spaceHeight < 3 {
+	if !r.isVisible || spaceHeight < MinSpaceHeight {
 		r.lyricLines = 0
 		return
 	}
 
-	endRow := r.netease.WindowHeight() - 4 - spectrumLines
-	if spaceHeight >= 5 {
-		r.lyricLines = 5
+	endRow := r.netease.WindowHeight() - EndRowMargin
+	if spaceHeight >= FullLyricLines {
+		r.lyricLines = FullLyricLines
 	} else {
-		r.lyricLines = 3
+		r.lyricLines = CompactLyricLines
 	}
-	r.lyricStartRow = (main.MenuBottomRow() + endRow - r.lyricLines) / 2
+	r.lyricStartRow = (main.MenuBottomRow() + specLines + endRow - r.lyricLines) / 2
 }
 
 // View renders the lyric component.
 func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
-	endRow := r.netease.WindowHeight() - 4 - r.netease.SpectrumLines(main)
+	specLines := r.netease.SpectrumLines(main)
+	endRow := r.netease.WindowHeight() - EndRowMargin
 
 	if r.lyricLines == 0 {
-		if endRow-main.MenuBottomRow() > 0 {
-			return strings.Repeat("\n", endRow-main.MenuBottomRow()), endRow - main.MenuBottomRow()
+		fillingLines := endRow - main.MenuBottomRow() - specLines
+		if fillingLines > 0 {
+			return strings.Repeat("\n", fillingLines), fillingLines
 		}
 		return "", 0
 	}
@@ -192,8 +194,9 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	r.prepareLyricLines()
 
 	var lyricBuilder strings.Builder
-	if r.lyricStartRow > main.MenuBottomRow() {
-		lyricBuilder.WriteString(strings.Repeat("\n", r.lyricStartRow-main.MenuBottomRow()))
+	topPadding := r.lyricStartRow - main.MenuBottomRow() - specLines
+	if topPadding > 0 {
+		lyricBuilder.WriteString(strings.Repeat("\n", topPadding))
 	}
 
 	if main.CenterEverything() {
@@ -220,7 +223,7 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 // prepareLyricLines fetches the latest state from the service and prepares the `r.lyrics` array for rendering.
 func (r *LyricRenderer) prepareLyricLines() {
 	state := r.lyricService.State()
-	r.lyrics = [5]string{} // Clear previous lines
+	r.lyrics = make([]string, r.lyricLines) // Allocate based on current lyric line count
 
 	if !state.IsRunning {
 		return
@@ -343,17 +346,18 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 	// coverEndCol is the column where cover ends (1-indexed), so we need to offset by coverEndCol
 	lyricStartCol := coverEndCol
 	if lyricStartCol > 0 {
-		lyricStartCol += 2 // Add some padding after cover
+		lyricStartCol += CoverRightPadding // Add some padding after cover
 	}
 	availableWidth := windowWidth - lyricStartCol
 
-	highlightLine := 2
+	// 以 lyrics 数组的中心为高亮行（3 行模式索引 1，5 行模式索引 2）。
+	highlightLine := (r.lyricLines - 1) / 2
 	startLine := highlightLine - (r.lyricLines-1)/2
 	endLine := highlightLine + (r.lyricLines-1)/2
-	extraPadding := 8 + max(0, (availableWidth-40)/5)
+	extraPadding := MinLyricExtraPadding + max(0, (availableWidth-LyricBaseWidth)/LyricPaddingDivisor)
 	lyricsMaxLength := availableWidth - extraPadding
-	if lyricsMaxLength < 20 {
-		lyricsMaxLength = 20
+	if lyricsMaxLength < MinLyricWidth {
+		lyricsMaxLength = MinLyricWidth
 	}
 
 	for i := startLine; i <= endLine; i++ {
@@ -397,19 +401,19 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 
 	var startCol int
 	if main.IsDualColumn() {
-		startCol = main.MenuStartColumn() + 3
+		startCol = main.MenuStartColumn() + DualColumnLyricPadding
 	} else {
-		startCol = main.MenuStartColumn() - 4
+		startCol = main.MenuStartColumn() - LyricHorizontalMargin
 	}
 
 	// Add cover offset to start column if needed
-	if coverEndCol > 0 && startCol < coverEndCol+2 {
-		startCol = coverEndCol + 2 // Add some padding after cover
+	if coverEndCol > 0 && startCol < coverEndCol+CoverRightPadding {
+		startCol = coverEndCol + CoverRightPadding // Add some padding after cover
 	}
 
-	maxLen := r.netease.WindowWidth() - startCol - 4
-	if maxLen < 20 {
-		maxLen = 20
+	maxLen := r.netease.WindowWidth() - startCol - LyricHorizontalMargin
+	if maxLen < MinLyricWidth {
+		maxLen = MinLyricWidth
 	}
 
 	renderLine := func(idx int, isHighlight bool) {
@@ -454,8 +458,8 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 
 	switch r.lyricLines {
 	case 3:
-		for i := 1; i <= 3; i++ {
-			renderLine(i, i == 2)
+		for i := range 3 {
+			renderLine(i, i == 1)
 		}
 	case 5:
 		for i := range 5 {

@@ -8,12 +8,14 @@ import (
 	"github.com/ebitengine/purego/objc"
 
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
+	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 )
 
 var (
-	helperClass objc.Class
-	helperInst  core.NSObject
+	helperClass    objc.Class
+	helperInst     core.NSObject
+	dragViewClass  objc.Class
 
 	sel_createWindow          = objc.RegisterName("createWindow")
 	sel_showWindow            = objc.RegisterName("showWindow")
@@ -25,6 +27,14 @@ var (
 	sel_windowDidMove         = objc.RegisterName("windowDidMove:")
 	sel_persistWindowPosition = objc.RegisterName("persistWindowPosition")
 
+	// LyricsDragView mouse event selectors.
+	sel_mouseDown        = objc.RegisterName("mouseDown:")
+	sel_mouseDragged     = objc.RegisterName("mouseDragged:")
+	sel_mouseUp          = objc.RegisterName("mouseUp:")
+	sel_locationInWindow = objc.RegisterName("locationInWindow")
+	sel_convertPoint     = objc.RegisterName("convertPoint:fromView:")
+	sel_hitTest          = objc.RegisterName("hitTest:")
+
 	sel_performSelectorOnMainThread = objc.RegisterName("performSelectorOnMainThread:withObject:waitUntilDone:")
 	sel_performAfterDelay           = objc.RegisterName("performSelector:withObject:afterDelay:")
 	sel_cancelPreviousPerform       = objc.RegisterName("cancelPreviousPerformRequestsWithTarget:selector:object:")
@@ -35,13 +45,13 @@ var (
 )
 
 func init() {
-
 	var err error
+
+	// ---- Helper (NSObject subclass for main-thread dispatch) ----
 	helperClass, err = objc.RegisterClass(
 		"DesktopLyricsHelper",
 		objc.GetClass("NSObject"),
-		nil,
-		nil,
+		nil, nil,
 		[]objc.MethodDef{
 			{Cmd: sel_createWindow, Fn: handleCreateWindow},
 			{Cmd: sel_showWindow, Fn: handleShowWindow},
@@ -57,9 +67,25 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
 	helperInst = core.NSObject{
 		ID: objc.ID(helperClass).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init),
+	}
+
+	// ---- LyricsDragView (NSView subclass for mouse-based dragging) ----
+	// Implements LyricsX-style drag: mouseDown records offset, mouseDragged
+	// updates the screen-relative position factors, mouseUp persists to DB.
+	dragViewClass, err = objc.RegisterClass(
+		"LyricsDragView",
+		objc.GetClass("NSView"),
+		nil, nil,
+		[]objc.MethodDef{
+			{Cmd: sel_mouseDown, Fn: handleDragViewMouseDown},
+			{Cmd: sel_mouseDragged, Fn: handleDragViewMouseDragged},
+			{Cmd: sel_mouseUp, Fn: handleDragViewMouseUp},
+		},
+	)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -114,20 +140,38 @@ func handleScrollTick(id objc.ID, cmd objc.SEL) {
 }
 
 func handleWindowWillMove(id objc.ID, cmd objc.SEL, notification objc.ID) {
-	if ctrl := getDispatchCtrl(); ctrl != nil {
-		ctrl.beginWindowMove()
-	}
+	// No-op: window is fullscreen and never moves; drag is handled by LyricsDragView.
 }
 
 func handleWindowDidMove(id objc.ID, cmd objc.SEL, notification objc.ID) {
-	if ctrl := getDispatchCtrl(); ctrl != nil {
-		ctrl.scheduleWindowPositionPersist()
-	}
+	// No-op: window is fullscreen and never moves; drag is handled by LyricsDragView.
 }
 
 func handlePersistWindowPosition(id objc.ID, cmd objc.SEL) {
 	if ctrl := getDispatchCtrl(); ctrl != nil {
-		ctrl.persistWindowPosition()
+		ctrl.persistPositionFactors()
+	}
+}
+
+// ---- LyricsDragView mouse handlers ----
+
+func handleDragViewMouseDown(id objc.ID, cmd objc.SEL, event objc.ID) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		pt := objc.Send[cocoa.CGPoint](event, sel_locationInWindow)
+		ctrl.handleDragStart(pt.X, pt.Y)
+	}
+}
+
+func handleDragViewMouseDragged(id objc.ID, cmd objc.SEL, event objc.ID) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		pt := objc.Send[cocoa.CGPoint](event, sel_locationInWindow)
+		ctrl.handleDragMove(pt.X, pt.Y)
+	}
+}
+
+func handleDragViewMouseUp(id objc.ID, cmd objc.SEL, event objc.ID) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		ctrl.handleDragEnd()
 	}
 }
 

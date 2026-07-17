@@ -108,10 +108,11 @@ func NewNetease(app *model.App) *Netease {
 }
 
 func (n *Netease) Components() []model.Component {
-	components := []model.Component{n.lyricRenderer}
+	var components []model.Component
 	if n.spectrumRenderer.IsEnabled() {
 		components = append(components, n.spectrumRenderer)
 	}
+	components = append(components, n.lyricRenderer)
 	components = append(components, n.songInfoRenderer, n.progressRenderer)
 	// CoverRenderer uses absolute positioning and returns 0 lines, so it must
 	// be rendered last to overlay the normal layout.

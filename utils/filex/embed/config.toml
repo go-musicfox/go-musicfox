@@ -32,15 +32,18 @@ debug = false
 frameRate = 5
 
 # 实时频谱显示（目前仅支持 macOS 的 osx 播放引擎）
+# 调高 main.frameRate 更丝滑
 [main.visualizer]
 # 是否显示实时频谱
 enable = false
 # 频谱最大行数（0 表示不限制；会随可用空间自动缩小）
-maxHeight = 0
+maxHeight = 8
 # 频谱半单元、满单元和空单元字符（每项仅使用首个 Unicode 字符）
 fullCharHalfBlock = "▌"
 fullCharFullBlock = "█"
 emptyCharBlock = " "
+# 是否启用频谱从上到下渐变色
+verticalGradient = false
 
 
 # 桌面通知相关设置
@@ -89,8 +92,8 @@ spinDuration = 6
 enable = false
 # X 位置系数（0.0-1.0，0.5 表示居中，0.0 最左，1.0 最右）
 xPositionFactor = 0.5
-# Y 位置系数（0.0-1.0，0.0 底部，1.0 顶部，默认 0.05 接近底部）
-yPositionFactor = 0.05
+# Y 位置系数（0.0-1.0，0.0 底部，1.0 顶部，默认 0.5 居中）
+yPositionFactor = 0.5
 # 字体大小（默认 24 匹配系统标签字体）
 fontSize = 24
 # 字体名称（留空使用系统默认字体）
@@ -98,7 +101,7 @@ fontName = ""
 # 文字颜色（十六进制）
 textColor = "#FFFFFF"
 # 文字阴影颜色（十六进制）
-shadowColor = "#00FFD5"
+shadowColor = "#EA403F"
 # 阴影模糊半径（像素）
 shadowRadius = 1.0
 # 背景颜色（十六进制）
@@ -114,7 +117,7 @@ oneLineMode = false
 # 暂停时隐藏歌词
 hideOnPause = false
 # 允许拖拽移动歌词窗口
-draggable = false
+draggable = true
 # 窗口最大宽度占屏幕比例（0.3-0.9，默认 0.7）
 maxWindowWidth = 0.7
 
@@ -139,12 +142,14 @@ loadingText = "[加载中...]"
 doubleColumn = true
 # 菜单行数是否根据终端高度动态变化
 dynamicMenuRows = false
+# 菜单内容起始行上限，限制菜单上方标题区域向下的最大偏移量（0 不限制）
+maxTitleStartRow = 12
 # 界面所有内容居中（实验性功能，未来版本中可能会大幅改动）
 centerEverything = false
 # 主题颜色
 # 随机
 # primaryColor = "random"
-primaryColor = "#ea403f" # 经典网易云音乐红
+primaryColor = "#EA403F" # 经典网易云音乐红
 
 # 进度条字符样式配置
 [theme.progress]

@@ -70,7 +70,7 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 	progress := float64(progressPct) / 100.0
 
-	width := r.netease.WindowWidth() - 14
+	width := r.netease.WindowWidth() - ProgressTimeDisplayWidth
 	if width < 0 {
 		width = 0
 	}
@@ -97,14 +97,14 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 
 	var times string
-	if allDuration/60 >= 100 {
+	if allDuration/60 >= ProgressLongDurationThreshold {
 		times = fmt.Sprintf("%03d:%02d/%03d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	} else {
 		times = fmt.Sprintf("%02d:%02d/%02d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	}
 	styledTimes := util.SetFgStyle(times, util.GetPrimaryColor())
 
-	if allDuration/60 >= 100 {
+	if allDuration/60 >= ProgressLongDurationThreshold {
 		return progressView + " " + styledTimes, 1
 	}
 	return progressView + " " + styledTimes + " ", 1

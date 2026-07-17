@@ -56,11 +56,11 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		segments = append(segments, Segment{text, lipgloss.BrightBlack})
 	}
 
-	prefixLen := 10
-	if main.MenuStartColumn()-4 > 0 {
-		prefixLen += 12
+	prefixLen := SongInfoPrefixBaseWidth
+	if main.MenuStartColumn()-MenuArrowWidth > 0 {
+		prefixLen += SongInfoPrefixExtraWidth
 		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), lipgloss.BrightBlack)
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), lipgloss.BrightBlack)
 		}
 		{
 			msg := r.state.Mode().Name()
@@ -114,7 +114,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	if main.CenterEverything() {
 		totalWidth := 0
-		widthLimit := r.netease.WindowWidth() - 4
+		widthLimit := r.netease.WindowWidth() - SongInfoHorizontalPadding
 		for index, segment := range segments {
 			segmentWidth := runewidth.StringWidth(segment.text)
 			if totalWidth+segmentWidth > widthLimit {
@@ -141,7 +141,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// and determine bottom-fill padding. An inflated value suppresses the bottom fill,
 	// resulting in a View output shorter than the terminal height, which leaves cells
 	// from the previous frame uncleared (causing display corruption/overlay).
-	lines = 2
+	lines = SongInfoLines
 
 	return builder.String() + "\n\n", lines
 }

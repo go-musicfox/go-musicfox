@@ -68,7 +68,6 @@ func (a *App) Init() tea.Cmd {
 }
 
 func (a *App) Close() {
-	stopGlobalKeys()
 	if a.options.CloseHook != nil {
 		a.options.CloseHook(a)
 	}

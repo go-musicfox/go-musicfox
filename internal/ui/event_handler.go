@@ -433,7 +433,7 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 		case tea.MouseRight:
 			// 鼠标右键：根据点击位置判断是菜单还是歌曲信息区域
 			// 歌曲信息行：等同于对“当前播放”按 m
-			playModeRow := a.WindowHeight() - 3
+			playModeRow := a.WindowHeight() - PlayModeRowOffset
 			if mouse.Y == playModeRow {
 				action(h.netease, true)
 				return true, main, a.Tick(time.Nanosecond)
@@ -591,7 +591,7 @@ func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.Ap
 	}
 
 	// X坐标：检查是否在菜单的有效区域内
-	if mouse.X < menuStartColumn-4 {
+	if mouse.X < menuStartColumn-MenuArrowWidth {
 		return 0, false
 	}
 
@@ -610,10 +610,10 @@ func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.Ap
 	if main.IsDualColumn() {
 		windowWidth := a.WindowWidth()
 		var leftColumnWidth int
-		if windowWidth <= 88 {
-			leftColumnWidth = (windowWidth - menuStartColumn - 4) / 2
+		if windowWidth <= DualColumnWindowThreshold {
+			leftColumnWidth = (windowWidth - menuStartColumn - LyricHorizontalMargin) / 2
 		} else {
-			leftColumnWidth = 44
+			leftColumnWidth = MaxLeftColumnWidth
 		}
 
 		if mouse.X < menuStartColumn+leftColumnWidth {
@@ -634,7 +634,7 @@ func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.Ap
 
 // handlePlayerBarClick 处理播放栏点击事件
 func (h *EventHandler) handlePlayerBarClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
-	playModeRow := a.WindowHeight() - 3
+	playModeRow := a.WindowHeight() - PlayModeRowOffset
 	if msg.Mouse().Y != playModeRow {
 		return false, nil, nil
 	}
@@ -653,9 +653,9 @@ func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main 
 	player := h.netease.player
 	menuStartColumn := main.MenuStartColumn()
 
-	if menuStartColumn > 4 {
-		playModeEndX := menuStartColumn + 5
-		if msg.Mouse().X >= menuStartColumn-4 && msg.Mouse().X <= playModeEndX {
+	if menuStartColumn > MenuArrowWidth {
+		playModeEndX := menuStartColumn + PlayModeClickWidth
+		if msg.Mouse().X >= menuStartColumn-MenuArrowWidth && msg.Mouse().X <= playModeEndX {
 			player.SwitchMode()
 			return true, main, a.Tick(time.Nanosecond)
 		}
@@ -676,14 +676,14 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 
 	menuStartColumn := main.MenuStartColumn()
 	leftPad := 0
-	if !main.CenterEverything() && menuStartColumn-4 > 0 {
-		leftPad = menuStartColumn - 4
+	if !main.CenterEverything() && menuStartColumn-MenuArrowWidth > 0 {
+		leftPad = menuStartColumn - MenuArrowWidth
 	}
 
 	currentX := leftPad
 
 	// Mode & Volume 宽度
-	if menuStartColumn-4 > 0 {
+	if menuStartColumn-MenuArrowWidth > 0 {
 		modeStr := fmt.Sprintf("[%s] ", player.Mode().Name())
 		modeWidth := runewidth.StringWidth(modeStr)
 		volStr := fmt.Sprintf("%d%% ", player.Volume())
@@ -723,9 +723,9 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 	songName := curSong.Name
 	songShownWidth := runewidth.StringWidth(songName)
 	if !main.CenterEverything() {
-		prefixLen := 10
-		if main.MenuStartColumn()-4 > 0 {
-			prefixLen += 12
+		prefixLen := SongInfoPrefixBaseWidth
+		if main.MenuStartColumn()-MenuArrowWidth > 0 {
+			prefixLen += SongInfoPrefixExtraWidth
 		}
 		maxSongWidth := a.WindowWidth() - main.MenuStartColumn() - prefixLen
 		if songShownWidth > maxSongWidth {
@@ -751,7 +751,7 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 func (h *EventHandler) handleProgressBarSeek(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
 	player := h.netease.player
 	x, y := msg.Mouse().X, msg.Mouse().Y
-	progressBarWidth := a.WindowWidth() - 14
+	progressBarWidth := a.WindowWidth() - ProgressTimeDisplayWidth
 	if y+1 == a.WindowHeight() && x+1 <= progressBarWidth {
 		allDuration := int(player.CurMusic().Duration.Seconds())
 		if allDuration == 0 {

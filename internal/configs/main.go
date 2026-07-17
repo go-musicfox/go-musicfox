@@ -65,6 +65,8 @@ type VisualizerConfig struct {
 	FullCharHalfBlock string `koanf:"fullCharHalfBlock"`
 	FullCharFullBlock string `koanf:"fullCharFullBlock"`
 	EmptyCharBlock    string `koanf:"emptyCharBlock"`
+	// 频谱从上到下渐变色
+	VerticalGradient bool `koanf:"verticalGradient"`
 }
 
 // Characters returns the configured spectrum glyphs with Bubbles-style defaults.

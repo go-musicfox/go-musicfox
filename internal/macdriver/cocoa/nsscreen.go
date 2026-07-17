@@ -72,6 +72,5 @@ func NSScreen_WithDisplayID(displayID uint32) (NSScreen, bool) {
 
 // VisibleFrame returns the visible frame (excluding Dock and menu bar).
 func (s NSScreen) VisibleFrame() NSRect {
-	s.Send(sel_visibleFrame)
-	return NSRect{}
+	return objc.Send[NSRect](s.ID, sel_visibleFrame)
 }

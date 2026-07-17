@@ -21,8 +21,9 @@ func TestSpectrumLineCountRespondsToAvailableSpace(t *testing.T) {
 	if got := renderer.LineCount(40, 20); got != 10 {
 		t.Fatalf("line count = %d, want 10", got)
 	}
-	if got := renderer.LineCount(30, 20); got != 4 {
-		t.Fatalf("line count = %d, want 4", got)
+	// Lyrics have priority; spectrum yields when space is tight.
+	if got := renderer.LineCount(30, 20); got != 0 {
+		t.Fatalf("line count = %d, want 0", got)
 	}
 	if got := renderer.LineCount(28, 20); got != 0 {
 		t.Fatalf("line count = %d, want 0", got)

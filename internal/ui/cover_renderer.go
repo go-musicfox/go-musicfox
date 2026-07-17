@@ -106,9 +106,9 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 // calculateDimensions calculates the cover image display dimensions.
 func (r *CoverRenderer) calculateDimensions() {
 	main := r.netease.MustMain()
-	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow() - r.netease.SpectrumLines(main)
+	spaceHeight := r.netease.WindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - r.netease.SpectrumLines(main)
 
-	if spaceHeight < 3 {
+	if spaceHeight < MinSpaceHeight {
 		r.rows = 0
 		r.cols = 0
 		return
@@ -117,21 +117,21 @@ func (r *CoverRenderer) calculateDimensions() {
 	// Get width ratio from config, default to 0.3 if not set or invalid
 	widthRatio := configs.AppConfig.Main.Lyric.Cover.WidthRatio
 	if widthRatio <= 0 || widthRatio > 1 {
-		widthRatio = 0.3
+		widthRatio = DefaultCoverWidthRatio
 	}
 
 	windowWidth := r.netease.WindowWidth()
-	r.cols = max(int(float64(windowWidth)*widthRatio), 10) // Minimum width
+	r.cols = max(int(float64(windowWidth)*widthRatio), MinCoverCols) // Minimum width
 
 	// Calculate rows to maintain square visual aspect ratio
 	// Terminal cells are typically 2:1 (twice as tall as wide, e.g., 8x16 pixels)
 	// So rows = cols / 2 makes the image appear visually square
-	r.rows = max(r.cols/2, 3)
+	r.rows = max(r.cols/TerminalCellAspectRatio, MinCoverRows)
 	// Don't exceed available space
 	if r.rows > spaceHeight {
 		r.rows = spaceHeight
 		// Adjust cols to maintain square aspect ratio (cols = rows * 2)
-		r.cols = r.rows * 2
+		r.cols = r.rows * TerminalCellAspectRatio
 	}
 }
 
@@ -177,21 +177,22 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		lyricCenterRow := lyricStartRow + lyricLines
 		coverStartRow = lyricCenterRow - r.rows/2
 	} else {
-		coverStartRow = windowHeight - 2 - r.rows - r.netease.SpectrumLines(main)
+		coverStartRow = windowHeight - CoverEndRowMargin - r.rows
 	}
 
-	if coverStartRow <= menuBottomRow {
-		coverStartRow = menuBottomRow + 1
+	minStartRow := menuBottomRow + r.netease.SpectrumLines(main) + 1
+	if coverStartRow <= minStartRow {
+		coverStartRow = minStartRow
 	}
 	if coverStartRow < 1 {
 		coverStartRow = 1
 	}
-	if coverStartRow+r.rows > windowHeight-1-r.netease.SpectrumLines(main) {
-		coverStartRow = windowHeight - 1 - r.netease.SpectrumLines(main) - r.rows
+	if coverStartRow+r.rows > windowHeight-1 {
+		coverStartRow = windowHeight - 1 - r.rows
 	}
 
 	// If cover can't fit at all, skip rendering
-	if r.rows > windowHeight-5-r.netease.SpectrumLines(main) {
+	if r.rows > windowHeight-FixedTopBottomRows {
 		return "", 0
 	}
 

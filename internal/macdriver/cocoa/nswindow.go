@@ -34,6 +34,7 @@ var (
 	sel_setContentView                           = objc.RegisterName("setContentView:")
 	sel_contentView                              = objc.RegisterName("contentView")
 	sel_setFrameDisplay                          = objc.RegisterName("setFrame:display:")
+	sel_setFrameDisplayAnimate                   = objc.RegisterName("setFrame:display:animate:")
 	sel_screen                                   = objc.RegisterName("screen")
 	sel_center                                   = objc.RegisterName("center")
 	sel_close                                    = objc.RegisterName("close")
@@ -183,6 +184,18 @@ func (w NSWindow) SetFrameDisplayTopLeft(frameRect NSRect, display bool) {
 		frameRect.Origin.X, frameRect.Origin.Y,
 		frameRect.Size.Width, frameRect.Size.Height,
 		display,
+	)
+}
+
+// SetFrameDisplayAnimate calls -[NSWindow setFrame:display:animate:].
+// The native window-server animation coexists with user dragging: when the
+// user starts to drag during the animation, the system cancels the animation
+// automatically.
+func (w NSWindow) SetFrameDisplayAnimate(frameRect NSRect, display, animate bool) {
+	w.Send(sel_setFrameDisplayAnimate,
+		frameRect.Origin.X, frameRect.Origin.Y,
+		frameRect.Size.Width, frameRect.Size.Height,
+		display, animate,
 	)
 }
 
