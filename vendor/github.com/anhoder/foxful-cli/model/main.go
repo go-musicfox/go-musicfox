@@ -177,15 +177,15 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 		// 3 lines for search + 5 lines of lyrics + 6 lines of song name and progress bar = 14. But somehow
 		// 13 works better.
 		bottomHeight := 13
+		// MaxMenuStartRow limit applies regardless of DynamicRowCount
+		if m.options.MaxMenuStartRow > 0 {
+			if m.menuStartRow > m.options.MaxMenuStartRow {
+				m.menuStartRow = m.options.MaxMenuStartRow
+			}
+		}
 		if m.options.DynamicRowCount {
 			if m.options.BottomHeight > 0 {
 				bottomHeight = m.options.BottomHeight
-			}
-			if m.options.MaxMenuStartRow > 0 {
-				// Limit menuStartRow to user-defined value
-				if m.menuStartRow > m.options.MaxMenuStartRow {
-					m.menuStartRow = m.options.MaxMenuStartRow
-				}
 			}
 		}
 
