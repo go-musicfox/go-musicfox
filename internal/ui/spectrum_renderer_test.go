@@ -18,8 +18,8 @@ func TestSpectrumLineCountRespondsToAvailableSpace(t *testing.T) {
 
 	renderer := &SpectrumRenderer{provider: spectrumTestProvider{}}
 
-	if got := renderer.LineCount(40, 20); got != 10 {
-		t.Fatalf("line count = %d, want 10", got)
+	if got := renderer.LineCount(40, 20); got != 9 {
+		t.Fatalf("line count = %d, want 9", got)
 	}
 	// Lyrics have priority; spectrum yields when space is tight.
 	if got := renderer.LineCount(30, 20); got != 0 {
@@ -38,11 +38,11 @@ func TestSpectrumLayoutFillsAvailableSpaceAndSeparatesSongInfo(t *testing.T) {
 
 	renderer := &SpectrumRenderer{provider: spectrumTestProvider{}}
 	layout := renderer.layout(40, 20)
-	if layout.barLines != 8 || layout.topPadding != 1 || layout.bottomPadding != 1 {
-		t.Fatalf("layout = %+v, want 1 top, 8 bars, and 1 bottom", layout)
+	if layout.barLines != 8 || layout.topPadding != 0 || layout.bottomPadding != 1 {
+		t.Fatalf("layout = %+v, want 0 top, 8 bars, and 1 bottom", layout)
 	}
-	if layout.lines() != 10 {
-		t.Fatalf("layout lines = %d, want 10", layout.lines())
+	if layout.lines() != 9 {
+		t.Fatalf("layout lines = %d, want 9", layout.lines())
 	}
 }
 

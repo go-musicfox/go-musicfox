@@ -187,8 +187,8 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if coverStartRow < 1 {
 		coverStartRow = 1
 	}
-	if coverStartRow+r.rows > windowHeight-1 {
-		coverStartRow = windowHeight - 1 - r.rows
+	if coverStartRow+r.rows > windowHeight-CoverEndRowMargin {
+		coverStartRow = windowHeight - CoverEndRowMargin - r.rows
 	}
 
 	// If cover can't fit at all, skip rendering

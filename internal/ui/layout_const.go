@@ -26,7 +26,7 @@ const (
 	// EndRowMargin is the number of rows reserved from the terminal bottom.
 	// Lyrics and other content should not extend beyond WindowHeight - EndRowMargin.
 	// 从终端底部预留的行数。歌词等内容不应超过 WindowHeight - EndRowMargin。
-	EndRowMargin = 4
+	EndRowMargin = 2
 
 	// MinSpaceHeight is the minimum height of available space for lyrics/cover
 	// to be displayed at all.
@@ -104,10 +104,10 @@ const (
 	// （如 8x16 像素），因此 cols 除以该比值可得到视觉上的正方形图像。
 	TerminalCellAspectRatio = 2
 
-	// CoverEndRowMargin is added to the reserved bottom area when
-	// calculating cover positioning without lyrics.
-	// 在没有歌词时计算封面位置时，在底部预留区域上增加的额外行边距。
-	CoverEndRowMargin = 2
+	// CoverEndRowMargin is the number of rows reserved from the terminal
+	// bottom when calculating cover positioning without lyrics.
+	// 在没有歌词时计算封面位置时，从终端底部预留的行数。
+	CoverEndRowMargin = 3
 
 	// ---- Spectrum constants / 频谱常量 ----
 

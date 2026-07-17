@@ -82,7 +82,7 @@ func (r *SpectrumRenderer) layout(windowHeight, menuBottomRow int) spectrumLayou
 		return spectrumLayout{}
 	}
 	return spectrumLayout{
-		topPadding:    SpectrumVerticalPadding,
+		topPadding:    0,
 		barLines:      barLines,
 		bottomPadding: SpectrumVerticalPadding,
 	}
