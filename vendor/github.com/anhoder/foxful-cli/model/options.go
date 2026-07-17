@@ -18,7 +18,7 @@ type Options struct {
 	DualColumn          bool // The menu list is displayed as a dual column
 	DynamicRowCount     bool // If true, the number of entries per page can be greater than 10
 	MaxMenuStartRow     int  // Max number of rows occupied by the title section before the menu. 0 means no limit.
-	BottomHeight       int  // Height of the bottom area reserved for components (e.g. spectrum, lyrics, progress bar). Only effective when DynamicRowCount is true. 0 means use the default.
+	BottomHeight        int  // Height of the bottom area reserved for components (e.g. spectrum, lyrics, progress bar). Only effective when DynamicRowCount is true. 0 means use the default.
 	CenterEverything    bool // If true, everything will be centered. Otherwise, use default layout.
 	HideMenu            bool
 

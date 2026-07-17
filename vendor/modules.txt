@@ -7,7 +7,7 @@ charm.land/bubbles/v2/key
 charm.land/bubbles/v2/table
 charm.land/bubbles/v2/textinput
 charm.land/bubbles/v2/viewport
-# charm.land/bubbletea/v2 v2.0.8 => github.com/go-musicfox/bubbletea/v2 v2.0.8-foxful-1.1
+# charm.land/bubbletea/v2 v2.0.8 => github.com/go-musicfox/bubbletea/v2 v2.0.8-foxful-1.2
 ## explicit; go 1.25.0
 charm.land/bubbletea/v2
 # charm.land/lipgloss/v2 v2.0.4
@@ -18,7 +18,7 @@ charm.land/lipgloss/v2
 github.com/adrg/xdg
 github.com/adrg/xdg/internal/pathutil
 github.com/adrg/xdg/internal/userdirs
-# github.com/anhoder/foxful-cli v0.6.7
+# github.com/anhoder/foxful-cli v0.6.9
 ## explicit; go 1.25.0
 github.com/anhoder/foxful-cli/model
 github.com/anhoder/foxful-cli/util

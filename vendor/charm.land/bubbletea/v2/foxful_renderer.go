@@ -107,6 +107,14 @@ func (r *foxfulRenderer) flush(bool) error {
 	skipLines := make(map[int]struct{})
 
 	var buf bytes.Buffer
+
+	// When altScreen is off, position cursor at top of viewport for first frame.
+	// Without this, content starts wherever the cursor happens to be (e.g. shell prompt),
+	// leading to UI misalignment that persists across subsequent relative movements.
+	if r.linesRendered == 0 && !r.altScreenActive {
+		buf.WriteString(ansi.CursorHomePosition)
+	}
+
 	if r.linesRendered > 0 {
 		for i := r.linesRendered - 1; i > 0; i-- {
 			if len(newLines) <= len(oldLines) && len(newLines) > i && len(oldLines) > i && newLines[i] == oldLines[i] {
@@ -114,7 +122,10 @@ func (r *foxfulRenderer) flush(bool) error {
 			}
 			buf.WriteString(ansi.CursorUp(1))
 		}
-		buf.WriteString(ansi.CursorBackward(r.width))
+		// Use \r (carriage return) instead of CursorBackward to avoid auto-wrap
+		// issues on some terminals (e.g. macOS Terminal.app) when the cursor
+		// is at the right margin and an escape sequence triggers wrapping.
+		buf.WriteString("\r")
 	}
 
 	for i, line := range newLines {
@@ -140,7 +151,10 @@ func (r *foxfulRenderer) flush(bool) error {
 	if r.altScreenActive {
 		buf.WriteString(fmt.Sprintf("\x1b[%d;1H", max(r.linesRendered, 1)))
 	} else {
-		buf.WriteString(ansi.CursorBackward(r.width))
+		// Use \r (carriage return) instead of CursorBackward to avoid auto-wrap
+		// issues on some terminals (e.g. macOS Terminal.app) when the cursor
+		// is at the right margin and an escape sequence triggers wrapping.
+		buf.WriteString("\r")
 	}
 
 	if _, err := r.out.Write(buf.Bytes()); err != nil {

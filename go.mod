@@ -7,7 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.4
 	github.com/adrg/xdg v0.5.3
-	github.com/anhoder/foxful-cli v0.6.7
+	github.com/anhoder/foxful-cli v0.6.9
 	github.com/atotto/clipboard v0.1.4
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.2
@@ -100,7 +100,7 @@ require (
 )
 
 replace (
-	charm.land/bubbletea/v2 v2.0.8 => github.com/go-musicfox/bubbletea/v2 v2.0.8-foxful-1.1
+	charm.land/bubbletea/v2 v2.0.8 => github.com/go-musicfox/bubbletea/v2 v2.0.8-foxful-1.2
 	github.com/cnsilvan/UnblockNeteaseMusic => github.com/go-musicfox/UnblockNeteaseMusic v0.1.6
 	// github.com/cnsilvan/UnblockNeteaseMusic => ../UnblockNeteaseMusic
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
