@@ -28,9 +28,10 @@ type State struct {
 	IsRunning           bool
 	// Word-by-word lyric data
 	YRCLines        []YRCLine
-	YRCLineIndex    int  // Current YRC line index
+	YRCLineIndex    int  // Current word-by-word lyric line index
 	YRCEnabled      bool // Whether YRC mode is active
 	ShowTranslation bool // Whether translation display is enabled
+	OffsetMs        int64
 }
 
 // FormatAsLRC serializes the State into a string that conforms to the LRC file format standard.
@@ -339,6 +340,7 @@ func (s *Service) State() State {
 		YRCLineIndex:        s.yrcIndex,
 		YRCEnabled:          s.showYRC && len(s.yrcLines) > 0,
 		ShowTranslation:     s.showTranslation,
+		OffsetMs:            s.offset.Milliseconds(),
 	}
 }
 

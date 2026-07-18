@@ -101,6 +101,13 @@ func WithoutRenderer() ProgramOption {
 	}
 }
 
+// WithFoxfulRenderer selects the v0.25.0-foxful-compatible line renderer.
+func WithFoxfulRenderer() ProgramOption {
+	return func(p *Program) {
+		p.useFoxfulRenderer = true
+	}
+}
+
 // WithFilter supplies an event filter that will be invoked before Bubble Tea
 // processes a tea.Msg. The event filter can return any tea.Msg which will then
 // get handled by Bubble Tea instead of the original event. If the event filter
@@ -164,5 +171,15 @@ func WithWindowSize(width, height int) ProgramOption {
 	return func(p *Program) {
 		p.width = width
 		p.height = height
+	}
+}
+
+// WithHardTabs sets whether hard tabs should be used for optimizing cursor
+// movements. By default, Bubble Tea automatically detects terminal support for
+// hard tabs. Use this option to explicitly override the auto-detection.
+func WithHardTabs(v bool) ProgramOption {
+	return func(p *Program) {
+		p.useHardTabs = v
+		p.useHardTabsSet = true
 	}
 }

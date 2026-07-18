@@ -18,13 +18,14 @@ var (
 )
 
 var (
-	sel_sharedApplication         = objc.RegisterName("sharedApplication")
-	sel_setActivationPolicy       = objc.RegisterName("setActivationPolicy:")
-	sel_activateIgnoringOtherApps = objc.RegisterName("activateIgnoringOtherApps:")
-	sel_setDelegate               = objc.RegisterName("setDelegate:")
-	sel_run                       = objc.RegisterName("run")
-	sel_stop                      = objc.RegisterName("stop:")
-	sel_terminate                 = objc.RegisterName("terminate:")
+	sel_sharedApplication              = objc.RegisterName("sharedApplication")
+	sel_setActivationPolicy            = objc.RegisterName("setActivationPolicy:")
+	sel_activateIgnoringOtherApps      = objc.RegisterName("activateIgnoringOtherApps:")
+	sel_setDelegate                    = objc.RegisterName("setDelegate:")
+	sel_run                            = objc.RegisterName("run")
+	sel_stop                           = objc.RegisterName("stop:")
+	sel_terminate                      = objc.RegisterName("terminate:")
+	sel_performSelectorOnMainThread    = objc.RegisterName("performSelectorOnMainThread:withObject:waitUntilDone:")
 )
 
 type NSApplicationActivationPolicy core.NSInteger
@@ -73,6 +74,13 @@ func (a NSApplication) Stop(sender objc.ID) {
 
 func (a NSApplication) Terminate(sender objc.ID) {
 	a.Send(sel_terminate, sender)
+}
+
+// TerminateOnMainThread safely calls terminate: on the main thread.
+// Unlike Terminate(), this can be called from any goroutine — it dispatches
+// the terminate: selector to the main thread via performSelectorOnMainThread.
+func (a NSApplication) TerminateOnMainThread(sender objc.ID) {
+	a.Send(sel_performSelectorOnMainThread, sel_terminate, sender, true)
 }
 
 func (a NSApplication) Run() {

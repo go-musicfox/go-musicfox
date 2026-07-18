@@ -10,24 +10,11 @@
 
 package hook
 
-/*
-#cgo darwin CFLAGS: -x objective-c -Wno-deprecated-declarations
-#cgo darwin LDFLAGS: -framework Cocoa
-
-#cgo linux CFLAGS:-I/usr/src -std=gnu99
-#cgo linux LDFLAGS: -L/usr/src -lX11 -lXtst
-#cgo linux LDFLAGS: -lX11-xcb -lxcb -lxcb-xkb -lxkbcommon -lxkbcommon-x11
-//#cgo windows LDFLAGS: -lgdi32 -luser32
-
-#include "event/goEvent.h"
-*/
-import "C"
-
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 const (
@@ -114,6 +101,19 @@ func allPressed(pressed map[uint16]bool, keys ...uint16) bool {
 	return true
 }
 
+func keyRegistered(evKeyCode uint16, keys ...uint16) bool {
+	// Handle empty keys list case (consider all keys registered)
+	if len(keys) == 0 {
+		return true
+	}
+	for _, k := range keys {
+		if k == evKeyCode {
+			return true
+		}
+	}
+	return false
+}
+
 // Register register gohook event
 func Register(when uint8, cmds []string, cb func(Event)) {
 	key := len(used)
@@ -140,16 +140,20 @@ func Process(evChan <-chan Event) (out chan bool) {
 	out = make(chan bool)
 	go func() {
 		for ev := range evChan {
-			if ev.Kind == KeyDown || ev.Kind == KeyHold {
+			switch ev.Kind {
+			case KeyDown, KeyHold:
 				pressed[ev.Keycode] = true
 				uppressed[ev.Keycode] = true
-			} else if ev.Kind == KeyUp {
+			case KeyUp:
 				pressed[ev.Keycode] = false
 			}
 
 			for _, v := range events[ev.Kind] {
 				if !asyncon {
 					break
+				}
+				if keyRegistered(ev.Keycode, keys[v]...) {
+					continue
 				}
 
 				if allPressed(pressed, keys[v]...) {
@@ -212,58 +216,36 @@ func (e Event) String() string {
 	return "Unknown event, contact the mantainers."
 }
 
-// RawcodetoKeychar rawcode to keychar
-func RawcodetoKeychar(r uint16) string {
+// RawcodeToKeychar rawcode to keychar
+func RawcodeToKeychar(r uint16) string {
 	lck.RLock()
 	defer lck.RUnlock()
 
-	return raw2key[r]
-}
-
-// KeychartoRawcode key char to rawcode
-func KeychartoRawcode(kc string) uint16 {
-	return keytoraw[kc]
-}
-
-// Start adds global event hook to OS
-// returns event channel
-func Start(tm ...int) chan Event {
-	ev = make(chan Event, 1024)
-	go C.start_ev()
-
-	tm1 := 50
-	if len(tm) > 0 {
-		tm1 = tm[0]
+	switch runtime.GOOS {
+	case "darwin":
+		return rawToKeyDarwin[r]
+	case "windows":
+		return raw2keyWin[r]
+	default:
+		return raw2keyLinux[r]
 	}
-
-	asyncon = true
-	go func() {
-		for {
-			if !asyncon {
-				return
-			}
-
-			C.pollEv()
-			time.Sleep(time.Millisecond * time.Duration(tm1))
-			//todo: find smallest time that does not destroy the cpu utilization
-		}
-	}()
-
-	return ev
 }
 
-// End removes global event hook
-func End() {
-	asyncon = false
-	C.endPoll()
-	C.stop_event()
-	time.Sleep(time.Millisecond * 10)
-
-	for len(ev) != 0 {
-		<-ev
+// KeycharToRawcode key char to rawcode
+func KeycharToRawcode(kc string) uint16 {
+	switch runtime.GOOS {
+	case "darwin":
+		return keyToRawDarwin[kc]
+	case "windows":
+		return key2rawWin[kc]
+	default:
+		return key2RawLinux[kc]
 	}
-	close(ev)
+}
 
+// resetState clears all package-level hook state. Shared by every backend's
+// End() implementation (cgo and Wayland).
+func resetState() {
 	pressed = make(map[uint16]bool, 256)
 	uppressed = make(map[uint16]bool, 256)
 	used = []int{}
@@ -271,20 +253,4 @@ func End() {
 	keys = map[int][]uint16{}
 	cbs = map[int]func(Event){}
 	events = map[uint8][]int{}
-}
-
-// AddEvent add the block event listener
-func addEvent(key string) int {
-	cs := C.CString(key)
-	defer C.free(unsafe.Pointer(cs))
-
-	eve := C.add_event(cs)
-	geve := int(eve)
-
-	return geve
-}
-
-// StopEvent stop the block event listener
-func StopEvent() {
-	C.stop_event()
 }

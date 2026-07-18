@@ -9,6 +9,8 @@ import (
 )
 
 func (p *Program) checkOptimizedMovements(s *term.State) {
-	p.useHardTabs = s.Oflag&unix.TABDLY == unix.TAB0
+	if !p.useHardTabsSet {
+		p.useHardTabs = s.Oflag&unix.TABDLY == unix.TAB0
+	}
 	p.useBackspace = s.Lflag&unix.BSDLY == unix.BS0
 }

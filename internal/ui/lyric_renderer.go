@@ -17,6 +17,22 @@ import (
 
 var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
+// lyricCacheKey holds the state that determines whether the rendered
+// output has changed. Used to skip expensive recomputation in View().
+type lyricCacheKey struct {
+	currentIndex   int
+	yrcLineIdx     int
+	isRunning      bool
+	yrcEnabled     bool
+	showTranslation bool
+	currentTimeHundredMs int64 // currentTimeMs / 100, ~100ms granularity
+	windowWidth    int
+	windowHeight   int
+	menuBottomRow  int
+	specLines      int
+	isCentered     bool
+}
+
 // LyricRenderer is a dedicated UI component for rendering lyrics.
 type LyricRenderer struct {
 	netease      *Netease
@@ -25,10 +41,15 @@ type LyricRenderer struct {
 	isVisible         bool
 	lyricLines        int // 3 or 5
 	lyricStartRow     int
-	lyrics            [5]string // A fixed-size array to hold lines for rendering
+	lyrics            []string // Dynamic-size slice to hold lines for rendering
 	lyricNowScrollBar *app.XScrollBar
 	currentTimeMs     int64     // Current playback time in milliseconds for YRC rendering
 	lastViewTime      time.Time // For debug logging
+
+	// output caching to avoid recomputation when nothing changed
+	cachedView  string
+	cachedLines int
+	cachedKey   lyricCacheKey
 }
 
 // NewLyricRenderer creates a new lyric renderer component.
@@ -55,9 +76,9 @@ func (r *LyricRenderer) SetCurrentTime(timeMs int64) {
 func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 	index := state.YRCLineIndex
 
-	// Fill current YRC line (with word-level details in a special format)
+	// Fill current YRC line with the same offset used by lyric service indexing.
 	currentLine := state.YRCLines[index]
-	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs, state.ShowTranslation)
+	r.lyrics[centerIndex] = r.buildYRCLineString(currentLine, r.currentTimeMs+state.OffsetMs, state.ShowTranslation)
 
 	// Fill previous YRC lines
 	for i := 1; i <= centerIndex; i++ {
@@ -79,68 +100,33 @@ func (r *LyricRenderer) prepareYRCLines(state lyric.State, centerIndex int) {
 // buildYRCLineString constructs a displayable string from YRC line with word progress highlighting.
 // If currentTimeMs >= 0, highlights words based on their timing with ANSI colors.
 func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int64, showTranslation bool) string {
-	// Get render mode from config (default: "smooth")
 	renderMode := "smooth"
 	if configs.AppConfig.Main.Lyric.RenderMode != "" {
 		renderMode = configs.AppConfig.Main.Lyric.RenderMode
 	}
 
-	// For non-current lines (no time tracking), use simple gray rendering
 	if currentTimeMs < 0 {
-		var result strings.Builder
+		var text strings.Builder
 		for _, word := range line.Words {
-			result.WriteString(util.SetFgStyle(word.Word, LyricInactiveColor))
+			text.WriteString(word.Word)
 		}
 		if showTranslation && line.TranslatedLyric != "" {
-			result.WriteString(" ")
-			result.WriteString(util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor))
+			text.WriteString(" [")
+			text.WriteString(line.TranslatedLyric)
+			text.WriteString("]")
 		}
-		return result.String()
+		return util.SetFgStyle(text.String(), LyricInactiveColor)
 	}
 
-	// Prepare word timing data for rendering
-	var words []wordWithTiming
-	var currentWordIndex int = -1
-	var playedWords, totalWords int
-	totalWords = len(line.Words)
-
-	// Apply frame rate compensation for smoother animation
-	frameCompensation := int64(configs.AppConfig.Main.FrameRate.DurationMs() / 2)
-	adjustedTimeMs := currentTimeMs + frameCompensation
-
-	for i, word := range line.Words {
-		var state wordState
-		var interpolation float64
-		if adjustedTimeMs < word.StartTime {
-			state = wordStateNotPlayed
-			interpolation = 0.0
-		} else if adjustedTimeMs >= word.EndTime {
-			state = wordStatePlayed
-			playedWords++
-			interpolation = 1.0
-		} else {
-			state = wordStatePlaying
-			currentWordIndex = i
-			playedWords++
-			// Calculate interpolation progress within the word (0.0 - 1.0)
-			wordDuration := word.EndTime - word.StartTime
-			if wordDuration > 0 {
-				interpolation = float64(adjustedTimeMs-word.StartTime) / float64(wordDuration)
-			}
-		}
-		words = append(words, wordWithTiming{text: word.Word, state: state, interpolation: interpolation})
-	}
-
-	// Calculate progress for smooth/wave modes
+	adjustedTimeMs := currentTimeMs + int64(configs.AppConfig.Main.FrameRate.DurationMs()/2)
+	words, currentWordIndex, playedWords := yrcWordTimings(line, adjustedTimeMs)
 	progress := 0.0
-	if totalWords > 0 {
-		progress = float64(playedWords) / float64(totalWords)
+	if len(words) > 0 {
+		progress = float64(playedWords) / float64(len(words))
 	}
 
-	// Render based on mode
+	animationTime := float64(currentTimeMs) * 0.001
 	var result string
-	// Use currentTimeMs as animation time for smoother effects (in milliseconds)
-	animationTime := float64(currentTimeMs) * 0.001 // Convert to seconds
 	switch renderMode {
 	case "smooth":
 		result = renderSmooth(words, progress)
@@ -152,16 +138,35 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 		}
 		result = renderGlow(words, currentWordIndex, animationTime)
 	default:
-		// Default to smooth mode
 		result = renderSmooth(words, progress)
 	}
 
-	// Append translation if available and enabled (gray color)
 	if showTranslation && line.TranslatedLyric != "" {
 		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor)
 	}
-
 	return result
+}
+
+func yrcWordTimings(line lyric.YRCLine, timeMs int64) ([]wordWithTiming, int, int) {
+	progress := lyric.ProgressYRCLineAtTimeMs(line, timeMs)
+	words := make([]wordWithTiming, len(line.Words))
+	for i, word := range line.Words {
+		words[i] = wordWithTiming{text: word.Word, state: wordStateNotPlayed}
+		switch {
+		case i < progress.CompletedWords:
+			words[i].state = wordStatePlayed
+			words[i].interpolation = 1
+		case i == progress.CurrentWord:
+			words[i].state = wordStatePlaying
+			words[i].interpolation = progress.CurrentProgress
+		}
+	}
+
+	playedWords := progress.CompletedWords
+	if progress.CurrentWord >= 0 {
+		playedWords++
+	}
+	return words, progress.CurrentWord, playedWords
 }
 
 // stripAnsiCodes removes ANSI escape sequences from a string to get visible content
@@ -172,43 +177,70 @@ func stripAnsiCodes(s string) string {
 // Update handles UI messages, primarily for resizing and configuration updates.
 func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 	main := r.netease.MustMain()
-	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow()
+	specLines := r.netease.SpectrumLines(main)
+	spaceHeight := r.netease.WindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - specLines
 
-	if !r.isVisible || spaceHeight < 3 {
+	if !r.isVisible || spaceHeight < MinSpaceHeight {
 		r.lyricLines = 0
 		return
 	}
 
-	if spaceHeight >= 5 {
-		r.lyricLines = 5
-		r.lyricStartRow = (r.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 3
+	endRow := r.netease.WindowHeight() - EndRowMargin
+	if spaceHeight >= FullLyricLines {
+		r.lyricLines = FullLyricLines
 	} else {
-		r.lyricLines = 3
-		r.lyricStartRow = (r.netease.WindowHeight()-3+main.MenuBottomRow())/2 - 2
+		r.lyricLines = CompactLyricLines
 	}
+	r.lyricStartRow = (main.MenuBottomRow() + specLines + endRow - r.lyricLines) / 2
 }
 
 // View renders the lyric component.
 func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
-	endRow := r.netease.WindowHeight() - 4
+	specLines := r.netease.SpectrumLines(main)
+	endRow := r.netease.WindowHeight() - EndRowMargin
 
 	if r.lyricLines == 0 {
-		if endRow-main.MenuBottomRow() > 0 {
-			return strings.Repeat("\n", endRow-main.MenuBottomRow()), endRow - main.MenuBottomRow()
+		fillingLines := endRow - main.MenuBottomRow() - specLines
+		if fillingLines > 0 {
+			return strings.Repeat("\n", fillingLines), fillingLines
 		}
 		return "", 0
 	}
 
 	// Update YRC playback time for word-level progress
+	var currentTimeMs int64
 	if player := r.netease.Player(); player != nil {
-		r.SetCurrentTime(player.PassedTime().Milliseconds())
+		currentTimeMs = player.PassedTime().Milliseconds()
+		r.SetCurrentTime(currentTimeMs)
+	}
+
+	// Build cache key and skip recomputation if nothing changed.
+	// Time is rounded to ~100ms granularity since lyrics don't need
+	// pixel-perfect timing — per-frame precision is wasteful.
+	state := r.lyricService.State()
+	key := lyricCacheKey{
+		currentIndex:        state.CurrentIndex,
+		yrcLineIdx:          state.YRCLineIndex,
+		isRunning:           state.IsRunning,
+		yrcEnabled:          state.YRCEnabled,
+		showTranslation:     state.ShowTranslation,
+		currentTimeHundredMs: currentTimeMs / 100,
+		windowWidth:         r.netease.WindowWidth(),
+		windowHeight:        r.netease.WindowHeight(),
+		menuBottomRow:       main.MenuBottomRow(),
+		specLines:           specLines,
+		isCentered:          main.CenterEverything(),
+	}
+	if key == r.cachedKey {
+		return r.cachedView, r.cachedLines
 	}
 
 	r.prepareLyricLines()
 
 	var lyricBuilder strings.Builder
-	if r.lyricStartRow > main.MenuBottomRow() {
-		lyricBuilder.WriteString(strings.Repeat("\n", r.lyricStartRow-main.MenuBottomRow()))
+	topPadding := r.lyricStartRow - main.MenuBottomRow() - specLines
+	if topPadding > 0 {
+		lyricBuilder.WriteString(strings.Repeat("\n", topPadding))
 	}
 
 	if main.CenterEverything() {
@@ -229,13 +261,20 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// significantly from the actual output when lyrics are centered or when
 	// no lyrics are displayed.
 	viewResult := lyricBuilder.String()
-	return viewResult, strings.Count(viewResult, "\n")
+	linesResult := strings.Count(viewResult, "\n")
+
+	// store in cache
+	r.cachedKey = key
+	r.cachedView = viewResult
+	r.cachedLines = linesResult
+
+	return viewResult, linesResult
 }
 
 // prepareLyricLines fetches the latest state from the service and prepares the `r.lyrics` array for rendering.
 func (r *LyricRenderer) prepareLyricLines() {
 	state := r.lyricService.State()
-	r.lyrics = [5]string{} // Clear previous lines
+	r.lyrics = make([]string, r.lyricLines) // Allocate based on current lyric line count
 
 	if !state.IsRunning {
 		return
@@ -358,17 +397,18 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 	// coverEndCol is the column where cover ends (1-indexed), so we need to offset by coverEndCol
 	lyricStartCol := coverEndCol
 	if lyricStartCol > 0 {
-		lyricStartCol += 2 // Add some padding after cover
+		lyricStartCol += CoverRightPadding // Add some padding after cover
 	}
 	availableWidth := windowWidth - lyricStartCol
 
-	highlightLine := 2
+	// 以 lyrics 数组的中心为高亮行（3 行模式索引 1，5 行模式索引 2）。
+	highlightLine := (r.lyricLines - 1) / 2
 	startLine := highlightLine - (r.lyricLines-1)/2
 	endLine := highlightLine + (r.lyricLines-1)/2
-	extraPadding := 8 + max(0, (availableWidth-40)/5)
+	extraPadding := MinLyricExtraPadding + max(0, (availableWidth-LyricBaseWidth)/LyricPaddingDivisor)
 	lyricsMaxLength := availableWidth - extraPadding
-	if lyricsMaxLength < 20 {
-		lyricsMaxLength = 20
+	if lyricsMaxLength < MinLyricWidth {
+		lyricsMaxLength = MinLyricWidth
 	}
 
 	for i := startLine; i <= endLine; i++ {
@@ -412,19 +452,19 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 
 	var startCol int
 	if main.IsDualColumn() {
-		startCol = main.MenuStartColumn() + 3
+		startCol = main.MenuStartColumn() + DualColumnLyricPadding
 	} else {
-		startCol = main.MenuStartColumn() - 4
+		startCol = main.MenuStartColumn() - LyricHorizontalMargin
 	}
 
 	// Add cover offset to start column if needed
-	if coverEndCol > 0 && startCol < coverEndCol+2 {
-		startCol = coverEndCol + 2 // Add some padding after cover
+	if coverEndCol > 0 && startCol < coverEndCol+CoverRightPadding {
+		startCol = coverEndCol + CoverRightPadding // Add some padding after cover
 	}
 
-	maxLen := r.netease.WindowWidth() - startCol - 4
-	if maxLen < 20 {
-		maxLen = 20
+	maxLen := r.netease.WindowWidth() - startCol - LyricHorizontalMargin
+	if maxLen < MinLyricWidth {
+		maxLen = MinLyricWidth
 	}
 
 	renderLine := func(idx int, isHighlight bool) {
@@ -469,8 +509,8 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 
 	switch r.lyricLines {
 	case 3:
-		for i := 1; i <= 3; i++ {
-			renderLine(i, i == 2)
+		for i := range 3 {
+			renderLine(i, i == 1)
 		}
 	case 5:
 		for i := range 5 {

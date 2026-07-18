@@ -118,7 +118,7 @@ static inline void set_modifier_mask(uint16_t mask) {
 
 // Unset the native modifier mask for future events.
 static inline void unset_modifier_mask(uint16_t mask) {
-	current_modifiers ^= mask;
+	current_modifiers &= ~mask;
 }
 
 // Get the current native modifier mask state.

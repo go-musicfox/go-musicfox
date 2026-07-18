@@ -81,7 +81,7 @@ extern KeySym keycode_to_keysym(KeyCode keycode, unsigned int modifier_mask);
  * called in combination with UnloadInputHelper() if the native keyboard layout
  * is changed.
  */
-extern void load_input_helper();
+extern void load_input_helper(Display*);
 
 /* De-initialize items required for KeyCodeToKeySym() and KeySymToUnicode()
  * functionality.  This method is called by OnLibraryUnload() and may need to be

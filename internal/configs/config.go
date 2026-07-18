@@ -29,6 +29,7 @@ func (cfg *Config) FillToModelOpts(opts *model.Options) {
 	opts.LoadingText = cfg.Theme.LoadingText
 	opts.PrimaryColor = cfg.Theme.PrimaryColor
 	opts.DualColumn = cfg.Theme.DoubleColumn
+	opts.MaxMenuStartRow = cfg.Theme.MaxTitleStartRow
 	opts.AltScreen = cfg.Main.AltScreen
 
 	opts.MouseMode = tea.MouseModeCellMotion

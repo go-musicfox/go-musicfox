@@ -20,12 +20,12 @@ endif
 
 .PHONY: build
 build:
-	$(PACKAGE_ROOT)/hack/build.sh build
+	BUILD_TAGS="enable_global_hotkey,purego" $(PACKAGE_ROOT)/hack/build.sh build
 
 .PHONY: build-macapp
 build-macapp:
 	@mkdir -p $(PACKAGE_ROOT)/bin
-	BUILD_TAGS="enable_global_hotkey" $(PACKAGE_ROOT)/hack/build.sh build
+	BUILD_TAGS="enable_global_hotkey,purego" $(PACKAGE_ROOT)/hack/build.sh build
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/Resources
 	@cp $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/go-musicfox
@@ -41,7 +41,7 @@ init:
 
 .PHONY: install
 install:
-	$(PACKAGE_ROOT)/hack/build.sh install
+	BUILD_TAGS="enable_global_hotkey,purego" $(PACKAGE_ROOT)/hack/build.sh install
 
 .PHONY: scoop-config-gen
 scoop-config-gen:

@@ -485,6 +485,8 @@ type Program struct {
 	// UI but still want to take advantage of Bubble Tea's architecture.
 	disableRenderer bool
 
+	useFoxfulRenderer bool
+
 	// handlers is a list of channels that need to be waited on before the
 	// program can exit.
 	handlers channelHandlers
@@ -545,6 +547,9 @@ type Program struct {
 
 	// whether to use hard tabs to optimize cursor movements
 	useHardTabs bool
+	// useHardTabsSet indicates whether the user explicitly set useHardTabs
+	// via WithHardTabs. When true, automatic detection is skipped.
+	useHardTabsSet bool
 	// whether to use backspace to optimize cursor movements
 	useBackspace bool
 
@@ -1056,6 +1061,8 @@ func (p *Program) Run() (returnModel Model, returnErr error) {
 	if p.renderer == nil {
 		if p.disableRenderer {
 			p.renderer = &nilRenderer{}
+		} else if p.useFoxfulRenderer {
+			p.renderer = newFoxfulRenderer(p.output, p.width, p.height)
 		} else {
 			// If no renderer is set use the cursed one.
 			r := newCursedRenderer(

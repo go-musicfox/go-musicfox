@@ -19,6 +19,16 @@ import (
 type SongInfoRenderer struct {
 	netease *Netease
 	state   playerRendererState
+
+	cachedView     string
+	cachedLines    int
+	cachedSongId   int64
+	cachedState    types.State
+	cachedVolume   int
+	cachedMode     types.Mode
+	cachedLike     bool
+	cachedWidth    int
+	cachedCentered bool
 }
 
 // NewSongInfoRenderer creates a new song info renderer component.
@@ -42,9 +52,29 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 
 	var (
+		song     = r.state.CurSong()
+		state    = r.state.State()
+		volume   = r.state.Volume()
+		mode     = r.state.Mode()
+		width    = r.netease.WindowWidth()
+		centered = main.CenterEverything()
+	)
+
+	var isLike bool
+	if song.Id > 0 {
+		isLike = likelist.IsLikeSong(song.Id)
+	}
+
+	// Output caching: skip full rebuild when nothing changed
+	if song.Id == r.cachedSongId && state == r.cachedState && volume == r.cachedVolume &&
+		mode == r.cachedMode && isLike == r.cachedLike && width == r.cachedWidth &&
+		centered == r.cachedCentered {
+		return r.cachedView, r.cachedLines
+	}
+
+	var (
 		builder  strings.Builder
 		segments []Segment
-		song     = r.state.CurSong()
 	)
 
 	// Helper for adding a new segment
@@ -56,11 +86,11 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		segments = append(segments, Segment{text, lipgloss.BrightBlack})
 	}
 
-	prefixLen := 10
-	if main.MenuStartColumn()-4 > 0 {
-		prefixLen += 12
+	prefixLen := SongInfoPrefixBaseWidth
+	if main.MenuStartColumn()-MenuArrowWidth > 0 {
+		prefixLen += SongInfoPrefixExtraWidth
 		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-4), lipgloss.BrightBlack)
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), lipgloss.BrightBlack)
 		}
 		{
 			msg := r.state.Mode().Name()
@@ -76,7 +106,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	if song.Id > 0 {
 		var icolor color.Color
-		if likelist.IsLikeSong(song.Id) {
+		if isLike {
 			icolor = lipgloss.Red
 		} else {
 			icolor = lipgloss.White
@@ -114,7 +144,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	if main.CenterEverything() {
 		totalWidth := 0
-		widthLimit := r.netease.WindowWidth() - 4
+		widthLimit := r.netease.WindowWidth() - SongInfoHorizontalPadding
 		for index, segment := range segments {
 			segmentWidth := runewidth.StringWidth(segment.text)
 			if totalWidth+segmentWidth > widthLimit {
@@ -141,7 +171,18 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// and determine bottom-fill padding. An inflated value suppresses the bottom fill,
 	// resulting in a View output shorter than the terminal height, which leaves cells
 	// from the previous frame uncleared (causing display corruption/overlay).
-	lines = 2
+	lines = SongInfoLines
 
-	return builder.String() + "\n\n", lines
+	// Store output cache
+	r.cachedView = builder.String() + "\n\n"
+	r.cachedLines = lines
+	r.cachedSongId = song.Id
+	r.cachedState = state
+	r.cachedVolume = volume
+	r.cachedMode = mode
+	r.cachedLike = isLike
+	r.cachedWidth = width
+	r.cachedCentered = centered
+
+	return r.cachedView, r.cachedLines
 }

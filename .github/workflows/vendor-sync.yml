@@ -51,11 +51,11 @@ jobs:
           committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 
-          title: "Chore: Automate vendor sync"
+          title: "chore(vendor): 同步 go vendor 目录"
           body: |
-            An automatic workflow has detected changes in `go.mod` or `go.sum` and updated the vendor directory accordingly.
+            自动工作流检测到 `go.mod` 或 `go.sum` 发生了变更，已同步更新 vendor 目录。
 
-            This PR is automatically generated. Please review and merge.
+            此 PR 自动生成，请审查并合并。
 
           branch: "bot/vendor-sync"
 

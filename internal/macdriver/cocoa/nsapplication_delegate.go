@@ -49,7 +49,8 @@ func applicationDidFinishLaunching(id objc.ID, cmd objc.SEL, notification objc.I
 }
 
 func applicationShouldTerminateAfterLastWindowClosed(id objc.ID, cmd objc.SEL, notification objc.ID) bool {
-	return true
+	// runtime.Run terminates NSApplication after the Go application exits.
+	return false
 }
 
 type defaultAppDelegate struct {

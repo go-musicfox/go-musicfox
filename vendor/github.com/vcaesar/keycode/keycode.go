@@ -127,14 +127,14 @@ var Keycode = UMap{
 	"ctrl":    29,
 	"control": 29,
 	"shift":   42,
-	"rshift":  54,
+	"shiftr":  54,
 	"space":   57,
 	//
 	"alt":     56,
-	"ralt":    3640,
+	"altr":    3640,
 	"cmd":     3675,
 	"command": 3675,
-	"rcmd":    3676,
+	"cmdr":    3676,
 	//
 	"up":    57416,
 	"down":  57424,

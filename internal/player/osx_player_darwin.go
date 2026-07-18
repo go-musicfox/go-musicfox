@@ -3,6 +3,7 @@
 package player
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
@@ -21,8 +22,10 @@ type osxPlayer struct {
 	player  *avcore.AVPlayer
 	handler *playerHandler
 
-	curMusic URLMusic
-	timer    *timex.Timer
+	curMusic       URLMusic
+	timer          *timex.Timer
+	spectrum       *PCMAnalyzer
+	renderInterval time.Duration
 
 	volume    int
 	state     types.State
@@ -41,6 +44,10 @@ func NewOsxPlayer() *osxPlayer {
 		musicChan: make(chan URLMusic, 1),
 		close:     make(chan struct{}),
 		volume:    100,
+	}
+	p.renderInterval = configs.AppConfig.Main.FrameRate.Interval()
+	if configs.AppConfig.Main.Visualizer.Enable || configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled {
+		p.spectrum = NewPCMAnalyzer(p.renderInterval)
 	}
 
 	handler := playerHandler_new(p)
@@ -78,6 +85,15 @@ func (p *osxPlayer) listen() {
 				}
 
 				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.URL)))
+				if p.spectrum != nil {
+					tap, err := avcore.NewAudioTap(p.spectrum.NewConsumer())
+					if err != nil {
+						slog.Warn("failed to create audio spectrum tap", "error", err)
+					} else if !item.AttachAudioTap(tap) {
+						tap.Close()
+						slog.Warn("failed to attach audio spectrum tap")
+					}
+				}
 				p.player.ReplaceCurrentItemWithPlayerItem(item)
 
 				// 重新注册通知监听器，因为CurrentItem已经改变
@@ -89,7 +105,7 @@ func (p *osxPlayer) listen() {
 				// 计时器
 				p.timer = timex.NewTimer(timex.Options{
 					Duration:       8760 * time.Hour,
-					TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
+					TickerInternal: p.renderInterval,
 					OnRun:          func(started bool) {},
 					OnPause:        func() {},
 					OnDone:         func(stopped bool) {},
@@ -232,6 +248,20 @@ func (p *osxPlayer) StateChan() <-chan types.State {
 	return p.stateChan
 }
 
+func (p *osxPlayer) Spectrum() SpectrumFrame {
+	if p.spectrum == nil {
+		return SpectrumFrame{}
+	}
+	return p.spectrum.Spectrum()
+}
+
+func (p *osxPlayer) RawSamples() RawSampleFrame {
+	if p.spectrum == nil {
+		return RawSampleFrame{}
+	}
+	return p.spectrum.RawSamples()
+}
+
 func (p *osxPlayer) UpVolume() {
 	p.l.Lock()
 	defer p.l.Unlock()
@@ -289,8 +319,11 @@ func (p *osxPlayer) Close() {
 		close(p.close)
 		p.close = nil
 	}
-	p.handler.Release()
-	if p.player != nil {
-		p.player.Release()
+	if p.spectrum != nil {
+		p.spectrum.Close()
 	}
+	// Skip ObjC Release calls during shutdown to avoid SIGSEGV.
+	// During app termination the ObjC runtime may be in an inconsistent
+	// state, and calling release on ObjC objects can cause a segfault in
+	// the purego cgo bridge. The OS reclaims resources on process exit.
 }

@@ -74,33 +74,33 @@ jobs:
 
             if (!hasValidTitle) {
               await addLabel('needs:title');
-              await comment('title', `Hey! Your PR title \`${title}\` doesn't follow conventional commit format.
+              await comment('title', `你的 PR 标题 \`${title}\` 不符合 Conventional Commit 规范。
 
-            Please update it to start with one of:
-            - \`feat:\` or \`feat(scope):\` new feature
-            - \`fix:\` or \`fix(scope):\` bug fix
-            - \`docs:\` or \`docs(scope):\` documentation changes
-            - \`chore:\` or \`chore(scope):\` maintenance tasks
-            - \`refactor:\` or \`refactor(scope):\` code refactoring
-            - \`test:\` or \`test(scope):\` adding or updating tests
-            - \`style:\` or \`style(scope):\` code style changes
-            - \`perf:\` or \`perf(scope):\` performance improvements
-            - \`build:\` or \`build(scope):\` build system changes
-            - \`ci:\` or \`ci(scope):\` CI/CD changes
+            请修改标题，以以下格式之一开头：
+            - \`feat:\` 或 \`feat(scope):\` 新功能
+            - \`fix:\` 或 \`fix(scope):\` Bug 修复
+            - \`docs:\` 或 \`docs(scope):\` 文档更新
+            - \`chore:\` 或 \`chore(scope):\` 维护任务
+            - \`refactor:\` 或 \`refactor(scope):\` 代码重构
+            - \`test:\` 或 \`test(scope):\` 测试相关
+            - \`style:\` 或 \`style(scope):\` 代码格式调整
+            - \`perf:\` 或 \`perf(scope):\` 性能优化
+            - \`build:\` 或 \`build(scope):\` 构建系统
+            - \`ci:\` 或 \`ci(scope):\` CI/CD 变更
 
-            Where \`scope\` is the package or module name (e.g., \`player\`, \`ui\`, \`config\`).
+            其中 \`scope\` 为包名或模块名（例如 \`player\`、\`ui\`、\`config\`）。
 
-            See [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md) for details.`);
+            详见 [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)。`);
               return;
             }
 
             await removeLabel('needs:title');
 
-            // Step 2: Check for linked issue (skip for docs/refactor/feat/style/perf/build/ci PRs)
-            const skipIssueCheck = /^(docs|refactor|feat|style|perf|build|ci)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
-            if (skipIssueCheck) {
+            // Step 2: Only bug fix PRs require a linked issue
+            const isFixPR = /^fix\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
+            if (!isFixPR) {
               await removeLabel('needs:issue');
-              console.log('Skipping issue check for docs/refactor/feat/style/perf/build/ci PR');
+              console.log('Skipping issue check for non-fix PR');
               return;
             }
             const query = `
@@ -125,15 +125,15 @@ jobs:
 
             if (linkedIssues === 0) {
               await addLabel('needs:issue');
-              await comment('issue', `Thanks for your contribution!
+              await comment('issue', `感谢你的贡献！
 
-            This PR doesn't have a linked issue. All PRs should reference an existing issue when applicable.
+            此 PR 未关联 Issue。Bug 修复类 PR 必须关联一个已有的 Issue。
 
-            Please:
-            1. Open an issue describing the bug/feature (if one doesn't exist)
-            2. Add \`Fixes #<number>\` or \`Closes #<number>\` to this PR description
+            请按以下步骤操作：
+            1. 打开一个 Issue 描述该 Bug（如尚不存在）
+            2. 在 PR 描述中添加 \`Fixes #<编号>\` 或 \`Closes #<编号>\`
 
-            See [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md) for details.`);
+            详见 [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)。`);
               return;
             }
 
@@ -161,19 +161,23 @@ jobs:
 
             const body = pr.body || '';
             const title = pr.title;
-            const isDocsRefactorOrFeat = /^(docs|refactor|feat|style|perf|build|ci)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
+            const isFixPR = /^fix\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
 
             const issues = [];
 
-            // Check: template sections exist
+            // Check: template sections exist (Issue section only required for bug fix PRs)
             const hasWhatSection = /### What does this PR do\?/.test(body);
             const hasTypeSection = /### Type of change/.test(body);
             const hasVerifySection = /### How did you verify your code works\?/.test(body);
             const hasChecklistSection = /### Checklist/.test(body);
             const hasIssueSection = /### Issue for this PR/.test(body);
 
-            if (!hasWhatSection || !hasTypeSection || !hasVerifySection || !hasChecklistSection || !hasIssueSection) {
-              issues.push('PR description is missing required template sections. Please use the [PR template](../blob/master/.github/pull_request_template.md).');
+            if (!hasWhatSection || !hasTypeSection || !hasVerifySection || !hasChecklistSection) {
+              issues.push('PR 描述缺少必需的模板段落，请使用 [PR 模板](../blob/master/.github/pull_request_template.md)。');
+            }
+
+            if (isFixPR && !hasIssueSection) {
+              issues.push('Bug 修复类 PR 必须包含「Issue for this PR」段落并关联 Issue。');
             }
 
             // Check: "What does this PR do?" has real content (not just placeholder text)
@@ -183,7 +187,7 @@ jobs:
               const placeholder = 'Please provide a description of the issue';
               const onlyPlaceholder = whatContent.includes(placeholder) && whatContent.replace(placeholder, '').replace(/[*\s]/g, '').length < 20;
               if (!whatContent || onlyPlaceholder) {
-                issues.push('"What does this PR do?" section is empty or only contains placeholder text. Please describe your changes.');
+                issues.push('「What does this PR do?」段落为空或仅含占位文本，请描述你的更改。');
               }
             }
 
@@ -193,17 +197,17 @@ jobs:
               const typeContent = typeMatch ? typeMatch[1] : '';
               const hasCheckedBox = /- \[x\]/i.test(typeContent);
               if (!hasCheckedBox) {
-                issues.push('No "Type of change" checkbox is checked. Please select at least one.');
+                issues.push('未勾选任何「Type of change」复选框，请至少选择一项。');
               }
             }
 
-            // Check: issue reference (skip for docs/refactor/feat/style/perf/build/ci)
-            if (!isDocsRefactorOrFeat && hasIssueSection) {
+            // Check: issue reference (only required for bug fix PRs)
+            if (isFixPR && hasIssueSection) {
               const issueMatch = body.match(/### Issue for this PR\s*\n([\s\S]*?)(?=###|$)/);
               const issueContent = issueMatch ? issueMatch[1].trim() : '';
               const hasIssueRef = /(closes|fixes|resolves)\s+#\d+/i.test(issueContent) || /#\d+/.test(issueContent);
               if (!hasIssueRef) {
-                issues.push('No issue referenced. Please add `Closes #<number>` linking to the relevant issue.');
+                issues.push('Bug 修复类 PR 必须引用 Issue。请添加 `Closes #<编号>` 关联相关 Issue。');
               }
             }
 
@@ -212,7 +216,7 @@ jobs:
               const verifyMatch = body.match(/### How did you verify your code works\?\s*\n([\s\S]*?)(?=###|$)/);
               const verifyContent = verifyMatch ? verifyMatch[1].trim() : '';
               if (!verifyContent) {
-                issues.push('"How did you verify your code works?" section is empty. Please explain how you tested.');
+                issues.push('「How did you verify your code works?」段落为空，请说明你是如何测试的。');
               }
             }
 
@@ -223,7 +227,7 @@ jobs:
               const unchecked = (checklistContent.match(/- \[ \]/g) || []).length;
               const checked = (checklistContent.match(/- \[x\]/gi) || []).length;
               if (checked < 2) {
-                issues.push('Not all checklist items are checked. Please confirm you have tested locally and have not included unrelated changes.');
+                issues.push('未勾选全部 Checklist 项，请确认你已在本地测试且未包含无关更改。');
               }
             }
 
@@ -265,14 +269,14 @@ jobs:
               const existing = comments.find(c => c.body.includes(marker));
 
               const body_text = `${marker}
-            This PR doesn't fully meet our [contributing guidelines](../blob/master/CONTRIBUTING.md) and [PR template](../blob/master/.github/pull_request_template.md).
+            此 PR 不完全符合我们的[贡献指南](../blob/master/CONTRIBUTING.md)和 [PR 模板](../blob/master/.github/pull_request_template.md)。
 
-            **What needs to be fixed:**
+            **需要修复的问题：**
             ${issues.map(i => `- ${i}`).join('\n')}
 
-            Please edit this PR description to address the above within **2 hours**, or it will be automatically closed.
+            请在 **2 小时**内修改 PR 描述以解决以上问题，否则该 PR 将被自动关闭。
 
-            If you believe this was flagged incorrectly, please let a maintainer know.`;
+            如果你认为此标记有误，请联系维护者。`;
 
               if (existing) {
                 await github.rest.issues.updateComment({
@@ -314,7 +318,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: 'Thanks for updating your PR! It now meets our contributing guidelines. :+1:'
+                body: '感谢你更新了 PR！现在它符合我们的贡献指南了。:+1:'
               });
 
               console.log(`PR #${pr.number} is now compliant, label removed`);
