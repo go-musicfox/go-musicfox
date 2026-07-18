@@ -199,6 +199,42 @@ type Player interface {
 1. 实现 `Update()` 和 `View()` 方法
 2. 在 `netease.go:Components()` 注册
 
+### 跨平台构建兼容性
+
+**修改 `Makefile` 或 `hack/` 目录下的构建脚本时，必须确保 Windows 系统兼容。**
+
+#### 原因
+go-musicfox 支持 macOS/Linux/Windows 三平台，构建脚本需要在不同环境下正确执行。
+
+#### 检查清单
+- [ ] 新增的 target 是否包含 Unix 特有命令（`which`、`cp`、`mkdir -p`、`chmod`、`tar`、`awk` 等）
+- [ ] 是否使用 `$(OS)` / `Windows_NT` 条件分支提供 Windows 替代逻辑
+- [ ] Shell 脚本（`.sh`）是否有对应的 PowerShell（`.ps1`）实现
+- [ ] 路径分隔符是否兼容（使用 `$(PACKAGE_ROOT)` 而非 `` `pwd` ``）
+- [ ] 重定向和设备文件是否有 Windows 替代（`nul` 对应 `/dev/null`，`where` 对应 `which`）
+
+#### Windows 兼容模式参考
+
+```makefile
+# 使用 OS 条件分支
+ifeq ($(OS),Windows_NT)
+    # Windows 逻辑
+else
+    # Unix 逻辑
+endif
+```
+
+| Unix 写法 | Windows 替代 |
+|-----------|-------------|
+| `which <cmd>` | `where <cmd>` |
+| `/dev/null` | `nul` |
+| `` `pwd` `` | `$(PACKAGE_ROOT)`（Make 变量） |
+| `<cmd> >/dev/null 2>&1` | `<cmd> >nul 2>&1` |
+| `<cmd> || { cmd2; }` | `<cmd> || ( cmd2 )` |
+| `hack/*.sh` | `hack/*.ps1`（PowerShell 实现） |
+
+**例外**：纯交叉编译/CI 内部工具（如 `hack/init_linux_env.sh`、`hack/init_windows_env.sh` 等 Docker 内部脚本），仅在 Linux Docker 容器中执行，无需适配 Windows。
+
 ## 文档维护准则
 
 ### 重要准则：修改代码后需维护 AGENTS.md
