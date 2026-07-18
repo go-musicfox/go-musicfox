@@ -134,8 +134,9 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			case <-ctx.Done():
 				return
 			case s := <-p.StateChan():
-				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				if s != types.Stopped {
+			p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+			p.updateDesktopLyrics()
+			if s != types.Stopped {
 					p.netease.Rerender(false)
 					break
 				}
@@ -158,14 +159,15 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 
 				p.lyricService.UpdatePosition(duration)
 
+				// Update desktop lyrics
+				p.updateDesktopLyrics()
+
 				if p.renderTicker != nil {
 					select {
 					case p.renderTicker.c <- time.Now():
 					default:
 					}
 				}
-
-				p.netease.Rerender(false)
 			}
 		}
 	})
@@ -682,4 +684,46 @@ func modeToLoopStatusAndShuffle(mode types.Mode) (loopStatus string, shuffle boo
 
 func (p *Player) RenderTicker() model.Ticker {
 	return p.renderTicker
+}
+
+func (p *Player) updateDesktopLyrics() {
+	dl := p.netease.DesktopLyrics()
+	if dl == nil {
+		return
+	}
+
+	state := p.State()
+	curLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
+	hasContent := curLine.Text != "" || len(curLine.Words) > 0
+	currentTimeMs := p.PassedTime().Milliseconds()
+	if configs.AppConfig.Main.Lyric.DesktopLyrics.HideOnPause && state == types.Paused {
+		dl.Update(curLine, nextLine, currentIndex, currentTimeMs, false)
+		dl.Hide()
+		return
+	}
+
+	// Show/hide based on playback state
+	switch state {
+	case types.Playing:
+		if hasContent {
+			if !dl.IsVisible() {
+				dl.Show()
+			}
+			dl.Update(curLine, nextLine, currentIndex, currentTimeMs, true)
+		}
+	case types.Paused:
+		if hasContent {
+			dl.Update(curLine, nextLine, currentIndex, currentTimeMs, false)
+		}
+	case types.Stopped:
+		dl.Hide()
+	}
+
+	// Pass spectrum data to desktop lyrics for GPU visualization
+	if state == types.Playing || state == types.Paused {
+		if provider, ok := p.Player.(player.SpectrumProvider); ok {
+			dl.UpdateSpectrum(provider.Spectrum())
+			dl.UpdateRawSamples(provider.RawSamples())
+		}
+	}
 }

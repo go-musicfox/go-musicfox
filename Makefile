@@ -32,14 +32,18 @@ endif
 
 .PHONY: build
 build:
-	$(BUILD_SCRIPT) build
+ifeq ($(OS),Windows_NT)
+	$(BUILD_SCRIPT) build -BuildTags "enable_global_hotkey,purego"
+else
+	BUILD_TAGS="enable_global_hotkey,purego" $(BUILD_SCRIPT) build
+endif
 
 # build-macapp 仅在 macOS 下有效
 .PHONY: build-macapp
 build-macapp:
 ifneq ($(OS),Windows_NT)
 	@mkdir -p $(PACKAGE_ROOT)/bin
-	BUILD_TAGS="enable_global_hotkey" $(PACKAGE_ROOT)/hack/build.sh build
+	BUILD_TAGS="enable_global_hotkey,purego" $(BUILD_SCRIPT) build
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS
 	@mkdir -p $(PACKAGE_ROOT)/bin/musicfox.app/Contents/Resources
 	@cp $(PACKAGE_ROOT)/bin/musicfox $(PACKAGE_ROOT)/bin/musicfox.app/Contents/MacOS/go-musicfox
@@ -58,7 +62,11 @@ init:
 
 .PHONY: install
 install:
-	$(BUILD_SCRIPT) install
+ifeq ($(OS),Windows_NT)
+	$(BUILD_SCRIPT) install -BuildTags "enable_global_hotkey,purego"
+else
+	BUILD_TAGS="enable_global_hotkey,purego" $(BUILD_SCRIPT) install
+endif
 
 .PHONY: scoop-config-gen
 scoop-config-gen:

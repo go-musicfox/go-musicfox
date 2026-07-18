@@ -8,11 +8,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
-	tea "charm.land/bubbletea/v2"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -22,6 +23,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/automator"
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -49,14 +51,18 @@ type Netease struct {
 
 	lyricService *lyric.Service
 
-	lyricRenderer    *LyricRenderer
-	songInfoRenderer *SongInfoRenderer
-	progressRenderer *ProgressRenderer
-	coverRenderer    *CoverRenderer
+	lyricRenderer        *LyricRenderer
+	songInfoRenderer     *SongInfoRenderer
+	progressRenderer     *ProgressRenderer
+	coverRenderer        *CoverRenderer
+	spectrumRenderer     *SpectrumRenderer
+	spectrogramRenderer  *SpectrogramRenderer
 
 	player       *Player
 	shareSvc     *composer.ShareService
 	trackManager *track.Manager
+
+	desktopLyrics desktop_lyrics.Controller
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -80,12 +86,18 @@ func NewNetease(app *model.App) *Netease {
 
 	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset, skipParseErr)
 	n.lyricService.EnableYRC(true) // Enable word-by-word lyrics
+
+	// Initialize desktop lyrics
+	n.desktopLyrics = desktop_lyrics.NewController(configs.AppConfig.Main.Lyric.DesktopLyrics)
+
 	n.player = NewPlayer(n, n.lyricService)
 
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
 	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
 	n.progressRenderer = NewProgressRenderer(n, n.player)
 	n.coverRenderer = NewCoverRenderer(n, n.player)
+	n.spectrumRenderer = NewSpectrumRenderer(n.player)
+	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
@@ -98,24 +110,33 @@ func NewNetease(app *model.App) *Netease {
 }
 
 func (n *Netease) Components() []model.Component {
-	// CoverRenderer uses absolute positioning and returns 0 lines,
-	// so it doesn't affect the layout of other components.
-	// It should be rendered LAST to overlay the cover image after normal layout.
+	var components []model.Component
+	if n.spectrumRenderer.IsEnabled() {
+		components = append(components, n.spectrumRenderer)
+	}
+	if n.spectrogramRenderer.IsEnabled() {
+		components = append(components, n.spectrogramRenderer)
+	}
+	components = append(components, n.lyricRenderer)
+	components = append(components, n.songInfoRenderer, n.progressRenderer)
+	// CoverRenderer uses absolute positioning and returns 0 lines, so it must
+	// be rendered last to overlay the normal layout.
 	if n.coverRenderer.IsEnabled() {
-		return []model.Component{
-			n.lyricRenderer,
-			n.songInfoRenderer,
-			n.progressRenderer,
-			n.coverRenderer,
-		}
+		components = append(components, n.coverRenderer)
 	}
+	return components
+}
 
-	// Default: just lyrics without cover
-	return []model.Component{
-		n.lyricRenderer,
-		n.songInfoRenderer,
-		n.progressRenderer,
+func (n *Netease) SpectrumLines(main *model.Main) int {
+	windowHeight := n.WindowHeight()
+	menuBottomRow := main.MenuBottomRow()
+	if n.spectrumRenderer != nil && n.spectrumRenderer.IsEnabled() {
+		return n.spectrumRenderer.LineCount(windowHeight, menuBottomRow)
 	}
+	if n.spectrogramRenderer != nil && n.spectrogramRenderer.IsEnabled() {
+		return n.spectrogramRenderer.LineCount(windowHeight, menuBottomRow)
+	}
+	return 0
 }
 
 // ToLoginPage 需要登录的处理
@@ -387,6 +408,10 @@ func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
 	n.lastfm.Close()
 
+	if n.desktopLyrics != nil {
+		n.desktopLyrics.Close()
+	}
+
 	if n.coverRenderer != nil {
 		n.coverRenderer.Close()
 	}
@@ -396,6 +421,111 @@ func (n *Netease) CloseHook(_ *model.App) {
 
 func (n *Netease) Player() *Player {
 	return n.player
+}
+
+// DesktopLyrics returns the desktop lyrics controller.
+func (n *Netease) DesktopLyrics() desktop_lyrics.Controller {
+	return n.desktopLyrics
+}
+
+// GetDesktopLyricsLines returns the current lyrics lines for desktop display.
+// Returns the current line, the next line (with word-level data when YRC is available),
+// and the current index.
+func (n *Netease) GetDesktopLyricsLines() (curLine, nextLine desktop_lyrics.LyricLine, currentIndex int) {
+	if n.desktopLyrics == nil || n.lyricService == nil {
+		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
+	}
+
+	state := n.lyricService.State()
+	if !state.IsRunning {
+		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
+	}
+
+	// Helper to build display text including translation
+	buildText := func(content, translation string) string {
+		if translation != "" {
+			return content + "\n" + translation
+		}
+		return content
+	}
+
+	if state.YRCEnabled && len(state.YRCLines) > 0 {
+		idx := state.YRCLineIndex
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(state.YRCLines) {
+			idx = len(state.YRCLines) - 1
+		}
+
+		// Current line — with word data
+		if idx < len(state.YRCLines) {
+			line := state.YRCLines[idx]
+			var sb strings.Builder
+			words := make([]desktop_lyrics.LyricWord, len(line.Words))
+			for i, w := range line.Words {
+				sb.WriteString(w.Word)
+				words[i] = desktop_lyrics.LyricWord{
+					Word:      w.Word,
+					StartTime: w.StartTime,
+					EndTime:   w.EndTime,
+				}
+			}
+			curLine = desktop_lyrics.LyricLine{Text: buildText(sb.String(), line.TranslatedLyric), Words: words}
+		}
+
+		// Next line
+		nextIdx := idx + 1
+		if nextIdx < len(state.YRCLines) {
+			line := state.YRCLines[nextIdx]
+			var sb strings.Builder
+			nextWords := make([]desktop_lyrics.LyricWord, len(line.Words))
+			for i, w := range line.Words {
+				sb.WriteString(w.Word)
+				nextWords[i] = desktop_lyrics.LyricWord{
+					Word:      w.Word,
+					StartTime: w.StartTime,
+					EndTime:   w.EndTime,
+				}
+			}
+			nextLine = desktop_lyrics.LyricLine{Text: buildText(sb.String(), line.TranslatedLyric), Words: nextWords}
+		}
+
+		return curLine, nextLine, idx
+
+	} else if len(state.Fragments) > 0 {
+		idx := state.CurrentIndex
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(state.Fragments) {
+			idx = len(state.Fragments) - 1
+		}
+
+		// Current line — plain text (no word data for LRC)
+		if idx < len(state.Fragments) {
+			f := state.Fragments[idx]
+			trans := ""
+			if state.ShowTranslation {
+				trans = state.TranslatedFragments[f.StartTimeMs]
+			}
+			curLine = desktop_lyrics.LyricLine{Text: buildText(f.Content, trans)}
+		}
+
+		// Next line
+		if idx+1 < len(state.Fragments) {
+			f := state.Fragments[idx+1]
+			trans := ""
+			if state.ShowTranslation {
+				trans = state.TranslatedFragments[f.StartTimeMs]
+			}
+			nextLine = desktop_lyrics.LyricLine{Text: buildText(f.Content, trans)}
+		}
+
+		return curLine, nextLine, idx
+	}
+
+	return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
 }
 
 // GetCoverWidth returns the cover image width in columns, or 0 if cover is disabled.

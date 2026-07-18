@@ -95,7 +95,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Make sure these keys always quit
 	switch msgWithType := msg.(type) {
 	case tea.KeyPressMsg:
-		var k = msgWithType.String()
+		k := msgWithType.String()
 		if k != "q" && k != "Q" && k != "ctrl+c" {
 			break
 		}
@@ -147,6 +147,7 @@ func (a *App) Run() error {
 		ListenGlobalKeys(a, a.options.GlobalKeyHandlers)
 	}
 
+	a.options.TeaOptions = append(a.options.TeaOptions, tea.WithHardTabs(false), tea.WithFoxfulRenderer())
 	a.program = tea.NewProgram(a, a.options.TeaOptions...)
 	_, err := a.program.Run()
 	return err

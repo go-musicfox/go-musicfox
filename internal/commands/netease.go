@@ -6,6 +6,7 @@ import (
 	_ "net/http/pprof"
 	"strconv"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/gookit/gcli/v2"
 	"github.com/mattn/go-runewidth"
@@ -62,6 +63,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		model.WithHook(netease.InitHook, netease.CloseHook),
 		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
 		func(options *model.Options) {
+			options.TeaOptions = []tea.ProgramOption{
+				tea.WithHardTabs(false),
+			}
 			options.LocalSearchMenu = ui.NewLocalSearchMenu(netease)
 			options.Components = append(options.Components, netease.Components()...)
 			options.KBControllers = append(options.KBControllers, eventHandler)
@@ -69,6 +73,19 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.Ticker = netease.Player().RenderTicker()
 			options.DynamicRowCount = configs.AppConfig.Theme.DynamicMenuRows
 			options.CenterEverything = configs.AppConfig.Theme.CenterEverything
+
+			if options.DynamicRowCount {
+				// BottomHeight 是底部组件的最大预估高度，用于告诉 foxful-cli
+				// 至少预留多少行给底部组件。菜单会根据剩余空间自适应调整行数。
+				// 当窗口较小时，频谱会根据可用空间自动缩小或隐藏，
+				// 歌词也会从 5 行缩减到 3 行或完全隐藏。
+				// 详见 ui/spectrum_renderer.go 和 ui/lyric_renderer.go 的自适应逻辑。
+				spectrumRows := 0
+				if configs.AppConfig.Main.Visualizer.Enable {
+					spectrumRows = ui.DynamicMenuSpectrumLines // 最大预估频谱行数
+				}
+				options.BottomHeight = ui.DynamicMenuOverhead + ui.DynamicMenuLyricLines + spectrumRows + ui.DynamicMenuBottomLines
+			}
 		},
 	)
 

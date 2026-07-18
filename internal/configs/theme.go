@@ -26,6 +26,8 @@ type ThemeConfig struct {
 	DoubleColumn bool `koanf:"doubleColumn"`
 	// 菜单行数动态变更
 	DynamicMenuRows bool `koanf:"dynamicMenuRows"`
+	// 菜单内容起始行上限，限制菜单上方标题区域向下的最大偏移量（全局生效，0 不限制）
+	MaxTitleStartRow int `koanf:"maxTitleStartRow"`
 	// 界面全部居中
 	CenterEverything bool `koanf:"centerEverything"`
 	// 主题色

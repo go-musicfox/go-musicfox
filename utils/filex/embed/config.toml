@@ -31,6 +31,83 @@ debug = false
 # 播放时 UI 刷新帧率（更高帧率可使动画更平滑，但消耗更多cpu）
 frameRate = 5
 
+# 实时频谱显示（目前仅支持 macOS 的 osx 播放引擎）
+# 调高 main.frameRate 更丝滑
+[main.visualizer]
+# 是否显示实时频谱
+enable = false
+# 频谱最大行数（0 表示不限制；会随可用空间自动缩小）
+maxHeight = 8
+# 频谱渲染样式：bar(柱状图), line(折线图), mirror_bar(镜像柱状图), dot(散点图),
+#   oscilloscope(示波器), vectorscope(向量示波器), spectrogram(滚动频谱图)
+style = "oscilloscope"
+# 声道模式：dual(左右声道分开显示，默认) / mono(左右声道合并显示)
+channelMode = "mono"
+
+# bar / mirror_bar 样式字符（仅使用首个 Unicode 字符）
+barHalfBlock = "▌"
+barFullBlock = "█"
+barEmptyBlock = " "
+barVerticalGradient = false
+# 启用条间水平渐变（每条独立颜色，默认false）
+barHorizontalGradient = false
+# 无声时显示微小顶部标记（cava 风格 idle bar heads）
+showIdleBarHeads = false
+# 条生长方向：bottom(从下往上，默认) / top / left / right / horizontal / vertical
+barOrientation = "bottom"
+
+# mirror_bar 样式字符（留空则沿用 bar 对应项）
+mirrorBarHalfBlock = "▌"
+mirrorBarFullBlock = "█"
+mirrorBarEmptyBlock = ""
+
+# line 样式：braille(盲文，细腻) / block(块字符，醒目)
+lineMode = "braille"
+# 波段交叉点：满格
+lineFullBlock = "•"
+# 插值线段：下半角，纵向填充分层
+lineHalfBlock = "•"
+lineEmptyBlock = "•"
+
+# dot 样式：braille(盲文，细腻) / block(块字符，醒目)
+dotMode = "braille"
+dotFullBlock = "•"
+dotHalfBlock = "•"
+dotEmptyBlock = " "
+
+# oscilloscope 示波器样式：braille(盲文，细腻) / block(块字符，醒目)
+oscilloscopeMode = "braille"
+oscilloscopeScatter = false
+oscilloscopeFullBlock = "█"
+oscilloscopeHalfBlock = "▌"
+oscilloscopeEmptyBlock = " "
+
+# vectorscope 向量示波器样式：braille(盲文，细腻) / block(块字符，醒目)
+vectorscopeMode = "braille"
+vectorscopeFullBlock = "•"
+vectorscopeHalfBlock = "•"
+vectorscopeEmptyBlock = " "
+
+# spectrogram 滚动频谱图设置
+# 滚动速度（1=慢, 10=快，默认4）
+spectrogramSpeed = 4
+
+# FFT 频谱增强（对 line/dot 等频谱样式生效）
+# FFT 帧平均数量（1 表示不平滑，越大越平滑但响应越慢）
+spectrumAverage = 1
+# 纵轴刻度：true=对数(dB，默认) / false=线性(原始振幅)
+spectrumLogScale = true
+# 叠加显示左右声道相位相关性（仅 dual 声道模式生效）
+spectrumPhaseDiff = false
+
+# cava 风格后处理平滑（对 bar/mirror_bar 样式生效）
+# monstercat 指数扩散平滑（0=关，>0=启用，典型值1.0-3.0，值越小条越融合）
+monstercat = 0
+# waves 二次扩散模式（与monstercat互斥，0=关，1=开）
+waves = false
+# 视觉超调百分比（0=关，典型值10-30）
+overshoot = 0
+
 
 # 桌面通知相关设置
 [main.notification]
@@ -72,6 +149,62 @@ spinFPS = 30
 # 时长和帧率挂钩：60fps*6s=360帧，30fps*6s=180帧，30fps*12s=360帧
 spinDuration = 6
 
+# 桌面歌词设置（目前仅支持 macOS）
+[main.lyric.desktopLyrics]
+# 是否启用桌面歌词
+enable = false
+# X 位置系数（0.0-1.0，0.5 表示居中，0.0 最左，1.0 最右）
+xPositionFactor = 0.5
+# Y 位置系数（0.0-1.0，0.0 底部，1.0 顶部，默认 0.5 居中）
+yPositionFactor = 0.5
+# 字体大小（默认 24 匹配系统标签字体）
+fontSize = 24
+# 字体名称（留空使用系统默认字体）
+fontName = ""
+# 文字颜色（十六进制）
+textColor = "#FFFFFF"
+# 文字阴影颜色（十六进制）
+shadowColor = "#EA403F"
+# 阴影模糊半径（像素）
+shadowRadius = 1.0
+# 背景颜色（十六进制）
+backgroundColor = "#000000"
+# 背景透明度（0.0-1.0，默认 0.60）
+backgroundAlpha = 0.60
+# 背景圆角半径（像素，0 使用默认胶囊形状 fontSize/2）
+cornerRadius = 0
+# 窗口整体透明度（0.0-1.0）
+windowAlpha = 1.0
+# 单行模式（只显示当前行）
+oneLineMode = false
+# 暂停时隐藏歌词
+hideOnPause = false
+# 允许拖拽移动歌词窗口
+draggable = true
+# 窗口最大宽度占屏幕比例（0.3-0.9，默认 0.7）
+maxWindowWidth = 0.7
+
+# 桌面歌词频谱可视化（GPU 加速，Core Animation 渲染）
+spectrumEnabled = false
+# 频谱区域高度（像素，默认 60）
+spectrumHeight = 60
+# 频段数量（2-64，默认 64）
+spectrumBarCount = 64
+# 频段间距（像素，默认 1）
+spectrumBarGap = 1
+# 频谱刷新帧率（默认 30）
+spectrumFPS = 30
+# 频谱渲染样式："bar" / "line" / "capsule" / "dot" / "mirror" / "waveform" / "fire" / "led" / "circular" / "ring_arc" / "ripple"
+spectrumStyle = "line"
+# 频谱整体透明度（0.0-1.0，默认 0.8）
+spectrumOpacity = 0.8
+# 低频颜色（十六进制）
+spectrumColorLow = "#00FF00"
+# 中频颜色（十六进制）
+spectrumColorMid = "#FFCC00"
+# 高频颜色（十六进制）
+spectrumColorHigh = "#FF0000"
+
 # Go性能分析工具pprof的相关设置
 [main.pprof]
 # pprof 服务监听的端口，通过 --pprof 命令行选项启用
@@ -93,12 +226,15 @@ loadingText = "[加载中...]"
 doubleColumn = true
 # 菜单行数是否根据终端高度动态变化
 dynamicMenuRows = false
+# 菜单内容起始行上限，限制菜单上方标题区域向下的最大偏移量（0 不限制）
+maxTitleStartRow = 12
 # 界面所有内容居中（实验性功能，未来版本中可能会大幅改动）
 centerEverything = false
 # 主题颜色
 # 随机
 # primaryColor = "random"
-primaryColor = "#ea403f" # 经典网易云音乐红
+# 经典网易云音乐红
+primaryColor = "#EA403F"
 
 # 进度条字符样式配置
 [theme.progress]
@@ -276,8 +412,10 @@ useDefaultKeyBindings = true
 help = ["?", "？"]
 pageUp = ["ctrl+u", "pgup"]
 pageDown = ["ctrl+d", "pgdown"]
-playOrToggle = ["space"]        # 空格
-toggle = []                     # 空数组表示取消此功能的快捷键
+# 空格
+playOrToggle = ["space"]
+# 空数组表示取消此功能的快捷键
+toggle = []
 previous = ["[", "【"]
 next = ["]", "】"]
 backwardFiveSec = ["X"]

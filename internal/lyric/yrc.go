@@ -25,6 +25,33 @@ type YRCLine struct {
 	IsDuet          bool   // 二重唱（与他人合唱）标志
 }
 
+// YRCLineProgress describes word-by-word playback at one instant.
+type YRCLineProgress struct {
+	CompletedWords  int
+	CurrentWord     int
+	CurrentProgress float64
+}
+
+// ProgressYRCLineAtTimeMs returns the completed word count and active word for timeMs.
+// Gaps between words have no active word; words that have ended remain completed.
+func ProgressYRCLineAtTimeMs(line YRCLine, timeMs int64) YRCLineProgress {
+	progress := YRCLineProgress{CurrentWord: -1}
+	for i, word := range line.Words {
+		if timeMs < word.StartTime {
+			break
+		}
+		if word.EndTime <= word.StartTime || timeMs >= word.EndTime {
+			progress.CompletedWords = i + 1
+			continue
+		}
+
+		progress.CurrentWord = i
+		progress.CurrentProgress = float64(timeMs-word.StartTime) / float64(word.EndTime-word.StartTime)
+		return progress
+	}
+	return progress
+}
+
 // ParseYRC解析API返回的YRC JSON字符串并返回YRCLine切片。
 // YRC 格式有两种：
 // 1. 纯 JSON：{"t":timestamp,"c":[{"tx":"word","tr":[offset,duration]}...]}

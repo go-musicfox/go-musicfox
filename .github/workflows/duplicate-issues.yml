@@ -25,48 +25,48 @@ jobs:
         with:
           model: minimax-cn/MiniMax-M2.7
           prompt: |
-            A new issue has been created:
+            一个新的 Issue 已创建：
 
-            Issue number: ${{ github.event.issue.number }}
+            Issue 编号：${{ github.event.issue.number }}
 
-            Lookup this issue with gh issue view ${{ github.event.issue.number }}.
+            使用 gh issue view ${{ github.event.issue.number }} 查看此 Issue。
 
-            You have TWO tasks. Perform both, then post a SINGLE comment (if needed).
-
-            ---
-
-            TASK 1: CONTRIBUTING GUIDELINES COMPLIANCE CHECK
-
-            Check whether the issue follows our contributing guidelines and issue templates.
-
-            This project has issue templates that every issue MUST use. Additionally check:
-            - No AI-generated walls of text (long, AI-generated descriptions are not acceptable)
-            - The issue has real content, not just template placeholder text left unchanged
-            - Bug reports should include some context about how to reproduce
-            - Feature requests should explain the problem or need
-
-            Do NOT be nitpicky about optional fields. Only flag real problems like: no template used, required fields empty or placeholder text only, obviously AI-generated walls of text, or completely empty/nonsensical content.
+            你需要完成两项任务。两项都完成后，发布一条评论（如需要）。
 
             ---
 
-            TASK 2: DUPLICATE CHECK
+            任务一：贡献指南合规检查
 
-            Search through existing issues (excluding #${{ github.event.issue.number }}) to find potential duplicates.
-            Consider:
-            1. Similar titles or descriptions
-            2. Same error messages or symptoms
-            3. Related functionality or components
-            4. Similar feature requests
+            检查此 Issue 是否符合我们的贡献指南和 Issue 模板。
+
+            本项目有 Issue 模板，每个 Issue 都必须使用。额外检查：
+            - 没有 AI 生成的大段文本（大段明显由 AI 生成的描述不可接受）
+            - Issue 有实际内容，而非未修改的模板占位文本
+            - Bug 报告应包含复现步骤
+            - 功能请求应说明问题或需求
+
+            不要对可选的字段吹毛求疵。仅标记真正的问题，如：未使用模板、必填字段为空或仅含占位文本、明显的 AI 生成大段文本、完全空白的无意义内容。
 
             ---
 
-            POSTING YOUR COMMENT:
+            任务二：重复检查
 
-            Based on your findings, post a SINGLE comment on issue #${{ github.event.issue.number }}. Build the comment as follows:
+            搜索已有 Issue（不包括 #${{ github.event.issue.number }}）来发现可能的重复。
+            考虑：
+            1. 标题或描述相似
+            2. 相同的错误信息或症状
+            3. 相关的功能或组件
+            4. 类似的功能请求
+
+            ---
+
+            发布评论：
+
+            根据你的发现，在 Issue #${{ github.event.issue.number }} 发布一条评论。按以下方式构建评论：
 
             If the issue is NOT compliant, start the comment with:
             <!-- issue-compliance -->
-            Then explain what needs to be fixed and that they have 2 hours to edit the issue before it is automatically closed. Also add the label needs:compliance to the issue using: gh issue edit ${{ github.event.issue.number }} --add-label needs:compliance
+            然后说明需要修复的内容，以及他们需要在 2 小时内修改 Issue 否则将被自动关闭。同时使用以下命令添加 needs:compliance 标签：gh issue edit ${{ github.event.issue.number }} --add-label needs:compliance
 
             If duplicates were found, include a section about potential duplicates with links.
 
@@ -76,20 +76,20 @@ jobs:
 
             [If not compliant:]
             <!-- issue-compliance -->
-            This issue doesn't fully meet our [contributing guidelines](../blob/master/CONTRIBUTING.md).
+            此 Issue 不完全符合我们的[贡献指南](../blob/master/CONTRIBUTING.md)。
 
-            **What needs to be fixed:**
+            **需要修复的问题：**
             - [specific reasons]
 
-            Please edit this issue to address the above within **2 hours**, or it will be automatically closed.
+            请在 **2 小时**内修改此 Issue 以解决以上问题，否则将被自动关闭。
 
             [If duplicates found, add:]
             ---
-            This issue might be a duplicate of existing issues. Please check:
+            此 Issue 可能与已有 Issue 重复，请检查：
             - #[issue_number]: [brief description of similarity]
 
             [End with if not compliant:]
-            If you believe this was flagged incorrectly, please let a maintainer know.
+            如果你认为此标记有误，请联系维护者。
 
             Remember: post at most ONE comment combining all findings. If everything is fine, post nothing."
 
@@ -113,24 +113,24 @@ jobs:
         with:
           model: minimax-cn/MiniMax-M2.7
           prompt: |
-            Issue #${{ github.event.issue.number }} was previously flagged as non-compliant and has been edited.
+            Issue #${{ github.event.issue.number }} 之前被标记为不合规，现已编辑。
 
-            Lookup this issue with gh issue view ${{ github.event.issue.number }}.
+            使用 gh issue view ${{ github.event.issue.number }} 查看此 Issue。
 
-            Re-check whether the issue now follows our contributing guidelines and issue templates.
+            重新检查此 Issue 是否符合我们的贡献指南和 Issue 模板。
 
-            Check:
-            - No AI-generated walls of text (long, AI-generated descriptions are not acceptable)
-            - The issue has real content, not just template placeholder text left unchanged
-            - Bug reports should include some context about how to reproduce
-            - Feature requests should explain the problem or need
+            检查：
+            - 没有 AI 生成的大段文本（大段明显由 AI 生成的描述不可接受）
+            - Issue 有实际内容，而非未修改的模板占位文本
+            - Bug 报告应包含复现步骤
+            - 功能请求应说明问题或需求
 
-            Do NOT be nitpicky about optional fields. Only flag real problems.
+            不要对可选的字段吹毛求疵。仅标记真正的问题。
 
             If the issue is NOW compliant:
             1. Remove the needs:compliance label: gh issue edit ${{ github.event.issue.number }} --remove-label needs:compliance
             2. Find and delete the previous compliance comment (the one containing <!-- issue-compliance -->) using: gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments --jq '.[] | select(.body | contains(\"<!-- issue-compliance -->\") | .id' then delete it with: gh api -X DELETE repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments/{id}
-            3. Post a short comment thanking them for updating the issue.
+            3. 发布一条简短评论，感谢他们更新了 Issue。
 
             If the issue is STILL not compliant:
-            Post a comment explaining what still needs to be fixed. Keep the needs:compliance label.
+            发布一条评论说明仍需修复的内容。保留 needs:compliance 标签。

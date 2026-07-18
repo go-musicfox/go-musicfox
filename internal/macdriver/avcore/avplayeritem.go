@@ -20,9 +20,11 @@ var (
 )
 
 var (
-	sel_playerItemWithURL = objc.RegisterName("playerItemWithURL:")
-	sel_asset             = objc.RegisterName("asset")
-	sel_duration          = objc.RegisterName("duration")
+	sel_playerItemWithURL   = objc.RegisterName("playerItemWithURL:")
+	sel_playerItemWithAsset = objc.RegisterName("playerItemWithAsset:")
+	sel_asset               = objc.RegisterName("asset")
+	sel_duration            = objc.RegisterName("duration")
+	sel_setAudioMix         = objc.RegisterName("setAudioMix:")
 )
 
 type AVPlayerItem struct {
@@ -35,6 +37,31 @@ func AVPlayerItem_playerItemWithURL(url core.NSURL) AVPlayerItem {
 			ID: objc.ID(class_AVPlayerItem).Send(sel_playerItemWithURL, url.ID),
 		},
 	}
+}
+
+// AttachAudioTap configures an AVAudioMix for the first audio track and
+// transfers the tap's creation reference to the audio mix.
+func (i AVPlayerItem) AttachAudioTap(tap *AudioTap) bool {
+	if i.ID == 0 || tap == nil {
+		return false
+	}
+	tracks := i.Asset().AudioTracks()
+	if len(tracks) == 0 {
+		return false
+	}
+	parameters := AVMutableAudioMixInputParameters_audioMixInputParametersWithTrack(tracks[0])
+	if parameters.ID == 0 {
+		return false
+	}
+	parameters.SetAudioTapProcessor(tap)
+	mix := AVMutableAudioMix_audioMix()
+	if mix.ID == 0 {
+		return false
+	}
+	mix.SetInputParameters(core.NSArray_arrayWithObject(parameters.NSObject))
+	i.Send(sel_setAudioMix, mix.ID)
+	tap.Close()
+	return true
 }
 
 func (i AVPlayerItem) Asset() (asset AVAsset) {

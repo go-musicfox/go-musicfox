@@ -19,6 +19,12 @@ type ProgressRenderer struct {
 
 	progressLastWidth float64
 	progressRamp      []color.Color
+
+	cachedView      string
+	cachedLines     int
+	cachedPassedSec int // rounded to seconds
+	cachedDuration  int // total seconds
+	cachedWidth     int
 }
 
 // NewProgressRenderer creates a new progress bar renderer component.
@@ -70,10 +76,16 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 	progress := float64(progressPct) / 100.0
 
-	width := r.netease.WindowWidth() - 14
+	width := r.netease.WindowWidth() - ProgressTimeDisplayWidth
 	if width < 0 {
 		width = 0
 	}
+
+	// Output caching: skip rebuild when progress has not ticked to the next second
+	if passedDuration == r.cachedPassedSec && allDuration == r.cachedDuration && width == r.cachedWidth {
+		return r.cachedView, r.cachedLines
+	}
+
 	fullSize := int(math.Round(float64(width) * progress))
 
 	progressOptions := configs.AppConfig.Theme.Progress.ToModel()
@@ -97,15 +109,24 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 
 	var times string
-	if allDuration/60 >= 100 {
+	if allDuration/60 >= ProgressLongDurationThreshold {
 		times = fmt.Sprintf("%03d:%02d/%03d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	} else {
 		times = fmt.Sprintf("%02d:%02d/%02d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	}
 	styledTimes := util.SetFgStyle(times, util.GetPrimaryColor())
 
-	if allDuration/60 >= 100 {
-		return progressView + " " + styledTimes, 1
+	view = progressView + " " + styledTimes
+	if allDuration/60 < ProgressLongDurationThreshold {
+		view += " "
 	}
-	return progressView + " " + styledTimes + " ", 1
+
+	// Store output cache
+	r.cachedView = view
+	r.cachedLines = 1
+	r.cachedPassedSec = passedDuration
+	r.cachedDuration = allDuration
+	r.cachedWidth = width
+
+	return r.cachedView, r.cachedLines
 }

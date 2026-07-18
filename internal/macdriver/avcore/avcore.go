@@ -8,11 +8,15 @@ import (
 	"github.com/ebitengine/purego"
 )
 
-var importOnce sync.Once
+var (
+	importOnce      sync.Once
+	avFoundationLib uintptr
+)
 
 func importFramework() {
 	importOnce.Do(func() {
-		_, err := purego.Dlopen("/System/Library/Frameworks/AVFoundation.framework/AVFoundation", purego.RTLD_GLOBAL)
+		var err error
+		avFoundationLib, err = purego.Dlopen("/System/Library/Frameworks/AVFoundation.framework/AVFoundation", purego.RTLD_GLOBAL)
 		if err != nil {
 			panic(err)
 		}

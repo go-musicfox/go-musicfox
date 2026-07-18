@@ -39,3 +39,9 @@ type (
 	NSRect  = CGRect
 	NSSize  = CGSize
 )
+
+// NSRange represents a range in a string or collection.
+type NSRange struct {
+	Location int
+	Length   int
+}

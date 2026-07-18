@@ -7,7 +7,7 @@ charm.land/bubbles/v2/key
 charm.land/bubbles/v2/table
 charm.land/bubbles/v2/textinput
 charm.land/bubbles/v2/viewport
-# charm.land/bubbletea/v2 v2.0.7
+# charm.land/bubbletea/v2 v2.0.8 => github.com/go-musicfox/bubbletea/v2 v2.0.8-foxful-1.2
 ## explicit; go 1.25.0
 charm.land/bubbletea/v2
 # charm.land/lipgloss/v2 v2.0.4
@@ -18,7 +18,7 @@ charm.land/lipgloss/v2
 github.com/adrg/xdg
 github.com/adrg/xdg/internal/pathutil
 github.com/adrg/xdg/internal/userdirs
-# github.com/anhoder/foxful-cli v0.6.1
+# github.com/anhoder/foxful-cli v0.6.9
 ## explicit; go 1.25.0
 github.com/anhoder/foxful-cli/model
 github.com/anhoder/foxful-cli/util
@@ -34,7 +34,10 @@ github.com/buger/jsonparser
 # github.com/charmbracelet/colorprofile v0.4.3
 ## explicit; go 1.25.0
 github.com/charmbracelet/colorprofile
-# github.com/charmbracelet/ultraviolet v0.0.0-20260525132238-948f4557a654
+# github.com/charmbracelet/harmonica v0.2.0
+## explicit; go 1.16
+github.com/charmbracelet/harmonica
+# github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7
 ## explicit; go 1.25.0
 github.com/charmbracelet/ultraviolet
 # github.com/charmbracelet/x/ansi v0.11.7
@@ -83,7 +86,7 @@ github.com/cocoonlife/goflac
 github.com/ebitengine/oto/v3
 github.com/ebitengine/oto/v3/internal/mux
 github.com/ebitengine/oto/v3/internal/oboe
-# github.com/ebitengine/purego v0.10.0
+# github.com/ebitengine/purego v0.10.1
 ## explicit; go 1.18
 github.com/ebitengine/purego
 github.com/ebitengine/purego/internal/cgo
@@ -203,6 +206,11 @@ github.com/hajimehoshi/go-mp3/internal/sideinfo
 # github.com/icza/bitio v1.1.0
 ## explicit; go 1.13
 github.com/icza/bitio
+# github.com/jezek/xgb v1.3.1
+## explicit; go 1.11
+github.com/jezek/xgb
+github.com/jezek/xgb/record
+github.com/jezek/xgb/xproto
 # github.com/jfreymuth/oggvorbis v1.0.5
 ## explicit; go 1.15
 github.com/jfreymuth/oggvorbis
@@ -278,8 +286,8 @@ github.com/pkg/errors
 # github.com/rivo/uniseg v0.4.7
 ## explicit; go 1.18
 github.com/rivo/uniseg
-# github.com/robotn/gohook v0.42.3
-## explicit; go 1.17
+# github.com/robotn/gohook v1.0.0-beta1
+## explicit; go 1.25.0
 github.com/robotn/gohook
 # github.com/sahilm/fuzzy v0.1.1
 ## explicit
@@ -340,7 +348,10 @@ github.com/tidwall/pretty
 # github.com/tosone/minimp3 v1.0.2
 ## explicit; go 1.18
 github.com/tosone/minimp3
-# github.com/vcaesar/keycode v0.10.1
+# github.com/vcaesar/go-wayland v0.40.0
+## explicit; go 1.25.0
+github.com/vcaesar/go-wayland/client
+# github.com/vcaesar/keycode v0.20.0
 ## explicit; go 1.17
 github.com/vcaesar/keycode
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
@@ -355,11 +366,11 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.55.0
 ## explicit; go 1.25.0
 golang.org/x/net/publicsuffix
-# golang.org/x/sync v0.20.0
+# golang.org/x/sync v0.21.0
 ## explicit; go 1.25.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.45.0
+# golang.org/x/sys v0.46.0
 ## explicit; go 1.25.0
 golang.org/x/sys/plan9
 golang.org/x/sys/unix

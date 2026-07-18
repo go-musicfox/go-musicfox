@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anhoder/foxful-cli/model"
 	tea "charm.land/bubbletea/v2"
+	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
@@ -106,9 +106,9 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 // calculateDimensions calculates the cover image display dimensions.
 func (r *CoverRenderer) calculateDimensions() {
 	main := r.netease.MustMain()
-	spaceHeight := r.netease.WindowHeight() - 5 - main.MenuBottomRow()
+	spaceHeight := r.netease.WindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - r.netease.SpectrumLines(main)
 
-	if spaceHeight < 3 {
+	if spaceHeight < MinSpaceHeight {
 		r.rows = 0
 		r.cols = 0
 		return
@@ -117,21 +117,21 @@ func (r *CoverRenderer) calculateDimensions() {
 	// Get width ratio from config, default to 0.3 if not set or invalid
 	widthRatio := configs.AppConfig.Main.Lyric.Cover.WidthRatio
 	if widthRatio <= 0 || widthRatio > 1 {
-		widthRatio = 0.3
+		widthRatio = DefaultCoverWidthRatio
 	}
 
 	windowWidth := r.netease.WindowWidth()
-	r.cols = max(int(float64(windowWidth)*widthRatio), 10) // Minimum width
+	r.cols = max(int(float64(windowWidth)*widthRatio), MinCoverCols) // Minimum width
 
 	// Calculate rows to maintain square visual aspect ratio
 	// Terminal cells are typically 2:1 (twice as tall as wide, e.g., 8x16 pixels)
 	// So rows = cols / 2 makes the image appear visually square
-	r.rows = max(r.cols/2, 3)
+	r.rows = max(r.cols/TerminalCellAspectRatio, MinCoverRows)
 	// Don't exceed available space
 	if r.rows > spaceHeight {
 		r.rows = spaceHeight
 		// Adjust cols to maintain square aspect ratio (cols = rows * 2)
-		r.cols = r.rows * 2
+		r.cols = r.rows * TerminalCellAspectRatio
 	}
 }
 
@@ -168,30 +168,15 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	windowHeight := r.netease.WindowHeight()
-	menuBottomRow := main.MenuBottomRow()
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	var coverStartRow int
-	if lyricLines > 0 {
-		lyricCenterRow := lyricStartRow + lyricLines
-		coverStartRow = lyricCenterRow - r.rows/2
-	} else {
-		coverStartRow = windowHeight - 2 - r.rows
-	}
-
-	if coverStartRow <= menuBottomRow {
-		coverStartRow = menuBottomRow + 1
-	}
-	if coverStartRow < 1 {
-		coverStartRow = 1
-	}
-	if coverStartRow+r.rows > windowHeight-1 {
-		coverStartRow = windowHeight - 1 - r.rows
-	}
+	// Position cover purely based on lyrics: vertically center-aligned with the lyric block
+	lyricCenterRow := lyricStartRow + lyricLines/2 + 1
+	coverStartRow := lyricCenterRow - r.rows/2
 
 	// If cover can't fit at all, skip rendering
-	if r.rows > windowHeight-5 {
+	if r.rows > windowHeight-FixedTopBottomRows {
 		return "", 0
 	}
 

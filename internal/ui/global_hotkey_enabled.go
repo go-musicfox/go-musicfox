@@ -1,4 +1,4 @@
-//go:build enable_global_hotkey
+//go:build enable_global_hotkey && !purego
 
 package ui
 
@@ -103,18 +103,14 @@ static void closeGohookLogger(void) {
 import "C"
 
 import (
-	"fmt"
 	"log/slog"
 	"path/filepath"
 	"time"
 	"unsafe"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
-	hook "github.com/robotn/gohook"
 )
 
 // gohookMinLevel maps slog levels to gohook's log_level enum values.
@@ -134,18 +130,7 @@ func gohookMinLevel(slogLevel slog.Level) C.uint {
 }
 
 func (h *EventHandler) RegisterGlobalHotkeys(opts *model.Options) {
-	opts.GlobalKeyHandlers = make(map[string]model.GlobalKeyHandler)
-	for global, operate := range configs.AppConfig.Keybindings.Global {
-		ot, ok := keybindings.GetOperationFromName(operate)
-		if !ok {
-			slog.Warn(fmt.Sprintf("无效的操作：'%s'，忽略全局快捷键 '%s'", operate, global))
-			continue
-		}
-		opts.GlobalKeyHandlers[global] = func(event hook.Event) model.Page {
-			_, page, _ := h.handle(ot)
-			return page
-		}
-	}
+	h.registerGlobalHotkeyBindings(opts)
 
 	// Override gohook's logger to redirect output to file instead of stdout/stderr.
 	// This runs after a short delay so that hook.Start() in ListenGlobalKeys

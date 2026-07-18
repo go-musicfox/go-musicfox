@@ -1,0 +1,57 @@
+name: Close Stale Issues and PRs
+
+on:
+  schedule:
+    - cron: '30 1 * * *'  # UTC 01:30 daily (北京时间 09:30)
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issues
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          stale-issue-label: 'stale'
+          stale-issue-message: |
+            该 issue 因超过 30 天无活动且作者未回复，已被标记为 stale。
+            若仍需处理，请在 7 天内回复，否则将被自动关闭。
+            This issue has been marked as stale due to 30 days of inactivity and no author response.
+            It will be closed in 7 days if no further activity occurs.
+
+          close-issue-message: |
+            该 issue 因长时间无活动已被自动关闭。如有需要，请重新打开或新建 issue。
+            This issue was closed due to prolonged inactivity.
+            Feel free to reopen or create a new issue if needed.
+
+          # Ignore issues with these labels
+          exempt-issue-labels: 'pinned,security'
+
+          # PRs
+          days-before-pr-stale: 45
+          days-before-pr-close: 14
+          stale-pr-label: 'stale'
+          stale-pr-message: |
+            该 PR 因超过 45 天无活动且作者未回复，已被标记为 stale。
+            若仍需合并，请在 14 天内回复或更新，否则将被自动关闭。
+            This PR has been marked as stale due to 45 days of inactivity and no author response.
+            It will be closed in 14 days if no further activity occurs.
+
+          close-pr-message: |
+            该 PR 因长时间无活动已被自动关闭。如有需要，请重新打开。
+            This PR was closed due to prolonged inactivity. Feel free to reopen if needed.
+
+          # Labels to reset stale timer when added
+          labels-to-remove-when-unstale: 'stale'
+          labels-to-add-when-unstale: 'needs-review'
+
+          # Close rate limit (max operations per run)
+          operations-per-run: 30
+
+          # Enable stale message for PRs
