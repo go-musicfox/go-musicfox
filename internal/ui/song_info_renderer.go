@@ -19,6 +19,16 @@ import (
 type SongInfoRenderer struct {
 	netease *Netease
 	state   playerRendererState
+
+	cachedView     string
+	cachedLines    int
+	cachedSongId   int64
+	cachedState    types.State
+	cachedVolume   int
+	cachedMode     types.Mode
+	cachedLike     bool
+	cachedWidth    int
+	cachedCentered bool
 }
 
 // NewSongInfoRenderer creates a new song info renderer component.
@@ -42,9 +52,29 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 
 	var (
+		song     = r.state.CurSong()
+		state    = r.state.State()
+		volume   = r.state.Volume()
+		mode     = r.state.Mode()
+		width    = r.netease.WindowWidth()
+		centered = main.CenterEverything()
+	)
+
+	var isLike bool
+	if song.Id > 0 {
+		isLike = likelist.IsLikeSong(song.Id)
+	}
+
+	// Output caching: skip full rebuild when nothing changed
+	if song.Id == r.cachedSongId && state == r.cachedState && volume == r.cachedVolume &&
+		mode == r.cachedMode && isLike == r.cachedLike && width == r.cachedWidth &&
+		centered == r.cachedCentered {
+		return r.cachedView, r.cachedLines
+	}
+
+	var (
 		builder  strings.Builder
 		segments []Segment
-		song     = r.state.CurSong()
 	)
 
 	// Helper for adding a new segment
@@ -76,7 +106,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	if song.Id > 0 {
 		var icolor color.Color
-		if likelist.IsLikeSong(song.Id) {
+		if isLike {
 			icolor = lipgloss.Red
 		} else {
 			icolor = lipgloss.White
@@ -143,5 +173,16 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// from the previous frame uncleared (causing display corruption/overlay).
 	lines = SongInfoLines
 
-	return builder.String() + "\n\n", lines
+	// Store output cache
+	r.cachedView = builder.String() + "\n\n"
+	r.cachedLines = lines
+	r.cachedSongId = song.Id
+	r.cachedState = state
+	r.cachedVolume = volume
+	r.cachedMode = mode
+	r.cachedLike = isLike
+	r.cachedWidth = width
+	r.cachedCentered = centered
+
+	return r.cachedView, r.cachedLines
 }

@@ -26,8 +26,11 @@ func TestAudioTapLayout(t *testing.T) {
 }
 
 func TestAudioTapObservesInterleavedFloat32(t *testing.T) {
-	input := []float32{1, 0, 0.5, -0.25}
-	var observed []float32
+	input := []float32{1, 0, 0.5, -0.25} // L,R,L,R
+	var (
+		observedL []float32
+		observedR []float32
+	)
 	tap := AudioTap{
 		format: AudioStreamBasicDescription{
 			SampleRate:       44100,
@@ -37,9 +40,11 @@ func TestAudioTapObservesInterleavedFloat32(t *testing.T) {
 			ChannelsPerFrame: 2,
 			BitsPerChannel:   32,
 		},
-		samples: make([]float32, 2),
-		handler: func(_ float64, samples []float32) {
-			observed = append(observed, samples...)
+		samples:  make([]float32, 2),
+		samplesR: make([]float32, 2),
+		handler: func(_ float64, samplesL, samplesR []float32) {
+			observedL = append(observedL, samplesL...)
+			observedR = append(observedR, samplesR...)
 		},
 	}
 	buffers := audioBufferList{
@@ -52,18 +57,28 @@ func TestAudioTapObservesInterleavedFloat32(t *testing.T) {
 	}
 
 	tap.observe(&buffers, 2)
-	if len(observed) != 2 {
-		t.Fatalf("observed frames = %d, want 2", len(observed))
+
+	// Left channel: [1, 0.5]
+	if len(observedL) != 2 {
+		t.Fatalf("observedL frames = %d, want 2", len(observedL))
 	}
-	if observed[0] != 0.5 || observed[1] != 0.125 {
-		t.Fatalf("observed = %v, want [0.5 0.125]", observed)
+	if observedL[0] != 1 || observedL[1] != 0.5 {
+		t.Fatalf("observedL = %v, want [1 0.5]", observedL)
+	}
+	// Right channel: [0, -0.25]
+	if len(observedR) != 2 {
+		t.Fatalf("observedR frames = %d, want 2", len(observedR))
+	}
+	if observedR[0] != 0 || observedR[1] != -0.25 {
+		t.Fatalf("observedR = %v, want [0 -0.25]", observedR)
 	}
 }
 
 func TestAudioTapCapturesPlaybackPCM(t *testing.T) {
 	var frames atomic.Int64
-	tap, err := NewAudioTap(func(_ float64, samples []float32) {
-		frames.Add(int64(len(samples)))
+	tap, err := NewAudioTap(func(_ float64, samplesL, samplesR []float32) {
+		frames.Add(int64(len(samplesL)))
+		_ = samplesR
 	})
 	if err != nil {
 		t.Fatal(err)

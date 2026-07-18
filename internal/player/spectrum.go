@@ -1,19 +1,21 @@
 package player
 
 import (
-	"github.com/charmbracelet/harmonica"
-
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/charmbracelet/harmonica"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
 const (
-	// SpectrumBandCount is the fixed analysis resolution exposed to renderers.
-	SpectrumBandCount = 64
-	spectrumFFTSize   = 1024
-	spectrumSlots     = 3
+	SpectrumBandCount   = 64
+	spectrumFFTSize     = 1024
+	spectrumSlots       = 3
+	rawSampleBufferSize = 4096
 )
 
 const (
@@ -23,15 +25,45 @@ const (
 	spectrumSlotReading
 )
 
-// SpectrumFrame contains normalized terminal bar levels in the range [0, 1].
-// Renderers quantize only at their final terminal-cell boundary.
-type SpectrumFrame struct {
-	Levels [SpectrumBandCount]float64
+var fftTwiddle [spectrumFFTSize / 2][2]float64 // [real, imag]
+var fftTwiddleOnce sync.Once
+
+func initFFTTwiddle() {
+	fftTwiddleOnce.Do(func() {
+		for k := 0; k < spectrumFFTSize/2; k++ {
+			sin, cos := math.Sincos(-2.0 * math.Pi * float64(k) / float64(spectrumFFTSize))
+			fftTwiddle[k][0] = cos // real part
+			fftTwiddle[k][1] = sin // imag part
+		}
+	})
 }
 
-// SpectrumProvider is implemented by playback engines that expose live PCM analysis.
+// SpectrumFrame holds per-band levels.
+// Levels  = combined (average of L+R, used by bar/mirror_bar).
+// LevelsL = left channel (used by line/dot for dual display).
+// LevelsR = right channel.
+// PhasesL / PhasesR = phase angle (radians) of dominant FFT bin per band.
+type SpectrumFrame struct {
+	Levels  [SpectrumBandCount]float64
+	LevelsL [SpectrumBandCount]float64
+	LevelsR [SpectrumBandCount]float64
+	PhasesL [SpectrumBandCount]float64
+	PhasesR [SpectrumBandCount]float64
+}
+
+// RawSampleFrame holds raw PCM time-domain samples for oscilloscope/vectorscope.
+// SamplesL and SamplesR are freshly-allocated snapshots of the ring buffer;
+// Count is the number of valid samples in each slice.
+type RawSampleFrame struct {
+	SamplesL   []float64
+	SamplesR   []float64
+	Count      int
+	SampleRate float64
+}
+
 type SpectrumProvider interface {
 	Spectrum() SpectrumFrame
+	RawSamples() RawSampleFrame
 }
 
 type spectrumSlot struct {
@@ -40,11 +72,12 @@ type spectrumSlot struct {
 	sequence   uint64
 	sampleRate float64
 	count      int
+	hasStereo  bool
 	samples    [spectrumFFTSize]float32
+	samplesR   [spectrumFFTSize]float32
 }
 
-// PCMAnalyzer accepts PCM from a real-time callback and analyzes it away from
-// the audio thread. Full input slots are dropped instead of blocking playback.
+// PCMAnalyzer accepts stereo PCM callbacks and analyzes each channel independently.
 type PCMAnalyzer struct {
 	slots      [spectrumSlots]spectrumSlot
 	sequence   atomic.Uint64
@@ -57,14 +90,34 @@ type PCMAnalyzer struct {
 	frameMu sync.RWMutex
 	frame   SpectrumFrame
 
-	window     [spectrumFFTSize]float64
-	fft        [spectrumFFTSize]complex128
-	interval   time.Duration
-	spring     harmonica.Spring
-	positions  [SpectrumBandCount]float64
-	velocities [SpectrumBandCount]float64
-	processed  uint64
-	target     SpectrumFrame
+	// Raw PCM ring buffer for oscilloscope/vectorscope.
+	rawRingL      [rawSampleBufferSize]float64
+	rawRingR      [rawSampleBufferSize]float64
+	rawRingPos    atomic.Uint32
+	rawRingCount  atomic.Uint32
+	rawSampleRate atomic.Uint64 // math.Float64bits(sampleRate)
+
+	rawMu   sync.RWMutex
+	rawSnap RawSampleFrame // pre-allocated snapshot buffers
+
+	window       [spectrumFFTSize]float64
+	fft          [spectrumFFTSize]complex128
+	fftR         [spectrumFFTSize]complex128
+	interval     time.Duration
+
+	springL      harmonica.Spring
+	positionsL   [SpectrumBandCount]float64
+	velocitiesL  [SpectrumBandCount]float64
+	springR      harmonica.Spring
+	positionsR   [SpectrumBandCount]float64
+	velocitiesR  [SpectrumBandCount]float64
+
+	// FFT frame averaging (scope-tui spectroscope average feature).
+	avgLevelsL [SpectrumBandCount]float64 // previous averaged L levels (EMA)
+	avgLevelsR [SpectrumBandCount]float64 // previous averaged R levels (EMA)
+
+	target    SpectrumFrame // last known target, persists across dry ticks
+	processed uint64
 }
 
 func NewPCMAnalyzer(interval time.Duration) *PCMAnalyzer {
@@ -75,8 +128,11 @@ func NewPCMAnalyzer(interval time.Duration) *PCMAnalyzer {
 		stop:     make(chan struct{}),
 		done:     make(chan struct{}),
 		interval: interval,
-		spring:   harmonica.NewSpring(interval.Seconds(), 9, 1),
+		springL:  harmonica.NewSpring(interval.Seconds(), 9, 1),
+		springR:  harmonica.NewSpring(interval.Seconds(), 9, 1),
 	}
+	a.rawSnap.SamplesL = make([]float64, rawSampleBufferSize)
+	a.rawSnap.SamplesR = make([]float64, rawSampleBufferSize)
 	for i := range a.window {
 		a.window[i] = 0.5 * (1 - math.Cos(2*math.Pi*float64(i)/float64(spectrumFFTSize-1)))
 	}
@@ -84,34 +140,67 @@ func NewPCMAnalyzer(interval time.Duration) *PCMAnalyzer {
 	return a
 }
 
-// NewConsumer resets the visible frame and returns a callback for one audio
-// source. Frames from a replaced player item are discarded by generation.
-func (a *PCMAnalyzer) NewConsumer() func(sampleRate float64, samples []float32) {
+func (a *PCMAnalyzer) NewConsumer() func(sampleRate float64, samplesL, samplesR []float32) {
 	generation := a.generation.Add(1)
 	a.frameMu.Lock()
 	a.frame = SpectrumFrame{}
+	a.target = SpectrumFrame{}
 	a.frameMu.Unlock()
 
-	return func(sampleRate float64, samples []float32) {
-		a.consume(generation, sampleRate, samples)
+	// Clear raw ring buffer for new audio source.
+	a.rawRingPos.Store(0)
+	a.rawRingCount.Store(0)
+	a.rawSampleRate.Store(0)
+	for i := range a.rawRingL {
+		a.rawRingL[i] = 0
+		a.rawRingR[i] = 0
+	}
+	// Reset FFT averaging state.
+	a.avgLevelsL = [SpectrumBandCount]float64{}
+	a.avgLevelsR = [SpectrumBandCount]float64{}
+
+	return func(sampleRate float64, samplesL, samplesR []float32) {
+		a.consume(generation, sampleRate, samplesL, samplesR)
 	}
 }
 
-func (a *PCMAnalyzer) consume(generation uint64, sampleRate float64, samples []float32) {
-	if generation != a.generation.Load() || sampleRate <= 0 || len(samples) == 0 {
+func (a *PCMAnalyzer) consume(generation uint64, sampleRate float64, samplesL, samplesR []float32) {
+	if generation != a.generation.Load() || sampleRate <= 0 || len(samplesL) == 0 {
 		return
 	}
-	for index := range a.slots {
-		slot := &a.slots[index]
+
+	// Copy to raw PCM ring buffer for oscilloscope/vectorscope.
+	a.rawSampleRate.Store(math.Float64bits(sampleRate))
+	count := min(len(samplesL), rawSampleBufferSize)
+	pos := int(a.rawRingPos.Load())
+	for i := 0; i < count; i++ {
+		idx := (pos + i) % rawSampleBufferSize
+		a.rawRingL[idx] = float64(samplesL[len(samplesL)-count+i])
+		if len(samplesR) >= count {
+			a.rawRingR[idx] = float64(samplesR[len(samplesR)-count+i])
+		}
+	}
+	newPos := uint32((pos + count) % rawSampleBufferSize)
+	a.rawRingPos.Store(newPos)
+	if c := a.rawRingCount.Load(); c < rawSampleBufferSize {
+		a.rawRingCount.Store(min(c+uint32(count), rawSampleBufferSize))
+	}
+
+	for i := range a.slots {
+		slot := &a.slots[i]
 		if !slot.state.CompareAndSwap(spectrumSlotFree, spectrumSlotWriting) {
 			continue
 		}
-		count := min(len(samples), spectrumFFTSize)
-		copy(slot.samples[:count], samples[len(samples)-count:])
+		slotCount := min(len(samplesL), spectrumFFTSize)
+		copy(slot.samples[:slotCount], samplesL[len(samplesL)-slotCount:])
+		slot.hasStereo = len(samplesR) >= slotCount
+		if slot.hasStereo {
+			copy(slot.samplesR[:slotCount], samplesR[len(samplesR)-slotCount:])
+		}
 		slot.generation = generation
 		slot.sequence = a.sequence.Add(1)
 		slot.sampleRate = sampleRate
-		slot.count = count
+		slot.count = slotCount
 		slot.state.Store(spectrumSlotReady)
 		return
 	}
@@ -119,10 +208,7 @@ func (a *PCMAnalyzer) consume(generation uint64, sampleRate float64, samples []f
 
 func (a *PCMAnalyzer) run() {
 	ticker := time.NewTicker(a.interval)
-	defer func() {
-		ticker.Stop()
-		close(a.done)
-	}()
+	defer func() { ticker.Stop(); close(a.done) }()
 	for {
 		select {
 		case <-a.stop:
@@ -134,21 +220,23 @@ func (a *PCMAnalyzer) run() {
 }
 
 func (a *PCMAnalyzer) analyzeLatest() {
-	generation := a.generation.Load()
-	if generation != a.processed {
-		a.positions = [SpectrumBandCount]float64{}
-		a.velocities = [SpectrumBandCount]float64{}
+	gen := a.generation.Load()
+	if gen != a.processed {
+		a.positionsL, a.velocitiesL = [SpectrumBandCount]float64{}, [SpectrumBandCount]float64{}
+		a.positionsR, a.velocitiesR = [SpectrumBandCount]float64{}, [SpectrumBandCount]float64{}
+		a.avgLevelsL = [SpectrumBandCount]float64{}
+		a.avgLevelsR = [SpectrumBandCount]float64{}
 		a.target = SpectrumFrame{}
-		a.processed = generation
+		a.processed = gen
 	}
 
 	var latest *spectrumSlot
-	for index := range a.slots {
-		slot := &a.slots[index]
+	for i := range a.slots {
+		slot := &a.slots[i]
 		if !slot.state.CompareAndSwap(spectrumSlotReady, spectrumSlotReading) {
 			continue
 		}
-		if slot.generation != generation {
+		if slot.generation != gen {
 			slot.state.Store(spectrumSlotFree)
 			continue
 		}
@@ -161,97 +249,319 @@ func (a *PCMAnalyzer) analyzeLatest() {
 		}
 		slot.state.Store(spectrumSlotFree)
 	}
-	if latest != nil {
-		defer latest.state.Store(spectrumSlotFree)
-		a.transform(latest.samples[:latest.count])
-		if latest.generation != a.generation.Load() {
-			return
+	if latest == nil {
+		frame := a.springFrame(a.target)
+
+		// Apply cava-inspired smoothing after springFrame
+		if configs.AppConfig != nil {
+			cfg := configs.AppConfig.Main.Visualizer
+			if cfg.Monstercat > 0 {
+				a.monstercatFilter(&frame.Levels)
+			} else if cfg.Waves {
+				a.wavesFilter(&frame.Levels)
+			}
 		}
-		a.target = a.targetLevels(latest.sampleRate)
+
+		a.publish(frame)
+		return
+	}
+	defer latest.state.Store(spectrumSlotFree)
+
+	// Left channel FFT
+	a.transform(a.fft[:], latest.samples[:latest.count])
+	if latest.generation != a.generation.Load() {
+		return
+	}
+	logScale := true
+	if configs.AppConfig != nil {
+		logScale = configs.AppConfig.Main.Visualizer.SpectrumLogScale
+	}
+	rawL, rawPhasesL := a.channelLevelsAndPhases(a.fft[:], latest.sampleRate, logScale)
+	a.target.LevelsL = a.applyAvg(rawL, a.avgLevelsL[:])
+	a.target.PhasesL = rawPhasesL
+	a.target.Levels = a.target.LevelsL
+
+	// Right channel FFT
+	if latest.hasStereo {
+		if configs.AppConfig != nil && configs.AppConfig.Main.Visualizer.IsMono() {
+			// Mono mode: skip right FFT, use left channel for all
+			a.target.LevelsR = a.target.LevelsL
+			a.target.PhasesR = a.target.PhasesL
+		} else {
+			a.transform(a.fftR[:], latest.samplesR[:latest.count])
+			if latest.generation != a.generation.Load() {
+				return
+			}
+			rawR, rawPhasesR := a.channelLevelsAndPhases(a.fftR[:], latest.sampleRate, logScale)
+			a.target.LevelsR = a.applyAvg(rawR, a.avgLevelsR[:])
+			a.target.PhasesR = rawPhasesR
+			for band := range a.target.Levels {
+				a.target.Levels[band] = (a.target.LevelsL[band] + a.target.LevelsR[band]) / 2
+			}
+		}
 	}
 
-	a.publish(a.springFrame(a.target))
+	// Apply overshoot to target levels before spring interpolation
+	if configs.AppConfig != nil {
+		overshoot := configs.AppConfig.Main.Visualizer.EffectiveOvershoot()
+		if overshoot > 0 {
+			for band := range a.target.LevelsL {
+				a.target.LevelsL[band] = min(1.0, a.target.LevelsL[band]*(1.0+overshoot))
+			}
+			for band := range a.target.LevelsR {
+				a.target.LevelsR[band] = min(1.0, a.target.LevelsR[band]*(1.0+overshoot))
+			}
+			for band := range a.target.Levels {
+				a.target.Levels[band] = min(1.0, a.target.Levels[band]*(1.0+overshoot))
+			}
+		}
+	}
+
+	frame := a.springFrame(a.target)
+
+	// Apply cava-inspired smoothing after springFrame
+	if configs.AppConfig != nil {
+		cfg := configs.AppConfig.Main.Visualizer
+		if cfg.Monstercat > 0 {
+			a.monstercatFilter(&frame.Levels)
+		} else if cfg.Waves {
+			a.wavesFilter(&frame.Levels)
+		}
+	}
+
+	a.publish(frame)
 }
 
-func (a *PCMAnalyzer) transform(samples []float32) {
-	padding := spectrumFFTSize - len(samples)
-	for index := 0; index < padding; index++ {
-		a.fft[index] = 0
-	}
-	for index, sample := range samples {
-		a.fft[padding+index] = complex(float64(sample)*a.window[padding+index], 0)
-	}
+// --- FFT ---
 
-	for index := 1; index < spectrumFFTSize; index++ {
-		reversed := reverseSpectrumBits(index)
-		if index < reversed {
-			a.fft[index], a.fft[reversed] = a.fft[reversed], a.fft[index]
+func (a *PCMAnalyzer) transform(fftBuf []complex128, samples []float32) {
+	initFFTTwiddle()
+	padding := spectrumFFTSize - len(samples)
+	for i := 0; i < padding; i++ {
+		fftBuf[i] = 0
+	}
+	for i, s := range samples {
+		fftBuf[padding+i] = complex(float64(s)*a.window[padding+i], 0)
+	}
+	for i := 1; i < spectrumFFTSize; i++ {
+		rev := reverseSpectrumBits(i)
+		if i < rev {
+			fftBuf[i], fftBuf[rev] = fftBuf[rev], fftBuf[i]
 		}
 	}
 	for size := 2; size <= spectrumFFTSize; size <<= 1 {
-		angle := -2 * math.Pi / float64(size)
-		step := complex(math.Cos(angle), math.Sin(angle))
 		half := size / 2
+		stride := spectrumFFTSize / size
 		for offset := 0; offset < spectrumFFTSize; offset += size {
-			weight := complex(1, 0)
-			for index := 0; index < half; index++ {
-				even := a.fft[offset+index]
-				odd := weight * a.fft[offset+index+half]
-				a.fft[offset+index] = even + odd
-				a.fft[offset+index+half] = even - odd
-				weight *= step
+			for i := 0; i < half; i++ {
+				tw := fftTwiddle[i*stride]
+				w := complex(tw[0], tw[1])
+				even := fftBuf[offset+i]
+				odd := w * fftBuf[offset+i+half]
+				fftBuf[offset+i] = even + odd
+				fftBuf[offset+i+half] = even - odd
 			}
 		}
 	}
 }
 
-func reverseSpectrumBits(value int) int {
-	reversed := 0
+func reverseSpectrumBits(v int) int {
+	rev := 0
 	for bit := 0; bit < 10; bit++ {
-		reversed = reversed<<1 | value&1
-		value >>= 1
+		rev = rev<<1 | v&1
+		v >>= 1
 	}
-	return reversed
+	return rev
 }
 
-func (a *PCMAnalyzer) targetLevels(sampleRate float64) SpectrumFrame {
-	var target SpectrumFrame
-	lowFrequency := 60.0
-	highFrequency := min(16000.0, sampleRate/2)
-	if highFrequency <= lowFrequency {
-		return target
+// --- Level extraction ---
+
+// channelLevelsAndPhases extracts per-band magnitude levels and phase angles from FFT data.
+// When useLogScale is true, magnitudes are converted to dB (log scale);
+// when false, linear amplitude is used.
+func (a *PCMAnalyzer) channelLevelsAndPhases(fftBuf []complex128, sampleRate float64, useLogScale bool) (levels, phases [SpectrumBandCount]float64) {
+	lo := 60.0
+	hi := min(16000.0, sampleRate/2)
+	if hi <= lo {
+		return levels, phases
 	}
-	ratio := highFrequency / lowFrequency
-	for band := range target.Levels {
-		startFrequency := lowFrequency * math.Pow(ratio, float64(band)/SpectrumBandCount)
-		endFrequency := lowFrequency * math.Pow(ratio, float64(band+1)/SpectrumBandCount)
-		startBin := max(1, int(math.Floor(startFrequency*float64(spectrumFFTSize)/sampleRate)))
-		endBin := min(spectrumFFTSize/2, int(math.Ceil(endFrequency*float64(spectrumFFTSize)/sampleRate)))
+	ratio := hi / lo
+	fftScale := 4.0 / float64(spectrumFFTSize)
+	for band := range levels {
+		startFreq := lo * math.Pow(ratio, float64(band)/SpectrumBandCount)
+		endFreq := lo * math.Pow(ratio, float64(band+1)/SpectrumBandCount)
+		startBin := max(1, int(math.Floor(startFreq*float64(spectrumFFTSize)/sampleRate)))
+		endBin := min(spectrumFFTSize/2, int(math.Ceil(endFreq*float64(spectrumFFTSize)/sampleRate)))
 		if endBin <= startBin {
 			endBin = min(spectrumFFTSize/2, startBin+1)
 		}
-
-		magnitude := 0.0
+		mag := 0.0
+		bestPhase := 0.0
 		for bin := startBin; bin < endBin; bin++ {
-			value := a.fft[bin]
-			magnitude = max(magnitude, math.Hypot(real(value), imag(value)))
+			v := fftBuf[bin]
+			m := math.Hypot(real(v), imag(v))
+			if m > mag {
+				mag = m
+				bestPhase = math.Atan2(imag(v), real(v))
+			}
 		}
-		db := 20 * math.Log10(magnitude*4/float64(spectrumFFTSize)+1e-9)
-		target.Levels[band] = min(1.0, max(0.0, (db+72)/72))
+		if useLogScale {
+			db := 20 * math.Log10(mag*fftScale+1e-9)
+			levels[band] = clamp01((db + 72) / 72)
+		} else {
+			levels[band] = clamp01(mag * fftScale)
+		}
+		phases[band] = bestPhase
 	}
-	return target
+	return levels, phases
+}
+
+// --- Spring animation ---
+
+// applyAvg applies exponential moving average smoothing to a level array.
+// The prev slice is updated in-place. Returns the averaged levels.
+func (a *PCMAnalyzer) applyAvg(raw [SpectrumBandCount]float64, prev []float64) [SpectrumBandCount]float64 {
+	alpha := a.computeAvgAlpha()
+	if alpha >= 1.0 {
+		return raw
+	}
+	var out [SpectrumBandCount]float64
+	for band := range raw {
+		prev[band] = raw[band]*alpha + prev[band]*(1-alpha)
+		out[band] = prev[band]
+	}
+	return out
+}
+
+func (a *PCMAnalyzer) computeAvgAlpha() float64 {
+	if configs.AppConfig == nil {
+		return 1.0
+	}
+	avg := configs.AppConfig.Main.Visualizer.SpectrumAverage
+	if avg <= 1 {
+		return 1.0
+	}
+	return 1.0 / float64(avg)
 }
 
 func (a *PCMAnalyzer) springFrame(target SpectrumFrame) SpectrumFrame {
 	var frame SpectrumFrame
-	for band, targetLevel := range target.Levels {
-		position, velocity := a.spring.Update(a.positions[band], a.velocities[band], targetLevel)
-		a.positions[band] = min(1.0, max(0.0, position))
-		a.velocities[band] = velocity
-		frame.Levels[band] = a.positions[band]
+
+	if configs.AppConfig != nil && configs.AppConfig.Main.Visualizer.IsMono() {
+		// Mono mode: only animate left channel, use it for all
+		for band, t := range target.LevelsL {
+			pos, vel := a.springL.Update(a.positionsL[band], a.velocitiesL[band], t)
+			a.positionsL[band] = clamp01(pos)
+			a.velocitiesL[band] = vel
+			frame.LevelsL[band] = a.positionsL[band]
+		}
+		frame.LevelsR = frame.LevelsL
+		frame.Levels = frame.LevelsL
+		frame.PhasesL = target.PhasesL
+		frame.PhasesR = target.PhasesL
+		return frame
 	}
+
+	// Left channel spring
+	for band, t := range target.LevelsL {
+		pos, vel := a.springL.Update(a.positionsL[band], a.velocitiesL[band], t)
+		a.positionsL[band] = clamp01(pos)
+		a.velocitiesL[band] = vel
+		frame.LevelsL[band] = a.positionsL[band]
+	}
+
+	// Right channel spring
+	for band, t := range target.LevelsR {
+		pos, vel := a.springR.Update(a.positionsR[band], a.velocitiesR[band], t)
+		a.positionsR[band] = clamp01(pos)
+		a.velocitiesR[band] = vel
+		frame.LevelsR[band] = a.positionsR[band]
+	}
+
+	// Combined: average of L+R (scales correctly for both mono and stereo)
+	hasR := false
+	for _, v := range frame.LevelsR {
+		if v > 1e-9 {
+			hasR = true
+			break
+		}
+	}
+	for band := range frame.Levels {
+		if hasR {
+			frame.Levels[band] = (frame.LevelsL[band] + frame.LevelsR[band]) / 2
+		} else {
+			frame.Levels[band] = frame.LevelsL[band]
+		}
+	}
+
+	// Pass phases through unchanged (spring doesn't apply to phase).
+	frame.PhasesL = target.PhasesL
+	frame.PhasesR = target.PhasesR
+
 	return frame
 }
+
+func clamp01(v float64) float64 {
+	return min(1.0, max(0.0, v))
+}
+
+// monstercatFilter applies cava-style monstercat smoothing to spectrum levels.
+// Lower monstercat values = more spread (more fusion between bars).
+// The typical cava formula uses monstercat * 1.5 as the base.
+// Only operates on the combined Levels array.
+func (a *PCMAnalyzer) monstercatFilter(levels *[SpectrumBandCount]float64) {
+	if configs.AppConfig == nil {
+		return
+	}
+	monstercat := configs.AppConfig.Main.Visualizer.Monstercat
+	if monstercat <= 0 {
+		return
+	}
+	base := monstercat * 1.5
+	for i := range levels {
+		if levels[i] == 0 {
+			continue
+		}
+		for d := 1; d < SpectrumBandCount; d++ {
+			spread := levels[i] / math.Pow(base, float64(d))
+			if spread < 0.01 {
+				break
+			}
+			if i-d >= 0 {
+				levels[i-d] = max(levels[i-d], spread)
+			}
+			if i+d < SpectrumBandCount {
+				levels[i+d] = max(levels[i+d], spread)
+			}
+		}
+	}
+}
+
+// wavesFilter applies cava-style waves (quadratic decay) smoothing to spectrum levels.
+// Mutually exclusive with monstercatFilter.
+// Only operates on the combined Levels array.
+func (a *PCMAnalyzer) wavesFilter(levels *[SpectrumBandCount]float64) {
+	const heightNormalizer = 0.02
+	for i := range levels {
+		if levels[i] == 0 {
+			continue
+		}
+		for d := 1; d < SpectrumBandCount; d++ {
+			spread := levels[i] - heightNormalizer*float64(d*d)
+			if spread <= 0 {
+				break
+			}
+			if i-d >= 0 {
+				levels[i-d] = max(levels[i-d], spread)
+			}
+			if i+d < SpectrumBandCount {
+				levels[i+d] = max(levels[i+d], spread)
+			}
+		}
+	}
+}
+
+// --- Publish / Read ---
 
 func (a *PCMAnalyzer) publish(frame SpectrumFrame) {
 	a.frameMu.Lock()
@@ -263,6 +573,29 @@ func (a *PCMAnalyzer) Spectrum() SpectrumFrame {
 	a.frameMu.RLock()
 	defer a.frameMu.RUnlock()
 	return a.frame
+}
+
+// RawSamples returns a linearized snapshot of the raw PCM ring buffer
+// for oscilloscope and vectorscope rendering.
+func (a *PCMAnalyzer) RawSamples() RawSampleFrame {
+	pos := int(a.rawRingPos.Load())
+	count := int(a.rawRingCount.Load())
+	sr := math.Float64frombits(a.rawSampleRate.Load())
+
+	a.rawMu.Lock()
+	defer a.rawMu.Unlock()
+
+	snap := &a.rawSnap
+	// Linearize the circular buffer: oldest = count samples before pos.
+	start := (pos - count + rawSampleBufferSize) % rawSampleBufferSize
+	for i := 0; i < count; i++ {
+		idx := (start + i) % rawSampleBufferSize
+		snap.SamplesL[i] = a.rawRingL[idx]
+		snap.SamplesR[i] = a.rawRingR[idx]
+	}
+	snap.Count = count
+	snap.SampleRate = sr
+	return *snap
 }
 
 func (a *PCMAnalyzer) Close() {

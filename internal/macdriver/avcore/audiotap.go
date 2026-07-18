@@ -36,13 +36,15 @@ const (
 	audioTapProcessOffset    = 44
 )
 
-// AudioTap observes decoded PCM frames. samples is valid only for the duration
-// of the callback and must be copied by the receiver if it needs to retain it.
+// AudioTap observes decoded PCM frames. samplesL/samplesR are valid only for
+// the duration of the callback and must be copied by the receiver. When the
+// source is mono, samplesR is nil.
 type AudioTap struct {
 	id       uint64
-	handler  func(sampleRate float64, samples []float32)
+	handler  func(sampleRate float64, samplesL, samplesR []float32)
 	format   AudioStreamBasicDescription
 	samples  []float32
+	samplesR []float32
 	ref      uintptr
 	released atomic.Bool
 }
@@ -111,7 +113,8 @@ func importAudioTapFrameworks() {
 
 // NewAudioTap creates a pre-effects tap. Its callback copies only decoded PCM
 // data into the supplied handler and never changes the audio buffers.
-func NewAudioTap(handler func(sampleRate float64, samples []float32)) (*AudioTap, error) {
+// samplesR is nil for mono sources.
+func NewAudioTap(handler func(sampleRate float64, samplesL, samplesR []float32)) (*AudioTap, error) {
 	if handler == nil {
 		return nil, fmt.Errorf("audio tap handler is nil")
 	}
@@ -167,6 +170,7 @@ func audioTapPrepare(tapRef uintptr, maxFrames int64, format *AudioStreamBasicDe
 	}
 	tap.format = *format
 	tap.samples = make([]float32, int(maxFrames))
+	tap.samplesR = make([]float32, int(maxFrames))
 }
 
 func audioTapUnprepare(_ uintptr) {}
@@ -216,20 +220,28 @@ func (t *AudioTap) observe(bufferList *audioBufferList, frames int) {
 		frames = len(t.samples)
 	}
 
+	var samplesR []float32
 	if t.format.FormatFlags&audioFormatFlagIsNonInterleaved != 0 {
 		if int(bufferList.NumberBuffers) < channels {
 			return
 		}
+		// Channel 0 → left
+		bufL := audioBufferAt(bufferList, 0)
+		if bufL == nil || bufL.Data == nil || int(bufL.DataByteSize) < frames*int(t.format.BytesPerFrame) {
+			return
+		}
 		for frame := 0; frame < frames; frame++ {
-			var sum float64
-			for channel := 0; channel < channels; channel++ {
-				buffer := audioBufferAt(bufferList, channel)
-				if buffer == nil || buffer.Data == nil || int(buffer.DataByteSize) < (frame+1)*int(t.format.BytesPerFrame) {
-					return
+			t.samples[frame] = float32(pcmSample(unsafe.Add(bufL.Data, frame*int(t.format.BytesPerFrame)), t.format))
+		}
+		// Channel 1 → right (if present)
+		if channels >= 2 {
+			bufR := audioBufferAt(bufferList, 1)
+			if bufR != nil && bufR.Data != nil && int(bufR.DataByteSize) >= frames*int(t.format.BytesPerFrame) {
+				for frame := 0; frame < frames; frame++ {
+					t.samplesR[frame] = float32(pcmSample(unsafe.Add(bufR.Data, frame*int(t.format.BytesPerFrame)), t.format))
 				}
-				sum += pcmSample(unsafe.Add(buffer.Data, frame*int(t.format.BytesPerFrame)), t.format)
+				samplesR = t.samplesR[:frames]
 			}
-			t.samples[frame] = float32(sum / float64(channels))
 		}
 	} else {
 		buffer := audioBufferAt(bufferList, 0)
@@ -238,14 +250,16 @@ func (t *AudioTap) observe(bufferList *audioBufferList, frames int) {
 		}
 		for frame := 0; frame < frames; frame++ {
 			frameStart := unsafe.Add(buffer.Data, frame*int(t.format.BytesPerFrame))
-			var sum float64
-			for channel := 0; channel < channels; channel++ {
-				sum += pcmSample(unsafe.Add(frameStart, channel*sampleBytes), t.format)
+			t.samples[frame] = float32(pcmSample(frameStart, t.format))
+			if channels >= 2 {
+				t.samplesR[frame] = float32(pcmSample(unsafe.Add(frameStart, sampleBytes), t.format))
 			}
-			t.samples[frame] = float32(sum / float64(channels))
+		}
+		if channels >= 2 {
+			samplesR = t.samplesR[:frames]
 		}
 	}
-	t.handler(t.format.SampleRate, t.samples[:frames])
+	t.handler(t.format.SampleRate, t.samples[:frames], samplesR)
 }
 
 func supportedPCMFormat(format AudioStreamBasicDescription) bool {

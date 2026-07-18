@@ -134,9 +134,9 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			case <-ctx.Done():
 				return
 			case s := <-p.StateChan():
-				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-				p.updateDesktopLyrics()
-				if s != types.Stopped {
+			p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+			p.updateDesktopLyrics()
+			if s != types.Stopped {
 					p.netease.Rerender(false)
 					break
 				}
@@ -168,8 +168,6 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 					default:
 					}
 				}
-
-				p.netease.Rerender(false)
 			}
 		}
 	})
@@ -719,5 +717,13 @@ func (p *Player) updateDesktopLyrics() {
 		}
 	case types.Stopped:
 		dl.Hide()
+	}
+
+	// Pass spectrum data to desktop lyrics for GPU visualization
+	if state == types.Playing || state == types.Paused {
+		if provider, ok := p.Player.(player.SpectrumProvider); ok {
+			dl.UpdateSpectrum(provider.Spectrum())
+			dl.UpdateRawSamples(provider.RawSamples())
+		}
 	}
 }

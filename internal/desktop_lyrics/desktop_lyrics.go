@@ -1,6 +1,9 @@
 package desktop_lyrics
 
-import "github.com/go-musicfox/go-musicfox/internal/configs"
+import (
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/player"
+)
 
 // LyricWord represents a single word with its timing in milliseconds.
 type LyricWord struct {
@@ -28,6 +31,11 @@ type Controller interface {
 	// currentTimeMs is the current playback position in milliseconds.
 	// playing controls whether YRC highlight time may advance between updates.
 	Update(curLine, nextLine LyricLine, currentIndex int, currentTimeMs int64, playing bool)
+	// UpdateSpectrum updates the spectrum visualization with the latest FFT frame.
+	// Called periodically by the player to keep the spectrum in sync with audio.
+	UpdateSpectrum(frame player.SpectrumFrame)
+	// UpdateRawSamples provides raw PCM time-domain samples for waveform/oscilloscope rendering.
+	UpdateRawSamples(snap player.RawSampleFrame)
 	Close()
 }
 

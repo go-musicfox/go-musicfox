@@ -60,6 +60,10 @@ func (*osxPlayer) Spectrum() SpectrumFrame {
 	return SpectrumFrame{}
 }
 
+func (*osxPlayer) RawSamples() RawSampleFrame {
+	return RawSampleFrame{}
+}
+
 func (p *osxPlayer) UpVolume() {
 }
 

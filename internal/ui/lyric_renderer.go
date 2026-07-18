@@ -17,6 +17,22 @@ import (
 
 var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
+// lyricCacheKey holds the state that determines whether the rendered
+// output has changed. Used to skip expensive recomputation in View().
+type lyricCacheKey struct {
+	currentIndex   int
+	yrcLineIdx     int
+	isRunning      bool
+	yrcEnabled     bool
+	showTranslation bool
+	currentTimeHundredMs int64 // currentTimeMs / 100, ~100ms granularity
+	windowWidth    int
+	windowHeight   int
+	menuBottomRow  int
+	specLines      int
+	isCentered     bool
+}
+
 // LyricRenderer is a dedicated UI component for rendering lyrics.
 type LyricRenderer struct {
 	netease      *Netease
@@ -29,6 +45,11 @@ type LyricRenderer struct {
 	lyricNowScrollBar *app.XScrollBar
 	currentTimeMs     int64     // Current playback time in milliseconds for YRC rendering
 	lastViewTime      time.Time // For debug logging
+
+	// output caching to avoid recomputation when nothing changed
+	cachedView  string
+	cachedLines int
+	cachedKey   lyricCacheKey
 }
 
 // NewLyricRenderer creates a new lyric renderer component.
@@ -187,8 +208,31 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Update YRC playback time for word-level progress
+	var currentTimeMs int64
 	if player := r.netease.Player(); player != nil {
-		r.SetCurrentTime(player.PassedTime().Milliseconds())
+		currentTimeMs = player.PassedTime().Milliseconds()
+		r.SetCurrentTime(currentTimeMs)
+	}
+
+	// Build cache key and skip recomputation if nothing changed.
+	// Time is rounded to ~100ms granularity since lyrics don't need
+	// pixel-perfect timing — per-frame precision is wasteful.
+	state := r.lyricService.State()
+	key := lyricCacheKey{
+		currentIndex:        state.CurrentIndex,
+		yrcLineIdx:          state.YRCLineIndex,
+		isRunning:           state.IsRunning,
+		yrcEnabled:          state.YRCEnabled,
+		showTranslation:     state.ShowTranslation,
+		currentTimeHundredMs: currentTimeMs / 100,
+		windowWidth:         r.netease.WindowWidth(),
+		windowHeight:        r.netease.WindowHeight(),
+		menuBottomRow:       main.MenuBottomRow(),
+		specLines:           specLines,
+		isCentered:          main.CenterEverything(),
+	}
+	if key == r.cachedKey {
+		return r.cachedView, r.cachedLines
 	}
 
 	r.prepareLyricLines()
@@ -217,7 +261,14 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// significantly from the actual output when lyrics are centered or when
 	// no lyrics are displayed.
 	viewResult := lyricBuilder.String()
-	return viewResult, strings.Count(viewResult, "\n")
+	linesResult := strings.Count(viewResult, "\n")
+
+	// store in cache
+	r.cachedKey = key
+	r.cachedView = viewResult
+	r.cachedLines = linesResult
+
+	return viewResult, linesResult
 }
 
 // prepareLyricLines fetches the latest state from the service and prepares the `r.lyrics` array for rendering.

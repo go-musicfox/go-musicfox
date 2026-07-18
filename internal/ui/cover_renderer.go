@@ -168,28 +168,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	windowHeight := r.netease.WindowHeight()
-	menuBottomRow := main.MenuBottomRow()
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	var coverStartRow int
-	if lyricLines > 0 {
-		lyricCenterRow := lyricStartRow + lyricLines
-		coverStartRow = lyricCenterRow - r.rows/2
-	} else {
-		coverStartRow = windowHeight - CoverEndRowMargin - r.rows
-	}
-
-	minStartRow := menuBottomRow + r.netease.SpectrumLines(main) + 1
-	if coverStartRow <= minStartRow {
-		coverStartRow = minStartRow
-	}
-	if coverStartRow < 1 {
-		coverStartRow = 1
-	}
-	if coverStartRow+r.rows > windowHeight-CoverEndRowMargin {
-		coverStartRow = windowHeight - CoverEndRowMargin - r.rows
-	}
+	// Position cover purely based on lyrics: vertically center-aligned with the lyric block
+	lyricCenterRow := lyricStartRow + lyricLines/2 + 1
+	coverStartRow := lyricCenterRow - r.rows/2
 
 	// If cover can't fit at all, skip rendering
 	if r.rows > windowHeight-FixedTopBottomRows {

@@ -41,34 +41,72 @@ func initPaths() {
 	bootstrapOnce.Do(func() {
 		portableRoot := os.Getenv("MUSICFOX_ROOT")
 		if portableRoot != "" {
-			absRoot, err := filepath.Abs(portableRoot)
-			if err != nil {
-				panic(fmt.Sprintf("无法解析便携模式根目录: %v", err))
-			}
-			paths.isPortable = true
-			paths.rootDir = absRoot
-			paths.configDir = absRoot
-			paths.stateDir = absRoot
-			paths.dataDir = filepath.Join(absRoot, "data")
-			paths.cacheDir = filepath.Join(absRoot, "cache")
-			paths.downloadDir = filepath.Join(absRoot, "download")
-			mustCreateDirectory(absRoot)
+			setPortablePaths(portableRoot)
 		} else {
-			paths.dataDir = filepath.Join(xdg.DataHome, types.AppLocalDataDir)
-			paths.stateDir = filepath.Join(xdg.StateHome, types.AppLocalDataDir)
-			paths.cacheDir = filepath.Join(xdg.CacheHome, types.AppLocalDataDir)
-			paths.downloadDir = filepath.Join(xdg.UserDirs.Download, types.AppLocalDataDir)
-			path, err := xdg.ConfigFile(types.AppLocalDataDir)
-			if err != nil {
-				panic(fmt.Sprintf("无法获取配置目录: %v", err))
-			}
-			paths.configDir = path
+			setXDGPaths()
 		}
-		paths.logDir = filepath.Join(paths.stateDir, "log")
-		paths.dbDir = filepath.Join(paths.dataDir, "db")
-
-		mustCreateDirectory(paths.configDir, paths.dataDir, paths.logDir)
 	})
+}
+
+func setPortablePaths(root string) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		panic(fmt.Sprintf("无法解析便携模式根目录: %v", err))
+	}
+	paths.isPortable = true
+	paths.rootDir = absRoot
+	paths.configDir = absRoot
+	paths.stateDir = absRoot
+	paths.dataDir = filepath.Join(absRoot, "data")
+	paths.cacheDir = filepath.Join(absRoot, "cache")
+	paths.downloadDir = filepath.Join(absRoot, "download")
+	paths.logDir = filepath.Join(absRoot, "log")
+	paths.dbDir = filepath.Join(paths.dataDir, "db")
+
+	mustCreateDirectory(absRoot, paths.dataDir, paths.logDir)
+}
+
+func setXDGPaths() {
+	paths.dataDir = filepath.Join(xdg.DataHome, types.AppLocalDataDir)
+	paths.stateDir = filepath.Join(xdg.StateHome, types.AppLocalDataDir)
+	paths.cacheDir = filepath.Join(xdg.CacheHome, types.AppLocalDataDir)
+	paths.downloadDir = filepath.Join(xdg.UserDirs.Download, types.AppLocalDataDir)
+	path, err := xdg.ConfigFile(types.AppLocalDataDir)
+	if err != nil {
+		panic(fmt.Sprintf("无法获取配置目录: %v", err))
+	}
+	paths.configDir = path
+	paths.logDir = filepath.Join(paths.stateDir, "log")
+	paths.dbDir = filepath.Join(paths.dataDir, "db")
+
+	mustCreateDirectory(paths.configDir, paths.dataDir, paths.logDir)
+}
+
+// SetupPureRoot 将应用切换到纯净模式，所有路径指向临时目录。
+// 必须在 bootstrapOnce 已触发但实际业务逻辑尚未使用路径时调用。
+func SetupPureRoot(rootDir string) {
+	// 确保 bootstrapOnce 已完成（会被 slogx init 提前触发）
+	initPaths()
+
+	absRoot, err := filepath.Abs(rootDir)
+	if err != nil {
+		panic(fmt.Sprintf("无法解析纯净模式根目录: %v", err))
+	}
+
+	paths.isPortable = true
+	paths.rootDir = absRoot
+	paths.configDir = absRoot
+	paths.stateDir = absRoot
+	paths.dataDir = filepath.Join(absRoot, "data")
+	paths.cacheDir = filepath.Join(absRoot, "cache")
+	paths.downloadDir = filepath.Join(absRoot, "download")
+	paths.logDir = filepath.Join(absRoot, "log")
+	paths.dbDir = filepath.Join(paths.dataDir, "db")
+
+	// runtimeDir 可能尚未初始化，强制重置
+	paths.runtimeDir = paths.cacheDir
+
+	mustCreateDirectory(absRoot, paths.dataDir, paths.logDir)
 }
 
 func initPathsWithConfig() {

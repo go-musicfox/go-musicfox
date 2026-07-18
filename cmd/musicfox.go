@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/anhoder/foxful-cli/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -14,7 +15,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils/app"
+	mfoxapp "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
 	_ "github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -34,6 +35,7 @@ func musicfox() {
 	app.GOptsBinder = func(gf *gcli.Flags) {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")
 		gf.BoolOpt(&commands.GlobalOptions.DebugMode, "debug", "", false, "enable debug log level")
+		gf.BoolOpt(&commands.GlobalOptions.PureMode, "pure", "", false, "start with default config in a temporary directory")
 	}
 
 	// FIXME: 后续版本移除
@@ -41,6 +43,18 @@ func musicfox() {
 		app.Add(commands.NewMigrateCommand())
 		app.Run()
 		return
+	}
+
+	// --pure flag: start with a temporary directory as MUSICFOX_ROOT
+	if isFlagTrue("pure") {
+		pureDir, err := os.MkdirTemp("", "musicfox-pure-*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create temp dir for pure mode: %v\n", err)
+			os.Exit(1)
+		}
+		mfoxapp.SetupPureRoot(pureDir)
+		commands.GlobalOptions.PureMode = true
+		fmt.Fprintf(os.Stderr, "Pure mode enabled. Temp root: %s\n", pureDir)
 	}
 
 	loadConfig()
@@ -66,6 +80,7 @@ func musicfox() {
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
+	app.Add(commands.NewResetCommand())
 	app.Add(commands.NewMigrateCommand())
 	app.DefaultCommand(playerCommand.Name)
 
@@ -74,8 +89,8 @@ func musicfox() {
 
 // loadConfig 加载配置
 func loadConfig() {
-	configDir := app.ConfigDir()
-	configPath := app.ConfigFilePath()
+	configDir := mfoxapp.ConfigDir()
+	configPath := mfoxapp.ConfigFilePath()
 
 	// 检测旧版 INI 配置文件（migrate 命令不需要检测）
 	iniPath := filepath.Join(configDir, "go-musicfox.ini")
@@ -100,4 +115,22 @@ func loadConfig() {
 		panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
 	}
 	configs.AppConfig = cfg
+}
+
+// isFlagTrue checks whether a boolean flag is set to true in os.Args,
+// before gcli parses the flags. Handles --flag and --flag=true.
+func isFlagTrue(name string) bool {
+	prefix := "--" + name
+	for _, arg := range os.Args {
+		if arg == prefix {
+			return true
+		}
+		if after, ok := strings.CutPrefix(arg, prefix+"="); ok {
+			switch after {
+			case "true", "1", "yes":
+				return true
+			}
+		}
+	}
+	return false
 }

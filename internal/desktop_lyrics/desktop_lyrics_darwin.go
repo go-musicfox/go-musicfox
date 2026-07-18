@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
+	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -145,7 +146,8 @@ type darwinController struct {
 
 	containerView cocoa.NSView  // LyricsDragView subclass — content container
 	contentOrigin cocoa.CGPoint // window's screen origin (bottom-left)
-	dragActive    bool          // true during mouse drag
+	dragActive    bool          // true during custom mouse drag
+	isMoving     bool          // true during AppKit window-level drag (SetMovableByWindowBackground)
 
 	dragStartScreenMX float64 // screen mouse X at drag start
 	dragStartScreenMY float64 // screen mouse Y at drag start
@@ -163,6 +165,20 @@ type darwinController struct {
 	wordAnimation wordAnimationState
 	animating     bool
 	nextFrameAt   time.Time // scheduled deadline of the next animation frame
+
+	// GPU spectrum visualization (Core Animation CALayer sublayers of bgView.layer)
+	spectrumBars      []cocoa.CALayer      // one CALayer per frequency band (bar/mirror style)
+	spectrumLineLayer cocoa.CAShapeLayer   // shape layer for line/curve style
+	spectrumLinePath  cocoa.NSBezierPath   // reusable bezier path for building the curve
+	spectrumFrame     player.SpectrumFrame // latest FFT frame (immutable snapshot)
+	spectrumMu        sync.Mutex           // guards spectrumFrame
+	rawSamples        player.RawSampleFrame // latest raw PCM snapshot for waveform style
+	rawSampleMu       sync.Mutex            // guards rawSamples
+	dragOverlay       cocoa.NSView           // transparent overlay for mouse event capture
+	// Fire style: peak dots with acceleration falloff.
+	firePeakDots   []cocoa.CALayer       // small circle per band for peak indicator
+	firePeaks      [64]float64           // peak height per band (0–1)
+	fireFalloff    [64]float64           // falloff speed per band
 }
 
 func newController(cfg configs.DesktopLyricsConfig) Controller {
@@ -241,6 +257,12 @@ func (c *darwinController) createWindow() {
 	if lineCount == 2 {
 		contentH += labelGap
 	}
+	// Add spectrum height
+	if c.cfg.SpectrumEnabled {
+		if sh := c.cfg.SpectrumEffectiveHeight(); sh > 0 {
+			contentH += sh + 4.0 // 4px padding between spectrum and lyrics bg
+		}
+	}
 	c.currentContentH = contentH
 
 	// Compute initial window screen position from factors
@@ -275,6 +297,12 @@ func (c *darwinController) createWindow() {
 	)
 	c.window.SetBackgroundColor(cocoa.NSColor_ClearColor())
 	c.window.SetIgnoresMouseEvents(!c.cfg.Draggable)
+	c.window.SetMovableByWindowBackground(c.cfg.Draggable)
+
+	// Set the helper instance as window delegate so windowDidMove: fires
+	// and syncPositionFactors keeps xFactor/yFactor current during drags.
+	selSetDelegate := objc.RegisterName("setDelegate:")
+	c.window.Send(selSetDelegate, helperInst.ID)
 
 	// Content view (fills window)
 	contentView := c.window.ContentView()
@@ -328,28 +356,77 @@ func (c *darwinController) createWindow() {
 	).CGColorRef()))
 	c.containerView.AddSubview(c.bgView)
 
+	// ---- Spectrum bars (sublayers of bgView's layer, below lyrics) ----
+	if c.cfg.SpectrumEnabled {
+		if sh := c.cfg.SpectrumEffectiveHeight(); sh > 0 {
+			barCount := c.cfg.SpectrumEffectiveBarCount()
+			if c.cfg.SpectrumStyle == "line" || c.cfg.SpectrumStyle == "waveform" || c.cfg.SpectrumStyle == "ring_arc" || c.cfg.SpectrumStyle == "ripple" {
+				// Shape-based styles: single CAShapeLayer draws curves/arcs/rings.
+				c.spectrumLinePath = cocoa.NSBezierPath_New()
+				c.spectrumLineLayer = cocoa.CAShapeLayer_New()
+				bgLayer.Send(sel_addSublayer, c.spectrumLineLayer.ID)
+			} else {
+				totalBars := barCount
+				if c.cfg.SpectrumStyle == "mirror" {
+					totalBars = barCount * 2 // upper + lower bars
+				}
+				c.spectrumBars = make([]cocoa.CALayer, totalBars)
+				for i := 0; i < totalBars; i++ {
+					bar := cocoa.CALayer_New()
+					c.spectrumBars[i] = bar
+					bgLayer.Send(sel_addSublayer, bar.ID)
+			}
+
+			// Fire style: create peak indicator dots (small circles above bars).
+			if c.cfg.SpectrumStyle == "fire" {
+				c.firePeakDots = make([]cocoa.CALayer, barCount)
+				for i := 0; i < barCount; i++ {
+					dot := cocoa.CALayer_New()
+					dot.SetCornerRadius(2.0)
+					c.firePeakDots[i] = dot
+					bgLayer.Send(sel_addSublayer, dot.ID)
+				}
+			}
+		}
+	}
+	}
+
 	// ---- Labels ----
 	textW := contentW - padding*2
 	textH := labelH
+	// Labels sit above spectrum area when spectrum is enabled.
+	specBottomPad := 0.0
+	sh := c.cfg.SpectrumEffectiveHeight()
+	if c.cfg.SpectrumEnabled && sh > 0 {
+		specBottomPad = sh + 4.0
+	}
 	if !c.cfg.OneLineMode {
-		baseFirst := padding + textH + labelGap
-		baseSecond := padding
+		baseFirst := specBottomPad + padding + textH + labelGap
+		baseSecond := specBottomPad + padding
 		c.labelBaseY[posFirst] = baseFirst
 		c.labelBaseY[posSecond] = baseSecond
 		c.labels[posFirst] = c.makeTextField(baseFirst, padding, textW, textH, inactiveColor, shadow)
 		c.labels[posFirst].SetAlignment(nsTextAlignmentLeft)
-		c.labels[posSecond] = c.makeTextField(padding, padding, textW, textH, inactiveColor, shadow)
+		c.labels[posSecond] = c.makeTextField(specBottomPad+padding, padding, textW, textH, inactiveColor, shadow)
 		c.labels[posSecond].SetAlignment(nsTextAlignmentRight)
 		c.bgView.AddSubview(c.labels[posFirst].NSView)
 		c.bgView.AddSubview(c.labels[posSecond].NSView)
 	} else {
-		c.labelBaseY[posSecond] = padding
-		c.labels[posSecond] = c.makeTextField(padding, padding, textW, textH, inactiveColor, shadow)
+		c.labelBaseY[posSecond] = specBottomPad + padding
+		c.labels[posSecond] = c.makeTextField(specBottomPad+padding, padding, textW, textH, inactiveColor, shadow)
 		c.labels[posSecond].SetAlignment(nsTextAlignmentCenter)
 		c.bgView.AddSubview(c.labels[posSecond].NSView)
 	}
 
 	contentView.AddSubview(c.containerView)
+
+	// ---- Transparent drag overlay (on top, handles all mouse events) ----
+	overlayID := objc.ID(dragViewClass).Send(macdriver.SEL_alloc).Send(macdriver.SEL_init)
+	c.dragOverlay = cocoa.NSView{NSObject: core.NSObject{ID: overlayID}}
+	c.dragOverlay.SetWantsLayer(true)
+	c.dragOverlay.SetFrameSize(contentW, contentH)
+	c.dragOverlay.SetFrameOrigin(0, 0)
+	c.containerView.AddSubview(c.dragOverlay)
 
 	// Override persisted position from DB.
 	if position, ok := loadDesktopLyricsPosition(); ok {
@@ -362,7 +439,14 @@ func (c *darwinController) createWindow() {
 }
 
 func (c *darwinController) makeTextField(yOff, xOff, w, h float64, color cocoa.NSColor, shadow cocoa.NSShadow) cocoa.NSTextField {
-	tf := cocoa.NSTextField_alloc().InitWithFrame(cocoa.NSRect{
+	// Use LyricsTextField (NSTextField subclass) with mouseDownCanMoveWindow=YES
+	// so AppKit's window-level drag also works from label-covered areas.
+	id := objc.ID(textFieldClass).Send(macdriver.SEL_alloc)
+	tf := cocoa.NSTextField{
+		NSView: cocoa.NSView{
+			NSObject: core.NSObject{ID: id},
+		},
+	}.InitWithFrame(cocoa.NSRect{
 		Origin: cocoa.CGPoint{X: xOff, Y: yOff},
 		Size:   cocoa.CGSize{Width: w, Height: h},
 	})
@@ -479,10 +563,40 @@ func (c *darwinController) doClose() {
 			c.labels[i].SetObjcID(0)
 		}
 	}
+	if c.dragOverlay.ID != 0 {
+		c.dragOverlay.RemoveFromSuperview()
+		c.dragOverlay.Release()
+		c.dragOverlay.SetObjcID(0)
+	}
 	if c.bgView.ID != 0 {
 		c.bgView.RemoveFromSuperview()
 		c.bgView.Release()
 		c.bgView.SetObjcID(0)
+	}
+	// Clean up spectrum layers
+	for i := range c.spectrumBars {
+		if c.spectrumBars[i].ID != 0 {
+			c.spectrumBars[i].Release()
+			c.spectrumBars[i].SetObjcID(0)
+		}
+	}
+	c.spectrumBars = nil
+	// Fire style peak dots
+	for i := range c.firePeakDots {
+		if c.firePeakDots[i].ID != 0 {
+			c.firePeakDots[i].Release()
+			c.firePeakDots[i].SetObjcID(0)
+		}
+	}
+	c.firePeakDots = nil
+	if c.spectrumLineLayer.ID != 0 {
+		c.spectrumLineLayer.RemoveFromSuperlayer()
+		c.spectrumLineLayer.Release()
+		c.spectrumLineLayer.SetObjcID(0)
+	}
+	if c.spectrumLinePath.ID != 0 {
+		c.spectrumLinePath.Release()
+		c.spectrumLinePath.SetObjcID(0)
 	}
 	if c.containerView.ID != 0 {
 		c.containerView.RemoveFromSuperview()
@@ -531,6 +645,9 @@ func (c *darwinController) doUpdateText() {
 			c.needLargeHeight = hasTrans
 			c.layoutContent(true)
 		}
+		if c.cfg.SpectrumEnabled {
+			c.renderSpectrum()
+		}
 		return
 	}
 
@@ -567,6 +684,9 @@ func (c *darwinController) doUpdateText() {
 	if hasTrans != c.needLargeHeight {
 		c.needLargeHeight = hasTrans
 		c.layoutContent(true)
+	}
+	if c.cfg.SpectrumEnabled {
+		c.renderSpectrum()
 	}
 }
 
@@ -656,9 +776,21 @@ func (c *darwinController) layoutContent(animate bool) {
 	if lineCount == 2 {
 		contentH += labelGap
 	}
+	// Add spectrum height
+	sh := 0.0
+	spectrumPad := 0.0
+	if c.cfg.SpectrumEnabled {
+		sh = c.cfg.SpectrumEffectiveHeight()
+		if sh > 0 {
+			spectrumPad = 4.0
+			contentH += sh + spectrumPad
+		}
+	}
 	c.currentContentH = contentH
 
-	// Compute window screen origin from factors
+	// Compute new origin from the controller's stored factors, adjusting for any
+	// content size change. Uses the factor-preserved center position so
+	// the window resizes around its current center point.
 	originX := c.screenFrame.Origin.X + c.screenFrame.Size.Width*c.xFactor - contentW/2
 	originY := c.screenFrame.Origin.Y + c.screenFrame.Size.Height*c.yFactor - contentH/2
 	originX, originY = c.constrainWindowOrigin(originX, originY, contentW, contentH)
@@ -669,11 +801,13 @@ func (c *darwinController) layoutContent(animate bool) {
 		Size:   cocoa.CGSize{Width: contentW, Height: contentH},
 	}
 
-	// Label positions (relative to bgView which is at 0,0)
+	// Label positions (relative to bgView's own coordinate system).
+	// Labels shift up to make room for spectrum bars at the bottom of bgView.
 	textW := contentW - padding*2
 	textH := labelH
-	baseFirst := padding + textH + labelGap
-	baseSecond := padding
+	specBottomPad := spectrumPad + sh
+	baseFirst := specBottomPad + padding + textH + labelGap
+	baseSecond := specBottomPad + padding
 	if lineCount == 2 {
 		c.labelBaseY[posFirst] = baseFirst
 	}
@@ -692,6 +826,9 @@ func (c *darwinController) layoutContent(animate bool) {
 
 			c.containerView.Animator().SetFrameSize(contentW, contentH)
 			c.bgView.Animator().SetFrameSize(contentW, contentH)
+			c.bgView.Animator().SetFrameOrigin(0, 0)
+			c.dragOverlay.Animator().SetFrameSize(contentW, contentH)
+			c.dragOverlay.Animator().SetFrameOrigin(0, 0)
 			if c.labels[posFirst].ID != 0 {
 				la := c.labels[posFirst].Animator()
 				la.SetFrameSize(textW, textH)
@@ -710,6 +847,9 @@ func (c *darwinController) layoutContent(animate bool) {
 		c.containerView.SetFrameSize(contentW, contentH)
 		c.containerView.SetFrameOrigin(0, 0)
 		c.bgView.SetFrameSize(contentW, contentH)
+		c.bgView.SetFrameOrigin(0, 0)
+		c.dragOverlay.SetFrameSize(contentW, contentH)
+		c.dragOverlay.SetFrameOrigin(0, 0)
 		if c.labels[posFirst].ID != 0 {
 			c.labels[posFirst].SetFrameSize(textW, textH)
 			c.labels[posFirst].SetFrameOrigin(defaultWindowPadding-c.scroll[posFirst].offset, c.labelBaseY[posFirst])
@@ -786,6 +926,51 @@ func (c *darwinController) handleDragEnd() {
 	}
 	c.dragActive = false
 	c.persistPositionFactors()
+}
+
+// syncPositionFactors recomputes xFactor/yFactor from the window's current
+// screen frame. Called when AppKit moves the window (via windowDidMove:),
+// keeping factor-based positioning in sync regardless of how the window moves.
+// Persistence is debounced to avoid excessive DB writes during drag.
+func (c *darwinController) syncPositionFactors() {
+	if c.window.ID == 0 {
+		return
+	}
+	// Skip if a custom drag is active — handleDragMove already updates factors.
+	if c.dragActive {
+		return
+	}
+	frame := c.window.Frame()
+	originX := float64(frame.Origin.X)
+	originY := float64(frame.Origin.Y)
+	contentW := float64(frame.Size.Width)
+	contentH := float64(frame.Size.Height)
+	if c.screenFrame.Size.Width == 0 || c.screenFrame.Size.Height == 0 {
+		return
+	}
+
+	// Reverse the layoutContent calculation:
+	//   originX = screenOrigin.X + screenW*xFactor - contentW/2
+	//   => xFactor = (originX + contentW/2 - screenOrigin.X) / screenW
+	c.xFactor = (originX + contentW/2 - c.screenFrame.Origin.X) / c.screenFrame.Size.Width
+	c.yFactor = (originY + contentH/2 - c.screenFrame.Origin.Y) / c.screenFrame.Size.Height
+	if c.xFactor < 0 {
+		c.xFactor = 0
+	}
+	if c.xFactor > 1 {
+		c.xFactor = 1
+	}
+	if c.yFactor < 0 {
+		c.yFactor = 0
+	}
+	if c.yFactor > 1 {
+		c.yFactor = 1
+	}
+	c.contentOrigin = cocoa.CGPoint{X: originX, Y: originY}
+	c.currentContentH = contentH
+
+	// Debounce persistence: cancel previous, schedule after 0.5s
+	scheduleDebouncedPersist()
 }
 
 // persistPositionFactors saves the current screen-relative center factors to DB.
@@ -1208,6 +1393,587 @@ func (c *darwinController) blendColor(t float64) cocoa.NSColor {
 	)
 }
 
+// catmullRomToCubicBezier converts Catmull-Rom control points P0,P1,P2,P3 into
+// cubic Bezier control points for the segment P1→P2. Uses the standard centripetal
+// parameterization that produces C1-continuous curves through all control points.
+//   cp1 = P1 + (P2 - P0) / 6
+//   cp2 = P2 - (P3 - P1) / 6
+func catmullRomToCubicBezier(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y float64) (cp1x, cp1y, cp2x, cp2y float64) {
+	cp1x = p1x + (p2x-p0x)/6
+	cp1y = p1y + (p2y-p0y)/6
+	cp2x = p2x - (p3x-p1x)/6
+	cp2y = p2y - (p3y-p1y)/6
+	return
+}
+
+// renderSpectrum updates all CALayer bar frames and colors from the latest spectrum data.
+// Must be called on the main thread (from doUpdateText).
+func (c *darwinController) renderSpectrum() {
+	c.spectrumMu.Lock()
+	frame := c.spectrumFrame
+	c.spectrumMu.Unlock()
+
+	isLine := c.cfg.SpectrumStyle == "line"
+	isWaveform := c.cfg.SpectrumStyle == "waveform"
+	isRingArc := c.cfg.SpectrumStyle == "ring_arc"
+	isRipple := c.cfg.SpectrumStyle == "ripple"
+
+	// Guard: bars must exist for bar-based styles; shape layer must exist for shape-based styles.
+	needsShape := isLine || isWaveform || isRingArc || isRipple
+	if needsShape {
+		if c.spectrumLineLayer.ID == 0 || c.bgView.ID == 0 {
+			return
+		}
+	} else {
+		if len(c.spectrumBars) == 0 || c.bgView.ID == 0 {
+			return
+		}
+	}
+
+	contentW := c.currentWinW
+	padding := defaultWindowPadding
+	availableW := contentW - padding*2
+	effectiveBarCount := c.cfg.SpectrumEffectiveBarCount()
+	maxH := c.cfg.SpectrumEffectiveHeight()
+	if maxH <= 0 {
+		return
+	}
+	barGap := c.cfg.SpectrumEffectiveBarGap()
+	barW := (availableW - barGap*float64(effectiveBarCount-1)) / float64(effectiveBarCount)
+	if barW < 1 {
+		barW = 1
+	}
+
+	// Get colors
+	lowR, lowG, lowB := parseHexRGB(c.cfg.SpectrumColorLow)
+	midR, midG, midB := parseHexRGB(c.cfg.SpectrumColorMid)
+	highR, highG, highB := parseHexRGB(c.cfg.SpectrumColorHigh)
+	opacity := c.cfg.SpectrumOpacity
+	if opacity <= 0 {
+		opacity = 0.8
+	}
+	opacityCg := cocoa.CGFloat(opacity)
+
+	cocoa.CATransaction_Begin()
+	cocoa.CATransaction_SetDisableActions(true)
+
+	// ---- Line/Curve style: CAShapeLayer with bezier curve ----
+	if isLine {
+		c.renderSpectrumCurve(frame, effectiveBarCount, availableW, maxH,
+			float64(padding), barW, barGap,
+			lowR, lowG, lowB, midR, midG, midB, highR, highG, highB, opacityCg)
+		cocoa.CATransaction_Commit()
+		return
+	}
+
+	// ---- Waveform style: raw PCM oscilloscope ----
+	if isWaveform {
+		c.renderWaveform(
+			float64(padding), float64(availableW), maxH,
+			midR, midG, midB, opacityCg,
+		)
+		cocoa.CATransaction_Commit()
+		return
+	}
+
+	// ---- Ring Arc HUD: CAShapeLayer arc segments around a ring ----
+	if isRingArc {
+		c.renderRingArc(effectiveBarCount, availableW, maxH,
+			lowR, lowG, lowB, midR, midG, midB, highR, highG, highB, opacityCg)
+		cocoa.CATransaction_Commit()
+		return
+	}
+
+	// ---- Ripple Rings: concentric pulsing circles with glow ----
+	if isRipple {
+		c.renderRipple(effectiveBarCount, maxH,
+			midR, midG, midB, opacityCg)
+		cocoa.CATransaction_Commit()
+		return
+	}
+
+	// ---- Bar / Mirror / Capsule / Dot / Fire / LED / Circular styles ----
+	barBottom := cocoa.CGFloat(padding)
+	isMirror := c.cfg.SpectrumStyle == "mirror"
+	isCapsule := c.cfg.SpectrumStyle == "capsule"
+	isDot := c.cfg.SpectrumStyle == "dot"
+	isFire := c.cfg.SpectrumStyle == "fire"
+	isLED := c.cfg.SpectrumStyle == "led"
+	isCircular := c.cfg.SpectrumStyle == "circular"
+
+	// Dot style: use fewer bands and smaller dots to avoid crowding.
+	dotSize := cocoa.CGFloat(4.0)
+	halfDot := dotSize / 2
+	if isDot {
+		if effectiveBarCount > 32 {
+			effectiveBarCount = 32
+		}
+		barW = (availableW - barGap*float64(effectiveBarCount-1)) / float64(effectiveBarCount)
+		if barW < 1 {
+			barW = 1
+		}
+	}
+
+	// Thin bar width for deprecated "line" bar style (kept for compat, unused here).
+	var lineW float64
+	if isLine {
+		lineW = 2.0
+		if lineW > barW {
+			lineW = barW
+		}
+		lineW = cocoa.CGFloat(lineW)
+	}
+
+	// Thin bar width for deprecated "line" bar style (kept for compat, unused here).
+	_ = lineW // suppress unused warning
+
+	for i := 0; i < effectiveBarCount; i++ {
+		srcIdx := i * player.SpectrumBandCount / effectiveBarCount
+		if srcIdx >= player.SpectrumBandCount {
+			srcIdx = player.SpectrumBandCount - 1
+		}
+		level := frame.Levels[srcIdx]
+		x := cocoa.CGFloat(padding + float64(i)*(barW+barGap))
+
+		// Compute color based on style
+		var r, g, b float64
+		if isFire {
+			// Fire gradient: bottom red → orange → top yellow/white
+			r, g, b = fireColor(level)
+		} else if isLED {
+			// Retro LED: bright green/amber gradient left→right
+			r, g, b = ledColor(float64(srcIdx) / float64(player.SpectrumBandCount-1))
+		} else {
+			t := float64(srcIdx) / float64(player.SpectrumBandCount-1)
+			if t < 0.5 {
+				s := t * 2
+				r = lerp(lowR, midR, s)
+				g = lerp(lowG, midG, s)
+				b = lerp(lowB, midB, s)
+			} else {
+				s := (t - 0.5) * 2
+				r = lerp(midR, highR, s)
+				g = lerp(midG, highG, s)
+				b = lerp(midB, highB, s)
+			}
+		}
+		color := cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+			cocoa.CGFloat(r), cocoa.CGFloat(g), cocoa.CGFloat(b), opacityCg,
+		)
+		cgColor := uintptr(color.CGColorRef())
+
+		if isMirror {
+			centreY := barBottom + cocoa.CGFloat(maxH)/2
+			halfH := cocoa.CGFloat(level * maxH / 2)
+			if halfH < 0.5 {
+				halfH = 0.5
+			}
+			if halfH > cocoa.CGFloat(maxH)/2 {
+				halfH = cocoa.CGFloat(maxH) / 2
+			}
+			bw := cocoa.CGFloat(barW)
+			cr := cocoa.CGFloat(0.0)
+			if isCapsule {
+				cr = bw / 2
+			}
+			if bar := c.spectrumBars[i]; bar.ID != 0 {
+				bar.SetFrame(x, centreY, bw, halfH)
+				bar.SetCornerRadius(cr)
+				bar.SetBackgroundCGColor(cgColor)
+			}
+			if bar := c.spectrumBars[effectiveBarCount+i]; bar.ID != 0 {
+				bar.SetFrame(x, centreY-halfH, bw, halfH)
+				bar.SetCornerRadius(cr)
+				bar.SetBackgroundCGColor(cgColor)
+			}
+		} else if isDot {
+			barH := cocoa.CGFloat(level * maxH)
+			if barH < 1 {
+				barH = 1
+			}
+			if barH > cocoa.CGFloat(maxH) {
+				barH = cocoa.CGFloat(maxH)
+			}
+			cx := x + cocoa.CGFloat(barW)/2
+			dy := barBottom + barH
+			if dy > barBottom+cocoa.CGFloat(maxH) {
+				dy = barBottom + cocoa.CGFloat(maxH)
+			}
+			if bar := c.spectrumBars[i]; bar.ID != 0 {
+				bar.SetFrame(cx-halfDot, dy-halfDot, dotSize, dotSize)
+				bar.SetCornerRadius(halfDot)
+				bar.SetBackgroundCGColor(cgColor)
+			}
+		} else {
+			barH := cocoa.CGFloat(level * maxH)
+			if isLED {
+				// LED: quantize bar height into discrete steps.
+				const ledSteps = 8.0
+				barH = cocoa.CGFloat(math.Round(float64(barH)/maxH*ledSteps) / ledSteps * maxH)
+				if barH > 0 && barH < cocoa.CGFloat(maxH/ledSteps) {
+					barH = cocoa.CGFloat(maxH / ledSteps) // always show at least one block
+				}
+			}
+			if barH < 0.5 {
+				barH = 0.5
+			}
+			if barH > cocoa.CGFloat(maxH) {
+				barH = cocoa.CGFloat(maxH)
+			}
+			w := cocoa.CGFloat(barW)
+			bx := x
+			cr := cocoa.CGFloat(0.0)
+			if isCapsule || isLED {
+				cr = w / 2
+			}
+			if isCircular {
+				// Circular: bars radiate outward from centre. Each bar is drawn as a
+				// thin line from inner to outer radius (no rotation needed).
+				centreX := availableW/2 + padding
+				centreY := maxH/2 + float64(padding)
+				innerR := min(availableW, maxH) / 2 * 0.42
+				outerBase := min(availableW, maxH) / 2 * 0.95
+				r := innerR + level*(outerBase-innerR)
+				angle := float64(i)/float64(effectiveBarCount)*2.0*math.Pi - math.Pi/2
+				cosA := math.Cos(angle)
+				sinA := math.Sin(angle)
+				bw := 3.0
+				if barW < 3 {
+					bw = barW
+				}
+				bh := r - innerR
+				if bh < 1 {
+					bh = 1
+				}
+				barMidX := centreX + cosA*innerR + cosA*bh/2
+				barMidY := centreY + sinA*innerR + sinA*bh/2
+				if bar := c.spectrumBars[i]; bar.ID != 0 {
+					bar.SetFrame(
+						cocoa.CGFloat(barMidX-bw/2),
+						cocoa.CGFloat(barMidY-bh/2),
+						cocoa.CGFloat(bw),
+						cocoa.CGFloat(bh),
+					)
+					bar.SetCornerRadius(cocoa.CGFloat(bw / 2))
+					bar.SetBackgroundCGColor(cgColor)
+				}
+				continue
+			}
+			if bar := c.spectrumBars[i]; bar.ID != 0 {
+				bar.SetFrame(bx, barBottom, w, barH)
+				bar.SetCornerRadius(cr)
+				bar.SetBackgroundCGColor(cgColor)
+			}
+		}
+	}
+
+	// Fire peak dots: draw + animate falloff after bars.
+	if isFire {
+		for i := 0; i < effectiveBarCount; i++ {
+			srcIdx := i * player.SpectrumBandCount / effectiveBarCount
+			if srcIdx >= player.SpectrumBandCount {
+				srcIdx = player.SpectrumBandCount - 1
+			}
+			level := frame.Levels[srcIdx]
+			peakH := level * maxH
+			if peakH > c.firePeaks[srcIdx] {
+				c.firePeaks[srcIdx] = peakH
+				c.fireFalloff[srcIdx] = 2.0
+			}
+			c.firePeaks[srcIdx] -= c.fireFalloff[srcIdx]
+			c.fireFalloff[srcIdx] *= 1.08
+			if c.firePeaks[srcIdx] < 0 {
+				c.firePeaks[srcIdx] = 0
+			}
+			if c.fireFalloff[srcIdx] > 20 {
+				c.fireFalloff[srcIdx] = 20
+			}
+			if i < len(c.firePeakDots) {
+				dot := c.firePeakDots[i]
+				if dot.ID != 0 {
+					dotY := barBottom + cocoa.CGFloat(c.firePeaks[srcIdx]) - 2
+					dotX := cocoa.CGFloat(padding + float64(i)*(barW+barGap))
+					dot.SetFrame(dotX, dotY, 4, 4)
+					dot.SetBackgroundCGColor(uintptr(cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+						cocoa.CGFloat(1.0), cocoa.CGFloat(1.0), cocoa.CGFloat(1.0), opacityCg,
+					).CGColorRef()))
+				}
+			}
+		}
+	}
+
+	cocoa.CATransaction_Commit()
+}
+
+const (
+	waveformTargetPoints = 200 // number of sample points drawn in waveform style
+)
+
+// fireColor returns RGB for fire style: base red → orange → yellow/white as level increases.
+func fireColor(level float64) (r, g, b float64) {
+	if level < 0.25 {
+		t := level / 0.25
+		return lerp(0.6, 0.9, t), lerp(0.0, 0.25, t), 0.0
+	}
+	if level < 0.5 {
+		t := (level - 0.25) / 0.25
+		return lerp(0.9, 1.0, t), lerp(0.25, 0.6, t), 0.0
+	}
+	if level < 0.75 {
+		t := (level - 0.5) / 0.25
+		return 1.0, lerp(0.6, 0.9, t), lerp(0.0, 0.1, t)
+	}
+	t := (level - 0.75) / 0.25
+	return 1.0, lerp(0.9, 1.0, t), lerp(0.1, 0.5, t)
+}
+
+// ledColor returns retro LED green/amber palette based on position (0=left, 1=right).
+func ledColor(t float64) (r, g, b float64) {
+	if t < 0.5 {
+		s := t * 2
+		return lerp(0.0, 0.2, s), lerp(0.6, 1.0, s), lerp(0.1, 0.2, s)
+	}
+	s := (t - 0.5) * 2
+	return lerp(0.2, 1.0, s), lerp(1.0, 0.5, s), lerp(0.2, 0.0, s)
+}
+
+// renderRingArc draws spectrum as arc segments around a circle (HUD/radar style).
+func (c *darwinController) renderRingArc(
+	bandCount int, availableW, maxH float64,
+	lowR, lowG, lowB, midR, midG, midB, highR, highG, highB float64,
+	opacityCg cocoa.CGFloat,
+) {
+	shapeLayer := c.spectrumLineLayer
+	shapeLayer.SetFrame(0, 0, cocoa.CGFloat(availableW), cocoa.CGFloat(maxH))
+
+	radius := min(availableW, maxH) / 2 * 0.9
+	cx := availableW / 2
+	cy := maxH / 2
+
+	path := c.spectrumLinePath
+	path.RemoveAllPoints()
+
+	for i := 0; i < bandCount; i++ {
+		si := i * player.SpectrumBandCount / bandCount
+		if si >= player.SpectrumBandCount {
+			si = player.SpectrumBandCount - 1
+		}
+		level := c.spectrumFrame.Levels[si]
+		r := radius * (0.45 + level*0.55) // radius expands with level
+
+		segAngle := (2.0 * math.Pi / float64(bandCount)) * 0.8 // 80% of slot (gap)
+		startAng := float64(i)/float64(bandCount)*2.0*math.Pi - math.Pi/2
+		endAng := startAng + segAngle
+
+		// Simple line from inner to outer radius
+		cosS := math.Cos(startAng)
+		sinS := math.Sin(startAng)
+		cosE := math.Cos(endAng)
+		sinE := math.Sin(endAng)
+
+		x1 := cx + radius*0.4*cosS
+		y1 := cy + radius*0.4*sinS
+		x2 := cx + r*cosE
+		y2 := cy + r*sinE
+
+		if i == 0 {
+			path.MoveToPoint(cocoa.CGFloat(x1), cocoa.CGFloat(y1))
+		}
+		path.LineToPoint(cocoa.CGFloat(x2), cocoa.CGFloat(y2))
+	}
+
+	t := float64(bandCount/2) / float64(bandCount)
+	r, g, b := ledColor(t)
+	strokeColor := cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+		cocoa.CGFloat(r), cocoa.CGFloat(g), cocoa.CGFloat(b), opacityCg,
+	)
+	shapeLayer.SetStrokeCGColor(uintptr(strokeColor.CGColorRef()))
+	shapeLayer.SetFillCGColor(0)
+	shapeLayer.SetLineWidth(2.5)
+	shapeLayer.SetPath(path.CGPath())
+}
+
+// renderRipple draws concentric pulsing circles with CALayer shadow for glow.
+func (c *darwinController) renderRipple(
+	bandCount int, maxH float64,
+	r, g, b float64, opacityCg cocoa.CGFloat,
+) {
+	shapeLayer := c.spectrumLineLayer
+	shapeLayer.SetFrame(0, 0, cocoa.CGFloat(maxH*2), cocoa.CGFloat(maxH))
+
+	rings := min(bandCount, 12)
+	cx := maxH
+	cy := maxH / 2
+	maxRadius := maxH * 0.7
+
+	path := c.spectrumLinePath
+	path.RemoveAllPoints()
+
+	for i := 0; i < rings; i++ {
+		si := i * player.SpectrumBandCount / rings
+		if si >= player.SpectrumBandCount {
+			si = player.SpectrumBandCount - 1
+		}
+		level := c.spectrumFrame.Levels[si]
+		rr := maxRadius * (0.4 + level*0.6)
+		rect := cocoa.NSRect{
+			Origin: cocoa.CGPoint{X: cocoa.CGFloat(cx - rr), Y: cocoa.CGFloat(cy - rr)},
+			Size:   cocoa.CGSize{Width: cocoa.CGFloat(rr * 2), Height: cocoa.CGFloat(rr * 2)},
+		}
+		path.AppendBezierPathWithOvalInRect(rect)
+	}
+
+	strokeColor := cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+		cocoa.CGFloat(r), cocoa.CGFloat(g), cocoa.CGFloat(b), opacityCg,
+	)
+	shapeLayer.SetStrokeCGColor(uintptr(strokeColor.CGColorRef()))
+	shapeLayer.SetFillCGColor(0)
+	shapeLayer.SetLineWidth(1.5)
+	shapeLayer.SetPath(path.CGPath())
+}
+
+// renderWaveform draws a raw-PCM oscilloscope waveform using CAShapeLayer.
+func (c *darwinController) renderWaveform(
+	padding, availableW, maxH float64,
+	r, g, b float64, opacityCg cocoa.CGFloat,
+) {
+	c.rawSampleMu.Lock()
+	snap := c.rawSamples
+	c.rawSampleMu.Unlock()
+
+	if snap.Count < 2 {
+		return
+	}
+
+	shapeLayer := c.spectrumLineLayer
+	shapeLayer.SetFrame(
+		cocoa.CGFloat(padding), cocoa.CGFloat(padding),
+		cocoa.CGFloat(availableW), cocoa.CGFloat(maxH),
+	)
+	shapeLayer.SetLineWidth(1.5)
+	strokeColor := cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+		cocoa.CGFloat(r), cocoa.CGFloat(g), cocoa.CGFloat(b), opacityCg,
+	)
+	shapeLayer.SetStrokeCGColor(uintptr(strokeColor.CGColorRef()))
+	shapeLayer.SetFillCGColor(0)
+
+	// Downsample to fit target point count.
+	step := snap.Count / waveformTargetPoints
+	if step < 1 {
+		step = 1
+	}
+	halfH := maxH / 2
+
+	path := c.spectrumLinePath
+	path.RemoveAllPoints()
+	first := true
+	for i := 0; i < snap.Count; i += step {
+		// Normalize: map [-1,1] → [0, maxH]. centre = halfH.
+		sample := snap.SamplesL[i]
+		// Clip extreme values.
+		if sample > 1 {
+			sample = 1
+		} else if sample < -1 {
+			sample = -1
+		}
+		y := sample*halfH + halfH
+		x := float64(i) / float64(snap.Count) * availableW
+
+		if first {
+			path.MoveToPoint(cocoa.CGFloat(x), cocoa.CGFloat(y))
+			first = false
+		} else {
+			path.LineToPoint(cocoa.CGFloat(x), cocoa.CGFloat(y))
+		}
+	}
+
+	shapeLayer.SetPath(path.CGPath())
+}
+
+// renderSpectrumCurve draws the spectrum as a smooth Catmull-Rom curve using
+// a single CAShapeLayer + NSBezierPath. The curve connects frequency band peaks
+// with cubic Bezier segments for C1 continuity.
+func (c *darwinController) renderSpectrumCurve(
+	frame player.SpectrumFrame,
+	effectiveBarCount int,
+	availableW, maxH, padding, barW, barGap float64,
+	lowR, lowG, lowB, midR, midG, midB, highR, highG, highB float64,
+	opacityCg cocoa.CGFloat,
+) {
+	if effectiveBarCount < 2 {
+		return
+	}
+
+	// Collect band peak points (centre-x of each band slot, peak-y).
+	type pt struct{ x, y float64 }
+	points := make([]pt, effectiveBarCount)
+	for i := 0; i < effectiveBarCount; i++ {
+		srcIdx := i * player.SpectrumBandCount / effectiveBarCount
+		if srcIdx >= player.SpectrumBandCount {
+			srcIdx = player.SpectrumBandCount - 1
+		}
+		level := frame.Levels[srcIdx]
+		points[i].x = padding + float64(i)*(barW+barGap) + barW/2
+		points[i].y = padding + level*maxH
+	}
+
+	// Use mid-frequency color for the curve stroke.
+	strokeR := lerp(lowR, midR, 0.5)
+	strokeG := lerp(lowG, midG, 0.5)
+	strokeB := lerp(lowB, midB, 0.5)
+	strokeColor := cocoa.NSColor_ColorWithRedGreenBlueAlpha(
+		cocoa.CGFloat(strokeR), cocoa.CGFloat(strokeG), cocoa.CGFloat(strokeB), opacityCg,
+	)
+	// Set up the shape layer frame to cover the spectrum area.
+	shapeLayer := c.spectrumLineLayer
+	shapeLayer.SetFrame(
+		cocoa.CGFloat(padding), cocoa.CGFloat(padding),
+		cocoa.CGFloat(availableW), cocoa.CGFloat(maxH),
+	)
+	shapeLayer.SetLineWidth(2.0)
+	shapeLayer.SetStrokeCGColor(uintptr(strokeColor.CGColorRef()))
+	// Clear fill: curve-only, no filled area beneath.
+	shapeLayer.SetFillCGColor(0)
+
+	// Build bezier path in the shape layer's own coordinate space (origin = bottom-left of spectrum area).
+	path := c.spectrumLinePath
+	path.RemoveAllPoints()
+
+	// Y in layer coords: 0 = bottom of spectrum, maxH = top.
+	rel := func(px, py float64) (cocoa.CGFloat, cocoa.CGFloat) {
+		return cocoa.CGFloat(px - padding), cocoa.CGFloat(py - padding)
+	}
+
+	rx, ry := rel(points[0].x, points[0].y)
+	path.MoveToPoint(rx, ry)
+
+	for i := 0; i < effectiveBarCount-1; i++ {
+		var p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y float64
+
+		if i == 0 {
+			p0x, p0y = points[0].x, points[0].y
+		} else {
+			p0x, p0y = points[i-1].x, points[i-1].y
+		}
+		p1x, p1y = points[i].x, points[i].y
+		p2x, p2y = points[i+1].x, points[i+1].y
+		if i+2 < effectiveBarCount {
+			p3x, p3y = points[i+2].x, points[i+2].y
+		} else {
+			p3x, p3y = points[i+1].x, points[i+1].y
+		}
+
+		cp1x, cp1y, cp2x, cp2y := catmullRomToCubicBezier(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y)
+		cp1rx, cp1ry := rel(cp1x, cp1y)
+		cp2rx, cp2ry := rel(cp2x, cp2y)
+		e2rx, e2ry := rel(p2x, p2y)
+		path.CurveToPoint(e2rx, e2ry, cp1rx, cp1ry, cp2rx, cp2ry)
+	}
+
+	// Curve-only: no bottom fill, path is an open stroke.
+	shapeLayer.SetPath(path.CGPath())
+}
+
 // ---- Public interface ----
 
 func (c *darwinController) Show() {
@@ -1264,6 +2030,39 @@ func (c *darwinController) Update(curLine, nextLine LyricLine, currentIndex int,
 	c.pendingPlaying = playing
 	c.pendingMu.Unlock()
 
+	dispatchAsync(sel_updateText)
+}
+
+func (c *darwinController) UpdateSpectrum(frame player.SpectrumFrame) {
+	if c == nil {
+		return
+	}
+	c.spectrumMu.Lock()
+	c.spectrumFrame = frame
+	c.spectrumMu.Unlock()
+	// Trigger a main-thread render (reuse the existing updateText path)
+	c.pendingMu.Lock()
+	if c.closed || c.window.ID == 0 || !c.visible {
+		c.pendingMu.Unlock()
+		return
+	}
+	c.pendingMu.Unlock()
+	dispatchAsync(sel_updateText)
+}
+
+func (c *darwinController) UpdateRawSamples(snap player.RawSampleFrame) {
+	if c == nil || c.cfg.SpectrumStyle != "waveform" {
+		return
+	}
+	c.rawSampleMu.Lock()
+	c.rawSamples = snap
+	c.rawSampleMu.Unlock()
+	c.pendingMu.Lock()
+	if c.closed || c.window.ID == 0 || !c.visible {
+		c.pendingMu.Unlock()
+		return
+	}
+	c.pendingMu.Unlock()
 	dispatchAsync(sel_updateText)
 }
 

@@ -51,11 +51,12 @@ type Netease struct {
 
 	lyricService *lyric.Service
 
-	lyricRenderer    *LyricRenderer
-	songInfoRenderer *SongInfoRenderer
-	progressRenderer *ProgressRenderer
-	coverRenderer    *CoverRenderer
-	spectrumRenderer *SpectrumRenderer
+	lyricRenderer        *LyricRenderer
+	songInfoRenderer     *SongInfoRenderer
+	progressRenderer     *ProgressRenderer
+	coverRenderer        *CoverRenderer
+	spectrumRenderer     *SpectrumRenderer
+	spectrogramRenderer  *SpectrogramRenderer
 
 	player       *Player
 	shareSvc     *composer.ShareService
@@ -96,6 +97,7 @@ func NewNetease(app *model.App) *Netease {
 	n.progressRenderer = NewProgressRenderer(n, n.player)
 	n.coverRenderer = NewCoverRenderer(n, n.player)
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
+	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
 	n.login = NewLoginPage(n)
 	n.search = NewSearchPage(n)
@@ -112,6 +114,9 @@ func (n *Netease) Components() []model.Component {
 	if n.spectrumRenderer.IsEnabled() {
 		components = append(components, n.spectrumRenderer)
 	}
+	if n.spectrogramRenderer.IsEnabled() {
+		components = append(components, n.spectrogramRenderer)
+	}
 	components = append(components, n.lyricRenderer)
 	components = append(components, n.songInfoRenderer, n.progressRenderer)
 	// CoverRenderer uses absolute positioning and returns 0 lines, so it must
@@ -123,10 +128,15 @@ func (n *Netease) Components() []model.Component {
 }
 
 func (n *Netease) SpectrumLines(main *model.Main) int {
-	if n.spectrumRenderer == nil {
-		return 0
+	windowHeight := n.WindowHeight()
+	menuBottomRow := main.MenuBottomRow()
+	if n.spectrumRenderer != nil && n.spectrumRenderer.IsEnabled() {
+		return n.spectrumRenderer.LineCount(windowHeight, menuBottomRow)
 	}
-	return n.spectrumRenderer.LineCount(n.WindowHeight(), main.MenuBottomRow())
+	if n.spectrogramRenderer != nil && n.spectrogramRenderer.IsEnabled() {
+		return n.spectrogramRenderer.LineCount(windowHeight, menuBottomRow)
+	}
+	return 0
 }
 
 // ToLoginPage 需要登录的处理

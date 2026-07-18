@@ -59,27 +59,133 @@ type NotificationConfig struct {
 }
 
 // VisualizerConfig controls live spectrum rendering.
+// Character fields for each style accept a single Unicode character; the first rune is used.
 type VisualizerConfig struct {
-	Enable            bool   `koanf:"enable"`
-	MaxHeight         int    `koanf:"maxHeight"`
-	FullCharHalfBlock string `koanf:"fullCharHalfBlock"`
-	FullCharFullBlock string `koanf:"fullCharFullBlock"`
-	EmptyCharBlock    string `koanf:"emptyCharBlock"`
-	// 频谱从上到下渐变色
-	VerticalGradient bool `koanf:"verticalGradient"`
+	Enable      bool   `koanf:"enable"`
+	MaxHeight   int    `koanf:"maxHeight"`
+	Style       string `koanf:"style"`       // "bar", "line", "mirror_bar", "dot", "oscilloscope", "vectorscope", "spectrogram"
+	ChannelMode string `koanf:"channelMode"` // "dual" (default) or "mono"
+
+	// --- bar style ---
+	BarHalfBlock          string `koanf:"barHalfBlock"`
+	BarFullBlock          string `koanf:"barFullBlock"`
+	BarEmptyBlock         string `koanf:"barEmptyBlock"`
+	BarVerticalGradient   bool   `koanf:"barVerticalGradient"`
+	BarHorizontalGradient bool   `koanf:"barHorizontalGradient"` // enable per-bar horizontal color gradient
+	ShowIdleBarHeads      bool   `koanf:"showIdleBarHeads"`      // show small caps when bars are nearly silent (cava-style)
+	BarOrientation        string `koanf:"barOrientation"`        // "bottom" (default), "top", "left", "right", "horizontal", "vertical"
+
+	// --- mirror_bar style (falls back to bar values when left empty) ---
+	MirrorBarHalfBlock  string `koanf:"mirrorBarHalfBlock"`
+	MirrorBarFullBlock  string `koanf:"mirrorBarFullBlock"`
+	MirrorBarEmptyBlock string `koanf:"mirrorBarEmptyBlock"`
+
+	// --- line style ---
+	LineMode       string `koanf:"lineMode"`       // "braille" (default) or "block"
+	LineFullBlock  string `koanf:"lineFullBlock"`  // block mode: band-position character
+	LineHalfBlock  string `koanf:"lineHalfBlock"`  // block mode: interpolated segments (falls back to full)
+	LineEmptyBlock string `koanf:"lineEmptyBlock"` // block mode: empty cell (default space)
+
+	// --- dot style ---
+	DotMode       string `koanf:"dotMode"`       // "braille" (default) or "block"
+	DotFullBlock  string `koanf:"dotFullBlock"`  // block mode: dot character
+	DotHalfBlock  string `koanf:"dotHalfBlock"`  // block mode: reserved
+	DotEmptyBlock string `koanf:"dotEmptyBlock"` // block mode: empty cell (default space)
+
+	// --- oscilloscope style (time-domain waveform) ---
+	OscilloscopeMode       string `koanf:"oscilloscopeMode"`       // "braille" (default) or "block"
+	OscilloscopeScatter    bool   `koanf:"oscilloscopeScatter"`    // scatter dots vs connected line
+	OscilloscopeFullBlock  string `koanf:"oscilloscopeFullBlock"`
+	OscilloscopeHalfBlock  string `koanf:"oscilloscopeHalfBlock"`
+	OscilloscopeEmptyBlock string `koanf:"oscilloscopeEmptyBlock"`
+
+	// --- vectorscope style (Lissajous L×R scatter) ---
+	VectorscopeMode       string `koanf:"vectorscopeMode"`       // "braille" (default) or "block"
+	VectorscopeFullBlock  string `koanf:"vectorscopeFullBlock"`
+	VectorscopeHalfBlock  string `koanf:"vectorscopeHalfBlock"`
+	VectorscopeEmptyBlock string `koanf:"vectorscopeEmptyBlock"`
+
+	// --- spectrogram style ---
+	SpectrogramSpeed int `koanf:"spectrogramSpeed"` // scrolling speed (1=slow, 10=fast, default 4)
+
+	// --- spectrum-wide settings (line, dot styles) ---
+	SpectrumAverage  int  `koanf:"spectrumAverage"`  // FFT frame averaging count (1 = off, higher = smoother)
+	SpectrumLogScale bool `koanf:"spectrumLogScale"` // use dB (true) or linear amplitude (false) for Y axis
+	SpectrumPhaseDiff bool `koanf:"spectrumPhaseDiff"` // overlay channel phase correlation
+
+	// --- cava-inspired smoothing (applied after spring/EMA, affects bar/mirror_bar) ---
+	Monstercat float64 `koanf:"monstercat"` // cava monstercat smoothing (0=off, >0=enabled, typical 1.0-3.0)
+	Waves      bool    `koanf:"waves"`      // cava waves smoothing mode
+	Overshoot  float64 `koanf:"overshoot"`  // visual overshoot percentage (0-100, default 0)
 }
 
-// Characters returns the configured spectrum glyphs with Bubbles-style defaults.
-func (c VisualizerConfig) Characters() (halfBlock, fullBlock, emptyBlock rune) {
-	return firstCharOrDefault(c.FullCharHalfBlock, "▌"),
-		firstCharOrDefault(c.FullCharFullBlock, "█"),
-		firstCharOrDefault(c.EmptyCharBlock, " ")
+// BarCharacters returns bar style glyphs with defaults.
+func (c VisualizerConfig) BarCharacters() (halfBlock, fullBlock, emptyBlock rune) {
+	return firstCharOrDefault(c.BarHalfBlock, "▌"),
+		firstCharOrDefault(c.BarFullBlock, "█"),
+		firstCharOrDefault(c.BarEmptyBlock, " ")
+}
+
+// MirrorBarCharacters returns mirror_bar glyphs, falling back to bar values when empty.
+func (c VisualizerConfig) MirrorBarCharacters() (halfBlock, fullBlock, emptyBlock rune) {
+	h := c.MirrorBarHalfBlock
+	f := c.MirrorBarFullBlock
+	e := c.MirrorBarEmptyBlock
+	if h == "" {
+		h = c.BarHalfBlock
+	}
+	if f == "" {
+		f = c.BarFullBlock
+	}
+	if e == "" {
+		e = c.BarEmptyBlock
+	}
+	return firstCharOrDefault(h, "▌"),
+		firstCharOrDefault(f, "█"),
+		firstCharOrDefault(e, " ")
 }
 
 // MaxBarHeight returns zero for an unlimited spectrum height.
 func (c VisualizerConfig) MaxBarHeight() int {
 	return max(0, c.MaxHeight)
 }
+
+// IsMono returns true when the visualizer should render a single combined channel
+// instead of separate left/right stereo channels.
+func (c VisualizerConfig) IsMono() bool {
+	return c.ChannelMode == "mono"
+}
+
+// EffectiveBarOrientation returns the bar growth direction, defaulting to "bottom".
+func (c VisualizerConfig) EffectiveBarOrientation() string {
+	if c.BarOrientation == "" {
+		return "bottom"
+	}
+	return c.BarOrientation
+}
+
+// EffectiveSpectrogramSpeed returns the spectrogram scrolling speed, defaulting to 4.
+func (c VisualizerConfig) EffectiveSpectrogramSpeed() int {
+	if c.SpectrogramSpeed <= 0 {
+		return 4
+	}
+	return c.SpectrogramSpeed
+}
+
+// EffectiveOvershoot returns the overshoot multiplier (0 = no overshoot).
+func (c VisualizerConfig) EffectiveOvershoot() float64 {
+	if c.Overshoot <= 0 {
+		return 0
+	}
+	return c.Overshoot / 100.0
+}
+
+// IsSpectrogram returns true when the style is "spectrogram".
+func (c VisualizerConfig) IsSpectrogram() bool {
+	return c.Style == "spectrogram"
+}
+
+
 
 // LyricConfig 歌词显示相关设置
 type LyricConfig struct {
@@ -133,6 +239,18 @@ type DesktopLyricsConfig struct {
 	Draggable bool `koanf:"draggable"`
 	// 窗口最大宽度占屏幕比例（0.3-0.9，默认 0.7）
 	MaxWindowWidth float64 `koanf:"maxWindowWidth"`
+
+	// 桌面歌词频谱可视化
+	SpectrumEnabled    bool    `koanf:"spectrumEnabled"`    // 启用频谱
+	SpectrumHeight     float64 `koanf:"spectrumHeight"`     // 频谱区域高度（像素）
+	SpectrumBarCount   int     `koanf:"spectrumBarCount"`   // 频段数量（≤64）
+	SpectrumBarGap     float64 `koanf:"spectrumBarGap"`     // 频段间距（像素）
+	SpectrumFPS        int     `koanf:"spectrumFPS"`        // 刷新帧率
+	SpectrumOpacity    float64 `koanf:"spectrumOpacity"`    // 频谱整体透明度
+	SpectrumStyle      string  `koanf:"spectrumStyle"`      // 样式："bar"(默认) / "mirror"
+	SpectrumColorLow   string  `koanf:"spectrumColorLow"`   // 低频颜色（hex）
+	SpectrumColorMid   string  `koanf:"spectrumColorMid"`   // 中频颜色（hex）
+	SpectrumColorHigh  string  `koanf:"spectrumColorHigh"`  // 高频颜色（hex）
 }
 
 // CoverConfig 封面图显示设置
@@ -155,6 +273,33 @@ type CoverConfig struct {
 type PprofConfig struct {
 	// pprof 端口
 	Port int `koanf:"port"`
+}
+
+// SpectrumEffectiveHeight 返回有效频谱高度（启用时 > 0）
+func (c DesktopLyricsConfig) SpectrumEffectiveHeight() float64 {
+	if !c.SpectrumEnabled {
+		return 0
+	}
+	if c.SpectrumHeight <= 0 {
+		return 60 // default 60px
+	}
+	return c.SpectrumHeight
+}
+
+// SpectrumEffectiveBarCount 返回有效频段数（2-64）
+func (c DesktopLyricsConfig) SpectrumEffectiveBarCount() int {
+	if c.SpectrumBarCount <= 0 || c.SpectrumBarCount > 64 {
+		return 64
+	}
+	return c.SpectrumBarCount
+}
+
+// SpectrumEffectiveBarGap 返回频段间距，默认1px
+func (c DesktopLyricsConfig) SpectrumEffectiveBarGap() float64 {
+	if c.SpectrumBarGap <= 0 {
+		return 1
+	}
+	return c.SpectrumBarGap
 }
 
 // AccountConfig 账号相关配置

@@ -17,12 +17,14 @@ func init() {
 var class_NSView objc.Class
 
 var (
-	sel_initWithFrame       = objc.RegisterName("initWithFrame:")
-	sel_addSubview          = objc.RegisterName("addSubview:")
-	sel_setWantsLayer       = objc.RegisterName("setWantsLayer:")
-	sel_removeFromSuperview = objc.RegisterName("removeFromSuperview")
-	sel_setFrameOrigin      = objc.RegisterName("setFrameOrigin:")
-	sel_setFrameSize        = objc.RegisterName("setFrameSize:")
+	sel_initWithFrame          = objc.RegisterName("initWithFrame:")
+	sel_addSubview             = objc.RegisterName("addSubview:")
+	sel_setWantsLayer          = objc.RegisterName("setWantsLayer:")
+	sel_removeFromSuperview    = objc.RegisterName("removeFromSuperview")
+	sel_setFrameOrigin         = objc.RegisterName("setFrameOrigin:")
+	sel_setFrameSize           = objc.RegisterName("setFrameSize:")
+	sel_setViewFrame             = objc.RegisterName("setFrame:")
+	sel_addSubviewPositioned     = objc.RegisterName("addSubview:positioned:relativeTo:")
 )
 
 type NSView struct {
@@ -65,4 +67,26 @@ func (v NSView) SetFrameOrigin(x, y CGFloat) {
 // SetFrameSize sets the view's frame size (width, height).
 func (v NSView) SetFrameSize(w, h CGFloat) {
 	v.Send(sel_setFrameSize, w, h)
+}
+
+// NSWindowOrderingMode constants
+const (
+	NSWindowAbove = 1
+	NSWindowBelow = -1
+)
+
+// SetFrame sets the view's frame (x, y, width, height).
+func (v NSView) SetFrame(x, y, w, h CGFloat) {
+	v.Send(sel_setViewFrame, x, y, w, h)
+}
+
+// AddSubviewPositioned adds a subview at the specified position relative to another view.
+// place: NSWindowAbove or NSWindowBelow.
+// otherView: the view to place relative to (pass NSView{} with ID 0 for nil).
+func (v NSView) AddSubviewPositioned(subview NSView, place int, otherView NSView) {
+	var otherID objc.ID
+	if otherView.ID != 0 {
+		otherID = otherView.ID
+	}
+	v.Send(sel_addSubviewPositioned, subview.ID, place, otherID)
 }
