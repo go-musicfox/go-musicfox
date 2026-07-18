@@ -3,11 +3,8 @@
   "plugin": [
     "oh-my-opencode-slim@latest"
   ],
-  "provider": {
-    "opencode": {
-      "options": {},
-    },
-  },
+  "provider": {},
+  "permission": {},
   "mcp": {},
   "tools": {
     "github-triage": false,
