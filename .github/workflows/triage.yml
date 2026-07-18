@@ -24,8 +24,8 @@ jobs:
         with:
           agent: triage
           prompt: |
-            The following issue was just opened, triage it:
+            以下 Issue 刚刚创建，请进行分诊：
 
-            Title: ${{ github.event.issue.title }}
+            标题：${{ github.event.issue.title }}
 
             ${{ github.event.issue.body }}
