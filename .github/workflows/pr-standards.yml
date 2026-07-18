@@ -96,11 +96,11 @@ jobs:
 
             await removeLabel('needs:title');
 
-            // Step 2: Check for linked issue (skip for docs/refactor/feat/style/perf/build/ci PRs)
-            const skipIssueCheck = /^(docs|refactor|feat|style|perf|build|ci)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
-            if (skipIssueCheck) {
+            // Step 2: Only bug fix PRs require a linked issue
+            const isFixPR = /^fix\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
+            if (!isFixPR) {
               await removeLabel('needs:issue');
-              console.log('Skipping issue check for docs/refactor/feat/style/perf/build/ci PR');
+              console.log('Skipping issue check for non-fix PR');
               return;
             }
             const query = `
@@ -161,19 +161,23 @@ jobs:
 
             const body = pr.body || '';
             const title = pr.title;
-            const isDocsRefactorOrFeat = /^(docs|refactor|feat|style|perf|build|ci)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
+            const isFixPR = /^fix\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
 
             const issues = [];
 
-            // Check: template sections exist
+            // Check: template sections exist (Issue section only required for bug fix PRs)
             const hasWhatSection = /### What does this PR do\?/.test(body);
             const hasTypeSection = /### Type of change/.test(body);
             const hasVerifySection = /### How did you verify your code works\?/.test(body);
             const hasChecklistSection = /### Checklist/.test(body);
             const hasIssueSection = /### Issue for this PR/.test(body);
 
-            if (!hasWhatSection || !hasTypeSection || !hasVerifySection || !hasChecklistSection || !hasIssueSection) {
+            if (!hasWhatSection || !hasTypeSection || !hasVerifySection || !hasChecklistSection) {
               issues.push('PR description is missing required template sections. Please use the [PR template](../blob/master/.github/pull_request_template.md).');
+            }
+
+            if (isFixPR && !hasIssueSection) {
+              issues.push('Bug fix PRs must include the "Issue for this PR" section with a linked issue. Please use the [PR template](../blob/master/.github/pull_request_template.md).');
             }
 
             // Check: "What does this PR do?" has real content (not just placeholder text)
@@ -197,13 +201,13 @@ jobs:
               }
             }
 
-            // Check: issue reference (skip for docs/refactor/feat/style/perf/build/ci)
-            if (!isDocsRefactorOrFeat && hasIssueSection) {
+            // Check: issue reference (only required for bug fix PRs)
+            if (isFixPR && hasIssueSection) {
               const issueMatch = body.match(/### Issue for this PR\s*\n([\s\S]*?)(?=###|$)/);
               const issueContent = issueMatch ? issueMatch[1].trim() : '';
               const hasIssueRef = /(closes|fixes|resolves)\s+#\d+/i.test(issueContent) || /#\d+/.test(issueContent);
               if (!hasIssueRef) {
-                issues.push('No issue referenced. Please add `Closes #<number>` linking to the relevant issue.');
+                issues.push('Bug fix PRs must reference an issue. Please add `Closes #<number>` linking to the relevant issue.');
               }
             }
 
