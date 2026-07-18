@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +13,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
-
-var tmpdir = "/tmp"
 
 // mpvPlayer 实现基于MPV的播放器
 type mpvPlayer struct {
@@ -105,9 +101,6 @@ func (p *mpvPlayer) startMpv(url, mediaTitle string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if IsTermux() {
-		tmpdir = "/data/data/com.termux/files/usr/tmp"
-	}
 	// 如果已有进程在运行，先停止
 	if p.cmd != nil && p.cmd.Process != nil {
 		_ = p.cmd.Process.Kill()
@@ -120,12 +113,12 @@ func (p *mpvPlayer) startMpv(url, mediaTitle string) error {
 	args := []string{
 		"--no-video",    // 无视频模式
 		"--no-terminal", // 不使用终端
-		"--input-ipc-server=" + tmpdir + "/mpvsocket", // IPC套接字，用于控制
+		"--input-ipc-server=" + ipcServerPath(), // IPC通道，用于控制
 		"--idle",                       // 空闲模式
 		"--cache=yes",                  // 启用缓存
 		"--demuxer-max-bytes=120MiB",   // 增大缓存容量
 		"--demuxer-readahead-secs=120", // 增加预读时间
-		"--log-file=" + tmpdir + "/mpvipc.log",
+		"--log-file=" + ipcLogPath(),
 		"--audio-device=auto", // 自动选择音频设备
 		"--input-media-keys=no",
 		fmt.Sprintf("--volume=%d", p.volume), // 设置音量
@@ -158,10 +151,7 @@ func (p *mpvPlayer) getIPCConn() (net.Conn, error) {
 		return p.ipcConn, nil
 	}
 
-	conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
-		Name: tmpdir + "/mpvsocket",
-		Net:  "unix",
-	})
+	conn, err := p.dialIPC()
 	if err != nil {
 		return nil, fmt.Errorf("连接MPV失败: %v", err)
 	}
@@ -183,10 +173,7 @@ func (p *mpvPlayer) closeIPCConn() {
 // 监听mpv事件
 func (p *mpvPlayer) listenMpvEvent() {
 	for {
-		conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
-			Name: tmpdir + "/mpvsocket",
-			Net:  "unix",
-		})
+		conn, err := p.dialIPC()
 		if err != nil {
 			time.Sleep(time.Second)
 			continue
@@ -552,33 +539,4 @@ func (p *mpvPlayer) Close() {
 	}
 }
 
-// IsTermux 检查当前是否在 Termux 环境中运行
-func IsTermux() bool {
-	// 方法1：检查特定环境变量
-	if path, ok := os.LookupEnv("PREFIX"); ok {
-		if strings.Contains(path, "com.termux") {
-			return true
-		}
-	}
 
-	// 方法2：检查特定目录是否存在
-	termuxPaths := []string{
-		"/data/data/com.termux/files/usr",
-		"/data/data/com.termux/files/home",
-	}
-
-	for _, path := range termuxPaths {
-		if _, err := os.Stat(path); err == nil {
-			return true
-		}
-	}
-
-	// 方法3：检查可执行文件路径
-	if exe, err := os.Executable(); err == nil {
-		if strings.Contains(filepath.Dir(exe), "com.termux") {
-			return true
-		}
-	}
-
-	return false
-}
