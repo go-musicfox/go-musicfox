@@ -12,3 +12,4 @@ result/
 coverage.txt
 musicfox
 __debug*
+.slim/
