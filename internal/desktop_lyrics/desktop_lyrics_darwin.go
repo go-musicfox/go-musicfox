@@ -17,11 +17,13 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver"
-	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
+	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 )
+
+const DesktopLyricsAvailable = true
 
 // lerp performs linear interpolation between a and b by factor t (0.0-1.0).
 func lerp(a, b, t float64) float64 {
@@ -121,8 +123,8 @@ type darwinController struct {
 	window  cocoa.NSWindow
 	bgView  cocoa.NSView
 	labels  [2]cocoa.NSTextField // [0]=posFirst, [1]=posSecond
-	visible    bool
-	closed     bool
+	visible bool
+	closed  bool
 
 	// spectrumAvailable tracks whether the current player engine supports
 	// spectrum visualization (only osxPlayer on macOS). When false, the window
@@ -152,7 +154,7 @@ type darwinController struct {
 	containerView cocoa.NSView  // LyricsDragView subclass — content container
 	contentOrigin cocoa.CGPoint // window's screen origin (bottom-left)
 	dragActive    bool          // true during custom mouse drag
-	isMoving     bool          // true during AppKit window-level drag (SetMovableByWindowBackground)
+	isMoving      bool          // true during AppKit window-level drag (SetMovableByWindowBackground)
 
 	dragStartScreenMX float64 // screen mouse X at drag start
 	dragStartScreenMY float64 // screen mouse Y at drag start
@@ -172,18 +174,18 @@ type darwinController struct {
 	nextFrameAt   time.Time // scheduled deadline of the next animation frame
 
 	// GPU spectrum visualization (Core Animation CALayer sublayers of bgView.layer)
-	spectrumBars      []cocoa.CALayer      // one CALayer per frequency band (bar/mirror style)
-	spectrumLineLayer cocoa.CAShapeLayer   // shape layer for line/curve style
-	spectrumLinePath  cocoa.NSBezierPath   // reusable bezier path for building the curve
-	spectrumFrame     player.SpectrumFrame // latest FFT frame (immutable snapshot)
-	spectrumMu        sync.Mutex           // guards spectrumFrame
+	spectrumBars      []cocoa.CALayer       // one CALayer per frequency band (bar/mirror style)
+	spectrumLineLayer cocoa.CAShapeLayer    // shape layer for line/curve style
+	spectrumLinePath  cocoa.NSBezierPath    // reusable bezier path for building the curve
+	spectrumFrame     player.SpectrumFrame  // latest FFT frame (immutable snapshot)
+	spectrumMu        sync.Mutex            // guards spectrumFrame
 	rawSamples        player.RawSampleFrame // latest raw PCM snapshot for waveform style
 	rawSampleMu       sync.Mutex            // guards rawSamples
-	dragOverlay       cocoa.NSView           // transparent overlay for mouse event capture
+	dragOverlay       cocoa.NSView          // transparent overlay for mouse event capture
 	// Fire style: peak dots with acceleration falloff.
-	firePeakDots   []cocoa.CALayer       // small circle per band for peak indicator
-	firePeaks      [64]float64           // peak height per band (0–1)
-	fireFalloff    [64]float64           // falloff speed per band
+	firePeakDots []cocoa.CALayer // small circle per band for peak indicator
+	firePeaks    [64]float64     // peak height per band (0–1)
+	fireFalloff  [64]float64     // falloff speed per band
 }
 
 func newController(cfg configs.DesktopLyricsConfig) Controller {
@@ -442,20 +444,20 @@ func (c *darwinController) createWindow() {
 					bar := cocoa.CALayer_New()
 					c.spectrumBars[i] = bar
 					bgLayer.Send(sel_addSublayer, bar.ID)
-			}
+				}
 
-			// Fire style: create peak indicator dots (small circles above bars).
-			if c.cfg.SpectrumStyle == "fire" {
-				c.firePeakDots = make([]cocoa.CALayer, barCount)
-				for i := 0; i < barCount; i++ {
-					dot := cocoa.CALayer_New()
-					dot.SetCornerRadius(2.0)
-					c.firePeakDots[i] = dot
-					bgLayer.Send(sel_addSublayer, dot.ID)
+				// Fire style: create peak indicator dots (small circles above bars).
+				if c.cfg.SpectrumStyle == "fire" {
+					c.firePeakDots = make([]cocoa.CALayer, barCount)
+					for i := 0; i < barCount; i++ {
+						dot := cocoa.CALayer_New()
+						dot.SetCornerRadius(2.0)
+						c.firePeakDots[i] = dot
+						bgLayer.Send(sel_addSublayer, dot.ID)
+					}
 				}
 			}
 		}
-	}
 	}
 
 	// ---- Labels ----
@@ -1463,8 +1465,9 @@ func (c *darwinController) blendColor(t float64) cocoa.NSColor {
 // catmullRomToCubicBezier converts Catmull-Rom control points P0,P1,P2,P3 into
 // cubic Bezier control points for the segment P1→P2. Uses the standard centripetal
 // parameterization that produces C1-continuous curves through all control points.
-//   cp1 = P1 + (P2 - P0) / 6
-//   cp2 = P2 - (P3 - P1) / 6
+//
+//	cp1 = P1 + (P2 - P0) / 6
+//	cp2 = P2 - (P3 - P1) / 6
 func catmullRomToCubicBezier(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y float64) (cp1x, cp1y, cp2x, cp2y float64) {
 	cp1x = p1x + (p2x-p0x)/6
 	cp1y = p1y + (p2y-p0y)/6

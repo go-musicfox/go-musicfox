@@ -76,7 +76,7 @@ func NewBeepPlayer() *beepPlayer {
 		close:      make(chan struct{}),
 	}
 
-	if configs.AppConfig.Main.Visualizer.Enable || configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled {
+	if configs.AppConfig.Main.Visualizer.Enable || (configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled && desktopLyricsAvailable) {
 		p.spectrum = NewPCMAnalyzer(configs.AppConfig.Main.FrameRate.Interval())
 	}
 
@@ -133,10 +133,10 @@ func (p *beepPlayer) listen() {
 			if prevSongId != p.curMusic.Id || !filex.FileOrDirExists(cacheFile) {
 				// FIXME: 先这样处理，暂时没想到更好的办法
 				_ = os.Remove(cacheFile)
-				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0666); err != nil {
+				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, 0o666); err != nil {
 					panic(err)
 				}
-				if p.cacheWriter, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666); err != nil {
+				if p.cacheWriter, err = os.OpenFile(cacheFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666); err != nil {
 					panic(err)
 				}
 
@@ -164,7 +164,7 @@ func (p *beepPlayer) listen() {
 					// 除了MP3格式，其他格式无需重载
 					if p.curMusic.Type == Mp3 && configs.AppConfig.Player.Beep.Mp3Decoder != types.BeepMiniMp3Decoder {
 						// 需再开一次文件，保证其指针变化，否则将概率导致 p.ctrl.Streamer = beep.Seq(……) 直接停止播放
-						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0666)
+						cacheReader, _ := os.OpenFile(cacheFile, os.O_RDONLY, 0o666)
 						// 使用新的文件后需手动Seek到上次播放处
 						lastStreamer := p.curStreamer
 						defer func() { _ = lastStreamer.Close() }()
@@ -197,7 +197,7 @@ func (p *beepPlayer) listen() {
 			} else {
 				// 单曲循环以及歌单只有一首歌时不再请求网络
 				p.cacheDownloaded = true
-				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_RDONLY, 0666); err != nil {
+				if p.cacheReader, err = os.OpenFile(cacheFile, os.O_RDONLY, 0o666); err != nil {
 					panic(err)
 				}
 			}

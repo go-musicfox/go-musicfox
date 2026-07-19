@@ -46,7 +46,7 @@ func NewOsxPlayer() *osxPlayer {
 		volume:    100,
 	}
 	p.renderInterval = configs.AppConfig.Main.FrameRate.Interval()
-	if configs.AppConfig.Main.Visualizer.Enable || configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled {
+	if configs.AppConfig.Main.Visualizer.Enable || (configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled && desktopLyricsAvailable) {
 		p.spectrum = NewPCMAnalyzer(p.renderInterval)
 	}
 

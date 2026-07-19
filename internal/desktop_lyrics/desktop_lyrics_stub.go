@@ -7,18 +7,22 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/player"
 )
 
+const DesktopLyricsAvailable = false
+
 type stubController struct{}
 
-func (stubController) Show()                                           {}
-func (stubController) Hide()                                           {}
-func (stubController) IsVisible() bool                                 { return false }
-func (stubController) Update(_, _ LyricLine, _ int, _ int64, _ bool)   {}
-func (stubController) UpdateSpectrum(_ player.SpectrumFrame)           {}
-func (stubController) UpdateRawSamples(_ player.RawSampleFrame)        {}
-func (stubController) SetSpectrumAvailable(_ bool)                     {}
-func (stubController) Close()                                          {}
+func (stubController) Show()                                         {}
+func (stubController) Hide()                                         {}
+func (stubController) IsVisible() bool                               { return false }
+func (stubController) Update(_, _ LyricLine, _ int, _ int64, _ bool) {}
+func (stubController) UpdateSpectrum(_ player.SpectrumFrame)         {}
+func (stubController) UpdateRawSamples(_ player.RawSampleFrame)      {}
+func (stubController) SetSpectrumAvailable(_ bool)                   {}
+func (stubController) Close()                                        {}
 
-// newController returns a stub on non-macOS platforms.
+// newController returns a stub on non-macOS platforms. Enable check is handled
+// at the PCM analyzer creation level (see internal/player/) since stub platform
+// does not support desktop lyrics at all.
 func newController(cfg configs.DesktopLyricsConfig) Controller {
 	return stubController{}
 }
