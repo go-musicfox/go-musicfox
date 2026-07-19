@@ -15,6 +15,7 @@ func (stubController) IsVisible() bool                                 { return 
 func (stubController) Update(_, _ LyricLine, _ int, _ int64, _ bool)   {}
 func (stubController) UpdateSpectrum(_ player.SpectrumFrame)           {}
 func (stubController) UpdateRawSamples(_ player.RawSampleFrame)        {}
+func (stubController) SetSpectrumAvailable(_ bool)                     {}
 func (stubController) Close()                                          {}
 
 // newController returns a stub on non-macOS platforms.

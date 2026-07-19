@@ -29,6 +29,7 @@ var (
 	sel_windowDidMove         = objc.RegisterName("windowDidMove:")
 	sel_persistWindowPosition = objc.RegisterName("persistWindowPosition")
 	sel_clearWindowMoving     = objc.RegisterName("clearWindowMoving")
+	sel_syncSpectrumAvailable = objc.RegisterName("syncSpectrumAvailable")
 
 	// LyricsDragView mouse event selectors.
 	sel_mouseDown        = objc.RegisterName("mouseDown:")
@@ -68,6 +69,7 @@ func init() {
 			{Cmd: sel_windowDidMove, Fn: handleWindowDidMove},
 			{Cmd: sel_persistWindowPosition, Fn: handlePersistWindowPosition},
 			{Cmd: sel_clearWindowMoving, Fn: handleClearWindowMoving},
+			{Cmd: sel_syncSpectrumAvailable, Fn: handleSyncSpectrumAvailable},
 		},
 	)
 	if err != nil {
@@ -192,6 +194,13 @@ func handlePersistWindowPosition(id objc.ID, cmd objc.SEL) {
 func handleClearWindowMoving(id objc.ID, cmd objc.SEL) {
 	if ctrl := getDispatchCtrl(); ctrl != nil {
 		ctrl.isMoving = false
+	}
+}
+
+func handleSyncSpectrumAvailable(id objc.ID, cmd objc.SEL) {
+	if ctrl := getDispatchCtrl(); ctrl != nil {
+		ctrl.ensureSpectrumLayers()
+		ctrl.layoutContent(true)
 	}
 }
 

@@ -719,6 +719,12 @@ func (p *Player) updateDesktopLyrics() {
 		dl.Hide()
 	}
 
+	// Notify desktop lyrics whether the current player supports spectrum.
+	// When false, the desktop lyrics window does not reserve background space
+	// for spectrum bars even if SpectrumEnabled is true in config.
+	_, hasSpectrum := p.Player.(player.SpectrumProvider)
+	dl.SetSpectrumAvailable(hasSpectrum)
+
 	// Pass spectrum data to desktop lyrics for GPU visualization
 	if state == types.Playing || state == types.Paused {
 		if provider, ok := p.Player.(player.SpectrumProvider); ok {

@@ -36,6 +36,10 @@ type Controller interface {
 	UpdateSpectrum(frame player.SpectrumFrame)
 	// UpdateRawSamples provides raw PCM time-domain samples for waveform/oscilloscope rendering.
 	UpdateRawSamples(snap player.RawSampleFrame)
+	// SetSpectrumAvailable notifies the controller whether the current player supports
+	// spectrum visualization. When false, the desktop lyrics window does not reserve
+	// space for spectrum bars even if SpectrumEnabled is true in config.
+	SetSpectrumAvailable(available bool)
 	Close()
 }
 

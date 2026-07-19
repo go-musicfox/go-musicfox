@@ -12,8 +12,4 @@ result/
 coverage.txt
 musicfox
 __debug*
-
-# BEGIN oh-my-opencode-slim worktrees
-.slim/worktrees/
-.slim/worktrees.json
-# END oh-my-opencode-slim worktrees
+.slim/
