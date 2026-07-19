@@ -53,6 +53,9 @@ type beepPlayer struct {
 	httpClient *http.Client
 
 	close chan struct{}
+
+	spectrum         *PCMAnalyzer
+	spectrumConsumer func(sampleRate float64, samplesL, samplesR []float32)
 }
 
 func NewBeepPlayer() *beepPlayer {
@@ -71,6 +74,10 @@ func NewBeepPlayer() *beepPlayer {
 		},
 		httpClient: &http.Client{},
 		close:      make(chan struct{}),
+	}
+
+	if configs.AppConfig.Main.Visualizer.Enable || configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled {
+		p.spectrum = NewPCMAnalyzer(configs.AppConfig.Main.FrameRate.Interval())
 	}
 
 	errorx.WaitGoStart(p.listen)
@@ -201,6 +208,10 @@ func (p *beepPlayer) listen() {
 			}
 
 			slog.Info("current song sample rate", slog.Int("sample_rate", int(p.curFormat.SampleRate)))
+
+			if p.spectrum != nil {
+				p.spectrumConsumer = p.spectrum.NewConsumer()
+			}
 
 			p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 			p.volume.Streamer = p.ctrl
@@ -433,6 +444,9 @@ func (p *beepPlayer) Close() {
 		close(p.close)
 		p.close = nil
 	}
+	if p.spectrum != nil {
+		p.spectrum.Close()
+	}
 	speaker.Clear()
 	speaker.Close()
 }
@@ -453,6 +467,7 @@ func (p *beepPlayer) reset() {
 		p.curStreamer = nil
 	}
 	p.cacheDownloaded = false
+	p.spectrumConsumer = nil
 	speaker.Clear()
 }
 
@@ -462,6 +477,18 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
+
+	// Spectrum: feed PCM samples to analyzer
+	if p.spectrumConsumer != nil && n > 0 {
+		samplesL := make([]float32, n)
+		samplesR := make([]float32, n)
+		for i := 0; i < n; i++ {
+			samplesL[i] = float32(samples[i][0])
+			samplesR[i] = float32(samples[i][1])
+		}
+		p.spectrumConsumer(float64(sampleRate), samplesL, samplesR)
+	}
+
 	err := p.curStreamer.Err()
 	if err == nil && (ok || p.cacheDownloaded) {
 		return
@@ -494,4 +521,18 @@ func (p *beepPlayer) resampleStreamer(old beep.SampleRate) beep.Streamer {
 		return beep.StreamerFunc(p.streamer)
 	}
 	return beep.Resample(resampleQuiality, old, sampleRate, beep.StreamerFunc(p.streamer))
+}
+
+func (p *beepPlayer) Spectrum() SpectrumFrame {
+	if p.spectrum == nil {
+		return SpectrumFrame{}
+	}
+	return p.spectrum.Spectrum()
+}
+
+func (p *beepPlayer) RawSamples() RawSampleFrame {
+	if p.spectrum == nil {
+		return RawSampleFrame{}
+	}
+	return p.spectrum.RawSamples()
 }
