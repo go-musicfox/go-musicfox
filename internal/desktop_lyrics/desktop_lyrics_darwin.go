@@ -121,8 +121,13 @@ type darwinController struct {
 	window  cocoa.NSWindow
 	bgView  cocoa.NSView
 	labels  [2]cocoa.NSTextField // [0]=posFirst, [1]=posSecond
-	visible bool
-	closed  bool
+	visible    bool
+	closed     bool
+
+	// spectrumAvailable tracks whether the current player engine supports
+	// spectrum visualization (only osxPlayer on macOS). When false, the window
+	// does not reserve space for spectrum even if SpectrumEnabled is true.
+	spectrumAvailable bool
 
 	pendingMu       sync.Mutex
 	pendingCurLine  LyricLine
@@ -213,6 +218,68 @@ func newController(cfg configs.DesktopLyricsConfig) Controller {
 
 // ---- Main-thread operations ----
 
+// isSpectrumActive returns true when both the user has enabled spectrum in config
+// and the current player actually supports spectrum visualization.
+func (c *darwinController) isSpectrumActive() bool {
+	return c.cfg.SpectrumEnabled && c.spectrumAvailable
+}
+
+// SetSpectrumAvailable is called by the UI layer to inform the controller
+// whether the current player engine supports spectrum data.
+func (c *darwinController) SetSpectrumAvailable(available bool) {
+	if c.spectrumAvailable == available {
+		return
+	}
+	c.spectrumAvailable = available
+	if c.closed || c.window.ID == 0 || c.currentWinW == 0 {
+		return
+	}
+	dispatchAsync(sel_syncSpectrumAvailable)
+}
+
+// ensureSpectrumLayers creates the CALayer sublayers for spectrum visualization.
+// Only called on the main thread when spectrum becomes available after the window
+// was already created without spectrum layers.
+func (c *darwinController) ensureSpectrumLayers() {
+	if c.closed || c.bgView.ID == 0 || !c.isSpectrumActive() {
+		return
+	}
+	sh := c.cfg.SpectrumEffectiveHeight()
+	if sh <= 0 {
+		return
+	}
+	barCount := c.cfg.SpectrumEffectiveBarCount()
+	bgLayer := c.bgView.Layer()
+	if bgLayer.ID == 0 {
+		return
+	}
+	if c.cfg.SpectrumStyle == "line" || c.cfg.SpectrumStyle == "waveform" || c.cfg.SpectrumStyle == "ring_arc" || c.cfg.SpectrumStyle == "ripple" {
+		c.spectrumLinePath = cocoa.NSBezierPath_New()
+		c.spectrumLineLayer = cocoa.CAShapeLayer_New()
+		bgLayer.Send(sel_addSublayer, c.spectrumLineLayer.ID)
+	} else {
+		totalBars := barCount
+		if c.cfg.SpectrumStyle == "mirror" {
+			totalBars = barCount * 2
+		}
+		c.spectrumBars = make([]cocoa.CALayer, totalBars)
+		for i := 0; i < totalBars; i++ {
+			bar := cocoa.CALayer_New()
+			c.spectrumBars[i] = bar
+			bgLayer.Send(sel_addSublayer, bar.ID)
+		}
+		if c.cfg.SpectrumStyle == "fire" {
+			c.firePeakDots = make([]cocoa.CALayer, barCount)
+			for i := 0; i < barCount; i++ {
+				dot := cocoa.CALayer_New()
+				dot.SetCornerRadius(2.0)
+				c.firePeakDots[i] = dot
+				bgLayer.Send(sel_addSublayer, dot.ID)
+			}
+		}
+	}
+}
+
 func (c *darwinController) createWindow() {
 	fontSize := c.origFontSz
 	padding := defaultWindowPadding
@@ -258,7 +325,7 @@ func (c *darwinController) createWindow() {
 		contentH += labelGap
 	}
 	// Add spectrum height
-	if c.cfg.SpectrumEnabled {
+	if c.isSpectrumActive() {
 		if sh := c.cfg.SpectrumEffectiveHeight(); sh > 0 {
 			contentH += sh + 4.0 // 4px padding between spectrum and lyrics bg
 		}
@@ -357,7 +424,7 @@ func (c *darwinController) createWindow() {
 	c.containerView.AddSubview(c.bgView)
 
 	// ---- Spectrum bars (sublayers of bgView's layer, below lyrics) ----
-	if c.cfg.SpectrumEnabled {
+	if c.isSpectrumActive() {
 		if sh := c.cfg.SpectrumEffectiveHeight(); sh > 0 {
 			barCount := c.cfg.SpectrumEffectiveBarCount()
 			if c.cfg.SpectrumStyle == "line" || c.cfg.SpectrumStyle == "waveform" || c.cfg.SpectrumStyle == "ring_arc" || c.cfg.SpectrumStyle == "ripple" {
@@ -397,7 +464,7 @@ func (c *darwinController) createWindow() {
 	// Labels sit above spectrum area when spectrum is enabled.
 	specBottomPad := 0.0
 	sh := c.cfg.SpectrumEffectiveHeight()
-	if c.cfg.SpectrumEnabled && sh > 0 {
+	if c.isSpectrumActive() && sh > 0 {
 		specBottomPad = sh + 4.0
 	}
 	if !c.cfg.OneLineMode {
@@ -645,7 +712,7 @@ func (c *darwinController) doUpdateText() {
 			c.needLargeHeight = hasTrans
 			c.layoutContent(true)
 		}
-		if c.cfg.SpectrumEnabled {
+		if c.isSpectrumActive() {
 			c.renderSpectrum()
 		}
 		return
@@ -685,7 +752,7 @@ func (c *darwinController) doUpdateText() {
 		c.needLargeHeight = hasTrans
 		c.layoutContent(true)
 	}
-	if c.cfg.SpectrumEnabled {
+	if c.isSpectrumActive() {
 		c.renderSpectrum()
 	}
 }
@@ -779,7 +846,7 @@ func (c *darwinController) layoutContent(animate bool) {
 	// Add spectrum height
 	sh := 0.0
 	spectrumPad := 0.0
-	if c.cfg.SpectrumEnabled {
+	if c.isSpectrumActive() {
 		sh = c.cfg.SpectrumEffectiveHeight()
 		if sh > 0 {
 			spectrumPad = 4.0
