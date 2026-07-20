@@ -131,7 +131,11 @@ func (m *metadataTagger) fetchCover(picURL string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	return data, resp.Header.Get("Content-Type"), nil
+	mimeType := resp.Header.Get("Content-Type")
+	if mimeType == "image/jpg" {
+		mimeType = "image/jpeg"
+	}
+	return data, mimeType, nil
 }
 
 func (m *metadataTagger) setFlacCover(flacMeta *songtag.FLAC, song structs.Song) {
