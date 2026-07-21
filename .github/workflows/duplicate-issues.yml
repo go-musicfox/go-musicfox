@@ -76,7 +76,7 @@ jobs:
 
             [If not compliant:]
             <!-- issue-compliance -->
-            此 Issue 不完全符合我们的[贡献指南](../blob/master/CONTRIBUTING.md)。
+             此 Issue 不完全符合我们的贡献指南。
 
             **需要修复的问题：**
             - [specific reasons]

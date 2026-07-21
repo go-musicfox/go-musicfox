@@ -90,7 +90,7 @@ jobs:
 
             其中 \`scope\` 为包名或模块名（例如 \`player\`、\`ui\`、\`config\`）。
 
-            详见 [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)。`);
+             详见贡献指南。`);
               return;
             }
 
@@ -133,7 +133,7 @@ jobs:
             1. 打开一个 Issue 描述该 Bug（如尚不存在）
             2. 在 PR 描述中添加 \`Fixes #<编号>\` 或 \`Closes #<编号>\`
 
-            详见 [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)。`);
+             详见贡献指南。`);
               return;
             }
 
@@ -182,7 +182,7 @@ jobs:
 
             // Check: "What does this PR do?" has real content (not just placeholder text)
             if (hasWhatSection) {
-              const whatMatch = body.match(/### What does this PR do\?\s*\n([\s\S]*?)(?=###|$)/);
+              const whatMatch = body.match(/### What does this PR do\? \/ 本 PR 做了什么？\n([\s\S]*?)(?=###|$)/);
               const whatContent = whatMatch ? whatMatch[1].trim() : '';
               const placeholder = 'Please provide a description of the issue';
               const onlyPlaceholder = whatContent.includes(placeholder) && whatContent.replace(placeholder, '').replace(/[*\s]/g, '').length < 20;
@@ -193,7 +193,7 @@ jobs:
 
             // Check: at least one "Type of change" checkbox is checked
             if (hasTypeSection) {
-              const typeMatch = body.match(/### Type of change\s*\n([\s\S]*?)(?=###|$)/);
+              const typeMatch = body.match(/### Type of change \/ 变更类型\n([\s\S]*?)(?=###|$)/);
               const typeContent = typeMatch ? typeMatch[1] : '';
               const hasCheckedBox = /- \[x\]/i.test(typeContent);
               if (!hasCheckedBox) {
@@ -203,7 +203,7 @@ jobs:
 
             // Check: issue reference (only required for bug fix PRs)
             if (isFixPR && hasIssueSection) {
-              const issueMatch = body.match(/### Issue for this PR\s*\n([\s\S]*?)(?=###|$)/);
+              const issueMatch = body.match(/### Issue for this PR \/ 本 PR 关联的 Issue\n([\s\S]*?)(?=###|$)/);
               const issueContent = issueMatch ? issueMatch[1].trim() : '';
               const hasIssueRef = /(closes|fixes|resolves)\s+#\d+/i.test(issueContent) || /#\d+/.test(issueContent);
               if (!hasIssueRef) {
@@ -213,7 +213,7 @@ jobs:
 
             // Check: "How did you verify" has content
             if (hasVerifySection) {
-              const verifyMatch = body.match(/### How did you verify your code works\?\s*\n([\s\S]*?)(?=###|$)/);
+              const verifyMatch = body.match(/### How did you verify your code works\? \/ 如何验证你的代码有效？\n([\s\S]*?)(?=###|$)/);
               const verifyContent = verifyMatch ? verifyMatch[1].trim() : '';
               if (!verifyContent) {
                 issues.push('「How did you verify your code works?」段落为空，请说明你是如何测试的。');
@@ -222,7 +222,7 @@ jobs:
 
             // Check: checklist boxes are checked
             if (hasChecklistSection) {
-              const checklistMatch = body.match(/### Checklist\s*\n([\s\S]*?)(?=###|$)/);
+              const checklistMatch = body.match(/### Checklist \/ 检查清单\n([\s\S]*?)(?=###|$)/);
               const checklistContent = checklistMatch ? checklistMatch[1] : '';
               const unchecked = (checklistContent.match(/- \[ \]/g) || []).length;
               const checked = (checklistContent.match(/- \[x\]/gi) || []).length;
@@ -269,7 +269,7 @@ jobs:
               const existing = comments.find(c => c.body.includes(marker));
 
               const body_text = `${marker}
-            此 PR 不完全符合我们的[贡献指南](../blob/master/CONTRIBUTING.md)和 [PR 模板](../blob/master/.github/pull_request_template.md)。
+            此 PR 不完全符合我们的贡献指南和 [PR 模板](../blob/master/.github/pull_request_template.md)。
 
             **需要修复的问题：**
             ${issues.map(i => `- ${i}`).join('\n')}
