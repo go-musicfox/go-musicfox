@@ -262,6 +262,12 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
+		cloudUserID := int64(0)
+		if n.user != nil {
+			cloudUserID = n.user.UserId
+		}
+		n.trackManager.SetCloudUserID(cloudUserID)
+
 		// 刷新界面用户名
 		n.MustMain().RefreshMenuTitle()
 
@@ -564,6 +570,7 @@ func (n *Netease) LoginCallback() error {
 		return errors.WithMessagef(err, "parse user err, code: %f, resp: %s", code, string(resp))
 	}
 	n.user = &user
+	n.trackManager.SetCloudUserID(user.UserId)
 
 	// 获取我喜欢的歌单
 	userPlaylists := service.UserPlaylistService{

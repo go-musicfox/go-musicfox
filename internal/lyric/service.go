@@ -102,7 +102,7 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 
 	s.resetState(true) // Preserve configuration on reset
 
-	lrcData, err := s.fetcher.GetLyric(ctx, song.Id)
+	lrcData, err := s.fetcher.GetLyric(ctx, song)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch lyric data")
 	}

@@ -87,3 +87,41 @@ func FetchLyric(songID int64) (structs.LRCData, error) {
 
 	return data, nil
 }
+
+// FetchCloudLyric fetches the embedded LYRICS tag for a cloud disk song.
+func FetchCloudLyric(userID, songID int64) (structs.LRCData, error) {
+	options := &util.Options{
+		Crypto:  "eapi",
+		Url:     "/api/cloud/lyric/get",
+		Cookies: []*http.Cookie{{Name: "os", Value: "pc"}},
+	}
+	params := map[string]string{
+		"userId": strconv.FormatInt(userID, 10),
+		"songId": strconv.FormatInt(songID, 10),
+		"lv":     "-1",
+		"kv":     "-1",
+	}
+	code, response, _ := util.CreateRequest(
+		"POST",
+		"https://music.163.com/eapi/cloud/lyric/get",
+		params,
+		options,
+	)
+
+	return parseCloudLyricResponse(code, response)
+}
+
+func parseCloudLyricResponse(code float64, response []byte) (structs.LRCData, error) {
+	var data structs.LRCData
+	if code != 200 {
+		return data, fmt.Errorf("netease cloud lyric api returned status code: %v", code)
+	}
+
+	lyric, err := jsonparser.GetString(response, "lrc")
+	if err != nil || lyric == "" {
+		return data, fmt.Errorf("netease cloud lyric api returned no lyric")
+	}
+	data.Original = lyric
+	data.Translated = "[00:00.00]"
+	return data, nil
+}

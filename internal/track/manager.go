@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/go-musicfox/netease-music/service"
 	"golang.org/x/sync/errgroup"
@@ -40,6 +41,7 @@ type Manager struct {
 	lyricDir    string
 	quality     service.SongQualityLevel
 	sfGroup     singleflight.Group
+	cloudUserID atomic.Int64
 }
 
 // ManagerOption 是用于配置 Manager 的函数类型。
@@ -195,7 +197,7 @@ func (m *Manager) DownloadLyric(ctx context.Context, song structs.Song) (string,
 			return filePath, os.ErrExist
 		}
 
-		lrc, err := m.GetLyric(ctx, song.Id)
+		lrc, err := m.GetLyric(ctx, song)
 		if err != nil {
 			return "", err
 		}
@@ -216,16 +218,52 @@ func (m *Manager) DownloadLyric(ctx context.Context, song structs.Song) (string,
 }
 
 // GetLyric 获取一首歌的歌词。
-func (m *Manager) GetLyric(ctx context.Context, songID int64) (structs.LRCData, error) {
-	key := fmt.Sprintf("lyric-fetch-%d", songID)
+func (m *Manager) GetLyric(ctx context.Context, song structs.Song) (structs.LRCData, error) {
+	cloudUserID := m.cloudUserID.Load()
+	preferCloudLyric := shouldPreferCloudLyric(song)
+	key := fmt.Sprintf("lyric-fetch-%d-%d-%t", cloudUserID, song.Id, preferCloudLyric)
 	result, err, _ := m.sfGroup.Do(key, func() (any, error) {
-		return m.fetcher.FetchLyric(ctx, songID)
+		if preferCloudLyric && cloudUserID != 0 {
+			data, cloudErr := m.fetcher.FetchCloudLyric(ctx, cloudUserID, song.Id)
+			if cloudErr == nil && data.Original != "" {
+				return data, nil
+			}
+			if cloudErr != nil {
+				slog.Debug("Failed to fetch embedded cloud lyric, falling back to regular lyric",
+					"songId", song.Id, "error", cloudErr)
+			} else {
+				slog.Debug("Cloud lyric response empty, falling back to regular lyric",
+					"songId", song.Id)
+			}
+		}
+		return m.fetcher.FetchLyric(ctx, song.Id)
 	})
 
 	if err != nil {
 		return structs.LRCData{}, err
 	}
 	return result.(structs.LRCData), nil
+}
+
+func shouldPreferCloudLyric(song structs.Song) bool {
+	if song.UnMatched {
+		return true
+	}
+	if song.DjRadioEpisodeId != 0 || song.Album.Id != 0 || len(song.Artists) == 0 {
+		return false
+	}
+	for _, artist := range song.Artists {
+		if artist.Id != 0 {
+			return false
+		}
+	}
+	// Older playlist snapshots may lack UnMatched but retain zero-ID cloud metadata.
+	return true
+}
+
+// SetCloudUserID updates the account used to fetch cloud disk lyrics.
+func (m *Manager) SetCloudUserID(userID int64) {
+	m.cloudUserID.Store(userID)
 }
 
 func (m *Manager) ClearCache() error {
