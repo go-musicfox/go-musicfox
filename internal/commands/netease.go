@@ -50,6 +50,7 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	model.Submit = types.SubmitText
 	model.SearchPlaceholder = types.SearchPlaceholder
 	model.SearchResult = types.SearchResult
+	ui.SetupI18n(configs.AppConfig.Main.Locale)
 
 	// DBManager 初始化
 	storage.DBManager = new(storage.LocalDBManager)
@@ -73,6 +74,11 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.Ticker = netease.Player().RenderTicker()
 			options.DynamicRowCount = configs.AppConfig.Theme.DynamicMenuRows
 			options.CenterEverything = configs.AppConfig.Theme.CenterEverything
+
+		// 状态栏：若配置启用，注入队列位置与音质中间文本
+		if options.StatusBar != nil {
+			options.StatusBar = ui.NewQueueQualityStatusBar(netease.Player())
+		}
 
 			if options.DynamicRowCount {
 				// BottomHeight 是底部组件的最大预估高度，用于告诉 foxful-cli

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -51,16 +50,18 @@ type Netease struct {
 
 	lyricService *lyric.Service
 
-	lyricRenderer        *LyricRenderer
-	songInfoRenderer     *SongInfoRenderer
-	progressRenderer     *ProgressRenderer
-	coverRenderer        *CoverRenderer
-	spectrumRenderer     *SpectrumRenderer
-	spectrogramRenderer  *SpectrogramRenderer
+	lyricRenderer       *LyricRenderer
+	songInfoRenderer    *SongInfoRenderer
+	progressRenderer    *ProgressRenderer
+	coverRenderer       *CoverRenderer
+	spectrumRenderer    *SpectrumRenderer
+	spectrogramRenderer *SpectrogramRenderer
 
 	player       *Player
 	shareSvc     *composer.ShareService
 	trackManager *track.Manager
+
+	playbarHoveredElement PlaybarElement
 
 	desktopLyrics desktop_lyrics.Controller
 }
@@ -128,7 +129,7 @@ func (n *Netease) Components() []model.Component {
 }
 
 func (n *Netease) SpectrumLines(main *model.Main) int {
-	windowHeight := n.WindowHeight()
+	windowHeight := n.EffectiveWindowHeight()
 	menuBottomRow := main.MenuBottomRow()
 	if n.spectrumRenderer != nil && n.spectrumRenderer.IsEnabled() {
 		return n.spectrumRenderer.LineCount(windowHeight, menuBottomRow)
@@ -139,21 +140,33 @@ func (n *Netease) SpectrumLines(main *model.Main) int {
 	return 0
 }
 
+// EffectiveWindowHeight returns the available content height, excluding the
+// status bar if present. Components should use this instead of WindowHeight()
+// for bottom-anchored layout to avoid overlapping the status bar.
+func (n *Netease) EffectiveWindowHeight() int {
+	return n.MustMain().EffectiveWindowHeight(n.App)
+}
+
 // ToLoginPage 需要登录的处理
 func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
 	n.login.AfterLogin = callback
+	n.coverRenderer.ClearDisplayed()
 	return n.login, tickLogin(time.Nanosecond)
 }
 
 // ToSearchPage 搜索
 func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 	n.search.searchType = searchType
+	n.coverRenderer.ClearDisplayed()
 	return n.search, tickSearch(time.Nanosecond)
 }
 
 func (n *Netease) InitHook(_ *model.App) {
 	config := configs.AppConfig
 	dataDir := app.DataDir()
+
+	// 注册 TUI 内 toast 回调（此时 App.Run 已启动，program 就绪）
+	n.registerToastHook()
 
 	// 全局文件Jar
 	cookiePath := filepath.Join(dataDir, "cookie")
@@ -361,12 +374,12 @@ func (n *Netease) InitHook(_ *model.App) {
 				notifyMsg += yunbeiResult
 
 				_ = table.SetByKVModel(storage.LastSignIn{}, today)
-
 				notify.Notify(notify.NotifyContent{
 					Title:   "自动签到完成",
 					Text:    notifyMsg,
 					Url:     types.AppGithubUrl,
 					GroupId: types.GroupID,
+					Level:   notify.ToastSuccess,
 				})
 			}
 		}
@@ -374,19 +387,8 @@ func (n *Netease) InitHook(_ *model.App) {
 		// 检查更新
 		if config.Startup.CheckUpdate {
 			if ok, newVersion := version.CheckUpdate(); ok {
-				if runtime.GOOS == "windows" {
-					n.MustMain().EnterMenu(
-						NewCheckUpdateMenu(newBaseMenu(n)),
-						&model.MenuItem{Title: "新版本: " + newVersion, Subtitle: "当前版本: " + types.AppVersion},
-					)
-					n.Rerender(false)
-				}
 
-				notify.Notify(notify.NotifyContent{
-					Title: "发现新版本: " + newVersion,
-					Text:  "去看看呗",
-					Url:   types.AppLatestReleases,
-				})
+				notify.Notify(newVersionNotifyContent(newVersion))
 			}
 		}
 
@@ -398,6 +400,7 @@ func (n *Netease) InitHook(_ *model.App) {
 				notify.Notify(notify.NotifyContent{
 					Title: "自动播放失败",
 					Text:  err.Error(),
+					Level: notify.ToastError,
 				})
 			}
 		}

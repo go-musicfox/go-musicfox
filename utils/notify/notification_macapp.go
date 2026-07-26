@@ -22,11 +22,18 @@ type NotifyContent struct {
 	Url     string
 	Icon    string
 	GroupId string
+	// Level 控制 TUI 内 toast 的语义级别（颜色/图标），默认 ToastInfo。
+	// 不影响桌面通知。
+	Level ToastLevel
+	// ActionLabel 非空且 Url 非空时，TUI toast 显示打开链接按钮。
+	ActionLabel string
 }
 
 var notificationDelegate = cocoa.NewUserNotificationDelegate()
 
 func Notify(content NotifyContent) {
+	// TUI 内 toast 独立于桌面通知开关，由 UI 层的 InApp 配置控制。
+	emitToast(content, content.Level)
 	if !configs.AppConfig.Main.Notification.Enable {
 		return
 	}
