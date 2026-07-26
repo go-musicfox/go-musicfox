@@ -1,15 +1,13 @@
 package model
 
 import (
-	"fmt"
 	"image/color"
 	"math"
-	"strings"
 	"time"
-	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/anhoder/foxful-cli/layout"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/fogleman/ease"
 )
@@ -33,6 +31,7 @@ type tickStartupMsg struct{}
 type StartupPage struct {
 	options *StartupOptions
 
+	startedAt      time.Time
 	loadedDuration time.Duration
 	loadedPercent  float64
 	loaded         bool
@@ -47,6 +46,7 @@ func NewStartup(options *StartupOptions, nextPage Page) *StartupPage {
 }
 
 func (s *StartupPage) Init(a *App) tea.Cmd {
+	s.startedAt = time.Now()
 	return a.Tick(time.Nanosecond)
 }
 
@@ -65,12 +65,24 @@ func (s *StartupPage) Type() PageType {
 func (s *StartupPage) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 	switch msg.(type) {
 	case tickStartupMsg:
-		if s.loadedDuration >= s.options.LoadingDuration {
+		if s.options.LoadingDuration <= 0 {
 			s.loaded = true
 			return s.nextPage, a.RerenderCmd(true)
 		}
-		s.loadedDuration += s.options.TickDuration
-		s.loadedPercent = float64(s.loadedDuration) / float64(s.options.LoadingDuration)
+		if s.startedAt.IsZero() {
+			s.startedAt = time.Now()
+		}
+
+		elapsed := time.Since(s.startedAt)
+		if elapsed >= s.options.LoadingDuration {
+			s.loadedDuration = s.options.LoadingDuration
+			s.loadedPercent = 1
+			s.loaded = true
+			return s.nextPage, a.RerenderCmd(true)
+		}
+
+		s.loadedDuration = elapsed
+		s.loadedPercent = float64(elapsed) / float64(s.options.LoadingDuration)
 		if s.options.ProgressOutBounce {
 			s.loadedPercent = ease.OutBounce(s.loadedPercent)
 		}
@@ -82,85 +94,28 @@ func (s *StartupPage) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 }
 
 func (s *StartupPage) View(a *App) string {
-	var windowHeight, windowWidth = a.WindowHeight(), a.WindowWidth()
+	windowWidth, windowHeight := a.WindowWidth(), a.WindowHeight()
 	if windowWidth <= 0 || windowHeight <= 0 {
 		return ""
 	}
-
-	blankLine := 1
-	tipsHeight := 1
-	progressHeight := 1
-	height := util.AsciiHeight + blankLine + tipsHeight + blankLine + progressHeight
-	var top, bottom int
-	if windowHeight-height > 0 {
-		top = (windowHeight - height) / 2
-	}
-	if windowHeight-top-height > 0 {
-		bottom = windowHeight - top - height
+	if special, ok := s.startupSpecialView(a); ok {
+		return special
 	}
 
-	var uiBuilder strings.Builder
-	if top > 1 {
-		uiBuilder.WriteString(strings.Repeat("\n", top-1))
-	}
-	uiBuilder.WriteString(s.logoView(a))
-	uiBuilder.WriteString("\n")
-	if top != 0 && bottom != 0 {
-		uiBuilder.WriteString("\n")
-	}
-	uiBuilder.WriteString(s.tipsView(a))
-	uiBuilder.WriteString("\n")
-	if top != 0 && bottom != 0 {
-		uiBuilder.WriteString("\n")
-	}
-	uiBuilder.WriteString(s.progressView(a))
-	uiBuilder.WriteString(strings.Repeat("\n", bottom))
-
-	return uiBuilder.String()
-}
-
-func (s *StartupPage) logoView(a *App) string {
-	var windowHeight, windowWidth = a.WindowHeight(), a.WindowWidth()
-	if windowWidth <= 0 || windowHeight <= 0 {
-		return ""
-	}
-
-	originLogo := util.GetAlphaAscii(s.options.Welcome)
-	var logoWidth int
-	if logoArr := strings.Split(originLogo, "\n"); len(logoArr) > 1 {
-		logoWidth = utf8.RuneCountInString(logoArr[1])
-	}
-
-	var left int
-	if windowWidth-logoWidth > 0 {
-		left = (windowWidth - logoWidth) / 2
-	}
-
-	var logoBuilder strings.Builder
-	leftSpace := strings.Repeat(" ", left)
-	lines := strings.Split(originLogo, "\n")
-	for _, line := range lines {
-		logoBuilder.WriteString(leftSpace)
-		logoBuilder.WriteString(line)
-		logoBuilder.WriteString("\n")
-	}
-	return util.SetFgStyle(logoBuilder.String(), util.GetPrimaryColor())
-}
-
-func (s *StartupPage) tipsView(a *App) string {
-	example := "Enter after 11.1 seconds..."
-	var (
-		left        int
-		windowWidth = a.WindowWidth()
+	content := layout.JoinVertical(
+		lipgloss.Center,
+		s.animatedLogoView(a),
+		"",
+		s.startupStatusView(a),
+		"",
+		s.progressView(a),
 	)
-	if windowWidth-len(example) > 0 {
-		left = (windowWidth - len(example)) / 2
-	}
-	tips := fmt.Sprintf("%sEnter after %.1f seconds...",
-		strings.Repeat(" ", left),
-		float64(s.options.LoadingDuration-s.loadedDuration)/float64(time.Second))
 
-	return util.SetFgStyle(tips, lipgloss.BrightBlack)
+	return layout.Place(
+		windowWidth, windowHeight,
+		lipgloss.Center, lipgloss.Center,
+		content,
+	)
 }
 
 func (s *StartupPage) progressView(a *App) string {
@@ -172,5 +127,10 @@ func (s *StartupPage) progressView(a *App) string {
 		progressLastWidth = width
 	}
 
-	return Progress(&a.options.ProgressOptions, int(width), int(math.Round(width*s.loadedPercent)), progressRamp)
+	semanticPercent := s.animationProgress()
+	visualPercent := s.loadedPercent
+	if s.options.ReducedMotion {
+		visualPercent = semanticPercent
+	}
+	return Progress(&a.options.ProgressOptions, int(width), int(math.Round(width*visualPercent)), progressRamp)
 }

@@ -11,13 +11,19 @@ import (
 type GlobalKeyHandler func(hook.Event) Page
 
 // comboEntry holds the parsed keycodes and handler for a single hotkey combo.
+// The combo is split into a trigger key (the last, non-modifier key) and the
+// modifier keys that must be held while the trigger is pressed. A combo fires
+// only when the trigger key's KeyDown arrives with all modifiers already held,
+// so partial input (e.g. holding ctrl+shift without the trigger) never fires.
 type comboEntry struct {
-	keycodes []uint16
-	handler  GlobalKeyHandler
+	trigger   uint16
+	modifiers []uint16
+	handler   GlobalKeyHandler
 }
 
 func ListenGlobalKeys(app *App, handlers map[string]GlobalKeyHandler) {
-	// Parse combos: split "ctrl+shift+space" into individual keycodes.
+	// Parse combos: split "ctrl+shift+space" into individual keycodes. The last
+	// key is the trigger; the preceding keys are modifiers held alongside it.
 	combos := make([]comboEntry, 0, len(handlers))
 	for global, handler := range handlers {
 		keys := strings.Split(global, "+")
@@ -30,7 +36,11 @@ func ListenGlobalKeys(app *App, handlers map[string]GlobalKeyHandler) {
 		if len(keycodes) == 0 {
 			continue
 		}
-		combos = append(combos, comboEntry{keycodes: keycodes, handler: handler})
+		combos = append(combos, comboEntry{
+			trigger:   keycodes[len(keycodes)-1],
+			modifiers: keycodes[:len(keycodes)-1],
+			handler:   handler,
+		})
 	}
 
 	// Use the raw channel API directly to avoid gohook's buggy
@@ -53,7 +63,14 @@ func ListenGlobalKeys(app *App, handlers map[string]GlobalKeyHandler) {
 			}
 
 			for _, c := range combos {
-				if allKeysDown(pressed, c.keycodes) {
+				// Require the pressed key to be this combo's trigger. Relying on
+				// the actual event key (rather than the persistent pressed map)
+				// prevents a stale entry from a missed KeyUp from firing the combo
+				// when only the modifiers are held.
+				if ev.Keycode != c.trigger {
+					continue
+				}
+				if allKeysDown(pressed, c.modifiers) {
 					page := c.handler(ev)
 					if page == nil {
 						page = app.page

@@ -7,11 +7,12 @@ require (
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.4
 	github.com/adrg/xdg v0.5.3
-	github.com/anhoder/foxful-cli v0.6.9
+	github.com/anhoder/foxful-cli v1.0.1
 	github.com/atotto/clipboard v0.1.4
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.2
 	github.com/charmbracelet/harmonica v0.2.0
+	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/ebitengine/purego v0.10.1
 	github.com/fhs/gompd/v2 v2.3.0
@@ -24,7 +25,6 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
-	github.com/gookit/ini/v2 v2.2.2
 	github.com/gopxl/beep v1.4.0
 	github.com/juju/persistent-cookiejar v1.0.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
@@ -48,8 +48,11 @@ require (
 )
 
 require (
+	charm.land/glamour/v2 v2.0.1 // indirect
+	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7 // indirect
+	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -57,6 +60,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366 // indirect
 	github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d // indirect
+	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect
 	github.com/fogleman/ease v0.0.0-20170301025033-8da417bf1776 // indirect
 	github.com/forgoer/openssl v1.6.0 // indirect
@@ -67,6 +71,7 @@ require (
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/gookit/goutil v0.6.10 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
 	github.com/jezek/xgb v1.3.1 // indirect
@@ -76,6 +81,7 @@ require (
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect
 	github.com/mewkiz/pkg v0.0.0-20230226050401-4010bf0fec14 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -90,6 +96,8 @@ require (
 	github.com/vcaesar/go-wayland v0.40.0 // indirect
 	github.com/vcaesar/keycode v0.20.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
+	github.com/yuin/goldmark-emoji v1.0.5 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
@@ -115,5 +123,3 @@ replace (
 	github.com/saltosystems/winrt-go => github.com/go-musicfox/winrt-go v0.1.4
 	github.com/shkh/lastfm-go => github.com/go-musicfox/lastfm-go v0.0.2
 )
-
-// replace github.com/anhoder/foxful-cli => ../foxful-cli

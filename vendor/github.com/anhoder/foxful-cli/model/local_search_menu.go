@@ -1,6 +1,7 @@
 package model
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"github.com/sahilm/fuzzy"
 )
 
@@ -32,17 +33,13 @@ func (m *LocalSearchMenuImpl) MenuViews() []MenuItem {
 	var (
 		items []MenuItem
 		menus = m.Menu.MenuViews()
+		seen  = make(map[int]bool, len(m.resItems))
 	)
 	for _, v := range m.resItems {
-		// matchedMap := lo.Associate(v.MatchedIndexes, func(i int) (int, bool) { return i, true })
-		// titleRune := []rune(menu.Title)
-		// for i := 0; i < len(titleRune); i++ {
-		// 	if matchedMap[i] {
-		// 		fmt.Print(fmt.Sprintf(bold, string(match.Str[i])))
-		// 	} else {
-		// 		fmt.Print(string(match.Str[i]))
-		// 	}
-		// }
+		if seen[v.Index] {
+			continue
+		}
+		seen[v.Index] = true
 		items = append(items, menus[v.Index])
 	}
 	return items
@@ -62,6 +59,34 @@ func (m *LocalSearchMenuImpl) RealDataIndex(index int) int {
 	}
 
 	return m.resItems[index].Index
+}
+
+// Action remaps the filtered-result index to the origin menu's real data index
+// before delegating, so callbacks receive the correct item. Without this
+// override the embedded Menu.Action would be invoked with the filtered index.
+func (m *LocalSearchMenuImpl) Action(a *App, index int) (Page, tea.Cmd) {
+	if index > len(m.resItems)-1 {
+		return nil, nil
+	}
+	return m.Menu.Action(a, m.resItems[index].Index)
+}
+
+// ContextMenuItems remaps the filtered-result index to the origin menu's real
+// data index before delegating.
+func (m *LocalSearchMenuImpl) ContextMenuItems(a *App, index int) []ContextMenuItem {
+	if index > len(m.resItems)-1 {
+		return nil
+	}
+	return m.Menu.ContextMenuItems(a, m.resItems[index].Index)
+}
+
+// ContextMenuAction remaps the filtered-result index to the origin menu's real
+// data index before delegating.
+func (m *LocalSearchMenuImpl) ContextMenuAction(a *App, index int, item ContextMenuItem) (Page, tea.Cmd) {
+	if index > len(m.resItems)-1 {
+		return nil, nil
+	}
+	return m.Menu.ContextMenuAction(a, m.resItems[index].Index, item)
 }
 
 func (m *LocalSearchMenuImpl) BottomOutHook() Hook {

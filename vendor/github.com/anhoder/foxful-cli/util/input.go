@@ -3,7 +3,7 @@ package util
 import (
 	"fmt"
 
-	"charm.land/lipgloss/v2"
+	"github.com/anhoder/foxful-cli/style"
 )
 
 var (
@@ -20,7 +20,7 @@ func GetFocusedPrompt() string {
 		return focusedPrompt
 	}
 
-	focusedPrompt = lipgloss.NewStyle().Foreground(GetPrimaryColor()).Render("> ")
+	focusedPrompt = style.DefaultStyleSet().Prompt.Render("> ")
 
 	return focusedPrompt
 }
@@ -36,11 +36,11 @@ func GetBlurredPrompt() string {
 }
 
 func GetFocusedButton(text string) string {
-	return fmt.Sprintf("[ %s ]", lipgloss.NewStyle().Foreground(GetPrimaryColor()).Render(text))
+	return fmt.Sprintf("[ %s ]", style.DefaultStyleSet().Button.Render(text))
 }
 
 func GetBlurredButton(text string) string {
-	return fmt.Sprintf("[ %s ]", lipgloss.NewStyle().Foreground(lipgloss.BrightBlack).Render(text))
+	return fmt.Sprintf("[ %s ]", style.DefaultStyleSet().ButtonBlurred.Render(text))
 }
 
 func GetFocusedSubmitButton() string {
