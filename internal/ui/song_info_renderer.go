@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/mattn/go-runewidth"
 
@@ -109,7 +110,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	if main.MenuStartColumn()-MenuArrowWidth > 0 {
 		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), artistColor, false, false)
+			addSegment(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth)), artistColor, false, false)
 		}
 		{
 			msg := r.state.Mode().Name()
@@ -192,11 +193,11 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 			totalWidth += segmentWidth
 		}
 		paddingLeft := (r.netease.WindowWidth() - totalWidth) / 2
-		builder.WriteString(strings.Repeat(" ", paddingLeft))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", paddingLeft)))
 		for _, segment := range segments {
 			builder.WriteString(renderSegment(segment))
 		}
-		builder.WriteString(strings.Repeat(" ", r.netease.WindowWidth()-paddingLeft-totalWidth))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", r.netease.WindowWidth()-paddingLeft-totalWidth)))
 	} else {
 		// simply concatenate every segment with the specified color
 		for _, segment := range segments {

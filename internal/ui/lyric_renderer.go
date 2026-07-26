@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/mattn/go-runewidth"
 
@@ -448,7 +449,7 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 		lineLength := runewidth.StringWidth(visibleLine)
 
 		paddingLeft := max(0, lyricStartCol+(availableWidth-lineLength)/2)
-		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
+		lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", paddingLeft)))
 
 		if !hasAnsi {
 			if i == highlightLine {
@@ -458,7 +459,7 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 			}
 		}
 		lyricBuilder.WriteString(line)
-		lyricBuilder.WriteString(strings.Repeat(" ", max(0, windowWidth-paddingLeft-lineLength)))
+		lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", max(0, windowWidth-paddingLeft-lineLength))))
 		lyricBuilder.WriteString("\n")
 	}
 }
@@ -486,7 +487,7 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 
 	renderLine := func(idx int, isHighlight bool) {
 		if startCol > 0 {
-			lyricBuilder.WriteString(strings.Repeat(" ", startCol))
+			lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", startCol)))
 		}
 
 		line := r.lyrics[idx]
@@ -526,7 +527,7 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		lineLen := runewidth.StringWidth(visibleLine)
 		remainingWidth := r.netease.WindowWidth() - startCol - lineLen
 		if remainingWidth > 0 {
-			lyricBuilder.WriteString(strings.Repeat(" ", remainingWidth))
+			lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", remainingWidth)))
 		}
 		lyricBuilder.WriteString("\n")
 	}

@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -36,7 +37,7 @@ func (r *SpectrumRenderer) vectorscopeEmptyChar() string {
 
 func (r *SpectrumRenderer) renderVectorscopeBraille(frame player.RawSampleFrame, width, height int) string {
 	if frame.Count < 2 || width < 1 || height < 1 {
-		return strings.Repeat(strings.Repeat(" ", width)+"\n", height)
+		return strings.Repeat(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", width))+"\n", height)
 	}
 
 	gridL := r.getBrailleGrid(&r.brailleGridLCache, width, height)
@@ -85,7 +86,7 @@ func (r *SpectrumRenderer) renderVectorscopeBraille(frame player.RawSampleFrame,
 
 func (r *SpectrumRenderer) renderVectorscopeBlock(frame player.RawSampleFrame, width, height int) string {
 	if frame.Count < 2 || width < 1 || height < 1 {
-		return strings.Repeat(strings.Repeat(" ", width)+"\n", height)
+		return strings.Repeat(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", width))+"\n", height)
 	}
 
 	fullChar := r.vectorscopeFullChar()

@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	foxfulStyle "github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/lucasb-eyer/go-colorful"
 
@@ -251,7 +252,7 @@ func (r *SpectrumRenderer) render(frame player.SpectrumFrame, width, height int)
 	isRawSample := style == SpectrumStyleOscilloscope || style == SpectrumStyleVectorscope
 
 	if !isLineOrDot && !isRawSample && !hasSignal(frame) {
-		blank := strings.Repeat(" ", width) + "\n"
+		blank := foxfulStyle.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", width)) + "\n"
 		return strings.Repeat(blank, height)
 	}
 
@@ -569,7 +570,7 @@ func (r *SpectrumRenderer) vertBrailleRamps(width, height int) [][]color.Color {
 		return nil
 	}
 	base := r.ramp(width)
-	black, _ := colorful.Hex("#000000")
+	black, _ := colorful.Hex(configs.GetSpectrumVerticalBg())
 
 	ramps := make([][]color.Color, height)
 	for row := 0; row < height; row++ {
@@ -591,7 +592,7 @@ func (r *SpectrumRenderer) vertBrailleRampsDim(width, height int, base []color.C
 	if height <= 1 {
 		return nil
 	}
-	black, _ := colorful.Hex("#000000")
+	black, _ := colorful.Hex(configs.GetSpectrumVerticalBg())
 
 	ramps := make([][]color.Color, height)
 	for row := 0; row < height; row++ {

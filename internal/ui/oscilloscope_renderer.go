@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -47,7 +48,7 @@ func hasStereoSamples(frame player.RawSampleFrame) bool {
 
 func (r *SpectrumRenderer) renderOscilloscopeBraille(frame player.RawSampleFrame, width, height int) string {
 	if frame.Count < 2 || width < 1 || height < 1 {
-		return strings.Repeat(strings.Repeat(" ", width)+"\n", height)
+		return strings.Repeat(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", width))+"\n", height)
 	}
 	if configs.AppConfig.Main.Visualizer.IsMono() || !hasStereoSamples(frame) {
 		return r.renderOscilloscopeBrailleMono(frame, width, height)
@@ -145,7 +146,7 @@ func (r *SpectrumRenderer) buildOscilloscopeBraille(samples []float64, count, w,
 
 func (r *SpectrumRenderer) renderOscilloscopeBlock(frame player.RawSampleFrame, width, height int) string {
 	if frame.Count < 2 || width < 1 || height < 1 {
-		return strings.Repeat(strings.Repeat(" ", width)+"\n", height)
+		return strings.Repeat(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", width))+"\n", height)
 	}
 	fullChar := r.oscilloscopeFullChar()
 	halfChar := r.oscilloscopeHalfChar()

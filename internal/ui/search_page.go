@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
@@ -298,7 +299,7 @@ func (s *SearchPage) View(a *model.App) string {
 	write("\n\n")
 
 	if main.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", main.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", main.MenuStartColumn())))
 	}
 	s.inputRowY = lineCount
 	s.inputStartX = max(0, main.MenuStartColumn())
@@ -308,12 +309,12 @@ func (s *SearchPage) View(a *model.App) string {
 
 	write("\n\n")
 	if main.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", main.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", main.MenuStartColumn())))
 	}
 	write(s.tips)
 	write("\n\n")
 	if main.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", main.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", main.MenuStartColumn())))
 	}
 	s.submitRowY = lineCount
 	s.submitStartX = max(0, main.MenuStartColumn())
@@ -325,7 +326,7 @@ func (s *SearchPage) View(a *model.App) string {
 	write(submitButtonView)
 	spaceLen := a.WindowWidth() - main.MenuStartColumn() - lipgloss.Width(submitButtonView)
 	if spaceLen > 0 {
-		write(strings.Repeat(" ", spaceLen))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
 	write("\n")
 

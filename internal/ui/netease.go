@@ -432,7 +432,7 @@ func (n *Netease) InitHook(_ *model.App) {
 				}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
-				time.AfterFunc(1500*time.Millisecond, func() {
+				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
 					slog.Debug("changelog: AfterFunc triggered, showing popup")
 					showChangelogPopup(app)
 				})
@@ -633,22 +633,32 @@ func (n *Netease) LoginCallback() error {
 
 // showChangelogPopup reads the embedded CHANGELOG.md and displays it as a markdown popup.
 func showChangelogPopup(app *model.App) {
-	data, err := filex.ReadFileFromEmbed("changelog.md")
+	data, err := filex.ReadFileFromEmbed("embed/changelog.md")
 	if err != nil {
 		slog.Error("changelog load failure", slogx.Error(err))
 		return
 	}
+
+	popupWidth := min(max(app.WindowWidth()*70/100, 40), 120)
+
+	maxHeight := max(app.WindowHeight()*80/100, 10)
+
 	popup, err := model.NewMarkdownPopup(model.MarkdownPopupSpec{
 		Title:           "更新日志",
 		MarkdownContent: string(data),
-		MaxWidth:        60,
-		MaxHeight:       40,
+		MaxWidth:        popupWidth,
+		MaxHeight:       maxHeight,
+		Anchor:          model.AnchorCenter,
+		DisableResize:   false,
+		CloseKeys:       []string{"esc", "q"},
 	})
 	if err != nil {
 		slog.Error("changelog popup creation failure", slogx.Error(err))
 		return
 	}
 	app.ShowPopup(popup)
+	// Trigger a rerender so the popup appears immediately without waiting for a keypress
+	app.Rerender(true)
 }
 
 // Update intercepts system background-change messages to rebuild the StyleSet

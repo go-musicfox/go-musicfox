@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/netease-music/service"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -424,7 +425,7 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 
 	for i, input := range inputs {
 		if mainPage.MenuStartColumn() > 0 {
-			write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+			write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 		}
 
 		input.SetWidth(max(1, a.WindowWidth()-l.inputStartX-lipgloss.Width(input.Prompt)))
@@ -448,13 +449,13 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 	write("\n\n")
 	(*top)++
 	if mainPage.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 	write(l.tips)
 	write("\n\n")
 	(*top)++
 	if mainPage.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 	// 记录按钮所在行（1-based）
 	l.buttonsRowY = curRow()
@@ -491,14 +492,14 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 
 	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(submitButtonView) - lipgloss.Width(qrButtonView) - lipgloss.Width(btnBlank)
 	if spaceLen > 0 {
-		write(strings.Repeat(" ", spaceLen))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
 	write("\n")
 }
 
 func (l *LoginPage) renderCookieLoginView(a *model.App, builder *strings.Builder, top *int, mainPage *model.Main, write func(string), curRow func() int) {
 	if mainPage.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 
 	l.cookieInput.SetWidth(max(1, a.WindowWidth()-l.inputStartX-lipgloss.Width(l.cookieInput.Prompt)))
@@ -512,13 +513,13 @@ func (l *LoginPage) renderCookieLoginView(a *model.App, builder *strings.Builder
 	write("\n\n")
 	(*top)++
 	if mainPage.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 	write(l.tips)
 	write("\n\n")
 	(*top)++
 	if mainPage.MenuStartColumn() > 0 {
-		write(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 	// 记录按钮所在行（1-based）
 	l.buttonsRowY = curRow()
@@ -541,7 +542,7 @@ func (l *LoginPage) renderCookieLoginView(a *model.App, builder *strings.Builder
 
 	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(submitButtonView)
 	if spaceLen > 0 {
-		write(strings.Repeat(" ", spaceLen))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
 	write("\n")
 }

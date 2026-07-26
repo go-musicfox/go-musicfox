@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/mattn/go-runewidth"
@@ -220,7 +221,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 		if padding < 0 {
 			padding = 0
 		}
-		space := strings.Repeat(" ", padding)
+		space := style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding))
 
 		if p.isExpired {
 			expiredMsg := model.T(MsgQRLoginExpired)
@@ -229,7 +230,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 			if msgPaddingLen < 0 {
 				msgPaddingLen = 0
 			}
-			msgPadding := strings.Repeat(" ", msgPaddingLen)
+			msgPadding := style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", msgPaddingLen))
 
 			fullMsgLine := msgPadding + expiredMsg + msgPadding
 			for runewidth.StringWidth(fullMsgLine) < qrWidth {
@@ -260,7 +261,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 	if padding < 0 {
 		padding = 0
 	}
-	builder.WriteString(strings.Repeat(" ", padding))
+	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
 	builder.WriteString(p.statusMsg)
 	builder.WriteString("\n\n")
 
@@ -269,7 +270,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 	if padding < 0 {
 		padding = 0
 	}
-	builder.WriteString(strings.Repeat(" ", padding))
+	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
 	builder.WriteString(util.SetFgStyle(bottomTip, lipgloss.BrightBlack))
 	builder.WriteString("\n")
 
@@ -279,7 +280,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 		if padding < 0 {
 			padding = 0
 		}
-		builder.WriteString(strings.Repeat(" ", padding))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
 		builder.WriteString(util.SetFgStyle(viewTip, lipgloss.BrightBlack))
 		builder.WriteString("\n")
 	} else {

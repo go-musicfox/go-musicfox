@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	tea "charm.land/bubbletea/v2"
 	"github.com/mattn/go-runewidth"
 )
@@ -114,7 +115,7 @@ func (r *CompositeRenderer) View(a *model.App, main *model.Main) (view string, l
 			if colIdx < len(r.columns)-1 {
 				padding := colWidth - visibleWidth
 				if padding > 0 {
-					result.WriteString(strings.Repeat(" ", padding))
+					result.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
 				}
 			}
 		}

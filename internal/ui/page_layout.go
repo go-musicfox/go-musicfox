@@ -171,7 +171,7 @@ func pageMenuTitleView(a *model.App, main *model.Main, top *int, title *model.Me
 		content = lipgloss.NewStyle().MaxWidth(maxWidth).Render(content)
 	}
 
-	builder.WriteString(strings.Repeat(" ", startColumn))
+	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", startColumn)))
 	builder.WriteString(style.CurrentStyleSet().MenuTitle.Render(content))
 	return builder.String()
 }
@@ -197,7 +197,7 @@ func pageMenuTitleViewWithBack(a *model.App, main *model.Main, top *int, title *
 	}
 
 	padding := max(0, main.MenuStartColumn()-pageBackButtonWidth)
-	builder.WriteString(strings.Repeat(" ", padding))
+	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
 	builder.WriteString(pageBackButtonIcon(hovered))
 	builder.WriteString(" ")
 	builder.WriteString(style.CurrentStyleSet().MenuTitle.Render(content))

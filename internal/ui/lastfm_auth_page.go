@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
@@ -222,7 +223,7 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 
 	for i, input := range inputs {
 		if mainPage.MenuStartColumn() > 0 {
-			builder.WriteString(strings.Repeat(" ", mainPage.MenuStartColumn()))
+			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 		}
 
 		builder.WriteString(input.View())
@@ -234,7 +235,7 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 			valueLen = runewidth.StringWidth(input.Value())
 		}
 		if spaceLen := l.netease.WindowWidth() - mainPage.MenuStartColumn() - valueLen - 3; spaceLen > 0 {
-			builder.WriteString(strings.Repeat(" ", spaceLen))
+			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 		}
 
 		top++
@@ -248,13 +249,13 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 	builder.WriteString("\n\n")
 	top++
 	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 	builder.WriteString(l.tips)
 	builder.WriteString("\n\n")
 	top++
 	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(strings.Repeat(" ", mainPage.MenuStartColumn()))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
 	}
 	builder.WriteString(l.submitButton)
 
@@ -267,7 +268,7 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 
 	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - runewidth.StringWidth(types.SubmitText) - runewidth.StringWidth(l.qrButtonTextByStep()) - runewidth.StringWidth(l.browserButtonTextByStep()) - len(btnBlank)*2
 	if spaceLen > 0 {
-		builder.WriteString(strings.Repeat(" ", spaceLen))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
 	builder.WriteString("\n")
 
