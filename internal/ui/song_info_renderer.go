@@ -29,6 +29,7 @@ type SongInfoRenderer struct {
 	cachedLike     bool
 	cachedWidth    int
 	cachedCentered bool
+	cachedHover    PlaybarElement
 }
 
 // NewSongInfoRenderer creates a new song info renderer component.
@@ -47,17 +48,20 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// Every part of the song view is expressed as a segment: unformatted text followed by a color specification
 	// This makes computing the total length of the song view easier
 	type Segment struct {
-		text  string
-		color color.Color
+		text      string
+		color     color.Color
+		underline bool
+		bold      bool
 	}
 
 	var (
-		song     = r.state.CurSong()
-		state    = r.state.State()
-		volume   = r.state.Volume()
-		mode     = r.state.Mode()
-		width    = r.netease.WindowWidth()
-		centered = main.CenterEverything()
+		song           = r.state.CurSong()
+		state          = r.state.State()
+		volume         = r.state.Volume()
+		mode           = r.state.Mode()
+		width          = r.netease.WindowWidth()
+		centered       = main.CenterEverything()
+		hoveredElement = r.netease.playbarHoveredElement
 	)
 
 	var isLike bool
@@ -68,7 +72,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// Output caching: skip full rebuild when nothing changed
 	if song.Id == r.cachedSongId && state == r.cachedState && volume == r.cachedVolume &&
 		mode == r.cachedMode && isLike == r.cachedLike && width == r.cachedWidth &&
-		centered == r.cachedCentered {
+		centered == r.cachedCentered && hoveredElement == r.cachedHover {
 		return r.cachedView, r.cachedLines
 	}
 
@@ -78,30 +82,52 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	)
 
 	// Helper for adding a new segment
-	addSegment := func(text string, color color.Color) {
-		segments = append(segments, Segment{text, color})
+	addSegment := func(text string, color color.Color, underline, bold bool) {
+		segments = append(segments, Segment{text, color, underline, bold})
 	}
 	// Helper for adding text whose color we don't care about
 	addText := func(text string) {
-		segments = append(segments, Segment{text, lipgloss.BrightBlack})
+		segments = append(segments, Segment{text, lipgloss.BrightBlack, false, false})
+	}
+	renderSegment := func(segment Segment) string {
+		return lipgloss.NewStyle().
+			Foreground(segment.color).
+			Underline(segment.underline).
+			Bold(segment.bold).
+			Render(segment.text)
 	}
 
 	prefixLen := SongInfoPrefixBaseWidth
 	if main.MenuStartColumn()-MenuArrowWidth > 0 {
 		prefixLen += SongInfoPrefixExtraWidth
 		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), lipgloss.BrightBlack)
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), lipgloss.BrightBlack, false, false)
 		}
 		{
 			msg := r.state.Mode().Name()
-			addSegment(fmt.Sprintf("[%s] ", msg), lipgloss.BrightMagenta)
+			modeColor := color.Color(lipgloss.BrightMagenta)
+			modeBold := hoveredElement == PlaybarElementMode
+			if modeBold {
+				modeColor = util.GetPrimaryColor()
+			}
+			addSegment(fmt.Sprintf("[%s] ", msg), modeColor, false, modeBold)
 		}
-		addSegment(fmt.Sprintf("%d%% ", r.state.Volume()), lipgloss.BrightBlue)
+		addSegment(fmt.Sprintf("%d%% ", r.state.Volume()), lipgloss.BrightBlue, false, false)
 	}
 	if r.state.State() == types.Playing {
-		addSegment("♫ ♪ ♫ ♪ ", lipgloss.BrightYellow)
+		stateColor := color.Color(lipgloss.BrightYellow)
+		stateBold := hoveredElement == PlaybarElementState
+		if stateBold {
+			stateColor = util.GetPrimaryColor()
+		}
+		addSegment("♫ ♪ ♫ ♪ ", stateColor, false, stateBold)
 	} else {
-		addSegment("_ z Z Z ", lipgloss.Yellow)
+		stateColor := color.Color(lipgloss.Yellow)
+		stateBold := hoveredElement == PlaybarElementState
+		if stateBold {
+			stateColor = util.GetPrimaryColor()
+		}
+		addSegment("_ z Z Z ", stateColor, false, stateBold)
 	}
 
 	if song.Id > 0 {
@@ -111,7 +137,11 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		} else {
 			icolor = lipgloss.White
 		}
-		addSegment("♥ ", icolor)
+		heartBold := hoveredElement == PlaybarElementHeart
+		if heartBold && !isLike {
+			icolor = util.GetPrimaryColor()
+		}
+		addSegment("♥ ", icolor, false, heartBold)
 	}
 
 	if r.state.CurSongIndex() < len(r.state.Playlist()) {
@@ -120,7 +150,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		if !main.CenterEverything() {
 			songName = runewidth.Truncate(songName, r.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
 		}
-		addSegment(songName, util.GetPrimaryColor())
+		addSegment(songName, util.GetPrimaryColor(), false, false)
 		addText(" ")
 
 		var artists strings.Builder
@@ -139,7 +169,12 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 				runewidth.FillRight(artistString, remainLen),
 				remainLen, "")
 		}
-		addSegment(artistString, lipgloss.BrightBlack)
+		artistColor := color.Color(lipgloss.BrightBlack)
+		artistHovered := hoveredElement == PlaybarElementArtist
+		if artistHovered {
+			artistColor = util.GetPrimaryColor()
+		}
+		addSegment(artistString, artistColor, false, false)
 	}
 
 	if main.CenterEverything() {
@@ -156,25 +191,24 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		paddingLeft := (r.netease.WindowWidth() - totalWidth) / 2
 		builder.WriteString(strings.Repeat(" ", paddingLeft))
 		for _, segment := range segments {
-			builder.WriteString(util.SetFgStyle(segment.text, segment.color))
+			builder.WriteString(renderSegment(segment))
 		}
 		builder.WriteString(strings.Repeat(" ", r.netease.WindowWidth()-paddingLeft-totalWidth))
 	} else {
 		// simply concatenate every segment with the specified color
 		for _, segment := range segments {
-			builder.WriteString(util.SetFgStyle(segment.text, segment.color))
+			builder.WriteString(renderSegment(segment))
 		}
 	}
 
-	// Return the actual number of lines: 1 content line + 1 blank line separator
-	// Do NOT inflate this value — foxful-cli's Main.View() uses it to advance 'top'
-	// and determine bottom-fill padding. An inflated value suppresses the bottom fill,
-	// resulting in a View output shorter than the terminal height, which leaves cells
-	// from the previous frame uncleared (causing display corruption/overlay).
+	// Return the actual number of lines: 1 content line + 1 blank line separator.
+	// In the new JoinVertical model, the returned `lines` value is discarded (no longer
+	// used to advance a `top` pointer). Only the actual string content matters for layout.
+	// Output exactly 2 visual rows: content + single trailing newline = 1 blank separator.
 	lines = SongInfoLines
 
 	// Store output cache
-	r.cachedView = builder.String() + "\n\n"
+	r.cachedView = builder.String() + "\n"
 	r.cachedLines = lines
 	r.cachedSongId = song.Id
 	r.cachedState = state
@@ -183,6 +217,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	r.cachedLike = isLike
 	r.cachedWidth = width
 	r.cachedCentered = centered
+	r.cachedHover = hoveredElement
 
 	return r.cachedView, r.cachedLines
 }

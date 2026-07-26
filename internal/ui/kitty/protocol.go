@@ -18,6 +18,12 @@ const (
 
 	// Chunk size for base64 encoded data (4096 bytes max per chunk)
 	maxChunkSize = 4096
+
+	// CoverZIndex is the z-index for cover images.
+	// Set to a deeply negative value (< -1073741824, i.e., INT32_MIN/2)
+	// to ensure cover images render below all text and cell backgrounds,
+	// allowing popup menus with solid backgrounds to appear on top.
+	CoverZIndex = -2000000000
 )
 
 var imageIDCounter uint32
@@ -41,13 +47,13 @@ func TransmitAndDisplay(img image.Image, cols, rows int) (string, error) {
 // TransmitAndDisplayWithID transmits an image with a specific ID.
 // Useful for updating an existing image (animation).
 func TransmitAndDisplayWithID(img image.Image, cols, rows int, imageID uint32) (string, error) {
-	return transmit(img, cols, rows, imageID, "T", 0)
+	return transmit(img, cols, rows, imageID, "T", 0, CoverZIndex)
 }
 
 // TransmitImage transmits an image without displaying it.
 // Returns the escape sequence string.
 func TransmitImage(img image.Image, cols, rows int, imageID uint32) (string, error) {
-	return transmit(img, cols, rows, imageID, "t", 0)
+	return transmit(img, cols, rows, imageID, "t", 0, 0)
 }
 
 // DeleteImage deletes an image by its ID.
@@ -99,7 +105,9 @@ func Placeholder(cols, rows int) string {
 
 // splitIntoChunks splits a string into chunks of the specified size.
 // transmit handles the common logic for transmitting image data.
-func transmit(img image.Image, cols, rows int, imageID uint32, action string, gapMS int) (string, error) {
+// zIndex sets the z-index for placement (only applies to display actions like "T").
+// For frame actions ("f"), gapMS is used for animation timing instead.
+func transmit(img image.Image, cols, rows int, imageID uint32, action string, gapMS int, zIndex int) (string, error) {
 	// Encode image to PNG
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
@@ -128,7 +136,12 @@ func transmit(img image.Image, cols, rows int, imageID uint32, action string, ga
 		fmt.Fprintf(&params, ",c=%d", cols)
 	}
 
-	if gapMS > 0 {
+	// z parameter meaning depends on action:
+	// - For display actions (T): z = z-index (stacking order)
+	// - For frame actions (f): z = gap duration in milliseconds
+	if action == "T" && zIndex != 0 {
+		fmt.Fprintf(&params, ",z=%d", zIndex)
+	} else if action == "f" && gapMS > 0 {
 		fmt.Fprintf(&params, ",z=%d", gapMS)
 	}
 
@@ -169,7 +182,7 @@ func transmit(img image.Image, cols, rows int, imageID uint32, action string, ga
 // imageID is the ID of the base image.
 // gapMS is the duration of this frame in milliseconds.
 func TransmitFrame(img image.Image, imageID uint32, gapMS int) (string, error) {
-	return transmit(img, 0, 0, imageID, "f", gapMS) // a=f for frame data
+	return transmit(img, 0, 0, imageID, "f", gapMS, 0) // a=f for frame data
 }
 
 // StartAnimation starts the animation playback.
@@ -196,17 +209,19 @@ func SetFrameGap(imageID uint32, frameIdx int, gapMS int) string {
 }
 
 // PlaceImage generates a command to display (place) an already transmitted image at the current cursor position.
-func PlaceImage(imageID uint32, cols, rows int) string {
+// zIndex controls the stacking order (use CoverZIndex for cover images to render below popups).
+func PlaceImage(imageID uint32, cols, rows int, zIndex int) string {
 	// a=p: placement action
 	// i=<id>: image ID to place
 	// c=<cols>: columns
 	// r=<rows>: rows
+	// z=<z-index>: stacking order
 	// C=1: do not move cursor
 	// If rows is 0, let Kitty calculate height based on image aspect ratio (square) and cols
 	if rows == 0 {
-		return fmt.Sprintf("%sa=p,i=%d,c=%d,C=1,q=2%s", apcStart, imageID, cols, st)
+		return fmt.Sprintf("%sa=p,i=%d,c=%d,z=%d,C=1,q=2%s", apcStart, imageID, cols, zIndex, st)
 	}
-	return fmt.Sprintf("%sa=p,i=%d,c=%d,r=%d,C=1,q=2%s", apcStart, imageID, cols, rows, st)
+	return fmt.Sprintf("%sa=p,i=%d,c=%d,r=%d,z=%d,C=1,q=2%s", apcStart, imageID, cols, rows, zIndex, st)
 }
 
 // splitIntoChunks splits a string into chunks of the specified size.

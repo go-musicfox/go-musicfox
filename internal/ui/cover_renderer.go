@@ -106,7 +106,7 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 // calculateDimensions calculates the cover image display dimensions.
 func (r *CoverRenderer) calculateDimensions() {
 	main := r.netease.MustMain()
-	spaceHeight := r.netease.WindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - r.netease.SpectrumLines(main)
+	spaceHeight := r.netease.EffectiveWindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - r.netease.SpectrumLines(main)
 
 	if spaceHeight < MinSpaceHeight {
 		r.rows = 0
@@ -167,13 +167,15 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	windowHeight := r.netease.WindowHeight()
+	windowHeight := r.netease.EffectiveWindowHeight()
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	// Position cover purely based on lyrics: vertically center-aligned with the lyric block
-	lyricCenterRow := lyricStartRow + lyricLines/2 + 1
-	coverStartRow := lyricCenterRow - r.rows/2
+	// Position cover purely based on lyrics: align the cover's bottom edge to the
+	// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
+	// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
+	// compensating for the Kitty image not filling the bottom terminal cell exactly.
+	coverStartRow := lyricStartRow + lyricLines - r.rows/2 - 1
 
 	// If cover can't fit at all, skip rendering
 	if r.rows > windowHeight-FixedTopBottomRows {
@@ -412,7 +414,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Placement
 				sb.WriteString("\x1b[s")
 				fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
-				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0))
+				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0, kitty.CoverZIndex))
 				sb.WriteString("\x1b[u")
 
 				// Delete OLD ID
@@ -602,6 +604,31 @@ func getCoverUrl(song structs.Song) string {
 	}
 	// Add resize parameter for better performance (request smaller image)
 	return app.AddResizeParamForPicUrl(picUrl, 512)
+}
+
+// ClearDisplayed clears the displayed cover image when switching pages.
+func (r *CoverRenderer) ClearDisplayed() {
+	if !r.IsEnabled() {
+		return
+	}
+
+	_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.cancelFunc != nil {
+		r.cancelFunc()
+		r.cancelFunc = nil
+	}
+
+	r.imageRendered = false
+	r.cachedSeq = ""
+	r.currentSongId = 0
+	r.animImageID = 0
+	r.renderingID = 0
+	r.lastStartRow = 0
+	r.lastStartCol = 0
 }
 
 // Close cleans up the cover renderer, clearing any displayed images.

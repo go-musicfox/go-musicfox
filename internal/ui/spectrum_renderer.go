@@ -228,7 +228,7 @@ func (*SpectrumRenderer) Update(tea.Msg, *model.App) {}
 
 func (r *SpectrumRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
 	width := a.WindowWidth()
-	layout := r.layout(a.WindowHeight(), main.MenuBottomRow())
+	layout := r.layout(main.EffectiveWindowHeight(a), main.MenuBottomRow())
 	if layout.barLines == 0 || width <= 0 {
 		return "", 0
 	}

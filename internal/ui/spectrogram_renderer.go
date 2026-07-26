@@ -72,7 +72,7 @@ func (*SpectrogramRenderer) Update(tea.Msg, *model.App) {}
 
 func (r *SpectrogramRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
 	width := a.WindowWidth()
-	h := r.LineCount(a.WindowHeight(), main.MenuBottomRow())
+	h := r.LineCount(main.EffectiveWindowHeight(a), main.MenuBottomRow())
 	if h <= SpectrumVerticalPadding || width <= 0 {
 		return "", 0
 	}

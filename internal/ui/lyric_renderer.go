@@ -20,17 +20,17 @@ var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 // lyricCacheKey holds the state that determines whether the rendered
 // output has changed. Used to skip expensive recomputation in View().
 type lyricCacheKey struct {
-	currentIndex   int
-	yrcLineIdx     int
-	isRunning      bool
-	yrcEnabled     bool
-	showTranslation bool
+	currentIndex         int
+	yrcLineIdx           int
+	isRunning            bool
+	yrcEnabled           bool
+	showTranslation      bool
 	currentTimeHundredMs int64 // currentTimeMs / 100, ~100ms granularity
-	windowWidth    int
-	windowHeight   int
-	menuBottomRow  int
-	specLines      int
-	isCentered     bool
+	windowWidth          int
+	windowHeight         int
+	menuBottomRow        int
+	specLines            int
+	isCentered           bool
 }
 
 // LyricRenderer is a dedicated UI component for rendering lyrics.
@@ -178,14 +178,14 @@ func stripAnsiCodes(s string) string {
 func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 	main := r.netease.MustMain()
 	specLines := r.netease.SpectrumLines(main)
-	spaceHeight := r.netease.WindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - specLines
+	spaceHeight := r.netease.EffectiveWindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - specLines
 
 	if !r.isVisible || spaceHeight < MinSpaceHeight {
 		r.lyricLines = 0
 		return
 	}
 
-	endRow := r.netease.WindowHeight() - EndRowMargin
+	endRow := r.netease.EffectiveWindowHeight() - EndRowMargin
 	if spaceHeight >= FullLyricLines {
 		r.lyricLines = FullLyricLines
 	} else {
@@ -197,12 +197,21 @@ func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 // View renders the lyric component.
 func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
 	specLines := r.netease.SpectrumLines(main)
-	endRow := r.netease.WindowHeight() - EndRowMargin
+	endRow := r.netease.EffectiveWindowHeight() - EndRowMargin
 
 	if r.lyricLines == 0 {
 		fillingLines := endRow - main.MenuBottomRow() - specLines
-		if fillingLines > 0 {
-			return strings.Repeat("\n", fillingLines), fillingLines
+		if fillingLines > 1 {
+			// strings.Repeat("\n", N) produces N+1 visual rows in JoinVertical.
+			// Use N-1 to get exactly fillingLines rows.
+			return strings.Repeat("\n", fillingLines-1), fillingLines
+		} else if fillingLines == 1 {
+			if main.StatusBar() != nil && main.StatusBarPosition() == model.StatusBarBottom {
+				return "", 1
+			}
+			// Main skips empty component views. Without a bottom status bar, retain
+			// this row so its padding does not move below the progress component.
+			return " ", 1
 		}
 		return "", 0
 	}
@@ -219,17 +228,17 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// pixel-perfect timing — per-frame precision is wasteful.
 	state := r.lyricService.State()
 	key := lyricCacheKey{
-		currentIndex:        state.CurrentIndex,
-		yrcLineIdx:          state.YRCLineIndex,
-		isRunning:           state.IsRunning,
-		yrcEnabled:          state.YRCEnabled,
-		showTranslation:     state.ShowTranslation,
+		currentIndex:         state.CurrentIndex,
+		yrcLineIdx:           state.YRCLineIndex,
+		isRunning:            state.IsRunning,
+		yrcEnabled:           state.YRCEnabled,
+		showTranslation:      state.ShowTranslation,
 		currentTimeHundredMs: currentTimeMs / 100,
-		windowWidth:         r.netease.WindowWidth(),
-		windowHeight:        r.netease.WindowHeight(),
-		menuBottomRow:       main.MenuBottomRow(),
-		specLines:           specLines,
-		isCentered:          main.CenterEverything(),
+		windowWidth:          r.netease.WindowWidth(),
+		windowHeight:         r.netease.EffectiveWindowHeight(),
+		menuBottomRow:        main.MenuBottomRow(),
+		specLines:            specLines,
+		isCentered:           main.CenterEverything(),
 	}
 	if key == r.cachedKey {
 		return r.cachedView, r.cachedLines

@@ -1,5 +1,17 @@
 package ui
 
+type PlaybarElement int
+
+const (
+	PlaybarElementNone PlaybarElement = iota
+	PlaybarElementMode
+	PlaybarElementState
+	PlaybarElementHeart
+	PlaybarElementSongName
+	PlaybarElementArtist
+	PlaybarElementProgressBar
+)
+
 // Layout constants for the terminal UI, shared across renderers.
 // All values are in terminal rows or columns.
 // 终端 UI 布局常量，跨渲染器共享。所有数值单位均为终端行或列。
@@ -24,9 +36,13 @@ const (
 	FixedTopBottomRows = SongInfoLines + ProgressBarLines + 2
 
 	// EndRowMargin is the number of rows reserved from the terminal bottom.
-	// Lyrics and other content should not extend beyond WindowHeight - EndRowMargin.
-	// 从终端底部预留的行数。歌词等内容不应超过 WindowHeight - EndRowMargin。
-	EndRowMargin = 2
+	// Must accommodate actual bottom content: SongInfo (2 visual rows: content + "\n")
+	// + ProgressBar (1 row during playback, 0 at startup) + StatusBar (1 row, rendered
+	// outside body but occupies screen space). Reserve 4 for worst case.
+	// 从终端底部预留的行数。必须容纳实际底部内容：SongInfo（2 视觉行：内容 + "\n"）
+	// + ProgressBar（播放时 1 行，启动时 0）+ StatusBar（1 行，在 body 外渲染但占屏幕空间）。
+	// 最坏情况预留 4 行。
+	EndRowMargin = 4
 
 	// MinSpaceHeight is the minimum height of available space for lyrics/cover
 	// to be displayed at all.
@@ -108,6 +124,12 @@ const (
 	// bottom when calculating cover positioning without lyrics.
 	// 在没有歌词时计算封面位置时，从终端底部预留的行数。
 	CoverEndRowMargin = 3
+
+	// CoverBottomAlignOffset nudges the cover down to visually match the
+	// lyric baseline, compensating for the Kitty image not filling the
+	// bottom terminal cell exactly.
+	// 封面底部对齐偏移量，用于补偿 Kitty 图像未完全填充底部终端单元格的情况。
+	CoverBottomAlignOffset = 2
 
 	// ---- Spectrum constants / 频谱常量 ----
 

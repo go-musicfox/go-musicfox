@@ -105,7 +105,8 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 			r.progressRamp = util.MakeRamp(start, end, float64(width))
 			r.progressLastWidth = float64(width)
 		}
-		progressView = model.Progress(&progressOptions, width, fullSize, r.progressRamp)
+		ramp := r.progressRamp
+		progressView = model.Progress(&progressOptions, width, fullSize, ramp)
 	}
 
 	var times string
