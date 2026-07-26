@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/clipboard"
 	"github.com/gookit/gcli/v2"
@@ -41,19 +42,25 @@ func NewConfigCommand() *gcli.Command {
 				table.WithWidth(90),
 			)
 
+			appColors := configs.GetCurrentAppColors()
+
 			s := table.DefaultStyles()
 			s.Header = s.Header.
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("240")).
+				BorderForeground(configs.SafeGetForeground(appColors.ConfigTableBorder, configs.ConfigTableBorderColor)).
 				BorderBottom(true).
 				Bold(false)
 			s.Selected = s.Selected.
-				Foreground(lipgloss.Color("229")).
-				Background(lipgloss.Color("160")).
+				Foreground(configs.SafeGetForeground(appColors.ConfigTableSelectedFg, configs.ConfigTableSelectedFgColor)).
+				Background(configs.SafeGetBackground(appColors.ConfigTableSelectedBg, configs.ConfigTableSelectedBgColor)).
 				Bold(true)
 			t.SetStyles(s)
 
-			m := configModel{t}
+			baseStyle := lipgloss.NewStyle().
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(configs.SafeGetForeground(appColors.ConfigTableBorder, configs.ConfigTableBorderColor))
+
+			m := configModel{t, baseStyle}
 			_, err := tea.NewProgram(m).Run()
 			return err
 		},
@@ -61,12 +68,9 @@ func NewConfigCommand() *gcli.Command {
 	return cmd
 }
 
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
-
 type configModel struct {
-	table table.Model
+	table     table.Model
+	baseStyle lipgloss.Style
 }
 
 func (m configModel) Init() tea.Cmd { return nil }
@@ -100,6 +104,6 @@ func (m configModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m configModel) View() tea.View {
 	var v tea.View
-	v.SetContent(baseStyle.Render(m.table.View()) + "\n")
+	v.SetContent(m.baseStyle.Render(m.table.View()) + "\n")
 	return v
 }
