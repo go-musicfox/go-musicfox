@@ -1,0 +1,194 @@
+# GitHub - Dark & Light Color Themes
+name = "GitHub"
+description = "GitHub-inspired color scheme — clean, accessible, and comfortable for daily coding sessions"
+
+# ── Dark Variant ───────────────────────────────────────────
+[dark]
+primary = "#58a6ff"
+secondary = "#8b949e"
+accent = "#f78166"
+success = "#3fb950"
+warning = "#d29922"
+error = "#f85149"
+info = "#79c0ff"
+muted = "#484f58"
+hintKey = "#6e7681"
+background = "#0d1117"
+foreground = "#c9d1d9"
+border = "#30363d"
+surface = "#161b22"
+
+[dark.highlights]
+menuTitle = "#58a6ff"
+menuItem = "#c9d1d9"
+selectedItem = "#58a6ff"
+selectedItemBg = "#161b22"
+menuItemHover = "#f78166"
+selectedItemHover = "#58a6ff"
+title = "#58a6ff"
+prompt = "#58a6ff"
+backButton = "#8b949e"
+backButtonHover = "#f78166"
+subtitle = "#8b949e"
+progressEmpty = "#484f58"
+scrollTrack = "#161b22"
+scrollThumb = "#484f58"
+button = "#58a6ff"
+buttonBlurred = "#8b949e"
+
+[dark.popup]
+surface = "#161b22"
+border = "#30363d"
+
+# ── 通知组件配色 ─────────────────────────────────────────
+[dark.notification]
+surface = "#161b22"
+infoBorder = "#79c0ff"
+successBorder = "#3fb950"
+warningBorder = "#d29922"
+errorBorder = "#f85149"
+
+# ── 状态栏配色 ───────────────────────────────────────────
+[dark.statusBar]
+bar = "#161b22"
+text = "#8b949e"
+breadcrumb = "#484f58"
+breadcrumbSep = "#484f58"
+breadcrumbHover = "#f78166"
+breadcrumbClick = "#58a6ff"
+time = "#484f58"
+nugget = "#c9d1d9"
+nuggetLabel = "#58a6ff"
+
+# ── Markdown 渲染主题 ────────────────────────────────────
+# 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
+# 或自定义 JSON 主题文件路径
+[dark.markdown]
+dark = "dark"
+light = "light"
+
+[dark.app]
+# Lyric colors
+lyricActive = "#79c0ff"
+lyricTransition = "#d2a8ff"
+lyricInactive = "#484f58"
+lyricHighlight = "#c9d1d9"
+
+# Playbar colors (hex colors — consistent across terminal themes)
+playbarMode = "#bc8cff"
+playbarVolume = "#79c0ff"
+playbarPlaying = "#3fb950"
+playbarPaused = "#d29922"
+playbarHeartLiked = "#f85149"
+playbarHeartUnliked = "#8b949e"
+playbarArtist = "#6e7681"
+
+# Visualizer colors: "random" or hex
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+
+# 整个应用背景色（默认透明不设置）
+background = "#0d1117"
+contextMenuBg = "#161b22"
+contextMenuBorder = "#30363d"
+spectrumVerticalBg = "#0d1117"
+desktopLyricsBg = "#0d1117"
+loginError = "#f85149"
+loginSuccess = "#3fb950"
+authStatus = "#79c0ff"
+configTableBorder = "#484f58"
+configTableSelectedFg = "#c9d1d9"
+configTableSelectedBg = "#161b22"
+
+# ── Light Variant ──────────────────────────────────────────
+[light]
+primary = "#0969da"
+secondary = "#57606a"
+accent = "#cf222e"
+success = "#1a7f37"
+warning = "#9a6700"
+error = "#cf222e"
+info = "#0969da"
+muted = "#6e7781"
+hintKey = "#8c959f"
+background = "#ffffff"
+foreground = "#24292f"
+border = "#d0d7de"
+surface = "#f6f8fa"
+
+[light.highlights]
+menuTitle = "#0969da"
+menuItem = "#24292f"
+selectedItem = "#0969da"
+selectedItemBg = "#f6f8fa"
+menuItemHover = "#cf222e"
+selectedItemHover = "#0969da"
+title = "#0969da"
+prompt = "#0969da"
+backButton = "#57606a"
+backButtonHover = "#cf222e"
+subtitle = "#57606a"
+progressEmpty = "#6e7781"
+scrollTrack = "#f6f8fa"
+scrollThumb = "#6e7781"
+button = "#0969da"
+buttonBlurred = "#57606a"
+
+[light.popup]
+surface = "#f6f8fa"
+border = "#d0d7de"
+
+# ── 通知组件配色 ─────────────────────────────────────────
+[light.notification]
+surface = "#f6f8fa"
+infoBorder = "#0969da"
+successBorder = "#1a7f37"
+warningBorder = "#9a6700"
+errorBorder = "#cf222e"
+
+# ── 状态栏配色 ───────────────────────────────────────────
+[light.statusBar]
+bar = "#f6f8fa"
+text = "#57606a"
+breadcrumb = "#6e7781"
+breadcrumbSep = "#6e7781"
+breadcrumbHover = "#cf222e"
+breadcrumbClick = "#0969da"
+time = "#6e7781"
+nugget = "#24292f"
+nuggetLabel = "#0969da"
+
+# ── Markdown 渲染主题 ────────────────────────────────────
+# 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
+# 或自定义 JSON 主题文件路径
+[light.markdown]
+dark = "dark"
+light = "light"
+
+[light.app]
+lyricActive = "#0969da"
+lyricTransition = "#8250df"
+lyricInactive = "#6e7781"
+lyricHighlight = "#24292f"
+playbarMode = "#bc8cff"
+playbarVolume = "#79c0ff"
+playbarPlaying = "#3fb950"
+playbarPaused = "#d29922"
+playbarHeartLiked = "#f85149"
+playbarHeartUnliked = "#8b949e"
+playbarArtist = "#6e7681"
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+
+# 整个应用背景色（默认透明不设置）
+background = "#ffffff"
+contextMenuBg = "#f6f8fa"
+contextMenuBorder = "#d0d7de"
+spectrumVerticalBg = "#ffffff"
+desktopLyricsBg = "#ffffff"
+loginError = "#cf222e"
+loginSuccess = "#1a7f37"
+authStatus = "#0969da"
+configTableBorder = "#6e7781"
+configTableSelectedFg = "#24292f"
+configTableSelectedBg = "#f6f8fa"

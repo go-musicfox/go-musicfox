@@ -189,6 +189,26 @@ func (r *ThemeRegistry) CurrentStyleSet(darkBackground bool) *style.StyleSet {
 	return &ss
 }
 
+// CurrentAppColorConfig returns the AppColorConfig for the current theme and brightness.
+func (r *ThemeRegistry) CurrentAppColorConfig(darkBackground bool) AppColorConfig {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	names := r.darkNames
+	if !darkBackground {
+		names = r.lightNames
+	}
+	if len(names) == 0 || r.themeIndex >= len(names) {
+		return AppColorConfig{}
+	}
+	name := names[r.themeIndex]
+	tf := r.themes[name]
+	if darkBackground {
+		return tf.Dark.App
+	}
+	return tf.Light.App
+}
+
 // modelThemesFromFiles builds foxful-cli Theme pair from the active theme file.
 // Falls back to legacy behavior using primaryColor if no theme files are loaded.
 func (tc ThemeConfig) modelThemesFromFiles(themes *ThemeRegistry, primary color.Color) (style.Theme, style.Theme) {

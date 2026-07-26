@@ -1,93 +1,92 @@
-# NetEase Red - Classic Go-Musicfox Default Theme
-name = "NetEase Red"
-description = "Classic NetEase Music red theme — the original go-musicfox look"
+# Nord - Arctic, north-bluish color palette
+name = "Nord"
+description = "Arctic, north-bluish color palette — cool, calm, and frosty"
 
 # ── Dark Variant ───────────────────────────────────────────
 [dark]
-primary = "#EA403F"
-secondary = "#808080"
-accent = "#0000FF"
-success = "#00FF00"
-warning = "#FFFF00"
-error = "#FF0000"
-info = "#00FFFF"
-muted = "#808080"
-hintKey = "#6E6E6E"
-background = "#1A1A1A"
-foreground = "#FFFFFF"
-border = "#333333"
-surface = "#242424"
+primary = "#88c0d0"
+secondary = "#81a1c1"
+accent = "#5e81ac"
+success = "#a3be8c"
+warning = "#ebcb8b"
+error = "#bf616a"
+info = "#b48ead"
+muted = "#4c566a"
+hintKey = "#616e88"
+background = "#2e3440"
+foreground = "#d8dee9"
+border = "#434c5e"
+surface = "#3b4252"
 
 [dark.highlights]
-menuTitle = "BrightGreen"
+menuTitle = "#88c0d0"
 # 菜单项文字颜色
-# menuItem = ""
+menuItem = "#d8dee9"
 # 选中项前景色
-# selectedItem = ""
+selectedItem = "#88c0d0"
 # 选中项背景色
-# selectedItemBg = ""
+selectedItemBg = "#3b4252"
 # 鼠标悬停颜色
-# menuItemHover = ""
+menuItemHover = "#5e81ac"
 # 选中+悬停颜色
-# selectedItemHover = ""
+selectedItemHover = "#88c0d0"
 # 页面标题颜色
-# title = ""
+title = "#88c0d0"
 # 输入提示颜色
-# prompt = ""
+prompt = "#88c0d0"
 # 返回按钮颜色
-# backButton = ""
+backButton = "#81a1c1"
 # 返回按钮悬停颜色
-# backButtonHover = ""
+backButtonHover = "#5e81ac"
 # 副标题颜色
-# subtitle = ""
+subtitle = "#81a1c1"
 # 进度条空槽颜色
-# progressEmpty = ""
+progressEmpty = "#4c566a"
 # 滚动条轨道颜色
-# scrollTrack = ""
+scrollTrack = "#3b4252"
 # 滚动条滑块颜色
-# scrollThumb = ""
+scrollThumb = "#4c566a"
 # 按钮常态颜色
-# button = ""
+button = "#88c0d0"
 # 按钮失焦颜色
-# buttonBlurred = ""
+buttonBlurred = "#81a1c1"
 
 [dark.popup]
-surface = "#383838"
-border = "#5C5C5C"
+surface = "#3b4252"
+border = "#434c5e"
 
 # ── 通知组件配色 ─────────────────────────────────────────
 [dark.notification]
-# 通知背景色
-# surface = ""
+surface = "#3b4252"
 # 信息通知边框色
-# infoBorder = ""
+infoBorder = "#b48ead"
 # 成功通知边框色
-# successBorder = ""
+successBorder = "#a3be8c"
 # 警告通知边框色
-# warningBorder = ""
+warningBorder = "#ebcb8b"
 # 错误通知边框色
-# errorBorder = ""
+errorBorder = "#bf616a"
 
 # ── 状态栏配色 ───────────────────────────────────────────
 [dark.statusBar]
 # 状态栏基底背景色
-# bar = ""
+bar = "#3b4252"
 # 状态栏文字颜色
-# text = ""
+text = "#81a1c1"
 # 面包屑路径颜色
-# breadcrumb = ""
+breadcrumb = "#4c566a"
 # 面包屑分隔符颜色 ">"
-# breadcrumbSep = ""
+breadcrumbSep = "#4c566a"
 # 面包屑悬停颜色
-# breadcrumbHover = ""
+breadcrumbHover = "#5e81ac"
 # 面包屑点击颜色
-# breadcrumbClick = ""
+breadcrumbClick = "#88c0d0"
 # 时间显示颜色
-# time = ""
+time = "#4c566a"
 # 标签块文字颜色
-# nugget = ""
+nugget = "#d8dee9"
 # 标签块背景色
-# nuggetLabel = ""
+nuggetLabel = "#88c0d0"
 
 # ── Markdown 渲染主题 ────────────────────────────────────
 # 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
@@ -98,129 +97,128 @@ light = "light"
 
 [dark.app]
 # Lyric colors
-lyricActive = "#7EC8E3"
-lyricTransition = "#C9B1D4"
-lyricInactive = "#6B6B6B"
-lyricHighlight = "#E8E8E8"
+lyricActive = "#88c0d0"
+lyricTransition = "#b48ead"
+lyricInactive = "#4c566a"
+lyricHighlight = "#d8dee9"
 
 # Playbar colors (ANSI terminal colors — adapt to terminal theme)
-playbarMode = "BrightMagenta"
-playbarVolume = "BrightBlue"
-playbarPlaying = "BrightYellow"
-playbarPaused = "Yellow"
-playbarHeartLiked = "Red"
-playbarHeartUnliked = "White"
-playbarArtist = "BrightBlack"
+playbarMode = "#b48ead"
+playbarVolume = "#88c0d0"
+playbarPlaying = "#a3be8c"
+playbarPaused = "#ebcb8b"
+playbarHeartLiked = "#bf616a"
+playbarHeartUnliked = "#81a1c1"
+playbarArtist = "#616e88"
 
 # Visualizer colors: "random" or hex
 visualizerColorStart = "random"
 visualizerColorEnd = "random"
 
 # 整个应用背景色（默认透明不设置）
-# background = ""
+background = "#2e3440"
 # 右键菜单背景色
-# contextMenuBg = ""
+contextMenuBg = "#3b4252"
 # 右键菜单边框色
-# contextMenuBorder = ""
+contextMenuBorder = "#434c5e"
 # 频谱纵向渐变色
-# spectrumVerticalBg = ""
+spectrumVerticalBg = "#2e3440"
 # 桌面歌词背景色
-# desktopLyricsBg = ""
+desktopLyricsBg = "#2e3440"
 # 登录/认证状态颜色
-# loginError = ""
-# loginSuccess = ""
-# authStatus = ""
+loginError = "#bf616a"
+loginSuccess = "#a3be8c"
+authStatus = "#b48ead"
 # CLI 配置表颜色
-# configTableBorder = ""
-# configTableSelectedFg = ""
-# configTableSelectedBg = ""
+configTableBorder = "#4c566a"
+configTableSelectedFg = "#d8dee9"
+configTableSelectedBg = "#3b4252"
 
 # ── Light Variant ──────────────────────────────────────────
 [light]
-primary = "#EA403F"
-secondary = "#808080"
-accent = "#0000FF"
-success = "#008000"
-warning = "#CC8800"
-error = "#CC0000"
-info = "#008080"
-muted = "#808080"
-hintKey = "#8E8E8E"
-background = "#FAFAFA"
-foreground = "#1A1A1A"
-border = "#CCCCCC"
-surface = "#E8E8E8"
+primary = "#5e81ac"
+secondary = "#81a1c1"
+accent = "#bf616a"
+success = "#719152"
+warning = "#c4952a"
+error = "#bf616a"
+info = "#7a6590"
+muted = "#959eb5"
+hintKey = "#959eb5"
+background = "#eceff4"
+foreground = "#3b4252"
+border = "#d8dee9"
+surface = "#e5e9f0"
 
 [light.highlights]
-menuTitle = "BrightGreen"
+menuTitle = "#5e81ac"
 # 菜单项文字颜色
-# menuItem = ""
+menuItem = "#3b4252"
 # 选中项前景色
-# selectedItem = ""
+selectedItem = "#5e81ac"
 # 选中项背景色
-# selectedItemBg = ""
+selectedItemBg = "#e5e9f0"
 # 鼠标悬停颜色
-# menuItemHover = ""
+menuItemHover = "#bf616a"
 # 选中+悬停颜色
-# selectedItemHover = ""
+selectedItemHover = "#5e81ac"
 # 页面标题颜色
-# title = ""
+title = "#5e81ac"
 # 输入提示颜色
-# prompt = ""
+prompt = "#5e81ac"
 # 返回按钮颜色
-# backButton = ""
+backButton = "#81a1c1"
 # 返回按钮悬停颜色
-# backButtonHover = ""
+backButtonHover = "#bf616a"
 # 副标题颜色
-# subtitle = ""
+subtitle = "#81a1c1"
 # 进度条空槽颜色
-# progressEmpty = ""
+progressEmpty = "#959eb5"
 # 滚动条轨道颜色
-# scrollTrack = ""
+scrollTrack = "#e5e9f0"
 # 滚动条滑块颜色
-# scrollThumb = ""
+scrollThumb = "#959eb5"
 # 按钮常态颜色
-# button = ""
+button = "#5e81ac"
 # 按钮失焦颜色
-# buttonBlurred = ""
+buttonBlurred = "#81a1c1"
 
 [light.popup]
-surface = "#E8E8E8"
-border = "#A8A8A8"
+surface = "#e5e9f0"
+border = "#d8dee9"
 
 # ── 通知组件配色 ─────────────────────────────────────────
 [light.notification]
-# 通知背景色
-# surface = ""
+surface = "#e5e9f0"
 # 信息通知边框色
-# infoBorder = ""
+infoBorder = "#7a6590"
 # 成功通知边框色
-# successBorder = ""
+successBorder = "#719152"
 # 警告通知边框色
-# warningBorder = ""
+warningBorder = "#c4952a"
 # 错误通知边框色
-# errorBorder = ""
+errorBorder = "#bf616a"
 
 # ── 状态栏配色 ───────────────────────────────────────────
 [light.statusBar]
 # 状态栏基底背景色
-# bar = ""
+bar = "#e5e9f0"
 # 状态栏文字颜色
-# text = ""
+text = "#81a1c1"
 # 面包屑路径颜色
-# breadcrumb = ""
+breadcrumb = "#959eb5"
 # 面包屑分隔符颜色 ">"
-# breadcrumbSep = ""
+breadcrumbSep = "#959eb5"
 # 面包屑悬停颜色
-# breadcrumbHover = ""
+breadcrumbHover = "#bf616a"
 # 面包屑点击颜色
-# breadcrumbClick = ""
+breadcrumbClick = "#5e81ac"
 # 时间显示颜色
-# time = ""
+time = "#959eb5"
 # 标签块文字颜色
-# nugget = ""
+nugget = "#3b4252"
 # 标签块背景色
-# nuggetLabel = ""
+nuggetLabel = "#5e81ac"
 
 # ── Markdown 渲染主题 ────────────────────────────────────
 # 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
@@ -230,10 +228,10 @@ dark = "dark"
 light = "light"
 
 [light.app]
-lyricActive = "#3A8FB7"
-lyricTransition = "#8B5E9E"
-lyricInactive = "#808080"
-lyricHighlight = "#E8E8E8"
+lyricActive = "#5e81ac"
+lyricTransition = "#7a6590"
+lyricInactive = "#959eb5"
+lyricHighlight = "#3b4252"
 playbarMode = "BrightMagenta"
 playbarVolume = "BrightBlue"
 playbarPlaying = "BrightYellow"
@@ -245,20 +243,20 @@ visualizerColorStart = "random"
 visualizerColorEnd = "random"
 
 # 整个应用背景色（默认透明不设置）
-# background = ""
+background = "#eceff4"
 # 右键菜单背景色
-# contextMenuBg = ""
+contextMenuBg = "#e5e9f0"
 # 右键菜单边框色
-# contextMenuBorder = ""
+contextMenuBorder = "#d8dee9"
 # 频谱纵向渐变色
-# spectrumVerticalBg = ""
+spectrumVerticalBg = "#eceff4"
 # 桌面歌词背景色
-# desktopLyricsBg = ""
+desktopLyricsBg = "#eceff4"
 # 登录/认证状态颜色
-# loginError = ""
-# loginSuccess = ""
-# authStatus = ""
+loginError = "#bf616a"
+loginSuccess = "#719152"
+authStatus = "#7a6590"
 # CLI 配置表颜色
-# configTableBorder = ""
-# configTableSelectedFg = ""
-# configTableSelectedBg = ""
+configTableBorder = "#959eb5"
+configTableSelectedFg = "#3b4252"
+configTableSelectedBg = "#e5e9f0"

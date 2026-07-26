@@ -1,0 +1,194 @@
+# Gruvbox - Retro Groove Color Scheme
+name = "Gruvbox"
+description = "Warm retro groove color scheme — inspired by the gruvbox palette"
+
+# ── Dark Variant ───────────────────────────────────────────
+[dark]
+primary = "#d79921"
+secondary = "#a89984"
+accent = "#458588"
+success = "#98971a"
+warning = "#d65d0e"
+error = "#cc241d"
+info = "#83a598"
+muted = "#665c54"
+hintKey = "#7c6f64"
+background = "#282828"
+foreground = "#ebdbb2"
+border = "#504945"
+surface = "#3c3836"
+
+[dark.highlights]
+menuTitle = "#b8bb26"
+menuItem = "#ebdbb2" # 菜单项文字
+selectedItem = "#d79921" # 选中项前景
+selectedItemBg = "#3c3836" # 选中项背景
+menuItemHover = "#458588" # 鼠标悬停
+selectedItemHover = "#d79921" # 选中+悬停
+title = "#d79921" # 页面标题
+prompt = "#d79921" # 输入提示
+backButton = "#a89984" # 返回按钮
+backButtonHover = "#458588" # 返回按钮悬停
+subtitle = "#a89984" # 副标题
+progressEmpty = "#665c54" # 进度条空槽
+scrollTrack = "#3c3836" # 滚动条轨道
+scrollThumb = "#665c54" # 滚动条滑块
+button = "#d79921" # 按钮常态
+buttonBlurred = "#a89984" # 按钮失焦
+
+[dark.popup]
+surface = "#3c3836"
+border = "#504945"
+
+# ── 通知组件配色 ─────────────────────────────────────────
+[dark.notification]
+surface = "#3c3836" # 通知背景
+infoBorder = "#83a598" # 信息通知边框
+successBorder = "#98971a" # 成功通知边框
+warningBorder = "#d65d0e" # 警告通知边框
+errorBorder = "#cc241d" # 错误通知边框
+
+# ── 状态栏配色 ───────────────────────────────────────────
+[dark.statusBar]
+bar = "#3c3836" # 状态栏基底背景
+text = "#a89984" # 状态栏文字
+breadcrumb = "#665c54" # 面包屑路径
+breadcrumbSep = "#665c54" # 面包屑分隔符
+breadcrumbHover = "#458588" # 面包屑悬停
+breadcrumbClick = "#d79921" # 面包屑点击
+time = "#665c54" # 时间显示
+nugget = "#ebdbb2" # 标签块文字
+nuggetLabel = "#d79921" # 标签块背景
+
+# ── Markdown 渲染主题 ────────────────────────────────────
+# 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
+# 或自定义 JSON 主题文件路径
+[dark.markdown]
+dark = "dark"
+light = "light"
+
+[dark.app]
+# Lyric colors
+lyricActive = "#458588"
+lyricTransition = "#b16286"
+lyricInactive = "#665c54"
+lyricHighlight = "#ebdbb2"
+
+# Playbar colors (ANSI terminal colors — adapt to terminal theme)
+playbarMode = "#d3869b"
+playbarVolume = "#458588"
+playbarPlaying = "#d79921"
+playbarPaused = "#b8bb26"
+playbarHeartLiked = "#cc241d"
+playbarHeartUnliked = "#a89984"
+playbarArtist = "#928374"
+
+# Visualizer colors: "random" or hex
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+
+# 整个应用背景色（默认透明不设置）
+background = "#282828"
+contextMenuBg = "#3c3836" # 右键菜单背景
+contextMenuBorder = "#504945" # 右键菜单边框
+spectrumVerticalBg = "#282828" # 频谱纵向渐变
+desktopLyricsBg = "#282828" # 桌面歌词背景
+loginError = "#cc241d" # 登录失败
+loginSuccess = "#98971a" # 登录成功
+authStatus = "#83a598" # 认证状态
+configTableBorder = "#665c54" # 配置表边框
+configTableSelectedFg = "#ebdbb2" # 配置表选中前景
+configTableSelectedBg = "#3c3836" # 配置表选中背景
+
+# ── Light Variant ──────────────────────────────────────────
+[light]
+primary = "#af3a03"
+secondary = "#7c6f64"
+accent = "#076678"
+success = "#79740e"
+warning = "#d65d0e"
+error = "#9d0006"
+info = "#427b58"
+muted = "#928374"
+hintKey = "#a89984"
+background = "#fbf1c7"
+foreground = "#3c3836"
+border = "#d5c4a1"
+surface = "#ebdbb2"
+
+[light.highlights]
+menuTitle = "#79740e"
+menuItem = "#3c3836" # 菜单项文字
+selectedItem = "#af3a03" # 选中项前景
+selectedItemBg = "#ebdbb2" # 选中项背景
+menuItemHover = "#076678" # 鼠标悬停
+selectedItemHover = "#af3a03" # 选中+悬停
+title = "#af3a03" # 页面标题
+prompt = "#af3a03" # 输入提示
+backButton = "#7c6f64" # 返回按钮
+backButtonHover = "#076678" # 返回按钮悬停
+subtitle = "#7c6f64" # 副标题
+progressEmpty = "#928374" # 进度条空槽
+scrollTrack = "#ebdbb2" # 滚动条轨道
+scrollThumb = "#928374" # 滚动条滑块
+button = "#af3a03" # 按钮常态
+buttonBlurred = "#7c6f64" # 按钮失焦
+
+[light.popup]
+surface = "#ebdbb2"
+border = "#d5c4a1"
+
+# ── 通知组件配色 ─────────────────────────────────────────
+[light.notification]
+surface = "#ebdbb2" # 通知背景
+infoBorder = "#427b58" # 信息通知边框
+successBorder = "#79740e" # 成功通知边框
+warningBorder = "#d65d0e" # 警告通知边框
+errorBorder = "#9d0006" # 错误通知边框
+
+# ── 状态栏配色 ───────────────────────────────────────────
+[light.statusBar]
+bar = "#ebdbb2" # 状态栏基底背景
+text = "#7c6f64" # 状态栏文字
+breadcrumb = "#928374" # 面包屑路径
+breadcrumbSep = "#928374" # 面包屑分隔符
+breadcrumbHover = "#076678" # 面包屑悬停
+breadcrumbClick = "#af3a03" # 面包屑点击
+time = "#928374" # 时间显示
+nugget = "#3c3836" # 标签块文字
+nuggetLabel = "#af3a03" # 标签块背景
+
+# ── Markdown 渲染主题 ────────────────────────────────────
+# 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
+# 或自定义 JSON 主题文件路径
+[light.markdown]
+dark = "dark"
+light = "light"
+
+[light.app]
+lyricActive = "#076678"
+lyricTransition = "#8f3f71"
+lyricInactive = "#928374"
+lyricHighlight = "#3c3836"
+playbarMode = "#d3869b"
+playbarVolume = "#458588"
+playbarPlaying = "#af3a03"
+playbarPaused = "#79740e"
+playbarHeartLiked = "#9d0006"
+playbarHeartUnliked = "#7c6f64"
+playbarArtist = "#928374"
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+
+# 整个应用背景色（默认透明不设置）
+background = "#fbf1c7"
+contextMenuBg = "#ebdbb2" # 右键菜单背景
+contextMenuBorder = "#d5c4a1" # 右键菜单边框
+spectrumVerticalBg = "#fbf1c7" # 频谱纵向渐变
+desktopLyricsBg = "#fbf1c7" # 桌面歌词背景
+loginError = "#9d0006" # 登录失败
+loginSuccess = "#79740e" # 登录成功
+authStatus = "#427b58" # 认证状态
+configTableBorder = "#928374" # 配置表边框
+configTableSelectedFg = "#3c3836" # 配置表选中前景
+configTableSelectedBg = "#ebdbb2" # 配置表选中背景
