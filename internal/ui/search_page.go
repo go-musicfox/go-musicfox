@@ -45,27 +45,38 @@ type SearchPage struct {
 	netease   *Netease
 	menuTitle *model.MenuItem
 
+	backBtnHovered bool
+	backBtnRowY    int // 0-based 屏幕行
+	backBtnStartX  int // 0-based 起始列
+
 	index        int
 	wordsInput   textinput.Model
 	submitButton string
 	tips         string
 	searchType   SearchType
 	result       any
+
+	// 鼠标点击区域坐标（用于 hover 和点击检测）
+	inputRowY     int // 输入框所在行号（0-based）
+	inputStartX   int // 输入框起始列（0-based）
+	inputEndX     int // 输入框结束列（0-based，闭区间）
+	submitRowY    int // 提交按钮所在行号（0-based）
+	submitStartX  int // 提交按钮起始列（0-based）
+	submitEndX    int // 提交按钮结束列（0-based，闭区间）
+	hoveredInput  bool
+	hoveredSubmit bool
+	mousePointer  string
 }
 
 func NewSearchPage(netease *Netease) (search *SearchPage) {
 	search = &SearchPage{
 		netease:      netease,
-		menuTitle:    &model.MenuItem{Title: "搜索"},
+		menuTitle:    &model.MenuItem{Title: model.T(MsgSearchPageTitle)},
 		wordsInput:   textinput.New(),
-		submitButton: model.GetBlurredSubmitButton(),
+		submitButton: pageSubmitButton(false),
 	}
-	search.wordsInput.Placeholder = " 输入关键词"
-	search.wordsInput.Focus()
-	search.wordsInput.Prompt = model.GetFocusedPrompt()
-	s := textinput.DefaultStyles(true)
-	s.Focused.Text = util.GetPrimaryFontStyle()
-	search.wordsInput.SetStyles(s)
+	search.wordsInput.Placeholder = model.T(MsgSearchPlaceholder)
+	focusPageInput(&search.wordsInput)
 	search.wordsInput.CharLimit = 32
 	return
 }
@@ -78,9 +89,66 @@ func (s *SearchPage) Type() model.PageType {
 	return PageTypeSearch
 }
 
-func (s *SearchPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
+func (s *SearchPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	if _, ok := msg.(tickSearchMsg); ok {
 		return s, nil
+	}
+
+	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
+		mouse := mouseMsg.Mouse()
+		oldBackHovered := s.backBtnHovered
+		oldInputHovered := s.hoveredInput
+		oldSubmitHovered := s.hoveredSubmit
+		oldPointer := s.mousePointer
+
+		// Delegate breadcrumb hover to Main when top status bar is rendered
+		bcChanged, bcOver := pageBreadcrumbMotion(a, s.netease.MustMain(), mouse.X, mouse.Y)
+
+		s.backBtnHovered = mouse.Y == s.backBtnRowY && mouse.X >= s.backBtnStartX && mouse.X < s.backBtnStartX+pageBackButtonWidth
+		s.hoveredInput = mouse.Y == s.inputRowY && mouse.X >= s.inputStartX && mouse.X <= s.inputEndX
+		s.hoveredSubmit = mouse.Y == s.submitRowY && mouse.X >= s.submitStartX && mouse.X <= s.submitEndX
+		s.mousePointer = "default"
+		if s.hoveredInput {
+			s.mousePointer = "text"
+		} else if s.backBtnHovered || s.hoveredSubmit || bcOver {
+			s.mousePointer = "pointer"
+		}
+
+		if s.backBtnHovered != oldBackHovered || s.hoveredInput != oldInputHovered || s.hoveredSubmit != oldSubmitHovered || s.mousePointer != oldPointer || bcChanged {
+			return s, tea.Sequence(tickSearch(time.Nanosecond), a.SetMousePointer(s.mousePointer))
+		}
+		return s.updateSearchInputs(msg)
+	}
+
+	if clickMsg, ok := msg.(tea.MouseClickMsg); ok {
+		if clickMsg.Mouse().Button == tea.MouseLeft {
+			mouse := clickMsg.Mouse()
+			// Breadcrumb click delegates to Main navigation (top status bar only)
+			if newPage := pageBreadcrumbClick(a, s.netease.MustMain(), mouse.X, mouse.Y); newPage != nil {
+				s.Reset()
+				return newPage, s.netease.RerenderCmd(true)
+			}
+			if mouse.Y == s.backBtnRowY && mouse.X >= s.backBtnStartX && mouse.X < s.backBtnStartX+pageBackButtonWidth {
+				s.Reset()
+				return s.netease.MustMain(), s.netease.RerenderCmd(true)
+			}
+
+			// 点击输入框：聚焦并将光标移动到点击位置
+			if mouse.Y == s.inputRowY && mouse.X >= s.inputStartX && mouse.X <= s.inputEndX {
+				s.index = 0
+				focusPageInput(&s.wordsInput)
+				setPageInputCursor(&s.wordsInput, mouse.X, s.inputStartX)
+				s.submitButton = pageSubmitButton(false)
+				return s, tickSearch(time.Nanosecond)
+			}
+
+			// 点击提交按钮：触发提交
+			if mouse.Y == s.submitRowY && mouse.X >= s.submitStartX && mouse.X <= s.submitEndX {
+				s.index = 1
+				return s.enterHandler()
+			}
+		}
+		return s.updateSearchInputs(msg)
 	}
 
 	key, ok := msg.(tea.KeyPressMsg)
@@ -124,30 +192,16 @@ func (s *SearchPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			s.index = len(inputs)
 		}
 
-		for i := 0; i <= len(inputs)-1; i++ {
+		for i := range inputs {
 			if i == s.index {
-				// Set focused state
-				inputs[i].Focus()
-				inputs[i].Prompt = model.GetFocusedPrompt()
-				s := textinput.DefaultStyles(true)
-				s.Focused.Text = util.GetPrimaryFontStyle()
-				inputs[i].SetStyles(s)
+				focusPageInput(&inputs[i])
 				continue
 			}
-			// Remove focused state
-			inputs[i].Blur()
-			inputs[i].Prompt = model.GetBlurredPrompt()
-			s := textinput.DefaultStyles(true)
-			s.Focused.Text = lipgloss.NewStyle()
-			inputs[i].SetStyles(s)
+			blurPageInput(&inputs[i])
 		}
 
 		s.wordsInput = inputs[0]
-		if s.index == len(inputs) {
-			s.submitButton = model.GetFocusedSubmitButton()
-		} else {
-			s.submitButton = model.GetBlurredSubmitButton()
-		}
+		s.submitButton = pageSubmitButton(s.index == len(inputs))
 
 		return s, nil
 	}
@@ -158,7 +212,7 @@ func (s *SearchPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 
 func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 	if len(s.wordsInput.Value()) <= 0 {
-		s.tips = util.SetFgStyle("关键词不得为空", lipgloss.BrightRed)
+		s.tips = util.SetFgStyle(model.T(MsgSearchKeywordRequired), lipgloss.BrightRed)
 		return s, nil
 	}
 	loading := model.NewLoading(s.netease.MustMain(), s.menuTitle)
@@ -180,10 +234,10 @@ func (s *SearchPage) enterHandler() (model.Page, tea.Cmd) {
 	codeType := _struct.CheckCode(code)
 	switch codeType {
 	case _struct.UnknownError:
-		s.tips = util.SetFgStyle("未知错误，请稍后再试~", lipgloss.BrightRed)
+		s.tips = util.SetFgStyle(model.T(MsgSearchUnknownError), lipgloss.BrightRed)
 		return s, tickSearch(time.Nanosecond)
 	case _struct.NetworkError:
-		s.tips = util.SetFgStyle("网络异常，请稍后再试~", lipgloss.BrightRed)
+		s.tips = util.SetFgStyle(model.T(MsgSearchNetworkError), lipgloss.BrightRed)
 		return s, tickSearch(time.Nanosecond)
 	case _struct.Success:
 		s.result = response
@@ -217,10 +271,17 @@ func (s *SearchPage) View(a *model.App) string {
 		main    = s.netease.MustMain()
 	)
 
+	lineCount := 0
+	write := func(text string) {
+		builder.WriteString(text)
+		lineCount += strings.Count(text, "\n")
+	}
+
 	// title
 	if configs.AppConfig.Theme.ShowTitle {
-		builder.WriteString(main.TitleView(a, &top))
+		write(pageTitleView(a, main, &top))
 	} else {
+		write("\n")
 		top++
 	}
 
@@ -230,60 +291,45 @@ func (s *SearchPage) View(a *model.App) string {
 		typeMenu := menuViews[main.SelectedIndex()]
 		s.menuTitle.Subtitle = typeMenu.Title
 	}
-	builder.WriteString(main.MenuTitleView(a, &top, s.menuTitle))
-	builder.WriteString("\n\n\n")
-	top += 2
+	topBefore := top
+	write(pageMenuTitleViewWithBack(a, main, &top, s.menuTitle, s.backBtnHovered))
+	s.backBtnRowY = pageMenuTitleRow(a, main, topBefore)
+	s.backBtnStartX = max(0, main.MenuStartColumn()-pageBackButtonWidth)
+	write("\n\n")
 
-	inputs := []textinput.Model{
-		s.wordsInput,
-	}
-
-	for i, input := range inputs {
-		if main.MenuStartColumn() > 0 {
-			builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()))
-		}
-
-		builder.WriteString(input.View())
-
-		var valueLen int
-		if input.Value() == "" {
-			valueLen = runewidth.StringWidth(input.Placeholder)
-		} else {
-			valueLen = runewidth.StringWidth(input.Value())
-		}
-		if spaceLen := a.WindowWidth() - main.MenuStartColumn() - valueLen - 3; spaceLen > 0 {
-			builder.WriteString(strings.Repeat(" ", spaceLen))
-		}
-
-		top++
-
-		if i < len(inputs)-1 {
-			builder.WriteString("\n\n")
-			top++
-		}
-	}
-
-	builder.WriteString("\n\n")
-	top++
 	if main.MenuStartColumn() > 0 {
-		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()))
+		write(strings.Repeat(" ", main.MenuStartColumn()))
 	}
-	builder.WriteString(s.tips)
-	builder.WriteString("\n\n")
-	top++
+	s.inputRowY = lineCount
+	s.inputStartX = max(0, main.MenuStartColumn())
+	s.inputEndX = max(s.inputStartX, a.WindowWidth()-1)
+	s.wordsInput.SetWidth(max(1, a.WindowWidth()-s.inputStartX-runewidth.StringWidth(s.wordsInput.Prompt)))
+	write(pageInputView(s.wordsInput, s.hoveredInput))
+
+	write("\n\n")
 	if main.MenuStartColumn() > 0 {
-		builder.WriteString(strings.Repeat(" ", main.MenuStartColumn()))
+		write(strings.Repeat(" ", main.MenuStartColumn()))
 	}
-	builder.WriteString(s.submitButton)
-	spaceLen := a.WindowWidth() - main.MenuStartColumn() - runewidth.StringWidth(types.SubmitText)
+	write(s.tips)
+	write("\n\n")
+	if main.MenuStartColumn() > 0 {
+		write(strings.Repeat(" ", main.MenuStartColumn()))
+	}
+	s.submitRowY = lineCount
+	s.submitStartX = max(0, main.MenuStartColumn())
+	submitButtonView := s.submitButton
+	if s.hoveredSubmit {
+		submitButtonView = pageButtonHoverView(pageSubmitText())
+	}
+	s.submitEndX = s.submitStartX + lipgloss.Width(submitButtonView) - 1
+	write(submitButtonView)
+	spaceLen := a.WindowWidth() - main.MenuStartColumn() - lipgloss.Width(submitButtonView)
 	if spaceLen > 0 {
-		builder.WriteString(strings.Repeat(" ", spaceLen))
+		write(strings.Repeat(" ", spaceLen))
 	}
-	builder.WriteString("\n")
+	write("\n")
 
-	if a.WindowHeight() > top+3 {
-		builder.WriteString(strings.Repeat("\n", a.WindowHeight()-top-3))
-	}
+	fillPageHeight(&builder, a.WindowHeight())
 
 	return builder.String()
 }
@@ -297,13 +343,9 @@ func (s *SearchPage) Reset() {
 	s.wordsInput.SetValue("")
 	s.wordsInput.Reset()
 	s.index = 0
-	s.wordsInput.Focus()
-	s.wordsInput.Prompt = model.GetFocusedPrompt()
-	st := textinput.DefaultStyles(true)
-	st.Focused.Text = util.GetPrimaryFontStyle()
-	s.wordsInput.SetStyles(st)
+	focusPageInput(&s.wordsInput)
 	s.wordsInput.CharLimit = 32
-	s.submitButton = model.GetBlurredSubmitButton()
+	s.submitButton = pageSubmitButton(false)
 }
 
 func (s *SearchPage) updateSearchInputs(msg tea.Msg) (model.Page, tea.Cmd) {

@@ -40,7 +40,7 @@ func NewLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
 	keyInput.Focus()
-	keyInput.Prompt = model.GetFocusedPrompt()
+	keyInput.Prompt = util.GetFocusedPrompt()
 	s := textinput.DefaultStyles(true)
 	s.Focused.Text = util.GetPrimaryFontStyle()
 	keyInput.SetStyles(s)
@@ -58,7 +58,7 @@ func NewLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 		menuTitle:    &model.MenuItem{Title: "Lastfm API account"},
 		keyInput:     keyInput,
 		secretInput:  secretInput,
-		submitButton: model.GetBlurredSubmitButton(),
+		submitButton: util.GetBlurredSubmitButton(),
 
 		reloadText:  "重载",
 		clearText:   "清空",
@@ -66,8 +66,8 @@ func NewLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 		reloadIndex: 3,
 		clearIndex:  4,
 	}
-	page.reloadButton = model.GetBlurredButton(page.reloadText)
-	page.clearButton = model.GetBlurredButton(page.clearText)
+	page.reloadButton = util.GetBlurredButton(page.reloadText)
+	page.clearButton = util.GetBlurredButton(page.clearText)
 	page.reloadApiAccount()
 	page.tips = ""
 	return page
@@ -142,7 +142,7 @@ func (l *LastfmCustomApiPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea
 			if i != l.index {
 				// Remove focused state
 				inputs[i].Blur()
-				inputs[i].Prompt = model.GetBlurredPrompt()
+				inputs[i].Prompt = util.GetBlurredPrompt()
 				s := textinput.DefaultStyles(true)
 				s.Focused.Text = lipgloss.NewStyle()
 				inputs[i].SetStyles(s)
@@ -150,7 +150,7 @@ func (l *LastfmCustomApiPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea
 			}
 			// Set focused state
 			inputs[i].Focus()
-			inputs[i].Prompt = model.GetFocusedPrompt()
+			inputs[i].Prompt = util.GetFocusedPrompt()
 			s := textinput.DefaultStyles(true)
 			s.Focused.Text = util.GetPrimaryFontStyle()
 			inputs[i].SetStyles(s)
@@ -163,23 +163,23 @@ func (l *LastfmCustomApiPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea
 
 		if l.index == submitIndex {
 			l.tips = util.SetFgStyle("保存至数据库，优先使用此值", lipgloss.BrightBlue)
-			l.submitButton = model.GetFocusedSubmitButton()
+			l.submitButton = util.GetFocusedSubmitButton()
 		} else {
-			l.submitButton = model.GetBlurredSubmitButton()
+			l.submitButton = util.GetBlurredSubmitButton()
 		}
 
 		if l.index == l.reloadIndex {
 			l.tips = util.SetFgStyle("从数据库或本次启动时的配置文件中加载 API account", lipgloss.BrightBlue)
-			l.reloadButton = model.GetFocusedButton(l.reloadText)
+			l.reloadButton = util.GetFocusedButton(l.reloadText)
 		} else {
-			l.reloadButton = model.GetBlurredButton(l.reloadText)
+			l.reloadButton = util.GetBlurredButton(l.reloadText)
 		}
 
 		if l.index == l.clearIndex {
 			l.tips = util.SetFgStyle("清除当前值及已设置值", lipgloss.BrightBlue)
-			l.clearButton = model.GetFocusedButton(l.clearText)
+			l.clearButton = util.GetFocusedButton(l.clearText)
 		} else {
-			l.clearButton = model.GetBlurredButton(l.clearText)
+			l.clearButton = util.GetBlurredButton(l.clearText)
 		}
 
 		return l, nil
@@ -198,13 +198,13 @@ func (l *LastfmCustomApiPage) View(a *model.App) string {
 
 	// title
 	if configs.AppConfig.Theme.ShowTitle {
-		builder.WriteString(mainPage.TitleView(a, &top))
+		builder.WriteString(pageTitleView(a, mainPage, &top))
 	} else {
 		top++
 	}
 
 	// menu title
-	builder.WriteString(mainPage.MenuTitleView(a, &top, l.menuTitle))
+	builder.WriteString(pageMenuTitleView(a, mainPage, &top, l.menuTitle))
 	builder.WriteString("\n\n\n")
 	top += 2
 

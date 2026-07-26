@@ -53,6 +53,12 @@ type QRLoginPage struct {
 	statusMsg  string
 	loading    *model.Loading
 	AfterLogin LoginCallback
+
+	backBtnHovered bool
+	backBtnRowY    int
+	backBtnStartX  int
+	backBtnEndX    int
+	mousePointer   string
 }
 
 func (p *QRLoginPage) IgnoreQuitKeyMsg(msg tea.KeyMsg) bool {
@@ -68,10 +74,10 @@ func NewQRLoginPage(netease *Netease, from model.Page, afterLogin LoginCallback)
 		netease:    netease,
 		from:       from,
 		AfterLogin: afterLogin,
-		statusMsg:  "正在生成二维码，请稍候...",
+		statusMsg:  model.T(MsgQRLoginGenerating),
 		isExpired:  false,
 	}
-	page.loading = model.NewLoading(netease.MustMain(), &model.MenuItem{Title: "二维码登录"})
+	page.loading = model.NewLoading(netease.MustMain(), &model.MenuItem{Title: model.T(MsgQRLoginPageTitle)})
 	page.loading.DisplayNotOnlyOnMain()
 	return page
 }
@@ -85,15 +91,42 @@ func (p *QRLoginPage) Type() model.PageType {
 	return QRLoginPageType
 }
 
-func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
+func (p *QRLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMotionMsg:
+		mouse := msg.Mouse()
+		oldHovered := p.backBtnHovered
+		oldPointer := p.mousePointer
+		bcChanged, bcOver := pageBreadcrumbMotion(a, p.netease.MustMain(), mouse.X, mouse.Y)
+		p.backBtnHovered = mouse.Y == p.backBtnRowY && mouse.X >= p.backBtnStartX && mouse.X < p.backBtnEndX
+		p.mousePointer = "default"
+		if p.backBtnHovered || bcOver {
+			p.mousePointer = "pointer"
+		}
+		if p.backBtnHovered != oldHovered || p.mousePointer != oldPointer || bcChanged {
+			return p, tea.Sequence(p.netease.RerenderCmd(true), a.SetMousePointer(p.mousePointer))
+		}
+		return p, nil
+
+	case tea.MouseClickMsg:
+		mouse := msg.Mouse()
+		if mouse.Button == tea.MouseLeft {
+			if newPage := pageBreadcrumbClick(a, p.netease.MustMain(), mouse.X, mouse.Y); newPage != nil {
+				return newPage, p.netease.RerenderCmd(true)
+			}
+			if mouse.Y == p.backBtnRowY && mouse.X >= p.backBtnStartX && mouse.X < p.backBtnEndX {
+				return p.back()
+			}
+		}
+		return p, nil
+
 	case qrGeneratedMsg:
 		p.loading.Complete()
 		p.qrCodeView = msg.qrView
 		p.uniKey = msg.uniKey
 		p.qrCodePath = msg.qrCodePath
 		p.isExpired = false
-		p.statusMsg = "请使用网易云音乐APP扫码"
+		p.statusMsg = model.T(MsgQRLoginScanPrompt)
 		return p, tickPolling(time.Second)
 
 	case tickPollingMsg:
@@ -105,7 +138,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 	case qrStatusMsg:
 		switch int(msg.code) {
 		case 803: // 登录成功
-			p.statusMsg = "登录成功！"
+			p.statusMsg = model.T(MsgQRLoginSuccess)
 			if p.qrCodePath != "" {
 				_ = os.Remove(p.qrCodePath)
 			}
@@ -115,7 +148,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			}
 			return p.netease.MustMain(), cmd
 		case 800: // 已失效
-			p.statusMsg = "二维码已失效，请按 'b' 或 'esc' 返回"
+			p.statusMsg = model.T(MsgQRLoginExpiredAction)
 			p.isExpired = true
 			if p.qrCodePath != "" {
 				_ = os.Remove(p.qrCodePath)
@@ -123,33 +156,30 @@ func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 			}
 			return p, nil
 		case 801: // 等待扫码
-			p.statusMsg = "等待扫码..."
+			p.statusMsg = model.T(MsgQRLoginWaitingScan)
 			return p, tickPolling(time.Second)
 		case 802: // 已扫码待确认
-			p.statusMsg = "已扫码，请在手机上确认登录"
+			p.statusMsg = model.T(MsgQRLoginWaitingConfirm)
 			return p, tickPolling(time.Second)
 		default:
-			p.statusMsg = fmt.Sprintf("未知状态: %d，请返回重试", int(msg.code))
+			p.statusMsg = fmt.Sprintf(model.T(MsgQRLoginUnknownStatus), int(msg.code))
 			return p, nil
 		}
 
 	case qrErrorMsg:
 		p.loading.Complete()
-		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), lipgloss.BrightRed)
+		p.statusMsg = util.SetFgStyle(model.T(MsgQRLoginError)+msg.err.Error(), lipgloss.BrightRed)
 		return p, nil
 
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "b", "esc", "q":
-			if p.qrCodePath != "" {
-				_ = os.Remove(p.qrCodePath)
-			}
-			return p.from, p.netease.RerenderCmd(true)
+			return p.back()
 		case "v":
 			if p.qrCodePath != "" && !p.isExpired {
 				err := open.Start(p.qrCodePath)
 				if err != nil {
-					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), lipgloss.BrightRed)
+					p.statusMsg = util.SetFgStyle(model.T(MsgQRLoginOpenImageFailed)+err.Error(), lipgloss.BrightRed)
 				}
 			}
 		}
@@ -158,13 +188,24 @@ func (p *QRLoginPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
 	return p, nil
 }
 
+func (p *QRLoginPage) back() (model.Page, tea.Cmd) {
+	if p.qrCodePath != "" {
+		_ = os.Remove(p.qrCodePath)
+	}
+	return p.from, p.netease.RerenderCmd(true)
+}
+
 func (p *QRLoginPage) View(a *model.App) string {
 	var builder strings.Builder
 
 	var top int
 	mainPage := p.netease.MustMain()
-	builder.WriteString(mainPage.TitleView(a, &top))
-	builder.WriteString(mainPage.MenuTitleView(a, &top, &model.MenuItem{Title: "二维码登录"}))
+	builder.WriteString(pageTitleView(a, mainPage, &top))
+	topBefore := top
+	builder.WriteString(pageMenuTitleViewWithBack(a, mainPage, &top, &model.MenuItem{Title: model.T(MsgQRLoginPageTitle)}, p.backBtnHovered))
+	p.backBtnRowY = pageMenuTitleRow(a, mainPage, topBefore)
+	p.backBtnStartX = max(0, mainPage.MenuStartColumn()-pageBackButtonWidth)
+	p.backBtnEndX = p.backBtnStartX + pageBackButtonWidth
 	builder.WriteString("\n\n")
 	top += 2
 
@@ -182,7 +223,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 		space := strings.Repeat(" ", padding)
 
 		if p.isExpired {
-			expiredMsg := "二维码已失效"
+			expiredMsg := model.T(MsgQRLoginExpired)
 			msgWidth := runewidth.StringWidth(expiredMsg)
 			msgPaddingLen := (qrWidth - msgWidth) / 2
 			if msgPaddingLen < 0 {
@@ -256,7 +297,7 @@ func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
 		return qrErrorMsg{err}
 	}
 	if code != 200 || url == "" {
-		return qrErrorMsg{fmt.Errorf("无法获取二维码, code: %.0f", code)}
+		return qrErrorMsg{fmt.Errorf("%s", fmt.Sprintf(model.T(MsgQRLoginGetCodeFailed), code))}
 	}
 
 	// 生成二维码

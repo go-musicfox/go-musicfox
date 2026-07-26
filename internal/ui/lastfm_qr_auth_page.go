@@ -119,8 +119,8 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 
 	var top int
 	mainPage := p.netease.MustMain()
-	builder.WriteString(mainPage.TitleView(a, &top))
-	builder.WriteString(mainPage.MenuTitleView(a, &top, &model.MenuItem{Title: "Last.fm 二维码授权"}))
+	builder.WriteString(pageTitleView(a, mainPage, &top))
+	builder.WriteString(pageMenuTitleView(a, mainPage, &top, &model.MenuItem{Title: "Last.fm 二维码授权"}))
 	builder.WriteString("\n\n")
 	top += 2
 
