@@ -3,6 +3,8 @@ package ui
 import (
 	"testing"
 
+	"github.com/anhoder/foxful-cli/util"
+
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -19,7 +21,7 @@ func TestFormatQueueAndQualityIncludesMusicfox(t *testing.T) {
 	player := &Player{playlistManager: playlist.NewPlaylistManager()}
 	player.InitSongManager(0, []structs.Song{{Id: 1}, {Id: 2}})
 
-	const want = "musicfox · [1/2] · 无损"
+	want := util.SetFgStyle("musicfox", util.GetPrimaryColor()) + " · [1/2] · 无损"
 	if got := formatQueueAndQuality(player); got != want {
 		t.Fatalf("formatQueueAndQuality() = %q, want %q", got, want)
 	}

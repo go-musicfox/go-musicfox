@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -56,7 +57,7 @@ func formatQueueAndQuality(player *Player) string {
 	quality := configs.AppConfig.Player.SongLevel
 	qualityName := qualityDisplayName(quality)
 
-	return fmt.Sprintf("musicfox · %s · %s", position, qualityName)
+	return fmt.Sprintf("%s · %s · %s", util.SetFgStyle("musicfox", util.GetPrimaryColor()), position, qualityName)
 }
 
 // NewQueueQualityStatusBar 创建带队列位置与音质中间文本的 DefaultStatusBar。
