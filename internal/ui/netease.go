@@ -67,10 +67,6 @@ type Netease struct {
 	playbarHoveredElement PlaybarElement
 
 	desktopLyrics desktop_lyrics.Controller
-
-	// pendingChangelog is set in InitHook when the changelog should be shown
-	// after the startup page completes and the main page becomes active.
-	pendingChangelog bool
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -212,22 +208,6 @@ func (n *Netease) InitHook(_ *model.App) {
 
 	appCookieJar = jar
 	util.SetGlobalCookieJar(appCookieJar)
-
-	// 首次启动新版本 → 延迟到主页面后显示更新日志
-	{
-		table := storage.NewTable()
-		jsonStr, _ := table.GetByKVModel(storage.ChangelogSeen{})
-		var seen storage.ChangelogSeen
-		if len(jsonStr) > 0 {
-			_ = json.Unmarshal(jsonStr, &seen)
-		}
-		if configs.AppConfig.Main.Debug || seen.Version == "" || version.CompareVersion(types.AppVersion, seen.Version, false) {
-			n.pendingChangelog = true
-			if !configs.AppConfig.Main.Debug {
-				_ = table.SetByKVModel(storage.ChangelogSeen{Version: types.AppVersion}, storage.ChangelogSeen{})
-			}
-		}
-	}
 
 	// 获取用户信息
 	errorx.Go(func() {
@@ -423,6 +403,38 @@ func (n *Netease) InitHook(_ *model.App) {
 					Title: "自动播放失败",
 					Text:  err.Error(),
 					Level: notify.ToastError,
+				})
+			}
+		}
+
+		// changelog: 首次启动新版本或 debug 模式 → 弹更新日志
+		// 使用 AfterFunc 延迟弹窗，确保 startup 页完成、主页面已进入
+		{
+			slog.Debug("changelog: entering check",
+				"debug", configs.AppConfig.Main.Debug,
+				"appVersion", types.AppVersion,
+				"app", n.App != nil,
+			)
+			jsonStr, _ := table.GetByKVModel(storage.ChangelogSeen{})
+			var seen storage.ChangelogSeen
+			if len(jsonStr) > 0 {
+				_ = json.Unmarshal(jsonStr, &seen)
+			}
+			shouldShow := configs.AppConfig.Main.Debug || seen.Version == "" || version.CompareVersion(types.AppVersion, seen.Version, false)
+			slog.Debug("changelog: shouldShow",
+				"shouldShow", shouldShow,
+				"debug", configs.AppConfig.Main.Debug,
+				"seenVersion", seen.Version,
+			)
+			if shouldShow {
+				if !configs.AppConfig.Main.Debug {
+					_ = table.SetByKVModel(storage.ChangelogSeen{Version: types.AppVersion}, storage.ChangelogSeen{})
+				}
+				app := n.App
+				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
+				time.AfterFunc(1500*time.Millisecond, func() {
+					slog.Debug("changelog: AfterFunc triggered, showing popup")
+					showChangelogPopup(app)
 				})
 			}
 		}
@@ -657,12 +669,7 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
 	default:
-		model, cmd := n.App.Update(msg)
-		// Show pending changelog popup once the main page becomes active (startup completed)
-		if n.pendingChangelog && n.App.CurPage() == n.App.Main() {
-			n.pendingChangelog = false
-			showChangelogPopup(n.App)
-		}
-		return model, cmd
+		_, cmd := n.App.Update(msg)
+		return n, cmd
 	}
 }
