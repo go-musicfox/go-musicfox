@@ -102,7 +102,6 @@ go-musicfox 是使用 Go 编写的网易云音乐 TUI（终端用户界面）客
 | `github.com/go-viper/mapstructure/v2` | v2.4.0 | 配置反序列化 |
 | `github.com/adrg/xdg` | v0.5.3 | XDG 基础目录规范支持 (Linux) |
 | `github.com/gookit/gcli/v2` | *(fork 版)* | CLI 命令框架 — 使用 `anhoder/gcli/v2 v2.3.5` |
-| `github.com/gookit/ini/v2` | v2.2.2 | 旧版 INI 格式配置文件迁移用 |
 | `github.com/robotn/gohook` | *(fork 版)* | 全局热键 — 使用 `go-musicfox/gohook v0.41.1` |
 | `github.com/gen2brain/beeep` | *(fork 版)* | 桌面通知 |
 | `github.com/go-musicfox/notificator` | v0.1.2 | 备用桌面通知 (项目自有) |

@@ -20,7 +20,7 @@ go-musicfox 是基于 Go 语言和 [bubbletea](https://github.com/charmbracelet/
                 │   CLI 命令层        │
                 │  (internal/commands)│
                 │  netease / config   │
-                │  migrate            │
+                │  reset              │
                 └──────────┬──────────┘
                            │
 ┌──────────────────────────▼───────────────────────────────────────┐
@@ -110,14 +110,13 @@ go-musicfox 是基于 Go 语言和 [bubbletea](https://github.com/charmbracelet/
 
 1. **CLI 应用创建**: 基于 `gookit/gcli` 创建命令行应用
 2. **配置加载** (`loadConfig()`):
-   - 检测旧版 INI 配置文件 → 提示迁移
    - 内嵌默认 TOML 配置 → 复制到用户配置目录
    - 解析 TOML 配置 (`configs.NewConfigFromTomlFile`)
 3. **netease-music SDK 配置**: UNM (Unlock Netease Music) 参数透传
 4. **子命令注册**:
    - `netease` (PlayerCommand) - 启动 TUI 播放器 (默认命令)
    - `config` - 配置管理
-   - `migrate` - 配置迁移
+   - `reset` - 清理缓存
 
 ### 启动 TUI (PlayerCommand 执行)
 

@@ -67,7 +67,6 @@
 | `internal/player/beep_player.go:287-291` | FLAC 格式 Seek 会卡住 20-40 秒，仅支持 MP3 跳转 |
 | `internal/keybindings/keybindings.go:551,555` | 键绑定解析器："," 字符的快捷键冲突，Unicode 空格可能被错误 trim |
 | `internal/ui/operate.go:415` | 类型断言逻辑应进一步通用化 |
-| `cmd/musicfox.go:39` | "后续版本移除" — migrate 命令的临时兼容处理待清理 |
 
 ### 7. 超大文件 — 可维护性风险
 
@@ -78,7 +77,6 @@
 | `internal/ui/event_handler.go` | 711 行 | 40+ 键盘操作集中处理 |
 | `internal/ui/player.go` | 684 行 | 播放逻辑复杂，状态管理分散 |
 | `internal/ui/cover_renderer.go` | 678 行 | 渲染、缓存、动画逻辑混合 |
-| `internal/commands/migrate.go` | 642 行 | 配置迁移逻辑过于庞大 |
 | `internal/player/dlna_player.go` | 591 行 | DLNA 协议处理复杂 |
 | `internal/player/mpv_player.go` | 584 行 | IPC 控制逻辑集中 |
 | `internal/keybindings/keybindings.go` | 581 行 | 键解析和操作定义混合 |

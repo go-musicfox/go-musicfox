@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/anhoder/foxful-cli/util"
@@ -38,13 +36,6 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.PureMode, "pure", "", false, "start with default config in a temporary directory")
 	}
 
-	// FIXME: 后续版本移除
-	if slices.Contains(os.Args, "migrate") {
-		app.Add(commands.NewMigrateCommand())
-		app.Run()
-		return
-	}
-
 	// --pure flag: start with a temporary directory as MUSICFOX_ROOT
 	if isFlagTrue("pure") {
 		pureDir, err := os.MkdirTemp("", "musicfox-pure-*")
@@ -54,6 +45,8 @@ func musicfox() {
 		}
 		mfoxapp.SetupPureRoot(pureDir)
 		commands.GlobalOptions.PureMode = true
+		// 纯净模式下忽略会绕过 MUSICFOX_ROOT 的登录态环境变量，确保干净启动
+		_ = os.Unsetenv("MUSICFOX_COOKIE")
 		fmt.Fprintf(os.Stderr, "Pure mode enabled. Temp root: %s\n", pureDir)
 	}
 
@@ -81,7 +74,6 @@ func musicfox() {
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
 	app.Add(commands.NewResetCommand())
-	app.Add(commands.NewMigrateCommand())
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()
@@ -89,20 +81,7 @@ func musicfox() {
 
 // loadConfig 加载配置
 func loadConfig() {
-	configDir := mfoxapp.ConfigDir()
 	configPath := mfoxapp.ConfigFilePath()
-
-	// 检测旧版 INI 配置文件（migrate 命令不需要检测）
-	iniPath := filepath.Join(configDir, "go-musicfox.ini")
-	if _, err := os.Stat(iniPath); err == nil {
-		fmt.Fprintf(os.Stderr, "⚠ 检测到旧版 INI 配置文件\n")
-		fmt.Fprintf(os.Stderr, "新版本不再支持 INI 格式的配置文件，请运行以下命令进行迁移：\n")
-		fmt.Fprintf(os.Stderr, "  %s migrate\n\n", types.AppName)
-		fmt.Fprintf(os.Stderr, "或手动删除旧配置文件后重新运行：\n")
-		fmt.Fprintf(os.Stderr, "  rm %s\n\n", iniPath)
-		fmt.Fprintf(os.Stderr, "迁移完成后，应用将使用新的 TOML 格式配置文件。\n")
-		os.Exit(1)
-	}
 
 	// 如果配置文件不存在，从内嵌文件复制
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {

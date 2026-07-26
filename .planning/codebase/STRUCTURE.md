@@ -341,7 +341,6 @@ cmd/musicfox.go
 | `internal/runtime/runtime_darwin.go` | ~30 | macOS 平台运行时 (含应用支持目录设置) |
 | `internal/commands/netease.go` | 76 | TUI 启动命令，组件装配 |
 | `internal/commands/config.go` | ~60 | 配置管理命令 |
-| `internal/commands/migrate.go` | ~50 | 配置迁移命令 (INI → TOML) |
 | `internal/ui/netease.go` | 463 | **核心协调器**，所有 UI 组件的容器 |
 | `internal/ui/menu.go` | 62 | Menu 接口定义 |
 | `internal/ui/menu_main.go` | ~200 | 主菜单 (首页) |

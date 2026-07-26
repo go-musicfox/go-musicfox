@@ -635,8 +635,6 @@ song = "分享{{if .SongArtists}}{{.SongArtists}}的{{end}}单曲《{{.SongName}
 >
 > 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
 
-> **注意**：配置文件格式已从 INI 迁移至 TOML。如果您的旧版本配置文件仍为 INI 格式，请运行 `musicfox migrate` 命令进行迁移，或运行 `musicfox help migrate` 查看更多选项。
-
 ## CHANGELOG
 
 See [CHANGELOG.md](./CHANGELOG.md)
