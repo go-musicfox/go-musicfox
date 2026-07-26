@@ -202,9 +202,10 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if r.lyricLines == 0 {
 		fillingLines := endRow - main.MenuBottomRow() - specLines
 		if fillingLines > 1 {
-			// strings.Repeat("\n", N) produces N+1 visual rows in JoinVertical.
-			// Use N-1 to get exactly fillingLines rows.
-			return strings.Repeat("\n", fillingLines-1), fillingLines
+			// JoinVertical inserts a separator before this component. The lyric
+			// placeholder still needs fillingLines+1 visual rows so the progress
+			// bar reaches the final content row.
+			return strings.Repeat("\n", fillingLines), fillingLines + 1
 		} else if fillingLines == 1 {
 			if main.StatusBar() != nil && main.StatusBarPosition() == model.StatusBarBottom {
 				return "", 1

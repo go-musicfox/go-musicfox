@@ -119,18 +119,19 @@ func renderTopStatusProgressBarRow(t *testing.T, width, height int) int {
 		tea.WithOutput(io.Discard),
 	}
 
-	app := model.NewApp(opts)
-	netease := &Netease{App: app}
+	netease := &Netease{}
 	state := songInfoTestState{song: structs.Song{Id: 1, Name: "Layout Song", Duration: time.Minute}}
 	opts.Components = []model.Component{
 		&LyricRenderer{netease: netease},
 		NewSongInfoRenderer(netease, state),
 		NewProgressRenderer(netease, state),
 	}
+	app := model.NewApp(opts)
+	netease.App = app
 	_ = app.Run()
 	_, _ = app.Update(tea.WindowSizeMsg{Width: width, Height: height})
-
-	return visibleRowContaining(t, app.Main().View(app), "00:00/01:00", height)
+	view := app.Main().View(app)
+	return visibleRowContaining(t, view, "00:00/01:00", height)
 }
 
 func visibleRowContaining(t *testing.T, view, marker string, height int) int {
@@ -153,6 +154,10 @@ type pageLayoutTestMenu struct {
 
 func (pageLayoutTestMenu) GetMenuKey() string {
 	return "page-layout-test"
+}
+
+func (pageLayoutTestMenu) HelpHints() []model.HelpHint {
+	return nil
 }
 
 func (m pageLayoutTestMenu) MenuViews() []model.MenuItem {
