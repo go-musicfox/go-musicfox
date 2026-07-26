@@ -230,6 +230,9 @@ neteaseCookie = ""
 
 # 主题设置
 [theme]
+# 活跃主题名称（对应主题文件中的 name 字段，默认 "NetEase Red"）
+# 主题文件存放于 embed/themes/（内置）和 ~/.config/go-musicfox/themes/（用户自定义）
+activeTheme = "NetEase Red"
 # 是否在界面顶部显示标题
 showTitle = true
 # 菜单加载时显示的提示文字

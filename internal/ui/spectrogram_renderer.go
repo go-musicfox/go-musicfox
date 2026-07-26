@@ -128,6 +128,7 @@ func (r *SpectrogramRenderer) View(a *model.App, main *model.Main) (view string,
 	}
 
 	// Render to string with color ramp.
+	// TODO: Use theme visualizer color config when integrated
 	start, end := model.GetProgressColor()
 	ramp := util.MakeRamp(start, end, float64(width*2))
 

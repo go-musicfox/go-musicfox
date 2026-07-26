@@ -35,41 +35,44 @@ func (cfg *Config) FillToModelOpts(opts *model.Options) {
 	opts.LoadingText = cfg.Theme.LoadingText
 	opts.PrimaryColor = cfg.Theme.PrimaryColor
 
-	// 无障碍模式：启用高对比度主题 + 强调样式。
-	// 未显式开启时，foxful-cli 仍会依据 NO_COLOR/ACCESSIBLE 环境变量自动探测。
+	// 无障碍模式
 	if cfg.Theme.AccessibleMode {
 		style.SetAccessibleMode(true)
 	}
+
+	primary := util.GetPrimaryColor()
+
 	if style.AccessibleMode() {
 		opts.DarkTheme = style.HighContrastDarkTheme()
 		opts.LightTheme = style.HighContrastLightTheme()
-		opts.DarkTheme.Primary = util.GetPrimaryColor()
-		opts.LightTheme.Primary = util.GetPrimaryColor()
+		opts.DarkTheme.Primary = primary
+		opts.LightTheme.Primary = primary
 	} else {
-		opts.DarkTheme, opts.LightTheme = cfg.Theme.modelThemes(util.GetPrimaryColor())
+		// Use theme files if loaded; fallback to legacy primaryColor config
+		registry := CurrentThemeRegistry()
+		opts.DarkTheme, opts.LightTheme = cfg.Theme.modelThemesFromFiles(registry, primary)
 	}
+
 	opts.DualColumn = cfg.Theme.DoubleColumn
 	opts.MaxMenuStartRow = cfg.Theme.MaxTitleStartRow
 	opts.AltScreen = cfg.Main.AltScreen
 
-	// 状态栏（面包屑路径 + 时间）
+	// 状态栏
 	if cfg.Theme.StatusBar {
 		opts.StatusBar = &model.DefaultStatusBar{}
 	}
-	// 状态栏位置：bottom 时置底部，其余（含空）默认顶部替换标题栏
 	if strings.EqualFold(cfg.Theme.StatusBarPosition, "bottom") {
 		opts.StatusBarPosition = model.StatusBarBottom
 	} else {
 		opts.StatusBarPosition = model.StatusBarTop
 	}
 
-	// TUI 内 toast 通知的自动消失时长
+	// Toast 通知超时
 	if cfg.Main.Notification.InAppTimeout > 0 {
 		opts.NotificationOptions.DefaultTimeout = time.Duration(cfg.Main.Notification.InAppTimeout) * time.Second
 	}
 
-	// hover 效果与指针形状依赖“无按钮移动”事件，必须用 AllMotion，
-	// CellMotion 仅在按住按钮拖动时才发送 motion 事件，会导致 hover 失效。
+	// 鼠标事件
 	opts.MouseMode = tea.MouseModeAllMotion
 	if !cfg.Main.EnableMouseEvent {
 		opts.MouseMode = tea.MouseModeNone

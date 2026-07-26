@@ -35,6 +35,8 @@ type ContextMenu struct {
 	mouseY       int
 	maxWidth     int
 	maxHeight    int
+	effectiveMaxHeight int // auto-constrained from terminal height when maxHeight==0
+	effectiveMaxWidth  int // auto-constrained from terminal width when maxWidth==0
 	scrollOffset int
 
 	focused     int // keyboard-focused item index (-1 = none)
@@ -171,10 +173,17 @@ func (cm *ContextMenu) update(msg tea.Msg) {
 
 func (cm *ContextMenu) visibleItemCount() int {
 	visible := len(cm.items)
-	if visible == 0 || cm.maxHeight == 0 {
+	if visible == 0 {
 		return visible
 	}
-	return min(visible, max(cm.maxHeight-contextMenuFrameOverhead, 1))
+	maxH := cm.maxHeight
+	if maxH == 0 {
+		maxH = cm.effectiveMaxHeight
+	}
+	if maxH == 0 {
+		return visible
+	}
+	return min(visible, max(maxH-contextMenuFrameOverhead, 1))
 }
 
 func (cm *ContextMenu) maxScrollOffset() int {
@@ -278,7 +287,20 @@ func (cm *ContextMenu) itemStyle(styles style.StyleSet, index int) lipgloss.Styl
 }
 
 // renderModal renders the context menu as a vertical list with rounded border.
-func (cm *ContextMenu) renderModal(styles style.StyleSet) modalRender {
+// termW/termH are the terminal dimensions, used to auto-constrain when no explicit
+// MaxWidth/MaxHeight is set in ContextMenuOptions.
+func (cm *ContextMenu) renderModal(styles style.StyleSet, termW, termH int) modalRender {
+	// Set effective max dimensions: explicit options take precedence, otherwise
+	// auto-constrain to terminal bounds so the menu never overflows the screen.
+	cm.effectiveMaxHeight = cm.maxHeight
+	if cm.effectiveMaxHeight == 0 {
+		cm.effectiveMaxHeight = termH
+	}
+	cm.effectiveMaxWidth = cm.maxWidth
+	if cm.effectiveMaxWidth == 0 {
+		cm.effectiveMaxWidth = termW
+	}
+
 	if len(cm.items) == 0 {
 		return modalRender{content: "", itemBounds: nil}
 	}
@@ -300,10 +322,14 @@ func (cm *ContextMenu) renderModal(styles style.StyleSet) modalRender {
 	if scrolling {
 		scrollbarWidth = contextMenuScrollbarWidth
 	}
+	effectiveMaxW := cm.maxWidth
+	if effectiveMaxW == 0 {
+		effectiveMaxW = cm.effectiveMaxWidth
+	}
 	innerWidth := max(maxLabelWidth+contextMenuHorizontalPad, contextMenuMinInnerWidth) + scrollbarWidth
-	if cm.maxWidth > 0 {
+	if effectiveMaxW > 0 {
 		minInnerWidth := contextMenuHorizontalPad + 1 + scrollbarWidth
-		maxInnerWidth := max(cm.maxWidth-contextMenuFrameOverhead, minInnerWidth)
+		maxInnerWidth := max(effectiveMaxW-contextMenuFrameOverhead, minInnerWidth)
 		innerWidth = min(innerWidth, maxInnerWidth)
 	}
 	itemWidth := innerWidth - scrollbarWidth

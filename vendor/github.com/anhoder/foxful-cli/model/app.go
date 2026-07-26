@@ -20,6 +20,7 @@ type App struct {
 	windowHeight int
 	options      *Options
 	quiting      bool
+	themeIndex   int // current position in Options.ThemeList
 
 	program *tea.Program
 
@@ -210,6 +211,19 @@ func (a *App) Update(msg tea.Msg) (model tea.Model, returnCmd tea.Cmd) {
 	case clearAllNotificationsMsg:
 		a.notifications = nil
 		return a, a.RerenderCmd(true)
+	}
+
+	// Theme switch shortcut: cycle to the next theme in ThemeList.
+	// Works globally regardless of modals.
+	{
+		if k, ok := msg.(tea.KeyPressMsg); ok {
+			key := k.String()
+			if a.options.ThemeSwitchKey != "" && len(a.options.ThemeList) > 0 && key == a.options.ThemeSwitchKey {
+				a.themeIndex = (a.themeIndex + 1) % len(a.options.ThemeList)
+				style.SetStyleSet(style.NewStyleSet(a.resolveTheme()))
+				return a, a.RerenderCmd(true)
+			}
+		}
 	}
 
 	// Make sure these keys always quit (but only if no modal is handling them)
@@ -419,6 +433,12 @@ func (a *App) View() tea.View {
 //  1. Both DarkTheme and LightTheme configured → auto-select based on detectedBg.
 //  2. Neither configured → use DefaultTheme() (auto-adaptive).
 func (a *App) resolveTheme() style.Theme {
+	if len(a.options.ThemeList) > 0 {
+		if a.themeIndex >= len(a.options.ThemeList) {
+			a.themeIndex = 0
+		}
+		return a.options.ThemeList[a.themeIndex]
+	}
 	if a.options.DarkTheme.Primary != nil && a.options.LightTheme.Primary != nil {
 		if style.HasDarkBackground() {
 			return a.options.DarkTheme
@@ -674,7 +694,7 @@ func (a *App) compositeModals(baseContent string) string {
 			m.SetTermSize(w, h)
 			layers = append(layers, layout.NewLayer(rendered.content).X(x).Y(y))
 		case *ContextMenu:
-			rendered := m.renderModal(ss)
+			rendered := m.renderModal(ss, w, h)
 			menuH := lipgloss.Height(rendered.content)
 			menuW := layout.Width(rendered.content)
 			x, y := m.computePosition(w, h, menuW, menuH)

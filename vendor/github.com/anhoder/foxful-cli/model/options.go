@@ -42,6 +42,8 @@ type Options struct {
 	HideMenu            bool
 	DarkTheme           style.Theme // Dark variant for adaptive theme pair. If zero-valued, DefaultTheme is used.
 	LightTheme          style.Theme // Light variant for adaptive theme pair. If zero-valued, DefaultTheme is used.
+	ThemeList           []style.Theme // List of themes to cycle through via shortcut. Nil/empty = disabled.
+	ThemeSwitchKey      string        // Key binding for theme switching (e.g. "ctrl+t"). Empty = disabled.
 
 	TeaOptions []tea.ProgramOption // Tea program options
 
@@ -179,6 +181,23 @@ func WithThemePair(dark, light style.Theme) WithOption {
 	return func(options *Options) {
 		options.DarkTheme = dark
 		options.LightTheme = light
+	}
+}
+
+// WithThemeList sets a list of themes that can be cycled through at runtime
+// via the ThemeSwitchKey shortcut. When set, ThemeList takes priority over
+// the DarkTheme/LightTheme pair in resolveTheme().
+func WithThemeList(themes ...style.Theme) WithOption {
+	return func(options *Options) {
+		options.ThemeList = themes
+	}
+}
+
+// WithThemeSwitchKey sets the key binding for cycling through the ThemeList.
+// Use Bubble Tea key notation: "ctrl+t", "shift+t", etc.
+func WithThemeSwitchKey(key string) WithOption {
+	return func(options *Options) {
+		options.ThemeSwitchKey = key
 	}
 }
 

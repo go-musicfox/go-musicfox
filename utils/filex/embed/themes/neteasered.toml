@@ -1,0 +1,84 @@
+# NetEase Red - Classic Go-Musicfox Default Theme
+name = "NetEase Red"
+description = "Classic NetEase Music red theme — the original go-musicfox look"
+
+# ── Dark Variant ───────────────────────────────────────────
+[dark]
+primary = "#EA403F"
+secondary = "#808080"
+accent = "#0000FF"
+success = "#00FF00"
+warning = "#FFFF00"
+error = "#FF0000"
+info = "#00FFFF"
+muted = "#808080"
+hintKey = "#6E6E6E"
+background = "#1A1A1A"
+foreground = "#FFFFFF"
+border = "#333333"
+surface = "#242424"
+
+[dark.highlights]
+menuTitle = "BrightGreen"
+
+[dark.popup]
+surface = "#383838"
+border = "#5C5C5C"
+
+[dark.app]
+# Lyric colors
+lyricActive = "#7EC8E3"
+lyricTransition = "#C9B1D4"
+lyricInactive = "#6B6B6B"
+lyricHighlight = "#E8E8E8"
+
+# Playbar colors (ANSI terminal colors — adapt to terminal theme)
+playbarMode = "BrightMagenta"
+playbarVolume = "BrightBlue"
+playbarPlaying = "BrightYellow"
+playbarPaused = "Yellow"
+playbarHeartLiked = "Red"
+playbarHeartUnliked = "White"
+playbarArtist = "BrightBlack"
+
+# Visualizer colors: "random" or hex
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+
+# ── Light Variant ──────────────────────────────────────────
+[light]
+primary = "#EA403F"
+secondary = "#808080"
+accent = "#0000FF"
+success = "#008000"
+warning = "#CC8800"
+error = "#CC0000"
+info = "#008080"
+muted = "#808080"
+hintKey = "#8E8E8E"
+background = "#FAFAFA"
+foreground = "#1A1A1A"
+border = "#CCCCCC"
+surface = "#E8E8E8"
+
+[light.highlights]
+menuTitle = "BrightGreen"
+
+[light.popup]
+surface = "#E8E8E8"
+border = "#A8A8A8"
+
+[light.app]
+lyricActive = "#3A8FB7"
+lyricTransition = "#8B5E9E"
+lyricInactive = "#808080"
+lyricHighlight = "#E8E8E8"
+	playbarMode = "BrightMagenta"
+	playbarVolume = "BrightBlue"
+	playbarPlaying = "BrightYellow"
+	playbarPaused = "Yellow"
+	playbarHeartLiked = "Red"
+	playbarHeartUnliked = "White"
+	playbarArtist = "BrightBlack"
+visualizerColorStart = "random"
+visualizerColorEnd = "random"

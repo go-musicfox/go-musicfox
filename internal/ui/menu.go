@@ -6,7 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
@@ -163,6 +165,14 @@ func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page
 		return nil, a.RerenderCmd(true)
 	case "generic:next":
 		n.player.NextSong(true)
+		return nil, a.RerenderCmd(true)
+	case "generic:switchTheme":
+		registry := configs.CurrentThemeRegistry()
+		newSS := registry.NextStyleSet(style.HasDarkBackground())
+		if newSS != nil {
+			style.SetStyleSet(*newSS)
+			a.SetStyleSet(*newSS)
+		}
 		return nil, a.RerenderCmd(true)
 	}
 	return nil, nil

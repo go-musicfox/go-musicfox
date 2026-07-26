@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -267,6 +268,15 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 				return true, main, app.RerenderCmd(true)
 			}
 		}
+
+	case keybindings.OpSwitchTheme:
+		registry := configs.CurrentThemeRegistry()
+		newSS := registry.NextStyleSet(style.HasDarkBackground())
+		if newSS != nil {
+			app.SetStyleSet(*newSS)
+			return true, main, app.RerenderCmd(true)
+		}
+
 	default:
 		return false, nil, nil
 	}

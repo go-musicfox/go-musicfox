@@ -11,6 +11,8 @@ import (
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 )
@@ -79,6 +81,14 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	var (
 		builder  strings.Builder
 		segments []Segment
+		appColors = configs.GetCurrentAppColors()
+		artistColor = configs.SafeGetForeground(appColors.PlaybarArtist, configs.PlaybarArtistColor)
+		modeColor   = configs.SafeGetForeground(appColors.PlaybarMode, configs.PlaybarModeColor)
+		volumeColor = configs.SafeGetForeground(appColors.PlaybarVolume, configs.PlaybarVolumeColor)
+		playingColor = configs.SafeGetForeground(appColors.PlaybarPlaying, configs.PlaybarPlayingColor)
+		pausedColor  = configs.SafeGetForeground(appColors.PlaybarPaused, configs.PlaybarPausedColor)
+		heartLikedColor   = configs.SafeGetForeground(appColors.PlaybarHeartLiked, configs.PlaybarHeartLikedColor)
+		heartUnlikedColor = configs.SafeGetForeground(appColors.PlaybarHeartUnliked, configs.PlaybarHeartUnlikedColor)
 	)
 
 	// Helper for adding a new segment
@@ -87,7 +97,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 	// Helper for adding text whose color we don't care about
 	addText := func(text string) {
-		segments = append(segments, Segment{text, lipgloss.BrightBlack, false, false})
+		segments = append(segments, Segment{text, artistColor, false, false})
 	}
 	renderSegment := func(segment Segment) string {
 		return lipgloss.NewStyle().
@@ -97,45 +107,43 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 			Render(segment.text)
 	}
 
-	prefixLen := SongInfoPrefixBaseWidth
 	if main.MenuStartColumn()-MenuArrowWidth > 0 {
-		prefixLen += SongInfoPrefixExtraWidth
 		if !main.CenterEverything() {
-			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), lipgloss.BrightBlack, false, false)
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), artistColor, false, false)
 		}
 		{
 			msg := r.state.Mode().Name()
-			modeColor := color.Color(lipgloss.BrightMagenta)
+			c := modeColor
 			modeBold := hoveredElement == PlaybarElementMode
 			if modeBold {
-				modeColor = util.GetPrimaryColor()
+				c = util.GetPrimaryColor()
 			}
-			addSegment(fmt.Sprintf("[%s] ", msg), modeColor, false, modeBold)
+			addSegment(fmt.Sprintf("[%s] ", msg), c, false, modeBold)
 		}
-		addSegment(fmt.Sprintf("%d%% ", r.state.Volume()), lipgloss.BrightBlue, false, false)
+		addSegment(fmt.Sprintf("%d%% ", r.state.Volume()), volumeColor, false, false)
 	}
 	if r.state.State() == types.Playing {
-		stateColor := color.Color(lipgloss.BrightYellow)
+		c := playingColor
 		stateBold := hoveredElement == PlaybarElementState
 		if stateBold {
-			stateColor = util.GetPrimaryColor()
+			c = util.GetPrimaryColor()
 		}
-		addSegment("♫ ♪ ♫ ♪ ", stateColor, false, stateBold)
+		addSegment("♫ ♪ ♫ ♪ ", c, false, stateBold)
 	} else {
-		stateColor := color.Color(lipgloss.Yellow)
+		c := pausedColor
 		stateBold := hoveredElement == PlaybarElementState
 		if stateBold {
-			stateColor = util.GetPrimaryColor()
+			c = util.GetPrimaryColor()
 		}
-		addSegment("_ z Z Z ", stateColor, false, stateBold)
+		addSegment("_ z Z Z ", c, false, stateBold)
 	}
 
 	if song.Id > 0 {
 		var icolor color.Color
 		if isLike {
-			icolor = lipgloss.Red
+			icolor = heartLikedColor
 		} else {
-			icolor = lipgloss.White
+			icolor = heartUnlikedColor
 		}
 		heartBold := hoveredElement == PlaybarElementHeart
 		if heartBold && !isLike {
@@ -145,36 +153,31 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 
 	if r.state.CurSongIndex() < len(r.state.Playlist()) {
-		// 按剩余长度截断字符串
-		songName := song.Name
-		if !main.CenterEverything() {
-			songName = runewidth.Truncate(songName, r.netease.WindowWidth()-main.MenuStartColumn()-prefixLen, "") // 多减，避免剩余1个中文字符
+		// 计算已占用的前缀宽度（实际 segment 宽度，而非估算的 prefixLen）
+		prefixUsedWidth := 0
+		for _, seg := range segments {
+			prefixUsedWidth += runewidth.StringWidth(seg.text)
 		}
+		availableWidth := r.netease.WindowWidth()
+
+		songName := song.Name
+		artistString := artistsString(song)
+
+		// 优先保留歌曲名，歌手名用剩余空间
+		songMaxWidth := max(0, availableWidth-prefixUsedWidth-1) // -1 for space between
+		songName = runewidth.Truncate(songName, songMaxWidth, "")
 		addSegment(songName, util.GetPrimaryColor(), false, false)
 		addText(" ")
 
-		var artists strings.Builder
-		for i, v := range song.Artists {
-			if i != 0 {
-				artists.WriteString(",")
-			}
-			artists.WriteString(v.Name)
-		}
-
-		artistString := artists.String()
-		if !main.CenterEverything() {
-			// 按剩余长度截断字符串
-			remainLen := r.netease.WindowWidth() - main.MenuStartColumn() - prefixLen - runewidth.StringWidth(song.Name)
-			artistString = runewidth.Truncate(
-				runewidth.FillRight(artistString, remainLen),
-				remainLen, "")
-		}
-		artistColor := color.Color(lipgloss.BrightBlack)
+		// 剩余空间全部给歌手名
+		artistMaxWidth := max(0, availableWidth-prefixUsedWidth-runewidth.StringWidth(songName)-1)
+		artistString = runewidth.Truncate(artistString, artistMaxWidth, "")
+		c := artistColor
 		artistHovered := hoveredElement == PlaybarElementArtist
 		if artistHovered {
-			artistColor = util.GetPrimaryColor()
+			c = util.GetPrimaryColor()
 		}
-		addSegment(artistString, artistColor, false, false)
+		addSegment(artistString, c, false, false)
 	}
 
 	if main.CenterEverything() {
@@ -220,4 +223,19 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	r.cachedHover = hoveredElement
 
 	return r.cachedView, r.cachedLines
+}
+
+// artistsString joins the artists' names into a comma-separated string.
+func artistsString(song structs.Song) string {
+	if len(song.Artists) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for i, v := range song.Artists {
+		if i != 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(v.Name)
+	}
+	return b.String()
 }

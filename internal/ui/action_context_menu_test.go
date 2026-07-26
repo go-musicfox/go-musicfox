@@ -30,11 +30,14 @@ func TestBuildGroupItems(t *testing.T) {
 
 func TestGenericContextMenuItemsExcludePlaybackControls(t *testing.T) {
 	items := appendContextMenuGlobalItems(nil, false)
-	if len(items) != 1 {
-		t.Fatalf("empty-playlist generic item count = %d, want only refresh", len(items))
+	if len(items) != 2 {
+		t.Fatalf("empty-playlist generic item count = %d, want refresh + switchTheme", len(items))
 	}
 	if got, want := items[0].ID, "generic:refresh"; got != want {
-		t.Fatalf("generic item ID = %q, want %q", got, want)
+		t.Fatalf("first generic item ID = %q, want %q", got, want)
+	}
+	if got, want := items[1].ID, "generic:switchTheme"; got != want {
+		t.Fatalf("second generic item ID = %q, want %q", got, want)
 	}
 
 	withPlaylist := appendContextMenuGlobalItems(nil, true)

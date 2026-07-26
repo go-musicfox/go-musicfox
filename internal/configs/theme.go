@@ -2,6 +2,7 @@ package configs
 
 import (
 	"image/color"
+	"sync"
 
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
@@ -22,6 +23,11 @@ type ProgressOptions struct {
 
 // ThemeConfig 主题设置
 type ThemeConfig struct {
+	// 活跃主题名称（对应主题文件名中的 name 字段，默认 "NetEase Red"）
+	ActiveTheme string `koanf:"activeTheme"`
+	// Deprecated: migrated to theme files. Kept for backward compatibility.
+	PrimaryColor string `koanf:"primaryColor"`
+
 	// 主界面是否显示标题
 	ShowTitle bool `koanf:"showTitle"`
 	// 主页面加载中提示
@@ -34,26 +40,172 @@ type ThemeConfig struct {
 	MaxTitleStartRow int `koanf:"maxTitleStartRow"`
 	// 界面全部居中
 	CenterEverything bool `koanf:"centerEverything"`
-	// 主题色
-	PrimaryColor string `koanf:"primaryColor"`
 	// 是否显示状态栏（面包屑导航路径 + 时间）
 	StatusBar bool `koanf:"statusBar"`
-	// 状态栏位置：top（默认，顶部替换标题栏）或 bottom（底部）
+	// 状态栏位置
 	StatusBarPosition string `koanf:"statusBarPosition"`
-	// 无障碍模式：高对比度主题 + 强调样式（留空跟随终端 NO_COLOR/ACCESSIBLE 环境变量自动探测）
+	// 无障碍模式
 	AccessibleMode bool `koanf:"accessibleMode"`
 
 	Progress ProgressConfig `koanf:"progress"`
 }
 
-func (tc ThemeConfig) modelThemes(primary color.Color) (style.Theme, style.Theme) {
+// ThemeRegistry holds all loaded themes and provides runtime theme switching support.
+type ThemeRegistry struct {
+	mu          sync.RWMutex
+	themes      map[string]*ThemeFile
+	allNames    []string        // sorted list of all theme names
+	darkNames   []string        // themes with dark variant configured
+	lightNames  []string        // themes with light variant configured
+	themeIndex  int             // current index in the active brightness-category theme list
+}
+
+var globalThemeRegistry = &ThemeRegistry{
+	themes: make(map[string]*ThemeFile),
+}
+
+// LoadThemeRegistry loads themes and populates the global registry.
+func LoadThemeRegistry(userConfigDir string) {
+	globalThemeRegistry.mu.Lock()
+	defer globalThemeRegistry.mu.Unlock()
+
+	globalThemeRegistry.themes = LoadAllThemes(userConfigDir)
+	globalThemeRegistry.rebuildIndex()
+}
+
+func (r *ThemeRegistry) rebuildIndex() {
+	r.allNames = make([]string, 0, len(r.themes))
+	r.darkNames = nil
+	r.lightNames = nil
+	for name, tf := range r.themes {
+		r.allNames = append(r.allNames, name)
+		if tf.Dark.isConfigured() {
+			r.darkNames = append(r.darkNames, name)
+		}
+		if tf.Light.isConfigured() {
+			r.lightNames = append(r.lightNames, name)
+		}
+	}
+}
+
+// Get returns a theme by name.
+func (r *ThemeRegistry) Get(name string) (*ThemeFile, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	tf, ok := r.themes[name]
+	return tf, ok
+}
+
+// First returns the first available theme.
+func (r *ThemeRegistry) First() (*ThemeFile, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, tf := range r.themes {
+		return tf, true
+	}
+	return nil, false
+}
+
+// Names returns a copy of sorted theme names (all, dark, light).
+func (r *ThemeRegistry) Names(darkBackground bool) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if darkBackground {
+		cp := make([]string, len(r.darkNames))
+		copy(cp, r.darkNames)
+		return cp
+	}
+	cp := make([]string, len(r.lightNames))
+	copy(cp, r.lightNames)
+	return cp
+}
+
+// ActiveThemeOrDefault returns the active theme file, falling back to any available.
+func (r *ThemeRegistry) ActiveThemeOrDefault(name string) (*ThemeFile, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if tf, ok := r.themes[name]; ok {
+		return tf, ok
+	}
+	return r.First()
+}
+
+// Current returns the global theme registry.
+func CurrentThemeRegistry() *ThemeRegistry {
+	return globalThemeRegistry
+}
+
+// NextStyleSet cycles to the next theme in the list for the given brightness and returns a new StyleSet.
+// If no themes are available or the list is empty, returns nil.
+func (r *ThemeRegistry) NextStyleSet(darkBackground bool) *style.StyleSet {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	names := r.darkNames
+	if !darkBackground {
+		names = r.lightNames
+	}
+	if len(names) == 0 {
+		return nil
+	}
+
+	r.themeIndex = (r.themeIndex + 1) % len(names)
+	name := names[r.themeIndex]
+	tf := r.themes[name]
+	var t style.Theme
+	if darkBackground {
+		t = tf.Dark.toTheme()
+	} else {
+		t = tf.Light.toTheme()
+	}
+	ss := style.NewStyleSet(t)
+	return &ss
+}
+
+// CurrentTheme returns the current active theme and StyleSet based on brightness.
+func (r *ThemeRegistry) CurrentStyleSet(darkBackground bool) *style.StyleSet {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	names := r.darkNames
+	if !darkBackground {
+		names = r.lightNames
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	if r.themeIndex >= len(names) {
+		r.themeIndex = 0
+	}
+	name := names[r.themeIndex]
+	tf := r.themes[name]
+	var t style.Theme
+	if darkBackground {
+		t = tf.Dark.toTheme()
+	} else {
+		t = tf.Light.toTheme()
+	}
+	ss := style.NewStyleSet(t)
+	return &ss
+}
+
+// modelThemesFromFiles builds foxful-cli Theme pair from the active theme file.
+// Falls back to legacy behavior using primaryColor if no theme files are loaded.
+func (tc ThemeConfig) modelThemesFromFiles(themes *ThemeRegistry, primary color.Color) (style.Theme, style.Theme) {
+	tf, ok := themes.ActiveThemeOrDefault(tc.ActiveTheme)
+	if ok && tf != nil {
+		dark := tf.Dark.toTheme()
+		light := tf.Light.toTheme()
+		return dark, light
+	}
+	return tc.modelThemesLegacy(primary)
+}
+
+// modelThemesLegacy builds themes from the old primaryColor config for backward compatibility.
+func (tc ThemeConfig) modelThemesLegacy(primary color.Color) (style.Theme, style.Theme) {
 	dark := style.DefaultDarkTheme()
 	dark.Primary = primary
-	// 保持菜单标题为 BrightGreen，与旧版硬编码行为一致
 	dark.MenuTitle = style.Highlight{Fg: lipgloss.BrightGreen}
-	// 右键菜单浮层：默认继承 Surface(#242424) 与暗色终端背景几乎无法区分。
-	// 提亮到 #383838 让浮层明显“浮起”。边框/分隔符用 #5C5C5C——
-	// 比 Surface 明显亮、清晰可见，但仍是低调的中性灰，不抢眼。
 	dark.Popup = style.PopupTheme{
 		Surface: lipgloss.Color("#383838"),
 		Border:  lipgloss.Color("#5C5C5C"),
@@ -61,11 +213,7 @@ func (tc ThemeConfig) modelThemes(primary color.Color) (style.Theme, style.Theme
 
 	light := style.DefaultLightTheme()
 	light.Primary = primary
-	// 保持菜单标题为 BrightGreen，与旧版硬编码行为一致
 	light.MenuTitle = style.Highlight{Fg: lipgloss.BrightGreen}
-	// 右键菜单浮层：默认 Surface(#F5F5F5) 与白色终端背景过于接近。
-	// 压深到 #E8E8E8 拉开与背景的差异。边框/分隔符用 #A8A8A8——
-	// 比 Surface 明显深、清晰可见，但仍是低调的中性灰，不抢眼。
 	light.Popup = style.PopupTheme{
 		Surface: lipgloss.Color("#E8E8E8"),
 		Border:  lipgloss.Color("#A8A8A8"),

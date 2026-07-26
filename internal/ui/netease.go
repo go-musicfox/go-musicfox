@@ -12,7 +12,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/buger/jsonparser"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/go-musicfox/netease-music/service"
 	"github.com/go-musicfox/netease-music/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
@@ -32,6 +34,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
+	"github.com/go-musicfox/go-musicfox/utils/filex"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
@@ -64,6 +67,10 @@ type Netease struct {
 	playbarHoveredElement PlaybarElement
 
 	desktopLyrics desktop_lyrics.Controller
+
+	// pendingChangelog is set in InitHook when the changelog should be shown
+	// after the startup page completes and the main page becomes active.
+	pendingChangelog bool
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -205,6 +212,22 @@ func (n *Netease) InitHook(_ *model.App) {
 
 	appCookieJar = jar
 	util.SetGlobalCookieJar(appCookieJar)
+
+	// 首次启动新版本 → 延迟到主页面后显示更新日志
+	{
+		table := storage.NewTable()
+		jsonStr, _ := table.GetByKVModel(storage.ChangelogSeen{})
+		var seen storage.ChangelogSeen
+		if len(jsonStr) > 0 {
+			_ = json.Unmarshal(jsonStr, &seen)
+		}
+		if configs.AppConfig.Main.Debug || seen.Version == "" || version.CompareVersion(types.AppVersion, seen.Version, false) {
+			n.pendingChangelog = true
+			if !configs.AppConfig.Main.Debug {
+				_ = table.SetByKVModel(storage.ChangelogSeen{Version: types.AppVersion}, storage.ChangelogSeen{})
+			}
+		}
+	}
 
 	// 获取用户信息
 	errorx.Go(func() {
@@ -387,7 +410,6 @@ func (n *Netease) InitHook(_ *model.App) {
 		// 检查更新
 		if config.Startup.CheckUpdate {
 			if ok, newVersion := version.CheckUpdate(); ok {
-
 				notify.Notify(newVersionNotifyContent(newVersion))
 			}
 		}
@@ -595,4 +617,52 @@ func (n *Netease) LoginCallback() error {
 	go likelist.RefreshLikeList(user.UserId)
 
 	return nil
+}
+
+// showChangelogPopup reads the embedded CHANGELOG.md and displays it as a markdown popup.
+func showChangelogPopup(app *model.App) {
+	data, err := filex.ReadFileFromEmbed("changelog.md")
+	if err != nil {
+		slog.Error("changelog load failure", slogx.Error(err))
+		return
+	}
+	popup, err := model.NewMarkdownPopup(model.MarkdownPopupSpec{
+		Title:           "更新日志",
+		MarkdownContent: string(data),
+		MaxWidth:        60,
+		MaxHeight:       40,
+	})
+	if err != nil {
+		slog.Error("changelog popup creation failure", slogx.Error(err))
+		return
+	}
+	app.ShowPopup(popup)
+}
+
+// Update intercepts system background-change messages to rebuild the StyleSet
+// from go-musicfox's ThemeRegistry with the correct dark/light variant.
+// Foxful-cli's built-in onBackgroundChanged handles SetDarkBackground and popup
+// cache invalidation; we override the StyleSet afterwards to use our theme files.
+func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case tea.BackgroundColorMsg, uv.LightColorSchemeEvent, uv.DarkColorSchemeEvent:
+		// Let foxful-cli process the message first (SetDarkBackground, popup cache, etc.)
+		_, cmd := n.App.Update(msg)
+		// Rebuild StyleSet from our ThemeRegistry with correct dark/light variant
+		isDark := style.HasDarkBackground()
+		ss := configs.CurrentThemeRegistry().CurrentStyleSet(isDark)
+		if ss != nil {
+			style.SetStyleSet(*ss)
+			n.App.SetStyleSet(*ss)
+		}
+		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
+	default:
+		model, cmd := n.App.Update(msg)
+		// Show pending changelog popup once the main page becomes active (startup completed)
+		if n.pendingChangelog && n.App.CurPage() == n.App.Main() {
+			n.pendingChangelog = false
+			showChangelogPopup(n.App)
+		}
+		return model, cmd
+	}
 }

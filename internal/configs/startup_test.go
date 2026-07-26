@@ -32,7 +32,7 @@ func TestStartupConfigToModelIncludesAnimationOptions(t *testing.T) {
 
 func TestThemeConfigModelThemesKeepPrimaryColor(t *testing.T) {
 	primary := lipgloss.Color("#EA403F")
-	dark, light := (ThemeConfig{}).modelThemes(primary)
+	dark, light := (ThemeConfig{}).modelThemesLegacy(primary)
 
 	if got, want := dark.Primary, primary; got != want {
 		t.Errorf("dark primary = %v, want %v", got, want)

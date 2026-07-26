@@ -1269,6 +1269,7 @@ func hasSignal(frame player.SpectrumFrame) bool {
 }
 
 func (r *SpectrumRenderer) ramp(width int) []color.Color {
+	// TODO: Use theme visualizer color config via configs.AppColorConfig.ResolveVisualizerColors() when integrated
 	if r.progressLastWidth != float64(width) || len(r.progressRamp) == 0 {
 		start, end := model.GetProgressColor()
 		r.progressRamp = util.MakeRamp(start, end, float64(width*2))
@@ -1290,6 +1291,7 @@ func (r *SpectrumRenderer) rowRamps(width, height int, enabled bool) [][]color.C
 
 	baseRamp := r.ramp(width)
 
+	// TODO: Use theme visualizer color config via configs.AppColorConfig.ResolveVisualizerColors() when integrated
 	vertStart, vertEnd := util.GetRandomRgbColor(true)
 	cStart, _ := colorful.Hex(vertStart)
 	cEnd, _ := colorful.Hex(vertEnd)

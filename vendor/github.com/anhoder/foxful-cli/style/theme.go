@@ -9,6 +9,7 @@ package style
 
 import (
 	"image/color"
+	"reflect"
 
 	"charm.land/lipgloss/v2"
 	"github.com/lucasb-eyer/go-colorful"
@@ -218,8 +219,11 @@ type Theme struct {
 	//   theme.StatusBar.Preset = "accent"  // StatusBar inherits accent preset
 	HighlightPresets map[string]Highlight
 
-	// Custom domain colors (unchanged from current)
-	Custom map[string]color.Color
+	// Custom holds any user-defined struct with Highlight fields for
+	// application-specific styles. The struct's Highlight fields are
+	// resolved through the full pipeline (presets → highlight → lipgloss.Style)
+	// during StyleSet construction.
+	Custom any
 }
 
 // BoolPtr returns a pointer to the given bool value.
@@ -530,8 +534,12 @@ type StyleSet struct {
 	Normal lipgloss.Style
 
 	// Custom holds application-specific styles built from Theme.Custom.
-	// Downstream apps can access these via style.CurrentStyleSet().Custom[key].
-	Custom map[string]lipgloss.Style
+	// Internally stored as map[string]lipgloss.Style keyed by struct field name.
+	// Use CustomStyles[T]() to get typed flat access via a user-defined struct
+	// with lipgloss.Style fields:
+	//   custom := style.CustomStyles[AppCustomStyles](style.CurrentStyleSet())
+	//   playerColor := custom.PlayerColor
+	Custom any
 
 	theme Theme
 }
@@ -1048,11 +1056,29 @@ func NewStyleSet(theme Theme) StyleSet {
 	base.BackButton = applyHL(lipgloss.NewStyle(), backButtonHL)
 	base.BackButtonHover = applyHL(lipgloss.NewStyle(), backButtonHoverHL)
 
-	// Build Custom styles (unchanged)
-	if len(theme.Custom) > 0 {
-		base.Custom = make(map[string]lipgloss.Style, len(theme.Custom))
-		for k, v := range theme.Custom {
-			base.Custom[k] = lipgloss.NewStyle().Foreground(v)
+	// Build Custom styles via reflection
+	if theme.Custom != nil {
+		customVal := reflect.ValueOf(theme.Custom)
+		// Dereference pointer types
+		for customVal.Kind() == reflect.Ptr {
+			customVal = customVal.Elem()
+		}
+		if customVal.Kind() == reflect.Struct {
+			typ := customVal.Type()
+			resolved := make(map[string]lipgloss.Style, typ.NumField())
+			for i := 0; i < typ.NumField(); i++ {
+				field := typ.Field(i)
+				if !field.IsExported() {
+					continue
+				}
+				if field.Type != reflect.TypeOf(Highlight{}) {
+					continue
+				}
+				hl := customVal.Field(i).Interface().(Highlight)
+				hl = resolvePreset(hl)
+				resolved[field.Name] = applyHL(lipgloss.NewStyle(), hl)
+			}
+			base.Custom = resolved
 		}
 	}
 
@@ -1115,4 +1141,60 @@ func Normal(content string) string {
 // Dim applies a dimming style to content, suitable for background text behind popups.
 func Dim(content string) string {
 	return lipgloss.NewStyle().Foreground(lipgloss.BrightBlack).Render(content)
+}
+
+// ApplyHL applies a Highlight configuration to a lipgloss.Style and returns it.
+// This is the public version of the internal applyHL closure used during StyleSet
+// construction. Fields set to nil are treated as "not set" and are ignored.
+func ApplyHL(s lipgloss.Style, hl Highlight) lipgloss.Style {
+	if hl.Fg != nil {
+		s = s.Foreground(hl.Fg)
+	}
+	if hl.Bg != nil {
+		s = s.Background(hl.Bg)
+	}
+	if hl.Bold != nil {
+		s = s.Bold(*hl.Bold)
+	}
+	if hl.Italic != nil {
+		s = s.Italic(*hl.Italic)
+	}
+	if hl.Underline != nil {
+		s = s.Underline(*hl.Underline)
+	}
+	return s
+}
+
+// CustomStyles converts a StyleSet's internal Custom map into a typed struct
+// with lipgloss.Style fields. Define a struct matching field names with the
+// Theme.Custom struct, but using lipgloss.Style instead of Highlight fields:
+//
+//	type AppCustomStyles struct {
+//	    PlayerColor lipgloss.Style
+//	}
+//	custom := style.CustomStyles[AppCustomStyles](style.CurrentStyleSet())
+//	playerColor := custom.PlayerColor
+//
+// Use this for type-safe, flat struct access to resolved custom styles.
+func CustomStyles[C any](ss StyleSet) C {
+	var result C
+	m, ok := ss.Custom.(map[string]lipgloss.Style)
+	if !ok || m == nil {
+		return result
+	}
+	rv := reflect.ValueOf(&result).Elem()
+	rt := rv.Type()
+	if rt.Kind() != reflect.Struct {
+		return result
+	}
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		if s, found := m[f.Name]; found {
+			rv.Field(i).Set(reflect.ValueOf(s))
+		}
+	}
+	return result
 }

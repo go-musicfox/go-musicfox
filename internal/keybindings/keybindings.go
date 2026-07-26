@@ -116,6 +116,8 @@ const (
 
 	OpActionOfSelected
 	OpActionOfPlayingSong
+
+	OpSwitchTheme
 )
 
 var opNameToOperateMap = make(map[string]OperateType)
@@ -194,6 +196,8 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 
 	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
 	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},
+
+	OpSwitchTheme: {name: "switchTheme", desc: "切换主题样式"},
 }
 
 // 默认操作 -> 快捷键数组映射
@@ -261,6 +265,8 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpActionOfSelected:    {"m"},
 	OpActionOfPlayingSong: {"M"},
 	OpToggleSortOrder:     {"|"},
+
+	OpSwitchTheme: {},
 }
 
 var userOperateToKeys map[OperateType][]string

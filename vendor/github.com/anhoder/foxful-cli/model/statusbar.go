@@ -44,11 +44,31 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 
 	ss := style.CurrentStyleSet()
 
-	// Left: "PATH" label nugget (Primary bg + white text)
+	// Left: "PATH" label nugget
 	pathLabel := ss.StatusBarNuggetLabel.Render(" » ")
+	labelW := lipgloss.Width(pathLabel)
 
-	// Breadcrumb path as a nugget block (same bg as time nugget, with padding)
-	path := buildBreadcrumbPath(m, ss)
+	// Right: time nugget
+	now := time.Now().Format("15:04")
+	timeNugget := ss.StatusBarTime.Render(" ⏱ " + now + " ")
+	timeW := lipgloss.Width(timeNugget)
+
+	// Breadcrumb: constrain to available width so bar stays single-line.
+	// Calculate max width optimistically (without time) in case time gets hidden.
+	breadcrumbPadding := 2 // Padding(0,1) on each side of breadcrumbBlock
+	maxBreadcrumbW := w - labelW - breadcrumbPadding
+	if d.Center != nil {
+		// Breadcrumb must leave room for the center module to sit roughly
+		// in the middle. Limit breadcrumb to the left half of the terminal
+		// (minus label, padding) so center fits in the right half.
+		centerHalfWidth := w / 2
+		maxBreadcrumbW = centerHalfWidth - labelW - breadcrumbPadding
+	}
+	if maxBreadcrumbW < 10 {
+		maxBreadcrumbW = 10
+	}
+	path := buildBreadcrumbPath(m, ss, maxBreadcrumbW)
+
 	var breadcrumbBlock string
 	if path != "" {
 		breadcrumbBlock = lipgloss.NewStyle().
@@ -56,6 +76,7 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 			Padding(0, 1).
 			Render(path)
 	}
+	bcrumbW := lipgloss.Width(breadcrumbBlock)
 
 	// Center: optional callback content
 	var centerBlock string
@@ -68,30 +89,32 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 				Render(centerContent)
 		}
 	}
-
-	// Right: time nugget
-	now := time.Now().Format("15:04")
-	timeNugget := ss.StatusBarTime.Render(" ⏱ " + now + " ")
-
-	// Compose: PATH label + breadcrumb (left-anchored) + leftFiller + center + rightFiller + time (right-anchored).
-	// The center block is centered within the full bar width via two surrounding fillers.
-	labelW := lipgloss.Width(pathLabel)
-	bcrumbW := lipgloss.Width(breadcrumbBlock)
 	centerW := lipgloss.Width(centerBlock)
-	timeW := lipgloss.Width(timeNugget)
 
+	// If total content exceeds window width, progressively hide time then center.
+	if labelW+bcrumbW+centerW+timeW > w {
+		if timeW > 0 {
+			timeNugget = ""
+			timeW = 0
+		}
+	}
+	if labelW+bcrumbW+centerW+timeW > w {
+		if centerW > 0 {
+			centerBlock = ""
+			centerW = 0
+		}
+	}
+
+	// Layout: label + breadcrumb + leftFiller + center + rightFiller + time
 	leftUsed := labelW + bcrumbW
 	rightUsed := timeW
 
-	// Ideal left filler so the center block is centered in the full width w.
 	leftFillerW := (w-centerW)/2 - leftUsed
 	if leftFillerW < 0 {
-		// Breadcrumb pushes past center; keep left anchor, don't overlap.
 		leftFillerW = 0
 	}
 	rightFillerW := w - leftUsed - leftFillerW - centerW - rightUsed
 	if rightFillerW < 0 {
-		// Center block collides with time; abandon centering, pull it left.
 		rightFillerW = 0
 		leftFillerW = w - leftUsed - centerW - rightUsed
 		if leftFillerW < 0 {
@@ -199,7 +222,10 @@ func computeBreadcrumbSegments(m *Main) []breadcrumbSegmentInfo {
 
 // buildBreadcrumbPath builds the styled breadcrumb path string for the status bar.
 // Applies hover/click effects based on m.hoveredBreadcrumbIdx.
-func buildBreadcrumbPath(m *Main, ss style.StyleSet) string {
+// maxWidth is the maximum visual width allowed; 0 means no constraint.
+// When constrained, leftmost segments are dropped and replaced with "..." to keep
+// the rightmost (current) segment visible.
+func buildBreadcrumbPath(m *Main, ss style.StyleSet, maxWidth int) string {
 	segments := computeBreadcrumbSegments(m)
 	if len(segments) == 0 {
 		return ""
@@ -210,6 +236,38 @@ func buildBreadcrumbPath(m *Main, ss style.StyleSet) string {
 		Foreground(ss.StatusBarBreadcrumbSep.GetForeground()).
 		Render(" / ")
 	breadcrumbBase := ss.StatusBarBreadcrumb
+
+	if maxWidth > 0 {
+		// Compute total width and trim left segments if needed
+		sepW := lipgloss.Width(separator)
+		for len(segments) > 1 {
+			totalW := 0
+			for i, seg := range segments {
+				if i > 0 {
+					totalW += sepW
+				}
+				totalW += seg.DisplayWidth
+			}
+			if totalW <= maxWidth {
+				break
+			}
+			// Drop leftmost non-ellipsis segment
+			if segments[0].IsEllipsis && len(segments) > 1 {
+				// drop the segment after the ellipsis, keep ellipsis
+				segments = append(segments[:1], segments[2:]...)
+			} else {
+				segments = segments[1:]
+			}
+			// Ensure "..." is at the front
+			if !segments[0].IsEllipsis {
+				segments = append([]breadcrumbSegmentInfo{{
+					DisplayTitle: "...",
+					DisplayWidth: 3,
+					IsEllipsis:   true,
+				}}, segments...)
+			}
+		}
+	}
 
 	parts := make([]string, 0, len(segments))
 	for i, seg := range segments {
@@ -222,7 +280,6 @@ func buildBreadcrumbPath(m *Main, ss style.StyleSet) string {
 		case seg.IsLast:
 			styled = breadcrumbBase.Bold(true).Render(seg.DisplayTitle)
 		case isHovered:
-			// Hovered ancestor: use BreadcrumbHover style (underline + brighter)
 			styled = ss.StatusBarBreadcrumbHover.Render(seg.DisplayTitle)
 		default:
 			styled = breadcrumbBase.Render(seg.DisplayTitle)

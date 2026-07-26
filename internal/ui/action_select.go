@@ -246,6 +246,7 @@ func selectedTypeIcon(menu model.Menu) string {
 func genericContextMenuItems() []model.ContextMenuItem {
 	return []model.ContextMenuItem{
 		{ID: "generic:refresh", Label: iconRefresh + "刷新当前列表"},
+		{ID: "generic:switchTheme", Label: iconTune + "切换主题"},
 	}
 }
 

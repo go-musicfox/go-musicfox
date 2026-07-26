@@ -115,7 +115,7 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 			text.WriteString(line.TranslatedLyric)
 			text.WriteString("]")
 		}
-		return util.SetFgStyle(text.String(), LyricInactiveColor)
+		return util.SetFgStyle(text.String(), lyricInactiveColor())
 	}
 
 	adjustedTimeMs := currentTimeMs + int64(configs.AppConfig.Main.FrameRate.DurationMs()/2)
@@ -142,7 +142,7 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 	}
 
 	if showTranslation && line.TranslatedLyric != "" {
-		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", LyricInactiveColor)
+		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", lyricInactiveColor())
 	}
 	return result
 }
@@ -358,7 +358,7 @@ func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, cu
 
 	// Helper function to render plain gray text (for non-current lines)
 	renderPlainGray := func(content string) string {
-		return util.SetFgStyle(content, LyricInactiveColor)
+		return util.SetFgStyle(content, lyricInactiveColor())
 	}
 
 	// Fill current line (with color gradient effect)
@@ -432,6 +432,13 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 
 		if !hasAnsi {
 			line = runewidth.Truncate(line, lyricsMaxLength, "")
+		} else {
+			// ANSI (YRC) lines: if visible width exceeds limit, strip and truncate
+			visibleContent := stripAnsiCodes(line)
+			if runewidth.StringWidth(visibleContent) > lyricsMaxLength {
+				line = runewidth.Truncate(visibleContent, lyricsMaxLength, "")
+				hasAnsi = false
+			}
 		}
 
 		visibleLine := line
@@ -445,9 +452,9 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 
 		if !hasAnsi {
 			if i == highlightLine {
-				line = util.SetFgStyle(line, LyricActiveColor)
+				line = util.SetFgStyle(line, lyricActiveColor())
 			} else {
-				line = util.SetFgStyle(line, LyricInactiveColor)
+				line = util.SetFgStyle(line, lyricInactiveColor())
 			}
 		}
 		lyricBuilder.WriteString(line)
@@ -489,7 +496,14 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		if isHighlight && !hasAnsi {
 			lyricLine = r.lyricNowScrollBar.Tick(maxLen, line)
 		} else if hasAnsi {
-			lyricLine = line
+			// ANSI (YRC) lines: if visible width exceeds limit, strip and truncate
+			visibleContent := stripAnsiCodes(line)
+			if runewidth.StringWidth(visibleContent) > maxLen {
+				hasAnsi = false
+				lyricLine = runewidth.Truncate(runewidth.FillRight(visibleContent, maxLen), maxLen, "")
+			} else {
+				lyricLine = line
+			}
 		} else {
 			lyricLine = runewidth.Truncate(runewidth.FillRight(line, maxLen), maxLen, "")
 		}
@@ -497,9 +511,9 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		lineHasAnsi := hasAnsi || strings.Contains(lyricLine, "\033[")
 		if !lineHasAnsi {
 			if isHighlight {
-				lyricLine = util.SetFgStyle(lyricLine, LyricActiveColor)
+				lyricLine = util.SetFgStyle(lyricLine, lyricActiveColor())
 			} else {
-				lyricLine = util.SetFgStyle(lyricLine, LyricInactiveColor)
+				lyricLine = util.SetFgStyle(lyricLine, lyricInactiveColor())
 			}
 		}
 

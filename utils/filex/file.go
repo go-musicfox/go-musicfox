@@ -16,6 +16,10 @@ func ReadFileFromEmbed(src string) ([]byte, error) {
 	return embedDir.ReadFile(src)
 }
 
+func ReadDirFromEmbed(src string) ([]fs.DirEntry, error) {
+	return fs.ReadDir(embedDir, src)
+}
+
 func CopyFileFromEmbed(src, dst string) error {
 	var (
 		err   error

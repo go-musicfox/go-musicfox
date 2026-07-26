@@ -52,6 +52,11 @@ func musicfox() {
 
 	loadConfig()
 
+	// Sync CLI --debug flag to AppConfig so it's visible to all packages.
+	if commands.GlobalOptions.DebugMode {
+		configs.AppConfig.Main.Debug = true
+	}
+
 	util.PrimaryColor = configs.AppConfig.Theme.PrimaryColor
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
@@ -94,6 +99,9 @@ func loadConfig() {
 		panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
 	}
 	configs.AppConfig = cfg
+
+	// 加载主题文件（内置 + 用户自定义）
+	configs.LoadThemeRegistry(mfoxapp.ConfigDir())
 }
 
 // isFlagTrue checks whether a boolean flag is set to true in os.Args,
