@@ -91,8 +91,8 @@ func logout() {
 	}
 
 	notify.Notify(notify.NotifyContent{
-		Title:   "登出成功",
-		Text:    "已清理用户信息",
+		Title:   model.T(MsgOperationLogoutSuccess),
+		Text:    model.T(MsgOperationLogoutCleared),
 		Url:     types.AppGithubUrl,
 		GroupId: types.GroupID,
 	})
@@ -163,7 +163,7 @@ func likeSong(n *Netease, isLike bool, isSelected bool) model.Page {
 				msg, _ = jsonparser.GetString(resp, "data", "message")
 			}
 			if msg == "" {
-				msg = "加入或移出歌单失败"
+				msg = model.T(MsgOperationLikeFailed)
 			}
 			notify.Notify(notify.NotifyContent{
 				Title:   msg,
@@ -179,9 +179,9 @@ func likeSong(n *Netease, isLike bool, isSelected bool) model.Page {
 			n.Rerender(false)
 		}()
 
-		title := "已添加到我喜欢的歌曲"
+		title := model.T(MsgOperationLikeAdded)
 		if !isLike {
-			title = "已从我喜欢的歌曲移除"
+			title = model.T(MsgOperationLikeRemoved)
 		}
 		notify.Notify(notify.NotifyContent{
 			Title:   title,
@@ -208,7 +208,7 @@ func trashSong(n *Netease, isSelected bool) model.Page {
 		trashService.FmTrash()
 
 		notify.Notify(notify.NotifyContent{
-			Title:   "已标记为不喜欢",
+			Title:   model.T(MsgOperationFMDisliked),
 			Text:    song.Name,
 			Url:     types.AppGithubUrl,
 			GroupId: types.GroupID,
@@ -241,7 +241,7 @@ func handleSongDownload(n *Netease, song structs.Song) {
 	}
 	slog.Info("开始下载歌曲", "song", song.Name, "id", song.Id)
 	notify.Notify(notify.NotifyContent{
-		Title:   "👇🏻 正在下载，请稍候...",
+		Title:   model.T(MsgOperationDownloading),
 		Text:    song.Name,
 		GroupId: types.GroupID,
 	})
@@ -250,23 +250,26 @@ func handleSongDownload(n *Netease, song structs.Song) {
 	case err == nil:
 		slog.Info("歌曲下载成功", "song", song.Name, "id", song.Id, "path", path)
 		notify.Notify(notify.NotifyContent{
-			Title:   "✅ 下载完成",
+			Title:   model.T(MsgOperationDownloadSuccess),
 			Text:    filepath.Base(path),
 			GroupId: types.GroupID,
+			Level:   notify.ToastSuccess,
 		})
 	case errors.Is(err, os.ErrExist):
 		slog.Info("歌曲文件已存在，跳过下载", "song", song.Name, "id", song.Id, "path", path)
 		notify.Notify(notify.NotifyContent{
-			Title:   "🙅🏻 文件已存在",
+			Title:   model.T(MsgOperationDownloadExists),
 			Text:    filepath.Base(path),
 			GroupId: types.GroupID,
+			Level:   notify.ToastWarning,
 		})
 	default:
 		slog.Error("歌曲下载失败", "song", song.Name, "id", song.Id, "error", err)
 		notify.Notify(notify.NotifyContent{
-			Title:   "❌ 下载失败",
+			Title:   model.T(MsgOperationDownloadFailed),
 			Text:    err.Error(),
 			GroupId: types.GroupID,
+			Level:   notify.ToastError,
 		})
 	}
 
@@ -309,6 +312,7 @@ func handleLyricDownload(n *Netease, song structs.Song) {
 			Text:    filepath.Base(path),
 			Url:     filepath.Base(path),
 			GroupId: types.GroupID,
+			Level:   notify.ToastSuccess,
 		})
 	case errors.Is(err, os.ErrExist):
 		slog.Info("歌词文件已存在，跳过下载", "song", song.Name, "id", song.Id, "path", path)
@@ -316,6 +320,7 @@ func handleLyricDownload(n *Netease, song structs.Song) {
 			Title:   "歌词文件已存在",
 			Text:    filepath.Base(path),
 			GroupId: types.GroupID,
+			Level:   notify.ToastWarning,
 		})
 	default:
 		slog.Error("歌词下载失败", "song", song.Name, "id", song.Id, "error", err)
@@ -324,6 +329,7 @@ func handleLyricDownload(n *Netease, song structs.Song) {
 			Text:    err.Error(),
 			Url:     types.AppGithubUrl,
 			GroupId: types.GroupID,
+			Level:   notify.ToastError,
 		})
 	}
 }
@@ -340,7 +346,7 @@ func findSimilarSongs(n *Netease, isSelected bool) {
 		if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongId == song.Id {
 			return nil // 避免重复进入
 		}
-		newTitle := &model.MenuItem{Title: "相似歌曲", Subtitle: "与「" + song.Name + "」相似的歌曲"}
+		newTitle := &model.MenuItem{Title: model.T(MsgMenuSimilarSongs), Subtitle: "与「" + song.Name + "」相似的歌曲"}
 		main.EnterMenu(NewSimilarSongsMenu(newBaseMenu(n), song), newTitle)
 		return nil
 	})
@@ -399,7 +405,7 @@ func goToArtistOfSong(n *Netease, isSelected bool) {
 }
 
 // openInWeb 在浏览器中打开
-func openInWeb(n *Netease, isSelected bool) {
+func openInWeb(n *Netease, isSelected bool, selectedIndex int) {
 	op := NewOperation(n, func(n *Netease) model.Page {
 		if !isSelected {
 			if song, ok := getTargetSong(n, false); ok {
@@ -410,7 +416,7 @@ func openInWeb(n *Netease, isSelected bool) {
 
 		main := n.MustMain()
 		menu := main.CurMenu()
-		selectedIndex := menu.RealDataIndex(main.SelectedIndex())
+		selectedIndex := menu.RealDataIndex(selectedIndex)
 
 		// FIXME: 暂时这样简化，相应函数应进一步通用化命名
 		if sharer, ok := menu.(composer.Sharer); ok {
@@ -457,7 +463,7 @@ func collectSelectedPlaylist(n *Netease, isCollect bool) model.Page {
 				msg, _ = jsonparser.GetString(resp, "data", "message")
 			}
 			if msg == "" {
-				msg = "操作失败"
+				msg = model.T(MsgOperationFailed)
 			}
 			notify.Notify(notify.NotifyContent{
 				Title:   msg,
@@ -494,10 +500,11 @@ func subscribeAlbum(n *Netease, isSub bool, isSelected bool) model.Page {
 		}
 		if song.Album.Id == 0 {
 			notify.Notify(notify.NotifyContent{
-				Title:   "操作失败",
-				Text:    "歌曲没有专辑信息",
+				Title:   model.T(MsgOperationFailed),
+				Text:    model.T(MsgErrorNoAlbum),
 				Url:     types.AppGithubUrl,
 				GroupId: types.GroupID,
+				Level:   notify.ToastError,
 			})
 			return nil
 		}
@@ -512,7 +519,7 @@ func subscribeAlbum(n *Netease, isSub bool, isSelected bool) model.Page {
 				msg, _ = jsonparser.GetString(resp, "data", "message")
 			}
 			if msg == "" {
-				msg = "操作失败"
+				msg = model.T(MsgOperationFailed)
 			}
 			notify.Notify(notify.NotifyContent{
 				Title:   msg,
@@ -549,10 +556,11 @@ func subscribeArtist(n *Netease, isSub bool, isSelected bool) model.Page {
 		}
 		if len(song.Artists) == 0 {
 			notify.Notify(notify.NotifyContent{
-				Title:   "操作失败",
-				Text:    "歌曲没有歌手信息",
+				Title:   model.T(MsgOperationFailed),
+				Text:    model.T(MsgErrorNoArtist),
 				Url:     types.AppGithubUrl,
 				GroupId: types.GroupID,
+				Level:   notify.ToastError,
 			})
 			return nil
 		}
@@ -570,7 +578,7 @@ func subscribeArtist(n *Netease, isSub bool, isSelected bool) model.Page {
 				msg, _ = jsonparser.GetString(resp, "data", "message")
 			}
 			if msg == "" {
-				msg = "操作失败"
+				msg = model.T(MsgOperationFailed)
 			}
 			notify.Notify(notify.NotifyContent{
 				Title:   msg,
@@ -688,7 +696,7 @@ func openAddSongToUserPlaylistMenu(n *Netease, isSelected, isAdd bool) model.Pag
 			subtitle = "将「" + song.Name + "」从歌单中删除"
 		}
 		newMenu := NewAddToUserPlaylistMenu(newBaseMenu(n), n.user.UserId, song, isAdd)
-		newTitle := &model.MenuItem{Title: "我的歌单", Subtitle: subtitle}
+		newTitle := &model.MenuItem{Title: model.T(MsgMenuMyPlaylists), Subtitle: subtitle}
 		main.EnterMenu(newMenu, newTitle)
 		return nil
 	}
@@ -809,16 +817,18 @@ func clearSongCache(n *Netease) {
 			if err != nil {
 				slog.Error("清除缓存失败", "error", err)
 				notify.Notify(notify.NotifyContent{
-					Title:   "清除缓存失败",
+					Title:   model.T(MsgOperationCacheClearFailed),
 					Text:    err.Error(),
 					GroupId: types.GroupID,
+					Level:   notify.ToastError,
 				})
 			} else {
 				slog.Info("清除缓存成功")
 				notify.Notify(notify.NotifyContent{
 					Title:   "清除缓存成功",
-					Text:    "缓存已清除",
+					Text:    model.T(MsgOperationCacheCleared),
 					GroupId: types.GroupID,
+					Level:   notify.ToastSuccess,
 				})
 			}
 			return nil
@@ -826,9 +836,9 @@ func clearSongCache(n *Netease) {
 		op.ShowLoading().Execute()
 	}
 	menu := NewConfirmMenu(newBaseMenu(n), []ConfirmItem{
-		{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+		{title: model.MenuItem{Title: model.T(MsgPromptConfirm)}, action: action, backLevel: 1},
 	})
-	n.MustMain().EnterMenu(menu, &model.MenuItem{Title: "清除缓存", Subtitle: "确定清除缓存"})
+	n.MustMain().EnterMenu(menu, &model.MenuItem{Title: model.T(MsgPromptClearCache), Subtitle: "确定清除缓存"})
 }
 
 // action 打开操作菜单
@@ -850,16 +860,16 @@ func action(n *Netease, curPlaying bool) {
 		if ok {
 			newTitle = &model.MenuItem{Title: "操作当前播放", Subtitle: song.Name}
 		} else {
-			newTitle = &model.MenuItem{Title: "操作当前播放", Subtitle: "当前无播放"}
+			newTitle = &model.MenuItem{Title: "操作当前播放", Subtitle: model.T(MsgMenuOperationNoPlaying)}
 		}
 	} else {
 		menuItems := menu.MenuViews()
 		selectedIndex := menu.RealDataIndex(main.SelectedIndex())
 		if selectedIndex >= 0 && selectedIndex < len(menuItems) {
 			item := menuItems[selectedIndex]
-			newTitle = &model.MenuItem{Title: "操作：" + item.Title, Subtitle: item.Subtitle}
+			newTitle = &model.MenuItem{Title: model.T(MsgMenuOperationTarget) + item.Title, Subtitle: item.Subtitle}
 		} else {
-			newTitle = &model.MenuItem{Title: "操作", Subtitle: "未知操作对象"}
+			newTitle = &model.MenuItem{Title: "操作", Subtitle: model.T(MsgMenuOperationUnknown)}
 		}
 	}
 
@@ -868,7 +878,7 @@ func action(n *Netease, curPlaying bool) {
 }
 
 // shareItem 分享项目到剪贴板
-func shareItem(n *Netease, isSelected bool) {
+func shareItem(n *Netease, isSelected bool, selectedIndex int) {
 	var itemToShare any
 	if !isSelected {
 		if song, ok := getTargetSong(n, false); ok {
@@ -877,7 +887,7 @@ func shareItem(n *Netease, isSelected bool) {
 	} else {
 		main := n.MustMain()
 		menu := main.CurMenu()
-		selectedIndex := menu.RealDataIndex(main.SelectedIndex())
+		selectedIndex := menu.RealDataIndex(selectedIndex)
 		if sharer, ok := menu.(composer.Sharer); ok {
 			itemToShare = sharer.ItemToShare(selectedIndex)
 		} else { // 兼容旧菜单类型
@@ -912,24 +922,37 @@ func shareItem(n *Netease, isSelected bool) {
 	if err != nil {
 		slog.Error("分享失败", "error", err)
 		notify.Notify(notify.NotifyContent{
-			Title:   "分享失败",
+			Title:   model.T(MsgOperationShareFailed),
 			Text:    err.Error(),
 			Url:     types.AppGithubUrl,
 			GroupId: types.GroupID,
 			Icon:    "",
+			Level:   notify.ToastError,
 		})
 		return
 	}
 	if err = clipboard.Write(str); err != nil {
 		slog.Error("写入剪贴板失败", "error", err)
 		notify.Notify(notify.NotifyContent{
-			Title:   "分享失败",
+			Title:   model.T(MsgOperationShareFailed),
 			Text:    err.Error(),
 			Url:     types.AppGithubUrl,
 			GroupId: types.GroupID,
 			Icon:    "",
+			Level:   notify.ToastError,
 		})
+		return
 	}
+	
+	// 分享成功通知
+	notify.Notify(notify.NotifyContent{
+		Title:   model.T(MsgOperationShareSuccess),
+		Text:    str,
+		Url:     types.AppGithubUrl,
+		GroupId: types.GroupID,
+		Icon:    "",
+		Level:   notify.ToastSuccess,
+	})
 }
 
 // searchSong 搜索歌名
@@ -956,7 +979,7 @@ func searchSong(n *Netease, isSelected bool) {
 		n.search.searchType = StSingleSong
 		n.search.result = _struct.GetSongsOfSearchResult(response)
 
-		return main.EnterMenu(NewSearchResultMenu(newBaseMenu(n), StSingleSong), &model.MenuItem{Title: "搜索结果"})
+		return main.EnterMenu(NewSearchResultMenu(newBaseMenu(n), StSingleSong), &model.MenuItem{Title: model.T(MsgMenuSearchResult)})
 	})
 	op.ShowLoading().Execute()
 }

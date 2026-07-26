@@ -1,7 +1,13 @@
 package ui
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+)
+
+const (
+	mainMenuHelpIndex        = 14
+	mainMenuCheckUpdateIndex = 15
 )
 
 type MainMenu struct {
@@ -47,8 +53,8 @@ func NewMainMenu(netease *Netease) *MainMenu {
 			NewCloudMenu(base),
 			NewRadioDjTypeMenu(base),
 			NewLastfm(base),
-			NewHelpMenu(base),
-			NewCheckUpdateMenu(base),
+			nil, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
+			nil, // 检查更新由 Action 异步执行，并直接显示 TUI 通知。
 		},
 	}
 	return mainMenu
@@ -68,15 +74,28 @@ func (m *MainMenu) GetMenuKey() string {
 
 func (m *MainMenu) MenuViews() []model.MenuItem {
 	for i, menu := range m.menuList {
-		menu.FormatMenuItem(&m.menus[i])
+		if menu != nil {
+			menu.FormatMenuItem(&m.menus[i])
+		}
 	}
 	return m.menus
 }
 
 func (m *MainMenu) SubMenu(_ *model.App, index int) model.Menu {
-	if index >= len(m.menuList) {
+	if index < 0 || index >= len(m.menuList) {
 		return nil
 	}
-
 	return m.menuList[index]
+}
+
+func (m *MainMenu) Action(app *model.App, index int) (model.Page, tea.Cmd) {
+	switch index {
+	case mainMenuHelpIndex:
+		showHelpPopup(app)
+		return app.MustMain(), nil
+	case mainMenuCheckUpdateIndex:
+		return app.MustMain(), checkUpdateCmd()
+	default:
+		return m.baseMenu.Action(app, index)
+	}
 }

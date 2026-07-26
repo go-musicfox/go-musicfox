@@ -1,50 +1,48 @@
 package ui
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/version"
 )
 
-type CheckUpdateMenu struct {
-	baseMenu
-	hasUpdate bool
-}
-
-func NewCheckUpdateMenu(base baseMenu) *CheckUpdateMenu {
-	return &CheckUpdateMenu{
-		baseMenu: base,
+func newVersionNotifyContent(newVersion string) notify.NotifyContent {
+	return notify.NotifyContent{
+		Title:       "发现新版本: " + newVersion,
+		Text:        "去看看呗",
+		Url:         types.AppGithubUrl + "/releases/tag/" + newVersion,
+		ActionLabel: "前往 GitHub",
 	}
 }
 
-func (m *CheckUpdateMenu) GetMenuKey() string {
-	return "check_update"
+func checkUpdateCmd() tea.Cmd {
+	return func() tea.Msg {
+		hasUpdate, latestVersion := version.CheckUpdate()
+		return checkUpdateNotificationMsg(hasUpdate, latestVersion)
+	}
 }
 
-func (m *CheckUpdateMenu) MenuViews() []model.MenuItem {
-	if m.hasUpdate {
-		return []model.MenuItem{
-			{Title: "检查到新版本，回车查看~", Subtitle: "ENTER"},
+func checkUpdateNotificationMsg(hasUpdate bool, latestVersion string) model.ShowNotificationMsg {
+	var spec model.NotificationSpec
+	switch {
+	case hasUpdate:
+		spec = buildToastNotificationSpec(newVersionNotifyContent(latestVersion), notify.ToastInfo, open.Start)
+	case latestVersion != "":
+		spec = model.NotificationSpec{
+			Level:   model.NotificationSuccess,
+			Title:   "检查更新",
+			Message: types.AppVersion + " 已是最新版本",
+		}
+	default:
+		spec = model.NotificationSpec{
+			Level:   model.NotificationError,
+			Title:   "检查更新失败",
+			Message: "无法获取最新版本信息，请稍后重试",
 		}
 	}
-
-	return []model.MenuItem{
-		{Title: "已是最新版本"},
-	}
-}
-
-func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu {
-	if m.hasUpdate {
-		_ = open.Start(types.AppGithubUrl)
-	}
-	return nil
-}
-
-func (m *CheckUpdateMenu) BeforeEnterMenuHook() model.Hook {
-	return func(main *model.Main) (bool, model.Page) {
-		m.hasUpdate, _ = version.CheckUpdate()
-		return true, nil
-	}
+	return model.ShowNotificationMsg{Spec: spec}
 }

@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"log/slog"
-	"runtime"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -22,11 +21,6 @@ type EventHandler struct {
 	netease         *Netease
 	keyToOperateMap map[string]keybindings.OperateType // KeyStr -> OperateType
 	mouseVolumeStep int
-
-	// 双击检测相关字段
-	lastClickTime time.Time
-	lastClickX    int
-	lastClickY    int
 }
 
 func NewEventHandler(netease *Netease) *EventHandler {
@@ -71,7 +65,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			if !player.playlistUpdateAt.IsZero() {
 				subTitle = player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
 			}
-			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.Playlist()), &model.MenuItem{Title: "当前播放列表", Subtitle: subTitle})
+			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.Playlist()), &model.MenuItem{Title: model.T(MsgMenuCurrentPlaylist), Subtitle: subTitle})
 			player.LocatePlayingSong()
 		}
 	case keybindings.OpPlayOrToggle:
@@ -141,8 +135,8 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		newPage := likeSong(h.netease, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpHelp:
-		// 帮助
-		main.EnterMenu(NewHelpMenu(newBaseMenu(h.netease)), &model.MenuItem{Title: "帮助"})
+		// 帮助（Markdown 弹窗，支持滚动/缩放/Esc 关闭）
+		showHelpPopup(h.netease.App)
 	case keybindings.OpAddSelectedToUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
@@ -175,10 +169,10 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		goToArtistOfSong(h.netease, true)
 	case keybindings.OpOpenPlayingSongInWeb:
 		// 网页打开当前歌曲
-		openInWeb(h.netease, false)
+		openInWeb(h.netease, false, main.SelectedIndex())
 	case keybindings.OpOpenSelectedItemInWeb:
 		// 网页打开选中项
-		openInWeb(h.netease, true)
+		openInWeb(h.netease, true, main.SelectedIndex())
 	case keybindings.OpCollectSelectedPlaylist:
 		// 收藏选中歌单
 		newPage := collectSelectedPlaylist(h.netease, true)
@@ -258,9 +252,9 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpActionOfPlayingSong:
 		action(h.netease, true)
 	case keybindings.OpSharePlayingItem:
-		shareItem(h.netease, false)
+		shareItem(h.netease, false, main.SelectedIndex())
 	case keybindings.OpShareSelectItem:
-		shareItem(h.netease, true)
+		shareItem(h.netease, true, main.SelectedIndex())
 	case keybindings.OpToggleSortOrder:
 		if djMenu, ok := menu.(*DjRadioDetailMenu); ok {
 			djMenu.ToggleSortOrder()
@@ -294,19 +288,23 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 }
 
 func (h *EventHandler) playOrToggleHandle() {
+	main := h.netease.MustMain()
+	playOrToggle(h.netease, main.CurMenu().RealDataIndex(main.SelectedIndex()))
+}
+
+func playOrToggle(netease *Netease, selectedIndex int) {
 	var (
 		songs         []structs.Song
-		main          = h.netease.MustMain()
+		main          = netease.MustMain()
 		menu          = main.CurMenu()
-		player        = h.netease.player
+		player        = netease.player
 		inPlayingMenu = player.InPlayingMenu()
 	)
 	if me, ok := menu.(SongsMenu); ok {
 		songs = me.Songs()
 	}
 
-	selectedIndex := menu.RealDataIndex(main.SelectedIndex())
-	if me, ok := menu.(Menu); !ok || !me.IsPlayable() || len(songs) == 0 || selectedIndex > len(songs)-1 {
+	if me, ok := menu.(Menu); !ok || !me.IsPlayable() || selectedIndex < 0 || len(songs) == 0 || selectedIndex > len(songs)-1 {
 		if player.CurSongIndex() > len(player.Playlist())-1 {
 			return
 		}
@@ -352,7 +350,11 @@ func (h *EventHandler) playOrToggleHandle() {
 	player.StartPlay()
 }
 
-// MouseMsgHandle 处理鼠标事件
+// MouseMsgHandle 处理鼠标事件。
+// 作为 foxful-cli 的 MouseController 优先运行：仅处理 go-musicfox 特有区域
+// （播放栏、进度条、非菜单区滚轮），其余返回 false 委托给 foxful-cli
+// 内置处理（hover、右键 ContextMenu、单击/双击、返回按钮、面包屑、tab、
+// 菜单区滚轮滚动、侧键菜单导航）。
 func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {
 	var (
 		player = h.netease.player
@@ -367,274 +369,68 @@ func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropa
 	mouse := msg.Mouse()
 	switch msg.(type) {
 	case tea.MouseClickMsg:
-		slog.Info("click", "X", mouse.X, "Y", mouse.Y)
 		switch mouse.Button {
 		case tea.MouseLeft:
-			slog.Info("click", "X", mouse.X, "Y", mouse.Y)
-			// Handle play mode click
-			// 计算播放模式显示位置
-			// 播放模式在歌曲信息行，位于窗口底部往上第3行（进度条是最后一行，往上数第3行）
+			// 播放栏点击（播放模式/歌曲信息/歌手）— musicfox 特有
 			if handled, page, cmd := h.handlePlayerBarClick(msg, a, main); handled {
 				return true, page, cmd
 			}
-
-			// Handle progress bar seeking
+			// 进度条 seek — musicfox 特有
 			if handled, m, cmd := h.handleProgressBarSeek(msg, a, main); handled {
 				return handled, m, cmd
 			}
+			// 其他区域（菜单项/返回按钮/面包屑/tab）委托 foxful-cli
+			return false, nil, nil
 
-			// Handle single and double-click detection for menu items
-
-			now := time.Now()
-			// 根据操作系统设置双击间隔阈值
-			var doubleClickInterval time.Duration
-			switch runtime.GOOS {
-			case "darwin":
-				doubleClickInterval = 400 * time.Millisecond
-			case "windows":
-				doubleClickInterval = 500 * time.Millisecond
-			default:
-				doubleClickInterval = 300 * time.Millisecond
-			}
-
-			// 计算坐标差的绝对值
-			deltaX := mouse.X - h.lastClickX
-			if deltaX < 0 {
-				deltaX = -deltaX
-			}
-			deltaY := mouse.Y - h.lastClickY
-			if deltaY < 0 {
-				deltaY = -deltaY
-			}
-
-			// 检测是否为双击（时间间隔小于阈值且位置相近）
-			if now.Sub(h.lastClickTime) <= doubleClickInterval &&
-				deltaX <= 2 && deltaY <= 2 {
-				// 双击事件处理
-				handled, page := h.handleDoubleClick(msg, a, main)
-				if handled {
-					// 重置双击检测状态
-					h.lastClickTime = time.Time{}
-					if page != nil {
-						return true, page, a.Tick(time.Nanosecond)
-					}
-					return true, main, a.Tick(time.Nanosecond)
-				}
-			} else {
-				// 单击事件处理：改变焦点
-				h.handleSingleClick(msg, a, main)
-			}
-
-			// 更新最后点击信息
-			h.lastClickTime = now
-			h.lastClickX = mouse.X
-			h.lastClickY = mouse.Y
-
-		case tea.MouseRight:
-			// 鼠标右键：根据点击位置判断是菜单还是歌曲信息区域
-			// 歌曲信息行：等同于对“当前播放”按 m
-			playModeRow := a.WindowHeight() - PlayModeRowOffset
-			if mouse.Y == playModeRow {
-				action(h.netease, true)
-				return true, main, a.Tick(time.Nanosecond)
-			}
-
-			// 菜单区域：先切换焦点；若当前是“可播放歌曲菜单”，则打开选中项操作菜单
-			menuStartRow := main.MenuStartRow()
-			menuBottomRow := main.MenuBottomRow()
-			y := mouse.Y + 1 // 1-based
-			isInMenuArea := y >= menuStartRow && y < menuBottomRow
-			if isInMenuArea {
-				h.handleSingleClick(msg, a, main)
-
-				menu := main.CurMenu()
-				if _, ok := menu.(SongsMenu); ok {
-					if curMenu, ok := menu.(Menu); ok && curMenu.IsPlayable() {
-						action(h.netease, false)
-						return true, main, a.Tick(time.Nanosecond)
-					}
-				}
-
-				return true, main, a.Tick(time.Nanosecond)
-			}
-
-			// 非菜单区域：默认触发“当前播放”的操作菜单
-			action(h.netease, true)
-			return true, main, a.Tick(time.Nanosecond)
-
-		case tea.MouseBackward:
-			oldPage := main.CurPage()
-			main.NextPage()
-			if oldPage != main.CurPage() {
-				curIndex := mathx.Min(main.SelectedIndex()+main.PageSize(), len(main.CurMenu().MenuViews())-1)
-				main.SetSelectedIndex(curIndex)
-			}
-			return true, main, a.Tick(time.Nanosecond)
-
-		case tea.MouseForward:
-			oldPage := main.CurPage()
-			main.PrePage()
-			if oldPage != main.CurPage() {
-				curIndex := mathx.Max(main.SelectedIndex()-main.PageSize(), 0)
-				main.SetSelectedIndex(curIndex)
-			}
-			return true, main, a.Tick(time.Nanosecond)
-
-		case tea.MouseMiddle:
-			// 鼠标中键：返回上一级（等同于ESC键）
-			main.BackMenu()
-			return true, main, a.Tick(time.Nanosecond)
 		}
+		// 侧键（Backward/Forward/Middle）及其他左右键未命中 → 委托 foxful-cli
+		return false, nil, nil
 
 	case tea.MouseWheelMsg:
 		switch mouse.Button {
-		case tea.MouseWheelDown:
-			if mouse.Mod == tea.ModCtrl {
-				currentVolume := player.Volume()
-				newVolume := max(currentVolume-h.mouseVolumeStep, 0)
-				player.SetVolume(newVolume)
-			} else {
-				player.DownVolume()
+		case tea.MouseWheelUp, tea.MouseWheelDown:
+			// 菜单区滚轮 → 委托 foxful-cli 滚动菜单；其他区域 → 调音量。
+			// 对齐 foxful-cli 内部 0-based mouse.Y 坐标系，勿加偏移。
+			if mouse.Y >= main.MenuStartRow() && mouse.Y < main.MenuBottomRow() {
+				return false, nil, nil
 			}
-		case tea.MouseWheelUp:
-			if mouse.Mod == tea.ModCtrl {
-				currentVolume := player.Volume()
-				newVolume := min(currentVolume+h.mouseVolumeStep, 100)
-				player.SetVolume(newVolume)
+			if mouse.Button == tea.MouseWheelDown {
+				if mouse.Mod == tea.ModCtrl {
+					player.SetVolume(max(player.Volume()-h.mouseVolumeStep, 0))
+				} else {
+					player.DownVolume()
+				}
 			} else {
-				player.UpVolume()
+				if mouse.Mod == tea.ModCtrl {
+					player.SetVolume(min(player.Volume()+h.mouseVolumeStep, 100))
+				} else {
+					player.UpVolume()
+				}
 			}
-		case tea.MouseWheelLeft:
-			player.PreviousSong(true)
-		case tea.MouseWheelRight:
-			player.NextSong(true)
+			return true, main, a.Tick(time.Nanosecond)
+		case tea.MouseWheelLeft, tea.MouseWheelRight:
+			// 水平滚轮不映射切歌，避免触控板手势转换为多条消息时重复切歌。
+			// 用户可继续使用键盘快捷键切歌。
+			return false, nil, nil
 		}
+		return false, nil, nil
 
 	case tea.MouseMotionMsg:
-		// Handle progress bar seeking
-		if handled, m, cmd := h.handleProgressBarSeek(msg, a, main); handled {
-			return handled, m, cmd
+		// 播放栏 hover 跟踪 — musicfox 特有
+		if handled, cmd := h.handlePlaybarMotion(msg, a, main); handled {
+			return true, nil, cmd
 		}
+		// 其他 motion → 委托 foxful-cli（hover 效果 + 指针形状）
+		return false, nil, nil
 	}
 
-	return true, main, a.Tick(time.Nanosecond)
-
-}
-
-// handleSingleClick 处理鼠标单击事件，单击菜单项时改变焦点
-func (h *EventHandler) handleSingleClick(msg tea.MouseMsg, a *model.App, main *model.Main) bool {
-	index, ok := h.getClickedIndexFromPosition(msg, a, main)
-	if !ok {
-		return false
-	}
-	main.SetSelectedIndex(index)
-	return true
-}
-
-// handleDoubleClick 处理鼠标双击事件，双击菜单项时进入该菜单
-func (h *EventHandler) handleDoubleClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page) {
-	clickedIndex, ok := h.getClickedIndexFromPosition(msg, a, main)
-	if !ok {
-		return false, nil
-	}
-
-	// 设置选中索引
-	main.SetSelectedIndex(clickedIndex)
-	menu := main.CurMenu()
-	menuViews := menu.MenuViews()
-
-	// 如果是歌曲菜单，双击播放歌曲
-	if songsMenu, ok := menu.(SongsMenu); ok {
-		if curMenu, ok := menu.(Menu); ok && curMenu.IsPlayable() {
-			songs := songsMenu.Songs()
-			selectedIndex := menu.RealDataIndex(clickedIndex)
-			if selectedIndex >= 0 && selectedIndex < len(songs) {
-				// 调用播放逻辑
-				h.playOrToggleHandle()
-				return true, nil
-			}
-		}
-	}
-
-	// 非歌曲菜单，进入子菜单
-	loading := model.NewLoading(main)
-	loading.Start()
-	defer loading.Complete()
-
-	submenu := menu.SubMenu(a, menu.RealDataIndex(clickedIndex))
-	if submenu != nil {
-		menuTitle := &menuViews[clickedIndex]
-		newPage := main.EnterMenu(submenu, menuTitle)
-		return true, newPage
-	}
-
-	return false, nil
-}
-
-// getClickedIndexFromPosition 根据鼠标位置计算点击的菜单项索引
-func (h *EventHandler) getClickedIndexFromPosition(msg tea.MouseMsg, a *model.App, main *model.Main) (int, bool) {
-	menu := main.CurMenu()
-	menuViews := menu.MenuViews()
-
-	// 获取菜单显示区域的行范围
-	menuStartRow := main.MenuStartRow()
-	menuBottomRow := main.MenuBottomRow()
-	menuStartColumn := main.MenuStartColumn()
-
-	mouse := msg.Mouse()
-
-	// 检查点击是否在菜单区域内
-	// msg.Y 是 0-based，需要转换为 1-based 与 menuStartRow 比较
-	y := mouse.Y + 1
-	if y < menuStartRow || y >= menuBottomRow {
-		return 0, false
-	}
-
-	// X坐标：检查是否在菜单的有效区域内
-	if mouse.X < menuStartColumn-MenuArrowWidth {
-		return 0, false
-	}
-
-	// 计算点击对应的菜单项索引
-	actualMenuStartRow := menuStartRow
-	relativeRow := y - actualMenuStartRow
-
-	if relativeRow < 0 {
-		return 0, false
-	}
-
-	pageStartIndex := (main.CurPage() - 1) * main.PageSize()
-	var clickedIndex int
-
-	// 双列模式
-	if main.IsDualColumn() {
-		windowWidth := a.WindowWidth()
-		var leftColumnWidth int
-		if windowWidth <= DualColumnWindowThreshold {
-			leftColumnWidth = (windowWidth - menuStartColumn - LyricHorizontalMargin) / 2
-		} else {
-			leftColumnWidth = MaxLeftColumnWidth
-		}
-
-		if mouse.X < menuStartColumn+leftColumnWidth {
-			clickedIndex = pageStartIndex + relativeRow*2
-		} else {
-			clickedIndex = pageStartIndex + relativeRow*2 + 1
-		}
-	} else {
-		clickedIndex = pageStartIndex + relativeRow
-	}
-
-	if clickedIndex < 0 || clickedIndex >= len(menuViews) {
-		return 0, false
-	}
-
-	return clickedIndex, true
+	// 其他事件（MouseReleaseMsg 等）→ 委托 foxful-cli
+	return false, nil, nil
 }
 
 // handlePlayerBarClick 处理播放栏点击事件
 func (h *EventHandler) handlePlayerBarClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
-	playModeRow := a.WindowHeight() - PlayModeRowOffset
+	playModeRow := main.EffectiveWindowHeight(a) - PlayModeRowOffset
 	if msg.Mouse().Y != playModeRow {
 		return false, nil, nil
 	}
@@ -748,11 +544,115 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 	return false, nil, nil
 }
 
+// handlePlaybarMotion tracks the hovered playbar element and switches the mouse pointer.
+func (h *EventHandler) handlePlaybarMotion(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, tea.Cmd) {
+	player := h.netease.player
+	mouse := msg.Mouse()
+	playModeRow := main.EffectiveWindowHeight(a) - PlayModeRowOffset
+	progressBarRow := main.EffectiveWindowHeight(a) - 1
+
+	newHover := PlaybarElementNone
+	needsPointer := false
+
+	progressBarWidth := a.WindowWidth() - ProgressTimeDisplayWidth
+	if mouse.Y == progressBarRow && mouse.X < progressBarWidth {
+		newHover = PlaybarElementProgressBar
+		needsPointer = true
+	} else if mouse.Y == playModeRow {
+		curSong := player.CurSong()
+		if curSong.Id == 0 {
+			menuStartColumn := main.MenuStartColumn()
+			if menuStartColumn > MenuArrowWidth {
+				playModeEndX := menuStartColumn + PlayModeClickWidth
+				if mouse.X >= menuStartColumn-MenuArrowWidth && mouse.X <= playModeEndX {
+					newHover = PlaybarElementMode
+					needsPointer = true
+				}
+			}
+		} else {
+			menuStartColumn := main.MenuStartColumn()
+			leftPad := 0
+			if !main.CenterEverything() && menuStartColumn-MenuArrowWidth > 0 {
+				leftPad = menuStartColumn - MenuArrowWidth
+			}
+			currentX := leftPad
+
+			if menuStartColumn-MenuArrowWidth > 0 {
+				modeWidth := runewidth.StringWidth(fmt.Sprintf("[%s] ", player.Mode().Name()))
+				volWidth := runewidth.StringWidth(fmt.Sprintf("%d%% ", player.Volume()))
+				if mouse.X >= currentX && mouse.X < currentX+modeWidth {
+					newHover = PlaybarElementMode
+					needsPointer = true
+				}
+				currentX += modeWidth + volWidth
+			}
+
+			stateText := "_ z Z Z "
+			if player.State() == types.Playing {
+				stateText = "♫ ♪ ♫ ♪ "
+			}
+			stateWidth := runewidth.StringWidth(stateText)
+			if mouse.X >= currentX && mouse.X < currentX+stateWidth {
+				newHover = PlaybarElementState
+				needsPointer = true
+			}
+			currentX += stateWidth
+
+			heartWidth := runewidth.StringWidth("♥ ")
+			if mouse.X >= currentX && mouse.X < currentX+heartWidth {
+				newHover = PlaybarElementHeart
+				needsPointer = true
+			}
+			currentX += heartWidth
+
+			songShownWidth := runewidth.StringWidth(curSong.Name)
+			if !main.CenterEverything() {
+				prefixLen := SongInfoPrefixBaseWidth
+				if main.MenuStartColumn()-MenuArrowWidth > 0 {
+					prefixLen += SongInfoPrefixExtraWidth
+				}
+				maxSongWidth := a.WindowWidth() - main.MenuStartColumn() - prefixLen
+				if songShownWidth > maxSongWidth {
+					songShownWidth = maxSongWidth
+				}
+			}
+			if mouse.X >= currentX && mouse.X < currentX+songShownWidth {
+				newHover = PlaybarElementSongName
+				needsPointer = true
+			}
+			currentX += songShownWidth + 1
+
+			if mouse.X >= currentX {
+				newHover = PlaybarElementArtist
+				needsPointer = true
+			}
+		}
+	}
+
+	if newHover != h.netease.playbarHoveredElement {
+		h.netease.playbarHoveredElement = newHover
+		pointer := "default"
+		if needsPointer {
+			pointer = "pointer"
+		}
+		return true, tea.Sequence(a.RerenderCmd(true), a.SetMousePointer(pointer))
+	}
+
+	// Hover 未变化时，若鼠标仍停留在播放栏可点击元素上，必须消费该事件，
+	// 并重新发送 SetMousePointer，否则 foxful-cli 的 mouseMotionHandle 在后续
+	// motion 事件中会因 isOverClickableElement 不识别播放栏而重置指针为 "default"。
+	if newHover != PlaybarElementNone {
+		return true, a.SetMousePointer("pointer")
+	}
+
+	return false, nil
+}
+
 func (h *EventHandler) handleProgressBarSeek(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
 	player := h.netease.player
 	x, y := msg.Mouse().X, msg.Mouse().Y
 	progressBarWidth := a.WindowWidth() - ProgressTimeDisplayWidth
-	if y+1 == a.WindowHeight() && x+1 <= progressBarWidth {
+	if y+1 == main.EffectiveWindowHeight(a) && x+1 <= progressBarWidth {
 		allDuration := int(player.CurMusic().Duration.Seconds())
 		if allDuration == 0 {
 			return true, main, nil
