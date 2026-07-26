@@ -46,6 +46,8 @@ type MainConfig struct {
 	Lyric        LyricConfig        `koanf:"lyric"`
 	Pprof        PprofConfig        `koanf:"pprof"`
 	Account      AccountConfig      `koanf:"account"`
+	// 界面语言（如 "zh"、"zh-CN"、"en"），影响 foxful-cli 内置文案。留空跟随默认（中文）
+	Locale string `koanf:"locale"`
 }
 
 // NotificationConfig 桌面通知相关设置
@@ -56,6 +58,10 @@ type NotificationConfig struct {
 	Icon string `koanf:"icon"`
 	// 通知显示专辑封面
 	AlbumCover bool `koanf:"albumCover"`
+	// 是否在 TUI 内显示原生 toast 通知（点赞、下载、订阅等瞬时事件）
+	InApp bool `koanf:"inApp"`
+	// TUI 内 toast 自动消失时长（秒，0 使用默认 4 秒）
+	InAppTimeout int `koanf:"inAppTimeout"`
 }
 
 // VisualizerConfig controls live spectrum rendering.

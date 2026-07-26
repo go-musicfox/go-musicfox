@@ -14,6 +14,10 @@ progressOutBounce = true
 loadingSeconds = 2
 # 启动页欢迎语
 welcome = "musicfox"
+# 启动页动画：sequence、fade-in、rainbow-wave、typewriter、spinner、slide-in、glitch、matrix-rain、particle-burst
+animation = "sequence"
+# 是否停用启动页动画以减少动态效果
+reducedMotion = false
 # 启动时是否自动签到 (网易云有风控，建议关闭)
 signIn = false
 # 启动时是否检查应用更新
@@ -30,6 +34,9 @@ enableMouseEvent = true
 debug = false
 # 播放时 UI 刷新帧率（更高帧率可使动画更平滑，但消耗更多cpu）
 frameRate = 5
+# 界面语言（影响 foxful-cli 内置文案，如帮助提示、弹窗按钮）
+# 可选："zh"（中文，默认）、"en"（英文）等；留空跟随中文
+locale = "zh"
 
 # 实时频谱显示（目前仅支持 macOS 的 osx 播放引擎）
 # 调高 main.frameRate 更丝滑
@@ -117,6 +124,11 @@ enable = true
 icon = "logo.png"
 # (Windows/Linux) 是否使用歌曲的专辑封面作为通知图标（如为否则使用默认通知图标）
 albumCover = false
+# 是否在 TUI 内显示原生 toast 通知（点赞、下载、订阅、签到等瞬时事件）
+# 独立于桌面通知开关，可与桌面通知同时启用
+inApp = true
+# TUI 内 toast 自动消失时长（秒，0 使用默认 4 秒）
+inAppTimeout = 4
 
 # 歌词显示相关设置
 [main.lyric]
@@ -235,6 +247,11 @@ centerEverything = false
 # primaryColor = "random"
 # 经典网易云音乐红
 primaryColor = "#EA403F"
+# 是否显示底部状态栏（面包屑导航路径 + 时间）
+statusBar = true
+# 无障碍模式：高对比度主题 + 强调样式
+# 关闭时仍会依据终端 NO_COLOR/ACCESSIBLE 环境变量自动探测
+accessibleMode = false
 
 # 进度条字符样式配置
 [theme.progress]

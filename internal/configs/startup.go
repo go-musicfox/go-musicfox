@@ -27,6 +27,10 @@ type StartupConfig struct {
 	LoadingSeconds int `koanf:"loadingSeconds"`
 	// 启动页欢迎语
 	Welcome string `koanf:"welcome"`
+	// 启动页动画效果，留空时使用 sequence
+	Animation string `koanf:"animation"`
+	// 是否停用启动页动画以减少动态效果
+	ReducedMotion bool `koanf:"reducedMotion"`
 }
 
 // ToModel 将 StartupConfig 转换为 foxful-cli 所需的 model.StartupOptions。
@@ -37,5 +41,7 @@ func (sc StartupConfig) ToModel() model.StartupOptions {
 		LoadingDuration:   time.Duration(sc.LoadingSeconds) * time.Second,
 		Welcome:           sc.Welcome,
 		TickDuration:      types.StartupTickDuration,
+		Animation:         model.StartupAnimation(sc.Animation),
+		ReducedMotion:     sc.ReducedMotion,
 	}
 }
