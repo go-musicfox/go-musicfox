@@ -38,7 +38,7 @@ frameRate = 5
 # 可选："zh"（中文，默认）、"en"（英文）等；留空跟随中文
 locale = "zh"
 
-# 实时频谱显示（目前仅支持 macOS 的 osx 播放引擎）
+# 实时频谱显示（目前仅支持 osx, beep 播放引擎）
 # 调高 main.frameRate 更丝滑
 [main.visualizer]
 # 是否显示实时频谱
