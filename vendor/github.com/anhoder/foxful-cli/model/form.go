@@ -300,7 +300,7 @@ func (f *Form) View() string {
 
 		// Render line
 		b.WriteString(labelStyle.Render(paddedLabel))
-		b.WriteString(" ")
+		b.WriteString(styles.AppBackground.Render(" "))
 		b.WriteString(inputView)
 		b.WriteString("\n")
 
@@ -308,7 +308,7 @@ func (f *Form) View() string {
 		if f.errors[i] != nil {
 			errorMsg := f.errors[i].Error()
 			errorStyle := styles.Error
-			padding := strings.Repeat(" ", labelWidth+3)
+			padding := styles.AppBackground.Render(strings.Repeat(" ", labelWidth+3))
 			b.WriteString(padding)
 			b.WriteString(errorStyle.Render(errorMsg))
 			b.WriteString("\n")

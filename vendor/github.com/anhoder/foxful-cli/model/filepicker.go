@@ -348,8 +348,7 @@ func (fp *FilePicker) renderEntry(entry fileEntry, isSelected bool, styles style
 			if isSelected {
 				styled = styles.SelectedItem.Width(fp.width).Render(displayName)
 			} else {
-				padding := strings.Repeat(" ", fp.width-currentWidth)
-				styled += padding
+				styled += styles.AppBackground.Render(strings.Repeat(" ", fp.width-currentWidth))
 			}
 		}
 	}

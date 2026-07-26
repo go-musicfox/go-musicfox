@@ -183,7 +183,7 @@ func (t *Tabs) renderTabBar(ss style.StyleSet, hoveredIdx int) string {
 				parts = append(parts, ss.MenuItem.Render(title))
 			}
 		}
-		return strings.Join(parts, " ")
+		return strings.Join(parts, ss.AppBackground.Render(" "))
 	}
 
 	// Border definitions matching lipgloss layout example
@@ -259,6 +259,7 @@ func (t *Tabs) renderTabBar(ss style.StyleSet, hoveredIdx int) string {
 	if gapWidth > 0 {
 		// Gap extends the bottom border line
 		tabGap := lipgloss.NewStyle().
+			Inherit(ss.AppBackground).
 			Border(tabBorder, true).
 			BorderForeground(gapBorderColor).
 			BorderTop(false).

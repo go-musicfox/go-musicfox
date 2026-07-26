@@ -272,7 +272,7 @@ func (t *Table) renderHeader(widths []int, styles style.StyleSet) string {
 		cell := lipgloss.NewStyle().Width(widths[i]).Render(title)
 		cells = append(cells, styles.Title.Render(cell))
 	}
-	return strings.Join(cells, " ")
+	return styles.AppBackground.Render(strings.Join(cells, styles.AppBackground.Render(" ")))
 }
 
 // renderSeparator renders a separator line below the header.
@@ -281,7 +281,7 @@ func (t *Table) renderSeparator(widths []int, styles style.StyleSet) string {
 	for _, w := range widths {
 		segments = append(segments, strings.Repeat("─", w))
 	}
-	return styles.Border.Render(strings.Join(segments, " "))
+	return styles.Border.Render(styles.AppBackground.Render(strings.Join(segments, styles.AppBackground.Render(" "))))
 }
 
 // renderRow renders a single data row.
@@ -314,7 +314,7 @@ func (t *Table) renderRow(rowIdx int, widths []int, styles style.StyleSet) strin
 		cells = append(cells, cell)
 	}
 
-	return strings.Join(cells, " ")
+	return styles.AppBackground.Render(strings.Join(cells, styles.AppBackground.Render(" ")))
 }
 
 // needsScrollIndicator returns true if scroll indicators should be shown.
@@ -338,13 +338,13 @@ func (t *Table) addScrollIndicator(content string, styles style.StyleSet) string
 
 	// Top indicator (if not at top)
 	if t.scrollOffset > 0 && len(lines) > 0 {
-		lines[0] = lines[0] + " " + styles.Muted.Render("▲")
+		lines[0] = lines[0] + styles.AppBackground.Render(" ") + styles.Muted.Render("▲")
 	}
 
 	// Bottom indicator (if not at bottom)
 	if t.scrollOffset < maxOffset && len(lines) > 0 {
 		lastIdx := len(lines) - 1
-		lines[lastIdx] = lines[lastIdx] + " " + styles.Muted.Render("▾")
+		lines[lastIdx] = lines[lastIdx] + styles.AppBackground.Render(" ") + styles.Muted.Render("▾")
 	}
 
 	return strings.Join(lines, "\n")

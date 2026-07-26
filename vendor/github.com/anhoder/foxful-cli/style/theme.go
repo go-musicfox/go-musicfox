@@ -181,7 +181,6 @@ type Theme struct {
 	Subtitle             Highlight         // fg→Secondary
 	Prompt               Highlight         // fg→Primary
 	BackButton           Highlight         // fg→Secondary, bold→true
-	Breadcrumb           Highlight         // fg→Muted, bg→computed from Surface (used by status bar)
 	Button               Highlight         // fg→Primary
 	ButtonBlurred        Highlight         // fg→Secondary
 	ProgressEmpty        Highlight         // fg→Secondary
@@ -196,7 +195,7 @@ type Theme struct {
 	StatusBarNugget      Highlight         // fg→Foreground (or white on dark), bg→transparent
 	StatusBarNuggetLabel Highlight         // fg→same as StatusBarNugget.Fg, bg→Primary
 	AppBackground        Highlight         // Bg→transparent (terminal shows through)
-	MenuBg               Highlight         // Bg→transparent (falls back to AppBackground.Bg)
+	SelectedItemBg        Highlight         // Bg→transparent (falls back to AppBackground.Bg)
 
 	// ---- Hover/click highlights (interactive states) ----
 	// Each field below controls the visual feedback when the mouse hovers or
@@ -646,7 +645,6 @@ func NewStyleSet(theme Theme) StyleSet {
 	theme.Subtitle = resolvePreset(theme.Subtitle)
 	theme.Prompt = resolvePreset(theme.Prompt)
 	theme.BackButton = resolvePreset(theme.BackButton)
-	theme.Breadcrumb = resolvePreset(theme.Breadcrumb)
 	theme.Button = resolvePreset(theme.Button)
 	theme.ButtonBlurred = resolvePreset(theme.ButtonBlurred)
 	theme.ProgressEmpty = resolvePreset(theme.ProgressEmpty)
@@ -671,7 +669,7 @@ func NewStyleSet(theme Theme) StyleSet {
 	theme.StatusBarNugget = resolvePreset(theme.StatusBarNugget)
 	theme.StatusBarNuggetLabel = resolvePreset(theme.StatusBarNuggetLabel)
 	theme.AppBackground = resolvePreset(theme.AppBackground)
-	theme.MenuBg = resolvePreset(theme.MenuBg)
+	theme.SelectedItemBg = resolvePreset(theme.SelectedItemBg)
 	theme.MenuItemHover = resolvePreset(theme.MenuItemHover)
 	theme.SelectedItemHover = resolvePreset(theme.SelectedItemHover)
 	theme.StatusBarBreadcrumbHover = resolvePreset(theme.StatusBarBreadcrumbHover)
@@ -721,12 +719,8 @@ func NewStyleSet(theme Theme) StyleSet {
 		}
 	}
 
-	breadcrumbHL := resolveHL(theme.Breadcrumb, nil, nil)
-	// Breadcrumb background (shared): use Breadcrumb.Bg → StatusBarBreadcrumb.Bg → computed
-	breadcrumbBg := breadcrumbHL.Bg
-	if breadcrumbBg == nil {
-		breadcrumbBg = theme.StatusBarBreadcrumb.Bg
-	}
+	// Breadcrumb background: use StatusBarBreadcrumb.Bg → computed from Surface → fallback
+	breadcrumbBg := theme.StatusBarBreadcrumb.Bg
 	if breadcrumbBg == nil {
 		if srf, ok := colorful.MakeColor(theme.Surface); ok {
 			if bgIsDark {
@@ -736,10 +730,9 @@ func NewStyleSet(theme Theme) StyleSet {
 			}
 		}
 		if breadcrumbBg == nil {
-			breadcrumbBg = lipgloss.Color("#555555")
+			breadcrumbBg = theme.AppBackground.Bg
 		}
 	}
-	breadcrumbHL.Bg = or(breadcrumbHL.Bg, breadcrumbBg)
 
 	// Buttons / progress
 	buttonHL := resolveHL(theme.Button, theme.Primary, nil)
@@ -752,11 +745,7 @@ func NewStyleSet(theme Theme) StyleSet {
 		popupSurface = theme.Background
 	}
 	if popupSurface == nil {
-		if detectedDarkBg {
-			popupSurface = lipgloss.Color("#242424")
-		} else {
-			popupSurface = lipgloss.Color("#F5F5F5")
-		}
+		popupSurface = theme.AppBackground.Bg
 	}
 	borderColor := or(theme.Border, theme.Accent)
 	popupBorder := or(theme.Popup.Border, borderColor)
@@ -814,14 +803,14 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	// App / Menu backgrounds
 	appBg := or(theme.AppBackground.Bg, noColor)
-	menuBg := or(theme.MenuBg.Bg, appBg)
+	selectedItemBg := or(theme.SelectedItemBg.Bg, appBg)
 
 	// ---- Hover highlights (interactive states) ----
 
 	// MenuItemHover: fg defaults to selectedItemHL.Fg, underline adds clickability cue
 	menuItemHoverHL := resolveHL(theme.MenuItemHover, selectedItemHL.Fg, nil)
 	if menuItemHoverHL.Bg == nil {
-		menuItemHoverHL.Bg = menuBg
+		menuItemHoverHL.Bg = selectedItemBg
 	}
 	if menuItemHoverHL.Underline == nil {
 		menuItemHoverHL.Underline = BoolPtr(false)
@@ -883,7 +872,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	base.MenuTitle = applyHL(lipgloss.NewStyle(), Highlight{Fg: menuTitleHL.Fg})
 
-	base.MenuItem = lipgloss.NewStyle().Background(menuBg)
+	base.MenuItem = lipgloss.NewStyle().Background(selectedItemBg)
 
 	base.MenuItemHover = applyHL(lipgloss.NewStyle(), menuItemHoverHL)
 
@@ -951,11 +940,7 @@ func NewStyleSet(theme Theme) StyleSet {
 		notifSurface = theme.Background
 	}
 	if notifSurface == nil {
-		if detectedDarkBg {
-			notifSurface = lipgloss.Color("#242424")
-		} else {
-			notifSurface = lipgloss.Color("#F5F5F5")
-		}
+		notifSurface = theme.AppBackground.Bg
 	}
 	notifTitleHL := resolveHL(theme.Notification.Title, theme.Primary, nil)
 	if notifTitleHL.Bold == nil {
@@ -1026,7 +1011,7 @@ func NewStyleSet(theme Theme) StyleSet {
 		Background(statusBarBg)
 
 	base.StatusBarBreadcrumb = lipgloss.NewStyle().
-		Foreground(breadcrumbHL.Fg).
+		Foreground(theme.StatusBarBreadcrumb.Fg).
 		Background(breadcrumbBg)
 	base.StatusBarBreadcrumbBg = lipgloss.NewStyle().
 		Background(breadcrumbBg)

@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
@@ -191,6 +192,11 @@ type Popup struct {
 	bounds       popupRect
 	boundsSet    bool
 	actionBounds []popupRect
+
+	// scrollThrottleUntil is set after processing a wheel event. Subsequent wheel
+	// events arriving before this time are dropped, coalescing rapid trackpad
+	// scrolls into a controlled rate.
+	scrollThrottleUntil time.Time
 }
 
 // NewPopup validates spec and constructs a popup ready for App.ShowPopup.
@@ -796,9 +802,10 @@ func renderPopupBody(lines []string, scrolling bool, offset, maxOffset, maxWidth
 		if maxWidth == 0 {
 			return strings.Join(lines, "\n"), widestLine(lines), nil
 		}
+		lineStyle := lipgloss.NewStyle().MaxWidth(maxWidth)
 		output := make([]string, len(lines))
 		for i, line := range lines {
-			output[i] = lipgloss.NewStyle().MaxWidth(maxWidth).Render(line)
+			output[i] = lineStyle.Render(line)
 		}
 		return strings.Join(output, "\n"), widestLine(output), nil
 	}
@@ -812,18 +819,18 @@ func renderPopupBody(lines []string, scrolling bool, offset, maxOffset, maxWidth
 	if maxOffset > 0 {
 		thumbLine = offset * (len(lines) - 1) / maxOffset
 	}
+	lineStyle := lipgloss.NewStyle().MaxWidth(bodyWidth).Width(bodyWidth)
+	trackChar := styles.ScrollTrack.Render("│")
+	thumbChar := styles.ScrollThumb.Render("█")
 	output := make([]string, len(lines))
 	scrollbarLines := make([]string, len(lines))
 	for i, line := range lines {
-		line = lipgloss.NewStyle().MaxWidth(bodyWidth).Render(line)
-		line = lipgloss.NewStyle().Width(bodyWidth).Render(line)
-		output[i] = line
-
-		scrollbar := styles.ScrollTrack.Render("│")
+		output[i] = lineStyle.Render(line)
 		if i == thumbLine {
-			scrollbar = styles.ScrollThumb.Render("█")
+			scrollbarLines[i] = thumbChar
+		} else {
+			scrollbarLines[i] = trackChar
 		}
-		scrollbarLines[i] = scrollbar
 	}
 	return strings.Join(output, "\n"), bodyWidth, scrollbarLines
 }
@@ -979,9 +986,17 @@ func (p *Popup) handleMouse(msg tea.MouseMsg) (bool, tea.Cmd) {
 		return p.handleLeftClick(mouse, hoverCmd)
 	}
 
+	// Throttle wheel events: coalesce rapid trackpad scrolls by dropping events
+	// within a short window after the last processed wheel event. The step size
+	// (3 lines per event) keeps each processed tick visually meaningful.
+	now := time.Now()
 	if mouse.Button == tea.MouseWheelDown {
 		if p.isContentScrollable() {
-			p.scrollOffset = min(p.scrollOffset+1, p.maxScrollOffset())
+			if now.Before(p.scrollThrottleUntil) {
+				return true, hoverCmd
+			}
+			p.scrollOffset = min(p.scrollOffset+3, p.maxScrollOffset())
+			p.scrollThrottleUntil = now.Add(30 * time.Millisecond)
 			return true, hoverCmd
 		}
 		if len(p.actions) > 1 {
@@ -991,7 +1006,11 @@ func (p *Popup) handleMouse(msg tea.MouseMsg) (bool, tea.Cmd) {
 	}
 	if mouse.Button == tea.MouseWheelUp {
 		if p.isContentScrollable() {
-			p.scrollOffset = max(p.scrollOffset-1, 0)
+			if now.Before(p.scrollThrottleUntil) {
+				return true, hoverCmd
+			}
+			p.scrollOffset = max(p.scrollOffset-3, 0)
+			p.scrollThrottleUntil = now.Add(30 * time.Millisecond)
 			return true, hoverCmd
 		}
 		if len(p.actions) > 1 {

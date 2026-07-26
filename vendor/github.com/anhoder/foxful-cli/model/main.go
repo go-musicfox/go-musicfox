@@ -892,7 +892,7 @@ func (m *Main) TitleView(a *App) string {
 	if suffixLen > 0 {
 		b.WriteString(strings.Repeat("─", suffixLen))
 	}
-	return style.CurrentStyleSet().Title.Render(b.String())
+	return style.CurrentStyleSet().AppBackground.Render(style.CurrentStyleSet().Title.Render(b.String()))
 }
 
 // backButtonIcon returns the styled back button icon suitable for prepending
@@ -953,7 +953,7 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		if padding < 0 {
 			padding = 0
 		}
-		return strings.Repeat(" ", padding) + backIcon + " " + styledTitle
+		return lipgloss.NewStyle().Inherit(ss.AppBackground).Render(strings.Repeat(" ", padding) + backIcon + " " + styledTitle)
 	}
 
 	// No back button: original padding + title
@@ -1015,12 +1015,12 @@ func (m *Main) forceEntryLength(item *MenuItem, targetLength int) string {
 		currentWidth += rw
 	}
 	subtitle := lipgloss.NewStyle().Width(subtitleSpace).MaxWidth(subtitleSpace).Render(string(s))
-	return item.Title + " " + style.CurrentStyleSet().Subtitle.Render(subtitle)
+	return item.Title + style.CurrentStyleSet().AppBackground.Render(" ") + style.CurrentStyleSet().Subtitle.Render(subtitle)
 }
 
 func (m *Main) formatEntry(item *MenuItem, index int, targetLength int) string {
 	if item == nil {
-		return lipgloss.NewStyle().Width(targetLength).Render("")
+		return lipgloss.NewStyle().Inherit(style.CurrentStyleSet().MenuItem).Width(targetLength).Render("")
 	}
 	var fmtStart string
 	if !m.inSearching && index == m.selectedIndex {
@@ -1133,7 +1133,7 @@ func (m *Main) menuListView(a *App) string {
 	// fill blanks to maintain fixed page size
 	if maxLines > lines {
 		var fillLines []string
-		blankLine := lipgloss.NewStyle().Width(a.WindowWidth() - m.menuStartColumn).Render("")
+		blankLine := lipgloss.NewStyle().Inherit(style.CurrentStyleSet().MenuItem).Width(a.WindowWidth() - m.menuStartColumn).Render("")
 		for i := lines; i < maxLines; i++ {
 			fillLines = append(fillLines, blankLine)
 		}
@@ -1467,6 +1467,7 @@ func (m *Main) searchInputView(app *App) string {
 		}
 		hint := layout.JoinHorizontal(layout.Top, parts...)
 		return lipgloss.NewStyle().
+			Inherit(ss.AppBackground).
 			Width(windowWidth).
 			Align(lipgloss.Center).
 			PaddingTop(1).

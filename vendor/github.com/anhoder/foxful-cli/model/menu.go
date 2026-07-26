@@ -18,14 +18,14 @@ func (item *MenuItem) OriginString() string {
 	if item.Subtitle == "" {
 		return item.Title
 	}
-	return item.Title + " " + item.Subtitle
+	return item.Title + style.CurrentStyleSet().AppBackground.Render(" ") + item.Subtitle
 }
 
 func (item *MenuItem) String() string {
 	if item.Subtitle == "" {
 		return item.Title
 	}
-	return item.Title + " " + style.CurrentStyleSet().Subtitle.Render(item.Subtitle)
+	return item.Title + style.CurrentStyleSet().AppBackground.Render(" ") + style.CurrentStyleSet().Subtitle.Render(item.Subtitle)
 }
 
 // HelpHint describes a single keyboard shortcut displayed in the help bar
