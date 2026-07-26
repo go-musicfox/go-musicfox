@@ -125,7 +125,13 @@ func NewAudioTap(handler func(sampleRate float64, samplesL, samplesR []float32))
 	audioTapRegistry.Store(id, tap)
 
 	var callbacks [audioTapCallbacksSize]byte
-	binary.LittleEndian.PutUint64(callbacks[audioTapClientInfoOffset:], uint64(uintptr(unsafe.Pointer(uintptr(id)))))
+	// Store the numeric tap id as an opaque client-info token. It is only ever
+	// used as a registry key (see audioTapFromRef), never dereferenced as a
+	// pointer, so store the integer value directly. Round-tripping through
+	// unsafe.Pointer(uintptr(id)) fabricates an invalid pointer from a small
+	// integer and trips checkptr under -race ("pointer arithmetic computed bad
+	// pointer value").
+	binary.LittleEndian.PutUint64(callbacks[audioTapClientInfoOffset:], id)
 	binary.LittleEndian.PutUint64(callbacks[audioTapInitOffset:], uint64(audioTapInitCallback))
 	binary.LittleEndian.PutUint64(callbacks[audioTapFinalizeOffset:], uint64(audioTapFinalizeCallback))
 	binary.LittleEndian.PutUint64(callbacks[audioTapPrepareOffset:], uint64(audioTapPrepareCallback))
