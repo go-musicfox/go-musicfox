@@ -274,9 +274,9 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		newSS := registry.NextStyleSet(style.HasDarkBackground())
 		if newSS != nil {
 			app.SetStyleSet(*newSS)
+			h.netease.notifyThemeSwitch(app, "切换主题", registry.CurrentName(style.HasDarkBackground()))
 			return true, main, app.RerenderCmd(true)
 		}
-
 	default:
 		return false, nil, nil
 	}

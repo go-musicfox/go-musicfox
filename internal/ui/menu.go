@@ -172,6 +172,7 @@ func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page
 		if newSS != nil {
 			style.SetStyleSet(*newSS)
 			a.SetStyleSet(*newSS)
+			n.notifyThemeSwitch(a, "切换主题", registry.CurrentName(style.HasDarkBackground()))
 		}
 		return nil, a.RerenderCmd(true)
 	}

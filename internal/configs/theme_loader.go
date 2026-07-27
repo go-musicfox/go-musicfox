@@ -46,7 +46,7 @@ func LoadAllThemes(userConfigDir string) map[string]*ThemeFile {
 
 	if len(themes) == 0 {
 		slog.Warn("no themes loaded, falling back to built-in default")
-		themes["NetEase Red"] = defaultBuiltinTheme()
+		themes["Default"] = defaultBuiltinTheme()
 	}
 
 	return themes
@@ -174,7 +174,7 @@ func defaultUserConfigDir() string {
 // defaultBuiltinTheme returns a fallback theme built from code defaults.
 func defaultBuiltinTheme() *ThemeFile {
 	return &ThemeFile{
-		Name:        "NetEase Red",
+		Name:        "Default",
 		Description: "Default classic NetEase Music red theme (fallback)",
 		Dark: ThemeVariant{
 			Primary: "#EA403F",

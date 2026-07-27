@@ -2,6 +2,7 @@ package configs
 
 import (
 	"image/color"
+	"sort"
 	"sync"
 
 	"charm.land/lipgloss/v2"
@@ -23,7 +24,7 @@ type ProgressOptions struct {
 
 // ThemeConfig 主题设置
 type ThemeConfig struct {
-	// 活跃主题名称（对应主题文件名中的 name 字段，默认 "NetEase Red"）
+	// 活跃主题名称（对应主题文件名中的 name 字段，默认 "Default"）
 	ActiveTheme string `koanf:"activeTheme"`
 	// Deprecated: migrated to theme files. Kept for backward compatibility.
 	PrimaryColor string `koanf:"primaryColor"`
@@ -58,6 +59,7 @@ type ThemeRegistry struct {
 	darkNames   []string        // themes with dark variant configured
 	lightNames  []string        // themes with light variant configured
 	themeIndex  int             // current index in the active brightness-category theme list
+	currentName string          // active theme name (survives brightness switches)
 }
 
 var globalThemeRegistry = &ThemeRegistry{
@@ -71,8 +73,10 @@ func LoadThemeRegistry(userConfigDir string) {
 
 	globalThemeRegistry.themes = LoadAllThemes(userConfigDir)
 	globalThemeRegistry.rebuildIndex()
+	if len(globalThemeRegistry.allNames) > 0 {
+		globalThemeRegistry.currentName = globalThemeRegistry.allNames[0]
+	}
 }
-
 func (r *ThemeRegistry) rebuildIndex() {
 	r.allNames = make([]string, 0, len(r.themes))
 	r.darkNames = nil
@@ -84,6 +88,28 @@ func (r *ThemeRegistry) rebuildIndex() {
 		}
 		if tf.Light.isConfigured() {
 			r.lightNames = append(r.lightNames, name)
+		}
+	}
+	sort.Strings(r.allNames)
+	sort.Strings(r.darkNames)
+	sort.Strings(r.lightNames)
+}
+
+// SelectTheme sets the current theme index to the named theme for the given brightness.
+// Does nothing if the theme is not found in the brightness category.
+func (r *ThemeRegistry) SelectTheme(name string, darkBackground bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	names := r.darkNames
+	if !darkBackground {
+		names = r.lightNames
+	}
+	for i, n := range names {
+		if n == name {
+			r.themeIndex = i
+			r.currentName = name
+			return
 		}
 	}
 }
@@ -150,8 +176,8 @@ func (r *ThemeRegistry) NextStyleSet(darkBackground bool) *style.StyleSet {
 	}
 
 	r.themeIndex = (r.themeIndex + 1) % len(names)
-	name := names[r.themeIndex]
-	tf := r.themes[name]
+	r.currentName = names[r.themeIndex]
+	tf := r.themes[r.currentName]
 	var t style.Theme
 	if darkBackground {
 		t = tf.Dark.toTheme()
@@ -162,23 +188,19 @@ func (r *ThemeRegistry) NextStyleSet(darkBackground bool) *style.StyleSet {
 	return &ss
 }
 
-// CurrentTheme returns the current active theme and StyleSet based on brightness.
+// CurrentStyleSet returns the StyleSet for the active theme at the given brightness.
+// Uses the stored theme name to survive brightness switches.
 func (r *ThemeRegistry) CurrentStyleSet(darkBackground bool) *style.StyleSet {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	names := r.darkNames
-	if !darkBackground {
-		names = r.lightNames
-	}
-	if len(names) == 0 {
+	if r.currentName == "" {
 		return nil
 	}
-	if r.themeIndex >= len(names) {
-		r.themeIndex = 0
+	tf, ok := r.themes[r.currentName]
+	if !ok {
+		return nil
 	}
-	name := names[r.themeIndex]
-	tf := r.themes[name]
 	var t style.Theme
 	if darkBackground {
 		t = tf.Dark.toTheme()
@@ -187,22 +209,26 @@ func (r *ThemeRegistry) CurrentStyleSet(darkBackground bool) *style.StyleSet {
 	}
 	ss := style.NewStyleSet(t)
 	return &ss
+}
+
+// CurrentName returns the name of the current active theme.
+func (r *ThemeRegistry) CurrentName(_ bool) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.currentName
 }
 
 // CurrentAppColorConfig returns the AppColorConfig for the current theme and brightness.
 func (r *ThemeRegistry) CurrentAppColorConfig(darkBackground bool) AppColorConfig {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	names := r.darkNames
-	if !darkBackground {
-		names = r.lightNames
-	}
-	if len(names) == 0 || r.themeIndex >= len(names) {
+	if r.currentName == "" {
 		return AppColorConfig{}
 	}
-	name := names[r.themeIndex]
-	tf := r.themes[name]
+	tf, ok := r.themes[r.currentName]
+	if !ok {
+		return AppColorConfig{}
+	}
 	if darkBackground {
 		return tf.Dark.App
 	}

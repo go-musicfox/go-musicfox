@@ -681,9 +681,11 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	// Detect dark/light background for computed values
 	bgIsDark := false
-	if bg, ok := colorful.MakeColor(theme.Background); ok {
-		_, _, l := bg.Hsl()
-		bgIsDark = l < 0.5
+	if theme.Background != nil && theme.Background != noColor {
+		if bg, ok := colorful.MakeColor(theme.Background); ok {
+			_, _, l := bg.Hsl()
+			bgIsDark = l < 0.5
+		}
 	}
 
 	// ---- Base palette ----
@@ -704,7 +706,8 @@ func NewStyleSet(theme Theme) StyleSet {
 	selectedItemHL := resolveHL(theme.SelectedItem, theme.Primary, nil)
 	if selectedItemHL.Bg == nil {
 		if primary, ok := colorful.MakeColor(theme.Primary); ok {
-			if bg, ok := colorful.MakeColor(theme.Background); ok {
+			if theme.Background != nil && theme.Background != noColor {
+				if bg, ok := colorful.MakeColor(theme.Background); ok {
 				_, _, l := bg.Hsl()
 				if l > 0.5 {
 					selectedItemHL.Bg = primary.BlendLab(bg, 0.94).Clamped()
@@ -714,6 +717,7 @@ func NewStyleSet(theme Theme) StyleSet {
 				}
 			}
 		}
+	}
 		if selectedItemHL.Bg == nil {
 			selectedItemHL.Bg = noColor
 		}
@@ -722,11 +726,13 @@ func NewStyleSet(theme Theme) StyleSet {
 	// Breadcrumb background: use StatusBarBreadcrumb.Bg → computed from Surface → fallback
 	breadcrumbBg := theme.StatusBarBreadcrumb.Bg
 	if breadcrumbBg == nil {
-		if srf, ok := colorful.MakeColor(theme.Surface); ok {
-			if bgIsDark {
-				breadcrumbBg = srf.BlendLab(colorful.Color{R: 1, G: 1, B: 1}, 0.3).Clamped()
-			} else {
-				breadcrumbBg = srf.BlendLab(colorful.Color{}, 0.1).Clamped()
+		if theme.Surface != nil && theme.Surface != noColor {
+			if srf, ok := colorful.MakeColor(theme.Surface); ok {
+				if bgIsDark {
+					breadcrumbBg = srf.BlendLab(colorful.Color{R: 1, G: 1, B: 1}, 0.3).Clamped()
+				} else {
+					breadcrumbBg = srf.BlendLab(colorful.Color{}, 0.1).Clamped()
+				}
 			}
 		}
 		if breadcrumbBg == nil {
@@ -950,8 +956,10 @@ func NewStyleSet(theme Theme) StyleSet {
 	// Keep default actions visible without letting their background dominate the notification.
 	notifActionBg := theme.Muted
 	if muted, ok := colorful.MakeColor(theme.Muted); ok {
-		if surface, ok := colorful.MakeColor(notifSurface); ok {
-			notifActionBg = muted.BlendLab(surface, 0.6).Clamped()
+		if notifSurface != nil && notifSurface != noColor {
+			if surface, ok := colorful.MakeColor(notifSurface); ok {
+				notifActionBg = muted.BlendLab(surface, 0.6).Clamped()
+			}
 		}
 	}
 	notifActionHL := resolveHL(theme.Notification.Action, theme.Primary, notifActionBg)

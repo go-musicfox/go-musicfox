@@ -320,12 +320,12 @@ albumCover = true  # 通知中显示专辑封面
 
 ## 8. 主题配置系统
 
-完全可配置的 TOML 主题系统，支持深色/浅色双变体，内置 **5 种主题**（NetEase Red / Gruvbox / GitHub / Dracula / Nord），允许用户自定义覆盖。
+完全可配置的 TOML 主题系统，支持深色/浅色双变体，内置 \*\*6 种主题\*\*（Default / Gruvbox / GitHub / Dracula / Nord / Transparent），允许用户自定义覆盖。
 
 ### 主题文件结构
 
 ```toml
-name = "NetEase Red"
+name = "Default"
 description = "网易云音乐经典红配色"
 
 [dark]
@@ -434,11 +434,12 @@ visualizerColorEnd = "random"    # 频谱结束色
 
 | 主题 | 文件 | Dark Primary | 风格 |
 |------|------|-------------|------|
-| NetEase Red | `neteasered.toml` | `#EA403F` | 网易云经典红色 |
+| Default | `default.toml` | `#EA403F` | 网易云经典红色 |
 | Gruvbox | `gruvbox.toml` | `#d79921` | 复古温暖色系 |
 | GitHub | `github.toml` | `#58a6ff` | GitHub 官方配色 |
 | Dracula | `dracula.toml` | `#bd93f9` | 经典 Dracula 紫色 |
 | Nord | `nord.toml` | `#88c0d0` | 北极冰蓝风格 |
+| Transparent | `transparent.toml` | `#EA403F` | 透明背景（无背景色） |
 
 ### 颜色格式
 
@@ -467,7 +468,7 @@ visualizerColorEnd = "random"    # 频谱结束色
 
 ```toml
 [theme]
-activeTheme = "NetEase Red"  # 启动时默认主题名称
+activeTheme = "Default"  # 启动时默认主题名称
 ```
 
 ---

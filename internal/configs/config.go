@@ -51,6 +51,7 @@ func (cfg *Config) FillToModelOpts(opts *model.Options) {
 		// Use theme files if loaded; fallback to legacy primaryColor config
 		registry := CurrentThemeRegistry()
 		opts.DarkTheme, opts.LightTheme = cfg.Theme.modelThemesFromFiles(registry, primary)
+		registry.SelectTheme(cfg.Theme.ActiveTheme, true)
 	}
 
 	opts.DualColumn = cfg.Theme.DoubleColumn

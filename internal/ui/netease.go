@@ -66,6 +66,10 @@ type Netease struct {
 
 	playbarHoveredElement PlaybarElement
 
+	// Theme switch notification: update in-place when visible, recreate when expired.
+	themeNotifID    model.NotificationID
+	themeNotifTimer *time.Timer
+
 	desktopLyrics desktop_lyrics.Controller
 }
 
@@ -684,9 +688,34 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			style.SetStyleSet(*ss)
 			n.App.SetStyleSet(*ss)
 		}
+		n.notifyThemeSwitch(n.App, "外观模式已切换", configs.CurrentThemeRegistry().CurrentName(isDark))
 		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd
 	}
+}
+
+// notifyThemeSwitch shows or updates a theme switch notification.
+// If a previous notification is still visible, updates it in place.
+// If it has expired, creates a new one.
+func (n *Netease) notifyThemeSwitch(app *model.App, title, name string) {
+	const timeout = 4 * time.Second
+	spec := model.NotificationSpec{
+		Level:   model.NotificationInfo,
+		Title:   title,
+		Message: name,
+		Timeout: timeout,
+	}
+	if n.themeNotifID == 0 {
+		n.themeNotifID = app.Notify(spec)
+	} else {
+		app.UpdateNotification(n.themeNotifID, spec)
+	}
+	if n.themeNotifTimer != nil {
+		n.themeNotifTimer.Stop()
+	}
+	n.themeNotifTimer = time.AfterFunc(timeout, func() {
+		n.themeNotifID = 0
+	})
 }

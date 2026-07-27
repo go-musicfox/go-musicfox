@@ -407,6 +407,9 @@ var ansiColorNames = map[string]color.Color{
 }
 
 func parseColor(s string) color.Color {
+	if s == "transparent" {
+		return lipgloss.NoColor{}
+	}
 	if c, ok := ansiColorNames[s]; ok {
 		return c
 	}
@@ -433,6 +436,9 @@ func (c AppColorConfig) IsVisualizerRandom() bool {
 func (c AppColorConfig) ResolveSpectrumVerticalBg() string {
 	if c.SpectrumVerticalBg == "" {
 		return SpectrumVerticalBgDefault
+	}
+	if c.SpectrumVerticalBg == "transparent" {
+		return ""
 	}
 	return c.SpectrumVerticalBg
 }

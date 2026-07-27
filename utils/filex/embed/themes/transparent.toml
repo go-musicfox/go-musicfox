@@ -1,0 +1,109 @@
+# Transparent - Default theme colors on terminal default background
+name = "Transparent"
+description = "Default color palette without any background colors — the terminal background shows through"
+
+# ── Dark Variant ───────────────────────────────────────────
+[dark]
+primary = "#EA403F"
+secondary = "#808080"
+accent = "#0000FF"
+success = "#00FF00"
+warning = "#FFFF00"
+error = "#FF0000"
+info = "#00FFFF"
+muted = "#808080"
+hintKey = "#6E6E6E"
+background = "transparent"
+foreground = "#FFFFFF"
+border = "#333333"
+surface = "transparent"
+
+[dark.highlights]
+menuTitle = "BrightGreen"
+selectedItemBg = "transparent"
+
+[dark.popup]
+surface = "transparent"
+border = "#5C5C5C"
+
+[dark.notification]
+surface = "transparent"
+
+[dark.statusBar]
+
+[dark.markdown]
+dark = "dark"
+light = "light"
+
+[dark.app]
+lyricActive = "#7EC8E3"
+lyricTransition = "#C9B1D4"
+lyricInactive = "#6B6B6B"
+lyricHighlight = "#E8E8E8"
+playbarMode = "BrightMagenta"
+playbarVolume = "BrightBlue"
+playbarPlaying = "BrightYellow"
+playbarPaused = "Yellow"
+playbarHeartLiked = "Red"
+playbarHeartUnliked = "White"
+playbarArtist = "BrightBlack"
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+background = "transparent"
+contextMenuBg = "transparent"
+spectrumVerticalBg = "transparent"
+desktopLyricsBg = "transparent"
+configTableSelectedBg = "transparent"
+
+# ── Light Variant ──────────────────────────────────────────
+[light]
+primary = "#EA403F"
+secondary = "#808080"
+accent = "#0000FF"
+success = "#008000"
+warning = "#CC8800"
+error = "#CC0000"
+info = "#008080"
+muted = "#808080"
+hintKey = "#8E8E8E"
+background = "transparent"
+foreground = "#1A1A1A"
+border = "#CCCCCC"
+surface = "transparent"
+
+[light.highlights]
+menuTitle = "BrightGreen"
+selectedItemBg = "transparent"
+
+[light.popup]
+surface = "transparent"
+border = "#A8A8A8"
+
+[light.notification]
+surface = "transparent"
+
+[light.statusBar]
+
+[light.markdown]
+dark = "dark"
+light = "light"
+
+[light.app]
+lyricActive = "#3A8FB7"
+lyricTransition = "#8B5E9E"
+lyricInactive = "#808080"
+lyricHighlight = "#E8E8E8"
+playbarMode = "BrightMagenta"
+playbarVolume = "BrightBlue"
+playbarPlaying = "BrightYellow"
+playbarPaused = "Yellow"
+playbarHeartLiked = "Red"
+playbarHeartUnliked = "White"
+playbarArtist = "BrightBlack"
+visualizerColorStart = "random"
+visualizerColorEnd = "random"
+background = "transparent"
+contextMenuBg = "transparent"
+spectrumVerticalBg = "transparent"
+desktopLyricsBg = "transparent"
+configTableSelectedBg = "transparent"

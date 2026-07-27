@@ -570,10 +570,21 @@ func (r *SpectrumRenderer) vertBrailleRamps(width, height int) [][]color.Color {
 		return nil
 	}
 	base := r.ramp(width)
-	black, _ := colorful.Hex(configs.GetSpectrumVerticalBg())
+	vertBgHex := configs.GetSpectrumVerticalBg()
+	if vertBgHex == "" {
+		// Transparent background — skip vertical blend, return uniform rows
+		ramps := make([][]color.Color, height)
+		for row := range height {
+			rowRamp := make([]color.Color, len(base))
+			copy(rowRamp, base)
+			ramps[row] = rowRamp
+		}
+		return ramps
+	}
+	black, _ := colorful.Hex(vertBgHex)
 
 	ramps := make([][]color.Color, height)
-	for row := 0; row < height; row++ {
+	for row := range height {
 		// 0.0=top(dark) → 1.0=bottom(bright)
 		t := float64(row) / float64(height-1)
 		blend := 0.35 * (1.0 - t) // top blends 35% black, bottom 0%
@@ -592,10 +603,21 @@ func (r *SpectrumRenderer) vertBrailleRampsDim(width, height int, base []color.C
 	if height <= 1 {
 		return nil
 	}
-	black, _ := colorful.Hex(configs.GetSpectrumVerticalBg())
+	vertBgHex := configs.GetSpectrumVerticalBg()
+	if vertBgHex == "" {
+		// Transparent background — skip vertical blend, return uniform rows
+		ramps := make([][]color.Color, height)
+		for row := range height {
+			rowRamp := make([]color.Color, len(base))
+			copy(rowRamp, base)
+			ramps[row] = rowRamp
+		}
+		return ramps
+	}
+	black, _ := colorful.Hex(vertBgHex)
 
 	ramps := make([][]color.Color, height)
-	for row := 0; row < height; row++ {
+	for row := range height {
 		t := float64(row) / float64(height-1)
 		blend := 0.35 * (1.0 - t)
 		rowRamp := make([]color.Color, len(base))
