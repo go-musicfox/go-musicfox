@@ -17,6 +17,7 @@ type Fetcher interface {
 	FetchPlayableInfo(ctx context.Context, songID int64) (*netease.PlayableInfo, error)
 	FetchStream(ctx context.Context, source PlayableSource) (io.ReadCloser, error)
 	FetchLyric(ctx context.Context, songID int64) (structs.LRCData, error)
+	FetchCloudLyric(ctx context.Context, userID, songID int64) (structs.LRCData, error)
 }
 
 type fetcher struct {
@@ -80,6 +81,14 @@ func (f *fetcher) FetchLyric(ctx context.Context, songID int64) (structs.LRCData
 	lrcData, err := netease.FetchLyric(songID)
 	if err != nil {
 		return structs.LRCData{}, errors.Wrapf(err, "failed to fetch lyric for song %d", songID)
+	}
+	return lrcData, nil
+}
+
+func (f *fetcher) FetchCloudLyric(ctx context.Context, userID, songID int64) (structs.LRCData, error) {
+	lrcData, err := netease.FetchCloudLyric(userID, songID)
+	if err != nil {
+		return structs.LRCData{}, errors.Wrapf(err, "failed to fetch cloud lyric for song %d", songID)
 	}
 	return lrcData, nil
 }
