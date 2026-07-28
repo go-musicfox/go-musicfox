@@ -30,6 +30,9 @@ border = "#5C5C5C"
 surface = "transparent"
 
 [dark.statusBar]
+nuggetLabelFg = "#EA403F"
+nuggetLabelBg = "transparent"
+breadcrumbHover = "#EA403F"
 
 [dark.markdown]
 dark = "dark"
@@ -83,6 +86,9 @@ border = "#A8A8A8"
 surface = "transparent"
 
 [light.statusBar]
+nuggetLabelFg = "#EA403F"
+nuggetLabelBg = "transparent"
+breadcrumbHover = "#EA403F"
 
 [light.markdown]
 dark = "dark"

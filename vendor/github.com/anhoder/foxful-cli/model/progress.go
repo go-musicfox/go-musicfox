@@ -28,16 +28,27 @@ type ProgressOptions struct {
 // styled with the active StyleSet's ProgressEmpty style. Returns the rendered,
 // ANSI-styled string.
 func Progress(options *ProgressOptions, width, fullSize int, progressRamp []color.Color) string {
+	// Resolve the app background once. Both filled and empty cells are painted
+	// over it (component→app→transparent chain) so progress-bar cells never stay
+	// transparent and reveal content drawn beneath the TUI.
+	appBg := style.CurrentStyleSet().AppBackground.GetBackground()
+	fullCell := func(char string, c color.Color) string {
+		if appBg != nil {
+			return style.FGBG(char, c, appBg)
+		}
+		return style.FG(char, c)
+	}
+
 	var fullCells strings.Builder
 	for i := 0; i < fullSize && i < len(progressRamp); i++ {
 		if i == 0 {
-			fullCells.WriteString(style.FG(string(options.FullCharWhenFirst), progressRamp[i]))
+			fullCells.WriteString(fullCell(string(options.FullCharWhenFirst), progressRamp[i]))
 		} else if i >= width-1 {
-			fullCells.WriteString(style.FG(string(options.FullCharWhenLast), progressRamp[i]))
+			fullCells.WriteString(fullCell(string(options.FullCharWhenLast), progressRamp[i]))
 		} else if i == fullSize-1 {
-			fullCells.WriteString(style.FG(string(options.LastFullChar), progressRamp[i]))
+			fullCells.WriteString(fullCell(string(options.LastFullChar), progressRamp[i]))
 		} else {
-			fullCells.WriteString(style.FG(string(options.FullChar), progressRamp[i]))
+			fullCells.WriteString(fullCell(string(options.FullChar), progressRamp[i]))
 		}
 	}
 
@@ -61,5 +72,11 @@ func Progress(options *ProgressOptions, width, fullSize int, progressRamp []colo
 			emptyCells.WriteRune(options.EmptyCharWhenLast)
 		}
 	}
-	return fullCells.String() + style.CurrentStyleSet().ProgressEmpty.Render(emptyCells.String())
+	// ProgressEmpty carries the empty-cell foreground; inherit the app background
+	// so the empty region is opaque when a theme sets an app background.
+	emptyStyle := style.CurrentStyleSet().ProgressEmpty
+	if appBg != nil {
+		emptyStyle = emptyStyle.Background(appBg)
+	}
+	return fullCells.String() + emptyStyle.Render(emptyCells.String())
 }

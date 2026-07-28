@@ -78,6 +78,7 @@ func musicfox() {
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
+	app.Add(commands.NewUpgradeConfigCommand())
 	app.Add(commands.NewResetCommand())
 	app.DefaultCommand(playerCommand.Name)
 

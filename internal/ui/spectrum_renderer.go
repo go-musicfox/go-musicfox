@@ -407,8 +407,9 @@ func (r *SpectrumRenderer) renderBarBottom(frame player.SpectrumFrame, width, he
 		// Idle bar head: show tiny cap when bar is nearly silent
 		if cfg.ShowIdleBarHeads && level > 0 && level <= 0.01 {
 			c := ramp[0]
-			builder.WriteString(util.SetFgStyle(string(halfBlock), c))
-			builder.WriteString(strings.Repeat(string(emptyBlock), width-1))
+			bg := spectrumAppBg()
+			builder.WriteString(spectrumFgGlyph(string(halfBlock), c, bg))
+			builder.WriteString(spectrumEmptyGlyph(strings.Repeat(string(emptyBlock), width-1), bg))
 			builder.WriteByte('\n')
 			continue
 		}
@@ -531,6 +532,7 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 		}
 	}
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -545,7 +547,7 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 			dotsR := gridR[row][col]
 			dots := dotsL | dotsR
 			if dots == 0 {
-				builder.WriteByte(' ')
+				builder.WriteString(spectrumEmptyGlyph(" ", bg))
 				continue
 			}
 			c := rowRamp[col*2]
@@ -556,7 +558,7 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 			if len(r.phaseMask) > 0 && hasR && col < len(r.phaseMask) {
 				c = blendPhaseColor(c, r.phaseMask[col])
 			}
-			builder.WriteString(util.SetFgStyle(string(brailleCell(dots)), c))
+			builder.WriteString(spectrumFgGlyph(string(brailleCell(dots)), c, bg))
 		}
 		builder.WriteByte('\n')
 	}
@@ -651,6 +653,7 @@ func (r *SpectrumRenderer) renderBrailleGridMono(grid [][]byte, width, height in
 	ramp := r.ramp(width)
 	vRamp := r.vertBrailleRamps(width, height)
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -661,11 +664,11 @@ func (r *SpectrumRenderer) renderBrailleGridMono(grid [][]byte, width, height in
 		for col := 0; col < width; col++ {
 			dots := grid[row][col]
 			if dots == 0 {
-				builder.WriteByte(' ')
+				builder.WriteString(spectrumEmptyGlyph(" ", bg))
 				continue
 			}
 			c := rowRamp[col*2]
-			builder.WriteString(util.SetFgStyle(string(brailleCell(dots)), c))
+			builder.WriteString(spectrumFgGlyph(string(brailleCell(dots)), c, bg))
 		}
 		builder.WriteByte('\n')
 	}
@@ -723,6 +726,7 @@ func (r *SpectrumRenderer) renderBlockDual(fullChar, halfChar, emptyChar string,
 		drawBlockChannel(grid, levelsR, width, height, connect, 1)
 	}
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -740,17 +744,17 @@ func (r *SpectrumRenderer) renderBlockDual(fullChar, halfChar, emptyChar string,
 				if len(r.phaseMask) > 0 && hasR && col < len(r.phaseMask) {
 					c = blendPhaseColor(c, r.phaseMask[col])
 				}
-				builder.WriteString(util.SetFgStyle(fullChar, c))
+				builder.WriteString(spectrumFgGlyph(fullChar, c, bg))
 			case v == 2:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
 			case v == 1:
 				c := rowRampDim[col*2]
 				if len(r.phaseMask) > 0 && hasR && col < len(r.phaseMask) {
 					c = blendPhaseColor(c, r.phaseMask[col])
 				}
-				builder.WriteString(util.SetFgStyle(halfChar, c))
+				builder.WriteString(spectrumFgGlyph(halfChar, c, bg))
 			default:
-				builder.WriteString(emptyChar)
+				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
 			}
 		}
 		builder.WriteByte('\n')
@@ -769,6 +773,7 @@ func (r *SpectrumRenderer) renderBlockMono(fullChar, halfChar, emptyChar string,
 	grid := r.getBrailleGrid(&r.brailleGridMCache, width, height)
 	drawBlockChannel(grid, levels, width, height, connect, 2)
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -780,11 +785,11 @@ func (r *SpectrumRenderer) renderBlockMono(fullChar, halfChar, emptyChar string,
 			v := grid[row][col]
 			switch {
 			case v >= 2:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
 			case v == 1:
-				builder.WriteString(util.SetFgStyle(halfChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(halfChar, rowRamp[col*2], bg))
 			default:
-				builder.WriteString(emptyChar)
+				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
 			}
 		}
 		builder.WriteByte('\n')
@@ -957,11 +962,12 @@ func renderSpectrumBar(level float64, width int, progressRamp []color.Color, hal
 	fillUnits := spectrumFillUnits(level, width)
 	fullChars := fillUnits / 2
 	hasHalfChar := fillUnits%2 == 1
+	bg := spectrumAppBg()
 
 	var builder strings.Builder
 	builder.Grow(width)
 	for column := 0; column < fullChars; column++ {
-		builder.WriteString(util.SetFgStyle(string(fullBlock), progressRamp[column*2]))
+		builder.WriteString(spectrumFgGlyph(string(fullBlock), progressRamp[column*2], bg))
 	}
 	if hasHalfChar {
 		builder.WriteString(spectrumHalfBlockStyle(
@@ -973,7 +979,9 @@ func renderSpectrumBar(level float64, width int, progressRamp []color.Color, hal
 	if hasHalfChar {
 		emptyChars--
 	}
-	builder.WriteString(strings.Repeat(string(emptyBlock), emptyChars))
+	if emptyChars > 0 {
+		builder.WriteString(spectrumEmptyGlyph(strings.Repeat(string(emptyBlock), emptyChars), bg))
+	}
 	return builder.String()
 }
 
@@ -991,6 +999,7 @@ func renderMirrorBarLine(level float64, width int, ramp []color.Color, halfBlock
 	fullCharsR := fillUnitsR / 2
 	hasHalfR := fillUnitsR%2 == 1
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow(width)
 
@@ -999,11 +1008,11 @@ func renderMirrorBarLine(level float64, width int, ramp []color.Color, halfBlock
 		distFromCenter := halfWidth - 1 - col
 		switch {
 		case distFromCenter < fullCharsL:
-			builder.WriteString(util.SetFgStyle(string(fullBlock), ramp[col*2]))
+			builder.WriteString(spectrumFgGlyph(string(fullBlock), ramp[col*2], bg))
 		case hasHalfL && distFromCenter == fullCharsL:
 			builder.WriteString(spectrumHalfBlockStyle(ramp[col*2], ramp[col*2+1]).Render(string(halfBlock)))
 		default:
-			builder.WriteString(string(emptyBlock))
+			builder.WriteString(spectrumEmptyGlyph(string(emptyBlock), bg))
 		}
 	}
 
@@ -1013,11 +1022,11 @@ func renderMirrorBarLine(level float64, width int, ramp []color.Color, halfBlock
 		rightCol := halfWidth + col
 		switch {
 		case distFromCenter < fullCharsR:
-			builder.WriteString(util.SetFgStyle(string(fullBlock), ramp[rightCol*2]))
+			builder.WriteString(spectrumFgGlyph(string(fullBlock), ramp[rightCol*2], bg))
 		case hasHalfR && distFromCenter == fullCharsR:
 			builder.WriteString(spectrumHalfBlockStyle(ramp[rightCol*2], ramp[rightCol*2+1]).Render(string(halfBlock)))
 		default:
-			builder.WriteString(string(emptyBlock))
+			builder.WriteString(spectrumEmptyGlyph(string(emptyBlock), bg))
 		}
 	}
 	return builder.String()
@@ -1039,6 +1048,7 @@ func renderMirrorBarLineDual(levelL, levelR float64, width int, ramp []color.Col
 	fullCharsR := fillUnitsR / 2
 	hasHalfR := fillUnitsR%2 == 1
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow(width)
 
@@ -1047,11 +1057,11 @@ func renderMirrorBarLineDual(levelL, levelR float64, width int, ramp []color.Col
 		distFromCenter := halfWidth - 1 - col
 		switch {
 		case distFromCenter < fullCharsL:
-			builder.WriteString(util.SetFgStyle(string(fullBlock), ramp[col*2]))
+			builder.WriteString(spectrumFgGlyph(string(fullBlock), ramp[col*2], bg))
 		case hasHalfL && distFromCenter == fullCharsL:
 			builder.WriteString(spectrumHalfBlockStyle(ramp[col*2], ramp[col*2+1]).Render(string(halfBlock)))
 		default:
-			builder.WriteString(string(emptyBlock))
+			builder.WriteString(spectrumEmptyGlyph(string(emptyBlock), bg))
 		}
 	}
 
@@ -1061,11 +1071,11 @@ func renderMirrorBarLineDual(levelL, levelR float64, width int, ramp []color.Col
 		rightCol := halfWidth + col
 		switch {
 		case distFromCenter < fullCharsR:
-			builder.WriteString(util.SetFgStyle(string(fullBlock), ramp[rightCol*2]))
+			builder.WriteString(spectrumFgGlyph(string(fullBlock), ramp[rightCol*2], bg))
 		case hasHalfR && distFromCenter == fullCharsR:
 			builder.WriteString(spectrumHalfBlockStyle(ramp[rightCol*2], ramp[rightCol*2+1]).Render(string(halfBlock)))
 		default:
-			builder.WriteString(string(emptyBlock))
+			builder.WriteString(spectrumEmptyGlyph(string(emptyBlock), bg))
 		}
 	}
 	return builder.String()
@@ -1076,24 +1086,25 @@ func renderMirrorIdleLineDual(width int, ramp []color.Color, halfBlock, emptyBlo
 	halfWidth := width / 2
 	rightWidth := width - halfWidth
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow(width)
 
 	// Left half: empty except rightmost halfBlock if leftIdle
 	for col := 0; col < halfWidth; col++ {
 		if leftIdle && col == halfWidth-1 {
-			builder.WriteString(util.SetFgStyle(string(halfBlock), ramp[(halfWidth-1)*2]))
+			builder.WriteString(spectrumFgGlyph(string(halfBlock), ramp[(halfWidth-1)*2], bg))
 		} else {
-			builder.WriteString(string(emptyBlock))
+			builder.WriteString(spectrumEmptyGlyph(string(emptyBlock), bg))
 		}
 	}
 
 	// Right half: empty except leftmost halfBlock if rightIdle
 	for col := 0; col < rightWidth; col++ {
 		if rightIdle && col == 0 {
-			builder.WriteString(util.SetFgStyle(string(halfBlock), ramp[halfWidth*2]))
+			builder.WriteString(spectrumFgGlyph(string(halfBlock), ramp[halfWidth*2], bg))
 		} else {
-			builder.WriteString(string(emptyBlock))
+			builder.WriteString(spectrumEmptyGlyph(string(emptyBlock), bg))
 		}
 	}
 	return builder.String()
@@ -1125,11 +1136,12 @@ func (r *SpectrumRenderer) renderBarVertical(frame player.SpectrumFrame, width, 
 	}
 
 	// Build grid of styled strings
+	bg := spectrumAppBg()
 	grid := make([][]string, height)
 	for row := range grid {
 		grid[row] = make([]string, width)
 		for col := range grid[row] {
-			grid[row][col] = string(emptyBlock)
+			grid[row][col] = spectrumEmptyGlyph(string(emptyBlock), bg)
 		}
 	}
 
@@ -1146,7 +1158,7 @@ func (r *SpectrumRenderer) renderBarVertical(frame player.SpectrumFrame, width, 
 			if horizEnabled {
 				c = r.horizontalColor(row, height)
 			}
-			grid[row][col] = util.SetFgStyle(string(halfBlock), c)
+			grid[row][col] = spectrumFgGlyph(string(halfBlock), c, bg)
 			continue
 		}
 
@@ -1169,7 +1181,7 @@ func (r *SpectrumRenderer) renderBarVertical(frame player.SpectrumFrame, width, 
 					c = horizColor
 				}
 			}
-			grid[row][col] = util.SetFgStyle(string(fullBlock), c)
+			grid[row][col] = spectrumFgGlyph(string(fullBlock), c, bg)
 		}
 		if hasHalf && fullChars < height {
 			row := height - 1 - fullChars
@@ -1188,7 +1200,7 @@ func (r *SpectrumRenderer) renderBarVertical(frame player.SpectrumFrame, width, 
 						c = horizColor
 					}
 				}
-				grid[row][col] = util.SetFgStyle(string(halfBlock), c)
+				grid[row][col] = spectrumFgGlyph(string(halfBlock), c, bg)
 			}
 		}
 	}
@@ -1371,6 +1383,32 @@ func blendRamps(rowRamp []color.Color, horizColor color.Color) []color.Color {
 
 func spectrumHalfBlockStyle(foreground, background color.Color) lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(foreground).Background(background)
+}
+
+// spectrumAppBg resolves the background color the visualizer paints its cells
+// with, following the component→app→transparent chain. Resolved once per render
+// (not per glyph) so the per-frame cost stays a single StyleSet lookup.
+func spectrumAppBg() color.Color {
+	return configs.ResolveBackground(nil)
+}
+
+// spectrumFgGlyph renders a single foreground-colored glyph, painting it over
+// bg when non-nil so the glyph cell never stays transparent (which would reveal
+// content drawn beneath the TUI, e.g. the cover image).
+func spectrumFgGlyph(char string, fg, bg color.Color) string {
+	if bg != nil {
+		return util.SetFgBgStyle(char, fg, bg)
+	}
+	return util.SetFgStyle(char, fg)
+}
+
+// spectrumEmptyGlyph renders an empty/plain glyph, painting it over bg when
+// non-nil so empty cells carry the app background too.
+func spectrumEmptyGlyph(char string, bg color.Color) string {
+	if bg != nil {
+		return foxfulStyle.CurrentStyleSet().AppBackground.Render(char)
+	}
+	return char
 }
 
 func spectrumRowLevel(frame player.SpectrumFrame, row, height int) float64 {

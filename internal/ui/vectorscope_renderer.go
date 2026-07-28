@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/player"
@@ -138,6 +137,7 @@ func (r *SpectrumRenderer) renderVectorscopeBlock(frame player.RawSampleFrame, w
 		}
 	}
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -151,13 +151,13 @@ func (r *SpectrumRenderer) renderVectorscopeBlock(frame player.RawSampleFrame, w
 			v := grid[row][col]
 			switch {
 			case v == 3:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRampDim[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRampDim[col*2], bg))
 			case v == 2:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
 			case v == 1:
-				builder.WriteString(util.SetFgStyle(halfChar, rowRampDim[col*2]))
+				builder.WriteString(spectrumFgGlyph(halfChar, rowRampDim[col*2], bg))
 			default:
-				builder.WriteString(emptyChar)
+				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
 			}
 		}
 		builder.WriteByte('\n')

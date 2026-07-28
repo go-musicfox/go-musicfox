@@ -107,7 +107,7 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 - **UI 框架**：bubbletea + foxful-cli（部分定制）
 - **音频处理**：beep、go-mp3、go-flac
 - **存储**：BoltDB
-- **配置**：TOML + mapstructure
+- **配置**：TOML + mapstructure；`configs.SetTOMLValue(path, keyPath, value)` 使用 `github.com/pelletier/go-toml/v2/unstable/edit` 按键路径保真编辑既有 TOML。`configs.UpgradeConfig(path)` 将内嵌默认 TOML 中用户文件缺失的叶子项追加到对应 table；`upgrade-config` 子命令调用它。两者均保留无关注释、布局、已有值、未知键与原文件权限，并以原子替换写回。
 - **API**：netease-music SDK
 
 **项目结构**：`cmd/` 入口 | `internal/` 核心业务（22个包） | `utils/` 工具 | `configs/` 嵌入式配置
@@ -172,8 +172,12 @@ type Player interface {
 - **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式；未匹配的云盘歌曲（含旧播放快照）优先通过云盘歌词接口获取内嵌歌词，失败时回退普通歌曲歌词接口
 - **播放列表**：列表循环/顺序/单曲循环/随机/无限随机/智能心动模式
 - **远程控制**：MPRIS(linux)、Now Playing(macOS)、System Media(Windows)
+- **状态栏组件**：`model.DefaultStatusBar.Components` 可注入任意 `StatusBarComponent` 到居中区域；展示项只实现 `View`，可点击项额外实现 `InteractiveStatusBarComponent`，以自身局部坐标处理命中和事件。状态栏负责布局、边界与指针，不持有业务回调。播放队列适配器的 `musicfox` 前缀自行打开 `https://github.com/go-musicfox/go-musicfox`，队列位置与音质文本不触发。
 - **存储**：BoltDB，存储用户信息、播放状态、播放列表快照和桌面歌词窗口位置/显示器
 - **实时频谱**：仅 macOS `osx` 播放引擎支持；`MTAudioProcessingTap` 经 PureGo 获取 PCM，由 `internal/player/spectrum.go` 异步分析。PCM 更新频谱目标值，`github.com/charmbracelet/harmonica` 的临界阻尼弹簧以每帧推进，避免 PCM 回调间隙使动画停顿。频谱分析与 UI 刷新均使用 `[main].frameRate`。`[main.visualizer]` 支持 `enable`、`maxHeight`（默认 `0` 为不限制；正数限制频谱行数）及 `fullCharHalfBlock`、`fullCharFullBlock`、`emptyCharBlock` 字符配置（各取首个 Unicode 字符，默认分别为 `▌`、`█`、空格）。`SpectrumRenderer` 将相邻频段分组为由低至高的横向进度条（低频在底部），以三态字符显示：满单元、使用前景/背景双色渐变的半单元、无样式空白单元，并以半单元为粒度提供双倍横向幅度分辨率。未限制时频谱会占满歌词与歌曲信息之间的可用行，顶部及歌曲信息前各保留一行空白。
+- **主题**：`[dark.app]` / `[light.app]` 的显式非透明 `background` 作为应用、菜单行、Startup 页面（普通内容和全屏特效）及 Search、Login、QR Login、Last.fm 授权/二维码授权/API account 等自定义页面完整窗口的终端单元格背景；未设置或 `transparent` 时 Startup 与自定义页面均不写入背景，Default 与 Transparent 保持终端透明。`[*.highlights]` 不提供菜单背景覆写。内置主题状态栏的面包屑与时间字体继承 Default 主题。仅 Transparent 主题通过 `statusBar.nuggetLabelFg` / `nuggetLabelBg` 将 `»` 配置为 Primary 前景、透明背景，并以 `statusBar.breadcrumbHover` 将面包屑 hover 前景设为 Primary；右键菜单 hover 文本也使用 `Primary`。用户通过快捷键或右键菜单切换主题时，会将名称保真写入 `theme.activeTheme`，下次启动加载该主题；系统外观变化仅切换当前主题的明暗变体。
+- **自定义表单页面**：`internal/ui/page_layout.go` 统一提供标题返回按钮、面包屑委托、输入框焦点/hover 样式、按钮本地化和文本光标定位；Search、Login 与 Last.fm API account 页面必须按其渲染结果记录命中坐标，并以 `pageSubmitButton` / `pageButton` 保持键盘和鼠标 active 状态一致。
+- **封面图**：Kitty 封面图在应用背景预留的透明区域渲染，位于文本和单元格背景之下；popup 仅覆盖与其重叠的部分。背景排除矩形仅覆盖图像实际填充的前 `rows-1` 行，Kitty 未填充的末行仍由主题 `AppBackground` 绘制。独立页面若需清理封面，必须在 deferred `MenuToPage.BeforeEnterMenuHook` 中调用 `coverRenderer.ClearDisplayed()`，使删除发生在 loading 的 Main 帧之后、目标页面切换之前；Last.fm API account 入口遵循此规则。
 
 ## 开发指南
 

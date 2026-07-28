@@ -43,25 +43,30 @@ func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 	case 1:
 		m.netease.lastfm.OpenUserHomePage()
 	case 2:
-		action := func() {
-			m.netease.lastfm.Tracker.Toggle()
+		turningOn := !m.netease.lastfm.Tracker.Status()
+		title := "关闭 Last.fm 功能"
+		content := "确定关闭 Last.fm Scrobble 功能吗？"
+		if turningOn {
+			title = "启用 Last.fm 功能"
+			content = "确定启用 Last.fm Scrobble 功能吗？"
 		}
-		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
-			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+		showConfirmPopup(app, title, content, func() {
+			m.netease.lastfm.Tracker.Toggle()
+			m.netease.MustMain().RefreshMenuList()
 		})
+		return nil
 	case 3:
-		action := func() {
+		count := m.netease.lastfm.Tracker.Count()
+		showConfirmPopup(app, "清空 Last.fm 队列", fmt.Sprintf("确定清空 Last.fm Scrobble 队列吗？（共 %d 条）", count), func() {
 			m.netease.lastfm.Tracker.Clear()
-
 			notify.Notify(notify.NotifyContent{
 				Title:   "清除 last.fm Scrobble 队列成功",
 				Text:    "Last.fm Scrobble 队列已清除",
 				GroupId: types.GroupID,
 			})
-		}
-		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
-			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 1},
+			m.netease.MustMain().RefreshMenuList()
 		})
+		return nil
 	}
 	return nil
 }

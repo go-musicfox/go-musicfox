@@ -475,6 +475,8 @@ func (m *Main) View(a *App) string {
 		return ""
 	}
 
+	a.ClearAppBackgroundExclusion()
+
 	var sections []string
 
 	// ── 1. Top bar: status bar (when position=top) OR title bar ──
@@ -569,6 +571,8 @@ func (m *Main) View(a *App) string {
 	// ── 6. Adjust body height for status bar ──
 	// Components use a.WindowHeight() which doesn't account for the status bar.
 	// Trim body to targetHeight to prevent overflow when status bar is present.
+	ss := style.CurrentStyleSet()
+
 	targetHeight := h - statusBarH
 	bodyHeight := lipgloss.Height(body)
 	if bodyHeight > targetHeight {
@@ -577,19 +581,54 @@ func (m *Main) View(a *App) string {
 			body = strings.Join(lines[:targetHeight], "\n")
 		}
 	} else if bodyHeight < targetHeight {
-		body = lipgloss.NewStyle().Height(targetHeight).Render(body)
+		body = style.CurrentStyleSet().AppBackground.Height(targetHeight).Render(body)
 	}
 
-	// Combine body + status bar, then wrap with AppBackground.
-	// AppBackground is transparent by default (terminal bg shows through).
-	ss := style.CurrentStyleSet()
+	// Combine body + status bar, then apply the app background everywhere except
+	// the cover rectangle registered by its absolute-positioned renderer.
 	var content string
 	if statusBarView != "" {
 		content = lipgloss.JoinVertical(lipgloss.Left, body, statusBarView)
 	} else {
 		content = body
 	}
-	return ss.AppBackground.Width(w).Render(content)
+	return renderAppBackground(content, w, ss.AppBackground, a.appBackgroundExclusion)
+}
+
+func renderAppBackground(content string, width int, background lipgloss.Style, exclusion backgroundRect) string {
+	content = lipgloss.NewStyle().Width(width).Render(content)
+	if exclusion.w <= 0 || exclusion.h <= 0 {
+		return background.Render(content)
+	}
+
+	lines := strings.Split(content, "\n")
+	for y, line := range lines {
+		start := max(exclusion.x, 0)
+		end := min(exclusion.x+exclusion.w, width)
+		if y < exclusion.y || y >= exclusion.y+exclusion.h || start >= end {
+			lines[y] = background.Render(line)
+			continue
+		}
+		lines[y] = background.Render(ansi.Cut(line, 0, start)) +
+			ansi.Cut(line, start, end) +
+			background.Render(ansi.Cut(line, end, width))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// RenderAppBackground fills a standalone page with the current explicit app
+// background. Themes without a background, including transparent themes, leave
+// the page unpainted.
+func RenderAppBackground(content string, width int) string {
+	background := style.CurrentStyleSet().AppBackground
+	color := background.GetBackground()
+	if color == nil {
+		return content
+	}
+	if _, transparent := color.(lipgloss.NoColor); transparent {
+		return content
+	}
+	return fillMissingBackground(renderAppBackground(content, width, background, backgroundRect{}), color)
 }
 
 // MenuTitleStartColumn returns the horizontal column where the menu title starts.
@@ -892,7 +931,8 @@ func (m *Main) TitleView(a *App) string {
 	if suffixLen > 0 {
 		b.WriteString(strings.Repeat("─", suffixLen))
 	}
-	return style.CurrentStyleSet().AppBackground.Render(style.CurrentStyleSet().Title.Render(b.String()))
+	ss := style.CurrentStyleSet()
+	return ss.Title.Inherit(ss.AppBackground).Render(b.String())
 }
 
 // backButtonIcon returns the styled back button icon suitable for prepending
@@ -939,7 +979,7 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		}
 		titleText = tmp.String()
 	} else {
-		titleText = lipgloss.NewStyle().Width(maxLen).Render(formatString)
+		titleText = lipgloss.NewStyle().Inherit(ss.AppBackground).Width(maxLen).Render(formatString)
 	}
 
 	// Style the title independently — back button must NOT affect its color.
@@ -948,17 +988,21 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 	if showBack {
 		// Back button at startCol - backButtonWidth, title unchanged at startCol.
 		// Layout: [padding]←[space][title...]
+		// backIcon and styledTitle are pre-rendered and emit their own reset
+		// sequences, which clear the outer AppBackground mid-line; paint the
+		// separating space explicitly so it never reveals content beneath the TUI.
 		backIcon := m.backButtonIcon()
 		padding := startCol - backButtonWidth
 		if padding < 0 {
 			padding = 0
 		}
-		return lipgloss.NewStyle().Inherit(ss.AppBackground).Render(strings.Repeat(" ", padding) + backIcon + " " + styledTitle)
+		sep := ss.AppBackground.Render(" ")
+		return lipgloss.NewStyle().Inherit(ss.AppBackground).Render(strings.Repeat(" ", padding) + backIcon + sep + styledTitle)
 	}
 
 	// No back button: original padding + title
 	if startCol > 0 {
-		styledTitle = lipgloss.NewStyle().PaddingLeft(startCol).Render(styledTitle)
+		styledTitle = lipgloss.NewStyle().Inherit(ss.AppBackground).PaddingLeft(startCol).Render(styledTitle)
 	}
 	return styledTitle
 }
@@ -1133,7 +1177,7 @@ func (m *Main) menuListView(a *App) string {
 	// fill blanks to maintain fixed page size
 	if maxLines > lines {
 		var fillLines []string
-		blankLine := lipgloss.NewStyle().Inherit(style.CurrentStyleSet().MenuItem).Width(a.WindowWidth() - m.menuStartColumn).Render("")
+		blankLine := style.CurrentStyleSet().AppBackground.Width(a.WindowWidth()).Render("")
 		for i := lines; i < maxLines; i++ {
 			fillLines = append(fillLines, blankLine)
 		}
@@ -1263,7 +1307,7 @@ func (m *Main) menuLineView(a *App, line int) string {
 		return "" // beyond menu bounds — empty row
 	}
 
-	menuItemStr, _ := m.menuItemView(a, index)
+	menuItemStr, firstColumnWidth := m.menuItemView(a, index)
 
 	var row string
 	if m.isDualColumn {
@@ -1271,16 +1315,18 @@ func (m *Main) menuLineView(a *App, line int) string {
 		if index+1 < len(m.menuList) {
 			secondMenuItemStr, _ = m.menuItemView(a, index+1)
 		} else {
-			secondMenuItemStr = "" // last item has no second column
+			secondMenuItemStr = style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", max(0, a.WindowWidth()-m.menuStartColumn-firstColumnWidth)))
 		}
-		// Fixed 4-space gap between columns
-		row = menuItemStr + "    " + secondMenuItemStr
+		// Fixed 4-space gap between columns, painted with the app background so
+		// the gap doesn't reveal content rendered beneath the TUI cells.
+		row = menuItemStr + style.CurrentStyleSet().AppBackground.Render("    ") + secondMenuItemStr
 	} else {
 		row = menuItemStr
 	}
-	// Left-align row at menuStartColumn (offset by -4 to account for " => "/"    " prefix)
+	// Left-align row at menuStartColumn (offset by -4 to account for " => "/"    " prefix).
+	// Inherit AppBackground so the padding is painted with the app background.
 	if m.menuStartColumn > 4 {
-		row = lipgloss.NewStyle().PaddingLeft(m.menuStartColumn - 4).Render(row)
+		row = lipgloss.NewStyle().Inherit(style.CurrentStyleSet().AppBackground).PaddingLeft(m.menuStartColumn - 4).Render(row)
 	}
 	return row
 }
@@ -1459,11 +1505,15 @@ func (m *Main) searchInputView(app *App) string {
 		if len(hints) == 0 {
 			return "" // menu opted out of help bar
 		}
+		appBg := ss.AppBackground
+		hintKey := ss.HintKey.Inherit(appBg)
+		hintDesc := ss.Muted.Inherit(appBg)
 		var parts []string
 		for _, h := range hints {
-			parts = append(parts,
-				ss.HintKey.Render("  "+h.Key)+ss.Muted.Render(" "+h.Desc),
-			)
+			// Paint each hint segment over the app background so the fg-only
+			// HintKey/Muted styles don't leave transparent cells that reveal
+			// content rendered beneath the TUI (e.g. the cover image).
+			parts = append(parts, hintKey.Render("  "+h.Key)+hintDesc.Render(" "+h.Desc))
 		}
 		hint := layout.JoinHorizontal(layout.Top, parts...)
 		return lipgloss.NewStyle().
@@ -1678,6 +1728,15 @@ func (m *Main) mouseClickHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 				if tabIdx != m.activeTab {
 					m.switchTab(tabIdx)
 					return m, a.RerenderCmd(true)
+				}
+				return m, a.Tick(time.Nanosecond)
+			}
+		}
+
+		if statusBar, ok := m.statusBar.(*DefaultStatusBar); ok {
+			if cmd, handled := statusBar.handleComponentClick(mouse, a, m); handled {
+				if cmd != nil {
+					return m, cmd
 				}
 				return m, a.Tick(time.Nanosecond)
 			}
@@ -2379,6 +2438,10 @@ func (m *Main) isOverClickableElement(x, y int, a *App) bool {
 
 	// 2. Breadcrumb ancestor segment (clickable to navigate back)
 	if _, _, ok := m.breadcrumbSegmentAt(x, y, a); ok {
+		return true
+	}
+
+	if statusBar, ok := m.statusBar.(*DefaultStatusBar); ok && statusBar.isOverComponent(x, y, a, m) {
 		return true
 	}
 

@@ -11,8 +11,6 @@ import (
 	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/mattn/go-runewidth"
 )
 
 const LastfmCustomApiPageType model.PageType = "lastfm_custom_api"
@@ -35,44 +33,61 @@ type LastfmCustomApiPage struct {
 	submitIndex int
 	reloadIndex int
 	clearIndex  int
+
+	backBtnHovered bool
+	backBtnRowY    int
+	backBtnStartX  int
+
+	keyRowY      int
+	secretRowY   int
+	inputStartX  int
+	inputEndX    int
+	buttonsRowY  int
+	submitStartX int
+	submitEndX   int
+	reloadStartX int
+	reloadEndX   int
+	clearStartX  int
+	clearEndX    int
+
+	hoveredInput  int
+	hoveredButton int
+	mousePointer  string
 }
 
 func NewLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
+	page := newLastfmCustomApiPage(netease)
+	page.reloadApiAccount()
+	return page
+}
+
+func newLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
-	keyInput.Focus()
-	keyInput.Prompt = util.GetFocusedPrompt()
-	s := textinput.DefaultStyles(true)
-	s.Focused.Text = util.GetPrimaryFontStyle()
-	keyInput.SetStyles(s)
 	keyInput.CharLimit = 32
 
 	secretInput := textinput.New()
 	secretInput.Placeholder = " Secret"
-	secretInput.Prompt = "> "
 	secretInput.EchoMode = textinput.EchoPassword
 	secretInput.EchoCharacter = '•'
 	secretInput.CharLimit = 32
 
 	page := &LastfmCustomApiPage{
-		netease:      netease,
-		menuTitle:    &model.MenuItem{Title: "Lastfm API account"},
-		keyInput:     keyInput,
-		secretInput:  secretInput,
-		submitButton: util.GetBlurredSubmitButton(),
-
-		reloadText:  "重载",
-		clearText:   "清空",
-		submitIndex: 2,
-		reloadIndex: 3,
-		clearIndex:  4,
+		netease:       netease,
+		menuTitle:     &model.MenuItem{Title: "Lastfm API account"},
+		keyInput:      keyInput,
+		secretInput:   secretInput,
+		reloadText:    "重载",
+		clearText:     "清空",
+		submitIndex:   2,
+		reloadIndex:   3,
+		clearIndex:    4,
+		hoveredInput:  -1,
+		hoveredButton: -1,
+		mousePointer:  "default",
 	}
-	page.reloadButton = util.GetBlurredButton(page.reloadText)
-	page.clearButton = util.GetBlurredButton(page.clearText)
-	page.reloadApiAccount()
-	page.tips = ""
+	page.applyFocus()
 	return page
-
 }
 
 func (l *LastfmCustomApiPage) IgnoreQuitKeyMsg(_ tea.KeyMsg) bool {
@@ -83,24 +98,102 @@ func (l *LastfmCustomApiPage) Type() model.PageType {
 	return LastfmCustomApiPageType
 }
 
-func (l *LastfmCustomApiPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
-	inputs := []*textinput.Model{
-		&l.keyInput,
-		&l.secretInput,
-	}
+func (l *LastfmCustomApiPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
+	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
+		mouse := mouseMsg.Mouse()
+		mainPage := l.netease.MustMain()
+		oldBackHovered := l.backBtnHovered
+		oldInputHovered := l.hoveredInput
+		oldButtonHovered := l.hoveredButton
+		oldPointer := l.mousePointer
 
-	var (
-		key tea.KeyMsg
-		ok  bool
-	)
+		breadcrumbChanged, breadcrumbHovered := pageBreadcrumbMotion(a, mainPage, mouse.X, mouse.Y)
+		l.backBtnHovered = mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+pageBackButtonWidth
+		l.hoveredInput = -1
+		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
+			switch mouse.Y {
+			case l.keyRowY:
+				l.hoveredInput = 0
+			case l.secretRowY:
+				l.hoveredInput = 1
+			}
+		}
+		l.hoveredButton = -1
+		if mouse.Y == l.buttonsRowY {
+			switch {
+			case mouse.X >= l.submitStartX && mouse.X <= l.submitEndX:
+				l.hoveredButton = 0
+			case mouse.X >= l.reloadStartX && mouse.X <= l.reloadEndX:
+				l.hoveredButton = 1
+			case mouse.X >= l.clearStartX && mouse.X <= l.clearEndX:
+				l.hoveredButton = 2
+			}
+		}
 
-	if key, ok = msg.(tea.KeyMsg); !ok {
+		l.mousePointer = "default"
+		if l.hoveredInput >= 0 {
+			l.mousePointer = "text"
+		} else if l.backBtnHovered || l.hoveredButton >= 0 || breadcrumbHovered {
+			l.mousePointer = "pointer"
+		}
+		if l.backBtnHovered != oldBackHovered || l.hoveredInput != oldInputHovered || l.hoveredButton != oldButtonHovered || l.mousePointer != oldPointer || breadcrumbChanged {
+			return l, tea.Sequence(tickLogin(time.Nanosecond), a.SetMousePointer(l.mousePointer))
+		}
 		return l.updateAccountInputs(msg)
 	}
 
-	switch key.String() {
+	if clickMsg, ok := msg.(tea.MouseClickMsg); ok {
+		mouse := clickMsg.Mouse()
+		if mouse.Button != tea.MouseLeft {
+			return l.updateAccountInputs(msg)
+		}
+		mainPage := l.netease.MustMain()
+		if newPage := pageBreadcrumbClick(a, mainPage, mouse.X, mouse.Y); newPage != nil {
+			l.tips = ""
+			return newPage, l.netease.RerenderCmd(true)
+		}
+		if mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+pageBackButtonWidth {
+			l.tips = ""
+			return mainPage, l.netease.RerenderCmd(true)
+		}
+		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
+			switch mouse.Y {
+			case l.keyRowY:
+				l.index = 0
+				l.applyFocus()
+				setPageInputCursor(&l.keyInput, mouse.X, l.inputStartX)
+				return l, tickLogin(time.Nanosecond)
+			case l.secretRowY:
+				l.index = 1
+				l.applyFocus()
+				setPageInputCursor(&l.secretInput, mouse.X, l.inputStartX)
+				return l, tickLogin(time.Nanosecond)
+			}
+		}
+		if mouse.Y == l.buttonsRowY {
+			switch {
+			case mouse.X >= l.submitStartX && mouse.X <= l.submitEndX:
+				l.index = l.submitIndex
+			case mouse.X >= l.reloadStartX && mouse.X <= l.reloadEndX:
+				l.index = l.reloadIndex
+			case mouse.X >= l.clearStartX && mouse.X <= l.clearEndX:
+				l.index = l.clearIndex
+			default:
+				return l.updateAccountInputs(msg)
+			}
+			l.applyFocus()
+			return l.enterHandler()
+		}
+		return l.updateAccountInputs(msg)
+	}
+
+	key, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return l.updateAccountInputs(msg)
+	}
+	switch keyName := key.String(); keyName {
 	case "b":
-		if l.index != l.submitIndex && l.index != l.clearIndex {
+		if l.index < l.submitIndex {
 			return l.updateAccountInputs(msg)
 		}
 		fallthrough
@@ -108,168 +201,120 @@ func (l *LastfmCustomApiPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea
 		l.tips = ""
 		return l.netease.MustMain(), l.netease.RerenderCmd(true)
 	case "tab", "shift+tab", "enter", "up", "down", "left", "right":
-		s := key.String()
-
-		// Did the user press enter while the submit button was focused?
-		// If so, exit.
-		if s == "enter" && l.index >= l.submitIndex {
+		if keyName == "enter" && l.index >= l.submitIndex {
 			return l.enterHandler()
 		}
-
-		// 当focus在button上时，左右按键的特殊处理
-		switch s {
+		switch keyName {
+		case "up", "shift+tab":
+			l.index--
 		case "left", "right":
 			if l.index < l.submitIndex {
 				return l.updateAccountInputs(msg)
 			}
-			if s == "left" && l.index >= l.submitIndex {
+			if keyName == "left" {
 				l.index--
-			} else if s == "right" && l.index <= l.clearIndex {
+			} else {
 				l.index++
 			}
-		case "up", "shift+tab":
-			l.index--
 		default:
 			l.index++
 		}
-
 		if l.index > l.clearIndex {
 			l.index = 0
 		} else if l.index < 0 {
 			l.index = l.clearIndex
 		}
-
-		for i := 0; i <= len(inputs)-1; i++ {
-			if i != l.index {
-				// Remove focused state
-				inputs[i].Blur()
-				inputs[i].Prompt = util.GetBlurredPrompt()
-				s := textinput.DefaultStyles(true)
-				s.Focused.Text = lipgloss.NewStyle()
-				inputs[i].SetStyles(s)
-				continue
-			}
-			// Set focused state
-			inputs[i].Focus()
-			inputs[i].Prompt = util.GetFocusedPrompt()
-			s := textinput.DefaultStyles(true)
-			s.Focused.Text = util.GetPrimaryFontStyle()
-			inputs[i].SetStyles(s)
-		}
-
-		// l.keyInput = *inputs[0]
-		// l.secretInput = *inputs[1]
-
-		l.tips = ""
-
-		if l.index == submitIndex {
-			l.tips = util.SetFgStyle("保存至数据库，优先使用此值", lipgloss.BrightBlue)
-			l.submitButton = util.GetFocusedSubmitButton()
-		} else {
-			l.submitButton = util.GetBlurredSubmitButton()
-		}
-
-		if l.index == l.reloadIndex {
-			l.tips = util.SetFgStyle("从数据库或本次启动时的配置文件中加载 API account", lipgloss.BrightBlue)
-			l.reloadButton = util.GetFocusedButton(l.reloadText)
-		} else {
-			l.reloadButton = util.GetBlurredButton(l.reloadText)
-		}
-
-		if l.index == l.clearIndex {
-			l.tips = util.SetFgStyle("清除当前值及已设置值", lipgloss.BrightBlue)
-			l.clearButton = util.GetFocusedButton(l.clearText)
-		} else {
-			l.clearButton = util.GetBlurredButton(l.clearText)
-		}
-
+		l.applyFocus()
 		return l, nil
 	}
-
-	// Handle character input and blinks
 	return l.updateAccountInputs(msg)
 }
 
 func (l *LastfmCustomApiPage) View(a *model.App) string {
 	var (
 		builder  strings.Builder
-		top      int // 距离顶部的行数
+		top      int
 		mainPage = l.netease.MustMain()
 	)
+	lineCount := 0
+	write := func(text string) {
+		builder.WriteString(text)
+		lineCount += strings.Count(text, "\n")
+	}
 
-	// title
 	if configs.AppConfig.Theme.ShowTitle {
-		builder.WriteString(pageTitleView(a, mainPage, &top))
+		write(pageTitleView(a, mainPage, &top))
 	} else {
+		write("\n")
 		top++
 	}
 
-	// menu title
-	builder.WriteString(pageMenuTitleView(a, mainPage, &top, l.menuTitle))
-	builder.WriteString("\n\n\n")
-	top += 2
+	topBefore := top
+	write(pageMenuTitleViewWithBack(a, mainPage, &top, l.menuTitle, l.backBtnHovered))
+	l.backBtnRowY = pageMenuTitleRow(a, mainPage, topBefore)
+	l.backBtnStartX = max(0, mainPage.MenuStartColumn()-pageBackButtonWidth)
+	write("\n\n")
 
-	inputs := []*textinput.Model{
-		&l.keyInput,
-		&l.secretInput,
-	}
-
+	l.inputStartX = max(0, mainPage.MenuStartColumn())
+	l.inputEndX = max(l.inputStartX, a.WindowWidth()-1)
+	inputs := []*textinput.Model{&l.keyInput, &l.secretInput}
 	for i, input := range inputs {
-		if mainPage.MenuStartColumn() > 0 {
-			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+		if l.inputStartX > 0 {
+			write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", l.inputStartX)))
 		}
-
-		builder.WriteString(input.View())
-
-		var valueLen int
-		if input.Value() == "" {
-			valueLen = runewidth.StringWidth(input.Placeholder)
+		if i == 0 {
+			l.keyRowY = lineCount
 		} else {
-			valueLen = runewidth.StringWidth(input.Value())
+			l.secretRowY = lineCount
 		}
-		if spaceLen := l.netease.WindowWidth() - mainPage.MenuStartColumn() - valueLen - 3; spaceLen > 0 {
-			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
-		}
-
-		top++
-
+		input.SetWidth(max(1, a.WindowWidth()-l.inputStartX-lipgloss.Width(input.Prompt)))
+		write(pageInputView(*input, l.hoveredInput == i))
 		if i < len(inputs)-1 {
-			builder.WriteString("\n\n")
-			top++
+			write("\n\n")
 		}
 	}
 
-	builder.WriteString("\n\n")
-	top++
-	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	write("\n\n")
+	if l.inputStartX > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", l.inputStartX)))
 	}
-	builder.WriteString(l.tips)
-	builder.WriteString("\n\n")
-	top++
-	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
-	}
-	builder.WriteString(l.submitButton)
-
-	btnBlank := "    "
-	builder.WriteString(btnBlank)
-	builder.WriteString(l.reloadButton)
-
-	builder.WriteString(btnBlank)
-	builder.WriteString(l.clearButton)
-
-	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - runewidth.StringWidth(types.SubmitText) - runewidth.StringWidth(l.clearText) - runewidth.StringWidth(l.reloadText) - len(btnBlank)*2
-	if spaceLen > 0 {
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
-	}
-	builder.WriteString("\n")
-
-	if a.WindowHeight() > top+3 {
-		builder.WriteString(strings.Repeat("\n", a.WindowHeight()-top-3))
+	write(l.tips)
+	write("\n\n")
+	if l.inputStartX > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", l.inputStartX)))
 	}
 
-	return builder.String()
+	l.buttonsRowY = lineCount
+	submitButtonView := l.submitButton
+	if l.hoveredButton == 0 {
+		submitButtonView = pageButtonHoverView(pageSubmitText())
+	}
+	reloadButtonView := l.reloadButton
+	if l.hoveredButton == 1 {
+		reloadButtonView = pageButtonHoverView(l.reloadText)
+	}
+	clearButtonView := l.clearButton
+	if l.hoveredButton == 2 {
+		clearButtonView = pageButtonHoverView(l.clearText)
+	}
+	buttonGap := "    "
+	l.submitStartX = l.inputStartX
+	l.submitEndX = l.submitStartX + lipgloss.Width(submitButtonView) - 1
+	l.reloadStartX = l.submitEndX + lipgloss.Width(buttonGap) + 1
+	l.reloadEndX = l.reloadStartX + lipgloss.Width(reloadButtonView) - 1
+	l.clearStartX = l.reloadEndX + lipgloss.Width(buttonGap) + 1
+	l.clearEndX = l.clearStartX + lipgloss.Width(clearButtonView) - 1
+	write(submitButtonView)
+	write(buttonGap)
+	write(reloadButtonView)
+	write(buttonGap)
+	write(clearButtonView)
+	if spaceLen := a.WindowWidth() - l.inputStartX - lipgloss.Width(submitButtonView) - lipgloss.Width(reloadButtonView) - lipgloss.Width(clearButtonView) - 2*lipgloss.Width(buttonGap); spaceLen > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
+	}
+	write("\n")
+
+	return finishCustomPageView(&builder, a)
 }
 
 func (l *LastfmCustomApiPage) Msg() tea.Msg {
@@ -289,6 +334,27 @@ func (l *LastfmCustomApiPage) updateAccountInputs(msg tea.Msg) (model.Page, tea.
 	cmds = append(cmds, cmd)
 
 	return l, tea.Batch(cmds...)
+}
+
+func (l *LastfmCustomApiPage) applyFocus() {
+	blurPageInput(&l.keyInput)
+	blurPageInput(&l.secretInput)
+	l.tips = ""
+	switch l.index {
+	case 0:
+		focusPageInput(&l.keyInput)
+	case 1:
+		focusPageInput(&l.secretInput)
+	case l.submitIndex:
+		l.tips = util.SetFgStyle("保存至数据库，优先使用此值", lipgloss.BrightBlue)
+	case l.reloadIndex:
+		l.tips = util.SetFgStyle("从数据库或本次启动时的配置文件中加载 API account", lipgloss.BrightBlue)
+	case l.clearIndex:
+		l.tips = util.SetFgStyle("清除当前值及已设置值", lipgloss.BrightBlue)
+	}
+	l.submitButton = pageSubmitButton(l.index == l.submitIndex)
+	l.reloadButton = pageButton(l.reloadText, l.index == l.reloadIndex)
+	l.clearButton = pageButton(l.clearText, l.index == l.clearIndex)
 }
 
 func (l *LastfmCustomApiPage) enterHandler() (model.Page, tea.Cmd) {

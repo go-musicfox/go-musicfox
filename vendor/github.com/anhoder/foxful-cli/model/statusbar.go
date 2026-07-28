@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/style"
 	"github.com/charmbracelet/x/ansi"
@@ -25,13 +26,32 @@ type StatusBar interface {
 	View(a *App, m *Main) string
 }
 
+// StatusBarComponent is a renderable module injected into DefaultStatusBar's
+// centered content area.
+type StatusBarComponent interface {
+	View(a *App, m *Main) string
+}
+
+// InteractiveStatusBarComponent is an optional extension for components that
+// own mouse behavior. Coordinates are relative to the component's rendered text.
+type InteractiveStatusBarComponent interface {
+	StatusBarComponent
+	HandleMouse(mouse tea.Mouse, x, y int) (handled bool, cmd tea.Cmd)
+	IsMouseOver(x, y int) bool
+}
+
 // DefaultStatusBar shows a "PATH" nugget, the breadcrumb path on bar background,
-// and the current time on the right, in a lipgloss nugget-style status bar.
-// If Center is set, its output is inserted between the breadcrumb and time.
+// injected centered components, and the current time on the right.
 type DefaultStatusBar struct {
-	// Center is an optional callback that returns text to display in the center.
-	// If nil, the center area remains empty (filled with StatusBarText background).
-	Center func(a *App, m *Main) string
+	Components []StatusBarComponent
+
+	componentBounds []statusBarComponentBounds
+}
+
+type statusBarComponentBounds struct {
+	component StatusBarComponent
+	start     int
+	end       int
 }
 
 const maxBreadcrumbSegmentWidth = 32
@@ -41,6 +61,7 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	if w <= 0 {
 		return ""
 	}
+	d.componentBounds = d.componentBounds[:0]
 
 	ss := style.CurrentStyleSet()
 
@@ -57,10 +78,10 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	// Calculate max width optimistically (without time) in case time gets hidden.
 	breadcrumbPadding := 2 // Padding(0,1) on each side of breadcrumbBlock
 	maxBreadcrumbW := w - labelW - breadcrumbPadding
-	if d.Center != nil {
-		// Breadcrumb must leave room for the center module to sit roughly
+	if len(d.Components) > 0 {
+		// Breadcrumb must leave room for centered components to sit roughly
 		// in the middle. Limit breadcrumb to the left half of the terminal
-		// (minus label, padding) so center fits in the right half.
+		// (minus label, padding) so components fit in the right half.
 		centerHalfWidth := w / 2
 		maxBreadcrumbW = centerHalfWidth - labelW - breadcrumbPadding
 	}
@@ -78,17 +99,31 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	}
 	bcrumbW := lipgloss.Width(breadcrumbBlock)
 
-	// Center: optional callback content
-	var centerBlock string
-	if d.Center != nil {
-		centerContent := d.Center(a, m)
-		if centerContent != "" {
-			centerBlock = lipgloss.NewStyle().
-				Inherit(ss.StatusBarText).
-				Padding(0, 1).
-				Render(centerContent)
-		}
+	// Center: injected components.
+	type renderedComponent struct {
+		component StatusBarComponent
+		width     int
 	}
+	renderedComponents := make([]renderedComponent, 0, len(d.Components))
+	centerBlocks := make([]string, 0, len(d.Components))
+	for _, component := range d.Components {
+		if component == nil {
+			continue
+		}
+		content := component.View(a, m)
+		if content == "" {
+			continue
+		}
+		renderedComponents = append(renderedComponents, renderedComponent{
+			component: component,
+			width:     lipgloss.Width(content),
+		})
+		centerBlocks = append(centerBlocks, lipgloss.NewStyle().
+			Inherit(ss.StatusBarText).
+			Padding(0, 1).
+			Render(content))
+	}
+	centerBlock := lipgloss.JoinHorizontal(lipgloss.Top, centerBlocks...)
 	centerW := lipgloss.Width(centerBlock)
 
 	// If total content exceeds window width, progressively hide time then center.
@@ -121,6 +156,18 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 			leftFillerW = 0
 		}
 	}
+	if centerW > 0 {
+		componentStart := leftUsed + leftFillerW
+		for _, component := range renderedComponents {
+			componentStart++ // left padding
+			d.componentBounds = append(d.componentBounds, statusBarComponentBounds{
+				component: component.component,
+				start:     componentStart,
+				end:       componentStart + component.width,
+			})
+			componentStart += component.width + 1 // content + right padding
+		}
+	}
 
 	leftFiller := lipgloss.NewStyle().
 		Inherit(ss.StatusBarText).
@@ -133,6 +180,37 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 
 	bar := lipgloss.JoinHorizontal(lipgloss.Top, pathLabel, breadcrumbBlock, leftFiller, centerBlock, rightFiller, timeNugget)
 	return ss.StatusBar.Width(w).Render(bar)
+}
+
+func (d *DefaultStatusBar) handleComponentClick(mouse tea.Mouse, a *App, m *Main) (tea.Cmd, bool) {
+	if mouse.Y != m.statusBarRowY(a) {
+		return nil, false
+	}
+	for _, bounds := range d.componentBounds {
+		if mouse.X < bounds.start || mouse.X >= bounds.end {
+			continue
+		}
+		if component, ok := bounds.component.(InteractiveStatusBarComponent); ok {
+			handled, cmd := component.HandleMouse(mouse, mouse.X-bounds.start, 0)
+			return cmd, handled
+		}
+		return nil, false
+	}
+	return nil, false
+}
+
+func (d *DefaultStatusBar) isOverComponent(x, y int, a *App, m *Main) bool {
+	if y != m.statusBarRowY(a) {
+		return false
+	}
+	for _, bounds := range d.componentBounds {
+		if x < bounds.start || x >= bounds.end {
+			continue
+		}
+		component, ok := bounds.component.(InteractiveStatusBarComponent)
+		return ok && component.IsMouseOver(x-bounds.start, 0)
+	}
+	return false
 }
 
 // breadcrumbSegmentInfo describes a single segment in the breadcrumb display.

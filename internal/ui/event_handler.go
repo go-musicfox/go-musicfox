@@ -109,8 +109,11 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		newPage := likeSong(h.netease, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLogout:
-		logout()
-		return true, nil, tea.Quit
+		showConfirmPopup(app, "退出登录", "确定要退出登录吗？将清除登录状态并清除 Cookie。", func() {
+			logout()
+			app.Quit()
+		})
+		return true, nil, nil
 	case keybindings.OpVolumeDown: // half-width, full-width and katakana
 		player.DownVolume()
 	case keybindings.OpVolumeUp:
@@ -121,12 +124,16 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		downloadSong(h.netease, true)
 	case keybindings.OpTrashPlayingSong:
 		// trash playing song
-		newPage := trashSong(h.netease, false)
-		return true, newPage, app.Tick(time.Nanosecond)
+		if page := trashSongWithConfirm(h.netease, false); page != nil {
+			return true, page, app.Tick(time.Nanosecond)
+		}
+		return true, nil, nil
 	case keybindings.OpTrashSelectedSong:
 		// trash selected song
-		newPage := trashSong(h.netease, true)
-		return true, newPage, app.Tick(time.Nanosecond)
+		if page := trashSongWithConfirm(h.netease, true); page != nil {
+			return true, page, app.Tick(time.Nanosecond)
+		}
+		return true, nil, nil
 	case keybindings.OpLikeSelectedSong: // half-width, full-width, Japanese, Chinese and French
 		// like selected song
 		newPage := likeSong(h.netease, true, true)
@@ -273,8 +280,14 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		registry := configs.CurrentThemeRegistry()
 		newSS := registry.NextStyleSet(style.HasDarkBackground())
 		if newSS != nil {
+			syncActiveThemePair(app, registry)
+			// Update both the global StyleSet (read by most renderers via
+			// style.CurrentStyleSet) and the app-scoped one, keeping them in sync.
+			style.SetStyleSet(*newSS)
 			app.SetStyleSet(*newSS)
-			h.netease.notifyThemeSwitch(app, "切换主题", registry.CurrentName(style.HasDarkBackground()))
+			themeName := registry.CurrentName(style.HasDarkBackground())
+			h.netease.saveActiveTheme(themeName)
+			h.netease.notifyThemeSwitch(app, "切换主题", themeName)
 			return true, main, app.RerenderCmd(true)
 		}
 	default:
@@ -290,8 +303,21 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 	defer loading.Complete()
 
 	menu := h.netease.MustMain().CurMenu()
-	if _, ok := menu.(*AddToUserPlaylistMenu); ok {
-		addSongToUserPlaylist(h.netease, menu.(*AddToUserPlaylistMenu).action)
+	if m, ok := menu.(*AddToUserPlaylistMenu); ok {
+		if !m.action {
+			// Removing a song from a cloud playlist: confirm AFTER the user
+			// picked the target playlist (late guard), with full context.
+			content := "确定从歌单移除这首歌曲吗？"
+			if idx := m.RealDataIndex(h.netease.MustMain().SelectedIndex()); idx >= 0 && idx < len(m.playlists) {
+				content = fmt.Sprintf("确定从歌单「%s」移除「%s」吗？", m.playlists[idx].Name, m.song.Name)
+			}
+			showConfirmPopup(h.netease.App, "从歌单移除", content, func() {
+				addSongToUserPlaylist(h.netease, false)
+				h.netease.App.Rerender(false)
+			})
+			return true, h.netease.MustMain(), nil
+		}
+		addSongToUserPlaylist(h.netease, m.action)
 		return true, h.netease.MustMain(), h.netease.Tick(time.Nanosecond)
 	}
 	return false, nil, nil

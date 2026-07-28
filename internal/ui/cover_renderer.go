@@ -135,6 +135,13 @@ func (r *CoverRenderer) calculateDimensions() {
 	}
 }
 
+// coverBackgroundExclusion reserves only the terminal cells the Kitty image
+// visibly fills. Kitty leaves its final placement row unpainted, so that row
+// must remain available for the app background.
+func coverBackgroundExclusion(coverStartCol, coverStartRow, cols, rows int) (x, y, width, height int) {
+	return coverStartCol - 1, coverStartRow - 1, cols, max(rows-1, 0)
+}
+
 // View renders the cover image component.
 // This component writes directly to stdout for kitty graphics,
 // bypassing bubbletea's rendering pipeline which may not handle APC sequences correctly.
@@ -191,6 +198,9 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if picUrl == "" {
 		return "", 0
 	}
+
+	exclusionX, exclusionY, exclusionWidth, exclusionHeight := coverBackgroundExclusion(coverStartCol, coverStartRow, r.cols, r.rows)
+	a.SetAppBackgroundExclusion(exclusionX, exclusionY, exclusionWidth, exclusionHeight)
 
 	// Check if we need to re-render
 	r.mu.Lock()

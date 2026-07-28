@@ -55,11 +55,11 @@ type ThemeConfig struct {
 type ThemeRegistry struct {
 	mu          sync.RWMutex
 	themes      map[string]*ThemeFile
-	allNames    []string        // sorted list of all theme names
-	darkNames   []string        // themes with dark variant configured
-	lightNames  []string        // themes with light variant configured
-	themeIndex  int             // current index in the active brightness-category theme list
-	currentName string          // active theme name (survives brightness switches)
+	allNames    []string // sorted list of all theme names
+	darkNames   []string // themes with dark variant configured
+	lightNames  []string // themes with light variant configured
+	themeIndex  int      // current index in the active brightness-category theme list
+	currentName string   // active theme name (survives brightness switches)
 }
 
 var globalThemeRegistry = &ThemeRegistry{
@@ -209,6 +209,21 @@ func (r *ThemeRegistry) CurrentStyleSet(darkBackground bool) *style.StyleSet {
 	}
 	ss := style.NewStyleSet(t)
 	return &ss
+}
+
+// CurrentThemePair returns the dark and light variants of the active theme.
+func (r *ThemeRegistry) CurrentThemePair() (dark, light style.Theme, ok bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if r.currentName == "" {
+		return style.Theme{}, style.Theme{}, false
+	}
+	tf, ok := r.themes[r.currentName]
+	if !ok {
+		return style.Theme{}, style.Theme{}, false
+	}
+	return tf.Dark.toTheme(), tf.Light.toTheme(), true
 }
 
 // CurrentName returns the name of the current active theme.

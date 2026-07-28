@@ -41,6 +41,11 @@ func fillPageHeight(builder *strings.Builder, height int) {
 	}
 }
 
+func finishCustomPageView(builder *strings.Builder, a *model.App) string {
+	fillPageHeight(builder, a.WindowHeight())
+	return model.RenderAppBackground(builder.String(), a.WindowWidth())
+}
+
 func pageSubmitText() string {
 	return model.T(model.MsgConfirm)
 }

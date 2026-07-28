@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 
@@ -203,5 +204,41 @@ func TestUpdateNotificationOpensVersionRelease(t *testing.T) {
 	spec.OnAction(model.NotificationActionResult{ActionID: toastOpenURLActionID})
 	if openedURL != wantURL {
 		t.Fatalf("opened URL = %q, want %q", openedURL, wantURL)
+	}
+}
+
+// TestConfirmPopupDefaultsToCancelAndRunsOnConfirm verifies the destructive-
+// action safety property of showConfirmPopup: 取消 is the default-focused
+// button (a bare Enter cancels and does NOT run onConfirm), while focusing
+// 确定 via Tab then Enter runs onConfirm. Also asserts the popup renders both
+// buttons and is pushed onto the modal stack.
+func TestConfirmPopupDefaultsToCancelAndRunsOnConfirm(t *testing.T) {
+	app, _ := newFormPageTestApp(t)
+
+	ran := false
+	showConfirmPopup(app, "测试确认", "确定执行吗？", func() { ran = true })
+
+	if !app.HasPopup() {
+		t.Fatal("showConfirmPopup did not push a popup onto the modal stack")
+	}
+	if view := app.View().Content; !strings.Contains(view, "取消") || !strings.Contains(view, "确定") {
+		t.Fatalf("confirm popup view missing action buttons: %q", view)
+	}
+
+	// Default focus is 取消: a bare Enter must cancel without running onConfirm.
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if ran {
+		t.Fatal("onConfirm ran on bare Enter; 取消 must be the default-focused button")
+	}
+	if app.HasPopup() {
+		t.Fatal("bare Enter did not dismiss the popup")
+	}
+
+	// Re-show, move focus to 确定 (Tab), then confirm (Enter).
+	showConfirmPopup(app, "测试确认", "确定执行吗？", func() { ran = true })
+	app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !ran {
+		t.Fatal("onConfirm did not run after focusing 确定 and pressing Enter")
 	}
 }

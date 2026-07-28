@@ -195,7 +195,7 @@ type Theme struct {
 	StatusBarNugget      Highlight         // fg→Foreground (or white on dark), bg→transparent
 	StatusBarNuggetLabel Highlight         // fg→same as StatusBarNugget.Fg, bg→Primary
 	AppBackground        Highlight         // Bg→transparent (terminal shows through)
-	SelectedItemBg        Highlight         // Bg→transparent (falls back to AppBackground.Bg)
+	SelectedItemBg       Highlight         // Bg→transparent (falls back to AppBackground.Bg)
 
 	// ---- Hover/click highlights (interactive states) ----
 	// Each field below controls the visual feedback when the mouse hovers or
@@ -543,6 +543,15 @@ type StyleSet struct {
 	theme Theme
 }
 
+// BlankStyle returns a lipgloss.Style for rendering blank/whitespace content
+// that inherits the app background color. Priority:
+//   - component's own background (via Inherit if caller passes parent)
+//   - AppBackground color (from theme)
+//   - transparent (no background set)
+func (ss StyleSet) BlankStyle() lipgloss.Style {
+	return ss.AppBackground
+}
+
 // NewStyleSet creates a pre-configured set of styles from a Theme.
 // Use this as the base and customize individual styles as needed.
 func NewStyleSet(theme Theme) StyleSet {
@@ -708,16 +717,16 @@ func NewStyleSet(theme Theme) StyleSet {
 		if primary, ok := colorful.MakeColor(theme.Primary); ok {
 			if theme.Background != nil && theme.Background != noColor {
 				if bg, ok := colorful.MakeColor(theme.Background); ok {
-				_, _, l := bg.Hsl()
-				if l > 0.5 {
-					selectedItemHL.Bg = primary.BlendLab(bg, 0.94).Clamped()
-				} else {
-					highlighted := primary.BlendLab(colorful.Color{R: 1, G: 1, B: 1}, 0.8)
-					selectedItemHL.Bg = highlighted.BlendLab(bg, 0.78).Clamped()
+					_, _, l := bg.Hsl()
+					if l > 0.5 {
+						selectedItemHL.Bg = primary.BlendLab(bg, 0.94).Clamped()
+					} else {
+						highlighted := primary.BlendLab(colorful.Color{R: 1, G: 1, B: 1}, 0.8)
+						selectedItemHL.Bg = highlighted.BlendLab(bg, 0.78).Clamped()
+					}
 				}
 			}
 		}
-	}
 		if selectedItemHL.Bg == nil {
 			selectedItemHL.Bg = noColor
 		}
@@ -770,6 +779,13 @@ func NewStyleSet(theme Theme) StyleSet {
 	contextMenuItemHL := resolveHL(theme.Popup.ContextMenuItem, nil, popupSurface)
 	contextMenuItemFocusedHL := resolveHL(theme.Popup.ContextMenuItemFocused, selectedItemHL.Fg, selectedItemHL.Bg)
 	contextMenuItemHoverHL := resolveHL(theme.Popup.ContextMenuItemHover, contextMenuItemHL.Fg, selectedItemHL.Bg)
+	if theme.Popup.ContextMenuItemHover.Fg == nil {
+		if bg := theme.AppBackground.Bg; bg == nil {
+			contextMenuItemHoverHL.Fg = theme.Primary
+		} else if _, transparent := bg.(lipgloss.NoColor); transparent {
+			contextMenuItemHoverHL.Fg = theme.Primary
+		}
+	}
 	if contextMenuItemHoverHL.Underline == nil {
 		contextMenuItemHoverHL.Underline = BoolPtr(false)
 	}
@@ -785,8 +801,10 @@ func NewStyleSet(theme Theme) StyleSet {
 	scrollThumbHL := resolveHL(theme.ScrollThumb, theme.Secondary, nil)
 
 	// Status bar
+	// Fall back to the app background (then transparent) so the filler cells
+	// between the breadcrumb and time never reveal content drawn beneath the TUI.
 	statusBarFg := or(theme.StatusBar.Fg, theme.Secondary)
-	statusBarBg := or(theme.StatusBar.Bg, noColor)
+	statusBarBg := or(theme.StatusBar.Bg, or(theme.AppBackground.Bg, noColor))
 	statusBarTextFg := or(theme.StatusBarText.Fg, theme.Secondary)
 
 	// Status bar time bg
@@ -799,6 +817,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	// Status bar nuggets
 	statusBarNuggetFg := or(theme.StatusBarNugget.Fg, theme.Foreground)
+	statusBarNuggetLabelFg := or(theme.StatusBarNuggetLabel.Fg, statusBarNuggetFg)
 	statusBarNuggetLabelBg := or(theme.StatusBarNuggetLabel.Bg, theme.Primary)
 
 	// Breadcrumb separator
@@ -876,7 +895,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	base.Title = applyHL(lipgloss.NewStyle(), titleHL)
 
-	base.MenuTitle = applyHL(lipgloss.NewStyle(), Highlight{Fg: menuTitleHL.Fg})
+	base.MenuTitle = applyHL(lipgloss.NewStyle().Background(appBg), Highlight{Fg: menuTitleHL.Fg})
 
 	base.MenuItem = lipgloss.NewStyle().Background(selectedItemBg)
 
@@ -888,7 +907,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	base.SelectedItemHover = applyHL(base.SelectedItem, selectedItemHoverHL)
 
-	base.Subtitle = applyHL(lipgloss.NewStyle(), Highlight{Fg: subtitleHL.Fg})
+	base.Subtitle = applyHL(lipgloss.NewStyle().Background(appBg), Highlight{Fg: subtitleHL.Fg})
 
 	base.Prompt = applyHL(lipgloss.NewStyle(), Highlight{Fg: promptHL.Fg})
 
@@ -1028,6 +1047,7 @@ func NewStyleSet(theme Theme) StyleSet {
 	base.StatusBarNugget = applyHL(lipgloss.NewStyle(), Highlight{Fg: statusBarNuggetFg}).
 		Padding(0, 1)
 	base.StatusBarNuggetLabel = base.StatusBarNugget.
+		Foreground(statusBarNuggetLabelFg).
 		Background(statusBarNuggetLabelBg)
 	base.StatusBarTime = lipgloss.NewStyle().
 		Foreground(statusBarTimeFg).
@@ -1095,6 +1115,12 @@ func DefaultStyleSet() StyleSet {
 
 var currentStyleSet = DefaultStyleSet()
 
+// styleGeneration is bumped every time the global StyleSet changes. Downstream
+// renderers that cache styled output can fold this value into their cache keys
+// so a theme switch invalidates any output still carrying the old theme's
+// colors, avoiding stale-color residue on the screen.
+var styleGeneration uint64
+
 // CurrentStyleSet returns the active global StyleSet.
 // By default this is built from DefaultTheme. Call SetStyleSet to override
 // with a custom theme constructed programmatically.
@@ -1107,11 +1133,18 @@ func CurrentStyleSet() StyleSet {
 	return currentStyleSet
 }
 
+// StyleGeneration returns a counter that increments on every SetStyleSet call.
+// Cache keys keyed on this value are invalidated whenever the theme changes.
+func StyleGeneration() uint64 {
+	return styleGeneration
+}
+
 // SetStyleSet sets the global StyleSet. Call during application startup
 // before any UI rendering. The framework's internal View methods all read
 // from this global StyleSet, so setting it once at init is sufficient.
 func SetStyleSet(s StyleSet) {
 	currentStyleSet = s
+	styleGeneration++
 }
 
 // FG applies a foreground color to a style and renders the content.

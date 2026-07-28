@@ -21,19 +21,19 @@ type ThemeFile struct {
 
 // ThemeVariant holds palette, highlight, popup, notification, and app-specific colors.
 type ThemeVariant struct {
-	Primary      string `toml:"primary"`
-	Secondary    string `toml:"secondary"`
-	Accent       string `toml:"accent"`
-	Success      string `toml:"success"`
-	Warning      string `toml:"warning"`
-	Error        string `toml:"error"`
-	Info         string `toml:"info"`
-	Muted        string `toml:"muted"`
-	HintKey      string `toml:"hintKey"`
-	Background   string `toml:"background"`
-	Foreground   string `toml:"foreground"`
-	Border       string `toml:"border"`
-	Surface      string `toml:"surface"`
+	Primary    string `toml:"primary"`
+	Secondary  string `toml:"secondary"`
+	Accent     string `toml:"accent"`
+	Success    string `toml:"success"`
+	Warning    string `toml:"warning"`
+	Error      string `toml:"error"`
+	Info       string `toml:"info"`
+	Muted      string `toml:"muted"`
+	HintKey    string `toml:"hintKey"`
+	Background string `toml:"background"`
+	Foreground string `toml:"foreground"`
+	Border     string `toml:"border"`
+	Surface    string `toml:"surface"`
 
 	Highlights   HighlightsConfig        `toml:"highlights"`
 	Popup        PopupConfig             `toml:"popup"`
@@ -48,7 +48,6 @@ type HighlightsConfig struct {
 	MenuTitle         string `toml:"menuTitle"`
 	MenuItem          string `toml:"menuItem"`
 	SelectedItem      string `toml:"selectedItem"`
-	SelectedItemBg    string `toml:"selectedItemBg"`
 	MenuItemHover     string `toml:"menuItemHover"`
 	SelectedItemHover string `toml:"selectedItemHover"`
 	Title             string `toml:"title"`
@@ -80,15 +79,17 @@ type ThemeNotificationConfig struct {
 
 // StatusBarConfig maps to foxful-cli StyleSet status bar fields.
 type StatusBarConfig struct {
-	Bar            string `toml:"bar"`
-	Text           string `toml:"text"`
-	Breadcrumb     string `toml:"breadcrumb"`
-	BreadcrumbSep  string `toml:"breadcrumbSep"`
+	Bar             string `toml:"bar"`
+	Text            string `toml:"text"`
+	Breadcrumb      string `toml:"breadcrumb"`
+	BreadcrumbSep   string `toml:"breadcrumbSep"`
 	BreadcrumbHover string `toml:"breadcrumbHover"`
 	BreadcrumbClick string `toml:"breadcrumbClick"`
-	Time           string `toml:"time"`
-	Nugget         string `toml:"nugget"`
-	NuggetLabel    string `toml:"nuggetLabel"`
+	Time            string `toml:"time"`
+	Nugget          string `toml:"nugget"`
+	NuggetLabel     string `toml:"nuggetLabel"`
+	NuggetLabelFg   string `toml:"nuggetLabelFg"`
+	NuggetLabelBg   string `toml:"nuggetLabelBg"`
 }
 
 // MarkdownConfig holds glamour markdown theme presets.
@@ -201,9 +202,6 @@ func (v ThemeVariant) toTheme() style.Theme {
 	if h.SelectedItem != "" {
 		t.SelectedItem = fgPtr(h.SelectedItem)
 	}
-	if h.SelectedItemBg != "" {
-		t.SelectedItemBg = style.Highlight{Bg: parseColor(h.SelectedItemBg)}
-	}
 	if h.MenuItemHover != "" {
 		t.MenuItemHover = fgPtr(h.MenuItemHover)
 	}
@@ -292,8 +290,11 @@ func (v ThemeVariant) toTheme() style.Theme {
 	if sb.Nugget != "" {
 		t.StatusBarNugget = fgPtr(sb.Nugget)
 	}
-	if sb.NuggetLabel != "" {
-		t.StatusBarNuggetLabel = fgPtr(sb.NuggetLabel)
+	if sb.NuggetLabelFg != "" {
+		t.StatusBarNuggetLabel.Fg = parseColor(sb.NuggetLabelFg)
+	}
+	if sb.NuggetLabelBg != "" {
+		t.StatusBarNuggetLabel.Bg = parseColor(sb.NuggetLabelBg)
 	}
 
 	// App background
@@ -315,20 +316,20 @@ func fgPtr(hex string) style.Highlight {
 // AppCustomStyles is the struct passed to Theme.Custom for foxful-cli reflection.
 // All fields must be of type style.Highlight.
 type AppCustomStyles struct {
-	LyricActive          style.Highlight
-	LyricTransition      style.Highlight
-	LyricInactive        style.Highlight
-	LyricHighlight       style.Highlight
-	PlaybarMode          style.Highlight
-	PlaybarVolume        style.Highlight
-	PlaybarPlaying       style.Highlight
-	PlaybarPaused        style.Highlight
-	PlaybarHeartLiked    style.Highlight
-	PlaybarHeartUnliked  style.Highlight
-	PlaybarArtist        style.Highlight
-	LoginError           style.Highlight
-	LoginSuccess         style.Highlight
-	AuthStatus           style.Highlight
+	LyricActive           style.Highlight
+	LyricTransition       style.Highlight
+	LyricInactive         style.Highlight
+	LyricHighlight        style.Highlight
+	PlaybarMode           style.Highlight
+	PlaybarVolume         style.Highlight
+	PlaybarPlaying        style.Highlight
+	PlaybarPaused         style.Highlight
+	PlaybarHeartLiked     style.Highlight
+	PlaybarHeartUnliked   style.Highlight
+	PlaybarArtist         style.Highlight
+	LoginError            style.Highlight
+	LoginSuccess          style.Highlight
+	AuthStatus            style.Highlight
 	ConfigTableBorder     style.Highlight
 	ConfigTableSelectedFg style.Highlight
 	ConfigTableSelectedBg style.Highlight
@@ -337,20 +338,20 @@ type AppCustomStyles struct {
 // toCustomStyles converts AppColorConfig to an AppCustomStyles for Theme.Custom.
 func (c AppColorConfig) toCustomStyles() AppCustomStyles {
 	return AppCustomStyles{
-		LyricActive:          fgHighlight(c.LyricActive, LyricActiveColor),
-		LyricTransition:      fgHighlight(c.LyricTransition, LyricTransitionColor),
-		LyricInactive:        fgHighlight(c.LyricInactive, LyricInactiveColor),
-		LyricHighlight:       fgHighlight(c.LyricHighlight, LyricWhiteColor),
-		PlaybarMode:          fgHighlight(c.PlaybarMode, PlaybarModeColor),
-		PlaybarVolume:        fgHighlight(c.PlaybarVolume, PlaybarVolumeColor),
-		PlaybarPlaying:       fgHighlight(c.PlaybarPlaying, PlaybarPlayingColor),
-		PlaybarPaused:        fgHighlight(c.PlaybarPaused, PlaybarPausedColor),
-		PlaybarHeartLiked:    fgHighlight(c.PlaybarHeartLiked, PlaybarHeartLikedColor),
-		PlaybarHeartUnliked:  fgHighlight(c.PlaybarHeartUnliked, PlaybarHeartUnlikedColor),
-		PlaybarArtist:        fgHighlight(c.PlaybarArtist, PlaybarArtistColor),
-		LoginError:           fgHighlight(c.LoginError, LoginErrorColor),
-		LoginSuccess:         fgHighlight(c.LoginSuccess, LoginSuccessColor),
-		AuthStatus:           fgHighlight(c.AuthStatus, AuthStatusColor),
+		LyricActive:           fgHighlight(c.LyricActive, LyricActiveColor),
+		LyricTransition:       fgHighlight(c.LyricTransition, LyricTransitionColor),
+		LyricInactive:         fgHighlight(c.LyricInactive, LyricInactiveColor),
+		LyricHighlight:        fgHighlight(c.LyricHighlight, LyricWhiteColor),
+		PlaybarMode:           fgHighlight(c.PlaybarMode, PlaybarModeColor),
+		PlaybarVolume:         fgHighlight(c.PlaybarVolume, PlaybarVolumeColor),
+		PlaybarPlaying:        fgHighlight(c.PlaybarPlaying, PlaybarPlayingColor),
+		PlaybarPaused:         fgHighlight(c.PlaybarPaused, PlaybarPausedColor),
+		PlaybarHeartLiked:     fgHighlight(c.PlaybarHeartLiked, PlaybarHeartLikedColor),
+		PlaybarHeartUnliked:   fgHighlight(c.PlaybarHeartUnliked, PlaybarHeartUnlikedColor),
+		PlaybarArtist:         fgHighlight(c.PlaybarArtist, PlaybarArtistColor),
+		LoginError:            fgHighlight(c.LoginError, LoginErrorColor),
+		LoginSuccess:          fgHighlight(c.LoginSuccess, LoginSuccessColor),
+		AuthStatus:            fgHighlight(c.AuthStatus, AuthStatusColor),
 		ConfigTableBorder:     fgHighlight(c.ConfigTableBorder, ConfigTableBorderColor),
 		ConfigTableSelectedFg: fgHighlight(c.ConfigTableSelectedFg, ConfigTableSelectedFgColor),
 		ConfigTableSelectedBg: bgHighlight(c.ConfigTableSelectedBg, ConfigTableSelectedBgColor),
@@ -511,20 +512,20 @@ const (
 // matching what foxful-cli's StyleSet.Custom map contains after resolution.
 // Use style.CustomStyles[ResolvedAppStyles](ss) to obtain an instance.
 type ResolvedAppStyles struct {
-	LyricActive          lipgloss.Style
-	LyricTransition      lipgloss.Style
-	LyricInactive        lipgloss.Style
-	LyricHighlight       lipgloss.Style
-	PlaybarMode          lipgloss.Style
-	PlaybarVolume        lipgloss.Style
-	PlaybarPlaying       lipgloss.Style
-	PlaybarPaused        lipgloss.Style
-	PlaybarHeartLiked    lipgloss.Style
-	PlaybarHeartUnliked  lipgloss.Style
-	PlaybarArtist        lipgloss.Style
-	LoginError           lipgloss.Style
-	LoginSuccess         lipgloss.Style
-	AuthStatus           lipgloss.Style
+	LyricActive           lipgloss.Style
+	LyricTransition       lipgloss.Style
+	LyricInactive         lipgloss.Style
+	LyricHighlight        lipgloss.Style
+	PlaybarMode           lipgloss.Style
+	PlaybarVolume         lipgloss.Style
+	PlaybarPlaying        lipgloss.Style
+	PlaybarPaused         lipgloss.Style
+	PlaybarHeartLiked     lipgloss.Style
+	PlaybarHeartUnliked   lipgloss.Style
+	PlaybarArtist         lipgloss.Style
+	LoginError            lipgloss.Style
+	LoginSuccess          lipgloss.Style
+	AuthStatus            lipgloss.Style
 	ConfigTableBorder     lipgloss.Style
 	ConfigTableSelectedFg lipgloss.Style
 	ConfigTableSelectedBg lipgloss.Style
@@ -551,6 +552,29 @@ func SafeGetBackground(s lipgloss.Style, defaultStr string) color.Color {
 		return c
 	}
 	return parseColor(defaultStr)
+}
+
+// ResolveBackground resolves the background color following the fallback chain
+// the app relies on: the component's own configured background first, then the
+// app-level AppBackground, and finally nil (transparent) when neither is set.
+//
+// Renderers that build ad-hoc foreground-only styles MUST paint their text
+// glyphs with this background; otherwise the glyph cells stay transparent and
+// reveal whatever is drawn beneath the TUI (e.g. the cover image).
+func ResolveBackground(componentBg color.Color) color.Color {
+	if componentBg != nil {
+		return componentBg
+	}
+	if c := style.CurrentStyleSet().AppBackground.GetBackground(); c != nil {
+		return c
+	}
+	return nil
+}
+
+// AppBackgroundColor returns the resolved app-level background color, or nil
+// when the current theme leaves it transparent.
+func AppBackgroundColor() color.Color {
+	return style.CurrentStyleSet().AppBackground.GetBackground()
 }
 
 // GetCurrentMarkdownTheme returns the configured markdown theme name for the current brightness.

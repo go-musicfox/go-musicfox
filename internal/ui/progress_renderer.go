@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
@@ -25,6 +28,7 @@ type ProgressRenderer struct {
 	cachedPassedSec int // rounded to seconds
 	cachedDuration  int // total seconds
 	cachedWidth     int
+	cachedStyleGen  uint64
 }
 
 // NewProgressRenderer creates a new progress bar renderer component.
@@ -81,8 +85,11 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 		width = 0
 	}
 
-	// Output caching: skip rebuild when progress has not ticked to the next second
-	if passedDuration == r.cachedPassedSec && allDuration == r.cachedDuration && width == r.cachedWidth {
+	// Output caching: skip rebuild when progress has not ticked to the next second.
+	// styleGen guards against replaying stale-colored output after a theme switch.
+	styleGen := style.StyleGeneration()
+	if passedDuration == r.cachedPassedSec && allDuration == r.cachedDuration &&
+		width == r.cachedWidth && styleGen == r.cachedStyleGen {
 		return r.cachedView, r.cachedLines
 	}
 
@@ -115,11 +122,28 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	} else {
 		times = fmt.Sprintf("%02d:%02d/%02d:%02d", displayDuration/60, displayDuration%60, allDuration/60, allDuration%60)
 	}
-	styledTimes := util.SetFgStyle(times, util.GetPrimaryColor())
+	// Paint the time text glyphs and every filler cell with the app background
+	// resolved from the SAME (global) StyleSet that model.Progress uses for the
+	// bar cells; mixing an app-scoped StyleSet here would leave the separator and
+	// trailing fill transparent whenever the two stylesets diverge.
+	appBg := style.CurrentStyleSet().AppBackground
+	timesBg := configs.ResolveBackground(nil)
+	var styledTimes string
+	if timesBg != nil {
+		styledTimes = util.SetFgBgStyle(times, util.GetPrimaryColor(), timesBg)
+	} else {
+		styledTimes = util.SetFgStyle(times, util.GetPrimaryColor())
+	}
 
-	view = progressView + " " + styledTimes
+	view = progressView + appBg.Render(" ") + styledTimes
 	if allDuration/60 < ProgressLongDurationThreshold {
-		view += " "
+		view += appBg.Render(" ")
+	}
+	viewWidth := runewidth.StringWidth(stripAnsiCodes(view))
+	windowWidth := r.netease.WindowWidth()
+	remainingWidth := windowWidth - viewWidth
+	if remainingWidth > 0 {
+		view += appBg.Render(strings.Repeat(" ", remainingWidth))
 	}
 
 	// Store output cache
@@ -128,6 +152,7 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	r.cachedPassedSec = passedDuration
 	r.cachedDuration = allDuration
 	r.cachedWidth = width
+	r.cachedStyleGen = styleGen
 
 	return r.cachedView, r.cachedLines
 }

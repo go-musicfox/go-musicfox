@@ -349,7 +349,6 @@ surface = "#242424"       # 表面色（卡片/弹窗背景）
 menuTitle = "BrightGreen"       # 菜单标题
 # menuItem = ""                  # 菜单项文字
 # selectedItem = ""              # 选中项前景
-# selectedItemBg = ""            # 选中项背景
 # menuItemHover = ""             # 鼠标悬停
 # selectedItemHover = ""         # 选中+悬停
 # title = ""                     # 页面标题
@@ -386,7 +385,8 @@ surface = "#2D2D2D"       # 通知背景
 # breadcrumbClick = ""     # 面包屑点击
 # time = ""                # 时间显示
 # nugget = ""              # 标签块文字
-# nuggetLabel = ""         # 标签块背景
+# nuggetLabelFg = ""       # 面包屑角标前景
+# nuggetLabelBg = ""       # 面包屑角标背景
 
 # ── Markdown 渲染主题 ─────────────────────────────
 [dark.markdown]

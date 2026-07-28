@@ -170,9 +170,12 @@ func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page
 		registry := configs.CurrentThemeRegistry()
 		newSS := registry.NextStyleSet(style.HasDarkBackground())
 		if newSS != nil {
+			syncActiveThemePair(a, registry)
 			style.SetStyleSet(*newSS)
 			a.SetStyleSet(*newSS)
-			n.notifyThemeSwitch(a, "切换主题", registry.CurrentName(style.HasDarkBackground()))
+			themeName := registry.CurrentName(style.HasDarkBackground())
+			n.saveActiveTheme(themeName)
+			n.notifyThemeSwitch(a, "切换主题", themeName)
 		}
 		return nil, a.RerenderCmd(true)
 	}

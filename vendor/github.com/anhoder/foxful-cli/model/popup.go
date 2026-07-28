@@ -872,6 +872,26 @@ func normalizePopupSurface(content string, surface color.Color) string {
 	return screen.Render()
 }
 
+// fillMissingBackground preserves rendered foregrounds, attributes, explicit
+// backgrounds, hyperlinks, and grapheme widths while filling transparent cells.
+func fillMissingBackground(content string, background color.Color) string {
+	if content == "" || background == nil {
+		return content
+	}
+
+	screen := popupStyledScreen(content)
+	for y := range screen.Lines {
+		for x := range screen.Lines[y] {
+			cell := screen.CellAt(x, y)
+			if cell == nil || cell.IsZero() || cell.Style.Bg != nil {
+				continue
+			}
+			cell.Style.Bg = background
+		}
+	}
+	return screen.Render()
+}
+
 func popupStyledScreen(content string) uv.ScreenBuffer {
 	width := max(lipgloss.Width(content), 1)
 	height := strings.Count(content, "\n") + 1
@@ -996,7 +1016,7 @@ func (p *Popup) handleMouse(msg tea.MouseMsg) (bool, tea.Cmd) {
 				return true, hoverCmd
 			}
 			p.scrollOffset = min(p.scrollOffset+3, p.maxScrollOffset())
-			p.scrollThrottleUntil = now.Add(30 * time.Millisecond)
+			p.scrollThrottleUntil = now.Add(50 * time.Millisecond)
 			return true, hoverCmd
 		}
 		if len(p.actions) > 1 {

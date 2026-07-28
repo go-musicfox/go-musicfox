@@ -42,7 +42,7 @@ func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 		page.AfterAction = func() {
 			app.MustMain().RefreshMenuList()
 		}
-		return NewMenuToPage(m.baseMenu, page)
+		return NewMenuToPage(m.baseMenu, page, m.netease.coverRenderer.ClearDisplayed)
 	case 1:
 		if m.netease.lastfm.NeedAuth() {
 			page := NewLastfmAuthPage(m.netease)
@@ -51,20 +51,20 @@ func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 			}
 			return NewMenuToPage(m.baseMenu, page)
 		}
-
-		action := func() {
+		showConfirmPopup(app, "清除 Last.fm 授权", "确定清除 Last.fm 授权信息吗？", func() {
 			m.netease.lastfm.ClearUserInfo()
-
 			notify.Notify(notify.NotifyContent{
 				Title:   "清除授权成功",
 				Text:    "Last.fm 授权已清除",
 				GroupId: types.GroupID,
 			})
-		}
-
-		return NewConfirmMenu(m.baseMenu, []ConfirmItem{
-			{title: model.MenuItem{Title: "确定"}, action: action, backLevel: 2},
+			// Original ConfirmMenu pushed a level and used backLevel:2 to land
+			// on the Lastfm menu; the popup pushes nothing, so a single BackMenu
+			// (out of LastfmProfile) reaches the same landing menu.
+			app.MustMain().BackMenu()
+			app.MustMain().RefreshMenuList()
 		})
+		return nil
 	default:
 		return nil
 	}

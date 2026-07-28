@@ -438,7 +438,7 @@ func (n *Netease) InitHook(_ *model.App) {
 			)
 			if shouldShow {
 				if !configs.AppConfig.Main.Debug {
-					_ = table.SetByKVModel(storage.ChangelogSeen{Version: types.AppVersion}, storage.ChangelogSeen{})
+					_ = table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion})
 				}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
@@ -679,11 +679,13 @@ func showChangelogPopup(app *model.App) {
 func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case tea.BackgroundColorMsg, uv.LightColorSchemeEvent, uv.DarkColorSchemeEvent:
+		registry := configs.CurrentThemeRegistry()
+		syncActiveThemePair(n.App, registry)
 		// Let foxful-cli process the message first (SetDarkBackground, popup cache, etc.)
 		_, cmd := n.App.Update(msg)
 		// Rebuild StyleSet from our ThemeRegistry with correct dark/light variant
 		isDark := style.HasDarkBackground()
-		ss := configs.CurrentThemeRegistry().CurrentStyleSet(isDark)
+		ss := registry.CurrentStyleSet(isDark)
 		if ss != nil {
 			style.SetStyleSet(*ss)
 			n.App.SetStyleSet(*ss)
@@ -693,6 +695,13 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd
+	}
+}
+
+func syncActiveThemePair(app *model.App, registry *configs.ThemeRegistry) {
+	dark, light, ok := registry.CurrentThemePair()
+	if ok {
+		app.SetThemePair(dark, light)
 	}
 }
 

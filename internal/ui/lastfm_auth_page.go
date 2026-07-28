@@ -272,11 +272,7 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 	}
 	builder.WriteString("\n")
 
-	if a.WindowHeight() > top+3 {
-		builder.WriteString(strings.Repeat("\n", a.WindowHeight()-top-3))
-	}
-
-	return builder.String()
+	return finishCustomPageView(&builder, a)
 }
 
 func (l *LastfmAuthPage) Msg() tea.Msg {
