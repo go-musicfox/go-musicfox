@@ -1,13 +1,17 @@
 package ui
 
 import (
+	"context"
+	"io"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/charmbracelet/x/ansi"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
@@ -175,6 +179,38 @@ func TestHelpPopupFitsTerminalHeight(t *testing.T) {
 	}
 }
 
+func TestDualColumnSelectedMenuItemDoesNotWrap(t *testing.T) {
+	const (
+		width  = 75
+		height = 24
+		title  = "我的音乐你听吗 第9期"
+	)
+
+	app := newDualColumnOverflowTestApp(t, width, height)
+	app.MustMain().EnterMenu(nil, nil)
+
+	view := ansi.Strip(app.View().Content)
+	backButtonFound := false
+	menuRowFound := false
+	for _, line := range strings.Split(view, "\n") {
+		if lipgloss.Width(line) > width {
+			t.Fatalf("rendered line width = %d, terminal width = %d: %q", lipgloss.Width(line), width, line)
+		}
+		if strings.Contains(line, "← 收藏专辑") {
+			backButtonFound = true
+		}
+		if strings.Contains(line, title) && strings.Contains(line, "另一张专辑") {
+			menuRowFound = true
+		}
+	}
+	if !backButtonFound {
+		t.Fatalf("submenu title is missing its back button:\n%s", view)
+	}
+	if !menuRowFound {
+		t.Fatalf("dual-column menu row wrapped:\n%s", view)
+	}
+}
+
 func TestUpdateNotificationOpensVersionRelease(t *testing.T) {
 	content := newVersionNotifyContent("v9.9.9")
 	wantURL := types.AppGithubUrl + "/releases/tag/v9.9.9"
@@ -205,6 +241,73 @@ func TestUpdateNotificationOpensVersionRelease(t *testing.T) {
 	if openedURL != wantURL {
 		t.Fatalf("opened URL = %q, want %q", openedURL, wantURL)
 	}
+}
+
+type dualColumnOverflowParentMenu struct {
+	model.DefaultMenu
+}
+
+func (dualColumnOverflowParentMenu) GetMenuKey() string {
+	return "dual-column-overflow-parent"
+}
+
+func (dualColumnOverflowParentMenu) MenuViews() []model.MenuItem {
+	return []model.MenuItem{{Title: "收藏专辑"}}
+}
+
+func (dualColumnOverflowParentMenu) SubMenu(_ *model.App, _ int) model.Menu {
+	return &dualColumnOverflowChildMenu{}
+}
+
+func (dualColumnOverflowParentMenu) HelpHints() []model.HelpHint {
+	return nil
+}
+
+type dualColumnOverflowChildMenu struct {
+	model.DefaultMenu
+}
+
+func (dualColumnOverflowChildMenu) GetMenuKey() string {
+	return "dual-column-overflow-child"
+}
+
+func (dualColumnOverflowChildMenu) MenuViews() []model.MenuItem {
+	return []model.MenuItem{
+		{Title: "我的音乐你听吗 第9期", Subtitle: "[我的音乐你听吗]"},
+		{Title: "另一张专辑"},
+	}
+}
+
+func (dualColumnOverflowChildMenu) HelpHints() []model.HelpHint {
+	return nil
+}
+
+func newDualColumnOverflowTestApp(t *testing.T, width, height int) *model.App {
+	t.Helper()
+
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Theme.ShowTitle = true
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	opts := model.DefaultOptions()
+	opts.EnableStartup = false
+	opts.WhetherDisplayTitle = true
+	opts.DualColumn = true
+	opts.MainMenu = &dualColumnOverflowParentMenu{}
+	opts.MainMenuTitle = &model.MenuItem{Title: "我的音乐"}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	opts.TeaOptions = []tea.ProgramOption{
+		tea.WithContext(ctx),
+		tea.WithInput(nil),
+		tea.WithOutput(io.Discard),
+	}
+
+	app := model.NewApp(opts)
+	_ = app.Run()
+	_, _ = app.Update(tea.WindowSizeMsg{Width: width, Height: height})
+	return app
 }
 
 // TestConfirmPopupDefaultsToCancelAndRunsOnConfirm verifies the destructive-
