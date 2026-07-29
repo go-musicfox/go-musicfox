@@ -69,14 +69,28 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	pathLabel := ss.StatusBarNuggetLabel.Render(" » ")
 	labelW := lipgloss.Width(pathLabel)
 
-	// Right: time nugget
+	// Breadcrumb right-end separator
+	breadcrumbBg := ss.StatusBarBreadcrumbBg.GetBackground()
+	breadcrumbEndSepStyle := lipgloss.NewStyle().Foreground(breadcrumbBg).Background(ss.StatusBar.GetBackground())
+
+	// Right: time nugget with Powerline separators
 	now := time.Now().Format("15:04")
-	timeNugget := ss.StatusBarTime.Render(" ⏱ " + now + " ")
+	timeBg := ss.StatusBarTime.GetBackground()
+	timeStyle := lipgloss.NewStyle().
+		Foreground(ss.StatusBarTime.GetForeground()).
+		Background(timeBg)
+	sepStyle := lipgloss.NewStyle().Foreground(timeBg).Background(ss.StatusBar.GetBackground())
+	// Fall back to space if no Powerline character configured (e.g., Transparent theme).
+	timeSepLeft := ss.StatusBarTimeSepLeft
+	if timeSepLeft == "" {
+		timeSepLeft = " "
+	}
+	timeNugget := sepStyle.Render(timeSepLeft) + timeStyle.Render("⏱ "+now+" ")
 	timeW := lipgloss.Width(timeNugget)
 
 	// Breadcrumb: constrain to available width so bar stays single-line.
 	// Calculate max width optimistically (without time) in case time gets hidden.
-	breadcrumbPadding := 2 // Padding(0,1) on each side of breadcrumbBlock
+	breadcrumbPadding := 1 // PaddingLeft(1)
 	maxBreadcrumbW := w - labelW - breadcrumbPadding
 	if len(d.Components) > 0 {
 		// Breadcrumb must leave room for centered components to sit roughly
@@ -92,10 +106,14 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 
 	var breadcrumbBlock string
 	if path != "" {
+		bcSepRight := ss.StatusBarBreadcrumbSepRight
+		if bcSepRight == "" {
+			bcSepRight = " "
+		}
 		breadcrumbBlock = lipgloss.NewStyle().
 			Inherit(ss.StatusBarBreadcrumbBg).
-			Padding(0, 1).
-			Render(path)
+			PaddingLeft(1).
+			Render(path) + breadcrumbEndSepStyle.Render(bcSepRight)
 	}
 	bcrumbW := lipgloss.Width(breadcrumbBlock)
 

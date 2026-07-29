@@ -815,24 +815,31 @@ func renderPopupBody(lines []string, scrolling bool, offset, maxOffset, maxWidth
 		bodyWidth = min(bodyWidth, max(maxWidth-2, 1))
 	}
 
-	thumbLine := 0
-	if maxOffset > 0 {
-		thumbLine = offset * (len(lines) - 1) / maxOffset
-	}
 	lineStyle := lipgloss.NewStyle().MaxWidth(bodyWidth).Width(bodyWidth)
 	trackChar := styles.ScrollTrack.Render("│")
 	thumbChar := styles.ScrollThumb.Render("█")
 	output := make([]string, len(lines))
-	scrollbarLines := make([]string, len(lines))
 	for i, line := range lines {
 		output[i] = lineStyle.Render(line)
-		if i == thumbLine {
+	}
+	bodyStr := strings.Join(output, "\n")
+
+	// scrollbarLines must be sized to the actual (post-wrap) rendered line count,
+	// because lineStyle.Render may wrap a line into multiple lines.
+	renderedLines := strings.Split(bodyStr, "\n")
+	scrollbarLines := make([]string, len(renderedLines))
+	thumbIdx := 0
+	if maxOffset > 0 && len(renderedLines) > 1 {
+		thumbIdx = offset * (len(renderedLines) - 1) / maxOffset
+	}
+	for i := range scrollbarLines {
+		if i == thumbIdx {
 			scrollbarLines[i] = thumbChar
 		} else {
 			scrollbarLines[i] = trackChar
 		}
 	}
-	return strings.Join(output, "\n"), bodyWidth, scrollbarLines
+	return bodyStr, bodyWidth, scrollbarLines
 }
 
 func widestLine(lines []string) int {

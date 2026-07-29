@@ -1235,13 +1235,13 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 	}
 
 	if isSelected {
-		menuTitle = fmt.Sprintf(fmt.Sprintf(" => %%%dd. %%s", maxIndexWidth), index, m.menuList[index].Title)
+		menuTitle = fmt.Sprintf(fmt.Sprintf("=> %%%dd. %%s", maxIndexWidth), index, m.menuList[index].Title)
 	} else {
 		menuTitle = fmt.Sprintf(fmt.Sprintf("    %%%dd. %%s", maxIndexWidth), index, m.menuList[index].Title)
+		// if len(m.menuList[index].Subtitle) != 0 {
+		menuTitle += " "
+		// }
 	}
-	// if len(m.menuList[index].Subtitle) != 0 {
-	menuTitle += " "
-	// }
 
 	if m.isDualColumn {
 		if windowWidth <= 88 {
@@ -1260,35 +1260,73 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 	menuTitleLen := lipgloss.Width(menuTitle)
 	menuSubtitleLen := lipgloss.Width(m.menuList[index].Subtitle)
 
+	// Count separators from raw config; fall back to space for rendering.
+	sepCount := 0
+	if isSelected {
+		if ss.MenuSelectedSepLeft != "" {
+			sepCount++
+		}
+		if ss.MenuSelectedSepRight != "" {
+			sepCount++
+		}
+	}
+	leftSep := ss.MenuSelectedSepLeft
+	if leftSep == "" {
+		leftSep = " "
+	}
+	rightSep := ss.MenuSelectedSepRight
+	if rightSep == "" {
+		rightSep = " "
+	}
+
+	// Build title rendering with separators outside the selection block.
+	// Separators: foreground = highlight color, background = row color.
+	var titlePart string
+	if isSelected {
+		selBg := titleStyle.GetBackground()
+		sepBg := ss.MenuItem.GetBackground()
+		titlePart = lipgloss.NewStyle().Foreground(selBg).Background(sepBg).Render(leftSep) +
+			titleStyle.Render(menuTitle) +
+			lipgloss.NewStyle().Foreground(selBg).Background(sepBg).Render(rightSep)
+	} else {
+		titlePart = titleStyle.Render(menuTitle)
+	}
+
 	var tmp string
 	if menuTitleLen > itemMaxLen {
-		// Title too long — manually truncate to visual width to avoid
-		// line wrapping that would break the fixed-row UI layout.
+		// Title too long — skip separators to avoid width overflow.
 		truncated := truncateVisualWidth(menuTitle, itemMaxLen)
 		menuName = titleStyle.Render(truncated)
 	} else if menuTitleLen+menuSubtitleLen > itemMaxLen {
+		// Scrolling subtitle: reserve room for separators.
+		subWidth := itemMaxLen - menuTitleLen - sepCount
+		if subWidth < 3 {
+			subWidth = 3
+		}
 		r := []rune(m.menuList[index].Subtitle + "   ")
-		s := make([]rune, 0, itemMaxLen-menuTitleLen)
+		s := make([]rune, 0, subWidth)
 		indexStart := 0
 		if m.options.Ticker != nil {
 			indexStart = int(m.options.Ticker.PassedTime().Milliseconds() / 500 % int64(len(r)))
 		}
 		currentWidth := 0
-		for i := indexStart; currentWidth < itemMaxLen-menuTitleLen; i = (i + 1) % len(r) {
+		for i := indexStart; currentWidth < subWidth; i = (i + 1) % len(r) {
 			rw := lipgloss.Width(string(r[i]))
-			if currentWidth+rw > itemMaxLen-menuTitleLen {
+			if currentWidth+rw > subWidth {
 				break
 			}
 			s = append(s, r[i])
 			currentWidth += rw
 		}
-		tmp = lipgloss.NewStyle().Width(itemMaxLen - menuTitleLen).MaxWidth(itemMaxLen - menuTitleLen).Render(string(s))
-		menuName = titleStyle.Render(menuTitle) + ss.Subtitle.Render(tmp)
+		tmp = lipgloss.NewStyle().Width(subWidth).MaxWidth(subWidth).Render(string(s))
+		menuName = titlePart + ss.Subtitle.Render(tmp)
 	} else {
+		// Normal subtitle: reserve room for separators.
+		subWidth := itemMaxLen - menuTitleLen - sepCount
 		tmp = lipgloss.NewStyle().
-			Width(itemMaxLen - menuTitleLen).
+			Width(subWidth).
 			Render(m.menuList[index].Subtitle)
-		menuName = titleStyle.Render(menuTitle) + ss.Subtitle.Render(tmp)
+		menuName = titlePart + ss.Subtitle.Render(tmp)
 	}
 
 	menuItemBuilder.WriteString(menuName)
