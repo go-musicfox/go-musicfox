@@ -204,6 +204,24 @@ type Player interface {
 1. 实现 `Update()` 和 `View()` 方法
 2. 在 `netease.go:Components()` 注册
 
+### 更新依赖
+
+使用 `make vendor` 更新 vendor 目录，该命令会依次执行 `go mod tidy`、`go mod vendor` 并复制 CGo 依赖的头文件。
+
+```bash
+make vendor
+```
+
+#### foxful-cli 依赖更新流程
+
+foxful-cli 是本项目的核心 UI 框架，位于 `vendor/github.com/anhoder/foxful-cli/`。更新流程：
+
+1. 在 `go.mod` 中使用 `replace` 指向本地 foxful-cli 仓库开发
+2. foxful-cli 改动完成后，在 `~/Desktop/foxful-cli` 中 commit 并推送
+3. 在 foxful-cli 仓库打 tag（如 `v1.0.5`）
+4. 在本项目 `go.mod` 中注释掉本地 `replace`，将版本升为新 tag
+5. 执行 `make vendor` 同步 vendor 目录
+
 ### 跨平台构建兼容性
 
 **修改 `Makefile` 或 `hack/` 目录下的构建脚本时，必须确保 Windows 系统兼容。**
