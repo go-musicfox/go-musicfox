@@ -2,7 +2,6 @@ package configs
 
 import (
 	"image/color"
-	"sort"
 	"sync"
 
 	"charm.land/lipgloss/v2"
@@ -90,9 +89,9 @@ func (r *ThemeRegistry) rebuildIndex() {
 			r.lightNames = append(r.lightNames, name)
 		}
 	}
-	sort.Strings(r.allNames)
-	sort.Strings(r.darkNames)
-	sort.Strings(r.lightNames)
+	sortThemeNames(r.allNames)
+	sortThemeNames(r.darkNames)
+	sortThemeNames(r.lightNames)
 }
 
 // SelectTheme sets the current theme index to the named theme for the given brightness.

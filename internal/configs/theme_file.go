@@ -41,6 +41,9 @@ type ThemeVariant struct {
 	StatusBar    StatusBarConfig         `toml:"statusBar"`
 	Markdown     MarkdownConfig          `toml:"markdown"`
 	App          AppColorConfig          `toml:"app"`
+
+	MenuSelectedSepLeft  *string `toml:"menuSelectedSepLeft"`
+	MenuSelectedSepRight *string `toml:"menuSelectedSepRight"`
 }
 
 // HighlightsConfig allows overriding specific Highlight fields.
@@ -88,8 +91,10 @@ type StatusBarConfig struct {
 	Time            string `toml:"time"`
 	Nugget          string `toml:"nugget"`
 	NuggetLabel     string `toml:"nuggetLabel"`
-	NuggetLabelFg   string `toml:"nuggetLabelFg"`
-	NuggetLabelBg   string `toml:"nuggetLabelBg"`
+	NuggetLabelFg          string  `toml:"nuggetLabelFg"`
+	NuggetLabelBg          string  `toml:"nuggetLabelBg"`
+	TimeSepLeft            *string `toml:"timeSepLeft"`
+	BreadcrumbSepRight     *string `toml:"breadcrumbSepRight"`
 }
 
 // MarkdownConfig holds glamour markdown theme presets.
@@ -295,6 +300,20 @@ func (v ThemeVariant) toTheme() style.Theme {
 	}
 	if sb.NuggetLabelBg != "" {
 		t.StatusBarNuggetLabel.Bg = parseColor(sb.NuggetLabelBg)
+	}
+	if sb.TimeSepLeft != nil {
+		t.StatusBarTimeSepLeft = *sb.TimeSepLeft
+	}
+	if sb.BreadcrumbSepRight != nil {
+		t.StatusBarBreadcrumbSepRight = *sb.BreadcrumbSepRight
+	}
+
+	// Menu selected item separators (pointer: nil=use default, non-nil=override)
+	if v.MenuSelectedSepLeft != nil {
+		t.MenuSelectedSepLeft = *v.MenuSelectedSepLeft
+	}
+	if v.MenuSelectedSepRight != nil {
+		t.MenuSelectedSepRight = *v.MenuSelectedSepRight
 	}
 
 	// App background
