@@ -462,6 +462,7 @@ visualizerColorEnd = "random"    # 频谱结束色
 - **快捷键**：`switchTheme` 键位绑定
 - **右键菜单**：「切换主题」菜单项
 - **自动切换**：跟随 macOS 系统外观变化（Light/Dark ColorSchemeEvent）自动切换亮/暗变体
+- **主题持久化**：切换亮/暗模式时保持当前主题不变，仅切换亮度变体
 - 切换时在当前亮度类别（深色/浅色）的主题列表中循环
 
 ### 配置
@@ -488,6 +489,49 @@ activeTheme = "Default"  # 启动时默认主题名称
 - 更新日志内容存储在 `embed/changelog.md`（嵌入二进制）
 - 通过 foxful-cli 的 `MarkdownPopup` 渲染
 - 使用 `time.AfterFunc` 延迟 1.5 秒弹出确保启动页完成
+
+---
+
+## 10. `upgrade-config` CLI 命令
+
+一键将内置默认配置项追加到现有用户配置文件，无需手动对比 TOML 文件。
+
+### 使用方式
+
+```bash
+go-musicfox upgrade-config
+```
+
+### 工作原理
+
+- 解析用户配置文件（`~/.config/go-musicfox/config.toml`）和内置默认配置（`embed/config.toml`）
+- 递归比较所有 TOML 键，找出用户配置中缺失的键
+- 使用 TOML 编辑器（pelletier/go-toml v2）按字母序追加缺失键到对应 section
+- 保留用户已有的所有配置值、注释和文件权限
+
+### 典型场景
+
+- 升级 go-musicfox 后，新版引入了新的配置项
+- 用户配置因版本滞后而缺少某些 section 或键
+- 快速同步最新默认配置而无损现存设置
+
+---
+
+## 11. 云盘歌词自动回退
+
+对于未匹配（Unmatched）的云盘歌曲，自动尝试从网易云云盘接口获取嵌入歌词。
+
+### 工作流程
+
+1. 判断歌曲是否需要云盘歌词（`UnMatched` 标记，或所有元数据 ID 均为 0 的旧快照数据）
+2. 调用 `/api/cloud/lyric/get` 接口获取云盘歌曲内嵌 LRC 标签
+3. 云盘歌词获取成功 → 直接返回；失败或为空 → 自动回退到常规歌词接口
+
+### 技术细节
+
+- **Singleflight 去重**：相同歌曲 + 相同云盘用户 ID 的并发请求合并为一次调用
+- **用户隔离**：歌词缓存键包含 `cloudUserID`，不同账号的云盘歌词互不干扰
+- **非侵入式**：仅当歌曲被判定为云盘未匹配时才触发，不影响正常歌曲的歌词获取流程
 
 ---
 

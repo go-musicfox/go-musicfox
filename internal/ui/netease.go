@@ -436,10 +436,14 @@ func (n *Netease) InitHook(_ *model.App) {
 				"debug", configs.AppConfig.Main.Debug,
 				"seenVersion", seen.Version,
 			)
-			if shouldShow {
-				if !configs.AppConfig.Main.Debug {
-					_ = table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion})
+		if shouldShow {
+			if !configs.AppConfig.Main.Debug {
+				if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
+					slog.Error("changelog: failed to persist seen version", slogx.Error(err))
+				} else {
+					slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
 				}
+			}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
 				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
@@ -655,7 +659,7 @@ func showChangelogPopup(app *model.App) {
 	maxHeight := max(app.WindowHeight()*80/100, 10)
 
 	popup, err := model.NewMarkdownPopup(model.MarkdownPopupSpec{
-		Title:           "更新日志",
+		Title:           types.AppVersion + " 更新日志",
 		MarkdownContent: string(data),
 		MaxWidth:        popupWidth,
 		MaxHeight:       maxHeight,
