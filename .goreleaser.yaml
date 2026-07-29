@@ -209,7 +209,7 @@ nfpms:
     description: A music player for netease music in terminal.
     vendor: go-musicfox
     homepage: https://github.com/go-musicfox/go-musicfox
-    license: MIT
+    license: GPL-3.0
     formats:
       - apk
       - deb
@@ -329,7 +329,7 @@ winget:
   - name: go-musicfox
     publisher: go-musicfox
     short_description: "A netease music player in terminal."
-    license: "MIT"
+    license: "GPL-3.0"
     publisher_url: https://github.com/go-musicfox/go-musicfox
     publisher_support_url: "https://github.com/go-musicfox/go-musicfox/issues/new"
     package_identifier: go-musicfox.go-musicfox
@@ -375,7 +375,7 @@ winget:
 #  commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
 #  homepage: "https://github.com/go-musicfox/go-musicfox"
 #  description: "go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持UnblockNeteaseMusic、各种音质级别、lastfm、MPRIS..."
-#  license: MIT
+#  license: GPL-3.0
 #
 #  post_install: ["Write-Host '好用记得给go-musicfox一个star✨哦~'"]
 

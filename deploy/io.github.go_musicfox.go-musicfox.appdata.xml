@@ -7,7 +7,7 @@
   <summary>Terminal music player for Netease Cloud Music</summary>
   <summary xml:lang="zh_CN">网易云音乐命令行客户端。</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>MIT</project_license>
+  <project_license>GPL-3.0</project_license>
 
   <!--Not possible to control this application with mouse or touch since it only has a TUI-->
   <recommends>

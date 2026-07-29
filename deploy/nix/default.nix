@@ -38,7 +38,7 @@ buildGoModule rec {
   meta = with lib; {
     description = "Terminal netease cloud music client written in Go";
     homepage = "https://github.com/go-musicfox/go-musicfox";
-    license = licenses.mit;
+    license = licenses.gpl3;
     mainProgram = "musicfox";
   };
 }

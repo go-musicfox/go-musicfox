@@ -9,7 +9,7 @@
     },
     "bin": "musicfox.exe",
     "homepage": "https://github.com/go-musicfox/go-musicfox",
-    "license": "MIT",
+    "license": "GPL-3.0",
     "description": "go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持UnblockNeteaseMusic、各种音质级别、lastfm、MPRIS...",
     "post_install": "Write-Host '好用记得给go-musicfox一个star✨哦~'",
     "env_set": {
