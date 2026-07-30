@@ -1,3 +1,1218 @@
+- semver: 5.0.0
+  date: 2026-07-31T00:08:15+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 98db2ac1c29f6fe64f709a6e645962b565c9e869
+      note: 'feat: optimize `upgrade-config` & update foxful-cli'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 42582aecd73053d01ca98368445a1ae8085ca545
+      note: 'fix: 显示实时频谱时无法显示播放进度条 #608'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fd20d2a866bdd043453c0f81ccc0ac876aad167a
+      note: 'feat: optimize upgrade-config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 814dd012ebd925c6c3c9636209f3cc6bf260d9e8
+      note: |-
+        chore: switch license from MIT to GPL-3.0
+
+        GPL-3.0 dependencies (tag, UnblockNeteaseMusic) were statically
+        linked, making MIT incompatible. Switching to GPL-3.0 resolves
+        the license contamination risk.
+
+        Updated:
+        - LICENSE (MIT -> GNU GPL v3.0 with 'or later' clause)
+        - Deploy metadata: goreleaser, appdata.xml, nix, scoop
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4720a54c3b60730942d16e50f06ad15e8134dfaf
+      note: 'feat: optimize ui'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 85431ed0bd0047e25cf0017138f1ac56dbd0cfa7
+      note: 'docs: document dependency update workflow and make vendor usage'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b5a3912630becb9408de8dcfa938d992602da4e3
+      note: 'build(make): improve macOS detection and add xattr quarantine removal'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f1dfcdd7aff6a735b069aa17d1aadb7d36acc5ca
+      note: 'feat(ui): show version in changelog popup title and handle persistence errors'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 981264d7085f32bc9d12f4008c5298a67759b8bf
+      note: |-
+        feat(theme): add Powerline separator config and built-in theme sort order
+
+        - Add MenuSelectedSepLeft/Right, TimeSepLeft, BreadcrumbSepRight to theme config
+        - Use pointer fields for nil=default, non-nil=override pattern
+        - Transparent theme disables separators with empty string
+        - Introduce builtinThemePriority for deterministic theme display order
+        - Replace sort.Strings with sortThemeNames across theme registry
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 67bb54be2a18ae56b402b11f23a98f194b35fa6d
+      note: |-
+        fix(debug): relocate --debug flag sync to after gcli flag parsing
+
+        gcli parses flags during app.Run(), which happens after cmd/musicfox.go init.
+        Move sync into runPlayer where GlobalOptions.DebugMode is already populated.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: b3a694d02618c7a0181587d02306674c1faafd4a
+      note: |-
+        chore(deps): upgrade foxful-cli to v1.0.5
+
+        - Add Powerline separator support for status bar and menu items
+        - Fix popup scrollbar thumb position when lines wrap
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9d2afad50a86445cb1525a3ae6f01cc162fba5a3
+      note: 'feat: optimize theme renderer & add `upgrade-config` command'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 127b30dd26121552b5020140dcd8873ea0b88106
+      note: 'feat: change theme'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8c1dbc861f2762072d6d4007e786af4dbe139312
+      note: 'feat(lyric): fetch unmatched cloud lyrics (#607)'
+      author:
+        name: bdbd
+        email: 3151975080@qq.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d2a33f440d17b09dda148e15b558ab10cc5f0405
+      note: 'docs: update changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 985b324e8fd5a2c0a707eefd40a536a5c540e4f9
+      note: |-
+        feat(config): make config table styling theme-aware
+
+        - Use theme colors for table border and selection styles
+        - Fetch app colors from ThemeRegistry instead of hardcoded values
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a058d485df4145d045218811e993a57ebd561e54
+      note: |-
+        feat(ui): replace plain padding with AppBackground styled rendering
+
+        - Use style.CurrentStyleSet().AppBackground for padding areas
+        - Ensures consistent background color across all UI components
+        - Affects: lyrics, song info, spectrum, visualizers, login, search, help, layout
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f498109457dcb64bc897cc96a840a491143824c0
+      note: |-
+        feat(theme): add dracula, github, gruvbox, nord themes and extend config
+
+        - Add CurrentAppColorConfig() to ThemeRegistry
+        - Extend ThemeVariant with StatusBar and Markdown config sections
+        - Expand HighlightsConfig with full highlight field overrides
+        - Add four new themes: dracula, github, gruvbox, nord
+        - Update neteasered theme with new fields
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 116e9dbbd9406a1786b3eccc181433d0edd4f2aa
+      note: |-
+        chore(deps): upgrade foxful-cli with theme system enhancements
+
+        - Rename Highlight.MenuBg to SelectedItemBg
+        - Remove Breadcrumb highlight (superseded by StatusBarBreadcrumb)
+        - Add AppBackground to StyleSet for consistent padding rendering
+        - Theme-aware padding in form/filepicker/main views
+        - MainPageHook support in main model
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0413a25d7429a5c41a6b7569872a6f220f0e6cab
+      note: |-
+        feat(changelog): add changelog popup on first launch of new version
+
+        - Add ChangelogSeen KV model for tracking last-seen version in BoltDB
+        - Add CHANGELOG.md embed file with v5.0.0 release notes
+        - Check changelog at end of InitHook goroutine with time.AfterFunc(1.5s)
+        - Show markdown popup on: debug mode, first launch, or version upgrade
+        - Sync --debug CLI flag to AppConfig.Main.Debug
+        - Add debug logging for troubleshooting
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d05d8833d3c3223cecb8a54f56c8c68428b5a7e5
+      note: |-
+        feat(theme): add theme configuration system with auto light/dark switching
+
+        - Add TOML-based theme files with dark/light variants (embed + user dir)
+        - Support ANSI color names and hex colors in theme config
+        - Migrate hardcoded lyric, progress, and playbar colors to theme-driven accessors
+        - Add runtime theme switching via keybinding, context menu, and OpSwitchTheme
+        - Add auto light/dark mode switching following system appearance changes
+        - Truncate long YRC lyrics and song info lines to prevent UI wrapping
+        - Status bar: breadcrumb max-width constraint and progressive time/center hiding
+        - Add changelog popup on first launch of new version
+        - Update foxful-cli vendor for Theme/Custom, markdown popup, and status bar
+        - Bump version to v5.0.0
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4895c417f5377ac4009e5aba9c96e60d21a6804e
+      note: 'chore: 更新配置注释'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e72c7b2927bf8f13622c798e0c39ae442254f624
+      note: |-
+        fix(ci): 修复 PR/Issue 检查 action 的文案与模板不一致问题
+
+        - 删除 close-issues.yml（与 stale.yml 功能重叠，关闭阈值冲突）
+        - 删除所有不存在的 CONTRIBUTING.md 引用（4 处）
+        - 修复 pr-standards.yml 内容提取正则：显式匹配 PR 模板的完整双语标题
+          （原 \s* 无法匹配标题行中的中文/全角字符，导致所有内容提取失败误报）
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e30ffdff9460b29877316ad37b95bc7528219868
+      note: 'fix(ui): preserve status bar text color'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1a2f4578c9b7b827f5701e980801b1814f93aa50
+      note: 'fix(ui): color status brand with primary theme'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6cc9c3d609447cbf62662c767c0e5d3298764d53
+      note: 'fix(ui): keep progress bar on final row'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a85d2fb899d5aebca5aa019f4aa7d69f0cce6534
+      note: 'docs: document foxful-cli upgrade impact'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 083648d11e6ef0fbb61561d22b64e7d83d3d302b
+      note: 'feat(ui): adopt native menus and mouse actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 730599688d14e37397d848acd3ad45015438e16d
+      note: 'fix(ui): align media renderers with status bar'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 04178c5f5b88a35225fac6ef114dca537bb73274
+      note: 'feat(ui): add status bar and in-app toasts'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6824fd9ab347cb3f1b7332b72e3a77767920fe66
+      note: 'feat(ui): modernize authentication forms'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 768bbfdff8794faa235a14a2fd47bc9339992332
+      note: 'feat(config): expose foxful UI settings'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 25510f266a55cb99b59517fa19211f25904625e9
+      note: 'chore(deps): upgrade foxful-cli to v1.0.1'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 820d668b932037a15df47cf6853d126758b9e696
+      note: 'refactor(config): remove legacy INI migration'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9f041b62e80eac2506be7e3c7c17146530958ab9
+      note: 'fix(darwin): avoid invalid audio tap pointer'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a9cbd5142e39faa4c7596cc75ddc0af5e720454f
+      note: 'feat: optimize desktop lyrics'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1b0ae3d848d8f02bd530b57b85e420f52cf4aecc
+      note: |-
+        feat: support spectrum for beep
+
+        - Stale issues after 30 days, close after 7 days
+        - Stale PRs after 45 days, close after 14 days
+        - Exempt pinned and security labeled issues
+        - Runs daily at UTC 01:30 (Beijing 09:30)
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2ceab4b44d4a5e8d206e63468be7f8ff05d351c3
+      note: |-
+        feat: windows mpv 改用 named pipe 通信 (#602)
+
+        * Windows mpv 改用 named pipe 通信
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * refactor(player): convert mpv player to daemon mode with persistent IPC
+
+        - Restructure mpvPlayer as a daemon (mpv --idle) instead of per-song process
+        - Extract platform-specific IPC into separate build-tagged files
+        - Add timex.Timer-based playback position tracking (no polling)
+        - Add async song switching via musicChan/listen goroutine
+        - Add watch goroutine for end-file event detection
+        - Introduce waitForIPC with 10s timeout on daemon startup
+        - Remove old ticker-based position sync and startMpv per-song flow
+
+        * feat(scripts): add PowerShell build and version scripts for Windows
+
+        - Add hack/build.ps1 as Windows equivalent of hack/build.sh
+        - Add hack/version.ps1 as Windows equivalent of hack/version.sh
+        - Support build, install actions with ldflags, build tags, version injection
+
+        * chore(build): make Makefile Windows-compatible and consolidate build scripts
+
+        - Change BUILD_SCRIPT from root build.ps1 to hack\build.ps1
+        - Add NULL_DEV and WHICH_CMD OS-conditional variables
+        - Guard Unix-only targets (sysroot-pack, sysroot-unpack) for Windows
+        - Guard scoop-config-gen and changelog-gen for Windows with helper message
+        - Add clean target with cross-platform implementation
+        - Replace backtick-pwd with  in release/docker targets
+        - Fix mixed indentation in release-debug-shell target
+        - Make modvendor-tool use OS-conditional which/where
+
+        * docs: add cross-platform build compatibility guidelines
+
+        - Add 'cross-platform build compatibility' section under dev guide
+        - Include checklist for Unix-specific commands, OS conditionals, PS1 ports
+        - Add Unix-to-Windows command mapping reference table
+        - Note exception for Docker-internal CI scripts
+
+        * chore: add opencode deepwork working directory to ignore lists
+
+        - Add .slim/ to .gitignore for opencode workspace artifacts
+        - Create .ignore to whitelist .slim/deepwork/ for skill usage tracking
+
+        * chore: remove old mpv IPC unix file after rename
+
+        * feat: optimize desktop lyrics
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@88.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: e7ac13041487e9785c760ac0c5a3a4713b607549
+      note: |-
+        ci: add stale workflow to auto-close inactive issues and PRs
+
+        - Stale issues after 30 days, close after 7 days
+        - Stale PRs after 45 days, close after 14 days
+        - Exempt pinned and security labeled issues
+        - Runs daily at UTC 01:30 (Beijing 09:30)
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 6d2e633b0d9e56cf37d62a0b45cfab343c3b9b00
+      note: |-
+        feat: desktop lyrics & spectrum_renderer for osx (#603)
+
+        * feat(desktop_lyrics): add macOS desktop lyrics overlay window
+
+        - Add desktop_lyrics package with cross-platform Controller interface
+        - Implement darwin controller using Cocoa NSWindow + NSTextField via purego
+        - Add NSShadow, NSColor, NSFont, CALayer, CGDisplay wrappers to macdriver
+        - Dispatch UI operations to main thread via ObjC helper class
+        - Integrate with Player tick loop for real-time lyric updates
+        - Support two-line alternating layout and single-line centered mode
+        - Configurable via config.toml [main.lyric.desktopLyrics]
+
+        * fix(desktop_lyrics): remove premature NSShadow Release causing SIGSEGV
+
+        -[NSView setShadow:] is a deprecated API that does not retain the NSShadow
+        object. Releasing the shadow inside makeTextField (called twice per window)
+        caused a use-after-free crash on the second invocation.
+
+        The shadow now lives for the window's lifetime, which is acceptable given
+        the negligible memory footprint (~100 bytes).
+
+        * feat(desktop_lyrics): add word-by-word coloring with YRC timing data
+
+        - Add LyricWord/LyricLine types for word-level metadata transfer
+        - Extend Controller.Update() to accept currentTimeMs for progress tracking
+        - Implement NSAttributedString-based per-word coloring in darwinController
+        - Colors interpolate between inactive (dim) and active (bright) per word
+        - Fall back to plain SetStringValue for non-YRC (LRC) lyrics
+        - Add NSMutableAttributedString and NSRange bindings to macdriver
+        - Add setAttributedStringValue: binding to NSTextField
+        - Next line in two-line mode remains plain text (no word coloring)
+
+        * feat(desktop_lyrics): auto-expand window width and horizontal scroll for long lyrics
+
+        - Window automatically expands up to configurable maxWindowWidth (70% screen)
+        - When text still overflows at max width, marquee-style horizontal scrolling
+          kicks in after a 1.5s delay, scrolling at 30px/s with 1s end pause
+        - Scroll animation driven by main-thread performSelector:withObject:afterDelay:
+        - Added SetFrameOrigin/SetFrameSize bindings to NSView for dynamic layout
+        - Text fields now fill 88% of window width (was 60%) for better readability
+        - Config: maxWindowWidth in [main.lyric.desktopLyrics]
+
+        * debug(desktop_lyrics): add diagnostic logging for YRC word-by-word rendering
+
+        Log when attributed string is used vs falling back to plain text,
+        and when attribution creation fails (nil ID).
+
+        * debug(desktop_lyrics): inline buildAttributedLine, add explicit nil-ID checks
+
+        Added diagnostic logging at each step: alloc, initWithString, and final
+        SetAttributedStringValue. If alloc or init returns nil ID, fall back to
+        plain text and log an error. This isolates whether the issue is in
+        NSMutableAttributedString creation or AddAttribute.
+
+        * fix(desktop_lyrics): right-align next line, add fade-in/out word animation
+
+        - Dynamic alignment: active line always left-aligned, next line right-aligned
+        - Word-by-word coloring now uses fade zones (80ms in, 200ms out)
+          instead of binary on/off, creating smooth gradient transitions
+        - Removed dead buildAttributedLine code (logic inlined in setLabelText)
+
+        * fix(desktop_lyrics): send cancelPreviousPerformRequests to class, not instance
+
+        +cancelPreviousPerformRequestsWithTarget:selector:object: is a class
+        method on NSObject. Sending it to the helper instance caused an
+        'unrecognized selector' exception on exit.
+
+        * fix(desktop_lyrics): remove fade-out, played words stay bright
+
+        Previously the fade-out logic re-dimmed words after they finished playing,
+        causing both played and unplayed words to appear gray. Now:
+        - Unplayed words: gray (inactive, 45% alpha)
+        - Fade-in zone (100ms before start): gray → bright
+        - Playing and played words: permanently bright
+
+        This matches the terminal lyric renderer behavior.
+
+        * fix(desktop_lyrics): improve text readability
+
+        - Raise inactiveAlpha from 0.45 to 0.65 for clearer unplayed text
+        - Reduce default shadowRadius from 3.0 to 1.0 to minimize edge blur
+
+        * fix(desktop_lyrics): unify unplayed text color, restore static alignment
+
+        - blendColor now interpolates only the alpha channel (was premultiplying
+          RGB*alpha, making unplayed words on the active line twice as dim as
+          the next line's plain text)
+        - Remove dynamic alignment swaps in doUpdateText; posFirst is always
+          left-aligned, posSecond is always right-aligned
+
+        * chore(deps): upgrade foxful-cli to v0.6.2
+
+        * fix(desktop_lyrics): active line always left-aligned, next line right-aligned
+
+        When posSecond (normally right-aligned) becomes the active line, text
+        must be left-aligned for proper readability and left-to-right scroll.
+        Next line stays right-aligned for visual contrast.
+
+        * fix(desktop_lyrics): use position-based alignment, not role-based
+
+        posFirst (top row) is always left-aligned, posSecond (bottom row)
+        is always right-aligned. Alignment is set once in createWindow
+        and never changed dynamically.
+
+        * fix(desktop_lyrics): enforce position-based alignment after every text update
+
+        NSMutableAttributedString may implicitly carry left paragraph alignment,
+        overriding NSTextField's native alignment property. Enforce:
+        - posFirst (top row) → NSTextAlignmentLeft  (0)
+        - posSecond (bottom row) → NSTextAlignmentRight (1)
+        after every doUpdateText call.
+
+        * fix(desktop_lyrics): set NSParagraphStyle in attributed string for reliable alignment
+
+        Root cause: NSTextField.SetAttributedStringValue may carry implicit
+        left paragraph alignment that SetAlignment cannot override.
+
+        Fix: Create NSMutableParagraphStyle with the correct alignment and
+        attach it as NSParagraphStyleAttributeName to the attributed string.
+        This is more reliable than calling SetAlignment on the text field.
+
+        Added NSMutableParagraphStyle bindings to macdriver/cocoa.
+
+        * fix(desktop_lyrics): dynamic window width to fit lyric length
+
+        - Reduce minWinW from fontSize*20 to fontSize*5 for short lyrics
+        - Make updateScrollNeed shrink window when text is short, not just expand
+        - Window now dynamically adjusts between min and max based on lyric length
+
+        Closes: 桌面歌词窗口宽度跟随歌词长度动态调整
+
+        * docs(260715-001): plan and summary for desktop lyrics dynamic width
+
+        * chore(deps): upgrade foxful-cli to v0.6.3
+
+        * fix(desktop_lyrics): increase min width for two-line mode and preserve window position on resize
+
+        - Set minWinW=fontSize*12 for two-line mode (was 5) to avoid pure vertical stacking
+        - Keep minWinW=fontSize*5 for one-line mode
+        - Cache window center point on creation, reuse it in resizeWindow
+          instead of recalculating from XPositionFactor/YPositionFactor
+        - Prevents window from jumping back to config position on every lyric change
+
+        * feat: optimize
+
+        * chore: upgrade deps
+
+        * feat: add visualizer
+
+        * fix: render error
+
+        * fix: render error
+
+        * feat: optimize render
+
+        * feat: optimize render
+
+        * fix: panic and render err
+
+        * feat: add spectrum for desktop lyrics
+
+        * fix(ci): only require linked issue for bug fix PRs
+
+        Previously the compliance bot required the 'Issue for this PR' section
+        and a linked issue for all non-docs/refactor/feat PR types (including
+        test, chore). Now only fix: type PRs are required to have a linked
+        issue. Non-fix PRs may optionally include the section without penalty.
+
+        * refactor(ci): translate bot reply messages to Chinese
+
+        * refactor(ci): translate all action copy to Chinese
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 3754012e81136f7d010502757094f23e45edfb65
+      note: |-
+        chore: simplify provider configuration in opencode.jsonc
+
+        Removed unnecessary provider options from opencode.jsonc.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: aaa9d5a229f8bb4fa282bdf67f8b293e1ed8bd9a
+      note: 'chore: Add OPENCODE_PERMISSION environment variable'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a5bcb2d54225887cba1aa72ae353de9cca2a14dd
+      note: |-
+        fix(darwin): prevent SIGTRAP crash and redirect gohook logs to file
+
+        - Lock main goroutine to the OS main thread in runtime_darwin.go init()
+          to prevent SIGTRAP when NSApplication.Run() is called from a migrated
+          thread (Go scheduler moves goroutine to non-main thread after CGo calls)
+
+        - Redirect gohook C library log output from stdout/stderr to gohook.log
+          via a custom loggerProc that overrides the global logger function pointer
+          after hook.Start(), without modifying vendor code
+
+        - Prepend log level prefix ([DEBUG], [INFO], [WARN], [ERROR]) to each line
+          and apply level-based filtering synced with the project slog level
+
+        - Suppress high-frequency mouse move/drag/wheel log messages by filtering
+          format strings containing the "Mouse" keyword
+
+        - Truncate gohook.log on each startup to prevent unbounded file growth
+
+        - Close the gohook log file during application shutdown via CloseHook
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ff1bc894f0f0a016ced5cc5b9bf12c774ce08e41
+      note: |-
+        chore(vendor): sync go vendor directory (#599)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d644a2fc10935c4c9b80501fc09ce491211b3ed0
+      note: 'chore: upgrade foxful-cli'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c5ab0ab74ebb6a1590c67cad5cb93e7f25d0b1d3
+      note: |-
+        feat(ui): defer menu entry hook to show loading tips properly
+
+        Previously, EnterMenu ran the BeforeEnterMenuHook synchronously within
+        a single Update cycle, preventing the loadingTips from ever being
+        rendered (DisplayTips set them before the hook, Recover cleared them
+        after, all before View() could run).
+
+        Fix: introduce enterMenuDeferred/enterMenuWithLoading that defers the
+        hook execution to the next tickMainMsg cycle. This gives the current
+        View() render a chance to display the loading text before the
+        (potentially slow) API call in the hook blocks the event loop.
+
+        EnterMenu remains for synchronous callers (search submission).
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c96f515e2f9c6540a233b5b7de37f22da5ec67e9
+      note: |-
+        fix(ui): fix submenu layout corruption caused by direct terminal writes
+
+        MenuTips.DisplayTips() and Recover() used terrmenv.MoveCursor(0,0)
+        and fmt.Print() to write directly to the terminal, bypassing
+        bubbletea's diff-based renderer. This caused the diff algorithm to
+        produce incorrect output:
+
+          - Submenu items appeared at wrong row positions
+          - Title bar was partially overwritten
+          - Stale main menu items ghosted through
+          - Main/submenu rendering positions were inconsistent
+
+        Fix: replace direct terminal writes with a Main.loadingTips field
+        that MenuTitleView injects into the subtitle during the normal
+        bubbletea View() cycle. DisplayTips sets the field; Recover clears it.
+
+        This removes ALL direct terminal I/O from the loading path while
+        preserving the ability to show progress text through the proper
+        bubbletea pipeline.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f3892bea8e1b44aef533414bda343a06d018618c
+      note: |-
+        fix(ui): fix overlay/ghosting display issue in submenu
+
+        SongInfoRenderer returned lines=WindowHeight-1 (~39 rows) instead of the
+        actual 2 rows consumed. This inflated the "top" tracker in Main.View()
+        beyond windowHeight, suppressing the bottom-fill padding. The resulting
+        View() output was shorter than the terminal, causing bubbletea to leave
+        stale cells from the previous frame visible (display corruption/overlay).
+
+        Fixes:
+        1. SongInfoRenderer.View(): return correct lines=2
+        2. LyricRenderer.View(): use endRow-MenuBottomRow (matches actual view
+           height) instead of lyricStartRow-MenuBottomRow+lyricLines
+        3. Main.View(): use actual newline count instead of "top" tracker for
+           reliable bottom-fill padding
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 986960d2580498a63129cc3ec3b1ac61b63ad192
+      note: |-
+        chore(vendor): sync go vendor directory (#598)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1128da031049f3b46366decf534724a63dd568b6
+      note: |-
+        chore(deps): bump golang.org/x/crypto from 0.51.0 to 0.52.0 (#597)
+
+        Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.51.0 to 0.52.0.
+        - [Commits](https://github.com/golang/crypto/compare/v0.51.0...v0.52.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/crypto
+          dependency-version: 0.52.0
+          dependency-type: indirect
+        ...
+        Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9361a890a175f65c339e0a03f3c072d960f16814
+      note: |-
+        fix:修复windows在无其他音频设备的情况下，唯一的蓝牙音频断开后会不断切歌 (#595)
+
+        Co-authored-by: remkeeper <rem@rem.asia>
+      author:
+        name: RemKeeper
+        email: 78486275+RemKeeper@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: bb15ae810584c8c9888e721a15b4460e019bb733
+      note: |-
+        refactor(website): replace Google Fonts with local JetBrains Mono
+
+        - Download 6 weight variants (400/500/600/700/800 + italic 400) as TTF
+        - Add @font-face declarations in all 3 HTML pages
+        - Remove external Google Fonts dependency for better China accessibility
+        - Adjust 3D cube background position (oy: 0.58 → 0.62)
+        - Update cube alpha for better visibility
+        - Update background audio label to 许嵩 - 忽略不计
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 05430b606060bcf107a07a8f189003a953114bd6
+      note: 'feat(website): optimize'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 4ccf82c929c4239b9992d73a4f155c970c29d82a
+      note: |-
+        feat(website): optimize spectrum visualizer, add audio-driven mode, update docs
+
+        - Remove height limit on terminal player, width-only constraint
+        - Redesign background spectrum: random rise/fall, frequency-band mapping
+        - Add 10 rhythm patterns randomly selected on page load
+        - Integrate real-time FFT spectrum analysis (Web Audio API)
+        - Download Canon in D (CC0) as demo audio, compress 8.3→2.5MB
+        - Add macOS-style window dots and restyle terminal title
+        - Unify engine icons with inline SVG
+        - Remove contributor area borders
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 61b28e719830fa05954c4b213cd5476073920e80
+      note: 'fix(ci): 在部署前先创建 Cloudflare Pages 项目'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7ffec9398af03e105eb4b7341939ce4998f24674
+      note: 'ci: 工作流文件变更时也触发部署'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: db3545f1c9b408c317a8a0a751744d37ecfa540b
+      note: 'fix(ci): 使用 wrangler CLI 直接部署替代 wrangler-action，兼容 Node 24'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: e4c96a1819e15bb6a9fe702ab59b2630a6cb3000
+      note: 'refactor(website): 使用 contrib.rocks 替代直接调用 GitHub API 展示贡献者'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 057a4a3437705dc0e36b5ca2c54a49b5e064c4c6
+      note: 'feat(website): 添加贡献者页面，展示 GitHub 贡献者头像'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 107e300aff0177b6c605cd7a636194a1e8033c97
+      note: 'feat(website): 添加贡献指南页面及导航入口'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f2631b1e922f3c43df4227e7fdae00ab1adce778
+      note: 'feat(website): 添加作者 GitHub 链接到下拉菜单'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a87f3941fa0c8c2a914c438fed6c2d6613287ed9
+      note: 'feat(website): 添加导航下拉菜单链接到 anhoder.com'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 5720eef0524ed1ec0c1261432844c701f741eed3
+      note: |-
+        feat(website): 添加 SEO 优化、Cloudflare Pages CI 部署和隐私政策
+
+        - 添加 GitHub Actions 自动部署到 Cloudflare Pages
+        - 添加 Google Analytics 支持
+        - 添加 Schema.org 结构化数据 (Organization + SoftwareApplication)
+        - 添加 Open Graph / Twitter Card 社交分享标签
+        - 添加 Canonical URL
+        - 添加 robots.txt、sitemap.xml、llms.txt
+        - 创建隐私政策页面
+        - 扩展首页内容，提升字数至 385 词
+        - 修复功能卡片描述始终可见而非悬停才显示
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c69f7eedda2d658e001a2977bbb113640451b443
+      note: |-
+        chore(vendor): sync go vendor directory (#594)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1d8487521683728811451aef97d0fe5ddfa43cad
+      note: |-
+        chore(deps): bump golang.org/x/net from 0.47.0 to 0.55.0 (#593)
+
+        Bumps [golang.org/x/net](https://github.com/golang/net) from 0.47.0 to 0.55.0.
+        - [Commits](https://github.com/golang/net/compare/v0.47.0...v0.55.0)
+
+        ---
+        updated-dependencies:
+        - dependency-name: golang.org/x/net
+          dependency-version: 0.55.0
+          dependency-type: indirect
+        ...
+        Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+      author:
+        name: dependabot[bot]
+        email: 49699333+dependabot[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 5b14aa0bd7116d8a6fce25a43af85b8b98bc498d
+      note: |-
+        fix: 为 winMediaPlayer 的 timer 添加 nil 保护 (#590)
+
+        * 为 winMediaPlayer 的 timer 添加 nil 保护
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * 已替换为 master 版本（`oh-my-opencode-slim@latest`）
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: bd5f407c5479849f892984259f8b3f240f1e95c2
+      note: |-
+        fix：clamp 快退时间为非负值 (#591)
+
+        * 修复：clamp 快退时间为非负值
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * opencode.jsonc 已恢复 master 版本
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 8d664176de501e975c4cd75b0ba841537d68cea2
+      note: |-
+        feat：新增收藏/取消收藏专辑和歌手的8个操作项与菜单 (#592)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 0bb6df7de2b8fc46199aa0460f77ae8d314e0486
+      note: 修复重复关闭通道导致的 panic (#589)
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 1ca11006e9062d9a57d4cfba60a3424c37bf6efd
+      note: 'feat: update GOLANG_CROSS_VERSION to v1.26.3'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a5cc81fcdc94d9b99aa0b2650f9a13e3815cc5e0
+      note: 'chore: change opencode plugin `oh-my-openagent` => `oh-my-opencode-slim`'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 60f0f5f43e7929ada8b448f87fe3495a32610780
+      note: 'fix: action error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ec5242c4d4abf5c8ba8184d9465523ea0002c6eb
+      note: 'chore: update opencode config'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c1167d1bb2bffe80b180d9ed72e1deba00418413
+      note: |-
+        chore(vendor): sync go vendor directory (#588)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 6b6386cd8ae52c27ef6f56ced8eedf298aadbead
+      note: 'chore: rm useless deps'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 0b87fd4382bfe7aa915f2ddaaaed423ee17233dc
+      note: 'fix: vendor sync for .c/.h files'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c3eacb48bf834173fc0f35d5f17c837051670e78
+      note: |-
+        docs(codebase): add comprehensive codebase mapping documents
+
+        - STACK.md: technology stack, dependencies, build tools, CI/CD
+        - INTEGRATIONS.md: external APIs, storage, audio engines, remote control
+        - ARCHITECTURE.md: system architecture, design patterns, data flow
+        - STRUCTURE.md: project structure, package dependencies, key files
+        - CONVENTIONS.md: coding conventions, naming, error handling patterns
+        - TESTING.md: test coverage analysis, patterns, gaps
+        - CONCERNS.md: risks, technical debt, security concerns
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 53c706c764ee70b1ac638c2c38d51cb6c544f5f6
+      note: 'chore(vendor): sync go vendor directory'
+      author:
+        name: github-actions[bot]
+        email: github-actions[bot]@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fdd14055086fe9ee6b9a48c247036b090f4947e3
+      note: 'chore: upgrade Bubble Tea, Bubbles, and Lipgloss to v2'
+      author:
+        name: jbwfu
+        email: 75001777+jbwfu@users.noreply.github.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d56ff3775c8461516bfb9deafdcbabd1ed6e7235
+      note: |-
+        fix(mpris): stop emitting Seeked signal during normal playback (#579)
+
+        The Seeked signal was being emitted on every playback position update
+        (~200ms per tick), violating the MPRIS spec which states it should only
+        be emitted when the position changes discontinuously due to a seek.
+
+        - Remove Seeked emission from SetPosition() to prevent continuous D-Bus
+          broadcast during playback
+        - Add EmitSeeked() method that emits the signal only on actual seeks
+        - Call EmitSeeked() from Player.Seek() after a user-initiated seek
+        - Add empty EmitSeeked() stubs for darwin and windows platforms
+      author:
+        name: Sakari
+        email: 20642596+sakarie9@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 59535493e2f7ccb31bf319a53e734b5294c5f39c
+      note: |-
+        feat(mpris): implement Seek and SetPosition D-Bus methods (#580)
+
+        Enable seeking via MPRIS by setting CanSeek to true and implementing
+        the Seek and SetPosition D-Bus methods, allowing MPRIS clients like
+        KDE Connect to show a seekable progress bar.
+
+        - Set CanSeek to true to advertise seek capability
+        - Implement Seek(offset) for relative position seeking
+        - Implement SetPosition(trackId, position) for absolute seeking
+        - Validate TrackId per MPRIS spec (ignore if not current track)
+      author:
+        name: Sakari
+        email: 20642596+sakarie9@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ab25118960b3ac82ad3036e140c2109dc9a10ffa
+      note: |-
+        chore(ci): Disable check-duplicates job in pr-management.yml
+
+        Comment out the check-duplicates job and its steps in the PR management workflow.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 047ef5c8f350b188fcc78a58e360a32b24d27ab8
+      note: 'chore(doc): update README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 20af2532c3d3408e2a7ece7ced103841648f263f
+      note: 'feat: support unm proxy'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 71722d78a08d3c0ba907040878f40e573bd8da41
+      note: 'chore(deps): upgrade purego'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c1d32842f7e43c5aed8b8b7e2ab3d707415adde4
+      note: |-
+        fix: **修复 Cookie 在 LoginCallback 失败时未持久化的问题** (#573)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c02cae23bf78ce9a4875ba56b4e11b287c2eedb9
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 4.8.5
   date: 2026-04-18T13:58:18+08:00
   packager: go-musicfox
