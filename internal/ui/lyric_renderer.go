@@ -205,10 +205,21 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if r.lyricLines == 0 {
 		fillingLines := endRow - main.MenuBottomRow() - specLines
 		if fillingLines > 1 {
+			// When spectrum/spectrogram is enabled, foxful-cli JoinVertical adds
+			// an extra section + separator row. Compensate by filling one fewer
+			// line so the total body stays within the window height and the
+			// progress bar is not truncated.
+			// Fixes: https://github.com/go-musicfox/go-musicfox/issues/608
+			if specLines > 0 {
+				fillingLines--
+			}
 			// JoinVertical inserts a separator before this component. The lyric
 			// placeholder still needs fillingLines+1 visual rows so the progress
 			// bar reaches the final content row.
-			return strings.Repeat("\n", fillingLines), fillingLines + 1
+			if fillingLines > 0 {
+				return strings.Repeat("\n", fillingLines), fillingLines + 1
+			}
+			return "", 0
 		} else if fillingLines == 1 {
 			if main.StatusBar() != nil && main.StatusBarPosition() == model.StatusBarBottom {
 				return "", 1
@@ -263,8 +274,17 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		r.buildLyricsTraditional(main, &lyricBuilder)
 	}
 
-	if endRow-r.lyricStartRow-r.lyricLines > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", endRow-r.lyricStartRow-r.lyricLines))
+	bottomPad := endRow - r.lyricStartRow - r.lyricLines
+	// When spectrum/spectrogram is enabled, foxful-cli JoinVertical adds an
+	// extra section + separator row between spectrum and lyric. Compensate by
+	// reducing the bottom padding by one line so the total body stays within
+	// the window height and the progress bar is not truncated.
+	// Fixes: https://github.com/go-musicfox/go-musicfox/issues/608
+	if specLines > 0 && bottomPad > 0 {
+		bottomPad--
+	}
+	if bottomPad > 0 {
+		lyricBuilder.WriteString(strings.Repeat("\n", bottomPad))
 	}
 
 	// Return the view with the actual number of newlines in the output.
