@@ -120,3 +120,94 @@ func TestUpgradeConfigUsesEmbeddedDefaultsPreservesContentAndMode(t *testing.T) 
 		t.Fatalf("second UpgradeConfig() changed TOML:\n%s", got)
 	}
 }
+
+func TestUpgradeTOMLPreservesDefaultKeyOrderWithinTable(t *testing.T) {
+	const defaults = `# Default (non-alphabetical key order)
+[sectionA]
+zKey = 2
+aKey = 1
+mKey = 3
+
+[sectionB]
+innerZ = 99
+innerA = 77
+innerM = 88
+
+[sectionB.child]
+childZ = "zz"
+childA = "aa"
+`
+	const user = `# User config (only innerA exists)
+[sectionA]
+aKey = 0
+
+[sectionB]
+innerA = 10
+`
+	upgraded, _, err := upgradeTOML([]byte(user), []byte(defaults))
+	if err != nil {
+		t.Fatalf("upgradeTOML() error = %v", err)
+	}
+	content := string(upgraded)
+	t.Logf("Upgraded TOML:\n%s", content)
+
+	// sectionA: existing aKey=0 stays; new zKey and mKey appended in default's order
+	secA := indexAfter(content, "[sectionA]\n")
+	zPos := strings.Index(content[secA:], "zKey = 2")
+	mPos := strings.Index(content[secA:], "mKey = 3")
+	aPos := strings.Index(content[secA:], "aKey = 0")
+	if zPos < 0 || mPos < 0 || aPos < 0 {
+		t.Fatalf("sectionA missing expected keys:\n%s", content[secA:])
+	}
+	// In default: zKey then aKey then mKey. Existing aKey stays in its position;
+	// new zKey and mKey should appear in default's order relative to each other.
+	if zPos >= mPos {
+		t.Fatalf("sectionA: zKey=%d should be before mKey=%d (default order)", zPos, mPos)
+	}
+
+	// sectionB: existing innerA=10 stays; new innerZ and innerM in default's order
+	secB := indexAfter(content, "[sectionB]\n")
+	izPos := strings.Index(content[secB:], "innerZ = 99")
+	imPos := strings.Index(content[secB:], "innerM = 88")
+	iaPos := strings.Index(content[secB:], "innerA = 10")
+	if izPos < 0 || imPos < 0 || iaPos < 0 {
+		t.Fatalf("sectionB missing expected keys:\n%s", content[secB:])
+	}
+	if izPos >= imPos {
+		t.Fatalf("sectionB: innerZ=%d should be before innerM=%d (default order)", izPos, imPos)
+	}
+
+	// sectionB.child: new table, all keys new, in default's order
+	t.Logf("content: %s", content)
+	secChild := indexAfter(content, "[sectionB.child]\n")
+	czPos := strings.Index(content[secChild:], "childZ = \"zz\"")
+	caPos := strings.Index(content[secChild:], "childA = \"aa\"")
+	if czPos < 0 || caPos < 0 {
+		t.Fatalf("sectionB.child missing expected keys:\n%s", content[secChild:])
+	}
+	if czPos >= caPos {
+		t.Fatalf("sectionB.child: childZ=%d should be before childA=%d (default order)", czPos, caPos)
+	}
+
+	// Verify idempotency
+	again, addedAgain, err := upgradeTOML(upgraded, []byte(defaults))
+	if err != nil {
+		t.Fatalf("second upgradeTOML() error = %v", err)
+	}
+	if addedAgain != 0 {
+		t.Fatalf("second added key count = %d, want 0", addedAgain)
+	}
+	if got := string(again); got != content {
+		t.Fatalf("second upgrade changed TOML:\n%s", got)
+	}
+}
+
+// indexAfter returns the offset just past the first occurrence of s in haystack,
+// or 0 if not found.
+func indexAfter(haystack, s string) int {
+	i := strings.Index(haystack, s)
+	if i < 0 {
+		return 0
+	}
+	return i + len(s)
+}

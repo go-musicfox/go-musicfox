@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	toml "github.com/pelletier/go-toml/v2"
+	"github.com/pelletier/go-toml/v2/unstable"
 	tomledit "github.com/pelletier/go-toml/v2/unstable/edit"
 
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -42,6 +43,75 @@ func UpgradeConfig(path string) (int, error) {
 	return added, nil
 }
 
+// tomlTableKeyOrder returns the keys visible at the given tablePath in the
+// TOML document, in source (document) order. tablePath is empty for the root
+// table. Returns nil on parse error (caller should fall back to sort.Strings).
+func tomlTableKeyOrder(data []byte, tablePath []string) []string {
+	p := &unstable.Parser{KeepComments: false}
+	p.Reset(data)
+
+	var currentTable []string
+	var keys []string
+	seen := make(map[string]bool)
+
+	for p.NextExpression() {
+		e := p.Expression()
+		switch e.Kind {
+		case unstable.Table, unstable.ArrayTable:
+			currentTable = nodeKeyParts(e)
+			// A [parent.key] or [a.b.c] header introduces the next key
+			// at the parent level (e.g. [reporter.lastfm] introduces
+			// "reporter" at root, "lastfm" at ["reporter"]).
+			if len(currentTable) > len(tablePath) &&
+				stringSlicesEqual(currentTable[:len(tablePath)], tablePath) {
+				key := currentTable[len(tablePath)]
+				if !seen[key] {
+					keys = append(keys, key)
+					seen[key] = true
+				}
+			}
+		case unstable.KeyValue:
+			if !stringSlicesEqual(currentTable, tablePath) {
+				continue
+			}
+			kps := nodeKeyParts(e)
+			if len(kps) == 0 {
+				continue
+			}
+			key := kps[0]
+			if !seen[key] {
+				keys = append(keys, key)
+				seen[key] = true
+			}
+		}
+	}
+	if err := p.Error(); err != nil {
+		return nil
+	}
+	return keys
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func nodeKeyParts(e *unstable.Node) []string {
+	var parts []string
+	it := e.Key()
+	for it.Next() {
+		parts = append(parts, string(it.Node().Data))
+	}
+	return parts
+}
+
 type tomlAddition struct {
 	path            []string
 	value           any
@@ -71,7 +141,7 @@ func upgradeTOML(userConfig, defaultConfig []byte) ([]byte, int, error) {
 		return nil, 0, fmt.Errorf("decode embedded default TOML: %w", err)
 	}
 
-	additions := missingTOMLAdditions(defaultValues, userValues, defaultDoc, nil)
+	additions := missingTOMLAdditions(defaultConfig, defaultValues, userValues, defaultDoc, nil)
 	if len(additions) == 0 {
 		return userConfig, 0, nil
 	}
@@ -111,16 +181,21 @@ func upgradeTOML(userConfig, defaultConfig []byte) ([]byte, int, error) {
 	return document.Bytes(), len(additions), nil
 }
 
-func missingTOMLAdditions(defaultValues, userValues map[string]any, defaultDoc *tomledit.Document, prefix []string) []tomlAddition {
-	keys := make([]string, 0, len(defaultValues))
-	for key := range defaultValues {
-		keys = append(keys, key)
+func missingTOMLAdditions(defaultConfig []byte, defaultValues, userValues map[string]any, defaultDoc *tomledit.Document, prefix []string) []tomlAddition {
+	orderedKeys := tomlTableKeyOrder(defaultConfig, prefix)
+	if len(orderedKeys) == 0 {
+		for key := range defaultValues {
+			orderedKeys = append(orderedKeys, key)
+		}
+		sort.Strings(orderedKeys)
 	}
-	sort.Strings(keys)
 
 	var additions []tomlAddition
-	for _, key := range keys {
-		defaultValue := defaultValues[key]
+	for _, key := range orderedKeys {
+		defaultValue, ok := defaultValues[key]
+		if !ok {
+			continue
+		}
 		path := append(append([]string(nil), prefix...), key)
 		defaultTable, isTable := defaultValue.(map[string]any)
 		if !isTable {
@@ -143,10 +218,10 @@ func missingTOMLAdditions(defaultValues, userValues map[string]any, defaultDoc *
 			if !isUserTable {
 				continue
 			}
-			additions = append(additions, missingTOMLAdditions(defaultTable, userTable, defaultDoc, path)...)
+			additions = append(additions, missingTOMLAdditions(defaultConfig, defaultTable, userTable, defaultDoc, path)...)
 			continue
 		}
-		additions = append(additions, missingTOMLAdditions(defaultTable, nil, defaultDoc, path)...)
+		additions = append(additions, missingTOMLAdditions(defaultConfig, defaultTable, nil, defaultDoc, path)...)
 	}
 	return additions
 }

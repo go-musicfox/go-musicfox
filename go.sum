@@ -14,8 +14,8 @@ github.com/alecthomas/chroma/v2 v2.14.0 h1:R3+wzpnUArGcQz7fCETQBzO5n9IMNi13iIs46
 github.com/alecthomas/chroma/v2 v2.14.0/go.mod h1:QolEbTfmUHIMVpBqxeDnNBj2uoeI4EbYP4i6n68SG4I=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
-github.com/anhoder/foxful-cli v1.0.6 h1:kn0F8hwgoMbvTQ9qM/N9NQgAONojo5UuIDzZALW+e4E=
-github.com/anhoder/foxful-cli v1.0.6/go.mod h1:UDUAeGgKp8o2xt7F/EyRW9193ZuW6TkxR5BlUOcsVPc=
+github.com/anhoder/foxful-cli v1.1.0 h1:ORVrv/xe1kRDWwnrY3AQ2U2LCV5O4BeEmzHUF8EPMRA=
+github.com/anhoder/foxful-cli v1.1.0/go.mod h1:UDUAeGgKp8o2xt7F/EyRW9193ZuW6TkxR5BlUOcsVPc=
 github.com/anhoder/gcli/v2 v2.3.5 h1:tiFK7xnZxNHIevEaRtfT4Cfhz4OYFcJaeB1S55dxxBU=
 github.com/anhoder/gcli/v2 v2.3.5/go.mod h1:AOxm27rFzNDLpBrwbW1pAh3ofebpXOQk/9x009qC9y8=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
