@@ -705,6 +705,26 @@ func (a *App) HasPopup() bool {
 	return len(a.modalStack) > 0
 }
 
+// TopModalBounds returns the absolute screen rectangle (x, y, width, height) of
+// the topmost modal in the stack. The second return value is false when there is
+// no active modal. Callers should treat a true-but-zero-area result as an unplaced
+// modal whose bounds haven't been computed yet (first-frame race).
+func (a *App) TopModalBounds() (x, y, w, h int, ok bool) {
+	if len(a.modalStack) == 0 {
+		return 0, 0, 0, 0, false
+	}
+	top := a.modalStack[len(a.modalStack)-1]
+	switch m := top.(type) {
+	case *Popup:
+		x, y, w, h = m.Bounds()
+		return x, y, w, h, true
+	case *ContextMenu:
+		x, y, w, h = m.Bounds()
+		return x, y, w, h, true
+	}
+	return 0, 0, 0, 0, false
+}
+
 // compositeModals renders the base page content with all modals in the stack
 // overlaid using lipgloss Compositor layers. Modals are rendered in stack
 // order (bottom of stack = back layer, top of stack = front layer).

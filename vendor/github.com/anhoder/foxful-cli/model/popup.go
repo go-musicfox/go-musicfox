@@ -448,6 +448,13 @@ func (p *Popup) allowsRightClickPassthrough() bool {
 	return false
 }
 
+// Bounds returns the absolute screen rectangle of this popup as (x, y, width, height).
+// Values are meaningful only after the popup has been rendered at least once
+// (the app-level compositeModals phase computes and stores bounds).
+func (p *Popup) Bounds() (x, y, w, h int) {
+	return p.bounds.x, p.bounds.y, p.bounds.w, p.bounds.h
+}
+
 type popupRect struct {
 	x int
 	y int

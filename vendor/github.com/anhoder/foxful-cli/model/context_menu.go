@@ -427,6 +427,13 @@ func (cm *ContextMenu) computePosition(termW, termH, menuW, menuH int) (int, int
 	return x, y
 }
 
+// Bounds returns the absolute screen rectangle of this context menu as (x, y, width, height).
+// Values are meaningful only after the menu has been rendered at least once
+// (the app-level compositeModals phase computes and stores bounds).
+func (cm *ContextMenu) Bounds() (x, y, w, h int) {
+	return cm.bounds.x, cm.bounds.y, cm.bounds.w, cm.bounds.h
+}
+
 // setModalBounds stores the absolute screen position and computes absolute item bounds.
 func (cm *ContextMenu) setModalBounds(x, y, w, h int, itemBounds []popupRect) {
 	cm.bounds = popupRect{x: x, y: y, w: w, h: h}

@@ -135,11 +135,10 @@ func (r *CoverRenderer) calculateDimensions() {
 	}
 }
 
-// coverBackgroundExclusion reserves only the terminal cells the Kitty image
-// visibly fills. Kitty leaves its final placement row unpainted, so that row
-// must remain available for the app background.
-func coverBackgroundExclusion(coverStartCol, coverStartRow, cols, rows int) (x, y, width, height int) {
-	return coverStartCol - 1, coverStartRow - 1, cols, max(rows-1, 0)
+// rectsOverlap returns true if two rectangles overlap.
+// All coordinates are 0-indexed.
+func rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2 int) bool {
+	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h2 > y2
 }
 
 // View renders the cover image component.
@@ -199,8 +198,22 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	exclusionX, exclusionY, exclusionWidth, exclusionHeight := coverBackgroundExclusion(coverStartCol, coverStartRow, r.cols, r.rows)
-	a.SetAppBackgroundExclusion(exclusionX, exclusionY, exclusionWidth, exclusionHeight)
+	// Popup collision detection: hide cover when a modal overlaps the cover area.
+	// Cover rect in 0-indexed screen coordinates.
+	r.mu.Lock()
+	if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
+		if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
+			if r.imageRendered {
+				_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
+				_ = os.Stdout.Sync()
+				r.imageRendered = false
+				r.cachedSeq = ""
+			}
+			r.mu.Unlock()
+			return "", 0
+		}
+	}
+	r.mu.Unlock()
 
 	// Check if we need to re-render
 	r.mu.Lock()

@@ -20,10 +20,10 @@ const (
 	maxChunkSize = 4096
 
 	// CoverZIndex is the z-index for cover images.
-	// Set to a deeply negative value (< -1073741824, i.e., INT32_MIN/2)
-	// to ensure cover images render below all text and cell backgrounds,
-	// allowing popup menus with solid backgrounds to appear on top.
-	CoverZIndex = -2000000000
+	// Set to a positive value so cover images render on top of text and cell
+	// backgrounds. Popup collision detection in cover_renderer.go hides the
+	// cover when a modal overlaps the cover area.
+	CoverZIndex = 1
 )
 
 var imageIDCounter uint32
