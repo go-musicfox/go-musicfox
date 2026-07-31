@@ -227,12 +227,14 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	} else {
 		kitty.CoverZIndex = 1
 	}
-	// Invalidate cached sequence when background transparency changes,
+	// Invalidate cached sequences when background transparency changes,
 	// since the kitty sequence embeds a z-index that is now stale.
-	if r.lastBgTransparent != isTransparent && r.imageRendered {
+	// Always clear the image cache regardless of current render state:
+	// the next View() pass must regenerate sequences with the correct z-index.
+	if r.lastBgTransparent != isTransparent {
+		r.imageCache.Clear()
 		r.cachedSeq = ""
 		r.imageRendered = false
-		r.imageCache.Clear() // Clear LRU cache too — cached sequences have wrong z-index
 	}
 	r.lastBgTransparent = isTransparent
 
