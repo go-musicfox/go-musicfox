@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -48,6 +49,11 @@ type CoverRenderer struct {
 	// Display dimensions
 	cols int
 	rows int
+
+	// lastBgTransparent tracks whether the previous frame used a transparent
+	// app background. When it changes, the cached kitty sequence is invalidated
+	// so the cover is re-rendered with the correct z-index.
+	lastBgTransparent bool
 }
 
 type renderResult struct {
@@ -141,6 +147,17 @@ func rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2 int) bool {
 	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h2 > y2
 }
 
+// isAppBackgroundTransparent returns true when the current theme's app
+// background is transparent.
+func isAppBackgroundTransparent(a *model.App) bool {
+	bg := a.StyleSet().AppBackground.GetBackground()
+	if bg == nil {
+		return true
+	}
+	_, isNoColor := bg.(lipgloss.NoColor)
+	return isNoColor
+}
+
 // View renders the cover image component.
 // This component writes directly to stdout for kitty graphics,
 // bypassing bubbletea's rendering pipeline which may not handle APC sequences correctly.
@@ -198,19 +215,42 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	// Popup collision detection: hide cover when a modal overlaps the cover area.
-	// Cover rect in 0-indexed screen coordinates.
+	// Choose the cover z-index based on whether the app background is
+	// transparent. Transparent backgrounds let the cover render below the
+	// text grid (z < 0), with popups naturally occluding it. Opaque
+	// backgrounds require z > 0 and explicit collision detection.
+	isTransparent := isAppBackgroundTransparent(a)
+
 	r.mu.Lock()
-	if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
-		if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
-			if r.imageRendered {
-				_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
-				_ = os.Stdout.Sync()
-				r.imageRendered = false
-				r.cachedSeq = ""
+	if isTransparent {
+		kitty.CoverZIndex = -2000000000
+	} else {
+		kitty.CoverZIndex = 1
+	}
+	// Invalidate cached sequence when background transparency changes,
+	// since the kitty sequence embeds a z-index that is now stale.
+	if r.lastBgTransparent != isTransparent && r.imageRendered {
+		r.cachedSeq = ""
+		r.imageRendered = false
+		r.imageCache.Clear() // Clear LRU cache too — cached sequences have wrong z-index
+	}
+	r.lastBgTransparent = isTransparent
+
+	// Popup collision detection: hide cover when a modal overlaps the cover area.
+	// Only needed for opaque backgrounds; transparent backgrounds let the text
+	// grid and popup cells naturally cover the cover via z-order.
+	if !isTransparent {
+		if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
+			if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
+				if r.imageRendered {
+					_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
+					_ = os.Stdout.Sync()
+					r.imageRendered = false
+					r.cachedSeq = ""
+				}
+				r.mu.Unlock()
+				return "", 0
 			}
-			r.mu.Unlock()
-			return "", 0
 		}
 	}
 	r.mu.Unlock()

@@ -18,13 +18,21 @@ const (
 
 	// Chunk size for base64 encoded data (4096 bytes max per chunk)
 	maxChunkSize = 4096
-
-	// CoverZIndex is the z-index for cover images.
-	// Set to a positive value so cover images render on top of text and cell
-	// backgrounds. Popup collision detection in cover_renderer.go hides the
-	// cover when a modal overlaps the cover area.
-	CoverZIndex = 1
 )
+
+// CoverZIndex is the z-index for cover images.
+//
+// Default: 1 (above text), used when the app background is opaque.
+// For transparent backgrounds (e.g. Transparent theme), cover_renderer sets
+// this to coverZIndexTransparentBg (-2000000000, below the text grid) so the
+// cover is visible through the transparent terminal and popups naturally
+// occlude it without collision detection.
+var CoverZIndex = 1
+
+// coverZIndexTransparentBg places the cover deeply below the text grid so it
+// is visible through a transparent app background. Popups with solid
+// backgrounds naturally cover it without any special handling.
+const coverZIndexTransparentBg = -2000000000
 
 var imageIDCounter uint32
 
