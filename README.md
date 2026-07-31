@@ -47,15 +47,16 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 
 ![UNM](previews/unm.png)
 
-#### 9. macOS 歌词显示
+#### 9. macOS 桌面歌词 + 频谱
 
 ![LyricsX](previews/lyricsX.gif)
 
-> [!IMPORTANT]
-> 需要满足以下条件：
-> 1. go-musicfox >= v3.7.7
-> 2. 下载和安装 [LyricsX 的 go-musicfox 的 fork 版本](https://github.com/go-musicfox/LyricsX/releases/latest)
-> 3. 在 LyricsX 设置中，打开`使用系统正在播放的应用`
+> [!NOTE]
+> macOS 原生桌面歌词功能，支持：
+> - YRC 逐字高亮、自动滚动、拖拽定位
+> - 11种频谱可视化样式（柱状/镜像/胶囊/火焰/圆形/波形等）
+> - 完整的视觉定制（字体/颜色/阴影/圆角/透明度）
+> - 配置路径：`[main.lyric.desktopLyrics]`，详见 [changelog](./utils/filex/embed/changelog.md)
 ## 安装
 
 <details>
@@ -391,11 +392,8 @@ $ musicfox
 
   > 这里之所以使用 FLAC8，主要是为了兼容大部分系统，因为FLAC是向前兼容的（也就是说 `≥ 8` 的FLAC都可以使用）
 - wsl 环境下使用 beep 须安装 `libasound2-plugins`，见 [issues](https://github.com/microsoft/wslg/issues/864)
-- XDG 支持
-
-  自 [#453](https://github.com/go-musicfox/go-musicfox/pull/453) 起，提供了完整的 XDG 支持，部分文件路径变更，见 [XDG 支持说明](./docs/xdg_support.md)
-- 配置文件格式
-  自 [#484](https://github.com/go-musicfox/go-musicfox/pull/484) 起，配置文件格式已由 INI 更换为 [TOML](https://toml.io/)
+- XDG 支持：完整的 XDG 支持，部分文件路径变更，见 [XDG 支持说明](./docs/xdg_support.md)
+- 配置文件格式：使用 [TOML](https://toml.io/) 格式
 
 </details>
 <details>
@@ -424,6 +422,160 @@ DLNA 引擎允许你将音乐投送到兼容 DLNA 的设备（如智能电视、
 3. **播放**
    启动应用后，选择歌曲即可自动投送到 DLNA 设备。
 
+
+</details>
+<details>
+<summary>
+引入完整的主题配置系统，支持运行时切换、自定义配色和多种内置主题。
+### 主题系统
+</summary>
+
+完整的主题配置系统，支持运行时切换、自定义配色和多种内置主题。
+
+#### 内置主题
+
+- **Default** - 经典浅色主题
+- **Transparent** - 透明主题，适配终端背景
+- **Dark Transparent** - 深色透明主题
+- **Dracula** - 流行的 Dracula 配色
+- **Nord** - 北欧冷色调
+- **Gruvbox** - 复古暖色调
+
+#### 使用方式
+
+1. **配置文件设置**
+   ```toml
+   [theme]
+   activeTheme = "Dracula"  # 启动时加载的主题
+   ```
+
+2. **运行时切换**
+   - 通过右键菜单选择"切换主题"
+   - 或在配置中绑定快捷键：`switchTheme = "t"`
+
+3. **自定义主题**
+   - 在用户配置目录下创建 `themes/` 子目录
+   - 每个主题一个独立的 `.toml` 文件（例如：
+     - macOS: `~/Library/Application Support/go-musicfox/themes/mytheme.toml`
+     - Linux: `~/.config/go-musicfox/themes/mytheme.toml`
+     - Windows: `%AppData%\go-musicfox\themes\mytheme.toml`）
+   - 主题文件必须包含 `name` 字段和 `[dark]` 或 `[light]` 配置表
+   - 详细配置参见 [内置主题示例](./utils/filex/embed/themes/)
+
+</details>
+<details>
+<summary>
+
+终端内实时显示音频频谱（仅 macOS `osx` 播放引擎支持）。
+</summary>
+
+终端 TUI 中的实时音频频谱可视化（仅 macOS `osx` 播放引擎支持）。
+
+#### 配置
+
+```toml
+[main.visualizer]
+enable = true              # 启用频谱显示
+maxHeight = 10             # 最大高度（行数），0 为自动填充
+fullCharHalfBlock = "▌"    # 半填充字符
+fullCharFullBlock = "█"    # 全填充字符
+emptyCharBlock = " "       # 空白字符
+```
+
+频谱会显示在歌词和歌曲信息之间，低频在底部，高频在顶部，使用前景/背景双色渐变提供更高精度的幅度表现。
+
+</details>
+<details>
+<summary>
+
+### macOS 桌面歌词
+</summary>
+macOS 原生桌面歌词窗口，支持 YRC 逐字高亮、频谱可视化和完整的视觉定制。
+
+#### 配置
+
+```toml
+[main.lyric.desktopLyrics]
+enable = true                    # 启用桌面歌词
+showSpectrum = true              # 显示频谱
+spectrumStyle = "capsule"        # 频谱样式：bar/mirror/capsule/flame/circle/wave/ring/pulse/helix/dna/dualwave
+
+# 外观定制
+fontName = "PingFang SC"
+fontSize = 40.0
+textColor = "#FFFFFF"
+strokeColor = "#000000"
+shadowColor = "#000000"
+backgroundColor = "#00000080"    # 支持透明度
+cornerRadius = 16.0
+```
+
+#### 功能
+
+- **YRC 逐字高亮** - 支持网易云的逐字歌词格式
+- **拖拽定位** - 按住窗口可自由移动，位置自动保存
+- **11种频谱样式** - 从经典柱状到创意 DNA 螺旋
+- **完整视觉定制** - 字体、颜色、阴影、圆角、透明度
+
+详细配置选项参见 [changelog](./utils/filex/embed/changelog.md)。
+
+</details>
+<details>
+<summary>
+
+### 启动动画
+</summary>
+
+支持 8 种启动动画类型，可配置启动视觉效果：
+
+- `sequential` - 经典序列动画（默认）
+- `wave` - 波浪效果
+- `pulse` - 脉冲效果
+- `typewriter` - 打字机效果
+- `matrix` - 黑客帝国字符雨
+- `glitch` - 故障艺术
+- `neon` - 霓虹灯效果
+- `none` - 无动画
+
+```toml
+[startup]
+style = "matrix"  # 选择启动动画
+```
+
+</details>
+<details>
+<summary>
+
+### 右键菜单
+</summary>
+
+完整的上下文菜单系统，右键点击不同元素可触发相应操作：
+
+- **菜单项右键** - 显示歌曲/专辑/歌单相关操作（喜欢、下载、收藏等）
+- **状态栏右键** - 快速切换主题、播放模式
+- **面包屑右键** - 菜单导航操作
+
+可在配置中设置 `enableMouseEvent = true` 以启用完整鼠标支持。
+
+</details>
+<details>
+<summary>
+
+### 配置升级
+</summary>
+
+`upgrade-config` 子命令用于同步新版本的配置项：
+
+```sh
+musicfox upgrade-config
+```
+
+该命令会：
+- 将内嵌默认配置中用户文件缺失的叶子项追加到对应 table
+- 保留用户已有的值、注释、布局和未知键
+- 以原子操作写回，保持文件权限
+
+建议在升级到新版本后运行一次。
 
 </details>
 <details>
@@ -513,6 +665,7 @@ DLNA 引擎允许你将音乐投送到兼容 DLNA 的设备（如智能电视、
 | `simiSongsOfSelectedSong`           | 与选中歌曲相似的歌曲          | `F`                                             |
 | `actionOfSelected`                  | 对于选中项或当前播放的操作    | `m`                                          |
 | `actionOfPlayingSong`               | 对于当前播放的操作            | `M`                                          |
+| `switchTheme`                       | 切换主题样式                  | *(无，可通过右键菜单触发)*                      |
 | `toggleSortOrder`                   | 切换排序顺序（电台/播客列表） | `|`                                          |
 
 注意：
@@ -569,8 +722,21 @@ curPlaylist = "ctrl+p"
 ### 鼠标支持
 </summary>
 
-* 确保`enableMouseEvent`设置为`true`
-* 详见 [鼠标支持说明](./docs/mouse_support.md)
+完整的鼠标交互支持：
+
+- **点击** - 选择菜单项、点击按钮
+- **双击** - 快速进入子菜单或播放
+- **滚轮** - 上下滚动列表
+- **悬停** - 高亮显示可交互元素
+- **右键菜单** - 上下文相关的操作菜单
+
+**配置**：
+```toml
+[main]
+enableMouseEvent = true  # 启用鼠标支持
+```
+
+详见 [鼠标支持说明](./docs/mouse_support.md)
 
 </details>
 <details>
@@ -632,8 +798,6 @@ song = "分享{{if .SongArtists}}{{.SongArtists}}的{{end}}单曲《{{.SongName}
 > Windows：`%AppData%\go-musicfox`
 >
 > 你可以通过设置 `MUSICFOX_ROOT` 环境变量来自定义用户配置的存储位置
->
-> 旧版本的 go-musicfox 的默认用户配置目录为 `$HOME/.go-musicfox`（*nix）或 `%USERPROFILE%\.go-musicfox`（Windows），升级到新版本时将自动迁移到上述的新路径
 
 ## CHANGELOG
 

@@ -49,7 +49,7 @@ func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 			page.AfterAction = func() {
 				app.MustMain().RefreshMenuList()
 			}
-			return NewMenuToPage(m.baseMenu, page)
+		return NewMenuToPage(m.baseMenu, page, m.netease.coverRenderer.ClearDisplayed)
 		}
 		showConfirmPopup(app, "清除 Last.fm 授权", "确定清除 Last.fm 授权信息吗？", func() {
 			m.netease.lastfm.ClearUserInfo()

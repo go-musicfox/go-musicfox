@@ -12,14 +12,14 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
+	"github.com/skratchdot/open-golang/open"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
-	"github.com/mattn/go-runewidth"
-	"github.com/skratchdot/open-golang/open"
 )
 
 const LastfmAuthPageType model.PageType = "lastfm_auth"
@@ -27,16 +27,16 @@ const LastfmAuthPageType model.PageType = "lastfm_auth"
 type LastfmAuthPage struct {
 	netease *Netease
 
-	menuTitle       *model.MenuItem
-	index           int
-	accountInput    textinput.Model
-	passwordInput   textinput.Model
-	submitButton    string
-	browserButton   string
-	qrAuthButton    string
+	menuTitle     *model.MenuItem
+	index         int
+	accountInput  textinput.Model
+	passwordInput textinput.Model
+	submitButton  string
+	browserButton string
+	qrAuthButton  string
 	browserAuthStep int
-	tips            string
-	AfterAction     func()
+	tips          string
+	AfterAction   func()
 
 	submitIndex  int
 	qrAuthIndex  int
@@ -45,39 +45,58 @@ type LastfmAuthPage struct {
 	token      string
 	url        string
 	sessionKey string
+
+	// 鼠标交互
+	backBtnHovered bool
+	backBtnRowY    int
+	backBtnStartX  int
+	backBtnEndX    int
+
+	accountRowY   int
+	passwordRowY  int
+	inputStartX   int
+	inputEndX     int
+	buttonsRowY   int
+	submitStartX  int
+	submitEndX    int
+	qrAuthStartX  int
+	qrAuthEndX    int
+	browserStartX int
+	browserEndX   int
+
+	hoveredInput  int
+	hoveredButton int
+	mousePointer  string
 }
 
 func NewLastfmAuthPage(netease *Netease) *LastfmAuthPage {
 	accountInput := textinput.New()
 	accountInput.Placeholder = " 用户名或邮箱"
-	accountInput.Focus()
-	accountInput.Prompt = util.GetFocusedPrompt()
-	s := textinput.DefaultStyles(true)
-	s.Focused.Text = util.GetPrimaryFontStyle()
-	accountInput.SetStyles(s)
 	accountInput.CharLimit = 32
+	accountInput.SetStyles(pageInputStyles())
 
 	passwordInput := textinput.New()
 	passwordInput.Placeholder = " 密码"
-	passwordInput.Prompt = "> "
 	passwordInput.EchoMode = textinput.EchoPassword
 	passwordInput.EchoCharacter = '•'
 	passwordInput.CharLimit = 32
+	passwordInput.SetStyles(pageInputStyles())
 
 	page := &LastfmAuthPage{
 		netease:       netease,
 		menuTitle:     &model.MenuItem{Title: "Lastfm用户登录/授权"},
 		accountInput:  accountInput,
 		passwordInput: passwordInput,
-		submitButton:  util.GetBlurredSubmitButton(),
 
 		submitIndex:  2,
 		qrAuthIndex:  3,
 		browserIndex: 4,
-	}
-	page.qrAuthButton = util.GetBlurredButton(page.qrButtonTextByStep())
-	page.browserButton = util.GetBlurredButton(page.browserButtonTextByStep())
 
+		hoveredInput:  -1,
+		hoveredButton: -1,
+		mousePointer:  "default",
+	}
+	page.applyFocus()
 	return page
 }
 
@@ -89,10 +108,95 @@ func (l *LastfmAuthPage) Type() model.PageType {
 	return LastfmAuthPageType
 }
 
-func (l *LastfmAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd) {
-	inputs := []*textinput.Model{
-		&l.accountInput,
-		&l.passwordInput,
+func (l *LastfmAuthPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
+	// 处理鼠标移动事件
+	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
+		mouse := mouseMsg.Mouse()
+		mainPage := l.netease.MustMain()
+		oldBackHovered := l.backBtnHovered
+		oldInputHovered := l.hoveredInput
+		oldButtonHovered := l.hoveredButton
+		oldPointer := l.mousePointer
+
+		breadcrumbChanged, breadcrumbHovered := pageBreadcrumbMotion(a, mainPage, mouse.X, mouse.Y)
+		l.backBtnHovered = mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnEndX
+		l.hoveredInput = -1
+		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
+			switch mouse.Y {
+			case l.accountRowY:
+				l.hoveredInput = 0
+			case l.passwordRowY:
+				l.hoveredInput = 1
+			}
+		}
+		l.hoveredButton = -1
+		if mouse.Y == l.buttonsRowY {
+			switch {
+			case mouse.X >= l.submitStartX && mouse.X <= l.submitEndX:
+				l.hoveredButton = 0
+			case mouse.X >= l.qrAuthStartX && mouse.X <= l.qrAuthEndX:
+				l.hoveredButton = 1
+			case mouse.X >= l.browserStartX && mouse.X <= l.browserEndX:
+				l.hoveredButton = 2
+			}
+		}
+
+		l.mousePointer = "default"
+		if l.hoveredInput >= 0 {
+			l.mousePointer = "text"
+		} else if l.backBtnHovered || l.hoveredButton >= 0 || breadcrumbHovered {
+			l.mousePointer = "pointer"
+		}
+		if l.backBtnHovered != oldBackHovered || l.hoveredInput != oldInputHovered || l.hoveredButton != oldButtonHovered || l.mousePointer != oldPointer || breadcrumbChanged {
+			return l, tea.Sequence(tickLogin(time.Nanosecond), a.SetMousePointer(l.mousePointer))
+		}
+		return l.updateLoginInputs(msg)
+	}
+
+	// 处理鼠标点击事件
+	if clickMsg, ok := msg.(tea.MouseClickMsg); ok {
+		mouse := clickMsg.Mouse()
+		if mouse.Button != tea.MouseLeft {
+			return l.updateLoginInputs(msg)
+		}
+		mainPage := l.netease.MustMain()
+		if newPage := pageBreadcrumbClick(a, mainPage, mouse.X, mouse.Y); newPage != nil {
+			l.tips = ""
+			return newPage, l.netease.RerenderCmd(true)
+		}
+		if mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnEndX {
+			l.tips = ""
+			return mainPage, l.netease.RerenderCmd(true)
+		}
+		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
+			switch mouse.Y {
+			case l.accountRowY:
+				l.index = 0
+				l.applyFocus()
+				setPageInputCursor(&l.accountInput, mouse.X, l.inputStartX)
+				return l, tickLogin(time.Nanosecond)
+			case l.passwordRowY:
+				l.index = 1
+				l.applyFocus()
+				setPageInputCursor(&l.passwordInput, mouse.X, l.inputStartX)
+				return l, tickLogin(time.Nanosecond)
+			}
+		}
+		if mouse.Y == l.buttonsRowY {
+			switch {
+			case mouse.X >= l.submitStartX && mouse.X <= l.submitEndX:
+				l.index = l.submitIndex
+			case mouse.X >= l.qrAuthStartX && mouse.X <= l.qrAuthEndX:
+				l.index = l.qrAuthIndex
+			case mouse.X >= l.browserStartX && mouse.X <= l.browserEndX:
+				l.index = l.browserIndex
+			default:
+				return l.updateLoginInputs(msg)
+			}
+			l.applyFocus()
+			return l.enterHandler()
+		}
+		return l.updateLoginInputs(msg)
 	}
 
 	var (
@@ -106,7 +210,7 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd)
 
 	switch key.String() {
 	case "b":
-		if l.index != submitIndex && l.index != l.qrAuthIndex {
+		if l.index < l.submitIndex {
 			return l.updateLoginInputs(msg)
 		}
 		fallthrough
@@ -118,19 +222,19 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd)
 
 		// Did the user press enter while the submit button was focused?
 		// If so, exit.
-		if s == "enter" && l.index >= submitIndex {
+		if s == "enter" && l.index >= l.submitIndex {
 			return l.enterHandler()
 		}
 
 		// 当focus在button上时，左右按键的特殊处理
 		switch s {
 		case "left", "right":
-			if l.index < submitIndex {
+			if l.index < l.submitIndex {
 				return l.updateLoginInputs(msg)
 			}
-			if s == "left" && l.index >= l.submitIndex {
+			if s == "left" && l.index > l.submitIndex {
 				l.index--
-			} else if s == "right" && l.index <= l.browserIndex {
+			} else if s == "right" && l.index < l.browserIndex {
 				l.index++
 			}
 		case "up", "shift+tab":
@@ -145,51 +249,7 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd)
 			l.index = l.browserIndex
 		}
 
-		for i := 0; i <= len(inputs)-1; i++ {
-			if i != l.index {
-				// Remove focused state
-				inputs[i].Blur()
-				inputs[i].Prompt = util.GetBlurredPrompt()
-				// inputs[i].TextStyle = lipgloss.NewStyle()
-				s := textinput.DefaultStyles(true)
-				s.Focused.Text = lipgloss.NewStyle()
-				inputs[i].SetStyles(s)
-				continue
-			}
-			// Set focused state
-			inputs[i].Focus()
-			inputs[i].Prompt = util.GetFocusedPrompt()
-			s := textinput.DefaultStyles(true)
-			s.Focused.Text = util.GetPrimaryFontStyle()
-			inputs[i].SetStyles(s)
-		}
-
-		// l.accountInput = *inputs[0]
-		// l.passwordInput = *inputs[1]
-
-		l.tips = ""
-
-		if l.index == l.submitIndex {
-			l.tips = util.SetFgStyle("使用账号密码登录并授权", lipgloss.BrightBlue)
-			l.submitButton = util.GetFocusedSubmitButton()
-		} else {
-			l.submitButton = util.GetBlurredSubmitButton()
-		}
-
-		if l.index == l.qrAuthIndex {
-			l.tips = util.SetFgStyle("请使用可扫码设备扫码并在浏览器授权", lipgloss.BrightBlue)
-			l.qrAuthButton = util.GetFocusedButton(l.qrButtonTextByStep())
-		} else {
-			l.qrAuthButton = util.GetBlurredButton(l.qrButtonTextByStep())
-		}
-
-		if l.index == l.browserIndex {
-			l.tips = util.SetFgStyle("在默认浏览器中打开链接并授权", lipgloss.BrightBlue)
-			l.browserButton = util.GetFocusedButton(l.browserButtonTextByStep())
-		} else {
-			l.browserButton = util.GetBlurredButton(l.browserButtonTextByStep())
-		}
-
+		l.applyFocus()
 		return l, nil
 	}
 
@@ -200,21 +260,34 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cmd)
 func (l *LastfmAuthPage) View(a *model.App) string {
 	var (
 		builder  strings.Builder
-		top      int // 距离顶部的行数
+		top      int
 		mainPage = l.netease.MustMain()
 	)
 
+	lineCount := 0
+	write := func(text string) {
+		builder.WriteString(text)
+		lineCount += strings.Count(text, "\n")
+	}
+
 	// title
 	if configs.AppConfig.Theme.ShowTitle {
-		builder.WriteString(pageTitleView(a, mainPage, &top))
+		write(pageTitleView(a, mainPage, &top))
 	} else {
+		write("\n")
 		top++
 	}
 
 	// menu title
-	builder.WriteString(pageMenuTitleView(a, mainPage, &top, l.menuTitle))
-	builder.WriteString("\n\n\n")
-	top += 2
+	topBefore := top
+	write(pageMenuTitleViewWithBack(a, mainPage, &top, l.menuTitle, l.backBtnHovered))
+	l.backBtnRowY = pageMenuTitleRow(a, mainPage, topBefore)
+	l.backBtnStartX = max(0, mainPage.MenuStartColumn()-pageBackButtonWidth)
+	l.backBtnEndX = l.backBtnStartX + pageBackButtonWidth
+	write("\n\n")
+
+	l.inputStartX = max(0, mainPage.MenuStartColumn())
+	l.inputEndX = max(l.inputStartX, a.WindowWidth()-1)
 
 	inputs := []*textinput.Model{
 		&l.accountInput,
@@ -222,55 +295,65 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 	}
 
 	for i, input := range inputs {
-		if mainPage.MenuStartColumn() > 0 {
-			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+		if l.inputStartX > 0 {
+			write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", l.inputStartX)))
 		}
-
-		builder.WriteString(input.View())
-
-		var valueLen int
-		if input.Value() == "" {
-			valueLen = runewidth.StringWidth(input.Placeholder)
+		if i == 0 {
+			l.accountRowY = lineCount
 		} else {
-			valueLen = runewidth.StringWidth(input.Value())
+			l.passwordRowY = lineCount
 		}
-		if spaceLen := l.netease.WindowWidth() - mainPage.MenuStartColumn() - valueLen - 3; spaceLen > 0 {
-			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
-		}
-
-		top++
+		input.SetWidth(max(1, a.WindowWidth()-l.inputStartX-lipgloss.Width(input.Prompt)))
+		write(pageInputView(*input, l.hoveredInput == i))
 
 		if i < len(inputs)-1 {
-			builder.WriteString("\n\n")
-			top++
+			write("\n\n")
 		}
 	}
 
-	builder.WriteString("\n\n")
-	top++
-	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	write("\n\n")
+	if l.inputStartX > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", l.inputStartX)))
 	}
-	builder.WriteString(l.tips)
-	builder.WriteString("\n\n")
-	top++
-	if mainPage.MenuStartColumn() > 0 {
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	write(l.tips)
+	write("\n\n")
+	if l.inputStartX > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", l.inputStartX)))
 	}
-	builder.WriteString(l.submitButton)
 
-	btnBlank := "    "
-	builder.WriteString(btnBlank)
-	builder.WriteString(l.qrAuthButton)
+	l.buttonsRowY = lineCount
+	submitButtonView := l.submitButton
+	if l.hoveredButton == 0 {
+		submitButtonView = pageButtonHoverView(pageSubmitText())
+	}
+	qrAuthButtonView := l.qrAuthButton
+	if l.hoveredButton == 1 {
+		qrAuthButtonView = pageButtonHoverView(l.qrButtonTextByStep())
+	}
+	browserButtonView := l.browserButton
+	if l.hoveredButton == 2 {
+		browserButtonView = pageButtonHoverView(l.browserButtonTextByStep())
+	}
 
-	builder.WriteString(btnBlank)
-	builder.WriteString(l.browserButton)
+	buttonGap := "    "
+	l.submitStartX = l.inputStartX
+	l.submitEndX = l.submitStartX + lipgloss.Width(submitButtonView) - 1
+	l.qrAuthStartX = l.submitEndX + lipgloss.Width(buttonGap) + 1
+	l.qrAuthEndX = l.qrAuthStartX + lipgloss.Width(qrAuthButtonView) - 1
+	l.browserStartX = l.qrAuthEndX + lipgloss.Width(buttonGap) + 1
+	l.browserEndX = l.browserStartX + lipgloss.Width(browserButtonView) - 1
 
-	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - runewidth.StringWidth(types.SubmitText) - runewidth.StringWidth(l.qrButtonTextByStep()) - runewidth.StringWidth(l.browserButtonTextByStep()) - len(btnBlank)*2
+	write(submitButtonView)
+	write(buttonGap)
+	write(qrAuthButtonView)
+	write(buttonGap)
+	write(browserButtonView)
+
+	spaceLen := a.WindowWidth() - l.inputStartX - lipgloss.Width(submitButtonView) - lipgloss.Width(qrAuthButtonView) - lipgloss.Width(browserButtonView) - 2*lipgloss.Width(buttonGap)
 	if spaceLen > 0 {
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
-	builder.WriteString("\n")
+	write("\n")
 
 	return finishCustomPageView(&builder, a)
 }
@@ -292,6 +375,29 @@ func (l *LastfmAuthPage) updateLoginInputs(msg tea.Msg) (model.Page, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return l, tea.Batch(cmds...)
+}
+
+func (l *LastfmAuthPage) applyFocus() {
+	blurPageInput(&l.accountInput)
+	blurPageInput(&l.passwordInput)
+	l.tips = ""
+
+	switch l.index {
+	case 0:
+		focusPageInput(&l.accountInput)
+	case 1:
+		focusPageInput(&l.passwordInput)
+	case l.submitIndex:
+		l.tips = util.SetFgStyle("使用账号密码登录并授权", lipgloss.BrightBlue)
+	case l.qrAuthIndex:
+		l.tips = util.SetFgStyle("请使用可扫码设备扫码并在浏览器授权", lipgloss.BrightBlue)
+	case l.browserIndex:
+		l.tips = util.SetFgStyle("在默认浏览器中打开链接并授权", lipgloss.BrightBlue)
+	}
+
+	l.submitButton = pageSubmitButton(l.index == l.submitIndex)
+	l.qrAuthButton = pageButton(l.qrButtonTextByStep(), l.index == l.qrAuthIndex)
+	l.browserButton = pageButton(l.browserButtonTextByStep(), l.index == l.browserIndex)
 }
 
 func (l *LastfmAuthPage) qrButtonTextByStep() string {

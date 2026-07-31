@@ -65,12 +65,14 @@ func newLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
 	keyInput.CharLimit = 32
+	keyInput.SetStyles(pageInputStyles())
 
 	secretInput := textinput.New()
 	secretInput.Placeholder = " Secret"
 	secretInput.EchoMode = textinput.EchoPassword
 	secretInput.EchoCharacter = '•'
 	secretInput.CharLimit = 32
+	secretInput.SetStyles(pageInputStyles())
 
 	page := &LastfmCustomApiPage{
 		netease:       netease,

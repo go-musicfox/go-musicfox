@@ -345,3 +345,87 @@ func TestConfirmPopupDefaultsToCancelAndRunsOnConfirm(t *testing.T) {
 		t.Fatal("onConfirm did not run after focusing 确定 and pressing Enter")
 	}
 }
+
+// dualColumnTruncateMenu reproduces the daily-recommend layout where a
+// left-column title overflows the fixed 44-cell budget. The overflowing title
+// is crafted so truncation stops one cell short (right before a wide rune),
+// which previously left the item under-filled and shifted that row's right
+// column left by one cell.
+type dualColumnTruncateMenu struct {
+	model.DefaultMenu
+}
+
+func (dualColumnTruncateMenu) GetMenuKey() string { return "dual-column-truncate" }
+
+func (dualColumnTruncateMenu) MenuViews() []model.MenuItem {
+	titles := []string{
+		"私人雷达",                        // 0 (left)
+		"华语必听100首，金曲新歌全都有",   // 1 (right)
+		"滚石唱片",                        // 2 (left)
+		"神级翻唱：戴上耳机领略仙音！",     // 3 (right)
+		// 4 (left): 36 ASCII + wide runes. "    4. " prefix is 7 cells, so the
+		// title truncates to 43 cells stopping before a wide rune.
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa中文哈哈",
+		"许嵩『安泊猜想巡回演唱会』2026",  // 5 (right)
+	}
+	items := make([]model.MenuItem, 0, len(titles))
+	for _, title := range titles {
+		items = append(items, model.MenuItem{Title: title})
+	}
+	return items
+}
+
+func (dualColumnTruncateMenu) HelpHints() []model.HelpHint { return nil }
+
+// TestDualColumnTruncatedItemKeepsRightColumnAligned verifies that when a
+// left-column menu item is truncated (stopping before a wide CJK/full-width
+// rune), the item is still padded to its fixed column width so every
+// right-column item starts at the same visual column.
+func TestDualColumnTruncatedItemKeepsRightColumnAligned(t *testing.T) {
+	const width, height = 130, 30
+
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Theme.ShowTitle = true
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	opts := model.DefaultOptions()
+	opts.EnableStartup = false
+	opts.WhetherDisplayTitle = true
+	opts.DualColumn = true
+	opts.MainMenu = &dualColumnTruncateMenu{}
+	opts.MainMenuTitle = &model.MenuItem{Title: "每日推荐歌单"}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	opts.TeaOptions = []tea.ProgramOption{
+		tea.WithContext(ctx),
+		tea.WithInput(nil),
+		tea.WithOutput(io.Discard),
+	}
+	app := model.NewApp(opts)
+	_ = app.Run()
+	_, _ = app.Update(tea.WindowSizeMsg{Width: width, Height: height})
+
+	view := ansi.Strip(app.View().Content)
+	rightMarkers := []string{"1. 华语必听", "3. 神级翻唱", "5. 许嵩"}
+	starts := make([]int, 0, len(rightMarkers))
+	for _, marker := range rightMarkers {
+		found := false
+		for _, line := range strings.Split(view, "\n") {
+			if idx := strings.Index(line, marker); idx >= 0 {
+				starts = append(starts, lipgloss.Width(line[:idx]))
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("right-column marker %q not found:\n%s", marker, view)
+		}
+	}
+	for i := 1; i < len(starts); i++ {
+		if starts[i] != starts[0] {
+			t.Fatalf("right-column items misaligned: %q starts at %d, want %d (all: %v)\n%s",
+				rightMarkers[i], starts[i], starts[0], starts, view)
+		}
+	}
+}

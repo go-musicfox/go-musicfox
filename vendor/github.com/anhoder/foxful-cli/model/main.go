@@ -1294,7 +1294,14 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 
 	var tmp string
 	if menuTitleLen > contentMaxLen {
-		menuName = renderTitlePart(truncateVisualWidth(menuTitle, contentMaxLen))
+		truncated := truncateVisualWidth(menuTitle, contentMaxLen)
+		menuName = renderTitlePart(truncated)
+		// truncateVisualWidth may stop before a wide (CJK/full-width) rune,
+		// leaving the item 1 cell short of contentMaxLen. Pad the gap so the
+		// column keeps its fixed width and neighbouring columns stay aligned.
+		if pad := contentMaxLen - lipgloss.Width(truncated); pad > 0 {
+			menuName += ss.Subtitle.Render(strings.Repeat(" ", pad))
+		}
 	} else if menuTitleLen+menuSubtitleLen > contentMaxLen {
 		subWidth := contentMaxLen - menuTitleLen
 		if subWidth == 0 {
