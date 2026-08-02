@@ -1,3 +1,63 @@
+- semver: 5.0.1
+  date: 2026-07-31T23:02:50+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 745433b7229d334addeedb2ef18fb3c5fec7b651
+      note: 修复 beep 播放的进度与时间播放在播放期间，时间持续落后于真实播放进度 (#611)
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a5494fd90a14f4dc1c60f118491a1b7e3c40984a
+      note: 'feat: optimize the rendering of cover img'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 40f87e5e0ae0a17a2bf4efaa8594e37c629f9f29
+      note: 'feat: optimize the rendering of cover img'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 930459921ee3c1a98e0470f3b72dbb8a632a079c
+      note: 'chore: disable pr-standards'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 8b2ea171cdbf1b881a4c94af322124ed83c4e36f
+      note: 'feat: optimize the rendering of cover img'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9850597253d80c97e705e5a20cfe7c6799453d85
+      note: 'fix: update README & fix ui render'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 72eaba5aae98ef85440181018fa6746c3cbae2b4
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 5.0.0
   date: 2026-07-31T00:08:15+08:00
   packager: go-musicfox

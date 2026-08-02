@@ -1,4 +1,16 @@
 
+5.0.1
+=============
+2026-07-31
+
+* 修复 beep 播放的进度与时间播放在播放期间，时间持续落后于真实播放进度 (#611) (745433b7)
+* feat: optimize the rendering of cover img (a5494fd9)
+* feat: optimize the rendering of cover img (40f87e5e)
+* chore: disable pr-standards (93045992)
+* feat: optimize the rendering of cover img (8b2ea171)
+* fix: update README & fix ui render (98505972)
+* chore: update scoop config & changelog [skip ci] (72eaba5a)
+
 5.0.0
 =============
 2026-07-30
