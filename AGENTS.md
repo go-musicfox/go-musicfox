@@ -156,7 +156,7 @@ type Player interface {
 |------|------|------|
 | Beep（默认） | 跨平台 | MP3/FLAC/OGG/WAV |
 | DLNA | 跨平台 | 设备投送 |
-| MPV | 跨平台 | IPC 控制 |
+| MPV | 跨平台 | IPC 控制（命令连接带排空 goroutine 防 mpv 发送缓冲堆积，切歌带 file-loaded 超时 watchdog 兜底） |
 | MPD | Linux | 远程服务器 |
 | AVFoundation | macOS | 原生集成 |
 | MediaPlayer | Windows | WinRT API |

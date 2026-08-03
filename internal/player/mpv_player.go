@@ -44,6 +44,14 @@ type mpvPlayer struct {
 	musicChan chan URLMusic // 异步切歌信号（参考 mpdPlayer）
 
 	watchOnce sync.Once // 确保 watch 只启动一次
+
+	// 切歌watchdog（加固）：等待 file-loaded 事件确认切歌成功
+	songLoadedCh chan struct{}
+
+	loadSeq      uint64 // 切歌代际计数，作废旧watchdog
+	loadSeqLock  sync.Mutex
+	loadWDCancel chan struct{} // 取消上一个切歌watchdog
+	loadWDMutex  sync.Mutex    // 保护 loadWDCancel
 }
 
 // MpvConfig MPV播放器配置
@@ -66,13 +74,14 @@ func NewMpvPlayer(conf *MpvConfig) *mpvPlayer {
 	slog.Info("mpv daemon: MPV版本检测通过", slog.String("bin", binPath))
 
 	p := &mpvPlayer{
-		binPath:   binPath,
-		volume:    50,
-		state:     types.Stopped,
-		timeChan:  make(chan time.Duration, 1),
-		stateChan: make(chan types.State, 10),
-		musicChan: make(chan URLMusic, 1),
-		closeCh:   make(chan struct{}),
+		binPath:      binPath,
+		volume:       50,
+		state:        types.Stopped,
+		timeChan:     make(chan time.Duration, 1),
+		stateChan:    make(chan types.State, 10),
+		musicChan:    make(chan URLMusic, 1),
+		closeCh:      make(chan struct{}),
+		songLoadedCh: make(chan struct{}, 1),
 	}
 
 	if err := p.startDaemon(); err != nil {
@@ -200,6 +209,9 @@ func (p *mpvPlayer) handleNewSong(music URLMusic) {
 	}
 	slog.Info("mpv handleNewSong: loadfile发送成功")
 
+	// 加固：切歌watchdog，超时未收到 file-loaded 则重建连接并重发 loadfile
+	p.armSongLoadedWatchdog(cmd)
+
 	// 设置媒体标题
 	if title := buildMpvMediaTitle(music); title != "" {
 		titleCmd := fmt.Sprintf(`{ "command": ["set_property", "media-title", %s] }`, jsonString(title))
@@ -237,6 +249,72 @@ func (p *mpvPlayer) handleNewSong(music URLMusic) {
 
 	// p.setState(types.Playing)
 	// slog.Info("mpv handleNewSong: 完成，状态已设为Playing")
+}
+
+// songLoadTimeout 切歌watchdog超时：loadfile 发出后等待 file-loaded 的最长时限
+const songLoadTimeout = 10 * time.Second
+
+// armSongLoadedWatchdog 为最近一次 loadfile 启动超时watchdog（加固）
+//
+// 若在 songLoadTimeout 内未收到 file-loaded 事件，说明命令连接可能已僵死
+// （旧版本只写不读导致 mpv IPC 线程卡死），此时重建命令连接并重发 loadfile，
+// 兜住历史版本已僵死场景下 UI 卡在"新歌无声/仍播上一首"的问题。
+func (p *mpvPlayer) armSongLoadedWatchdog(loadCmd string) {
+	// 取消上一个watchdog，确保快速连续切歌时同时只有一个watchdog在等待
+	p.loadWDMutex.Lock()
+	if p.loadWDCancel != nil {
+		close(p.loadWDCancel)
+	}
+	cancel := make(chan struct{})
+	p.loadWDCancel = cancel
+	p.loadWDMutex.Unlock()
+
+	// 递增代际：即使旧watchdog已越过select进入超时分支，也能阻止其干预新歌
+	p.loadSeqLock.Lock()
+	p.loadSeq++
+	seq := p.loadSeq
+	p.loadSeqLock.Unlock()
+
+	// 排空可能残留的上一次 file-loaded 事件
+	select {
+	case <-p.songLoadedCh:
+	default:
+	}
+
+	go func(cancel <-chan struct{}, seq uint64) {
+		select {
+		case <-p.songLoadedCh:
+			slog.Debug("mpv watchdog: 已收到file-loaded，切歌正常", slog.Uint64("seq", seq))
+		case <-cancel:
+			return
+		case <-p.closeCh:
+			return
+		case <-time.After(songLoadTimeout):
+			// 若已关闭播放器则直接放弃（防止退出过程中的误重发）
+			select {
+			case <-p.closeCh:
+				return
+			default:
+			}
+
+			p.loadSeqLock.Lock()
+			current := p.loadSeq
+			p.loadSeqLock.Unlock()
+			if seq != current {
+				return // 期间已切到新歌，由新watchdog负责
+			}
+
+			slog.Error("mpv watchdog: 切歌超时未收到file-loaded，重建命令连接并重发loadfile",
+				slog.Uint64("seq", seq),
+				slog.Duration("timeout", songLoadTimeout),
+			)
+			// 关闭旧连接（排空goroutine随之退出），强制重连后再重发
+			p.closeIPCConn()
+			if err := p.sendCommand(loadCmd); err != nil {
+				slog.Error("mpv watchdog: 重发loadfile失败", slogx.Error(err))
+			}
+		}
+	}(cancel, seq)
 }
 
 // watch 监听 mpv IPC 事件（end-file 检测）
@@ -311,6 +389,14 @@ func (p *mpvPlayer) watch() {
 					slog.Info("mpv watch: end-file忽略（非自然结束，可能是切歌中）")
 				}
 			}
+
+			// 切歌watchdog信号（加固）：file-loaded 表示新歌已成功加载
+			if strings.Contains(msg, `"event":"file-loaded"`) {
+				select {
+				case p.songLoadedCh <- struct{}{}:
+				default:
+				}
+			}
 		}
 		conn.Close()
 		slog.Debug("mpv watch: 事件连接已关闭，1秒后重试")
@@ -381,7 +467,10 @@ func (p *mpvPlayer) getIPCConn() (net.Conn, error) {
 		return nil, fmt.Errorf("连接MPV失败: %v", err)
 	}
 	p.ipcConn = conn
-	slog.Info("mpv ipc: 命令连接已建立")
+	// 方案A：启动排空goroutine持续读取命令连接上的事件与命令回包，
+	// 防止mpv侧发送缓冲堆积满导致其IPC线程僵死（详见 drainIPCConn 注释）
+	go p.drainIPCConn(conn)
+	slog.Info("mpv ipc: 命令连接已建立（排空goroutine已启动）")
 	return conn, nil
 }
 
@@ -394,6 +483,40 @@ func (p *mpvPlayer) closeIPCConn() {
 		slog.Debug("mpv ipc: 关闭命令连接")
 		p.ipcConn.Close()
 		p.ipcConn = nil
+	}
+}
+
+// drainIPCConn 持续读取并丢弃命令连接上的数据（mpv事件 + 命令回包）。
+//
+// 根因：mpv 的 JSON IPC（如 input/ipc-unix.c）每个客户端一个线程同时负责读写，
+// 若 Go 侧只写不读，mpv 发送缓冲会随播放事件堆积至满；其 ipc_write_str 对 EAGAIN
+// 采用自旋重试，导致该客户端线程卡死在写操作、从此不再读取命令，表现为播放十几首
+// 歌后没声/切歌仍播上一首。排空goroutine保证 mpv 侧发送缓冲永不满。
+//
+// 读取失败（EOF/连接异常/被 Close）时，若该连接仍是当前缓存连接则将其置空，
+// 使下一次 sendCommand 自动重连，天然获得连接失效检测与自愈。
+func (p *mpvPlayer) drainIPCConn(conn net.Conn) {
+	slog.Debug("mpv ipc: 排空goroutine启动")
+	buf := make([]byte, 4096)
+	for {
+		if _, err := conn.Read(buf); err != nil {
+			slog.Warn("mpv ipc: 命令连接读取结束，丢弃缓存连接", slogx.Error(err))
+			p.closeIPCConnIfSame(conn)
+			return
+		}
+	}
+}
+
+// closeIPCConnIfSame 仅当指定连接仍是当前缓存连接时关闭并置空（供排空goroutine使用）。
+// 通过身份校验，避免旧连接的排空goroutine误清掉新建立的连接。
+func (p *mpvPlayer) closeIPCConnIfSame(conn net.Conn) {
+	p.ipcMutex.Lock()
+	defer p.ipcMutex.Unlock()
+
+	if p.ipcConn == conn {
+		slog.Debug("mpv ipc: 关闭失效命令连接")
+		p.ipcConn = nil
+		_ = conn.Close()
 	}
 }
 
@@ -419,37 +542,6 @@ func (p *mpvPlayer) sendCommand(cmd string) error {
 	}
 	slog.Debug("mpv sendCommand: 发送成功")
 	return nil
-}
-
-// getProperty 读取 mpv 属性
-func (p *mpvPlayer) getProperty(property string) (string, error) {
-	conn, err := p.getIPCConn()
-	if err != nil {
-		return "", err
-	}
-
-	cmd := fmt.Sprintf(`{ "command": ["get_property", "%s"] }`+"\n", property)
-	slog.Debug("mpv getProperty: 发送", slog.String("property", property))
-
-	_ = conn.SetWriteDeadline(time.Now().Add(time.Second))
-	if _, err := conn.Write([]byte(cmd)); err != nil {
-		slog.Error("mpv getProperty: 写入失败", slogx.Error(err))
-		p.closeIPCConn()
-		return "", fmt.Errorf("发送命令失败: %v", err)
-	}
-
-	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		slog.Error("mpv getProperty: 读取响应失败", slogx.Error(err))
-		p.closeIPCConn()
-		return "", fmt.Errorf("读取响应失败: %v", err)
-	}
-
-	resp := string(buf[:n])
-	slog.Debug("mpv getProperty: 收到响应", slog.String("property", property), slog.String("response", resp))
-	return resp, nil
 }
 
 // ---------------------------------------------------------------------------
