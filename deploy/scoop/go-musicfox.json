@@ -1,15 +1,15 @@
 {
-    "version": "4.8.5",
+    "version": "5.0.1",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v4.8.5/go-musicfox_4.8.5_windows_amd64.zip",
-            "hash": "66380e2e1741d7c47123ca2600b16521ee8bf0e5b67184daa6ddc926d5c40209",
-            "extract_dir": "go-musicfox_4.8.5_windows_amd64"
+            "url": "https://github.com/go-musicfox/go-musicfox/releases/download/v5.0.1/go-musicfox_5.0.1_windows_amd64.zip",
+            "hash": "d4c3ffca0e80a78729c8940a36510230f57e1d06c140b7250879c7b65616e348",
+            "extract_dir": "go-musicfox_5.0.1_windows_amd64"
         }
     },
     "bin": "musicfox.exe",
     "homepage": "https://github.com/go-musicfox/go-musicfox",
-    "license": "MIT",
+    "license": "GPL-3.0",
     "description": "go-musicfox是用Go写的又一款网易云音乐命令行客户端，支持UnblockNeteaseMusic、各种音质级别、lastfm、MPRIS...",
     "post_install": "Write-Host '好用记得给go-musicfox一个star✨哦~'",
     "env_set": {

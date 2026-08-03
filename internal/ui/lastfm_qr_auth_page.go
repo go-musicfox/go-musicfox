@@ -189,7 +189,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 		builder.WriteString("\n")
 	}
 
-	return builder.String()
+	return finishCustomPageView(&builder, a)
 }
 
 // generateQRCodeCmd 异步获取和生成二维码

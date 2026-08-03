@@ -15,6 +15,13 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+type backgroundRect struct {
+	x int
+	y int
+	w int
+	h int
+}
+
 type App struct {
 	windowWidth  int
 	windowHeight int
@@ -37,6 +44,8 @@ type App struct {
 	// global style.CurrentStyleSet(). Set via SetStyleSet to isolate this app's
 	// theme from the global state (e.g. for multi-app or parallel-test scenarios).
 	styleSet *style.StyleSet
+
+	appBackgroundExclusion backgroundRect
 
 	listeningKBEventL    sync.Mutex
 	listeningMouseEventL sync.Mutex
@@ -64,6 +73,28 @@ func (a *App) StyleSet() style.StyleSet {
 // this app's rendering uses the given StyleSet regardless of global changes.
 func (a *App) SetStyleSet(s style.StyleSet) {
 	a.styleSet = &s
+}
+
+// SetThemePair updates the dark and light variants used for future system
+// appearance changes.
+func (a *App) SetThemePair(dark, light style.Theme) {
+	a.options.DarkTheme = dark
+	a.options.LightTheme = light
+}
+
+// SetAppBackgroundExclusion excludes a terminal-cell rectangle from the app
+// background applied by Main.View. Invalid dimensions clear the exclusion.
+func (a *App) SetAppBackgroundExclusion(x, y, width, height int) {
+	if width <= 0 || height <= 0 {
+		a.appBackgroundExclusion = backgroundRect{}
+		return
+	}
+	a.appBackgroundExclusion = backgroundRect{x: x, y: y, w: width, h: height}
+}
+
+// ClearAppBackgroundExclusion restores application background rendering everywhere.
+func (a *App) ClearAppBackgroundExclusion() {
+	a.appBackgroundExclusion = backgroundRect{}
 }
 
 // NewApp create application
@@ -672,6 +703,26 @@ func (a *App) completeTopModal() (Page, tea.Cmd) {
 // HasPopup returns whether a modal (popup or context menu) is currently active.
 func (a *App) HasPopup() bool {
 	return len(a.modalStack) > 0
+}
+
+// TopModalBounds returns the absolute screen rectangle (x, y, width, height) of
+// the topmost modal in the stack. The second return value is false when there is
+// no active modal. Callers should treat a true-but-zero-area result as an unplaced
+// modal whose bounds haven't been computed yet (first-frame race).
+func (a *App) TopModalBounds() (x, y, w, h int, ok bool) {
+	if len(a.modalStack) == 0 {
+		return 0, 0, 0, 0, false
+	}
+	top := a.modalStack[len(a.modalStack)-1]
+	switch m := top.(type) {
+	case *Popup:
+		x, y, w, h = m.Bounds()
+		return x, y, w, h, true
+	case *ContextMenu:
+		x, y, w, h = m.Bounds()
+		return x, y, w, h, true
+	}
+	return 0, 0, 0, 0, false
 }
 
 // compositeModals renders the base page content with all modals in the stack

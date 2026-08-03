@@ -6,11 +6,16 @@ import (
 
 type MenuToPage struct {
 	baseMenu
-	page model.Page
+	page        model.Page
+	beforeEnter func()
 }
 
-func NewMenuToPage(base baseMenu, page model.Page) *MenuToPage {
-	return &MenuToPage{baseMenu: base, page: page}
+func NewMenuToPage(base baseMenu, page model.Page, beforeEnter ...func()) *MenuToPage {
+	menu := &MenuToPage{baseMenu: base, page: page}
+	if len(beforeEnter) > 0 {
+		menu.beforeEnter = beforeEnter[0]
+	}
+	return menu
 }
 
 func (m *MenuToPage) GetMenuKey() string {
@@ -27,6 +32,9 @@ func (m *MenuToPage) SubMenu(app *model.App, index int) model.Menu {
 
 func (m *MenuToPage) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
+		if m.beforeEnter != nil {
+			m.beforeEnter()
+		}
 		return false, m.page
 	}
 }

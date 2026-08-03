@@ -24,8 +24,6 @@ menuTitle = "#bd93f9"
 menuItem = "#f8f8f2"
 # 选中项前景色
 selectedItem = "#bd93f9"
-# 选中项背景色
-selectedItemBg = "#383a59"
 # 鼠标悬停颜色
 menuItemHover = "#ffb86c"
 # 选中+悬停颜色
@@ -74,7 +72,6 @@ bar = "#383a59"
 # 状态栏文字颜色
 text = "#6272a4"
 # 面包屑路径颜色
-breadcrumb = "#44475a"
 # 面包屑分隔符颜色 ">"
 breadcrumbSep = "#44475a"
 # 面包屑悬停颜色
@@ -82,7 +79,6 @@ breadcrumbHover = "#ffb86c"
 # 面包屑点击颜色
 breadcrumbClick = "#bd93f9"
 # 时间显示颜色
-time = "#44475a"
 # 标签块文字颜色
 nugget = "#f8f8f2"
 # 标签块背景色
@@ -156,8 +152,6 @@ menuTitle = "#6200c4"
 menuItem = "#282a36"
 # 选中项前景色
 selectedItem = "#6200c4"
-# 选中项背景色
-selectedItemBg = "#eeeee0"
 # 鼠标悬停颜色
 menuItemHover = "#b45f06"
 # 选中+悬停颜色
@@ -206,7 +200,6 @@ bar = "#eeeee0"
 # 状态栏文字颜色
 text = "#6272a4"
 # 面包屑路径颜色
-breadcrumb = "#aaaaaa"
 # 面包屑分隔符颜色 ">"
 breadcrumbSep = "#aaaaaa"
 # 面包屑悬停颜色
@@ -214,7 +207,6 @@ breadcrumbHover = "#b45f06"
 # 面包屑点击颜色
 breadcrumbClick = "#6200c4"
 # 时间显示颜色
-time = "#aaaaaa"
 # 标签块文字颜色
 nugget = "#282a36"
 # 标签块背景色

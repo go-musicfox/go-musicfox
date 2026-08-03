@@ -18,6 +18,9 @@ foreground = "#FFFFFF"
 border = "#333333"
 surface = "transparent"
 
+menuSelectedSepLeft = " "
+menuSelectedSepRight = " "
+
 [dark.highlights]
 menuTitle = "BrightGreen"
 selectedItemBg = "transparent"
@@ -30,6 +33,11 @@ border = "#5C5C5C"
 surface = "transparent"
 
 [dark.statusBar]
+nuggetLabelFg = "#EA403F"
+nuggetLabelBg = "transparent"
+timeSepLeft = " "
+breadcrumbSepRight = " "
+breadcrumbHover = "#EA403F"
 
 [dark.markdown]
 dark = "dark"
@@ -71,6 +79,9 @@ foreground = "#1A1A1A"
 border = "#CCCCCC"
 surface = "transparent"
 
+menuSelectedSepLeft = " "
+menuSelectedSepRight = " "
+
 [light.highlights]
 menuTitle = "BrightGreen"
 selectedItemBg = "transparent"
@@ -83,6 +94,11 @@ border = "#A8A8A8"
 surface = "transparent"
 
 [light.statusBar]
+nuggetLabelFg = "#EA403F"
+nuggetLabelBg = "transparent"
+timeSepLeft = " "
+breadcrumbSepRight = " "
+breadcrumbHover = "#EA403F"
 
 [light.markdown]
 dark = "dark"

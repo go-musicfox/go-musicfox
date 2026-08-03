@@ -24,8 +24,6 @@ menuTitle = "BrightGreen"
 # menuItem = ""
 # 选中项前景色
 # selectedItem = ""
-# 选中项背景色
-# selectedItemBg = ""
 # 鼠标悬停颜色
 # menuItemHover = ""
 # 选中+悬停颜色
@@ -86,8 +84,10 @@ border = "#5C5C5C"
 # time = ""
 # 标签块文字颜色
 # nugget = ""
-# 标签块背景色
-# nuggetLabel = ""
+# 面包屑角标前景色
+# nuggetLabelFg = ""
+# 面包屑角标背景色
+# nuggetLabelBg = ""
 
 # ── Markdown 渲染主题 ────────────────────────────────────
 # 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）
@@ -157,8 +157,6 @@ menuTitle = "BrightGreen"
 # menuItem = ""
 # 选中项前景色
 # selectedItem = ""
-# 选中项背景色
-# selectedItemBg = ""
 # 鼠标悬停颜色
 # menuItemHover = ""
 # 选中+悬停颜色
@@ -219,8 +217,10 @@ border = "#A8A8A8"
 # time = ""
 # 标签块文字颜色
 # nugget = ""
-# 标签块背景色
-# nuggetLabel = ""
+# 面包屑角标前景色
+# nuggetLabelFg = ""
+# 面包屑角标背景色
+# nuggetLabelBg = ""
 
 # ── Markdown 渲染主题 ────────────────────────────────────
 # 支持 glamour 内置主题名（dark/light/dracula/tokyo-night/notion/pink）

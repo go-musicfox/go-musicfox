@@ -22,7 +22,6 @@ surface = "#3c3836"
 menuTitle = "#b8bb26"
 menuItem = "#ebdbb2" # 菜单项文字
 selectedItem = "#d79921" # 选中项前景
-selectedItemBg = "#3c3836" # 选中项背景
 menuItemHover = "#458588" # 鼠标悬停
 selectedItemHover = "#d79921" # 选中+悬停
 title = "#d79921" # 页面标题
@@ -52,11 +51,9 @@ errorBorder = "#cc241d" # 错误通知边框
 [dark.statusBar]
 bar = "#3c3836" # 状态栏基底背景
 text = "#a89984" # 状态栏文字
-breadcrumb = "#665c54" # 面包屑路径
 breadcrumbSep = "#665c54" # 面包屑分隔符
 breadcrumbHover = "#458588" # 面包屑悬停
 breadcrumbClick = "#d79921" # 面包屑点击
-time = "#665c54" # 时间显示
 nugget = "#ebdbb2" # 标签块文字
 nuggetLabel = "#d79921" # 标签块背景
 
@@ -120,7 +117,6 @@ surface = "#ebdbb2"
 menuTitle = "#79740e"
 menuItem = "#3c3836" # 菜单项文字
 selectedItem = "#af3a03" # 选中项前景
-selectedItemBg = "#ebdbb2" # 选中项背景
 menuItemHover = "#076678" # 鼠标悬停
 selectedItemHover = "#af3a03" # 选中+悬停
 title = "#af3a03" # 页面标题
@@ -150,11 +146,9 @@ errorBorder = "#9d0006" # 错误通知边框
 [light.statusBar]
 bar = "#ebdbb2" # 状态栏基底背景
 text = "#7c6f64" # 状态栏文字
-breadcrumb = "#928374" # 面包屑路径
 breadcrumbSep = "#928374" # 面包屑分隔符
 breadcrumbHover = "#076678" # 面包屑悬停
 breadcrumbClick = "#af3a03" # 面包屑点击
-time = "#928374" # 时间显示
 nugget = "#3c3836" # 标签块文字
 nuggetLabel = "#af3a03" # 标签块背景
 

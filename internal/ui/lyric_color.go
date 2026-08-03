@@ -5,8 +5,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/anhoder/foxful-cli/util"
-
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
@@ -143,7 +141,7 @@ func renderSmooth(words []wordWithTiming, progress float64) string {
 		}
 
 		color := blendColorFast(inactiveRGB, activeRGB, activation)
-		sb.WriteString(util.SetFgStyle(w.text, color))
+		sb.WriteString(styleLyricText(w.text, color))
 	}
 
 	return sb.String()
@@ -211,7 +209,7 @@ func renderWave(words []wordWithTiming, progress float64, animationTime float64)
 			lcolor = lyricInactiveColor()
 		}
 
-		sb.WriteString(util.SetFgStyle(w.text, lcolor))
+		sb.WriteString(styleLyricText(w.text, lcolor))
 	}
 
 	return sb.String()
@@ -271,7 +269,7 @@ func renderGlow(words []wordWithTiming, currentWordIndex int, animationTime floa
 			lcolor = lyricInactiveColor()
 		}
 
-		sb.WriteString(util.SetFgStyle(w.text, lcolor))
+		sb.WriteString(styleLyricText(w.text, lcolor))
 	}
 
 	return sb.String()
@@ -309,7 +307,7 @@ const (
 func renderLRCLineSmooth(line string, progress float64) string {
 	easedProgress := easeInOutCubic(progress)
 	color := blendColorFast(lyricInactiveRGB(), lyricActiveRGB(), easedProgress)
-	return util.SetFgStyle(line, color)
+	return styleLyricText(line, color)
 }
 
 // renderLRCWave renders LRC lyrics with wave mode - dynamic wave effect across the line.
@@ -330,7 +328,7 @@ func renderLRCWave(line string, progress float64, animationTime float64) string 
 	blendFactor := 0.5 + wave
 	finalColor := blendColorFast(transitionRGB, baseRGB, blendFactor)
 
-	return util.SetFgStyle(line, finalColor)
+	return styleLyricText(line, finalColor)
 }
 
 // renderLRCGlow renders LRC lyrics with glow mode - soft glow effect.
@@ -352,7 +350,7 @@ func renderLRCGlow(line string, progress float64, animationTime float64) string 
 	glowStrength = clamp(glowStrength, 0, 0.4)
 
 	finalColor := blendColorFast(baseRGB, whiteRGB, glowStrength)
-	return util.SetFgStyle(line, finalColor)
+	return styleLyricText(line, finalColor)
 }
 
 // easeInOutCubic provides smooth easing for color transitions.

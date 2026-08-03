@@ -226,7 +226,7 @@ func (p *beepPlayer) listen() {
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
 					select {
-					case p.timeChan <- p.timer.Passed():
+					case p.timeChan <- time.Duration(p.curStreamer.Position()) * time.Second / time.Duration(p.curFormat.SampleRate):
 					default:
 					}
 				},
@@ -273,10 +273,10 @@ func (p *beepPlayer) StateChan() <-chan types.State {
 }
 
 func (p *beepPlayer) PassedTime() time.Duration {
-	if p.timer == nil {
+	if p.curStreamer == nil {
 		return 0
 	}
-	return p.timer.Passed()
+	return time.Duration(p.curStreamer.Position()) * time.Second / time.Duration(p.curFormat.SampleRate)
 }
 
 func (p *beepPlayer) PlayedTime() time.Duration {

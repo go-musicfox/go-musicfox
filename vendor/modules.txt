@@ -42,7 +42,7 @@ github.com/alecthomas/chroma/v2/styles
 ## explicit; go 1.22
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
-# github.com/anhoder/foxful-cli v1.0.3
+# github.com/anhoder/foxful-cli v1.1.2
 ## explicit; go 1.25.8
 github.com/anhoder/foxful-cli/layout
 github.com/anhoder/foxful-cli/model
@@ -358,6 +358,13 @@ github.com/nu7hatch/gouuid
 # github.com/pelletier/go-toml v1.9.5
 ## explicit; go 1.12
 github.com/pelletier/go-toml
+# github.com/pelletier/go-toml/v2 v2.4.4-0.20260718201843-686c980c4758
+## explicit; go 1.21.0
+github.com/pelletier/go-toml/v2
+github.com/pelletier/go-toml/v2/internal/parserbridge
+github.com/pelletier/go-toml/v2/internal/tracker
+github.com/pelletier/go-toml/v2/unstable
+github.com/pelletier/go-toml/v2/unstable/edit
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors

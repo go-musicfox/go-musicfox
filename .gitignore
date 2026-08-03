@@ -11,5 +11,6 @@ go.work.sum
 result/
 coverage.txt
 musicfox
+musicfox.exe
 __debug*
 .slim/

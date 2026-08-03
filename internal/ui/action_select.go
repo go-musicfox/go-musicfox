@@ -329,9 +329,9 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			group: "like",
 		},
 		{
-			title: model.MenuItem{Title: iconThumbBan + "标记为不喜欢"},
-			page:  func() model.Page { return trashSong(n, isSelected) },
-			group: "like",
+			title:  model.MenuItem{Title: iconThumbBan + "标记为不喜欢"},
+			action: func() { confirmTrashSong(n, isSelected) },
+			group:  "like",
 		},
 		{
 			title: model.MenuItem{Title: iconPlaylistAdd + "添加至歌单"},

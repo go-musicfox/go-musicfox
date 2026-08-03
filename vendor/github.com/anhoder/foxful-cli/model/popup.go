@@ -193,10 +193,13 @@ type Popup struct {
 	boundsSet    bool
 	actionBounds []popupRect
 
-	// scrollThrottleUntil is set after processing a wheel event. Subsequent wheel
-	// events arriving before this time are dropped, coalescing rapid trackpad
-	// scrolls into a controlled rate.
-	scrollThrottleUntil time.Time
+	// Adaptive wheel scroll: step size dynamically adjusts based on the interval
+	// between consecutive wheel events and the total duration of the current
+	// scroll session. Rapid bursts and sustained scrolling both increase the step.
+	lastWheelTime      time.Time // last wheel event timestamp
+	lastWheelDir       int       // -1=up, 0=none, 1=down
+	wheelStep          int       // current dynamic step size (min 3, max 24)
+	scrollSessionStart time.Time // when the current continuous scroll session began
 }
 
 // NewPopup validates spec and constructs a popup ready for App.ShowPopup.
@@ -443,6 +446,13 @@ func (p *Popup) complete(app *App) (Page, tea.Cmd) {
 // Returns false — traditional modal popups don't allow right-click passthrough.
 func (p *Popup) allowsRightClickPassthrough() bool {
 	return false
+}
+
+// Bounds returns the absolute screen rectangle of this popup as (x, y, width, height).
+// Values are meaningful only after the popup has been rendered at least once
+// (the app-level compositeModals phase computes and stores bounds).
+func (p *Popup) Bounds() (x, y, w, h int) {
+	return p.bounds.x, p.bounds.y, p.bounds.w, p.bounds.h
 }
 
 type popupRect struct {
@@ -815,24 +825,31 @@ func renderPopupBody(lines []string, scrolling bool, offset, maxOffset, maxWidth
 		bodyWidth = min(bodyWidth, max(maxWidth-2, 1))
 	}
 
-	thumbLine := 0
-	if maxOffset > 0 {
-		thumbLine = offset * (len(lines) - 1) / maxOffset
-	}
 	lineStyle := lipgloss.NewStyle().MaxWidth(bodyWidth).Width(bodyWidth)
 	trackChar := styles.ScrollTrack.Render("│")
 	thumbChar := styles.ScrollThumb.Render("█")
 	output := make([]string, len(lines))
-	scrollbarLines := make([]string, len(lines))
 	for i, line := range lines {
 		output[i] = lineStyle.Render(line)
-		if i == thumbLine {
+	}
+	bodyStr := strings.Join(output, "\n")
+
+	// scrollbarLines must be sized to the actual (post-wrap) rendered line count,
+	// because lineStyle.Render may wrap a line into multiple lines.
+	renderedLines := strings.Split(bodyStr, "\n")
+	scrollbarLines := make([]string, len(renderedLines))
+	thumbIdx := 0
+	if maxOffset > 0 && len(renderedLines) > 1 {
+		thumbIdx = offset * (len(renderedLines) - 1) / maxOffset
+	}
+	for i := range scrollbarLines {
+		if i == thumbIdx {
 			scrollbarLines[i] = thumbChar
 		} else {
 			scrollbarLines[i] = trackChar
 		}
 	}
-	return strings.Join(output, "\n"), bodyWidth, scrollbarLines
+	return bodyStr, bodyWidth, scrollbarLines
 }
 
 func widestLine(lines []string) int {
@@ -867,6 +884,26 @@ func normalizePopupSurface(content string, surface color.Color) string {
 			}
 			cell.Style.Bg = surface
 			cell.Style.Attrs &^= uv.AttrReverse
+		}
+	}
+	return screen.Render()
+}
+
+// fillMissingBackground preserves rendered foregrounds, attributes, explicit
+// backgrounds, hyperlinks, and grapheme widths while filling transparent cells.
+func fillMissingBackground(content string, background color.Color) string {
+	if content == "" || background == nil {
+		return content
+	}
+
+	screen := popupStyledScreen(content)
+	for y := range screen.Lines {
+		for x := range screen.Lines[y] {
+			cell := screen.CellAt(x, y)
+			if cell == nil || cell.IsZero() || cell.Style.Bg != nil {
+				continue
+			}
+			cell.Style.Bg = background
 		}
 	}
 	return screen.Render()
@@ -986,17 +1023,18 @@ func (p *Popup) handleMouse(msg tea.MouseMsg) (bool, tea.Cmd) {
 		return p.handleLeftClick(mouse, hoverCmd)
 	}
 
-	// Throttle wheel events: coalesce rapid trackpad scrolls by dropping events
-	// within a short window after the last processed wheel event. The step size
-	// (3 lines per event) keeps each processed tick visually meaningful.
+	// Adaptive wheel scroll: step size grows when events arrive in rapid
+	// succession (fast trackpad flick) and decays back to the base step
+	// when scrolling slows or direction changes.
 	now := time.Now()
+	const (
+		baseStep = 3
+		maxStep  = 24
+	)
 	if mouse.Button == tea.MouseWheelDown {
+		p.adaptWheelStep(now, 1, baseStep, maxStep)
 		if p.isContentScrollable() {
-			if now.Before(p.scrollThrottleUntil) {
-				return true, hoverCmd
-			}
-			p.scrollOffset = min(p.scrollOffset+3, p.maxScrollOffset())
-			p.scrollThrottleUntil = now.Add(30 * time.Millisecond)
+			p.scrollOffset = min(p.scrollOffset+p.wheelStep, p.maxScrollOffset())
 			return true, hoverCmd
 		}
 		if len(p.actions) > 1 {
@@ -1005,12 +1043,9 @@ func (p *Popup) handleMouse(msg tea.MouseMsg) (bool, tea.Cmd) {
 		}
 	}
 	if mouse.Button == tea.MouseWheelUp {
+		p.adaptWheelStep(now, -1, baseStep, maxStep)
 		if p.isContentScrollable() {
-			if now.Before(p.scrollThrottleUntil) {
-				return true, hoverCmd
-			}
-			p.scrollOffset = max(p.scrollOffset-3, 0)
-			p.scrollThrottleUntil = now.Add(30 * time.Millisecond)
+			p.scrollOffset = max(p.scrollOffset-p.wheelStep, 0)
 			return true, hoverCmd
 		}
 		if len(p.actions) > 1 {
@@ -1020,6 +1055,73 @@ func (p *Popup) handleMouse(msg tea.MouseMsg) (bool, tea.Cmd) {
 	}
 
 	return true, hoverCmd
+}
+
+// adaptWheelStep adjusts p.wheelStep based on both the interval since the last
+// wheel event (burst speed) and the total duration of the current scroll
+// session (sustained momentum). Same-direction bursts increase the step (up to
+// maxStep); direction changes or long pauses reset to baseStep.
+func (p *Popup) adaptWheelStep(now time.Time, dir, baseStep, maxStep int) {
+	const (
+		// A gap this large ends the current scroll session.
+		sessionTimeout = 200 * time.Millisecond
+		// Duration after which momentum starts to build.
+		momentumDelay = 400 * time.Millisecond
+		// Duration at which momentum reaches full effect.
+		momentumFull = 1500 * time.Millisecond
+	)
+
+	if p.wheelStep == 0 {
+		p.wheelStep = baseStep
+	}
+
+	// Direction change or first event: reset session.
+	if dir != p.lastWheelDir {
+		p.wheelStep = baseStep
+		p.lastWheelDir = dir
+		p.lastWheelTime = now
+		p.scrollSessionStart = now
+		return
+	}
+
+	interval := now.Sub(p.lastWheelTime)
+
+	// Long pause: reset session.
+	if interval > sessionTimeout {
+		p.wheelStep = baseStep
+		p.scrollSessionStart = now
+		p.lastWheelTime = now
+		return
+	}
+
+	// --- Burst factor: interval-based step adaptation ---
+	switch {
+	case interval < 16*time.Millisecond:
+		// Rapid burst: accelerate quickly.
+		p.wheelStep = min(p.wheelStep*2, maxStep)
+	case interval < 32*time.Millisecond:
+		// Moderate burst: accelerate gradually.
+		p.wheelStep = min(p.wheelStep+3, maxStep)
+	case interval < 80*time.Millisecond:
+		// Slowing down: decay toward base.
+		p.wheelStep = max(p.wheelStep-2, baseStep)
+	default:
+		// Moderate pause: reset to base.
+		p.wheelStep = baseStep
+	}
+
+	// --- Momentum factor: duration-based floor lift ---
+	// The longer the user has been continuously scrolling, the higher the
+	// minimum step — mimicking physical momentum.
+	sessionDur := now.Sub(p.scrollSessionStart)
+	if sessionDur > momentumDelay {
+		progress := min(float64(sessionDur-momentumDelay)/float64(momentumFull-momentumDelay), 1.0)
+		// Floor rises from baseStep to baseStep+8 over the duration.
+		minStep := baseStep + int(float64(8)*progress)
+		p.wheelStep = max(p.wheelStep, minStep)
+	}
+
+	p.lastWheelTime = now
 }
 
 // handleLeftClick routes a left mouse-down inside the popup: title-bar drag,

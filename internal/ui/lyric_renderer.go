@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image/color"
 	"regexp"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ type lyricCacheKey struct {
 	menuBottomRow        int
 	specLines            int
 	isCentered           bool
+	styleGen             uint64 // style.StyleGeneration(): invalidates on theme switch
 }
 
 // LyricRenderer is a dedicated UI component for rendering lyrics.
@@ -116,7 +118,7 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 			text.WriteString(line.TranslatedLyric)
 			text.WriteString("]")
 		}
-		return util.SetFgStyle(text.String(), lyricInactiveColor())
+		return styleLyricText(text.String(), lyricInactiveColor())
 	}
 
 	adjustedTimeMs := currentTimeMs + int64(configs.AppConfig.Main.FrameRate.DurationMs()/2)
@@ -143,7 +145,7 @@ func (r *LyricRenderer) buildYRCLineString(line lyric.YRCLine, currentTimeMs int
 	}
 
 	if showTranslation && line.TranslatedLyric != "" {
-		result += " " + util.SetFgStyle("["+line.TranslatedLyric+"]", lyricInactiveColor())
+		result += styleLyricText(" ["+line.TranslatedLyric+"]", lyricInactiveColor())
 	}
 	return result
 }
@@ -203,10 +205,21 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if r.lyricLines == 0 {
 		fillingLines := endRow - main.MenuBottomRow() - specLines
 		if fillingLines > 1 {
+			// When spectrum/spectrogram is enabled, foxful-cli JoinVertical adds
+			// an extra section + separator row. Compensate by filling one fewer
+			// line so the total body stays within the window height and the
+			// progress bar is not truncated.
+			// Fixes: https://github.com/go-musicfox/go-musicfox/issues/608
+			if specLines > 0 {
+				fillingLines--
+			}
 			// JoinVertical inserts a separator before this component. The lyric
 			// placeholder still needs fillingLines+1 visual rows so the progress
 			// bar reaches the final content row.
-			return strings.Repeat("\n", fillingLines), fillingLines + 1
+			if fillingLines > 0 {
+				return strings.Repeat("\n", fillingLines), fillingLines + 1
+			}
+			return "", 0
 		} else if fillingLines == 1 {
 			if main.StatusBar() != nil && main.StatusBarPosition() == model.StatusBarBottom {
 				return "", 1
@@ -241,6 +254,7 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		menuBottomRow:        main.MenuBottomRow(),
 		specLines:            specLines,
 		isCentered:           main.CenterEverything(),
+		styleGen:             style.StyleGeneration(),
 	}
 	if key == r.cachedKey {
 		return r.cachedView, r.cachedLines
@@ -260,8 +274,17 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		r.buildLyricsTraditional(main, &lyricBuilder)
 	}
 
-	if endRow-r.lyricStartRow-r.lyricLines > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", endRow-r.lyricStartRow-r.lyricLines))
+	bottomPad := endRow - r.lyricStartRow - r.lyricLines
+	// When spectrum/spectrogram is enabled, foxful-cli JoinVertical adds an
+	// extra section + separator row between spectrum and lyric. Compensate by
+	// reducing the bottom padding by one line so the total body stays within
+	// the window height and the progress bar is not truncated.
+	// Fixes: https://github.com/go-musicfox/go-musicfox/issues/608
+	if specLines > 0 && bottomPad > 0 {
+		bottomPad--
+	}
+	if bottomPad > 0 {
+		lyricBuilder.WriteString(strings.Repeat("\n", bottomPad))
 	}
 
 	// Return the view with the actual number of newlines in the output.
@@ -359,7 +382,7 @@ func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, cu
 
 	// Helper function to render plain gray text (for non-current lines)
 	renderPlainGray := func(content string) string {
-		return util.SetFgStyle(content, lyricInactiveColor())
+		return styleLyricText(content, lyricInactiveColor())
 	}
 
 	// Fill current line (with color gradient effect)
@@ -449,19 +472,30 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 		lineLength := runewidth.StringWidth(visibleLine)
 
 		paddingLeft := max(0, lyricStartCol+(availableWidth-lineLength)/2)
-		lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", paddingLeft)))
+		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
 
 		if !hasAnsi {
 			if i == highlightLine {
-				line = util.SetFgStyle(line, lyricActiveColor())
+				line = styleLyricText(line, lyricActiveColor())
 			} else {
-				line = util.SetFgStyle(line, lyricInactiveColor())
+				line = styleLyricText(line, lyricInactiveColor())
 			}
 		}
 		lyricBuilder.WriteString(line)
 		lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", max(0, windowWidth-paddingLeft-lineLength))))
 		lyricBuilder.WriteString("\n")
 	}
+}
+
+// styleLyricText paints lyric glyphs with the given foreground and the app
+// background (component→app→transparent chain), so the text cells are opaque
+// and never reveal content drawn beneath the TUI. Falls back to a
+// foreground-only style when the theme leaves the app background transparent.
+func styleLyricText(text string, fg color.Color) string {
+	if bg := style.CurrentStyleSet().AppBackground.GetBackground(); bg != nil {
+		return util.SetFgBgStyle(text, fg, bg)
+	}
+	return util.SetFgStyle(text, fg)
 }
 
 // buildLyricsTraditional contains the rendering logic for the traditional layout.
@@ -487,7 +521,7 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 
 	renderLine := func(idx int, isHighlight bool) {
 		if startCol > 0 {
-			lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", startCol)))
+			lyricBuilder.WriteString(strings.Repeat(" ", startCol))
 		}
 
 		line := r.lyrics[idx]
@@ -512,19 +546,19 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		lineHasAnsi := hasAnsi || strings.Contains(lyricLine, "\033[")
 		if !lineHasAnsi {
 			if isHighlight {
-				lyricLine = util.SetFgStyle(lyricLine, lyricActiveColor())
+				lyricLine = styleLyricText(lyricLine, lyricActiveColor())
 			} else {
-				lyricLine = util.SetFgStyle(lyricLine, lyricInactiveColor())
+				lyricLine = styleLyricText(lyricLine, lyricInactiveColor())
 			}
 		}
 
 		lyricBuilder.WriteString(lyricLine)
 
-		visibleLine := lyricLine
-		if lineHasAnsi {
-			visibleLine = stripAnsiCodes(lyricLine)
-		}
-		lineLen := runewidth.StringWidth(visibleLine)
+		// Measure the visible width from the ANSI-stripped line: styleLyricText
+		// above wraps even non-ANSI lines in SGR codes, so counting the raw
+		// string would include escape bytes and shrink remainingWidth to zero,
+		// leaving the trailing margin unpainted (cover bleeds through).
+		lineLen := runewidth.StringWidth(stripAnsiCodes(lyricLine))
 		remainingWidth := r.netease.WindowWidth() - startCol - lineLen
 		if remainingWidth > 0 {
 			lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", remainingWidth)))

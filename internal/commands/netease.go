@@ -36,6 +36,13 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 		}, true)
 	}
 
+	// Sync CLI --debug flag to AppConfig so it's visible to all packages.
+	// Must be done here (inside runPlayer) because gcli parses flags during
+	// app.Run(), which happens after cmd/musicfox.go's init-time sync attempt.
+	if GlobalOptions.DebugMode {
+		configs.AppConfig.Main.Debug = true
+	}
+
 	if GlobalOptions.DebugMode || configs.AppConfig.Main.Debug {
 		slogx.LevelVar().Set(slog.LevelDebug)
 	}

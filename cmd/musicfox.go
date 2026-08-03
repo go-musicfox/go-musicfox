@@ -52,11 +52,6 @@ func musicfox() {
 
 	loadConfig()
 
-	// Sync CLI --debug flag to AppConfig so it's visible to all packages.
-	if commands.GlobalOptions.DebugMode {
-		configs.AppConfig.Main.Debug = true
-	}
-
 	util.PrimaryColor = configs.AppConfig.Theme.PrimaryColor
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
@@ -78,6 +73,7 @@ func musicfox() {
 	playerCommand := commands.NewPlayerCommand()
 	app.Add(playerCommand)
 	app.Add(commands.NewConfigCommand())
+	app.Add(commands.NewUpgradeConfigCommand())
 	app.Add(commands.NewResetCommand())
 	app.DefaultCommand(playerCommand.Name)
 

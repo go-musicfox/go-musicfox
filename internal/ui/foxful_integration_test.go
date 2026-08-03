@@ -1,12 +1,17 @@
 package ui
 
 import (
+	"context"
+	"io"
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/charmbracelet/x/ansi"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/keybindings"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
@@ -174,6 +179,38 @@ func TestHelpPopupFitsTerminalHeight(t *testing.T) {
 	}
 }
 
+func TestDualColumnSelectedMenuItemDoesNotWrap(t *testing.T) {
+	const (
+		width  = 75
+		height = 24
+		title  = "我的音乐你听吗 第9期"
+	)
+
+	app := newDualColumnOverflowTestApp(t, width, height)
+	app.MustMain().EnterMenu(nil, nil)
+
+	view := ansi.Strip(app.View().Content)
+	backButtonFound := false
+	menuRowFound := false
+	for _, line := range strings.Split(view, "\n") {
+		if lipgloss.Width(line) > width {
+			t.Fatalf("rendered line width = %d, terminal width = %d: %q", lipgloss.Width(line), width, line)
+		}
+		if strings.Contains(line, "← 收藏专辑") {
+			backButtonFound = true
+		}
+		if strings.Contains(line, title) && strings.Contains(line, "另一张专辑") {
+			menuRowFound = true
+		}
+	}
+	if !backButtonFound {
+		t.Fatalf("submenu title is missing its back button:\n%s", view)
+	}
+	if !menuRowFound {
+		t.Fatalf("dual-column menu row wrapped:\n%s", view)
+	}
+}
+
 func TestUpdateNotificationOpensVersionRelease(t *testing.T) {
 	content := newVersionNotifyContent("v9.9.9")
 	wantURL := types.AppGithubUrl + "/releases/tag/v9.9.9"
@@ -203,5 +240,192 @@ func TestUpdateNotificationOpensVersionRelease(t *testing.T) {
 	spec.OnAction(model.NotificationActionResult{ActionID: toastOpenURLActionID})
 	if openedURL != wantURL {
 		t.Fatalf("opened URL = %q, want %q", openedURL, wantURL)
+	}
+}
+
+type dualColumnOverflowParentMenu struct {
+	model.DefaultMenu
+}
+
+func (dualColumnOverflowParentMenu) GetMenuKey() string {
+	return "dual-column-overflow-parent"
+}
+
+func (dualColumnOverflowParentMenu) MenuViews() []model.MenuItem {
+	return []model.MenuItem{{Title: "收藏专辑"}}
+}
+
+func (dualColumnOverflowParentMenu) SubMenu(_ *model.App, _ int) model.Menu {
+	return &dualColumnOverflowChildMenu{}
+}
+
+func (dualColumnOverflowParentMenu) HelpHints() []model.HelpHint {
+	return nil
+}
+
+type dualColumnOverflowChildMenu struct {
+	model.DefaultMenu
+}
+
+func (dualColumnOverflowChildMenu) GetMenuKey() string {
+	return "dual-column-overflow-child"
+}
+
+func (dualColumnOverflowChildMenu) MenuViews() []model.MenuItem {
+	return []model.MenuItem{
+		{Title: "我的音乐你听吗 第9期", Subtitle: "[我的音乐你听吗]"},
+		{Title: "另一张专辑"},
+	}
+}
+
+func (dualColumnOverflowChildMenu) HelpHints() []model.HelpHint {
+	return nil
+}
+
+func newDualColumnOverflowTestApp(t *testing.T, width, height int) *model.App {
+	t.Helper()
+
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Theme.ShowTitle = true
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	opts := model.DefaultOptions()
+	opts.EnableStartup = false
+	opts.WhetherDisplayTitle = true
+	opts.DualColumn = true
+	opts.MainMenu = &dualColumnOverflowParentMenu{}
+	opts.MainMenuTitle = &model.MenuItem{Title: "我的音乐"}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	opts.TeaOptions = []tea.ProgramOption{
+		tea.WithContext(ctx),
+		tea.WithInput(nil),
+		tea.WithOutput(io.Discard),
+	}
+
+	app := model.NewApp(opts)
+	_ = app.Run()
+	_, _ = app.Update(tea.WindowSizeMsg{Width: width, Height: height})
+	return app
+}
+
+// TestConfirmPopupDefaultsToCancelAndRunsOnConfirm verifies the destructive-
+// action safety property of showConfirmPopup: 取消 is the default-focused
+// button (a bare Enter cancels and does NOT run onConfirm), while focusing
+// 确定 via Tab then Enter runs onConfirm. Also asserts the popup renders both
+// buttons and is pushed onto the modal stack.
+func TestConfirmPopupDefaultsToCancelAndRunsOnConfirm(t *testing.T) {
+	app, _ := newFormPageTestApp(t)
+
+	ran := false
+	showConfirmPopup(app, "测试确认", "确定执行吗？", func() { ran = true })
+
+	if !app.HasPopup() {
+		t.Fatal("showConfirmPopup did not push a popup onto the modal stack")
+	}
+	if view := app.View().Content; !strings.Contains(view, "取消") || !strings.Contains(view, "确定") {
+		t.Fatalf("confirm popup view missing action buttons: %q", view)
+	}
+
+	// Default focus is 取消: a bare Enter must cancel without running onConfirm.
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if ran {
+		t.Fatal("onConfirm ran on bare Enter; 取消 must be the default-focused button")
+	}
+	if app.HasPopup() {
+		t.Fatal("bare Enter did not dismiss the popup")
+	}
+
+	// Re-show, move focus to 确定 (Tab), then confirm (Enter).
+	showConfirmPopup(app, "测试确认", "确定执行吗？", func() { ran = true })
+	app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	app.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !ran {
+		t.Fatal("onConfirm did not run after focusing 确定 and pressing Enter")
+	}
+}
+
+// dualColumnTruncateMenu reproduces the daily-recommend layout where a
+// left-column title overflows the fixed 44-cell budget. The overflowing title
+// is crafted so truncation stops one cell short (right before a wide rune),
+// which previously left the item under-filled and shifted that row's right
+// column left by one cell.
+type dualColumnTruncateMenu struct {
+	model.DefaultMenu
+}
+
+func (dualColumnTruncateMenu) GetMenuKey() string { return "dual-column-truncate" }
+
+func (dualColumnTruncateMenu) MenuViews() []model.MenuItem {
+	titles := []string{
+		"私人雷达",                        // 0 (left)
+		"华语必听100首，金曲新歌全都有",   // 1 (right)
+		"滚石唱片",                        // 2 (left)
+		"神级翻唱：戴上耳机领略仙音！",     // 3 (right)
+		// 4 (left): 36 ASCII + wide runes. "    4. " prefix is 7 cells, so the
+		// title truncates to 43 cells stopping before a wide rune.
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa中文哈哈",
+		"许嵩『安泊猜想巡回演唱会』2026",  // 5 (right)
+	}
+	items := make([]model.MenuItem, 0, len(titles))
+	for _, title := range titles {
+		items = append(items, model.MenuItem{Title: title})
+	}
+	return items
+}
+
+func (dualColumnTruncateMenu) HelpHints() []model.HelpHint { return nil }
+
+// TestDualColumnTruncatedItemKeepsRightColumnAligned verifies that when a
+// left-column menu item is truncated (stopping before a wide CJK/full-width
+// rune), the item is still padded to its fixed column width so every
+// right-column item starts at the same visual column.
+func TestDualColumnTruncatedItemKeepsRightColumnAligned(t *testing.T) {
+	const width, height = 130, 30
+
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Theme.ShowTitle = true
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	opts := model.DefaultOptions()
+	opts.EnableStartup = false
+	opts.WhetherDisplayTitle = true
+	opts.DualColumn = true
+	opts.MainMenu = &dualColumnTruncateMenu{}
+	opts.MainMenuTitle = &model.MenuItem{Title: "每日推荐歌单"}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	opts.TeaOptions = []tea.ProgramOption{
+		tea.WithContext(ctx),
+		tea.WithInput(nil),
+		tea.WithOutput(io.Discard),
+	}
+	app := model.NewApp(opts)
+	_ = app.Run()
+	_, _ = app.Update(tea.WindowSizeMsg{Width: width, Height: height})
+
+	view := ansi.Strip(app.View().Content)
+	rightMarkers := []string{"1. 华语必听", "3. 神级翻唱", "5. 许嵩"}
+	starts := make([]int, 0, len(rightMarkers))
+	for _, marker := range rightMarkers {
+		found := false
+		for _, line := range strings.Split(view, "\n") {
+			if idx := strings.Index(line, marker); idx >= 0 {
+				starts = append(starts, lipgloss.Width(line[:idx]))
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("right-column marker %q not found:\n%s", marker, view)
+		}
+	}
+	for i := 1; i < len(starts); i++ {
+		if starts[i] != starts[0] {
+			t.Fatalf("right-column items misaligned: %q starts at %d, want %d (all: %v)\n%s",
+				rightMarkers[i], starts[i], starts[0], starts, view)
+		}
 	}
 }

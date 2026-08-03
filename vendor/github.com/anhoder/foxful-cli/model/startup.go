@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/layout"
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	"github.com/fogleman/ease"
 )
@@ -98,24 +99,34 @@ func (s *StartupPage) View(a *App) string {
 	if windowWidth <= 0 || windowHeight <= 0 {
 		return ""
 	}
+	var content string
 	if special, ok := s.startupSpecialView(a); ok {
-		return special
+		content = special
+	} else {
+		content = layout.Place(
+			windowWidth, windowHeight,
+			lipgloss.Center, lipgloss.Center,
+			layout.JoinVertical(
+				lipgloss.Center,
+				s.animatedLogoView(a),
+				"",
+				s.startupStatusView(a),
+				"",
+				s.progressView(a),
+			),
+		)
 	}
 
-	content := layout.JoinVertical(
-		lipgloss.Center,
-		s.animatedLogoView(a),
-		"",
-		s.startupStatusView(a),
-		"",
-		s.progressView(a),
-	)
-
-	return layout.Place(
-		windowWidth, windowHeight,
-		lipgloss.Center, lipgloss.Center,
-		content,
-	)
+	appBackground := style.CurrentStyleSet().AppBackground
+	background := appBackground.GetBackground()
+	if background == nil {
+		return content
+	}
+	if _, transparent := background.(lipgloss.NoColor); transparent {
+		return content
+	}
+	content = renderAppBackground(content, windowWidth, appBackground, backgroundRect{})
+	return normalizePopupSurface(content, background)
 }
 
 func (s *StartupPage) progressView(a *App) string {

@@ -33,6 +33,7 @@ type SongInfoRenderer struct {
 	cachedWidth    int
 	cachedCentered bool
 	cachedHover    PlaybarElement
+	cachedStyleGen uint64
 }
 
 // NewSongInfoRenderer creates a new song info renderer component.
@@ -72,10 +73,13 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		isLike = likelist.IsLikeSong(song.Id)
 	}
 
-	// Output caching: skip full rebuild when nothing changed
+	// Output caching: skip full rebuild when nothing changed. styleGen guards
+	// against replaying stale-colored output after a theme switch.
+	styleGen := style.StyleGeneration()
 	if song.Id == r.cachedSongId && state == r.cachedState && volume == r.cachedVolume &&
 		mode == r.cachedMode && isLike == r.cachedLike && width == r.cachedWidth &&
-		centered == r.cachedCentered && hoveredElement == r.cachedHover {
+		centered == r.cachedCentered && hoveredElement == r.cachedHover &&
+		styleGen == r.cachedStyleGen {
 		return r.cachedView, r.cachedLines
 	}
 
@@ -100,17 +104,26 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	addText := func(text string) {
 		segments = append(segments, Segment{text, artistColor, false, false})
 	}
+	// Resolve the background once: the app background paints text glyph cells so
+	// they never reveal content drawn beneath the TUI. nil leaves it transparent.
+	segmentBg := configs.ResolveBackground(nil)
 	renderSegment := func(segment Segment) string {
-		return lipgloss.NewStyle().
+		s := lipgloss.NewStyle().
 			Foreground(segment.color).
 			Underline(segment.underline).
-			Bold(segment.bold).
-			Render(segment.text)
+			Bold(segment.bold)
+		if segmentBg != nil {
+			s = s.Background(segmentBg)
+		}
+		return s.Render(segment.text)
 	}
 
 	if main.MenuStartColumn()-MenuArrowWidth > 0 {
 		if !main.CenterEverything() {
-			addSegment(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth)), artistColor, false, false)
+			// Store plain spaces (not pre-rendered); renderSegment paints them with
+			// segmentBg. Pre-rendering here would make runewidth.StringWidth count the
+			// ANSI escape bytes, inflating totalWidth and shrinking the trailing fill.
+			addSegment(strings.Repeat(" ", main.MenuStartColumn()-MenuArrowWidth), artistColor, false, false)
 		}
 		{
 			msg := r.state.Mode().Name()
@@ -199,9 +212,15 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		}
 		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", r.netease.WindowWidth()-paddingLeft-totalWidth)))
 	} else {
-		// simply concatenate every segment with the specified color
+		// Left-aligned: concatenate segments, then fill trailing space to window width.
+		totalWidth := 0
 		for _, segment := range segments {
 			builder.WriteString(renderSegment(segment))
+			totalWidth += runewidth.StringWidth(segment.text)
+		}
+		remainingWidth := r.netease.WindowWidth() - totalWidth
+		if remainingWidth > 0 {
+			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", remainingWidth)))
 		}
 	}
 
@@ -222,6 +241,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	r.cachedWidth = width
 	r.cachedCentered = centered
 	r.cachedHover = hoveredElement
+	r.cachedStyleGen = styleGen
 
 	return r.cachedView, r.cachedLines
 }

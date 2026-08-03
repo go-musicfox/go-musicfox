@@ -412,9 +412,7 @@ func (l *LoginPage) View(a *model.App) string {
 		l.renderCookieLoginView(a, &builder, &top, mainPage, write, curRow)
 	}
 
-	fillPageHeight(&builder, a.WindowHeight())
-
-	return builder.String()
+	return finishCustomPageView(&builder, a)
 }
 
 func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builder, top *int, mainPage *model.Main, write func(string), curRow func() int) {

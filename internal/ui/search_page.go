@@ -330,9 +330,7 @@ func (s *SearchPage) View(a *model.App) string {
 	}
 	write("\n")
 
-	fillPageHeight(&builder, a.WindowHeight())
-
-	return builder.String()
+	return finishCustomPageView(&builder, a)
 }
 
 func (s *SearchPage) Msg() tea.Msg {

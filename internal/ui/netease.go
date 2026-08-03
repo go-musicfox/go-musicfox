@@ -436,10 +436,14 @@ func (n *Netease) InitHook(_ *model.App) {
 				"debug", configs.AppConfig.Main.Debug,
 				"seenVersion", seen.Version,
 			)
-			if shouldShow {
-				if !configs.AppConfig.Main.Debug {
-					_ = table.SetByKVModel(storage.ChangelogSeen{Version: types.AppVersion}, storage.ChangelogSeen{})
+		if shouldShow {
+			if !configs.AppConfig.Main.Debug {
+				if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
+					slog.Error("changelog: failed to persist seen version", slogx.Error(err))
+				} else {
+					slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
 				}
+			}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
 				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
@@ -655,7 +659,7 @@ func showChangelogPopup(app *model.App) {
 	maxHeight := max(app.WindowHeight()*80/100, 10)
 
 	popup, err := model.NewMarkdownPopup(model.MarkdownPopupSpec{
-		Title:           "更新日志",
+		Title:           types.AppVersion + " 更新日志",
 		MarkdownContent: string(data),
 		MaxWidth:        popupWidth,
 		MaxHeight:       maxHeight,
@@ -679,11 +683,13 @@ func showChangelogPopup(app *model.App) {
 func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case tea.BackgroundColorMsg, uv.LightColorSchemeEvent, uv.DarkColorSchemeEvent:
+		registry := configs.CurrentThemeRegistry()
+		syncActiveThemePair(n.App, registry)
 		// Let foxful-cli process the message first (SetDarkBackground, popup cache, etc.)
 		_, cmd := n.App.Update(msg)
 		// Rebuild StyleSet from our ThemeRegistry with correct dark/light variant
 		isDark := style.HasDarkBackground()
-		ss := configs.CurrentThemeRegistry().CurrentStyleSet(isDark)
+		ss := registry.CurrentStyleSet(isDark)
 		if ss != nil {
 			style.SetStyleSet(*ss)
 			n.App.SetStyleSet(*ss)
@@ -693,6 +699,13 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd
+	}
+}
+
+func syncActiveThemePair(app *model.App, registry *configs.ThemeRegistry) {
+	dark, light, ok := registry.CurrentThemePair()
+	if ok {
+		app.SetThemePair(dark, light)
 	}
 }
 

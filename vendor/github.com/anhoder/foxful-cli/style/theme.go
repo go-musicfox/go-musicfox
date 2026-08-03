@@ -194,8 +194,21 @@ type Theme struct {
 	StatusBarTime        Highlight         // fg→Muted, bg→computed from Surface blend
 	StatusBarNugget      Highlight         // fg→Foreground (or white on dark), bg→transparent
 	StatusBarNuggetLabel Highlight         // fg→same as StatusBarNugget.Fg, bg→Primary
-	AppBackground        Highlight         // Bg→transparent (terminal shows through)
-	SelectedItemBg        Highlight         // Bg→transparent (falls back to AppBackground.Bg)
+
+	// Status bar Powerline separator characters.
+	// Default: "\uE0B6" (left arc), "\uE0B4" (right arc).
+	// Set to empty string to disable for themes with transparent backgrounds.
+	StatusBarTimeSepLeft        string // Left separator for time block
+	StatusBarBreadcrumbSepRight string // Right separator for breadcrumb block
+
+	// Menu selected item Powerline separator characters.
+	// Default: "\uE0B6" (left arc), "\uE0B4" (right arc).
+	// Set to empty string to disable for themes with transparent backgrounds.
+	MenuSelectedSepLeft  string
+	MenuSelectedSepRight string
+
+	AppBackground  Highlight // Bg→transparent (terminal shows through)
+	SelectedItemBg Highlight // Bg→transparent (falls back to AppBackground.Bg)
 
 	// ---- Hover/click highlights (interactive states) ----
 	// Each field below controls the visual feedback when the mouse hovers or
@@ -269,10 +282,15 @@ func DefaultDarkTheme() Theme {
 		Muted:                  lipgloss.BrightBlack,
 		HintKey:                lipgloss.Color("#6E6E6E"),
 		StatusBarBreadcrumbSep: lipgloss.Color("#757575"),
-		Background:             lipgloss.Color("#1A1A1A"),
-		Foreground:             lipgloss.Color("#FFFFFF"),
-		Border:                 lipgloss.Color("#333333"),
-		Surface:                lipgloss.Color("#242424"),
+
+		StatusBarTimeSepLeft:        "",
+		StatusBarBreadcrumbSepRight: "",
+		MenuSelectedSepLeft:         "",
+		MenuSelectedSepRight:        "",
+		Background:                  lipgloss.Color("#1A1A1A"),
+		Foreground:                  lipgloss.Color("#FFFFFF"),
+		Border:                      lipgloss.Color("#333333"),
+		Surface:                     lipgloss.Color("#242424"),
 
 		StatusBarBreadcrumb: Highlight{},
 	}
@@ -292,11 +310,16 @@ func DefaultLightTheme() Theme {
 		Info:                   lipgloss.Color("#0277BD"), // Light Blue 800
 		Muted:                  lipgloss.Color("#9E9E9E"), // Gray 500
 		HintKey:                lipgloss.Color("#BDBDBD"), // Gray 400
-		StatusBarBreadcrumbSep: lipgloss.Color("#BDBDBD"), // Gray 400
-		Background:             lipgloss.Color("#FFFFFF"),
-		Foreground:             lipgloss.Color("#212121"), // Gray 900
-		Border:                 lipgloss.Color("#E0E0E0"), // Gray 300
-		Surface:                lipgloss.Color("#F5F5F5"), // Gray 100
+		StatusBarBreadcrumbSep: lipgloss.Color("#BDBDBD"),
+
+		StatusBarTimeSepLeft:        "",
+		StatusBarBreadcrumbSepRight: "",
+		MenuSelectedSepLeft:         "",
+		MenuSelectedSepRight:        "",
+		Background:                  lipgloss.Color("#FFFFFF"),
+		Foreground:                  lipgloss.Color("#212121"), // Gray 900
+		Border:                      lipgloss.Color("#E0E0E0"), // Gray 300
+		Surface:                     lipgloss.Color("#F5F5F5"), // Gray 100
 
 		StatusBarBreadcrumb: Highlight{},
 	}
@@ -516,6 +539,22 @@ type StyleSet struct {
 	// StatusBarBreadcrumbSep is the style for the breadcrumb separator (">").
 	StatusBarBreadcrumbSep lipgloss.Style
 
+	// StatusBarTimeSepLeft is the Powerline separator character at the left of the time block.
+	// Default: "\uE0B6". Set to "" to disable (e.g., transparent backgrounds).
+	StatusBarTimeSepLeft string
+
+	// StatusBarBreadcrumbSepRight is the Powerline separator character at the right of the breadcrumb block.
+	// Default: "\uE0B4". Set to "" to disable (e.g., transparent backgrounds).
+	StatusBarBreadcrumbSepRight string
+
+	// MenuSelectedSepLeft is the Powerline separator character at the left of the selected menu item.
+	// Default: "\uE0B6". Set to "" to disable.
+	MenuSelectedSepLeft string
+
+	// MenuSelectedSepRight is the Powerline separator character at the right of the selected menu item.
+	// Default: "\uE0B4". Set to "" to disable.
+	MenuSelectedSepRight string
+
 	// BackButton is the style for the back/return icon button shown before the
 	// menu title when inside a submenu. Uses primary color to indicate clickability.
 	BackButton lipgloss.Style
@@ -541,6 +580,15 @@ type StyleSet struct {
 	Custom any
 
 	theme Theme
+}
+
+// BlankStyle returns a lipgloss.Style for rendering blank/whitespace content
+// that inherits the app background color. Priority:
+//   - component's own background (via Inherit if caller passes parent)
+//   - AppBackground color (from theme)
+//   - transparent (no background set)
+func (ss StyleSet) BlankStyle() lipgloss.Style {
+	return ss.AppBackground
 }
 
 // NewStyleSet creates a pre-configured set of styles from a Theme.
@@ -704,13 +752,15 @@ func NewStyleSet(theme Theme) StyleSet {
 	selectedItemHL := resolveHL(theme.SelectedItem, theme.Primary, nil)
 	if selectedItemHL.Bg == nil {
 		if primary, ok := colorful.MakeColor(theme.Primary); ok {
-			if bg, ok := colorful.MakeColor(theme.Background); ok {
-				_, _, l := bg.Hsl()
-				if l > 0.5 {
-					selectedItemHL.Bg = primary.BlendLab(bg, 0.94).Clamped()
-				} else {
-					highlighted := primary.BlendLab(colorful.Color{R: 1, G: 1, B: 1}, 0.8)
-					selectedItemHL.Bg = highlighted.BlendLab(bg, 0.78).Clamped()
+			if theme.Background != nil && theme.Background != noColor {
+				if bg, ok := colorful.MakeColor(theme.Background); ok {
+					_, _, l := bg.Hsl()
+					if l > 0.5 {
+						selectedItemHL.Bg = primary.BlendLab(bg, 0.94).Clamped()
+					} else {
+						highlighted := primary.BlendLab(colorful.Color{R: 1, G: 1, B: 1}, 0.8)
+						selectedItemHL.Bg = highlighted.BlendLab(bg, 0.78).Clamped()
+					}
 				}
 			}
 		}
@@ -764,6 +814,13 @@ func NewStyleSet(theme Theme) StyleSet {
 	contextMenuItemHL := resolveHL(theme.Popup.ContextMenuItem, nil, popupSurface)
 	contextMenuItemFocusedHL := resolveHL(theme.Popup.ContextMenuItemFocused, selectedItemHL.Fg, selectedItemHL.Bg)
 	contextMenuItemHoverHL := resolveHL(theme.Popup.ContextMenuItemHover, contextMenuItemHL.Fg, selectedItemHL.Bg)
+	if theme.Popup.ContextMenuItemHover.Fg == nil {
+		if bg := theme.AppBackground.Bg; bg == nil {
+			contextMenuItemHoverHL.Fg = theme.Primary
+		} else if _, transparent := bg.(lipgloss.NoColor); transparent {
+			contextMenuItemHoverHL.Fg = theme.Primary
+		}
+	}
 	if contextMenuItemHoverHL.Underline == nil {
 		contextMenuItemHoverHL.Underline = BoolPtr(false)
 	}
@@ -779,8 +836,10 @@ func NewStyleSet(theme Theme) StyleSet {
 	scrollThumbHL := resolveHL(theme.ScrollThumb, theme.Secondary, nil)
 
 	// Status bar
+	// Fall back to the app background (then transparent) so the filler cells
+	// between the breadcrumb and time never reveal content drawn beneath the TUI.
 	statusBarFg := or(theme.StatusBar.Fg, theme.Secondary)
-	statusBarBg := or(theme.StatusBar.Bg, noColor)
+	statusBarBg := or(theme.StatusBar.Bg, or(theme.AppBackground.Bg, noColor))
 	statusBarTextFg := or(theme.StatusBarText.Fg, theme.Secondary)
 
 	// Status bar time bg
@@ -793,6 +852,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	// Status bar nuggets
 	statusBarNuggetFg := or(theme.StatusBarNugget.Fg, theme.Foreground)
+	statusBarNuggetLabelFg := or(theme.StatusBarNuggetLabel.Fg, statusBarNuggetFg)
 	statusBarNuggetLabelBg := or(theme.StatusBarNuggetLabel.Bg, theme.Primary)
 
 	// Breadcrumb separator
@@ -870,7 +930,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	base.Title = applyHL(lipgloss.NewStyle(), titleHL)
 
-	base.MenuTitle = applyHL(lipgloss.NewStyle(), Highlight{Fg: menuTitleHL.Fg})
+	base.MenuTitle = applyHL(lipgloss.NewStyle().Background(appBg), Highlight{Fg: menuTitleHL.Fg})
 
 	base.MenuItem = lipgloss.NewStyle().Background(selectedItemBg)
 
@@ -882,7 +942,7 @@ func NewStyleSet(theme Theme) StyleSet {
 
 	base.SelectedItemHover = applyHL(base.SelectedItem, selectedItemHoverHL)
 
-	base.Subtitle = applyHL(lipgloss.NewStyle(), Highlight{Fg: subtitleHL.Fg})
+	base.Subtitle = applyHL(lipgloss.NewStyle().Background(appBg), Highlight{Fg: subtitleHL.Fg})
 
 	base.Prompt = applyHL(lipgloss.NewStyle(), Highlight{Fg: promptHL.Fg})
 
@@ -1020,6 +1080,7 @@ func NewStyleSet(theme Theme) StyleSet {
 	base.StatusBarNugget = applyHL(lipgloss.NewStyle(), Highlight{Fg: statusBarNuggetFg}).
 		Padding(0, 1)
 	base.StatusBarNuggetLabel = base.StatusBarNugget.
+		Foreground(statusBarNuggetLabelFg).
 		Background(statusBarNuggetLabelBg)
 	base.StatusBarTime = lipgloss.NewStyle().
 		Foreground(statusBarTimeFg).
@@ -1030,6 +1091,11 @@ func NewStyleSet(theme Theme) StyleSet {
 	base.StatusBarBreadcrumbHover = applyHL(lipgloss.NewStyle(), breadcrumbHoverHL)
 	base.StatusBarBreadcrumbClick = applyHL(lipgloss.NewStyle(), breadcrumbClickHL)
 	base.StatusBarBreadcrumbSep = lipgloss.NewStyle().Inherit(base.StatusBarBreadcrumb).Foreground(breadcrumbSepColor)
+
+	base.StatusBarTimeSepLeft = theme.StatusBarTimeSepLeft
+	base.StatusBarBreadcrumbSepRight = theme.StatusBarBreadcrumbSepRight
+	base.MenuSelectedSepLeft = theme.MenuSelectedSepLeft
+	base.MenuSelectedSepRight = theme.MenuSelectedSepRight
 
 	// App background
 	base.AppBackground = lipgloss.NewStyle().Background(appBg)
@@ -1087,6 +1153,12 @@ func DefaultStyleSet() StyleSet {
 
 var currentStyleSet = DefaultStyleSet()
 
+// styleGeneration is bumped every time the global StyleSet changes. Downstream
+// renderers that cache styled output can fold this value into their cache keys
+// so a theme switch invalidates any output still carrying the old theme's
+// colors, avoiding stale-color residue on the screen.
+var styleGeneration uint64
+
 // CurrentStyleSet returns the active global StyleSet.
 // By default this is built from DefaultTheme. Call SetStyleSet to override
 // with a custom theme constructed programmatically.
@@ -1099,11 +1171,18 @@ func CurrentStyleSet() StyleSet {
 	return currentStyleSet
 }
 
+// StyleGeneration returns a counter that increments on every SetStyleSet call.
+// Cache keys keyed on this value are invalidated whenever the theme changes.
+func StyleGeneration() uint64 {
+	return styleGeneration
+}
+
 // SetStyleSet sets the global StyleSet. Call during application startup
 // before any UI rendering. The framework's internal View methods all read
 // from this global StyleSet, so setting it once at init is sufficient.
 func SetStyleSet(s StyleSet) {
 	currentStyleSet = s
+	styleGeneration++
 }
 
 // FG applies a foreground color to a style and renders the content.

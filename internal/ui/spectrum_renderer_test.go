@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/lipgloss/v2"
+	foxfulStyle "github.com/anhoder/foxful-cli/style"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 )
@@ -537,6 +540,62 @@ func TestSpectrumDotCharEmptyUsesBraille(t *testing.T) {
 	}
 	if !hasBraille {
 		t.Fatalf("dot style with empty dotChar should use braille: %q", plain)
+	}
+}
+
+// TestSpectrumPaintsAppBackgroundOnEveryCell verifies that, when a theme sets an
+// app background, every rendered visualizer cell (filled glyphs AND empty cells)
+// carries a non-transparent background across the block-based render styles.
+// Transparent cells would let content drawn beneath the TUI (e.g. the cover
+// image) bleed through the spectrum area.
+func TestSpectrumPaintsAppBackgroundOnEveryCell(t *testing.T) {
+	previousConfig := configs.AppConfig
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	appBg := lipgloss.Color("#1E1E2E")
+	th := foxfulStyle.DefaultDarkTheme()
+	th.AppBackground = foxfulStyle.Highlight{Bg: appBg}
+	foxfulStyle.SetStyleSet(foxfulStyle.NewStyleSet(th))
+	t.Cleanup(func() { foxfulStyle.SetStyleSet(foxfulStyle.DefaultStyleSet()) })
+
+	styles := []string{"bar", "mirror_bar", "line", "dot"}
+	for _, spectrumStyle := range styles {
+		t.Run(spectrumStyle, func(t *testing.T) {
+			configs.AppConfig = &configs.Config{}
+			configs.AppConfig.Main.Visualizer.Style = spectrumStyle
+			// block mode drives the character-grid render paths; the block
+			// glyphs must be set explicitly (default config leaves them empty).
+			configs.AppConfig.Main.Visualizer.LineMode = "block"
+			configs.AppConfig.Main.Visualizer.LineFullBlock = "█"
+			configs.AppConfig.Main.Visualizer.LineHalfBlock = "▄"
+			configs.AppConfig.Main.Visualizer.DotMode = "block"
+			configs.AppConfig.Main.Visualizer.DotFullBlock = "█"
+			configs.AppConfig.Main.Visualizer.DotHalfBlock = "▄"
+
+			renderer := &SpectrumRenderer{}
+			frame := player.SpectrumFrame{}
+			for i := range frame.Levels {
+				frame.Levels[i] = 0.5
+				frame.LevelsL[i] = 0.5
+				frame.LevelsR[i] = 0.5
+			}
+
+			const w, h = 16, 4
+			view := renderer.render(frame, w, h)
+			screen := formStyledScreen(strings.TrimSuffix(view, "\n"))
+			for y := range screen.Lines {
+				for x := range screen.Lines[y] {
+					cell := screen.CellAt(x, y)
+					if cell == nil || cell.Width == 0 {
+						continue
+					}
+					if cell.Style.Bg == nil {
+						t.Fatalf("cell (%d,%d) content=%q has transparent background; "+
+							"cover image would bleed through the spectrum", x, y, cell.Content)
+					}
+				}
+			}
+		})
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/player"
@@ -171,6 +170,7 @@ func (r *SpectrumRenderer) renderOscilloscopeBlockDual(fullChar, halfChar, empty
 	r.drawOscilloscopeBlockChannel(grid, frame.SamplesL, frame.Count, width, height, connect, 2)
 	r.drawOscilloscopeBlockChannel(grid, frame.SamplesR, frame.Count, width, height, connect, 1)
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -184,13 +184,13 @@ func (r *SpectrumRenderer) renderOscilloscopeBlockDual(fullChar, halfChar, empty
 			v := grid[row][col]
 			switch {
 			case v == 3:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRampDim[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRampDim[col*2], bg))
 			case v == 2:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
 			case v == 1:
-				builder.WriteString(util.SetFgStyle(halfChar, rowRampDim[col*2]))
+				builder.WriteString(spectrumFgGlyph(halfChar, rowRampDim[col*2], bg))
 			default:
-				builder.WriteString(emptyChar)
+				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
 			}
 		}
 		builder.WriteByte('\n')
@@ -209,6 +209,7 @@ func (r *SpectrumRenderer) renderOscilloscopeBlockMono(fullChar, halfChar, empty
 	connect := !configs.AppConfig.Main.Visualizer.OscilloscopeScatter
 	r.drawOscilloscopeBlockChannel(grid, frame.SamplesL, frame.Count, width, height, connect, 2)
 
+	bg := spectrumAppBg()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
@@ -220,11 +221,11 @@ func (r *SpectrumRenderer) renderOscilloscopeBlockMono(fullChar, halfChar, empty
 			v := grid[row][col]
 			switch {
 			case v >= 2:
-				builder.WriteString(util.SetFgStyle(fullChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
 			case v == 1:
-				builder.WriteString(util.SetFgStyle(halfChar, rowRamp[col*2]))
+				builder.WriteString(spectrumFgGlyph(halfChar, rowRamp[col*2], bg))
 			default:
-				builder.WriteString(emptyChar)
+				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
 			}
 		}
 		builder.WriteByte('\n')
