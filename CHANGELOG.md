@@ -1,4 +1,11 @@
 
+5.0.2
+=============
+2026-08-03
+
+* MPV播放器修复完成：方案A排空连接+切歌watchdog加固。 (#615) (166f9474)
+* chore: update scoop config & changelog [skip ci] (bf12fcb1)
+
 5.0.1
 =============
 2026-07-31

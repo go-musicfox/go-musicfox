@@ -1,3 +1,23 @@
+- semver: 5.0.2
+  date: 2026-08-03T20:54:33+08:00
+  packager: go-musicfox
+  changes:
+    - commit: 166f9474ff5960e111c1e12d9c5c82f8539f5f5b
+      note: MPV播放器修复完成：方案A排空连接+切歌watchdog加固。 (#615)
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: bf12fcb14ecd61e4e99bca47a23b990105685d43
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 5.0.1
   date: 2026-07-31T23:02:50+08:00
   packager: go-musicfox
