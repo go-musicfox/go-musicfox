@@ -2,7 +2,9 @@
 
 go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持各种音质级别、UnblockNeteaseMusic、Last.fm、MPRIS 和 macOS 交互响应（睡眠暂停、蓝牙耳机连接断开响应和菜单栏控制等）等功能特性，以及 DLNA 投送。
 
-[官网](https://musicfox.anhoder.com) | [Icon](https://github.com/go-musicfox/go-musicfox-icon) | [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/go-musicfox/go-musicfox) ![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total) ![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
+[官网](https://musicfox.anhoder.com) | [Icon](https://github.com/go-musicfox/go-musicfox-icon)
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/go-musicfox/go-musicfox) ![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total) ![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
 
 <p><img src="previews/logo.png" alt="logo" width="256"/></p>
 
@@ -11,9 +13,9 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 ------------------------------
 ## 预览
 
-<video src="https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/preview.mp4" controls="controls" style="max-width: 100%;">
+https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/preview.mp4
 
-<video src="https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/desktop_lyrics.mp4" controls="controls" style="max-width: 100%;">
+https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/desktop_lyrics.mp4
 
 ## 安装
 
