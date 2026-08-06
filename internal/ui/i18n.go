@@ -26,6 +26,7 @@ const (
 	MsgLoginUnknownError        model.MessageID = "login.error.unknown"
 	MsgLoginNetworkError        model.MessageID = "login.error.network"
 	MsgLoginTooManyRequests     model.MessageID = "login.error.too_many_requests"
+	MsgLoginRiskControlled      model.MessageID = "login.error.risk_controlled"
 	MsgLoginInvalidCredentials  model.MessageID = "login.error.invalid_credentials"
 	MsgLoginVersionTooOld       model.MessageID = "login.error.version_too_old"
 	MsgLogin2FANotSupported     model.MessageID = "login.error.2fa_not_supported"
@@ -115,6 +116,7 @@ var zhMessages = map[model.MessageID]string{
 	MsgLoginUnknownError:        "未知错误，请稍后再试！code: %d",
 	MsgLoginNetworkError:        "网络异常，请检查后重试",
 	MsgLoginTooManyRequests:     "请求过于频繁，请稍后再试~",
+	MsgLoginRiskControlled:      "登录触发风控验证，请改用扫码登录或浏览器 Cookie 登录",
 	MsgLoginInvalidCredentials:  "账号或密码错误，请重试",
 	MsgLoginVersionTooOld:       "客户端版本过低，请升级到最新版本后重试",
 	MsgLogin2FANotSupported:     "账号需要二阶段验证，目前暂不支持该功能",
@@ -133,7 +135,7 @@ var zhMessages = map[model.MessageID]string{
 	MsgQRLoginUnknownStatus:   "未知状态: %d，请返回重试",
 	MsgQRLoginError:           "发生错误: ",
 	MsgQRLoginOpenImageFailed: "打开二维码失败: ",
-	MsgQRLoginGetCodeFailed:   "无法获取二维码, code: %.0f",
+	MsgQRLoginGetCodeFailed:   "无法获取二维码(可能被风控拦截), code: %.0f",
 
 	MsgOperationFailed:           "操作失败",
 	MsgOperationLogoutSuccess:    "登出成功",

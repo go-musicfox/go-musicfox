@@ -591,6 +591,8 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 			l.tips = util.SetFgStyle(model.T(MsgLoginCredentialRequired), lipgloss.BrightRed)
 			return l, nil
 		}
+		// 注入反风控参数，避免 cellphone/email 登录接口被服务端风控拦截
+		apputils.ApplyLoginStrategy()
 		return l.loginByAccount()
 	case qrLoginIndex:
 		// 扫码登录
@@ -669,8 +671,8 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 			slog.Error("登录失败, 网络异常", slogx.Error(resp.Message))
 			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginNetworkError))}
 		case _struct.TooManyRequests:
-			slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
-			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginTooManyRequests))}
+			slog.Error("登录失败, 触发风控验证", slogx.Error(resp.Message))
+			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
 		case _struct.Success:
 			// http状态码200， 但是：
 			// 账号密码错误时api状态码为502
@@ -679,8 +681,8 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 			// 需要二阶段验证时api状态码为8830
 			switch resp.Code {
 			case -462:
-				slog.Error("登录失败, 请求过于频繁", slogx.Error(resp.Message))
-				return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginTooManyRequests))}
+				slog.Error("登录失败, 触发风控验证", slogx.Error(resp.Message))
+				return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
 			case 502:
 				slog.Error("登录失败, 账号或密码错误", slogx.Error(resp.Message))
 				return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginInvalidCredentials))}
@@ -706,6 +708,8 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 
 // loginByQRCode 跳转到二维码登录界面
 func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
+	// 注入反风控参数，避免 qrcode/unikey 接口被服务端风控拦截
+	apputils.ApplyLoginStrategy()
 	qrPage := NewQRLoginPage(l.netease, l, l.AfterLogin)
 	return qrPage, qrPage.Init()
 }

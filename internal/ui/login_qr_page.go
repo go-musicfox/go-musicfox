@@ -292,6 +292,8 @@ func (p *QRLoginPage) View(a *model.App) string {
 
 // generateQRCodeCmd 异步获取和生成二维码
 func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
+	// 与 CheckQR 保持一致注入反风控参数，防止 unikey 接口被风控导致二维码无法获取
+	app.ApplyLoginStrategy()
 	qrService := service.LoginQRService{}
 	code, _, url, err := qrService.GetKey()
 	if err != nil {

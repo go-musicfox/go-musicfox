@@ -32,7 +32,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
-	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
@@ -231,12 +230,12 @@ func (n *Netease) InitHook(_ *model.App) {
 		if n.user == nil && cookieStr != "" {
 			// 使用cookie登录
 
-			err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+			err := app.ParseCookieFromStr(cookieStr, appCookieJar)
 			if err != nil {
 				slog.Error("网易云 cookies 格式错误", "error", err)
 			} else {
 				neteaseutil.SetGlobalCookieJar(appCookieJar)
-				newJar, err := apputils.RefreshCookieJar()
+				newJar, err := app.RefreshCookieJar()
 				if err != nil {
 					slog.Error("使用配置项的cookie登录/刷新失败，将以游客模式启动", slogx.Error(err))
 					n.user = nil
@@ -259,7 +258,7 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		if n.user != nil {
-			newJar, err := apputils.RefreshCookieJar()
+			newJar, err := app.RefreshCookieJar()
 			if err != nil {
 				slog.Error("Token 刷新失败，Cookie已彻底失效，降级为游客模式", slogx.Error(err))
 				n.user = nil
