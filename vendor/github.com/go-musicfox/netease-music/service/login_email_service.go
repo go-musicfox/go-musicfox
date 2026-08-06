@@ -3,7 +3,6 @@ package service
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"net/http"
 
 	"github.com/go-musicfox/netease-music/util"
 )
@@ -15,13 +14,11 @@ type LoginEmailService struct {
 }
 
 func (service *LoginEmailService) LoginEmail() (float64, []byte) {
+	// Keep os=pc identity (injected into the global cookie jar via
+	// ApplyRequestStrategy) consistent with cellphone/QR login paths.
 	options := &util.Options{
 		Crypto: "weapi",
 		Ua:     "pc",
-		Cookies: []*http.Cookie{
-			{Name: "os", Value: "ios"},
-			{Name: "appver", Value: "8.7.01"},
-		},
 	}
 	data := make(map[string]string)
 

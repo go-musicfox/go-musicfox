@@ -47,17 +47,18 @@ func tickLogin(duration time.Duration) tea.Cmd {
 type LoginPage struct {
 	netease *Netease
 
-	menuTitle     *model.MenuItem
-	index         int
-	tabs          *model.Tabs
-	accountInput  textinput.Model
-	passwordInput textinput.Model
-	cookieInput   textinput.Model
-	submitButton  string
-	qrLoginButton string
-	qrLoginStep   int
-	tips          string
-	AfterLogin    LoginCallback
+	menuTitle         *model.MenuItem
+	index             int
+	tabs              *model.Tabs
+	accountInput      textinput.Model
+	passwordInput     textinput.Model
+	cookieInput       textinput.Model
+	submitButton      string
+	qrLoginButton     string
+	qrLoginStep       int
+	tips              string
+	riskVerifyOpened  bool // 是否已进入过人机验证页（限制验证成功后自动重试只进行一次）
+	AfterLogin        LoginCallback
 
 	// 以下字段用于鼠标点击区域的计算与命中
 	accountRowY   int // 账号输入框所在的行号（1-based）
@@ -156,6 +157,14 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	}
 
 	if verifyMsg, ok := msg.(LoginVerifyMsg); ok {
+		// 限制自动重试：验证成功后自动重试若仍触发 -462，不再自动进入验证页
+		if l.riskVerifyOpened {
+			l.tips = util.SetFgStyle(model.T(MsgLoginRiskRetryLoop), lipgloss.BrightRed)
+			return l, nil
+		}
+		l.riskVerifyOpened = true
+		// 独立页面切换前清理封面图，避免渲染残留
+		l.netease.coverRenderer.ClearDisplayed()
 		verifyPage := NewVerifyPage(l.netease, l, verifyMsg.verify, func() (model.Page, tea.Cmd) {
 			// 验证成功后自动重试登录
 			l.index = submitIndex
@@ -222,6 +231,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 		// Breadcrumb click delegates to Main (use raw 0-based mouse.Y)
 		if newPage := pageBreadcrumbClick(a, l.netease.MustMain(), mouse.X, mouse.Y); newPage != nil {
 			l.tips = ""
+			l.riskVerifyOpened = false
 			l.qrLoginStep = 0
 			l.qrLoginButton = pageButton(l.qrButtonTextByStep(), false)
 			return newPage, l.netease.RerenderCmd(true)
@@ -230,6 +240,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 		x := mouse.X
 		if y == l.backBtnRowY && x >= l.backBtnStartX && x < l.backBtnEndX {
 			l.tips = ""
+			l.riskVerifyOpened = false
 			l.qrLoginStep = 0
 			l.qrLoginButton = pageButton(l.qrButtonTextByStep(), false)
 			return l.netease.MustMain(), l.netease.RerenderCmd(true)
@@ -306,6 +317,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 		fallthrough
 	case "esc":
 		l.tips = ""
+		l.riskVerifyOpened = false
 		l.qrLoginStep = 0
 		l.qrLoginButton = pageButton(l.qrButtonTextByStep(), l.index == qrLoginIndex)
 		return l.netease.MustMain(), l.netease.RerenderCmd(true)
@@ -685,13 +697,10 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 		case _struct.NetworkError:
 			slog.Error("登录失败, 网络异常", slogx.Error(resp.Message))
 			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginNetworkError))}
-		case _struct.TooManyRequests:
-			slog.Error("登录失败, 触发风控验证", slogx.Error(resp.Message))
-			// -462 携带人机验证数据时，渲染验证二维码引导用户完成验证
-			if resp.Data != nil && resp.Data.VerifyType == 40 {
-				return LoginVerifyMsg{verify: resp.Data}
-			}
-			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
+		case _struct.NeedVerify:
+			slog.Error("登录失败, 触发人机验证", slogx.Error(resp.Message))
+			// -462 携带人机验证数据时，按 verifyType 分流处理
+			return riskControlMsg(resp)
 		case _struct.Success:
 			// http状态码200， 但是：
 			// 账号密码错误时api状态码为502
@@ -700,8 +709,8 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 			// 需要二阶段验证时api状态码为8830
 			switch resp.Code {
 			case -462:
-				slog.Error("登录失败, 触发风控验证", slogx.Error(resp.Message))
-				return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
+				slog.Error("登录失败, 触发人机验证", slogx.Error(resp.Message))
+				return riskControlMsg(resp)
 			case 502:
 				slog.Error("登录失败, 账号或密码错误", slogx.Error(resp.Message))
 				return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginInvalidCredentials))}
@@ -725,6 +734,24 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 	}
 }
 
+// riskControlMsg 处理 -462 人机验证响应，按 verifyType 分流：
+// 40=扫码验证（进入验证页完成闭环） 20=短信验证（TUI 无法完成，提示改用扫码/Cookie） 50=设备/环境风险
+func riskControlMsg(resp loginResponse) tea.Msg {
+	if resp.Data == nil {
+		return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
+	}
+	switch int(resp.Data.VerifyType) {
+	case 40:
+		return LoginVerifyMsg{verify: resp.Data}
+	case 20:
+		return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskSMS))}
+	case 50:
+		return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskDevice))}
+	default:
+		return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
+	}
+}
+
 // loginByQRCode 跳转到二维码登录界面
 func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 	// 注入反风控参数，避免 qrcode/unikey 接口被服务端风控拦截
@@ -734,6 +761,7 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 }
 
 func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
+	l.riskVerifyOpened = false
 	// 先保存 cookie，确保登录成功后 cookie 被持久化
 	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
 	if err := appCookieJar.Save(); err != nil {

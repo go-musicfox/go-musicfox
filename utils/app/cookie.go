@@ -1,8 +1,6 @@
 package app
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -63,21 +61,11 @@ func RefreshCookieJar() (jar *cookiejar.Jar, err error) {
 	}
 }
 
-// ApplyLoginStrategy 向全局 CookieJar 注入网易云反风控参数（os=pc + 随机 NMTID）。
-// 与 SDK 的 util.ApplyRequestStrategy 对齐，并将其写死的固定 NMTID 覆盖为随机值，
-// 避免 qrcode/unikey、cellphone、email 等登录接口在 weapi 裸请求下被服务端风控拦截。
+// ApplyLoginStrategy 确保登录前全局 CookieJar 已注入网易云反风控参数
+// （os=pc + 随机 NMTID）。随机 NMTID 由 SDK 的 util.ApplyRequestStrategy 生成，
+// 统一 os=pc 身份，避免 qrcode/unikey、cellphone、email 等登录接口在 weapi
+// 裸请求下被服务端风控拦截。
 func ApplyLoginStrategy() {
 	jar := neteaseutil.GetGlobalCookieJar()
 	neteaseutil.ApplyRequestStrategy(jar)
-	u, _ := url.Parse("https://music.163.com")
-	jar.SetCookies(u, []*http.Cookie{
-		{Name: "NMTID", Value: randomHexString(32)},
-	})
-}
-
-// randomHexString 返回长度为 n 的随机十六进制字符串。
-func randomHexString(n int) string {
-	b := make([]byte, n/2)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
 }

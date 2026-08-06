@@ -22,7 +22,10 @@ type VerifyParams struct {
 }
 
 // GetVerifyQRCode 获取人机验证二维码
+// Verify endpoints run as bare weapi requests: make sure os=pc + random
+// NMTID are present instead of relying on the login flow to inject them.
 func GetVerifyQRCode(verify VerifyData) (qrCode string, err error) {
+	ApplyLoginStrategy()
 	params, _ := json.Marshal(verify.Params)
 	data := map[string]interface{}{
 		"verifyConfigId": verify.VerifyID,
@@ -54,7 +57,10 @@ func GetVerifyQRCode(verify VerifyData) (qrCode string, err error) {
 
 // CheckVerifyQRCodeStatus 轮询验证二维码状态
 // qrCodeStatus: 0=已生成待扫码 10=已扫码待确认 20=验证成功 21=二维码已失效
+// Verify endpoints run as bare weapi requests: make sure os=pc + random
+// NMTID are present instead of relying on the login flow to inject them.
 func CheckVerifyQRCodeStatus(qrCode string) (status float64, err error) {
+	ApplyLoginStrategy()
 	data := map[string]interface{}{"qrCode": qrCode}
 	code, bodyBytes, err := neteaseutil.CallWeapi("https://music.163.com/api/frontrisk/verify/qrcodestatus", data)
 	if err != nil {

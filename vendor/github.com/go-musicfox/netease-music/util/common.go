@@ -27,10 +27,11 @@ func RandStringRunes(n int) string {
 }
 
 func ApplyRequestStrategy(jar http.CookieJar) {
-	// 注入反风控参数
+	// 注入反风控参数: os=pc + random NMTID (a fixed string is easier to be
+	// fingerprinted by the server-side risk control)
 	strategyCookies := []*http.Cookie{
 		{Name: "os", Value: "pc"},
-		{Name: "NMTID", Value: "some_random_id_from_strategy"},
+		{Name: "NMTID", Value: RandStringRunes(32)},
 	}
 	targetUrl, _ := url.Parse("https://music.163.com")
 	jar.SetCookies(targetUrl, strategyCookies)

@@ -25,8 +25,10 @@ const (
 	MsgLoginFailed              model.MessageID = "login.error.failed"
 	MsgLoginUnknownError        model.MessageID = "login.error.unknown"
 	MsgLoginNetworkError        model.MessageID = "login.error.network"
-	MsgLoginTooManyRequests     model.MessageID = "login.error.too_many_requests"
 	MsgLoginRiskControlled      model.MessageID = "login.error.risk_controlled"
+	MsgLoginRiskSMS             model.MessageID = "login.error.risk_sms"
+	MsgLoginRiskDevice          model.MessageID = "login.error.risk_device"
+	MsgLoginRiskRetryLoop       model.MessageID = "login.error.risk_retry_loop"
 	MsgLoginInvalidCredentials  model.MessageID = "login.error.invalid_credentials"
 	MsgLoginVersionTooOld       model.MessageID = "login.error.version_too_old"
 	MsgLogin2FANotSupported     model.MessageID = "login.error.2fa_not_supported"
@@ -128,8 +130,10 @@ var zhMessages = map[model.MessageID]string{
 	MsgLoginFailed:              "使用账号密码登录失败：",
 	MsgLoginUnknownError:        "未知错误，请稍后再试！code: %d",
 	MsgLoginNetworkError:        "网络异常，请检查后重试",
-	MsgLoginTooManyRequests:     "请求过于频繁，请稍后再试~",
 	MsgLoginRiskControlled:      "登录触发风控验证，请改用扫码登录或浏览器 Cookie 登录",
+	MsgLoginRiskSMS:             "账号触发短信验证，终端内暂不支持完成，请改用扫码登录或浏览器 Cookie 登录",
+	MsgLoginRiskDevice:          "网络环境存在风险或设备标识异常，请稍后重试或改用浏览器 Cookie 登录",
+	MsgLoginRiskRetryLoop:       "验证后仍被风控拦截，请改用扫码登录或浏览器 Cookie 登录",
 	MsgLoginInvalidCredentials:  "账号或密码错误，请重试",
 	MsgLoginVersionTooOld:       "客户端版本过低，请升级到最新版本后重试",
 	MsgLogin2FANotSupported:     "账号需要二阶段验证，目前暂不支持该功能",

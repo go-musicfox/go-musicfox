@@ -182,6 +182,10 @@ func (p *VerifyPage) back() (model.Page, tea.Cmd) {
 	if p.qrCodePath != "" {
 		_ = os.Remove(p.qrCodePath)
 	}
+	// 手动退出验证页后允许用户再次发起验证（仅限制验证成功后的自动重试循环）
+	if lp, ok := p.from.(*LoginPage); ok {
+		lp.riskVerifyOpened = false
+	}
 	return p.from, p.netease.RerenderCmd(true)
 }
 
