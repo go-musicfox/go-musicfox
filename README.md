@@ -13,9 +13,13 @@ go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持�
 ------------------------------
 ## 预览
 
-https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/preview.mp4
+<p align="center">
+  <video src="previews/preview.mp4" width="500px"></video>
+</p>
 
-https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/desktop_lyrics.mp4
+<p align="center">
+  <video src="previews/desktop_lyrics.mp4" width="500px"></video>
+</p>
 
 ## 安装
 
