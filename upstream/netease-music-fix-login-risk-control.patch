@@ -1,0 +1,43 @@
+diff --git a/util/common.go b/util/common.go
+--- a/util/common.go
++++ b/util/common.go
+@@ -29,9 +29,10 @@ func ApplyRequestStrategy(jar http.CookieJar) {
+ func ApplyRequestStrategy(jar http.CookieJar) {
+-	// 注入反风控参数
++	// 注入反风控参数: os=pc + random NMTID (a fixed string is easier to be
++	// fingerprinted by the server-side risk control)
+ 	strategyCookies := []*http.Cookie{
+ 		{Name: "os", Value: "pc"},
+-		{Name: "NMTID", Value: "some_random_id_from_strategy"},
++		{Name: "NMTID", Value: RandStringRunes(32)},
+ 	}
+ 	targetUrl, _ := url.Parse("https://music.163.com")
+ 	jar.SetCookies(targetUrl, strategyCookies)
+ }
+diff --git a/service/login_email_service.go b/service/login_email_service.go
+--- a/service/login_email_service.go
++++ b/service/login_email_service.go
+@@ -3,7 +3,6 @@ import (
+ import (
+ 	"crypto/md5"
+ 	"encoding/hex"
+-	"net/http"
+ 
+ 	"github.com/go-musicfox/netease-music/util"
+ )
+@@ -18,9 +17,7 @@ func (service *LoginEmailService) LoginEmail() (float64, []byte) {
+-	options := &util.Options{
+-		Crypto: "weapi",
+-		Ua:     "pc",
+-		Cookies: []*http.Cookie{
+-			{Name: "os", Value: "ios"},
+-			{Name: "appver", Value: "8.7.01"},
+-		},
+-	}
++	// Keep os=pc identity (injected into the global cookie jar via
++	// ApplyRequestStrategy) consistent with cellphone/QR login paths.
++	options := &util.Options{
++		Crypto: "weapi",
++		Ua:     "pc",
++	}
+ 	data := make(map[string]string)
