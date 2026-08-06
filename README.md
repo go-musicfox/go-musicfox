@@ -2,61 +2,19 @@
 
 go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持各种音质级别、UnblockNeteaseMusic、Last.fm、MPRIS 和 macOS 交互响应（睡眠暂停、蓝牙耳机连接断开响应和菜单栏控制等）等功能特性，以及 DLNA 投送。
 
-> UI 基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) 进行了部分定制
-
-![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total) ![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
+[官网](https://musicfox.anhoder.com) | [Icon](https://github.com/go-musicfox/go-musicfox-icon) | [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/go-musicfox/go-musicfox) ![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total) ![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
 
 <p><img src="previews/logo.png" alt="logo" width="256"/></p>
 
-([The icon](https://github.com/go-musicfox/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
-
-> 官方网站：[https://musicfox.anhoder.com](https://musicfox.anhoder.com)
+*([The icon](https://github.com/go-musicfox/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))*
 
 ------------------------------
 ## 预览
 
-#### 1. 启动
+<video src="https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/preview.mp4" controls="controls" style="max-width: 100%;">
 
-![启动界面](previews/boot.png)
+<video src="https://raw.githubusercontent.com/go-musicfox/go-musicfox/refs/heads/master/previews/desktop_lyrics.mp4" controls="controls" style="max-width: 100%;">
 
-#### 2. 主界面
-
-![主界面](previews/main.png)
-
-#### 3. 通知
-
-![通知](previews/notify.png)
-
-#### 4. 登录
-
-![登录界面](previews/login.png)
-
-#### 5. 搜索
-
-![搜索界面](previews/search.png)
-
-#### 6. Last.fm 授权
-
-![lastfm](previews/lastfm.png)
-
-#### 7. macOS NowPlaying
-
-![NowPlaying](previews/nowplaying.png)
-
-#### 8. UnblockNeteaseMusic
-
-![UNM](previews/unm.png)
-
-#### 9. macOS 桌面歌词 + 频谱
-
-![LyricsX](previews/lyricsX.gif)
-
-> [!NOTE]
-> macOS 原生桌面歌词功能，支持：
-> - YRC 逐字高亮、自动滚动、拖拽定位
-> - 11种频谱可视化样式（柱状/镜像/胶囊/火焰/圆形/波形等）
-> - 完整的视觉定制（字体/颜色/阴影/圆角/透明度）
-> - 配置路径：`[main.lyric.desktopLyrics]`，详见 [changelog](./utils/filex/embed/changelog.md)
 ## 安装
 
 <details>
