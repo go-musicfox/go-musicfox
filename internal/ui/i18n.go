@@ -47,6 +47,19 @@ const (
 	MsgQRLoginOpenImageFailed model.MessageID = "qr_login.open_image_failed"
 	MsgQRLoginGetCodeFailed   model.MessageID = "qr_login.get_code_failed"
 
+	MsgVerifyPageTitle       model.MessageID = "verify.page.title"
+	MsgVerifyGenerating      model.MessageID = "verify.generating"
+	MsgVerifyScanPrompt      model.MessageID = "verify.scan_prompt"
+	MsgVerifySuccess         model.MessageID = "verify.success"
+	MsgVerifyExpired         model.MessageID = "verify.expired"
+	MsgVerifyExpiredAction   model.MessageID = "verify.expired_action"
+	MsgVerifyWaitingScan     model.MessageID = "verify.waiting_scan"
+	MsgVerifyWaitingConfirm  model.MessageID = "verify.waiting_confirm"
+	MsgVerifyUnknownStatus   model.MessageID = "verify.unknown_status"
+	MsgVerifyError           model.MessageID = "verify.error"
+	MsgVerifyOpenImageFailed model.MessageID = "verify.open_image_failed"
+	MsgVerifyGetQRCodeFailed model.MessageID = "verify.get_qrcode_failed"
+
 	MsgOperationFailed           model.MessageID = "operation.failed"
 	MsgOperationLogoutSuccess    model.MessageID = "operation.logout.success"
 	MsgOperationLogoutCleared    model.MessageID = "operation.logout.cleared"
@@ -136,6 +149,19 @@ var zhMessages = map[model.MessageID]string{
 	MsgQRLoginError:           "发生错误: ",
 	MsgQRLoginOpenImageFailed: "打开二维码失败: ",
 	MsgQRLoginGetCodeFailed:   "无法获取二维码(可能被风控拦截), code: %.0f",
+
+	MsgVerifyPageTitle:       "人机验证",
+	MsgVerifyGenerating:      "正在生成验证二维码，请稍候...",
+	MsgVerifyScanPrompt:      "请使用登录账号对应的网易云音乐APP扫码完成验证",
+	MsgVerifySuccess:         "验证成功，正在重新登录...",
+	MsgVerifyExpired:         "验证二维码已失效",
+	MsgVerifyExpiredAction:   "验证二维码已失效，请按 'b' 或 'esc' 返回",
+	MsgVerifyWaitingScan:     "等待扫码...（请使用与登录账号一致的网易云音乐APP）",
+	MsgVerifyWaitingConfirm:  "已扫码，请在手机上确认",
+	MsgVerifyUnknownStatus:   "未知状态: %d，请返回重试",
+	MsgVerifyError:           "验证出错: ",
+	MsgVerifyOpenImageFailed: "打开验证二维码失败: ",
+	MsgVerifyGetQRCodeFailed: "无法获取验证二维码(可能被风控拦截), code: %.0f",
 
 	MsgOperationFailed:           "操作失败",
 	MsgOperationLogoutSuccess:    "登出成功",

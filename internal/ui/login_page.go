@@ -92,6 +92,11 @@ type LoginMsg struct {
 	err error
 }
 
+// LoginVerifyMsg 登录触发人机验证（-462），携带验证会话数据
+type LoginVerifyMsg struct {
+	verify *apputils.VerifyData
+}
+
 func NewLoginPage(netease *Netease) (login *LoginPage) {
 	accountInput := textinput.New()
 	accountInput.Placeholder = model.T(MsgLoginAccountPlaceholder)
@@ -148,6 +153,15 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 			return newPage, tea.Batch(tea.ClearScreen, model.TickMain(time.Nanosecond), l.netease.RerenderCmd(true))
 		}
 		return l.netease.MustMain(), model.TickMain(time.Nanosecond)
+	}
+
+	if verifyMsg, ok := msg.(LoginVerifyMsg); ok {
+		verifyPage := NewVerifyPage(l.netease, l, verifyMsg.verify, func() (model.Page, tea.Cmd) {
+			// 验证成功后自动重试登录
+			l.index = submitIndex
+			return l.enterHandler()
+		})
+		return verifyPage, verifyPage.Init()
 	}
 
 	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
@@ -604,9 +618,10 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 
 // 登录api返回信息的结构体
 type loginResponse struct {
-	Code    int    `json:"code"`
-	Msg     string `json:"msg"`
-	Message string `json:"message"`
+	Code    int                  `json:"code"`
+	Msg     string               `json:"msg"`
+	Message string               `json:"message"`
+	Data    *apputils.VerifyData `json:"data"`
 }
 
 func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
@@ -672,6 +687,10 @@ func checkLoginCmd(code float64, resp loginResponse) tea.Cmd {
 			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginNetworkError))}
 		case _struct.TooManyRequests:
 			slog.Error("登录失败, 触发风控验证", slogx.Error(resp.Message))
+			// -462 携带人机验证数据时，渲染验证二维码引导用户完成验证
+			if resp.Data != nil && resp.Data.VerifyType == 40 {
+				return LoginVerifyMsg{verify: resp.Data}
+			}
 			return LoginMsg{err: fmt.Errorf("%s", model.T(MsgLoginRiskControlled))}
 		case _struct.Success:
 			// http状态码200， 但是：
