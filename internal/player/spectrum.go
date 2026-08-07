@@ -144,7 +144,6 @@ func (a *PCMAnalyzer) NewConsumer() func(sampleRate float64, samplesL, samplesR 
 	generation := a.generation.Add(1)
 	a.frameMu.Lock()
 	a.frame = SpectrumFrame{}
-	a.target = SpectrumFrame{}
 	a.frameMu.Unlock()
 
 	// Clear raw ring buffer for new audio source.
@@ -159,9 +158,10 @@ func (a *PCMAnalyzer) NewConsumer() func(sampleRate float64, samplesL, samplesR 
 		a.rawRingR[i] = 0
 	}
 	a.rawMu.Unlock()
-	// Reset FFT averaging state.
-	a.avgLevelsL = [SpectrumBandCount]float64{}
-	a.avgLevelsR = [SpectrumBandCount]float64{}
+	// Note: avgLevelsL/R and target are intentionally NOT reset here — they are
+	// owned by the analyze goroutine, which detects the generation bump (in
+	// analyzeLatest) and resets them before the first frame of the new source.
+	// A concurrent write here would race with the running analyze loop.
 
 	return func(sampleRate float64, samplesL, samplesR []float32) {
 		a.consume(generation, sampleRate, samplesL, samplesR)
