@@ -1464,19 +1464,36 @@ func blendRamps(rowRamp []color.Color, horizColor color.Color) []color.Color {
 // lipgloss's rendering ("\x1b[m").
 var sgrReset = []byte("\x1b[m")
 
+// sgrWorthEmitting reports whether a color produces a channel in the escape
+// sequence: nil colors and lipgloss.NoColor ("absence of color", the sentinel
+// for unconfigured theme backgrounds) are both skipped, exactly like lipgloss
+// does when rendering a style.
+func sgrWorthEmitting(c color.Color) bool {
+	if c == nil {
+		return false
+	}
+	if _, isNoColor := c.(lipgloss.NoColor); isNoColor {
+		return false
+	}
+	return true
+}
+
 // appendSGRFgBg appends the SGR prefix for fg over bg, in the same combined
 // truecolor format lipgloss v2 emits ("\x1b[38;2;R;G;B;48;2;R;G;Bm"). Either
-// color may be nil; both nil yields no escape sequence at all.
+// color may be nil or NoColor; neither emitting yields no escape sequence at
+// all (the returned buffer is unchanged).
 func appendSGRFgBg(buf []byte, fg, bg color.Color) []byte {
-	if fg == nil && bg == nil {
+	fgOn := sgrWorthEmitting(fg)
+	bgOn := sgrWorthEmitting(bg)
+	if !fgOn && !bgOn {
 		return buf
 	}
 	buf = append(buf, '\x1b', '[')
-	if fg != nil {
+	if fgOn {
 		buf = appendSGRColor(buf, '3', fg)
 	}
-	if bg != nil {
-		if fg != nil {
+	if bgOn {
+		if fgOn {
 			buf = append(buf, ';')
 		}
 		buf = appendSGRColor(buf, '4', bg)
@@ -1489,6 +1506,17 @@ func appendSGRFgBg(buf []byte, fg, bg color.Color) []byte {
 // truecolor prefix. Channel values are the 16-bit RGBA values scaled to 8-bit,
 // identical to what lipgloss emits on a truecolor profile.
 func appendSGRColor(buf []byte, mode byte, c color.Color) []byte {
+	if c == nil {
+		return buf
+	}
+	// lipgloss.NoColor ("absence of color") must be detected by type assertion:
+	// its RGBA() returns (0,0,0,65535), indistinguishable from a legitimate
+	// black background. lipgloss skips NoColor channels entirely; so must we,
+	// otherwise transparent themes (Default, Transparent) render the whole
+	// visualizer as an opaque black block.
+	if _, isNoColor := c.(lipgloss.NoColor); isNoColor {
+		return buf
+	}
 	r, g, b, _ := c.RGBA()
 	buf = append(buf, mode, '8', ';', '2', ';')
 	buf = strconv.AppendInt(buf, int64(r>>8), 10)
@@ -1528,10 +1556,10 @@ func spectrumFgGlyph(char string, fg, bg color.Color) string {
 // spectrumEmptyGlyph renders an empty/plain glyph, painting it over bg when
 // non-nil so empty cells carry the app background too.
 func spectrumEmptyGlyph(char string, bg color.Color) string {
-	if bg == nil {
+	buf := appendSGRFgBg(nil, nil, bg)
+	if buf == nil {
 		return char
 	}
-	buf := appendSGRFgBg(nil, nil, bg)
 	buf = append(buf, char...)
 	buf = append(buf, sgrReset...)
 	return string(buf)

@@ -628,6 +628,15 @@ func TestAppendSGRFgBgMatchesLipgloss(t *testing.T) {
 		{"bg only", nil, bg},
 		{"fg and bg", fg, bg},
 		{"neither", nil, nil},
+		// NoColor ("absence of color") must be skipped like lipgloss does;
+		// its RGBA() is (0,0,0,65535) — indistinguishable from black, so the
+		// SGR builder must detect it by type. Otherwise transparent themes
+		// (Default, Transparent) paint the whole visualizer opaque black.
+		{"fg NoColor", lipgloss.NoColor{}, nil},
+		{"bg NoColor", nil, lipgloss.NoColor{}},
+		{"both NoColor", lipgloss.NoColor{}, lipgloss.NoColor{}},
+		{"fg NoColor over bg", lipgloss.NoColor{}, bg},
+		{"fg over bg NoColor", fg, lipgloss.NoColor{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -645,6 +654,11 @@ func TestAppendSGRFgBgMatchesLipgloss(t *testing.T) {
 			}
 			if manual != lipglossOut {
 				t.Fatalf("manual SGR %q != lipgloss %q", manual, lipglossOut)
+			}
+			// A NoColor background must never degrade to an opaque black
+			// "48;2;0;0;0" escape — that's the regression this test guards.
+			if strings.Contains(manual, "48;2;0;0;0") {
+				t.Fatalf("NoColor background rendered as opaque black: %q", manual)
 			}
 		})
 	}
