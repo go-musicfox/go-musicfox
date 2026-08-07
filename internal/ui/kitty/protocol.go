@@ -55,7 +55,15 @@ func TransmitAndDisplay(img image.Image, cols, rows int) (string, error) {
 // TransmitAndDisplayWithID transmits an image with a specific ID.
 // Useful for updating an existing image (animation).
 func TransmitAndDisplayWithID(img image.Image, cols, rows int, imageID uint32) (string, error) {
-	return transmit(img, cols, rows, imageID, "T", 0, CoverZIndex)
+	return TransmitAndDisplayWithIDZ(img, cols, rows, imageID, CoverZIndex)
+}
+
+// TransmitAndDisplayWithIDZ transmits an image with a specific ID and an
+// explicit z-index. Callers that render asynchronously (cover_renderer's
+// animation goroutine) must pass the z-index captured at planning time —
+// reading the mutable global CoverZIndex there races with the render thread.
+func TransmitAndDisplayWithIDZ(img image.Image, cols, rows int, imageID uint32, zIndex int) (string, error) {
+	return transmit(img, cols, rows, imageID, "T", 0, zIndex)
 }
 
 // TransmitImage transmits an image without displaying it.
