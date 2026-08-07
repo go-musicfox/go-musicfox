@@ -25,16 +25,20 @@ type Timer struct {
 	actualRuntime time.Duration
 	lastTick      time.Time
 	done          chan struct{}
-	l             sync.Mutex
+	l             sync.RWMutex
 }
 
 // Passed returns how much done is already passed.
 func (t *Timer) Passed() time.Duration {
+	t.l.RLock()
+	defer t.l.RUnlock()
 	return t.passed
 }
 
 // ActualRuntime returns how much time the timer has actually spent running.
 func (t *Timer) ActualRuntime() time.Duration {
+	t.l.RLock()
+	defer t.l.RUnlock()
 	return t.actualRuntime
 }
 
@@ -55,10 +59,6 @@ func (t *Timer) Run() {
 	if t == nil {
 		return
 	}
-	if t.started && t.ticker != nil {
-		t.options.OnRun(t.started)
-		return
-	}
 	t.l.Lock()
 	if t.started && t.ticker != nil {
 		t.l.Unlock()
@@ -66,38 +66,53 @@ func (t *Timer) Run() {
 		return
 	}
 
-	//c.active = true
 	t.ticker = time.NewTicker(t.options.TickerInternal)
 	t.lastTick = time.Now()
 	t.started = true
+	// Keep local references: the loop must never re-read t.ticker/t.done
+	// lock-free — pushDone (Stop/Pause) nils them under t.l, and a racy read
+	// could panic on a nil ticker dereference.
+	ticker := t.ticker
+	done := make(chan struct{})
+	t.done = done
 	t.l.Unlock()
 
 	t.options.OnRun(true)
 	t.options.OnTick()
-	t.done = make(chan struct{})
 
 	for {
-		if t.ticker == nil {
-			return
-		}
 		select {
-		case tickAt := <-t.ticker.C:
+		case tickAt := <-ticker.C:
+			// Field updates under lock: Passed/ActualRuntime/SetPassed read
+			// and write these fields concurrently from other goroutines.
+			t.l.Lock()
 			t.passed += tickAt.Sub(t.lastTick)
 			t.actualRuntime += tickAt.Sub(t.lastTick)
-			t.lastTick = time.Now()
+			t.lastTick = tickAt
+			t.l.Unlock()
+
 			t.options.OnTick()
+
 			if t.Remaining() <= 0 {
+				t.l.Lock()
 				t.pushDone()
+				t.l.Unlock()
 				t.options.OnDone(false)
-			} else if t.Remaining() <= t.options.TickerInternal {
+				return
+			}
+			if t.Remaining() <= t.options.TickerInternal {
+				t.l.Lock()
 				t.pushDone()
+				t.l.Unlock()
 				time.Sleep(t.Remaining())
+				t.l.Lock()
 				t.passed = t.options.Duration
+				t.l.Unlock()
 				t.options.OnTick()
 				t.options.OnDone(false)
-
+				return
 			}
-		case <-t.done:
+		case <-done:
 			return
 		}
 	}
@@ -131,6 +146,8 @@ func NewTimer(options Options) *Timer {
 	}
 }
 
+// pushDone stops the internal ticker and closes the done channel.
+// Callers must hold t.l.
 func (t *Timer) pushDone() {
 	if t.ticker != nil {
 		t.ticker.Stop()
