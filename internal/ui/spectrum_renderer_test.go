@@ -7,6 +7,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	foxfulStyle "github.com/anhoder/foxful-cli/style"
+	"github.com/anhoder/foxful-cli/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/player"
@@ -167,7 +168,10 @@ func TestSpectrumEmptyCellsHaveNoStyle(t *testing.T) {
 	for index := range ramp {
 		ramp[index] = color.RGBA{R: 0x12, G: 0x34, B: 0x56, A: 0xff}
 	}
-	bar := renderSpectrumBar(1.0/16, 8, ramp, '▌', '█', ' ')
+	// Strip ANSI first: empty cells carry the app background (a bg-only SGR)
+	// on real terminals, while lipgloss degrades to plain text in the test
+	// environment — the assertion must be independent of that.
+	bar := stripAnsiCodes(renderSpectrumBar(1.0/16, 8, ramp, '▌', '█', ' '))
 	if !strings.HasSuffix(bar, strings.Repeat(" ", 7)) {
 		t.Fatalf("empty spectrum cells are styled: %q", bar)
 	}
@@ -607,4 +611,86 @@ func (spectrumTestProvider) Spectrum() player.SpectrumFrame {
 
 func (spectrumTestProvider) RawSamples() player.RawSampleFrame {
 	return player.RawSampleFrame{}
+}
+
+// TestAppendSGRFgBgMatchesLipgloss verifies the manual SGR builder produces
+// byte-identical escape sequences to lipgloss's truecolor rendering, so the
+// per-cell renderer rewrite changes no terminal output.
+func TestAppendSGRFgBgMatchesLipgloss(t *testing.T) {
+	fg := color.RGBA{R: 0x12, G: 0x34, B: 0x56, A: 0xff}
+	bg := color.RGBA{R: 0x65, G: 0x43, B: 0x21, A: 0xff}
+
+	cases := []struct {
+		name   string
+		fg, bg color.Color
+	}{
+		{"fg only", fg, nil},
+		{"bg only", nil, bg},
+		{"fg and bg", fg, bg},
+		{"neither", nil, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			manual := spectrumFgGlyph("X", tc.fg, tc.bg)
+			var lipglossOut string
+			switch {
+			case tc.fg != nil && tc.bg != nil:
+				lipglossOut = util.SetFgBgStyle("X", tc.fg, tc.bg)
+			case tc.fg != nil:
+				lipglossOut = util.SetFgStyle("X", tc.fg)
+			case tc.bg != nil:
+				lipglossOut = lipgloss.NewStyle().Background(tc.bg).Render("X")
+			default:
+				lipglossOut = "X"
+			}
+			if manual != lipglossOut {
+				t.Fatalf("manual SGR %q != lipgloss %q", manual, lipglossOut)
+			}
+		})
+	}
+}
+
+// TestSpectrumVertRampsCachedPerDimensions verifies the vertical gradient
+// ramps are computed once per (width, height) and reused across calls, so the
+// per-frame BlendLuv storm is gone.
+func TestSpectrumVertRampsCachedPerDimensions(t *testing.T) {
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	r := &SpectrumRenderer{}
+	a := r.vertBrailleRamps(20, 5)
+	b := r.vertBrailleRamps(20, 5)
+	if len(a) != 5 || len(b) != 5 {
+		t.Fatalf("unexpected ramp dimensions: %d / %d", len(a), len(b))
+	}
+	if &a[0][0] != &b[0][0] {
+		t.Fatal("vertBrailleRamps recomputed for identical dimensions")
+	}
+	if got := r.vertBrailleRampsDim(20, 5, nil); len(got) != 5 {
+		t.Fatalf("dim ramp not computed: %d rows", len(got))
+	}
+}
+
+// TestSpectrumRampInvalidatesOnStyleChange verifies the cached color ramps
+// are rebuilt after a theme switch (style.StyleGeneration bump), instead of
+// replaying stale theme colors until the window is resized.
+func TestSpectrumRampInvalidatesOnStyleChange(t *testing.T) {
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	restore := foxfulStyle.CurrentStyleSet()
+	t.Cleanup(func() { foxfulStyle.SetStyleSet(restore) })
+
+	r := &SpectrumRenderer{}
+	first := r.ramp(10)
+	if &r.ramp(10)[0] != &first[0] {
+		t.Fatal("ramp not cached for identical width")
+	}
+	foxfulStyle.SetStyleSet(foxfulStyle.StyleSet{})
+	second := r.ramp(10)
+	if &second[0] == &first[0] {
+		t.Fatal("ramp not invalidated after style change")
+	}
 }
