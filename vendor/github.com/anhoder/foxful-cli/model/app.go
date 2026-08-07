@@ -63,20 +63,7 @@ type App struct {
 	// 间隔（高帧率 + 重渲染）时堆积无界数量的阻塞 goroutine。
 	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
 	rerenderPending atomic.Bool
-
-	// lastMouseMotionAt 记录最近一次处理的 MouseMotionMsg 时间，用于对
-	// 鼠标移动事件节流（见 mouseMotionThrottle）。
-	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
-	lastMouseMotionAt time.Time
 }
-
-// mouseMotionThrottle 限制 MouseMotionMsg 的处理频率。终端在 motion 模式下
-// 上报的鼠标移动事件可达 60-120Hz，而每个事件都会触发一次全量 View 计算
-// （菜单 + 频谱 + 歌词）。节流到 ~30Hz 与 UI 帧率同一量级：hover 高亮跟手
-// 且不滞后（motion 是"最新位置"语义，丢弃中间事件安全），CPU 占用不再被
-// 鼠标事件驱动。
-// Local customization: 上游 foxful-cli 无此常量（go-musicfox 定制）。
-const mouseMotionThrottle = 30 * time.Millisecond
 
 // StyleSet returns the app-scoped StyleSet if one was set via SetStyleSet,
 // otherwise the global style.CurrentStyleSet(). Internal render paths should
