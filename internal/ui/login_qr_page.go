@@ -12,7 +12,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
-	"github.com/go-musicfox/netease-music/service"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/mattn/go-runewidth"
 	"github.com/skratchdot/open-golang/open"
 
@@ -292,13 +292,10 @@ func (p *QRLoginPage) View(a *model.App) string {
 
 // generateQRCodeCmd 异步获取和生成二维码
 func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
-	qrService := service.LoginQRService{}
-	code, _, url, err := qrService.GetKey()
+	cookieJar := neteaseutil.GetGlobalCookieJar()
+	uniKey, url, err := qrGetKey(cookieJar)
 	if err != nil {
 		return qrErrorMsg{err}
-	}
-	if code != 200 || url == "" {
-		return qrErrorMsg{fmt.Errorf("%s", fmt.Sprintf(model.T(MsgQRLoginGetCodeFailed), code))}
 	}
 
 	// 生成二维码
@@ -309,15 +306,15 @@ func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
 
 	return qrGeneratedMsg{
 		qrView:     buffer.String(),
-		uniKey:     qrService.UniKey,
+		uniKey:     uniKey,
 		qrCodePath: path,
 	}
 }
 
 // pollQRStatusCmd 轮询二维码状态
 func (p *QRLoginPage) pollQRStatusCmd() tea.Msg {
-	qrService := service.LoginQRService{UniKey: p.uniKey}
-	code, resp, err := qrService.CheckQR()
+	cookieJar := neteaseutil.GetGlobalCookieJar()
+	code, resp, err := qrCheckStatus(p.uniKey, cookieJar)
 	if err != nil {
 		return qrErrorMsg{err}
 	}

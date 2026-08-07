@@ -27,6 +27,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gopxl/beep v1.4.0
+	github.com/imroc/req/v3 v3.59.0
 	github.com/juju/persistent-cookiejar v1.0.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
 	github.com/knadh/koanf/providers/file v1.2.0
@@ -52,6 +53,7 @@ require (
 require (
 	charm.land/glamour/v2 v2.0.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
+	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
@@ -71,15 +73,18 @@ require (
 	github.com/go-flac/go-flac v1.0.0 // indirect
 	github.com/go-musicfox/requests v0.2.3 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gookit/color v1.5.3 // indirect
 	github.com/gookit/goutil v0.6.10 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
+	github.com/icholy/digest v1.1.0 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
 	github.com/jezek/xgb v1.3.1 // indirect
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/juju/go4 v0.0.0-20160222163258-40d72ab9641a // indirect
+	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect
 	github.com/mewkiz/pkg v0.0.0-20230226050401-4010bf0fec14 // indirect
@@ -90,6 +95,9 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/quic-go/qpack v0.6.0 // indirect
+	github.com/quic-go/quic-go v0.60.0 // indirect
+	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
