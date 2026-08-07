@@ -49,12 +49,14 @@ type DefaultStatusBar struct {
 
 	// 整栏渲染缓存（go-musicfox 定制）：组件文本每帧计算，但 nugget/
 	// breadcrumb/时间/填充的 lipgloss 渲染只按 (宽度, 分钟, 样式代,
-	// 组件文本) 变化时重做——状态栏是全帧渲染的最后一个每帧 lipgloss 大头。
+	// 组件文本, 面包屑内容, 面包屑 hover) 变化时重做——状态栏是全帧
+	// 渲染的最后一个每帧 lipgloss 大头。
 	cachedView            string
 	cachedWidth           int
 	cachedMinute          string
 	cachedStyleGen        uint64
 	cachedComponents      string
+	cachedBreadcrumb      string
 	cachedBreadcrumbHover int
 	cachedBounds          []statusBarComponentBounds
 }
@@ -87,14 +89,27 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	gen := style.StyleGeneration()
 	minute := time.Now().Format("15:04")
 	componentsKey := strings.Join(componentViews, "\x00")
-	// Breadcrumb hover paints a highlight (statusbar.go isHovered), so it must
-	// participate in the cache key.
+	// Breadcrumb content is rebuilt from m.menuStack + m.menuTitle on every
+	// navigation, while nothing else in the key changes — so it must
+	// participate in the cache key, or entering/returning submenus keeps the
+	// stale breadcrumb until the next minute boundary, song change or theme
+	// switch. Hover paints a highlight, so it participates too.
+	breadcrumbKey := ""
 	breadcrumbHover := -1
 	if m != nil {
 		breadcrumbHover = m.hoveredBreadcrumbIdx
+		breadcrumbKey = m.menuTitle.Title
+		if m.menuStack != nil {
+			for _, item := range m.menuStack.ToSlice() {
+				if si, ok := item.(*menuStackItem); ok {
+					breadcrumbKey += "\x00" + si.menuTitle.Title
+				}
+			}
+		}
 	}
 	if d.cachedView != "" && d.cachedWidth == w && d.cachedMinute == minute &&
 		d.cachedStyleGen == gen && d.cachedComponents == componentsKey &&
+		d.cachedBreadcrumb == breadcrumbKey &&
 		d.cachedBreadcrumbHover == breadcrumbHover {
 		d.componentBounds = append(d.componentBounds, d.cachedBounds...)
 		return d.cachedView
@@ -245,6 +260,7 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	d.cachedMinute = minute
 	d.cachedStyleGen = gen
 	d.cachedComponents = componentsKey
+	d.cachedBreadcrumb = breadcrumbKey
 	d.cachedBreadcrumbHover = breadcrumbHover
 	d.cachedBounds = append(d.cachedBounds[:0], d.componentBounds...)
 	return view
