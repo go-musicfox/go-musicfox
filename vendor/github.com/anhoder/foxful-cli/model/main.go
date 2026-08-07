@@ -77,6 +77,22 @@ type Main struct {
 	// Mouse hover tracking for menu list items
 	hoveredMenuItemIdx int // -1 = none, 0+ = index in menuList
 
+	// menuItemCache 缓存每行菜单项的渲染结果。鼠标划过菜单时 hover 只影响
+	// 单行，其余行的 lipgloss 渲染可整帧复用；否则每次 hover 变化都全量
+	// 重渲染所有菜单行，CPU 被鼠标事件驱动到接近单核满载。
+	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
+	menuItemCache map[int]menuItemViewCacheEntry
+
+	// menuLineCache 缓存整行（含双列间隙与左侧填充）的组装结果，避免每帧
+	// 对 29 行未变化的行重复 lipgloss 组装。
+	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
+	menuLineCache map[int]menuLineViewCacheEntry
+
+	// lastViewAt 记录 Main.View 最近一次执行时间，用于把鼠标 hover 引发的
+	// 渲染合并到 tick 帧率（hover 状态即时更新，渲染 ≤33ms 延迟由 tick 兜底）。
+	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
+	lastViewAt time.Time
+
 	// Mouse hover tracking for tabs
 	hoveredTabIdx int // -1 = none, 0+ = tab index
 
@@ -474,6 +490,10 @@ func (m *Main) View(a *App) string {
 	if w <= 0 || h <= 0 {
 		return ""
 	}
+	// Track the last frame time so hover state changes can merge their
+	// render into the frame-rate cycle instead of re-rendering per event.
+	// Local customization: 上游无此记录（go-musicfox 定制）。
+	m.lastViewAt = time.Now()
 
 	a.ClearAppBackgroundExclusion()
 
@@ -595,7 +615,90 @@ func (m *Main) View(a *App) string {
 	return renderAppBackground(content, w, ss.AppBackground, a.appBackgroundExclusion)
 }
 
+// renderAppBackground fills the frame with the app background. Rewritten to
+// avoid running lipgloss's full wrap/align/grapheme pipeline over the whole
+// frame on every render — that was the dominant per-frame cost during mouse
+// sweeps (components already paint their own cells with the background, so
+// only empty, plain-text and short rows need explicit filling).
+// Local customization: 上游用 lipgloss 全帧处理（go-musicfox 定制）。
 func renderAppBackground(content string, width int, background lipgloss.Style, exclusion backgroundRect) string {
+	bg := background.GetBackground()
+	if bg == nil || width <= 0 {
+		return content
+	}
+	// Transparent/empty backgrounds paint nothing — skip all processing.
+	// lipgloss.Color("") (unconfigured theme background) returns NoColor, and
+	// a NoColor RGBA() is indistinguishable from black, so detect it by type.
+	if _, isNoColor := bg.(lipgloss.NoColor); isNoColor {
+		return content
+	}
+	// Build the background SGR prefix once. NoColor must be detected by type
+	// assertion: its RGBA() returns (0,0,0,65535), indistinguishable from a
+	// legitimate black background. Falls back to lipgloss rendering for
+	// unusual color types (e.g. ANSI palette colors) so those still render.
+	var bgSGR string
+	if _, isNoColor := bg.(lipgloss.NoColor); !isNoColor {
+		if r, g, b, a := bg.RGBA(); a != 0 {
+			bgSGR = fmt.Sprintf("\x1b[48;2;%d;%d;%dm", r>>8, g>>8, b>>8)
+		}
+	}
+	if bgSGR == "" {
+		// Keep the original lipgloss path for unusual background colors.
+		return renderAppBackgroundLipgloss(content, width, background, exclusion)
+	}
+	const resetSGR = "\x1b[m"
+
+	lines := strings.Split(content, "\n")
+	for y, line := range lines {
+		// Exclusion row (cover image placeholder): fill the segments around
+		// the excluded span, leave the span itself untouched. Pad the row to
+		// the frame width first, matching the original full-frame Width pass.
+		if exclusion.w > 0 && exclusion.h > 0 && y >= exclusion.y && y < exclusion.y+exclusion.h {
+			start := max(exclusion.x, 0)
+			end := min(exclusion.x+exclusion.w, width)
+			if start < end {
+				if lw := ansi.StringWidth(line); lw < width {
+					line += bgSGR + strings.Repeat(" ", width-lw) + resetSGR
+				}
+				left := ansi.Cut(line, 0, start)
+				mid := ansi.Cut(line, start, end)
+				right := ansi.Cut(line, end, width)
+				lines[y] = bgSGR + left + resetSGR + mid + bgSGR + right + resetSGR
+				continue
+			}
+		}
+
+		switch {
+		case line == "":
+			// Empty row: fast path, no width computation needed.
+			lines[y] = bgSGR + strings.Repeat(" ", width) + resetSGR
+		case !strings.Contains(line, "\x1b"):
+			// Plain-text row: pad with runewidth (no ANSI to parse) and paint.
+			if lw := runewidth.StringWidth(line); lw < width {
+				line += strings.Repeat(" ", width-lw)
+			}
+			lines[y] = bgSGR + line + resetSGR
+		case len(line) < width*2:
+			// ANSI row that is plausibly shorter than the frame width: pad
+			// precisely and paint. The leading SGR is a fallback for cells
+			// without an explicit background; styled cells carry their own.
+			if lw := ansi.StringWidth(line); lw < width {
+				line += bgSGR + strings.Repeat(" ", width-lw) + resetSGR
+			}
+			lines[y] = bgSGR + line + resetSGR
+		default:
+			// Full-width ANSI row: components already paint every cell with
+			// the app background; leave it untouched.
+			lines[y] = line
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// renderAppBackgroundLipgloss is the original full-frame lipgloss
+// implementation, kept for background color types that cannot be expressed as
+// raw RGB SGR (fallback path of renderAppBackground).
+func renderAppBackgroundLipgloss(content string, width int, background lipgloss.Style, exclusion backgroundRect) string {
 	content = lipgloss.NewStyle().Width(width).Render(content)
 	if exclusion.w <= 0 || exclusion.h <= 0 {
 		return background.Render(content)
@@ -1167,11 +1270,15 @@ func (m *Main) menuListView(a *App) string {
 	if m.options.CenterEverything {
 		menuListBuilder.WriteString(m.centeredMenuView(a, lines))
 	} else {
+		// Each row is already fully rendered (styles baked in), so joining
+		// with plain newlines is equivalent to lipgloss.JoinVertical but
+		// avoids re-processing every row's ANSI content per frame.
+		// Local customization: 上游用 lipgloss.JoinVertical（go-musicfox 定制）。
 		var menuLines []string
 		for i := 0; i < lines; i++ {
 			menuLines = append(menuLines, m.menuLineView(a, i))
 		}
-		menuListBuilder.WriteString(lipgloss.JoinVertical(lipgloss.Left, menuLines...))
+		menuListBuilder.WriteString(strings.Join(menuLines, "\n"))
 	}
 
 	// fill blanks to maintain fixed page size
@@ -1184,7 +1291,7 @@ func (m *Main) menuListView(a *App) string {
 		if lines > 0 {
 			menuListBuilder.WriteByte('\n')
 		}
-		menuListBuilder.WriteString(lipgloss.JoinVertical(lipgloss.Left, fillLines...))
+		menuListBuilder.WriteString(strings.Join(fillLines, "\n"))
 	}
 
 	return menuListBuilder.String()
@@ -1209,6 +1316,24 @@ func truncateVisualWidth(s string, maxWidth int) string {
 	return s
 }
 
+// menuItemViewCacheEntry 是 menuItemView 单行渲染的缓存条目。键是渲染输入
+// 的一个子集：内容（title/subtitle）、选中/hover 状态、窗口尺寸、样式代与
+// subtitle 滚动相位。任一变化（翻页、hover、主题切换、滚动、数据刷新）都
+// 会自然失效。
+type menuItemViewCacheEntry struct {
+	title         string
+	subtitle      string
+	selected      bool
+	hovered       bool
+	windowWidth   int
+	maxIndexWidth int
+	dualColumn    bool
+	styleGen      uint64
+	scrollPhase   int64
+	view          string
+	width         int
+}
+
 func (m *Main) menuItemView(a *App, index int) (string, int) {
 	var (
 		menuItemBuilder strings.Builder
@@ -1221,6 +1346,25 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 
 	isSelected := m.isSelected(index)
 	isHovered := !m.inSearching && index == m.hoveredMenuItemIdx
+
+	// Row-level render cache (Local customization): a mouse sweep changes only
+	// the hovered row; re-rendering every menu line with lipgloss on each
+	// hover change dominated CPU during mouse sweeps at high frame rates.
+	if index >= 0 && index < len(m.menuList) && m.menuItemCache != nil {
+		item := &m.menuList[index]
+		var scrollPhase int64
+		if m.options.Ticker != nil {
+			scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+		}
+		if e, ok := m.menuItemCache[index]; ok &&
+			e.title == item.Title && e.subtitle == item.Subtitle &&
+			e.selected == isSelected && e.hovered == isHovered &&
+			e.windowWidth == windowWidth && e.maxIndexWidth == maxIndexWidth &&
+			e.dualColumn == m.isDualColumn &&
+			e.styleGen == style.StyleGeneration() && e.scrollPhase == scrollPhase {
+			return e.view, e.width
+		}
+	}
 
 	// Resolve title style based on selection + hover state
 	ss := style.CurrentStyleSet()
@@ -1335,7 +1479,54 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 
 	menuItemBuilder.WriteString(menuName)
 
-	return menuItemBuilder.String(), itemMaxLen
+	view := menuItemBuilder.String()
+
+	// Store the row render in the cache (Local customization). Cap the map at
+	// two pages: scrolling past that means the page changed, and the old
+	// entries are useless anyway.
+	if index >= 0 && index < len(m.menuList) {
+		if m.menuItemCache == nil {
+			m.menuItemCache = make(map[int]menuItemViewCacheEntry, m.menuPageSize+2)
+		} else if len(m.menuItemCache) > m.menuPageSize*2 {
+			m.menuItemCache = make(map[int]menuItemViewCacheEntry, m.menuPageSize+2)
+		}
+		item := &m.menuList[index]
+		var scrollPhase int64
+		if m.options.Ticker != nil {
+			scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+		}
+		m.menuItemCache[index] = menuItemViewCacheEntry{
+			title:         item.Title,
+			subtitle:      item.Subtitle,
+			selected:      isSelected,
+			hovered:       isHovered,
+			windowWidth:   windowWidth,
+			maxIndexWidth: maxIndexWidth,
+			dualColumn:    m.isDualColumn,
+			styleGen:      style.StyleGeneration(),
+			scrollPhase:   scrollPhase,
+			view:          view,
+			width:         itemMaxLen,
+		}
+	}
+
+	return view, itemMaxLen
+}
+
+// menuLineViewCacheEntry 缓存 menuLineView 整行的组装结果。键覆盖左右列的
+// 内容、选中/hover 状态、窗口尺寸与样式代——鼠标划过只失效 hover 行，其余
+// 行整帧直接复用。
+type menuLineViewCacheEntry struct {
+	leftIndex, rightIndex        int
+	leftTitle, leftSubtitle      string
+	leftSelected, leftHovered    bool
+	rightTitle, rightSubtitle    string
+	rightSelected, rightHovered  bool
+	windowWidth, menuStartColumn int
+	dualColumn                   bool
+	styleGen                     uint64
+	scrollPhase                  int64
+	view                         string
 }
 
 func (m *Main) menuLineView(a *App, line int) string {
@@ -1347,6 +1538,39 @@ func (m *Main) menuLineView(a *App, line int) string {
 	}
 	if index >= len(m.menuList) {
 		return "" // beyond menu bounds — empty row
+	}
+
+	// Row-level render cache (Local customization): assembling the row (gap +
+	// padding + JoinVertical) with lipgloss on every frame for every row was
+	// the remaining per-frame cost during mouse sweeps.
+	{
+		var rightIndex = -1
+		var rightItem *MenuItem
+		if m.isDualColumn && index+1 < len(m.menuList) {
+			rightIndex = index + 1
+			rightItem = &m.menuList[rightIndex]
+		}
+		var scrollPhase int64
+		if m.options.Ticker != nil {
+			scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+		}
+		gen := style.StyleGeneration()
+		if e, ok := m.menuLineCache[line]; ok {
+			leftItem := &m.menuList[index]
+			keyMatch := e.leftIndex == index &&
+				e.leftTitle == leftItem.Title && e.leftSubtitle == leftItem.Subtitle &&
+				e.leftSelected == m.isSelected(index) && e.leftHovered == (!m.inSearching && index == m.hoveredMenuItemIdx) &&
+				e.windowWidth == a.WindowWidth() && e.menuStartColumn == m.menuStartColumn &&
+				e.dualColumn == m.isDualColumn && e.styleGen == gen && e.scrollPhase == scrollPhase
+			if keyMatch && rightItem == nil {
+				return e.view
+			}
+			if keyMatch && rightItem != nil && e.rightIndex == rightIndex &&
+				e.rightTitle == rightItem.Title && e.rightSubtitle == rightItem.Subtitle &&
+				e.rightSelected == m.isSelected(rightIndex) && e.rightHovered == (!m.inSearching && rightIndex == m.hoveredMenuItemIdx) {
+				return e.view
+			}
+		}
 	}
 
 	menuItemStr, firstColumnWidth := m.menuItemView(a, index)
@@ -1370,6 +1594,38 @@ func (m *Main) menuLineView(a *App, line int) string {
 	if m.menuStartColumn > 4 {
 		row = lipgloss.NewStyle().Inherit(style.CurrentStyleSet().AppBackground).PaddingLeft(m.menuStartColumn - 4).Render(row)
 	}
+
+	// Store the assembled row (Local customization), with the same cap as the
+	// per-item cache: page changes invalidate naturally via the key fields.
+	if m.menuLineCache == nil {
+		m.menuLineCache = make(map[int]menuLineViewCacheEntry, m.menuPageSize+2)
+	} else if len(m.menuLineCache) > m.menuPageSize*2 {
+		m.menuLineCache = make(map[int]menuLineViewCacheEntry, m.menuPageSize+2)
+	}
+	entry := menuLineViewCacheEntry{
+		leftIndex:       index,
+		leftTitle:       m.menuList[index].Title,
+		leftSubtitle:    m.menuList[index].Subtitle,
+		leftSelected:    m.isSelected(index),
+		leftHovered:     !m.inSearching && index == m.hoveredMenuItemIdx,
+		rightIndex:      -1,
+		windowWidth:     a.WindowWidth(),
+		menuStartColumn: m.menuStartColumn,
+		dualColumn:      m.isDualColumn,
+		styleGen:        style.StyleGeneration(),
+		view:            row,
+	}
+	if m.isDualColumn && index+1 < len(m.menuList) {
+		entry.rightIndex = index + 1
+		entry.rightTitle = m.menuList[index+1].Title
+		entry.rightSubtitle = m.menuList[index+1].Subtitle
+		entry.rightSelected = m.isSelected(index + 1)
+		entry.rightHovered = !m.inSearching && index+1 == m.hoveredMenuItemIdx
+	}
+	if m.options.Ticker != nil {
+		entry.scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+	}
+	m.menuLineCache[line] = entry
 	return row
 }
 
@@ -2537,7 +2793,12 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 			stateChanged = true
 		}
 		if stateChanged {
-			return m, tea.Sequence(a.RerenderCmd(true), a.SetMousePointer("default"))
+			// 与下方 hover 渲染合并逻辑一致：不立即全量重渲染（go-musicfox 定制）。
+			var cmds []tea.Cmd
+			if time.Since(m.lastViewAt) >= hoverRenderInterval {
+				cmds = append(cmds, a.RerenderCmd(true))
+			}
+			return m, tea.Sequence(append(cmds, a.SetMousePointer("default"))...)
 		}
 		return m, nil
 	}
@@ -2579,7 +2840,18 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 	// Compute commands for state changes
 	var cmds []tea.Cmd
 	if m.hoveredBreadcrumbIdx != oldBreadcrumbHover || m.hoveredMenuItemIdx != oldMenuItemHover || m.hoveredBackButton != oldBackButtonHover || m.hoveredTabIdx != oldTabHover {
-		cmds = append(cmds, a.RerenderCmd(true))
+		// Hover rendering is merged into the frame-rate render cycle: a mouse
+		// sweep changes the hovered row every frame, and rendering the full
+		// view per change drives CPU to a single core. State updates are
+		// cheap; the render fires only when the last frame is older than
+		// hoverRenderInterval (the ticker renders during playback anyway, so
+		// this only matters while idle). This bounds the render rate to the
+		// frame rate architecturally — mouse events never drive rendering.
+		// Local customization: 上游每次 hover 变化都立即全量重渲染
+		//（go-musicfox 定制）。
+		if time.Since(m.lastViewAt) >= hoverRenderInterval {
+			cmds = append(cmds, a.RerenderCmd(true))
+		}
 	}
 	if m.hoverPointerActive != oldPointerActive {
 		if m.hoverPointerActive {
@@ -2594,6 +2866,12 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 	}
 	return m, nil
 }
+
+// hoverRenderInterval 是 hover 状态变化触发渲染的最小间隔。渲染频率被限制
+// 在帧率量级：播放时由 tick 驱动，空闲时 hover 变化至多按此间隔补一次渲染。
+// 必须明显大于 30fps 的 tick 间隔（33.33ms），否则每次 hover 变化都会在
+// 边界上越过阈值，合并失效（go-musicfox 定制）。
+const hoverRenderInterval = 50 * time.Millisecond
 
 // handleBreadcrumbClick handles a left-click on the status bar breadcrumb.
 // Navigates back to the clicked menu level. Returns nil if no clickable
