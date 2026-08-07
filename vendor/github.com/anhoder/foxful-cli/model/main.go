@@ -634,8 +634,10 @@ func renderAppBackground(content string, width int, background lipgloss.Style, e
 	}
 	// Build the background SGR prefix once. NoColor must be detected by type
 	// assertion: its RGBA() returns (0,0,0,65535), indistinguishable from a
-	// legitimate black background. Falls back to lipgloss rendering for
-	// unusual color types (e.g. ANSI palette colors) so those still render.
+	// legitimate black background. Note: this path always emits truecolor —
+	// ansi.BasicColor/IndexedColor (palette themes) have non-zero RGBA() and
+	// do NOT fall back to the lipgloss path below; lipgloss would emit
+	// "48;5;n" for those, an accepted difference.
 	var bgSGR string
 	if _, isNoColor := bg.(lipgloss.NoColor); !isNoColor {
 		if r, g, b, a := bg.RGBA(); a != 0 {
@@ -654,6 +656,9 @@ func renderAppBackground(content string, width int, background lipgloss.Style, e
 		// Exclusion row (cover image placeholder): fill the segments around
 		// the excluded span, leave the span itself untouched. Pad the row to
 		// the frame width first, matching the original full-frame Width pass.
+		// NB: SetAppBackgroundExclusion currently has no callers in
+		// go-musicfox, so this branch is unreachable in practice (cover
+		// rendering uses its own clear mechanism); kept for API parity.
 		if exclusion.w > 0 && exclusion.h > 0 && y >= exclusion.y && y < exclusion.y+exclusion.h {
 			start := max(exclusion.x, 0)
 			end := min(exclusion.x+exclusion.w, width)
