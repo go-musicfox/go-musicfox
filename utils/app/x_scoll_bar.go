@@ -48,6 +48,10 @@ func (b *XScrollBar) Tick(width int, content string) string {
 	if b.lastContent != content {
 		b.lastContent = content
 		b.offsetF = 0
+		// Content reset must not inherit the inter-frame elapsed, or the new
+		// line's first visible frame jumps elapsed*5 cells (cutting the head
+		// after a render pause, e.g. playback resuming after <1s).
+		elapsed = 0
 	}
 
 	length := runewidth.StringWidth(content)
