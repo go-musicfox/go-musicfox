@@ -16,6 +16,15 @@ func TestRenderAppBackgroundMatchesLipgloss(t *testing.T) {
 	bgStyle := lipgloss.NewStyle().Background(lipgloss.Color("#000000"))
 	width := 40
 
+	// Boundary cases around the old `len(line) < width*2` byte heuristic:
+	// rows whose byte length overflows width*2 while the visible width does
+	// not, and rows wider than the frame. Both previously slipped through
+	// unpainted or untruncated.
+	longAnsiShortVisible := strings.Repeat("\x1b[38;2;255;255;255mX\x1b[m", 15)  // ~360 bytes, 15 visible cols
+	exactBoundary := "\x1b[38;2;1;2;3m" + strings.Repeat("x", 62) + "\x1b[m"    // exactly width*2 bytes, over-wide
+	ansiWideShort := "\x1b[38;2;1;2;3m" + strings.Repeat("x", 50) + "\x1b[m"    // under width*2 bytes, over-wide
+	ansiCjkShortVisible := "\x1b[38;2;1;2;3m" + strings.Repeat("中", 26) + "\x1b[m" // 96 bytes, 26 visible cols
+
 	cases := []string{
 		"",
 		"short text",
@@ -25,6 +34,11 @@ func TestRenderAppBackgroundMatchesLipgloss(t *testing.T) {
 		"multi\nstyled \x1b[1mbold\x1b[m\nrows",
 		"\x1b[38;2;1;2;3m\x1b[48;2;4;5;6mcell\x1b[m rest",
 		"tail \x1b[m reset only",
+		longAnsiShortVisible,
+		exactBoundary,
+		ansiWideShort,
+		ansiCjkShortVisible,
+		strings.Repeat("y", 60), // over-wide plain text
 	}
 	for _, c := range cases {
 		got := renderAppBackground(c, width, bgStyle, backgroundRect{})

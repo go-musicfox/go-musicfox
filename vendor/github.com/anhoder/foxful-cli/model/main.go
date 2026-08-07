@@ -649,6 +649,7 @@ func renderAppBackground(content string, width int, background lipgloss.Style, e
 	const resetSGR = "\x1b[m"
 
 	lines := strings.Split(content, "\n")
+	overwide := false
 	for y, line := range lines {
 		// Exclusion row (cover image placeholder): fill the segments around
 		// the excluded span, leave the span itself untouched. Pad the row to
@@ -657,7 +658,9 @@ func renderAppBackground(content string, width int, background lipgloss.Style, e
 			start := max(exclusion.x, 0)
 			end := min(exclusion.x+exclusion.w, width)
 			if start < end {
-				if lw := ansi.StringWidth(line); lw < width {
+				if lw := ansi.StringWidth(line); lw > width {
+					overwide = true
+				} else if lw < width {
 					line += bgSGR + strings.Repeat(" ", width-lw) + resetSGR
 				}
 				left := ansi.Cut(line, 0, start)
@@ -674,23 +677,35 @@ func renderAppBackground(content string, width int, background lipgloss.Style, e
 			lines[y] = bgSGR + strings.Repeat(" ", width) + resetSGR
 		case !strings.Contains(line, "\x1b"):
 			// Plain-text row: pad with runewidth (no ANSI to parse) and paint.
-			if lw := runewidth.StringWidth(line); lw < width {
+			if lw := runewidth.StringWidth(line); lw > width {
+				overwide = true
+			} else if lw < width {
 				line += strings.Repeat(" ", width-lw)
+				lines[y] = bgSGR + line + resetSGR
+			} else {
+				lines[y] = bgSGR + line + resetSGR
 			}
-			lines[y] = bgSGR + line + resetSGR
-		case len(line) < width*2:
-			// ANSI row that is plausibly shorter than the frame width: pad
-			// precisely and paint. The leading SGR is a fallback for cells
-			// without an explicit background; styled cells carry their own.
-			if lw := ansi.StringWidth(line); lw < width {
+		default:
+			// ANSI row: byte length is not a reliable width proxy (a row of
+			// many short styled segments can exceed width*2 bytes while still
+			// leaving unfilled cells), so measure the visible width and pad
+			// precisely. The leading SGR is a fallback for cells without an
+			// explicit background; styled cells carry their own.
+			if lw := ansi.StringWidth(line); lw > width {
+				overwide = true
+			} else if lw < width {
 				line += bgSGR + strings.Repeat(" ", width-lw) + resetSGR
 			}
 			lines[y] = bgSGR + line + resetSGR
-		default:
-			// Full-width ANSI row: components already paint every cell with
-			// the app background; leave it untouched.
-			lines[y] = line
 		}
+	}
+	if overwide {
+		// An over-wide row wraps into extra lines under the original lipgloss
+		// Width() pass, shifting every subsequent row, so the manual filler
+		// cannot reproduce it line-by-line. Fall back to the full lipgloss
+		// pipeline (rare: components are expected to keep rows within the
+		// frame width).
+		return renderAppBackgroundLipgloss(content, width, background, exclusion)
 	}
 	return strings.Join(lines, "\n")
 }
