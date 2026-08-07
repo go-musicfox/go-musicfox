@@ -117,8 +117,11 @@ func (p *beepPlayer) listen() {
 			return
 		case <-done:
 			p.Stop()
-		case p.curMusic = <-p.musicChan:
+		case music := <-p.musicChan:
 			p.l.Lock()
+			// curMusic is read by CurMusic() (UI thread) under p.l, so assign
+			// it while holding the lock too.
+			p.curMusic = music
 			p.pausedNoLock()
 			if p.timer != nil {
 				p.timer.SetPassed(0)
@@ -225,6 +228,15 @@ func (p *beepPlayer) listen() {
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
+					// Guard with p.l: curStreamer/curFormat are replaced (and
+					// curStreamer set to nil) under p.l by reset() during song
+					// switches. Reading them lock-free from the timer goroutine
+					// races with that and can panic on a nil interface.
+					p.l.Lock()
+					defer p.l.Unlock()
+					if p.curStreamer == nil || p.curFormat.SampleRate == 0 {
+						return
+					}
 					select {
 					case p.timeChan <- time.Duration(p.curStreamer.Position()) * time.Second / time.Duration(p.curFormat.SampleRate):
 					default:
@@ -251,6 +263,8 @@ func (p *beepPlayer) Play(music URLMusic) {
 }
 
 func (p *beepPlayer) CurMusic() URLMusic {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.curMusic
 }
 
