@@ -1,12 +1,14 @@
-//go:build !darwin
+//go:build !darwin && !windows && !linux
 
 package ui
 
-// webviewLoginAvailable reports whether the native WKWebView login window is
-// available on the current platform. It is only implemented on macOS.
+// webviewLoginAvailable reports whether the native WebView login window is
+// available on the current platform. It is implemented on macOS (WKWebView),
+// Windows (WebView2) and Linux (WebKitGTK); unsupported platforms fall back
+// to this stub.
 const webviewLoginAvailable = false
 
-// webviewLoginController is a no-op stub on non-macOS platforms. The login
+// webviewLoginController is a no-op stub on unsupported platforms. The login
 // entry button stays visible and shows an unsupported message when activated.
 type webviewLoginController struct{}
 

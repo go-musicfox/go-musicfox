@@ -270,6 +270,14 @@ github.com/imroc/req/v3/internal/transport
 github.com/imroc/req/v3/internal/util
 github.com/imroc/req/v3/pkg/altsvc
 github.com/imroc/req/v3/pkg/tls
+# github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e
+## explicit; go 1.14
+github.com/jchv/go-winloader
+github.com/jchv/go-winloader/internal/loader
+github.com/jchv/go-winloader/internal/memloader
+github.com/jchv/go-winloader/internal/pe
+github.com/jchv/go-winloader/internal/vmem
+github.com/jchv/go-winloader/internal/winloader
 # github.com/jezek/xgb v1.3.1
 ## explicit; go 1.11
 github.com/jezek/xgb
@@ -475,6 +483,11 @@ github.com/vcaesar/go-wayland/client
 # github.com/vcaesar/keycode v0.20.0
 ## explicit; go 1.17
 github.com/vcaesar/keycode
+# github.com/wailsapp/go-webview2 v1.0.23
+## explicit; go 1.20
+github.com/wailsapp/go-webview2/pkg/combridge
+github.com/wailsapp/go-webview2/pkg/webview2
+github.com/wailsapp/go-webview2/webviewloader
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
 ## explicit; go 1.19
 github.com/xo/terminfo

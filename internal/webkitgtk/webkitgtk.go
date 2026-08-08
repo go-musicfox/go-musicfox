@@ -1,0 +1,444 @@
+//go:build linux
+
+// Package webkitgtk provides a minimal purego bridge to WebKitGTK for the
+// WebView login window (WebKitWebView + WebKitCookieManager). Both the
+// WebKitGTK 6.0 (GTK4) and 4.1 (GTK3) API versions are supported: the 6.0
+// stack is preferred at runtime and the 4.1 stack is used as a fallback on
+// older distributions (e.g. Debian 11/12, Ubuntu 22.04). When neither stack
+// is available every exported function degrades to a no-op / zero value and
+// the login page falls back to the form login. No CGO is involved; every C
+// function is resolved at runtime with purego.Dlopen + RegisterLibFunc so the
+// binary links cleanly without WebKitGTK headers.
+package webkitgtk
+
+import (
+	"unsafe"
+
+	"github.com/ebitengine/purego"
+)
+
+// API version constants.
+const (
+	// Version6 is the WebKitGTK 6.0 API (GTK4).
+	Version6 = 6
+	// Version41 is the WebKitGTK 4.1 API (GTK3).
+	Version41 = 41
+
+	// GTK_WINDOW_TOPLEVEL is the GtkWindowType for a regular window; it is
+	// required by the GTK3 gtk_window_new (GTK4's gtk_window_new takes no
+	// argument).
+	GTK_WINDOW_TOPLEVEL = 0
+)
+
+// webkitVersion is the active API version: Version6, Version41, or 0 when no
+// supported WebKitGTK stack could be loaded. It is written once during init()
+// before any goroutine runs, so the exported getter needs no lock.
+var webkitVersion int
+
+// WebKit bindings (same symbols in libwebkitgtk-6.0.so.4 and
+// libwebkit2gtk-4.1.so.0).
+var (
+	webkitNetworkSessionNewEphemeral       func() uintptr
+	webkitNetworkSessionGetCookieManager   func(session uintptr) uintptr
+	webkitWebViewNewWithNetworkSession     func(session uintptr) uintptr
+	webkitWebViewLoadURI                   func(webView uintptr, uri *byte)
+	webkitCookieManagerGetAllCookies       func(manager, cancellable, callback, userData uintptr)
+	webkitCookieManagerGetAllCookiesFinish func(manager, result, err uintptr) uintptr
+)
+
+// GTK bindings shared by both GTK4 and GTK3 (identical signatures; registered
+// from whichever GTK library loaded).
+var (
+	gtkInitCheck            func(argc, argv uintptr) bool
+	gtkWindowSetDefaultSize func(window uintptr, width, height int32)
+	gtkWindowSetTitle       func(window uintptr, title *byte)
+	gtkWindowPresent        func(window uintptr)
+	gtkWindowClose          func(window uintptr)
+	gtkMain                 func()
+	gtkMainQuit             func()
+)
+
+// GTK4 bindings (libgtk-4.so.1).
+var (
+	gtkWindowNew4     func() uintptr
+	gtkWindowSetChild func(window, widget uintptr)
+)
+
+// GTK3 bindings (libgtk-3.so.0).
+var (
+	gtkWindowNew3    func(windowType int32) uintptr
+	gtkContainerAdd  func(container, widget uintptr)
+	gtkWidgetShowAll func(widget uintptr)
+)
+
+// GObject/GLib bindings (shared by both versions).
+var (
+	gSignalConnectData func(instance uintptr, detailedSignal *byte, cHandler, data, destroyData uintptr, connectFlags int32) uint
+	gObjectUnref       func(object uintptr)
+	gTimeoutAdd        func(interval uint32, function, data uintptr) uint
+	gListLength        func(list uintptr) uint
+	gListNthData       func(list uintptr, n uint) uintptr
+	gListFree          func(list uintptr)
+	gErrorFree         func(err uintptr)
+)
+
+// Soup bindings (libsoup-3.0, shared by both versions).
+var (
+	soupCookieGetName  func(cookie uintptr) *byte
+	soupCookieGetValue func(cookie uintptr) *byte
+	soupCookieFree     func(cookie uintptr)
+)
+
+func init() {
+	// The GObject/GLib/Soup libraries are shared by both stacks; load them
+	// once.
+	sharedOK :=
+		dlopen("libgobject-2.0.so.0", func(lib uintptr) {
+			purego.RegisterLibFunc(&gSignalConnectData, lib, "g_signal_connect_data")
+			purego.RegisterLibFunc(&gObjectUnref, lib, "g_object_unref")
+		}) &&
+			dlopen("libglib-2.0.so.0", func(lib uintptr) {
+				purego.RegisterLibFunc(&gTimeoutAdd, lib, "g_timeout_add")
+				purego.RegisterLibFunc(&gListLength, lib, "g_list_length")
+				purego.RegisterLibFunc(&gListNthData, lib, "g_list_nth_data")
+				purego.RegisterLibFunc(&gListFree, lib, "g_list_free")
+				purego.RegisterLibFunc(&gErrorFree, lib, "g_error_free")
+			}) &&
+			dlopen("libsoup-3.0.so.0", func(lib uintptr) {
+				purego.RegisterLibFunc(&soupCookieGetName, lib, "soup_cookie_get_name")
+				purego.RegisterLibFunc(&soupCookieGetValue, lib, "soup_cookie_get_value")
+				purego.RegisterLibFunc(&soupCookieFree, lib, "soup_cookie_free")
+			})
+
+	// Prefer the WebKitGTK 6.0 (GTK4) stack.
+	if sharedOK && dlopen("libwebkitgtk-6.0.so.4", registerWebKit) && dlopen("libgtk-4.so.1", registerGTK4) {
+		webkitVersion = Version6
+		return
+	}
+	// Fall back to WebKitGTK 4.1 (GTK3).
+	if sharedOK && dlopen("libwebkit2gtk-4.1.so.0", registerWebKit) && dlopen("libgtk-3.so.0", registerGTK3) {
+		webkitVersion = Version41
+		return
+	}
+	// No supported stack is available: keep version 0. The exported functions
+	// degrade to no-ops / zero values through their nil guards.
+	webkitVersion = 0
+}
+
+// dlopen loads a shared library and registers its functions through the given
+// callback. Failures are non-fatal: the callback is only invoked on success.
+func dlopen(name string, register func(lib uintptr)) bool {
+	lib, err := purego.Dlopen(name, purego.RTLD_LAZY|purego.RTLD_GLOBAL)
+	if err != nil {
+		return false
+	}
+	register(lib)
+	return true
+}
+
+// registerWebKit binds the WebKit functions that are identical in both API
+// versions.
+func registerWebKit(lib uintptr) {
+	purego.RegisterLibFunc(&webkitNetworkSessionNewEphemeral, lib, "webkit_network_session_new_ephemeral")
+	purego.RegisterLibFunc(&webkitNetworkSessionGetCookieManager, lib, "webkit_network_session_get_cookie_manager")
+	purego.RegisterLibFunc(&webkitWebViewNewWithNetworkSession, lib, "webkit_web_view_new_with_network_session")
+	purego.RegisterLibFunc(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
+	purego.RegisterLibFunc(&webkitCookieManagerGetAllCookies, lib, "webkit_cookie_manager_get_all_cookies")
+	purego.RegisterLibFunc(&webkitCookieManagerGetAllCookiesFinish, lib, "webkit_cookie_manager_get_all_cookies_finish")
+}
+
+// registerGTKCommon binds the GTK functions that share a signature between
+// GTK4 and GTK3.
+func registerGTKCommon(lib uintptr) {
+	purego.RegisterLibFunc(&gtkInitCheck, lib, "gtk_init_check")
+	purego.RegisterLibFunc(&gtkWindowSetDefaultSize, lib, "gtk_window_set_default_size")
+	purego.RegisterLibFunc(&gtkWindowSetTitle, lib, "gtk_window_set_title")
+	purego.RegisterLibFunc(&gtkWindowPresent, lib, "gtk_window_present")
+	purego.RegisterLibFunc(&gtkWindowClose, lib, "gtk_window_close")
+	purego.RegisterLibFunc(&gtkMain, lib, "gtk_main")
+	purego.RegisterLibFunc(&gtkMainQuit, lib, "gtk_main_quit")
+}
+
+// registerGTK4 binds the GTK4-specific functions.
+func registerGTK4(lib uintptr) {
+	registerGTKCommon(lib)
+	purego.RegisterLibFunc(&gtkWindowNew4, lib, "gtk_window_new")
+	purego.RegisterLibFunc(&gtkWindowSetChild, lib, "gtk_window_set_child")
+}
+
+// registerGTK3 binds the GTK3-specific functions.
+func registerGTK3(lib uintptr) {
+	registerGTKCommon(lib)
+	purego.RegisterLibFunc(&gtkWindowNew3, lib, "gtk_window_new")
+	purego.RegisterLibFunc(&gtkContainerAdd, lib, "gtk_container_add")
+	purego.RegisterLibFunc(&gtkWidgetShowAll, lib, "gtk_widget_show_all")
+}
+
+// WebKit.
+
+// WebKitGTKVersion returns the active API version: Version6, Version41, or 0
+// when no supported WebKitGTK stack could be loaded.
+func WebKitGTKVersion() int {
+	return webkitVersion
+}
+
+func NetworkSessionNewEphemeral() uintptr {
+	if webkitNetworkSessionNewEphemeral == nil {
+		return 0
+	}
+	return webkitNetworkSessionNewEphemeral()
+}
+
+func NetworkSessionGetCookieManager(session uintptr) uintptr {
+	if webkitNetworkSessionGetCookieManager == nil {
+		return 0
+	}
+	return webkitNetworkSessionGetCookieManager(session)
+}
+
+func WebViewNewWithNetworkSession(session uintptr) uintptr {
+	if webkitWebViewNewWithNetworkSession == nil {
+		return 0
+	}
+	return webkitWebViewNewWithNetworkSession(session)
+}
+
+func WebViewLoadURI(webView uintptr, uri string) {
+	if webkitWebViewLoadURI == nil {
+		return
+	}
+	webkitWebViewLoadURI(webView, cString(uri))
+}
+
+func CookieManagerGetAllCookies(manager, cancellable, callback, userData uintptr) {
+	if webkitCookieManagerGetAllCookies == nil {
+		return
+	}
+	webkitCookieManagerGetAllCookies(manager, cancellable, callback, userData)
+}
+
+func CookieManagerGetAllCookiesFinish(manager, result, err uintptr) uintptr {
+	if webkitCookieManagerGetAllCookiesFinish == nil {
+		return 0
+	}
+	return webkitCookieManagerGetAllCookiesFinish(manager, result, err)
+}
+
+// GTK.
+
+// GtkInitCheck initializes GTK without aborting the process on failure (e.g. a
+// stale DISPLAY). It reports whether the initialization succeeded; it also
+// returns false when no GTK library is loaded.
+func GtkInitCheck() bool {
+	if gtkInitCheck == nil {
+		return false
+	}
+	return gtkInitCheck(0, 0)
+}
+
+// GtkWindowNew creates a new toplevel window: gtk_window_new() on GTK4,
+// gtk_window_new(GTK_WINDOW_TOPLEVEL) on GTK3.
+func GtkWindowNew() uintptr {
+	switch webkitVersion {
+	case Version6:
+		if gtkWindowNew4 == nil {
+			return 0
+		}
+		return gtkWindowNew4()
+	case Version41:
+		if gtkWindowNew3 == nil {
+			return 0
+		}
+		return gtkWindowNew3(GTK_WINDOW_TOPLEVEL)
+	default:
+		return 0
+	}
+}
+
+// GtkWindowSetChild attaches a child widget with the GTK4 API
+// (gtk_window_set_child). It is a no-op on GTK3; use GtkWindowAddChild for a
+// version-neutral attachment.
+func GtkWindowSetChild(window, widget uintptr) {
+	if gtkWindowSetChild == nil {
+		return
+	}
+	gtkWindowSetChild(window, widget)
+}
+
+// GtkWindowAddChild attaches the child widget to the window:
+// gtk_window_set_child on GTK4, gtk_container_add on GTK3.
+func GtkWindowAddChild(window, child uintptr) {
+	switch webkitVersion {
+	case Version6:
+		if gtkWindowSetChild != nil {
+			gtkWindowSetChild(window, child)
+		}
+	case Version41:
+		if gtkContainerAdd != nil {
+			gtkContainerAdd(window, child)
+		}
+	}
+}
+
+// GtkShowWidget makes the widget visible. GTK3 widgets are not shown by
+// default even when their toplevel window is presented, so this calls
+// gtk_widget_show_all; GTK4 shows children automatically and this is a no-op.
+func GtkShowWidget(widget uintptr) {
+	if webkitVersion != Version41 || gtkWidgetShowAll == nil {
+		return
+	}
+	gtkWidgetShowAll(widget)
+}
+
+func GtkWindowSetDefaultSize(window uintptr, width, height int32) {
+	if gtkWindowSetDefaultSize == nil {
+		return
+	}
+	gtkWindowSetDefaultSize(window, width, height)
+}
+
+func GtkWindowSetTitle(window uintptr, title string) {
+	if gtkWindowSetTitle == nil {
+		return
+	}
+	gtkWindowSetTitle(window, cString(title))
+}
+
+func GtkWindowPresent(window uintptr) {
+	if gtkWindowPresent == nil {
+		return
+	}
+	gtkWindowPresent(window)
+}
+
+func GtkWindowClose(window uintptr) {
+	if gtkWindowClose == nil {
+		return
+	}
+	gtkWindowClose(window)
+}
+
+func GtkMain() {
+	if gtkMain == nil {
+		return
+	}
+	gtkMain()
+}
+
+func GtkMainQuit() {
+	if gtkMainQuit == nil {
+		return
+	}
+	gtkMainQuit()
+}
+
+// GObject/GLib.
+
+// GSignalConnectCloseRequest connects the window-close signal of the active
+// API version: "close-request" (GTK4) or "delete-event" (GTK3). The callback
+// must have the signature func(window uintptr, extra uintptr) int32; for
+// "delete-event" the second argument is the GdkEvent pointer and for
+// "close-request" it is the user_data, both of which the controller ignores.
+// Returning 0 (FALSE) allows the window to close and GTK destroys it in both
+// versions.
+func GSignalConnectCloseRequest(window uintptr, cb uintptr) uint {
+	if gSignalConnectData == nil {
+		return 0
+	}
+	signal := "close-request"
+	if webkitVersion == Version41 {
+		signal = "delete-event"
+	}
+	return gSignalConnectData(window, cString(signal), cb, 0, 0, 0)
+}
+
+func GSignalConnectData(instance uintptr, detailedSignal string, cHandler, data, destroyData uintptr, connectFlags int32) uint {
+	if gSignalConnectData == nil {
+		return 0
+	}
+	return gSignalConnectData(instance, cString(detailedSignal), cHandler, data, destroyData, connectFlags)
+}
+
+func GObjectUnref(object uintptr) {
+	if gObjectUnref == nil {
+		return
+	}
+	gObjectUnref(object)
+}
+
+func GTimeoutAdd(interval uint32, function, data uintptr) uint {
+	if gTimeoutAdd == nil {
+		return 0
+	}
+	return gTimeoutAdd(interval, function, data)
+}
+
+func GListLength(list uintptr) uint {
+	if gListLength == nil {
+		return 0
+	}
+	return gListLength(list)
+}
+
+func GListNthData(list uintptr, n uint) uintptr {
+	if gListNthData == nil {
+		return 0
+	}
+	return gListNthData(list, n)
+}
+
+func GListFree(list uintptr) {
+	if gListFree == nil {
+		return
+	}
+	gListFree(list)
+}
+
+func GErrorFree(err uintptr) {
+	if gErrorFree == nil {
+		return
+	}
+	gErrorFree(err)
+}
+
+// Soup.
+
+func SoupCookieGetName(cookie uintptr) string {
+	if soupCookieGetName == nil {
+		return ""
+	}
+	return goString(soupCookieGetName(cookie))
+}
+
+func SoupCookieGetValue(cookie uintptr) string {
+	if soupCookieGetValue == nil {
+		return ""
+	}
+	return goString(soupCookieGetValue(cookie))
+}
+
+func SoupCookieFree(cookie uintptr) {
+	if soupCookieFree == nil {
+		return
+	}
+	soupCookieFree(cookie)
+}
+
+// cString returns a NUL-terminated C string for the given Go string. The
+// returned buffer is only valid for the duration of the synchronous call it is
+// passed to; GTK/WebKit copy the strings they need.
+func cString(s string) *byte {
+	b := append([]byte(s), 0)
+	return &b[0]
+}
+
+// goString converts a NUL-terminated C string into a Go string.
+func goString(p *byte) string {
+	if p == nil {
+		return ""
+	}
+	n := 0
+	for ptr := unsafe.Pointer(p); *(*byte)(unsafe.Add(ptr, n)) != 0; n++ {
+	}
+	return unsafe.String(p, n)
+}

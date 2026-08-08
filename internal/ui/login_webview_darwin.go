@@ -19,19 +19,6 @@ import (
 // available on the current platform (macOS only).
 const webviewLoginAvailable = true
 
-const (
-	// loginURL is the target page loaded by the WebView login window.
-	loginURL = "https://music.163.com/#/login"
-	// loginWindowTitle is the title of the WebView login window.
-	loginWindowTitle = "网易云音乐登录"
-	// webviewLoginWindowWidth/Height is the default login window size.
-	webviewLoginWindowWidth, webviewLoginWindowHeight = 800.0, 600.0
-	// webviewLoginPollInterval is the cookie polling interval.
-	webviewLoginPollInterval = time.Second
-	// musicUCookieName marks a successful login.
-	musicUCookieName = "MUSIC_U"
-)
-
 // webviewLoginController opens the native WKWebView login window and polls the
 // WKHTTPCookieStore until the MUSIC_U cookie appears. All ObjC window
 // operations are dispatched to the main thread via the helper class; the
