@@ -29,7 +29,11 @@ type CoverRenderer struct {
 	imageCache   *kitty.ImageCache
 	kittySupport bool
 
-	mu            sync.Mutex
+	mu sync.Mutex
+	// writeMu serializes direct os.Stdout writes from the render thread, the
+	// animation goroutine and Close(), so kitty sequences never interleave
+	// and corrupt the escape stream.
+	writeMu       sync.Mutex
 	currentSongId int64  // Track currently displayed song to avoid redundant renders
 	cachedSeq     string // Cached kitty sequence
 	lastStartRow  int    // Last rendered start row position
@@ -227,6 +231,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	} else {
 		kitty.CoverZIndex = 1
 	}
+	// Capture the z-index under the lock: the animation goroutine renders
+	// asynchronously and must not read the mutable global (it races with the
+	// next View() call that may flip it on a theme change).
+	zIndex := kitty.CoverZIndex
 	// Invalidate cached sequences when background transparency changes,
 	// since the kitty sequence embeds a z-index that is now stale.
 	// Always clear the image cache regardless of current render state:
@@ -245,8 +253,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
 			if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
 				if r.imageRendered {
-					_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
-					_ = os.Stdout.Sync()
+					r.writeStdout(kitty.DeleteAllImages())
 					r.imageRendered = false
 					r.cachedSeq = ""
 				}
@@ -273,8 +280,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 			// Verify this result is for the song we still want to show
 			if res.songID == song.Id {
 				// Apply to terminal
-				_, _ = os.Stdout.WriteString(res.sequence)
-				_ = os.Stdout.Sync()
+				r.writeStdout(res.sequence)
 
 				r.currentSongId = res.songID
 				r.animImageID = res.animID
@@ -303,12 +309,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		if stateChanged && r.imageRendered && r.animImageID != 0 {
 			if playerState == types.Paused {
 				// Pause animation
-				_, _ = os.Stdout.WriteString(kitty.StopAnimation(r.animImageID))
-				_ = os.Stdout.Sync()
+				r.writeStdout(kitty.StopAnimation(r.animImageID))
 			} else if playerState == types.Playing && r.lastPlayerState == types.Paused {
 				// Resume animation
-				_, _ = os.Stdout.WriteString(kitty.StartAnimation(r.animImageID))
-				_ = os.Stdout.Sync()
+				r.writeStdout(kitty.StartAnimation(r.animImageID))
 			}
 			r.lastPlayerState = playerState
 		}
@@ -347,10 +351,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 			// IMPORTANT: Render static image IMMEDIATELY while animation is being calculated
 			// This avoids a blank cover during the calculation time
-			renderStaticForAnimation(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID)
+			renderStaticForAnimation(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID, zIndex)
 
 			// Capture variables for closure
-			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32) {
+			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32, bgZIndex int) {
 				// Fetch image with timeout (derived from cancellable context)
 				fetchCtx, fetchCancel := context.WithTimeout(ctx, 15*time.Second)
 				defer fetchCancel()
@@ -391,8 +395,6 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 				// Use ALL available CPU cores
 				numWorkers := max(runtime.NumCPU(), 4) // Minimum 4 workers
-				// Set GOMAXPROCS to ensure all cores are used
-				runtime.GOMAXPROCS(numWorkers)
 
 				// Task and result structures
 				type frameTask struct {
@@ -457,16 +459,36 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				default:
 				}
 
-				// Transmit frames (skipping frame 0 which is already visible)
+				// Transmit frames (skipping frame 0 which is already visible),
+				// chunked so a cancelled generation stops writing promptly
+				// instead of flushing one multi-megabyte burst, and so the
+				// terminal is not hit with a single huge write.
+				const transmitBatch = 16
 				var frameData strings.Builder
-				for _, seq := range frameSeqs {
-					if seq != "" {
-						frameData.WriteString(seq)
+				for i, seq := range frameSeqs {
+					if seq == "" {
+						continue
 					}
+					if i%transmitBatch == 0 {
+						select {
+						case <-ctx.Done():
+							return
+						default:
+						}
+						if frameData.Len() > 0 {
+							r.writeStdout(frameData.String())
+							frameData.Reset()
+						}
+					}
+					frameData.WriteString(seq)
 				}
 				if frameData.Len() > 0 {
-					_, _ = os.Stdout.WriteString(frameData.String())
-					_ = os.Stdout.Sync()
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+					r.writeStdout(frameData.String())
 				}
 
 				// Assemble minimal sequence for animation playback
@@ -479,7 +501,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Placement
 				sb.WriteString("\x1b[s")
 				fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
-				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0, kitty.CoverZIndex))
+				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0, bgZIndex))
 				sb.WriteString("\x1b[u")
 
 				// Delete OLD ID
@@ -499,7 +521,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 					animID:   bgAnimID,
 				}:
 				}
-			}(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID)
+			}(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID, zIndex)
 
 			return "", 0
 		}
@@ -561,6 +583,15 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	return "", 0
 }
 
+// writeStdout serializes direct terminal writes from the cover renderer
+// (View, animation goroutines, Close) so kitty sequences never interleave.
+func (r *CoverRenderer) writeStdout(s string) {
+	r.writeMu.Lock()
+	defer r.writeMu.Unlock()
+	_, _ = os.Stdout.WriteString(s)
+	_ = os.Stdout.Sync()
+}
+
 // writeToTerminal writes the kitty graphics sequence directly to stdout,
 // bypassing bubbletea's rendering pipeline.
 // deleteOld controls whether to delete existing images first (only needed when changing images).
@@ -586,24 +617,21 @@ func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int,
 	// Restore cursor position
 	output += "\x1b[u"
 
-	// Write directly to stdout
-	_, _ = os.Stdout.WriteString(output)
-
-	// Sync to ensure the write is flushed immediately
-	_ = os.Stdout.Sync()
+	r.writeStdout(output)
 }
 
 // renderStaticForAnimation renders a static (non-spinning) version of the cover image
 // immediately while the animation is being calculated in the background.
 // Animation frames will overwrite this static image when ready.
-func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32) {
+func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32, zIndex int) {
 	img, err := r.imageCache.GetImage(ctx, picUrl, cols, rows)
 	if err != nil || img == nil {
 		return
 	}
 
-	// Transmit and display the static image
-	kittySeq, err := kitty.TransmitAndDisplayWithID(img, cols, rows, animID)
+	// Transmit and display the static image, with the z-index captured by the
+	// caller (the global CoverZIndex is mutable and read from this goroutine).
+	kittySeq, err := kitty.TransmitAndDisplayWithIDZ(img, cols, rows, animID, zIndex)
 	if err != nil {
 		return
 	}
@@ -613,8 +641,7 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 	output += kittySeq
 	output += "\x1b[u"
 
-	_, _ = os.Stdout.WriteString(output)
-	_ = os.Stdout.Sync()
+	r.writeStdout(output)
 
 	r.mu.Lock()
 	r.currentSongId = song.Id
@@ -677,7 +704,7 @@ func (r *CoverRenderer) ClearDisplayed() {
 		return
 	}
 
-	_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
+	r.writeStdout(kitty.DeleteAllImages())
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -714,7 +741,7 @@ func (r *CoverRenderer) Close() {
 	}
 
 	// Delete all Kitty graphics images
-	_, _ = os.Stdout.WriteString(kitty.DeleteAllImages())
+	r.writeStdout(kitty.DeleteAllImages())
 
 	// In non-alt-screen mode, we need to be more aggressive with cleanup.
 	// Move cursor to where the image was and clear that area.
@@ -740,12 +767,9 @@ func (r *CoverRenderer) Close() {
 		// Restore cursor position
 		cleanup.WriteString("\x1b[u")
 
-		_, _ = os.Stdout.WriteString(cleanup.String())
+		r.writeStdout(cleanup.String())
 	}
 	r.mu.Unlock()
-
-	// Flush to ensure everything is written before exit
-	_ = os.Stdout.Sync()
 
 	// Small delay to ensure terminal processes the commands
 	// This is especially important in non-alt-screen mode
