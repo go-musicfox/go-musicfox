@@ -6,6 +6,7 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.4
+	github.com/13thgoutham/go-webview2 v1.0.25
 	github.com/BurntSushi/toml v1.6.0
 	github.com/adrg/xdg v0.5.3
 	github.com/anhoder/foxful-cli v1.1.2
@@ -45,7 +46,6 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/tosone/minimp3 v1.0.2
-	github.com/wailsapp/go-webview2 v1.0.23
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/sync v0.21.0
 	golang.org/x/sys v0.46.0

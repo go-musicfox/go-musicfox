@@ -20,6 +20,11 @@ charm.land/glamour/v2/styles
 ## explicit; go 1.25.0
 charm.land/lipgloss/v2
 charm.land/lipgloss/v2/table
+# github.com/13thgoutham/go-webview2 v1.0.25
+## explicit; go 1.20
+github.com/13thgoutham/go-webview2/pkg/combridge
+github.com/13thgoutham/go-webview2/pkg/webview2
+github.com/13thgoutham/go-webview2/webviewloader
 # github.com/BurntSushi/toml v1.6.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml
@@ -483,11 +488,6 @@ github.com/vcaesar/go-wayland/client
 # github.com/vcaesar/keycode v0.20.0
 ## explicit; go 1.17
 github.com/vcaesar/keycode
-# github.com/wailsapp/go-webview2 v1.0.23
-## explicit; go 1.20
-github.com/wailsapp/go-webview2/pkg/combridge
-github.com/wailsapp/go-webview2/pkg/webview2
-github.com/wailsapp/go-webview2/webviewloader
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
 ## explicit; go 1.19
 github.com/xo/terminfo

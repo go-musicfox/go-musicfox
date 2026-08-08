@@ -15,8 +15,8 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/wailsapp/go-webview2/pkg/webview2"
-	"github.com/wailsapp/go-webview2/webviewloader"
+	"github.com/13thgoutham/go-webview2/pkg/webview2"
+	"github.com/13thgoutham/go-webview2/webviewloader"
 
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
