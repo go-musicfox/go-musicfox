@@ -33,6 +33,15 @@ const (
 	MsgLoginCookieVerifying     model.MessageID = "login.cookie.verifying"
 	MsgLoginCookieRequired      model.MessageID = "login.error.cookie_required"
 
+	MsgLoginWebviewButton      model.MessageID = "login.button.webview"
+	MsgLoginWebviewPageTitle   model.MessageID = "login.webview.page.title"
+	MsgLoginWebviewWaiting     model.MessageID = "login.webview.waiting"
+	MsgLoginWebviewVerifying   model.MessageID = "login.webview.verifying"
+	MsgLoginWebviewSuccess     model.MessageID = "login.webview.success"
+	MsgLoginWebviewCancelled   model.MessageID = "login.webview.cancelled"
+	MsgLoginWebviewFailed      model.MessageID = "login.webview.failed"
+	MsgLoginWebviewUnsupported model.MessageID = "login.webview.unsupported"
+
 	MsgQRLoginPageTitle       model.MessageID = "qr_login.page.title"
 	MsgQRLoginGenerating      model.MessageID = "qr_login.generating"
 	MsgQRLoginScanPrompt      model.MessageID = "qr_login.scan_prompt"
@@ -121,6 +130,15 @@ var zhMessages = map[model.MessageID]string{
 	MsgLoginCookieInvalid:       "Cookie 格式错误: %w",
 	MsgLoginCookieVerifying:     "正在验证 Cookie...",
 	MsgLoginCookieRequired:      "请输入 Cookie",
+
+	MsgLoginWebviewButton:      "网页登录",
+	MsgLoginWebviewPageTitle:   "网页登录",
+	MsgLoginWebviewWaiting:     "请在打开的窗口中完成登录...",
+	MsgLoginWebviewVerifying:   "正在验证登录信息...",
+	MsgLoginWebviewSuccess:     "登录成功！",
+	MsgLoginWebviewCancelled:   "登录已取消",
+	MsgLoginWebviewFailed:      "网页登录失败: ",
+	MsgLoginWebviewUnsupported: "当前平台不支持网页登录",
 
 	MsgQRLoginPageTitle:       "二维码登录",
 	MsgQRLoginGenerating:      "正在生成二维码，请稍候...",

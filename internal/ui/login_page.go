@@ -25,8 +25,9 @@ import (
 const LoginPageType model.PageType = "login"
 
 const (
-	submitIndex  = 2 // skip account and password input
-	qrLoginIndex = 3
+	submitIndex       = 2 // skip account and password input
+	qrLoginIndex      = 3
+	webviewLoginIndex = 4
 
 	tabAccount = 0
 	tabCookie  = 1
@@ -47,17 +48,18 @@ func tickLogin(duration time.Duration) tea.Cmd {
 type LoginPage struct {
 	netease *Netease
 
-	menuTitle     *model.MenuItem
-	index         int
-	tabs          *model.Tabs
-	accountInput  textinput.Model
-	passwordInput textinput.Model
-	cookieInput   textinput.Model
-	submitButton  string
-	qrLoginButton string
-	qrLoginStep   int
-	tips          string
-	AfterLogin    LoginCallback
+	menuTitle          *model.MenuItem
+	index              int
+	tabs               *model.Tabs
+	accountInput       textinput.Model
+	passwordInput      textinput.Model
+	cookieInput        textinput.Model
+	submitButton       string
+	qrLoginButton      string
+	webviewLoginButton string
+	qrLoginStep        int
+	tips               string
+	AfterLogin         LoginCallback
 
 	// 以下字段用于鼠标点击区域的计算与命中
 	accountRowY   int // 账号输入框所在的行号（1-based）
@@ -70,6 +72,8 @@ type LoginPage struct {
 	submitEndX    int // 提交按钮结束 X（0-based，闭区间）
 	qrStartX      int // 扫码按钮起始 X（0-based）
 	qrEndX        int // 扫码按钮结束 X（0-based，闭区间）
+	webviewStartX int // 网页登录按钮起始 X（0-based）
+	webviewEndX   int // 网页登录按钮结束 X（0-based，闭区间）
 	cookieStartX  int // Cookie按钮起始 X（0-based）
 	cookieEndX    int // Cookie按钮结束 X（0-based，闭区间）
 	tabStartX     int // Tabs 起始 X（0-based）
@@ -83,7 +87,7 @@ type LoginPage struct {
 	backBtnHovered  bool
 	hoveredTab      int // 悬停的 Tab 索引（0=账号登录，1=Cookie，-1=无）
 	hoveredInputBox int // 悬停的输入框（0=account，1=password，2=cookie，-1=无）
-	hoveredButton   int // 悬停的按钮（0=提交，1=扫码，-1=无）
+	hoveredButton   int // 悬停的按钮（0=提交，1=扫码，2=网页登录，-1=无）
 	mousePointer    string
 }
 
@@ -108,18 +112,19 @@ func NewLoginPage(netease *Netease) (login *LoginPage) {
 	cookieInput.CharLimit = 5000
 
 	login = &LoginPage{
-		netease:         netease,
-		menuTitle:       &model.MenuItem{Title: model.T(MsgLoginPageTitle)},
-		tabs:            model.NewTabs([]string{model.T(MsgLoginAccountTab), model.T(MsgLoginCookieTab)}),
-		accountInput:    accountInput,
-		passwordInput:   passwordInput,
-		cookieInput:     cookieInput,
-		submitButton:    pageSubmitButton(false),
-		qrLoginButton:   pageButton(model.T(MsgLoginQRCodeButton), false),
-		hoveredTab:      -1,
-		hoveredInputBox: -1,
-		hoveredButton:   -1,
-		mousePointer:    "default",
+		netease:            netease,
+		menuTitle:          &model.MenuItem{Title: model.T(MsgLoginPageTitle)},
+		tabs:               model.NewTabs([]string{model.T(MsgLoginAccountTab), model.T(MsgLoginCookieTab)}),
+		accountInput:       accountInput,
+		passwordInput:      passwordInput,
+		cookieInput:        cookieInput,
+		submitButton:       pageSubmitButton(false),
+		qrLoginButton:      pageButton(model.T(MsgLoginQRCodeButton), false),
+		webviewLoginButton: pageButton(model.T(MsgLoginWebviewButton), false),
+		hoveredTab:         -1,
+		hoveredInputBox:    -1,
+		hoveredButton:      -1,
+		mousePointer:       "default",
 	}
 	login.updateTabStyle()
 	login.applyFocus()
@@ -185,6 +190,8 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 				l.hoveredButton = 0
 			} else if l.activeTab() == tabAccount && x >= l.qrStartX && x <= l.qrEndX {
 				l.hoveredButton = 1
+			} else if l.activeTab() == tabAccount && x >= l.webviewStartX && x <= l.webviewEndX {
+				l.hoveredButton = 2
 			}
 		}
 
@@ -253,6 +260,10 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 					l.index = qrLoginIndex
 					return l.enterHandler()
 				}
+				if x >= l.webviewStartX && x <= l.webviewEndX {
+					l.index = webviewLoginIndex
+					return l.enterHandler()
+				}
 			}
 		} else {
 			if y == l.cookieRowY && x >= l.inputStartX && x <= l.inputEndX {
@@ -286,7 +297,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 
 	switch keyName {
 	case "b":
-		if l.index != submitIndex && l.index != qrLoginIndex {
+		if l.index != submitIndex && l.index != qrLoginIndex && l.index != webviewLoginIndex {
 			return l.updateActiveInput(msg)
 		}
 		fallthrough
@@ -316,6 +327,8 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 				}
 			case qrLoginIndex:
 				l.index = 1
+			case webviewLoginIndex:
+				l.index = qrLoginIndex
 			}
 		case "down", "tab", "enter":
 			switch l.index {
@@ -329,13 +342,15 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 				}
 			case 1:
 				l.index = submitIndex
-			case submitIndex, qrLoginIndex:
+			case submitIndex, qrLoginIndex, webviewLoginIndex:
 				l.index = l.tabFocusIndex()
 			}
 		case "left":
 			switch l.index {
 			case qrLoginIndex:
 				l.index = submitIndex
+			case webviewLoginIndex:
+				l.index = qrLoginIndex
 			case submitIndex:
 				if l.activeTab() == tabCookie {
 					l.index = 0
@@ -346,6 +361,10 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 			case submitIndex:
 				if l.activeTab() == tabAccount {
 					l.index = qrLoginIndex
+				}
+			case qrLoginIndex:
+				if l.activeTab() == tabAccount {
+					l.index = webviewLoginIndex
 				}
 			case 0:
 				if l.activeTab() == tabCookie {
@@ -471,6 +490,10 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 	if l.hoveredButton == 1 {
 		qrButtonView = pageButtonHoverView(l.qrButtonTextByStep())
 	}
+	webviewButtonView := l.webviewLoginButton
+	if l.hoveredButton == 2 {
+		webviewButtonView = pageButtonHoverView(model.T(MsgLoginWebviewButton))
+	}
 
 	submitW := lipgloss.Width(submitButtonView)
 	l.submitStartX = submitX
@@ -488,7 +511,16 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 
 	write(qrButtonView)
 
-	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(submitButtonView) - lipgloss.Width(qrButtonView) - lipgloss.Width(btnBlank)
+	write(btnBlank)
+	// 网页登录按钮坐标
+	webviewX := qrX + qrW + lipgloss.Width(btnBlank)
+	webviewW := lipgloss.Width(webviewButtonView)
+	l.webviewStartX = webviewX
+	l.webviewEndX = webviewX + webviewW - 1
+
+	write(webviewButtonView)
+
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(submitButtonView) - lipgloss.Width(qrButtonView) - lipgloss.Width(webviewButtonView) - 2*lipgloss.Width(btnBlank)
 	if spaceLen > 0 {
 		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
@@ -595,6 +627,9 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 	case qrLoginIndex:
 		// 扫码登录
 		return l.loginByQRCode()
+	case webviewLoginIndex:
+		// 网页登录
+		return l.loginByWebview()
 	}
 
 	return l, tickLogin(time.Nanosecond)
@@ -710,6 +745,16 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 	return qrPage, qrPage.Init()
 }
 
+// loginByWebview 跳转到网页登录界面（仅 macOS 支持原生 WKWebView 窗口）
+func (l *LoginPage) loginByWebview() (model.Page, tea.Cmd) {
+	if !webviewLoginAvailable {
+		l.tips = util.SetFgStyle(model.T(MsgLoginWebviewUnsupported), lipgloss.BrightRed)
+		return l, nil
+	}
+	webviewPage := NewWebviewLoginPage(l.netease, l, l.AfterLogin)
+	return webviewPage, webviewPage.Init()
+}
+
 func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
 	// 先保存 cookie，确保登录成功后 cookie 被持久化
 	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
@@ -794,6 +839,7 @@ func (l *LoginPage) applyFocus() {
 	}
 	l.submitButton = pageSubmitButton(l.index == submitIndex)
 	l.qrLoginButton = pageButton(l.qrButtonTextByStep(), l.index == qrLoginIndex)
+	l.webviewLoginButton = pageButton(model.T(MsgLoginWebviewButton), l.index == webviewLoginIndex)
 }
 
 func (l *LoginPage) updateActiveInput(msg tea.Msg) (model.Page, tea.Cmd) {
