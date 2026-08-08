@@ -94,29 +94,37 @@ func init() {
 	// once.
 	sharedOK :=
 		dlopen("libgobject-2.0.so.0", func(lib uintptr) {
-			purego.RegisterLibFunc(&gSignalConnectData, lib, "g_signal_connect_data")
-			purego.RegisterLibFunc(&gObjectUnref, lib, "g_object_unref")
+			registerSymbol(&gSignalConnectData, lib, "g_signal_connect_data")
+			registerSymbol(&gObjectUnref, lib, "g_object_unref")
 		}) &&
 			dlopen("libglib-2.0.so.0", func(lib uintptr) {
-				purego.RegisterLibFunc(&gTimeoutAdd, lib, "g_timeout_add")
-				purego.RegisterLibFunc(&gListLength, lib, "g_list_length")
-				purego.RegisterLibFunc(&gListNthData, lib, "g_list_nth_data")
-				purego.RegisterLibFunc(&gListFree, lib, "g_list_free")
-				purego.RegisterLibFunc(&gErrorFree, lib, "g_error_free")
+				registerSymbol(&gTimeoutAdd, lib, "g_timeout_add")
+				registerSymbol(&gListLength, lib, "g_list_length")
+				registerSymbol(&gListNthData, lib, "g_list_nth_data")
+				registerSymbol(&gListFree, lib, "g_list_free")
+				registerSymbol(&gErrorFree, lib, "g_error_free")
 			}) &&
 			dlopen("libsoup-3.0.so.0", func(lib uintptr) {
-				purego.RegisterLibFunc(&soupCookieGetName, lib, "soup_cookie_get_name")
-				purego.RegisterLibFunc(&soupCookieGetValue, lib, "soup_cookie_get_value")
-				purego.RegisterLibFunc(&soupCookieFree, lib, "soup_cookie_free")
+				registerSymbol(&soupCookieGetName, lib, "soup_cookie_get_name")
+				registerSymbol(&soupCookieGetValue, lib, "soup_cookie_get_value")
+				registerSymbol(&soupCookieFree, lib, "soup_cookie_free")
 			})
 
-	// Prefer the WebKitGTK 6.0 (GTK4) stack.
-	if sharedOK && dlopen("libwebkitgtk-6.0.so.4", registerWebKit) && dlopen("libgtk-4.so.1", registerGTK4) {
+	// Prefer the WebKitGTK 6.0 (GTK4) stack. A stack is only usable when the
+	// library actually exports the WebKit API we call: an older library may
+	// load fine (RTLD_LAZY) while missing newer symbols (e.g.
+	// webkit_network_session_new_ephemeral, added in WebKitGTK 2.40). Those
+	// symbols stay nil through registerSymbol, so a nil check here decides
+	// whether the stack really works.
+	webkitUsable := func() bool {
+		return webkitNetworkSessionNewEphemeral != nil && webkitWebViewNewWithNetworkSession != nil && webkitCookieManagerGetAllCookies != nil
+	}
+	if sharedOK && dlopen("libwebkitgtk-6.0.so.4", registerWebKit) && webkitUsable() && dlopen("libgtk-4.so.1", registerGTK4) {
 		webkitVersion = Version6
 		return
 	}
 	// Fall back to WebKitGTK 4.1 (GTK3).
-	if sharedOK && dlopen("libwebkit2gtk-4.1.so.0", registerWebKit) && dlopen("libgtk-3.so.0", registerGTK3) {
+	if sharedOK && dlopen("libwebkit2gtk-4.1.so.0", registerWebKit) && webkitUsable() && dlopen("libgtk-3.so.0", registerGTK3) {
 		webkitVersion = Version41
 		return
 	}
@@ -136,42 +144,57 @@ func dlopen(name string, register func(lib uintptr)) bool {
 	return true
 }
 
+// registerSymbol binds a single C symbol to the given Go function pointer.
+// Unlike purego.RegisterLibFunc it never panics: a missing symbol (e.g. an
+// older library version without a newer API) leaves the function pointer nil,
+// and every exported wrapper degrades to a no-op / zero value through its nil
+// guard. dlopen may succeed on a library that lacks a symbol (RTLD_LAZY only
+// fails on the missing library itself), so this is the last line of defence
+// that keeps the WebView feature optional.
+func registerSymbol(fptr any, lib uintptr, name string) {
+	sym, err := purego.Dlsym(lib, name)
+	if err != nil {
+		return
+	}
+	purego.RegisterFunc(fptr, sym)
+}
+
 // registerWebKit binds the WebKit functions that are identical in both API
 // versions.
 func registerWebKit(lib uintptr) {
-	purego.RegisterLibFunc(&webkitNetworkSessionNewEphemeral, lib, "webkit_network_session_new_ephemeral")
-	purego.RegisterLibFunc(&webkitNetworkSessionGetCookieManager, lib, "webkit_network_session_get_cookie_manager")
-	purego.RegisterLibFunc(&webkitWebViewNewWithNetworkSession, lib, "webkit_web_view_new_with_network_session")
-	purego.RegisterLibFunc(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
-	purego.RegisterLibFunc(&webkitCookieManagerGetAllCookies, lib, "webkit_cookie_manager_get_all_cookies")
-	purego.RegisterLibFunc(&webkitCookieManagerGetAllCookiesFinish, lib, "webkit_cookie_manager_get_all_cookies_finish")
+	registerSymbol(&webkitNetworkSessionNewEphemeral, lib, "webkit_network_session_new_ephemeral")
+	registerSymbol(&webkitNetworkSessionGetCookieManager, lib, "webkit_network_session_get_cookie_manager")
+	registerSymbol(&webkitWebViewNewWithNetworkSession, lib, "webkit_web_view_new_with_network_session")
+	registerSymbol(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
+	registerSymbol(&webkitCookieManagerGetAllCookies, lib, "webkit_cookie_manager_get_all_cookies")
+	registerSymbol(&webkitCookieManagerGetAllCookiesFinish, lib, "webkit_cookie_manager_get_all_cookies_finish")
 }
 
 // registerGTKCommon binds the GTK functions that share a signature between
 // GTK4 and GTK3.
 func registerGTKCommon(lib uintptr) {
-	purego.RegisterLibFunc(&gtkInitCheck, lib, "gtk_init_check")
-	purego.RegisterLibFunc(&gtkWindowSetDefaultSize, lib, "gtk_window_set_default_size")
-	purego.RegisterLibFunc(&gtkWindowSetTitle, lib, "gtk_window_set_title")
-	purego.RegisterLibFunc(&gtkWindowPresent, lib, "gtk_window_present")
-	purego.RegisterLibFunc(&gtkWindowClose, lib, "gtk_window_close")
-	purego.RegisterLibFunc(&gtkMain, lib, "gtk_main")
-	purego.RegisterLibFunc(&gtkMainQuit, lib, "gtk_main_quit")
+	registerSymbol(&gtkInitCheck, lib, "gtk_init_check")
+	registerSymbol(&gtkWindowSetDefaultSize, lib, "gtk_window_set_default_size")
+	registerSymbol(&gtkWindowSetTitle, lib, "gtk_window_set_title")
+	registerSymbol(&gtkWindowPresent, lib, "gtk_window_present")
+	registerSymbol(&gtkWindowClose, lib, "gtk_window_close")
+	registerSymbol(&gtkMain, lib, "gtk_main")
+	registerSymbol(&gtkMainQuit, lib, "gtk_main_quit")
 }
 
 // registerGTK4 binds the GTK4-specific functions.
 func registerGTK4(lib uintptr) {
 	registerGTKCommon(lib)
-	purego.RegisterLibFunc(&gtkWindowNew4, lib, "gtk_window_new")
-	purego.RegisterLibFunc(&gtkWindowSetChild, lib, "gtk_window_set_child")
+	registerSymbol(&gtkWindowNew4, lib, "gtk_window_new")
+	registerSymbol(&gtkWindowSetChild, lib, "gtk_window_set_child")
 }
 
 // registerGTK3 binds the GTK3-specific functions.
 func registerGTK3(lib uintptr) {
 	registerGTKCommon(lib)
-	purego.RegisterLibFunc(&gtkWindowNew3, lib, "gtk_window_new")
-	purego.RegisterLibFunc(&gtkContainerAdd, lib, "gtk_container_add")
-	purego.RegisterLibFunc(&gtkWidgetShowAll, lib, "gtk_widget_show_all")
+	registerSymbol(&gtkWindowNew3, lib, "gtk_window_new")
+	registerSymbol(&gtkContainerAdd, lib, "gtk_container_add")
+	registerSymbol(&gtkWidgetShowAll, lib, "gtk_widget_show_all")
 }
 
 // WebKit.

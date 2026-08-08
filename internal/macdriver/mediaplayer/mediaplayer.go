@@ -14,9 +14,12 @@ var importOnce sync.Once
 
 func importFramework() {
 	importOnce.Do(func() {
-		_, err := purego.Dlopen("/System/Library/Frameworks/MediaPlayer.framework/MediaPlayer", purego.RTLD_GLOBAL)
-		if err != nil {
-			panic(err)
+		// MediaPlayer.framework only exists on macOS 10.12.2+. On older
+		// systems the dlopen fails: degrade silently instead of panicking so
+		// the app still starts. All class lookups below then yield nil classes
+		// and every objc message send to a nil receiver safely returns zero.
+		if _, err := purego.Dlopen("/System/Library/Frameworks/MediaPlayer.framework/MediaPlayer", purego.RTLD_GLOBAL); err != nil {
+			return
 		}
 	})
 }
