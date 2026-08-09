@@ -41,10 +41,12 @@ type WebviewLoginPage struct {
 	netease *Netease
 	from    model.Page
 
-	controller *webviewLoginController
-	statusMsg  string
-	checking   bool
-	AfterLogin LoginCallback
+	controller        *webviewLoginController
+	statusMsg         string
+	checking          bool
+	checkingCookie    string
+	lastCheckedCookie string
+	AfterLogin        LoginCallback
 
 	backBtnHovered bool
 	backBtnRowY    int
@@ -126,14 +128,25 @@ func (p *WebviewLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cm
 			// A verification chain is already in flight; ignore duplicates.
 			return p, tickPolling(time.Second)
 		}
+		if ev.CookieString == p.lastCheckedCookie {
+			// The same cookie already failed validation; keep the window
+			// open but do not re-run the verification chain (it would
+			// hammer the NetEase API every second). A changed cookie
+			// string (e.g. a different account login) retries.
+			return p, tickPolling(time.Second)
+		}
 		p.checking = true
+		p.checkingCookie = ev.CookieString
 		p.statusMsg = model.T(MsgLoginWebviewVerifying)
 		return p, webviewCheckCookieCmd(ev.CookieString)
 
 	case webviewLoginResultMsg:
 		p.checking = false
 		if msg.err != nil {
-			// Cookie invalid/expired: keep the window open and keep polling.
+			// Cookie invalid/expired: keep the window open and keep polling,
+			// but skip re-validating the same cookie string.
+			p.lastCheckedCookie = p.checkingCookie
+			p.checkingCookie = ""
 			p.statusMsg = util.SetFgStyle(model.T(MsgLoginWebviewFailed)+msg.err.Error(), lipgloss.BrightRed)
 			return p, tickPolling(time.Second)
 		}

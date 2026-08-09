@@ -7,7 +7,8 @@
 // older distributions (e.g. Debian 11/12, Ubuntu 22.04). When neither stack
 // is available every exported function degrades to a no-op / zero value and
 // the login page falls back to the form login. No CGO is involved; every C
-// function is resolved at runtime with purego.Dlopen + RegisterLibFunc so the
+// function is resolved at runtime with purego.Dlopen + Dlsym + RegisterFunc
+// (missing symbols stay nil instead of panicking, see registerSymbol) so the
 // binary links cleanly without WebKitGTK headers.
 package webkitgtk
 

@@ -189,6 +189,14 @@ func handleWebviewCloseWindow(id objc.ID, cmd objc.SEL) {
 		// before the notification name string is released.
 		if win.ID != 0 {
 			win.Close()
+			// Remove the notification observer while the window and the name
+			// string are still valid; otherwise the notification center keeps a
+			// dangling pointer to the released window and a later session's
+			// window reusing the same address could fire a spurious
+			// webviewLoginWindowWillClose:.
+			cocoa.NSNotificationCenter_defaultCenter().RemoveObserverNameObject(
+				webviewHelperInst.ID, observerName, win.NSObject,
+			)
 			win.Release()
 		}
 		if config.ID != 0 {

@@ -117,11 +117,19 @@ func (c *webviewLoginController) Close() {
 // pollCookies serializes cookie polls with an in-flight flag. It runs on its
 // own goroutine and never touches UI objects.
 func (c *webviewLoginController) pollCookies() {
+	// Snapshot the stop channel once under lock: Close() may close and nil it
+	// concurrently, and reading the field on every select would race.
+	c.mu.Lock()
+	stopPolling := c.stopPolling
+	c.mu.Unlock()
+	if stopPolling == nil {
+		return
+	}
 	ticker := time.NewTicker(webviewLoginPollInterval)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-c.stopPolling:
+		case <-stopPolling:
 			return
 		case <-ticker.C:
 			c.pollOnce()

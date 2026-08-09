@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -66,6 +65,11 @@ type webviewLoginController struct {
 
 	opened bool
 	closed bool
+
+	// userDataDir is the session-scoped WebView2 user data folder created with
+	// os.MkdirTemp; cleanup() removes it so no cookies persist across login
+	// sessions. Guarded by mu.
+	userDataDir string
 }
 
 // Win32 window class and message constants.
@@ -255,6 +259,14 @@ func (c *webviewLoginController) Close() {
 	}
 }
 
+// isClosed reports whether Close() has been called. It is safe from any
+// goroutine.
+func (c *webviewLoginController) isClosed() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.closed
+}
+
 // messageLoop is the single UI thread of the login window. It is pinned to one
 // OS thread with LockOSThread so the window and the WebView2 hidden message
 // windows keep receiving their messages: GetMessageW only drains the queue of
@@ -383,10 +395,10 @@ func (c *webviewLoginController) createWindow() uintptr {
 // environment creation. CreateCoreWebView2EnvironmentWithOptions is
 // non-blocking: it returns immediately and the environment completion callback
 // is posted to a hidden message window of this thread, to be dispatched by the
-// message pump in messageLoop. The user data folder is kept at
-// os.UserCacheDir()/go-musicfox/webview2 (shared with the previous
-// implementation; a dedicated per-user subfolder was considered but the
-// difference is accepted to avoid churn).
+// message pump in messageLoop. It uses a session-scoped temporary user data
+// folder (created with os.MkdirTemp) so the cookies never outlive the login
+// window; cleanup() removes the folder afterwards, mirroring the in-memory
+// stores of macOS/Linux.
 func (c *webviewLoginController) setupWebView2(hwnd uintptr) error {
 	c.mu.Lock()
 	if c.closed {
@@ -398,15 +410,13 @@ func (c *webviewLoginController) setupWebView2(hwnd uintptr) error {
 	c.cookiesHandler = webview2.NewICoreWebView2GetCookiesCompletedHandler(&webview2CookiesHandler{ctrl: c})
 	c.mu.Unlock()
 
-	userDataDir, err := os.UserCacheDir()
+	userDataDir, err := os.MkdirTemp("", "go-musicfox-webview2-*")
 	if err != nil {
 		return err
 	}
-	userDataDir = filepath.Join(userDataDir, "go-musicfox", "webview2")
-	if err := os.MkdirAll(userDataDir, 0o755); err != nil {
-		return err
-	}
-
+	c.mu.Lock()
+	c.userDataDir = userDataDir
+	c.mu.Unlock()
 	return webviewloader.CreateCoreWebView2EnvironmentWithOptions(
 		c.envHandler,
 		webviewloader.WithUserDataFolder(userDataDir),
@@ -540,6 +550,20 @@ func (c *webviewLoginController) cleanup() {
 	if cookieManager != nil {
 		releaseWebview2Com(unsafe.Pointer(cookieManager), &cookieManager.Vtbl.IUnknownVtbl)
 	}
+
+	// Remove the per-session user data folder so no cookies persist across
+	// login sessions (mirrors the in-memory stores of macOS/Linux). The
+	// browser process may still be shutting down, so a locked file may make
+	// this fail; that is acceptable.
+	c.mu.Lock()
+	userDataDir := c.userDataDir
+	c.userDataDir = ""
+	c.mu.Unlock()
+	if userDataDir != "" {
+		if err := os.RemoveAll(userDataDir); err != nil {
+			slog.Warn("清理 WebView2 临时用户数据目录失败", slogx.Error(err))
+		}
+	}
 }
 
 // errWebviewLoginClosed reports that the login window was closed while the
@@ -601,7 +625,7 @@ func (h *webview2EnvHandler) EnvironmentCompleted(errorCode webviewloader.HRESUL
 	c := h.ctrl
 	if errorCode < 0 || createdEnvironment == nil {
 		slog.Error("WebView2 环境创建失败", slog.Any("errorCode", errorCode))
-		if !c.closed {
+		if !c.isClosed() {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
 		return 0
@@ -640,7 +664,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	c := h.ctrl
 	if errorCode != 0 || result == nil {
 		slog.Error("WebView2 登录窗口创建回调失败", slog.Any("errorCode", errorCode))
-		if !c.closed {
+		if !c.isClosed() {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
 		return 0
@@ -671,7 +695,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	core, err := result.GetCoreWebView2()
 	if err != nil || core == nil {
 		slog.Error("获取 WebView2 core 失败", slogx.Error(err))
-		if !c.closed {
+		if !c.isClosed() {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
 		return 0
@@ -681,7 +705,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	if core2 == nil {
 		slog.Error("获取 ICoreWebView2_2 接口失败")
 		// core is a borrowed reference owned by WebView2; no Release here.
-		if !c.closed {
+		if !c.isClosed() {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
 		return 0
@@ -694,7 +718,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	if err != nil || cookieMgr == nil {
 		slog.Error("获取 WebView2 CookieManager 失败", slogx.Error(err))
 		// core is a borrowed reference owned by WebView2; no Release here.
-		if !c.closed {
+		if !c.isClosed() {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
 		return 0
