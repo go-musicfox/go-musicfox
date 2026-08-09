@@ -13,6 +13,7 @@
 package webkitgtk
 
 import (
+	"log/slog"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -92,7 +93,8 @@ var (
 
 func init() {
 	// The GObject/GLib/Soup libraries are shared by both stacks; load them
-	// once.
+	// once. Each failure is logged by dlopen so the reason (missing library
+	// vs. missing symbols) is visible in musicfox.log.
 	sharedOK :=
 		dlopen("libgobject-2.0.so.0", func(lib uintptr) {
 			registerSymbol(&gSignalConnectData, lib, "g_signal_connect_data")
@@ -120,14 +122,22 @@ func init() {
 	webkitUsable := func() bool {
 		return webkitNetworkSessionNewEphemeral != nil && webkitWebViewNewWithNetworkSession != nil && webkitCookieManagerGetAllCookies != nil
 	}
-	if sharedOK && dlopen("libwebkitgtk-6.0.so.4", registerWebKit) && webkitUsable() && dlopen("libgtk-4.so.1", registerGTK4) {
-		webkitVersion = Version6
-		return
-	}
-	// Fall back to WebKitGTK 4.1 (GTK3).
-	if sharedOK && dlopen("libwebkit2gtk-4.1.so.0", registerWebKit) && webkitUsable() && dlopen("libgtk-3.so.0", registerGTK3) {
-		webkitVersion = Version41
-		return
+	if sharedOK {
+		// Prefer the WebKitGTK 6.0 (GTK4) stack.
+		if dlopen("libwebkitgtk-6.0.so.4", registerWebKit) {
+			if webkitUsable() && dlopen("libgtk-4.so.1", registerGTK4) {
+				webkitVersion = Version6
+				return
+			}
+			if !webkitUsable() {
+				slog.Warn("webkitgtk: libwebkitgtk-6.0.so.4 loaded but missing required symbols (webkit_network_session_new_ephemeral or friends); falling back to 4.1")
+			}
+		}
+		// Fall back to WebKitGTK 4.1 (GTK3).
+		if dlopen("libwebkit2gtk-4.1.so.0", registerWebKit) && webkitUsable() && dlopen("libgtk-3.so.0", registerGTK3) {
+			webkitVersion = Version41
+			return
+		}
 	}
 	// No supported stack is available: keep version 0. The exported functions
 	// degrade to no-ops / zero values through their nil guards.
@@ -136,9 +146,12 @@ func init() {
 
 // dlopen loads a shared library and registers its functions through the given
 // callback. Failures are non-fatal: the callback is only invoked on success.
+// The error is logged so musicfox.log shows whether the library is missing or
+// a dependency of it failed to resolve.
 func dlopen(name string, register func(lib uintptr)) bool {
 	lib, err := purego.Dlopen(name, purego.RTLD_LAZY|purego.RTLD_GLOBAL)
 	if err != nil {
+		slog.Debug("webkitgtk: dlopen failed", "lib", name, "error", err)
 		return false
 	}
 	register(lib)
