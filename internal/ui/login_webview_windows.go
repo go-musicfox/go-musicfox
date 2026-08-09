@@ -648,12 +648,17 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 
 	c.mu.Lock()
 	if c.closed {
-		// The window was closed before the controller finished creating; drop
-		// the reference instead of keeping it for cleanup().
+		// The window was closed before the controller finished creating. The
+		// completed handler passes a borrowed reference owned by WebView2,
+		// which releases it after the callback returns; do not Release here.
 		c.mu.Unlock()
-		releaseWebview2Com(unsafe.Pointer(result), &result.Vtbl.IUnknownVtbl)
 		return 0
 	}
+	// The completed handler receives a borrowed reference: WebView2 releases
+	// its own reference right after the callback returns, which would destroy
+	// the controller while cleanup() still holds the pointer. AddRef before
+	// storing it (mirrors wails' chromium.go).
+	result.AddRef()
 	c.controller = result
 	c.mu.Unlock()
 
@@ -675,7 +680,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	core2 := core.GetICoreWebView2_2()
 	if core2 == nil {
 		slog.Error("获取 ICoreWebView2_2 接口失败")
-		releaseWebview2Com(unsafe.Pointer(core), &core.Vtbl.IUnknownVtbl)
+		// core is a borrowed reference owned by WebView2; no Release here.
 		if !c.closed {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
@@ -688,7 +693,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	releaseWebview2Com(unsafe.Pointer(core2), &core2.Vtbl.IUnknownVtbl)
 	if err != nil || cookieMgr == nil {
 		slog.Error("获取 WebView2 CookieManager 失败", slogx.Error(err))
-		releaseWebview2Com(unsafe.Pointer(core), &core.Vtbl.IUnknownVtbl)
+		// core is a borrowed reference owned by WebView2; no Release here.
 		if !c.closed {
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		}
@@ -698,12 +703,19 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	c.mu.Lock()
 	if c.closed {
 		// The controller is owned by c.controller (released by cleanup()), but
-		// core and the cookie manager were not stored.
+		// core and the cookie manager were not stored. core is borrowed
+		// (WebView2 releases it); the cookie manager was AddRef'd by
+		// GetCookieManager, so Release it here.
 		c.mu.Unlock()
-		releaseWebview2Com(unsafe.Pointer(core), &core.Vtbl.IUnknownVtbl)
 		releaseWebview2Com(unsafe.Pointer(cookieMgr), &cookieMgr.Vtbl.IUnknownVtbl)
 		return 0
 	}
+	// Like the controller, the core webview handed back by the controller is
+	// a borrowed reference: AddRef before storing so cleanup() can Release it
+	// safely (mirrors wails' chromium.go). The cookie manager from
+	// GetCookieManager is already AddRef'd (caller releases it), so it needs
+	// no extra AddRef.
+	core.AddRef()
 	c.core = core
 	c.cookieManager = cookieMgr
 	c.mu.Unlock()
