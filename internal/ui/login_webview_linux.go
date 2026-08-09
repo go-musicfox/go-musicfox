@@ -141,9 +141,9 @@ func (c *webviewLoginController) runGTK() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	// Neither WebKitGTK 6.0 nor 4.1 is installed: degrade to the form login.
+	// Neither WebKitGTK 6.0, 4.1 nor 4.0 is available: degrade to the form login.
 	if webkitgtk.WebKitGTKVersion() == 0 {
-		slog.Error("WebView 登录不可用: 未找到 WebKitGTK 6.0/4.1 运行库")
+		slog.Error("WebView 登录不可用: 未找到 WebKitGTK 6.0/4.1/4.0 运行库")
 		c.sendEvent(WebviewLoginEvent{WindowClosed: true})
 		return
 	}
@@ -157,16 +157,30 @@ func (c *webviewLoginController) runGTK() {
 		return
 	}
 
-	session := webkitgtk.NetworkSessionNewEphemeral()
-	// Release our application-side references (transfer-full from the
-	// constructors) on every exit path. Deferred cleanup runs LIFO, so the
-	// window is unref'd before the web view, which is unref'd before the
-	// session: the window holds a reference to the web view until it is
-	// destroyed. The cookie manager is a borrowed reference of the session
-	// and must not be unref'd separately.
-	defer webkitgtk.GObjectUnref(session)
-	cookieManager := webkitgtk.NetworkSessionGetCookieManager(session)
-	webView := webkitgtk.WebViewNewWithNetworkSession(session)
+	var (
+		session       uintptr
+		cookieManager uintptr
+		webView       uintptr
+	)
+	if webkitgtk.WebKitGTKVersion() == webkitgtk.Version40 {
+		// Legacy 4.0 API (WebKitGTK < 2.40): no WebKitNetworkSession. The
+		// web view uses the default web context; the cookie manager is a
+		// borrowed reference of the context and must not be unref'd.
+		ctx := webkitgtk.WebContextGetDefault()
+		cookieManager = webkitgtk.WebContextGetCookieManager(ctx)
+		webView = webkitgtk.WebViewNew()
+	} else {
+		session = webkitgtk.NetworkSessionNewEphemeral()
+		// Release our application-side references (transfer-full from the
+		// constructors) on every exit path. Deferred cleanup runs LIFO, so the
+		// window is unref'd before the web view, which is unref'd before the
+		// session: the window holds a reference to the web view until it is
+		// destroyed. The cookie manager is a borrowed reference of the session
+		// and must not be unref'd separately.
+		defer webkitgtk.GObjectUnref(session)
+		cookieManager = webkitgtk.NetworkSessionGetCookieManager(session)
+		webView = webkitgtk.WebViewNewWithNetworkSession(session)
+	}
 	defer webkitgtk.GObjectUnref(webView)
 	window := webkitgtk.GtkWindowNew()
 	defer webkitgtk.GObjectUnref(window)
@@ -244,7 +258,11 @@ func (c *webviewLoginController) pollTick(_ uintptr) int32 {
 	c.inFlight = true
 	c.mu.Unlock()
 
-	webkitgtk.CookieManagerGetAllCookies(manager, 0, cb, 0)
+	if webkitgtk.WebKitGTKVersion() == webkitgtk.Version40 {
+		webkitgtk.CookieManagerGetCookiesAsync(manager, 0, cb, 0)
+	} else {
+		webkitgtk.CookieManagerGetAllCookies(manager, 0, cb, 0)
+	}
 	return 1
 }
 
@@ -264,7 +282,12 @@ func (c *webviewLoginController) cookiesReady(_ uintptr, res uintptr, _ uintptr)
 	// err is a GError** slot; the caller ignores the error, but the GError
 	// itself must be freed.
 	var errPtr uintptr
-	list := webkitgtk.CookieManagerGetAllCookiesFinish(manager, res, uintptr(unsafe.Pointer(&errPtr)))
+	var list uintptr
+	if webkitgtk.WebKitGTKVersion() == webkitgtk.Version40 {
+		list = webkitgtk.CookieManagerGetCookiesFinish(manager, res, uintptr(unsafe.Pointer(&errPtr)))
+	} else {
+		list = webkitgtk.CookieManagerGetAllCookiesFinish(manager, res, uintptr(unsafe.Pointer(&errPtr)))
+	}
 	if errPtr != 0 {
 		webkitgtk.GErrorFree(errPtr)
 	}

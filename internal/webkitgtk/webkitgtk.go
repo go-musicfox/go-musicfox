@@ -25,6 +25,10 @@ const (
 	Version6 = 6
 	// Version41 is the WebKitGTK 4.1 API (GTK3).
 	Version41 = 41
+	// Version40 is the legacy WebKitGTK 4.0 API (GTK3, pre-2.40): no
+	// WebKitNetworkSession; the web view uses the default web context and
+	// cookies come from the context's cookie manager.
+	Version40 = 40
 
 	// GTK_WINDOW_TOPLEVEL is the GtkWindowType for a regular window; it is
 	// required by the GTK3 gtk_window_new (GTK4's gtk_window_new takes no
@@ -46,6 +50,16 @@ var (
 	webkitWebViewLoadURI                   func(webView uintptr, uri *byte)
 	webkitCookieManagerGetAllCookies       func(manager, cancellable, callback, userData uintptr)
 	webkitCookieManagerGetAllCookiesFinish func(manager, result, err uintptr) uintptr
+)
+
+// WebKitGTK 4.0 bindings (libwebkit2gtk-4.0.so.37, pre-2.40 API): the legacy
+// web view creation and cookie manager access without WebKitNetworkSession.
+var (
+	webkitWebViewNew                    func() uintptr
+	webkitWebContextGetDefault          func() uintptr
+	webkitWebContextGetCookieManager    func(ctx uintptr) uintptr
+	webkitCookieManagerGetCookiesAsync  func(manager, cancellable, callback, userData uintptr)
+	webkitCookieManagerGetCookiesFinish func(manager, result, err uintptr) uintptr
 )
 
 // GTK bindings shared by both GTK4 and GTK3 (identical signatures; registered
@@ -138,6 +152,17 @@ func init() {
 			webkitVersion = Version41
 			return
 		}
+		// Last resort: legacy WebKitGTK 4.0 (GTK3, < 2.40), preinstalled on
+		// Debian 11 and Ubuntu 22.04 GNOME desktops (via gnome-software).
+		// It has no WebKitNetworkSession; the legacy symbols drive the web
+		// view and cookie manager instead.
+		webkitUsable40 := func() bool {
+			return webkitWebViewNew != nil && webkitWebContextGetDefault != nil && webkitCookieManagerGetCookiesAsync != nil
+		}
+		if dlopen("libwebkit2gtk-4.0.so.37", registerWebKit40) && webkitUsable40() && dlopen("libgtk-3.so.0", registerGTK3) {
+			webkitVersion = Version40
+			return
+		}
 	}
 	// No supported stack is available: keep version 0. The exported functions
 	// degrade to no-ops / zero values through their nil guards.
@@ -182,6 +207,16 @@ func registerWebKit(lib uintptr) {
 	registerSymbol(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
 	registerSymbol(&webkitCookieManagerGetAllCookies, lib, "webkit_cookie_manager_get_all_cookies")
 	registerSymbol(&webkitCookieManagerGetAllCookiesFinish, lib, "webkit_cookie_manager_get_all_cookies_finish")
+}
+
+// registerWebKit40 binds the legacy 4.0 API (WebKitGTK < 2.40) symbols.
+func registerWebKit40(lib uintptr) {
+	registerSymbol(&webkitWebViewNew, lib, "webkit_web_view_new")
+	registerSymbol(&webkitWebContextGetDefault, lib, "webkit_web_context_get_default")
+	registerSymbol(&webkitWebContextGetCookieManager, lib, "webkit_web_context_get_cookie_manager")
+	registerSymbol(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
+	registerSymbol(&webkitCookieManagerGetCookiesAsync, lib, "webkit_cookie_manager_get_cookies_async")
+	registerSymbol(&webkitCookieManagerGetCookiesFinish, lib, "webkit_cookie_manager_get_cookies_finish")
 }
 
 // registerGTKCommon binds the GTK functions that share a signature between
@@ -240,6 +275,33 @@ func WebViewNewWithNetworkSession(session uintptr) uintptr {
 	return webkitWebViewNewWithNetworkSession(session)
 }
 
+// WebViewNew creates a WebKitWebView on the legacy 4.0 API (uses the default
+// web context).
+func WebViewNew() uintptr {
+	if webkitWebViewNew == nil {
+		return 0
+	}
+	return webkitWebViewNew()
+}
+
+// WebContextGetDefault returns the default WebKitWebContext (borrowed
+// reference) on the legacy 4.0 API.
+func WebContextGetDefault() uintptr {
+	if webkitWebContextGetDefault == nil {
+		return 0
+	}
+	return webkitWebContextGetDefault()
+}
+
+// WebContextGetCookieManager returns the cookie manager (borrowed reference)
+// of a web context on the legacy 4.0 API.
+func WebContextGetCookieManager(ctx uintptr) uintptr {
+	if webkitWebContextGetCookieManager == nil {
+		return 0
+	}
+	return webkitWebContextGetCookieManager(ctx)
+}
+
 func WebViewLoadURI(webView uintptr, uri string) {
 	if webkitWebViewLoadURI == nil {
 		return
@@ -259,6 +321,24 @@ func CookieManagerGetAllCookiesFinish(manager, result, err uintptr) uintptr {
 		return 0
 	}
 	return webkitCookieManagerGetAllCookiesFinish(manager, result, err)
+}
+
+// CookieManagerGetCookiesAsync starts an asynchronous cookie fetch on the
+// legacy 4.0 API.
+func CookieManagerGetCookiesAsync(manager, cancellable, callback, userData uintptr) {
+	if webkitCookieManagerGetCookiesAsync == nil {
+		return
+	}
+	webkitCookieManagerGetCookiesAsync(manager, cancellable, callback, userData)
+}
+
+// CookieManagerGetCookiesFinish completes an asynchronous cookie fetch on the
+// legacy 4.0 API and returns the GList of SoupCookie.
+func CookieManagerGetCookiesFinish(manager, result, err uintptr) uintptr {
+	if webkitCookieManagerGetCookiesFinish == nil {
+		return 0
+	}
+	return webkitCookieManagerGetCookiesFinish(manager, result, err)
 }
 
 // GTK.
@@ -282,7 +362,7 @@ func GtkWindowNew() uintptr {
 			return 0
 		}
 		return gtkWindowNew4()
-	case Version41:
+	case Version41, Version40:
 		if gtkWindowNew3 == nil {
 			return 0
 		}
@@ -310,7 +390,7 @@ func GtkWindowAddChild(window, child uintptr) {
 		if gtkWindowSetChild != nil {
 			gtkWindowSetChild(window, child)
 		}
-	case Version41:
+	case Version41, Version40:
 		if gtkContainerAdd != nil {
 			gtkContainerAdd(window, child)
 		}
@@ -321,7 +401,7 @@ func GtkWindowAddChild(window, child uintptr) {
 // default even when their toplevel window is presented, so this calls
 // gtk_widget_show_all; GTK4 shows children automatically and this is a no-op.
 func GtkShowWidget(widget uintptr) {
-	if webkitVersion != Version41 || gtkWidgetShowAll == nil {
+	if (webkitVersion != Version41 && webkitVersion != Version40) || gtkWidgetShowAll == nil {
 		return
 	}
 	gtkWidgetShowAll(widget)
@@ -383,7 +463,7 @@ func GSignalConnectCloseRequest(window uintptr, cb uintptr) uint {
 		return 0
 	}
 	signal := "close-request"
-	if webkitVersion == Version41 {
+	if webkitVersion == Version41 || webkitVersion == Version40 {
 		signal = "delete-event"
 	}
 	return gSignalConnectData(window, cString(signal), cb, 0, 0, 0)
