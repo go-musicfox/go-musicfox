@@ -522,7 +522,6 @@ func (p *Popup) render(styles style.PopupStyleSet) popupRender {
 	// Cache the body render: an open popup re-renders every frame, and UV
 	// line processing is expensive. The key covers the visible lines, scroll
 	// geometry and style generation — scrolling or resizing invalidates it.
-	// Local customization: 上游每帧全量渲染（go-musicfox 定制）。
 	var bodyStr string
 	var contentWidth int
 	var scrollbarLines []string

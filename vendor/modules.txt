@@ -47,7 +47,7 @@ github.com/alecthomas/chroma/v2/styles
 ## explicit; go 1.22
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
-# github.com/anhoder/foxful-cli v1.1.2
+# github.com/anhoder/foxful-cli v1.1.3
 ## explicit; go 1.25.8
 github.com/anhoder/foxful-cli/layout
 github.com/anhoder/foxful-cli/model
