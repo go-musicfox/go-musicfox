@@ -105,7 +105,7 @@ func (c *webviewLoginController) Open() {
 			c.stopPolling = nil
 		}
 		c.mu.Unlock()
-		c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+		c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "未检测到 DISPLAY/WAYLAND_DISPLAY 环境变量，无法打开登录窗口"})
 		return
 	}
 
@@ -144,7 +144,7 @@ func (c *webviewLoginController) runGTK() {
 	// Neither WebKitGTK 6.0, 4.1 nor 4.0 is available: degrade to the form login.
 	if webkitgtk.WebKitGTKVersion() == 0 {
 		slog.Error("WebView 登录不可用: 未找到 WebKitGTK 6.0/4.1/4.0 运行库")
-		c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+		c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "未找到 WebKitGTK 运行库（请安装 webkit2gtk）"})
 		return
 	}
 
@@ -153,7 +153,7 @@ func (c *webviewLoginController) runGTK() {
 	// has been created yet, so there is nothing to clean up.
 	if !webkitgtk.GtkInitCheck() {
 		slog.Error("WebView 登录不可用: GTK 初始化失败")
-		c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+		c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "GTK 初始化失败，无法打开登录窗口"})
 		return
 	}
 

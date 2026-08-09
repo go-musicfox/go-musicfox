@@ -25,8 +25,15 @@ type WebviewLoginEvent struct {
 	// CookieString carries the standard "name=value; name2=value2" cookie
 	// string once a successful login (MUSIC_U cookie) is detected.
 	CookieString string
-	// WindowClosed reports that the user manually closed the login window.
+	// WindowClosed reports that the user manually closed the login window,
+	// or that the window could not be opened at all (e.g. missing WebKitGTK
+	// on Linux, missing WebView2 Runtime on Windows). When the close is
+	// caused by an environment failure, ErrMsg carries the reason so the
+	// page can show it instead of silently returning.
 	WindowClosed bool
+	// ErrMsg is the user-facing reason when WindowClosed is caused by the
+	// WebView being unavailable. Empty for a user-initiated close.
+	ErrMsg string
 }
 
 // webviewLoginResultMsg carries the result of the cookie verification chain.
@@ -121,6 +128,14 @@ func (p *WebviewLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cm
 			return p, tickPolling(time.Second)
 		}
 		if ev.WindowClosed {
+			if ev.ErrMsg != "" {
+				// The native window could not be opened (missing WebKitGTK /
+				// WebView2 Runtime, no display, ...): stay on this page and
+				// show the reason instead of silently returning. The user
+				// returns with 'b'/'esc'.
+				p.statusMsg = util.SetFgStyle(model.T(MsgLoginWebviewUnavailable)+ev.ErrMsg, lipgloss.BrightRed)
+				return p, nil
+			}
 			p.statusMsg = model.T(MsgLoginWebviewCancelled)
 			return p.back()
 		}

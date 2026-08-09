@@ -4,6 +4,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime"
@@ -293,7 +294,7 @@ func (c *webviewLoginController) messageLoop() {
 	if hwnd == 0 {
 		// Window creation failed; nothing to pump or destroy.
 		if !closed {
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "创建登录窗口失败"})
 		}
 		return
 	}
@@ -313,7 +314,7 @@ func (c *webviewLoginController) messageLoop() {
 		c.mu.Unlock()
 		if !closed {
 			slog.Error("初始化 WebView2 登录窗口失败", slogx.Error(err))
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: fmt.Sprintf("初始化 WebView2 登录窗口失败: %v", err)})
 		}
 		user32DestroyWindow.Call(hwnd)
 		return
@@ -630,7 +631,7 @@ func (h *webview2EnvHandler) EnvironmentCompleted(errorCode webviewloader.HRESUL
 	if errorCode < 0 || createdEnvironment == nil {
 		slog.Error("WebView2 环境创建失败", slog.Any("errorCode", errorCode))
 		if !c.isClosed() {
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "WebView2 初始化失败，请确认已安装 WebView2 Runtime"})
 		}
 		return 0
 	}
@@ -648,7 +649,7 @@ func (h *webview2EnvHandler) EnvironmentCompleted(errorCode webviewloader.HRESUL
 	env := (*webview2.ICoreWebView2Environment)(unsafe.Pointer(createdEnvironment))
 	if err := env.CreateCoreWebView2Controller(webview2.HWND(h.hwnd), handler); err != nil {
 		slog.Error("创建 WebView2 登录窗口失败", slogx.Error(err))
-		c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+		c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: fmt.Sprintf("创建 WebView2 登录窗口失败: %v", err)})
 	}
 	return 0
 }
@@ -669,7 +670,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	if errorCode != 0 || result == nil {
 		slog.Error("WebView2 登录窗口创建回调失败", slog.Any("errorCode", errorCode))
 		if !c.isClosed() {
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "创建 WebView2 登录窗口失败"})
 		}
 		return 0
 	}
@@ -700,7 +701,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	if err != nil || core == nil {
 		slog.Error("获取 WebView2 core 失败", slogx.Error(err))
 		if !c.isClosed() {
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "获取 WebView2 接口失败"})
 		}
 		return 0
 	}
@@ -710,7 +711,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 		slog.Error("获取 ICoreWebView2_2 接口失败")
 		// core is a borrowed reference owned by WebView2; no Release here.
 		if !c.isClosed() {
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "获取 WebView2 接口失败"})
 		}
 		return 0
 	}
@@ -723,7 +724,7 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 		slog.Error("获取 WebView2 CookieManager 失败", slogx.Error(err))
 		// core is a borrowed reference owned by WebView2; no Release here.
 		if !c.isClosed() {
-			c.sendEvent(WebviewLoginEvent{WindowClosed: true})
+			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: "获取 WebView2 CookieManager 失败"})
 		}
 		return 0
 	}

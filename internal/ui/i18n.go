@@ -41,6 +41,7 @@ const (
 	MsgLoginWebviewCancelled   model.MessageID = "login.webview.cancelled"
 	MsgLoginWebviewFailed      model.MessageID = "login.webview.failed"
 	MsgLoginWebviewUnsupported model.MessageID = "login.webview.unsupported"
+	MsgLoginWebviewUnavailable model.MessageID = "login.webview.unavailable"
 
 	MsgQRLoginPageTitle       model.MessageID = "qr_login.page.title"
 	MsgQRLoginGenerating      model.MessageID = "qr_login.generating"
@@ -139,6 +140,7 @@ var zhMessages = map[model.MessageID]string{
 	MsgLoginWebviewCancelled:   "登录已取消",
 	MsgLoginWebviewFailed:      "网页登录失败: ",
 	MsgLoginWebviewUnsupported: "当前平台不支持网页登录",
+	MsgLoginWebviewUnavailable: "网页登录不可用: ",
 
 	MsgQRLoginPageTitle:       "二维码登录",
 	MsgQRLoginGenerating:      "正在生成二维码，请稍候...",
