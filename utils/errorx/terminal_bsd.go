@@ -3,6 +3,7 @@
 package errorx
 
 import (
+	"io"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -37,4 +38,11 @@ func restoreStderr() {
 	if w, ok := slogx.StderrWriter().(*os.File); ok {
 		_ = unix.Dup2(int(w.Fd()), 2)
 	}
+}
+
+// childStderr 返回 exec 子进程应继承的 stderr。
+// Unix 上子进程自身的 slogx.Init 会重定向 fd 2 到日志文件，
+// 因此子进程直接继承终端 stderr 即可。
+func childStderr() io.Writer {
+	return os.Stderr
 }

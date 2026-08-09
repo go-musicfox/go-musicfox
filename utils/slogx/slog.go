@@ -28,6 +28,8 @@ const maxLogFileSize = 10 << 20 // 10 MiB
 var (
 	initOnce sync.Once
 	logPath  string
+	// logFile 为日志文件句柄（O_APPEND），供包装进程双写子进程 stderr 使用
+	logFile *os.File
 	// stderrWriter 为重定向前保存的原始 stderr，供崩溃提示等必须直达终端的输出使用
 	stderrWriter io.Writer
 )
@@ -48,6 +50,7 @@ func Init() {
 		if err != nil {
 			panic(fmt.Sprintf("failed to open log file, err: %v", err))
 		}
+		logFile = f
 
 		logger := slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{AddSource: true, Level: &levelVar}))
 		log.SetOutput(f)
@@ -62,6 +65,12 @@ func Init() {
 // LogFilePath 返回当前日志文件路径；未初始化时返回空串。
 func LogFilePath() string {
 	return logPath
+}
+
+// LogFile 返回日志文件句柄（O_APPEND），供包装进程双写子进程 stderr 使用。
+// 未初始化时返回 nil。
+func LogFile() *os.File {
+	return logFile
 }
 
 // ResolveLogFilePath 返回日志文件路径（不依赖 Init，供包装进程等场景使用）。

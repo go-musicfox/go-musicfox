@@ -30,11 +30,13 @@ func RunWrapped(app func()) {
 	}
 
 	cmd := exec.Command(os.Args[0], os.Args[1:]...)
-	// slogx 的 import 副作用已在本进程初始化日志（重定向了 fd 2），
-	// 恢复 stderr 后再 exec，保证子进程继承到真正的 stderr（终端）
+	// slogx 的 import 副作用已在本进程初始化日志（Unix 上重定向了 fd 2），
+	// 恢复 stderr 后再 exec，保证子进程继承到真正的 stderr（终端）。
+	// Windows 上 stderr 无法在进程内重定向，childStderr 经管道双写终端与日志
 	restoreStderr()
 	cmd.Env = append(os.Environ(), childEnv+"=1")
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
+	cmd.Stderr = childStderr()
 
 	err := cmd.Run()
 	if err == nil {
