@@ -97,10 +97,12 @@ func LevelVar() *slog.LevelVar {
 	return &levelVar
 }
 
-// rotateLogFile 日志文件超过大小上限时保留为 .old，避免覆盖历史日志。
+// rotateLogFile 日志文件超过大小上限时直接清空，避免无限增长。
+// 崩溃日志会因截断丢失，但 wrapper 进程的提示在退出时已从日志尾部
+// 提取过摘要，此处优先保证磁盘占用可控。
 func rotateLogFile(path string) {
 	if fi, err := os.Stat(path); err == nil && fi.Size() > maxLogFileSize {
-		_ = os.Rename(path, path+".old")
+		_ = os.Truncate(path, 0)
 	}
 }
 
