@@ -138,8 +138,10 @@ func (r *SpectrumRenderer) renderVectorscopeBlock(frame player.RawSampleFrame, w
 	}
 
 	bg := spectrumAppBg()
+	emptyCell := spectrumEmptyGlyph(emptyChar, bg)
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
+	var cellBuf []byte
 	for row := 0; row < height; row++ {
 		rowRamp := ramp
 		rowRampDim := rampDim
@@ -151,13 +153,22 @@ func (r *SpectrumRenderer) renderVectorscopeBlock(frame player.RawSampleFrame, w
 			v := grid[row][col]
 			switch {
 			case v == 3:
-				builder.WriteString(spectrumFgGlyph(fullChar, rowRampDim[col*2], bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], rowRampDim[col*2], bg)
+				cellBuf = append(cellBuf, fullChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			case v == 2:
-				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], rowRamp[col*2], bg)
+				cellBuf = append(cellBuf, fullChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			case v == 1:
-				builder.WriteString(spectrumFgGlyph(halfChar, rowRampDim[col*2], bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], rowRampDim[col*2], bg)
+				cellBuf = append(cellBuf, halfChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			default:
-				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
+				builder.WriteString(emptyCell)
 			}
 		}
 		builder.WriteByte('\n')

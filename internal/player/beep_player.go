@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gopxl/beep"
@@ -44,7 +45,7 @@ type beepPlayer struct {
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
 
-	state      types.State
+	state      atomic.Uint32 // types.State, atomically read/written (setState runs under p.l; State() is called from the UI thread)
 	ctrl       *beep.Ctrl
 	volume     *effects.Volume
 	timeChan   chan time.Duration
@@ -60,8 +61,6 @@ type beepPlayer struct {
 
 func NewBeepPlayer() *beepPlayer {
 	p := &beepPlayer{
-		state: types.Stopped,
-
 		timeChan:  make(chan time.Duration, 1),
 		stateChan: make(chan types.State, 10),
 		musicChan: make(chan URLMusic, 1),
@@ -79,6 +78,8 @@ func NewBeepPlayer() *beepPlayer {
 	if configs.AppConfig.Main.Visualizer.Enable || (configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled && desktopLyricsAvailable) {
 		p.spectrum = NewPCMAnalyzer(configs.AppConfig.Main.FrameRate.Interval())
 	}
+
+	p.state.Store(uint32(types.Stopped))
 
 	errorx.WaitGoStart(p.listen)
 
@@ -117,8 +118,11 @@ func (p *beepPlayer) listen() {
 			return
 		case <-done:
 			p.Stop()
-		case p.curMusic = <-p.musicChan:
+		case music := <-p.musicChan:
 			p.l.Lock()
+			// curMusic is read by CurMusic() (UI thread) under p.l, so assign
+			// it while holding the lock too.
+			p.curMusic = music
 			p.pausedNoLock()
 			if p.timer != nil {
 				p.timer.SetPassed(0)
@@ -225,6 +229,15 @@ func (p *beepPlayer) listen() {
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
+					// Guard with p.l: curStreamer/curFormat are replaced (and
+					// curStreamer set to nil) under p.l by reset() during song
+					// switches. Reading them lock-free from the timer goroutine
+					// races with that and can panic on a nil interface.
+					p.l.Lock()
+					defer p.l.Unlock()
+					if p.curStreamer == nil || p.curFormat.SampleRate == 0 {
+						return
+					}
 					select {
 					case p.timeChan <- time.Duration(p.curStreamer.Position()) * time.Second / time.Duration(p.curFormat.SampleRate):
 					default:
@@ -251,11 +264,13 @@ func (p *beepPlayer) Play(music URLMusic) {
 }
 
 func (p *beepPlayer) CurMusic() URLMusic {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.curMusic
 }
 
 func (p *beepPlayer) setState(state types.State) {
-	p.state = state
+	p.state.Store(uint32(state))
 	select {
 	case p.stateChan <- state:
 	case <-time.After(time.Second * 2):
@@ -264,7 +279,7 @@ func (p *beepPlayer) setState(state types.State) {
 
 // State 当前状态
 func (p *beepPlayer) State() types.State {
-	return p.state
+	return types.State(p.state.Load())
 }
 
 // StateChan 状态发生变更
@@ -273,6 +288,8 @@ func (p *beepPlayer) StateChan() <-chan types.State {
 }
 
 func (p *beepPlayer) PassedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.curStreamer == nil {
 		return 0
 	}
@@ -280,6 +297,8 @@ func (p *beepPlayer) PassedTime() time.Duration {
 }
 
 func (p *beepPlayer) PlayedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -302,7 +321,7 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.AppConfig.Player.Beep.Mp3Decoder == types.BeepMiniMp3Decoder {
 		return
 	}
-	if p.state == types.Playing || p.state == types.Paused {
+	if types.State(p.state.Load()) == types.Playing || types.State(p.state.Load()) == types.Paused {
 		speaker.Lock()
 		newPos := p.curFormat.SampleRate.N(duration)
 
@@ -373,7 +392,7 @@ func (p *beepPlayer) SetVolume(volume int) {
 }
 
 func (p *beepPlayer) pausedNoLock() {
-	if p.state != types.Playing {
+	if types.State(p.state.Load()) != types.Playing {
 		return
 	}
 	p.ctrl.Paused = true
@@ -389,7 +408,7 @@ func (p *beepPlayer) Pause() {
 }
 
 func (p *beepPlayer) resumeNoLock() {
-	if p.state == types.Playing {
+	if types.State(p.state.Load()) == types.Playing {
 		return
 	}
 	p.ctrl.Paused = false
@@ -405,7 +424,7 @@ func (p *beepPlayer) Resume() {
 }
 
 func (p *beepPlayer) stopNoLock() {
-	if p.state == types.Stopped {
+	if types.State(p.state.Load()) == types.Stopped {
 		return
 	}
 	p.ctrl.Paused = true

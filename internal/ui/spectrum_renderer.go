@@ -3,7 +3,9 @@ package ui
 import (
 	"image/color"
 	"math"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -169,10 +171,13 @@ type SpectrumRenderer struct {
 	provider             player.SpectrumProvider
 	progressLastWidth    float64
 	progressRamp         []color.Color
+	progressStyleGen     uint64 // style.StyleGeneration() at last ramp build
 	progressDimLastWidth float64
 	progressDimRamp      []color.Color
+	progressDimStyleGen  uint64
 	vertLastWidth        float64
 	vertLastHeight       int
+	vertRowRampsStyleGen uint64
 	vertRowRamps         [][]color.Color
 	brailleGridLCache    [][]byte
 	brailleGridRCache    [][]byte
@@ -180,6 +185,27 @@ type SpectrumRenderer struct {
 	brailleCacheW        int
 	brailleCacheH        int
 	phaseMask            []float64 // per-column phase correlation, set per frame when SpectrumPhaseDiff enabled
+
+	// vertBrailleRamps/vertBrailleRampsDim cache: per (width, height, style
+	// generation), shared by all braille/block renderers. The result depends
+	// only on dimensions and theme colors, never on frame data — recomputing
+	// it every frame was the dominant per-frame cost at high frame rates.
+	vertRampCacheW, vertRampCacheH int
+	vertRampCacheGen               uint64
+	vertRampCache                  [][]color.Color // plain (L channel)
+	vertRampDimCache               [][]color.Color // dim (R channel)
+
+	// resolvedBarRamps cache: final per-row ramps for bar styles after
+	// vertical/horizontal gradient combination.
+	resolvedRampCacheW, resolvedRampCacheH int
+	resolvedRampCacheGen                   uint64
+	resolvedRampFlags                      uint8 // bit0: vertical, bit1: horizontal
+	resolvedRowRamps                       [][]color.Color
+
+	// horizontalColor cache: per-row color of the horizontal gradient.
+	horizColorsCacheH   int
+	horizColorsCacheGen uint64
+	horizColors         []color.Color
 }
 
 func NewSpectrumRenderer(state *Player) *SpectrumRenderer {
@@ -374,32 +400,14 @@ func (r *SpectrumRenderer) renderBarBottom(frame player.SpectrumFrame, width, he
 	cfg := configs.AppConfig.Main.Visualizer
 	halfBlock, fullBlock, emptyBlock := cfg.BarCharacters()
 	progressRamp := r.ramp(width)
-	vertEnabled := cfg.BarVerticalGradient
-	horizEnabled := cfg.BarHorizontalGradient
-
-	var rowRamps [][]color.Color
-	if vertEnabled {
-		rowRamps = r.rowRamps(width, height, true)
-	}
+	resolved := r.resolvedBarRamps(width, height, cfg.BarVerticalGradient, cfg.BarHorizontalGradient)
 
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
 		ramp := progressRamp
-		if len(rowRamps) > 0 {
-			ramp = rowRamps[row]
-		}
-
-		// Horizontal gradient: compute per-row color or blend with vertical ramp
-		if horizEnabled {
-			horizColor := r.horizontalColor(row, height)
-			if !vertEnabled {
-				// Only horizontal: solid-color ramp
-				ramp = r.horizontalBarRamp(row, width, height)
-			} else {
-				// Both: blend horizontal into vertical ramp
-				ramp = blendRamps(ramp, horizColor)
-			}
+		if len(resolved) > 0 {
+			ramp = resolved[row]
 		}
 
 		level := spectrumRowLevel(frame, row, height)
@@ -426,31 +434,15 @@ func (r *SpectrumRenderer) renderMirror(frame player.SpectrumFrame, width, heigh
 	cfg := configs.AppConfig.Main.Visualizer
 	halfBlock, fullBlock, emptyBlock := cfg.MirrorBarCharacters()
 	progressRamp := r.ramp(width)
-	vertEnabled := cfg.BarVerticalGradient
-	horizEnabled := cfg.BarHorizontalGradient
-
-	var rowRamps [][]color.Color
-	if vertEnabled {
-		rowRamps = r.rowRamps(width, height, true)
-	}
+	resolved := r.resolvedBarRamps(width, height, cfg.BarVerticalGradient, cfg.BarHorizontalGradient)
 
 	mono := cfg.IsMono()
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
 	for row := 0; row < height; row++ {
 		ramp := progressRamp
-		if len(rowRamps) > 0 {
-			ramp = rowRamps[row]
-		}
-
-		// Horizontal gradient: compute per-row color or blend with vertical ramp
-		if horizEnabled {
-			horizColor := r.horizontalColor(row, height)
-			if !vertEnabled {
-				ramp = r.horizontalBarRamp(row, width, height)
-			} else {
-				ramp = blendRamps(ramp, horizColor)
-			}
+		if len(resolved) > 0 {
+			ramp = resolved[row]
 		}
 
 		var levelL, levelR float64
@@ -533,8 +525,11 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 	}
 
 	bg := spectrumAppBg()
+	emptyCell := spectrumEmptyGlyph(" ", bg)
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
+	// cellBuf is reused across cells so filled cells do not allocate per cell.
+	var cellBuf []byte
 	for row := 0; row < height; row++ {
 		rowRamp := ramp
 		rowRampDim := rampDim
@@ -547,7 +542,7 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 			dotsR := gridR[row][col]
 			dots := dotsL | dotsR
 			if dots == 0 {
-				builder.WriteString(spectrumEmptyGlyph(" ", bg))
+				builder.WriteString(emptyCell)
 				continue
 			}
 			c := rowRamp[col*2]
@@ -558,7 +553,10 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 			if len(r.phaseMask) > 0 && hasR && col < len(r.phaseMask) {
 				c = blendPhaseColor(c, r.phaseMask[col])
 			}
-			builder.WriteString(spectrumFgGlyph(string(brailleCell(dots)), c, bg))
+			cellBuf = appendSGRFgBg(cellBuf[:0], c, bg)
+			cellBuf = utf8.AppendRune(cellBuf, brailleCell(dots))
+			cellBuf = append(cellBuf, sgrReset...)
+			builder.Write(cellBuf)
 		}
 		builder.WriteByte('\n')
 	}
@@ -568,68 +566,63 @@ func (r *SpectrumRenderer) renderBrailleGridDual(gridL, gridR [][]byte, width, h
 // vertBrailleRamps returns per-row ramps blending the horizontal gradient
 // with a top→bottom brightness shift. Top rows are slightly darker.
 func (r *SpectrumRenderer) vertBrailleRamps(width, height int) [][]color.Color {
-	if height <= 1 {
-		return nil
+	r.ensureVertRamps(width, height)
+	return r.vertRampCache
+}
+
+// vertBrailleRampsDim applies the same vertical gradient to the shifted ramp.
+// The ramp itself is r.rampDim(width); the base parameter is kept for call
+// sites that already hold it.
+func (r *SpectrumRenderer) vertBrailleRampsDim(width, height int, _ []color.Color) [][]color.Color {
+	r.ensureVertRamps(width, height)
+	return r.vertRampDimCache
+}
+
+// ensureVertRamps computes both the plain and dim vertical ramps at most once
+// per (width, height, style generation). The result depends only on the
+// window dimensions and theme colors, so it is shared by every renderer and
+// reused across frames.
+func (r *SpectrumRenderer) ensureVertRamps(width, height int) {
+	gen := foxfulStyle.StyleGeneration()
+	if r.vertRampCacheW == width && r.vertRampCacheH == height && r.vertRampCacheGen == gen {
+		return
 	}
-	base := r.ramp(width)
+	r.vertRampCache, r.vertRampDimCache = nil, nil
+	r.vertRampCacheW, r.vertRampCacheH, r.vertRampCacheGen = width, height, gen
+	if height <= 1 {
+		return
+	}
 	vertBgHex := configs.GetSpectrumVerticalBg()
 	if vertBgHex == "" {
-		// Transparent background — skip vertical blend, return uniform rows
-		ramps := make([][]color.Color, height)
-		for row := range height {
-			rowRamp := make([]color.Color, len(base))
-			copy(rowRamp, base)
-			ramps[row] = rowRamp
-		}
-		return ramps
+		// Transparent background: callers fall back to the plain ramp, which
+		// is visually identical to the uniform per-row copies the old code
+		// produced.
+		return
 	}
 	black, _ := colorful.Hex(vertBgHex)
 
-	ramps := make([][]color.Color, height)
+	base := r.ramp(width)
+	dimBase := r.rampDim(width)
+	plain := make([][]color.Color, height)
+	dim := make([][]color.Color, height)
 	for row := range height {
 		// 0.0=top(dark) → 1.0=bottom(bright)
 		t := float64(row) / float64(height-1)
 		blend := 0.35 * (1.0 - t) // top blends 35% black, bottom 0%
-		rowRamp := make([]color.Color, len(base))
+		plainRow := make([]color.Color, len(base))
+		dimRow := make([]color.Color, len(dimBase))
 		for i, c := range base {
 			h, _ := colorful.MakeColor(c)
-			rowRamp[i] = h.BlendLuv(black, blend)
+			plainRow[i] = h.BlendLuv(black, blend)
 		}
-		ramps[row] = rowRamp
-	}
-	return ramps
-}
-
-// vertBrailleRampsDim applies the same vertical gradient to the shifted ramp.
-func (r *SpectrumRenderer) vertBrailleRampsDim(width, height int, base []color.Color) [][]color.Color {
-	if height <= 1 {
-		return nil
-	}
-	vertBgHex := configs.GetSpectrumVerticalBg()
-	if vertBgHex == "" {
-		// Transparent background — skip vertical blend, return uniform rows
-		ramps := make([][]color.Color, height)
-		for row := range height {
-			rowRamp := make([]color.Color, len(base))
-			copy(rowRamp, base)
-			ramps[row] = rowRamp
-		}
-		return ramps
-	}
-	black, _ := colorful.Hex(vertBgHex)
-
-	ramps := make([][]color.Color, height)
-	for row := range height {
-		t := float64(row) / float64(height-1)
-		blend := 0.35 * (1.0 - t)
-		rowRamp := make([]color.Color, len(base))
-		for i, c := range base {
+		for i, c := range dimBase {
 			h, _ := colorful.MakeColor(c)
-			rowRamp[i] = h.BlendLuv(black, blend)
+			dimRow[i] = h.BlendLuv(black, blend)
 		}
-		ramps[row] = rowRamp
+		plain[row] = plainRow
+		dim[row] = dimRow
 	}
-	return ramps
+	r.vertRampCache, r.vertRampDimCache = plain, dim
 }
 
 // --- Style: line/dot braille mono ---
@@ -654,8 +647,10 @@ func (r *SpectrumRenderer) renderBrailleGridMono(grid [][]byte, width, height in
 	vRamp := r.vertBrailleRamps(width, height)
 
 	bg := spectrumAppBg()
+	emptyCell := spectrumEmptyGlyph(" ", bg)
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
+	var cellBuf []byte
 	for row := 0; row < height; row++ {
 		rowRamp := ramp
 		if len(vRamp) > 0 {
@@ -664,11 +659,14 @@ func (r *SpectrumRenderer) renderBrailleGridMono(grid [][]byte, width, height in
 		for col := 0; col < width; col++ {
 			dots := grid[row][col]
 			if dots == 0 {
-				builder.WriteString(spectrumEmptyGlyph(" ", bg))
+				builder.WriteString(emptyCell)
 				continue
 			}
 			c := rowRamp[col*2]
-			builder.WriteString(spectrumFgGlyph(string(brailleCell(dots)), c, bg))
+			cellBuf = appendSGRFgBg(cellBuf[:0], c, bg)
+			cellBuf = utf8.AppendRune(cellBuf, brailleCell(dots))
+			cellBuf = append(cellBuf, sgrReset...)
+			builder.Write(cellBuf)
 		}
 		builder.WriteByte('\n')
 	}
@@ -727,8 +725,10 @@ func (r *SpectrumRenderer) renderBlockDual(fullChar, halfChar, emptyChar string,
 	}
 
 	bg := spectrumAppBg()
+	emptyCell := spectrumEmptyGlyph(emptyChar, bg)
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
+	var cellBuf []byte
 	for row := 0; row < height; row++ {
 		rowRamp := ramp
 		rowRampDim := rampDim
@@ -744,17 +744,26 @@ func (r *SpectrumRenderer) renderBlockDual(fullChar, halfChar, emptyChar string,
 				if len(r.phaseMask) > 0 && hasR && col < len(r.phaseMask) {
 					c = blendPhaseColor(c, r.phaseMask[col])
 				}
-				builder.WriteString(spectrumFgGlyph(fullChar, c, bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], c, bg)
+				cellBuf = append(cellBuf, fullChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			case v == 2:
-				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], rowRamp[col*2], bg)
+				cellBuf = append(cellBuf, fullChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			case v == 1:
 				c := rowRampDim[col*2]
 				if len(r.phaseMask) > 0 && hasR && col < len(r.phaseMask) {
 					c = blendPhaseColor(c, r.phaseMask[col])
 				}
-				builder.WriteString(spectrumFgGlyph(halfChar, c, bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], c, bg)
+				cellBuf = append(cellBuf, halfChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			default:
-				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
+				builder.WriteString(emptyCell)
 			}
 		}
 		builder.WriteByte('\n')
@@ -774,8 +783,10 @@ func (r *SpectrumRenderer) renderBlockMono(fullChar, halfChar, emptyChar string,
 	drawBlockChannel(grid, levels, width, height, connect, 2)
 
 	bg := spectrumAppBg()
+	emptyCell := spectrumEmptyGlyph(emptyChar, bg)
 	var builder strings.Builder
 	builder.Grow((width + 1) * height)
+	var cellBuf []byte
 	for row := 0; row < height; row++ {
 		rowRamp := ramp
 		if len(vRamp) > 0 {
@@ -785,11 +796,17 @@ func (r *SpectrumRenderer) renderBlockMono(fullChar, halfChar, emptyChar string,
 			v := grid[row][col]
 			switch {
 			case v >= 2:
-				builder.WriteString(spectrumFgGlyph(fullChar, rowRamp[col*2], bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], rowRamp[col*2], bg)
+				cellBuf = append(cellBuf, fullChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			case v == 1:
-				builder.WriteString(spectrumFgGlyph(halfChar, rowRamp[col*2], bg))
+				cellBuf = appendSGRFgBg(cellBuf[:0], rowRamp[col*2], bg)
+				cellBuf = append(cellBuf, halfChar...)
+				cellBuf = append(cellBuf, sgrReset...)
+				builder.Write(cellBuf)
 			default:
-				builder.WriteString(spectrumEmptyGlyph(emptyChar, bg))
+				builder.WriteString(emptyCell)
 			}
 		}
 		builder.WriteByte('\n')
@@ -889,7 +906,8 @@ func drawGridLineMaskAt(grid [][]byte, x1, y1, x2, y2 int, priority byte) {
 // a vibrant, distinct color that contrasts clearly with the L channel.
 // Cached: when width matches the previous call, the cached ramp is returned.
 func (r *SpectrumRenderer) rampDim(width int) []color.Color {
-	if r.progressDimLastWidth == float64(width) && len(r.progressDimRamp) > 0 {
+	gen := foxfulStyle.StyleGeneration()
+	if r.progressDimLastWidth == float64(width) && r.progressDimStyleGen == gen && len(r.progressDimRamp) > 0 {
 		return r.progressDimRamp
 	}
 	base := r.ramp(width)
@@ -903,6 +921,7 @@ func (r *SpectrumRenderer) rampDim(width int) []color.Color {
 	}
 	r.progressDimRamp = shifted
 	r.progressDimLastWidth = float64(width)
+	r.progressDimStyleGen = gen
 	return shifted
 }
 
@@ -1304,12 +1323,17 @@ func hasSignal(frame player.SpectrumFrame) bool {
 }
 
 func (r *SpectrumRenderer) ramp(width int) []color.Color {
-	// TODO: Use theme visualizer color config via configs.AppColorConfig.ResolveVisualizerColors() when integrated
-	if r.progressLastWidth != float64(width) || len(r.progressRamp) == 0 {
-		start, end := model.GetProgressColor()
-		r.progressRamp = util.MakeRamp(start, end, float64(width*2))
-		r.progressLastWidth = float64(width)
+	// The ramp depends on theme colors; the style generation invalidates the
+	// cache on theme switches so stale colors are never replayed.
+	gen := foxfulStyle.StyleGeneration()
+	if r.progressLastWidth == float64(width) && r.progressStyleGen == gen && len(r.progressRamp) > 0 {
+		return r.progressRamp
 	}
+	// TODO: Use theme visualizer color config via configs.AppColorConfig.ResolveVisualizerColors() when integrated
+	start, end := model.GetProgressColor()
+	r.progressRamp = util.MakeRamp(start, end, float64(width*2))
+	r.progressLastWidth = float64(width)
+	r.progressStyleGen = gen
 	return r.progressRamp
 }
 
@@ -1317,7 +1341,8 @@ func (r *SpectrumRenderer) rowRamps(width, height int, enabled bool) [][]color.C
 	if !enabled {
 		return nil
 	}
-	if r.vertLastWidth == float64(width) && r.vertLastHeight == height && len(r.vertRowRamps) > 0 {
+	gen := foxfulStyle.StyleGeneration()
+	if r.vertLastWidth == float64(width) && r.vertLastHeight == height && r.vertRowRampsStyleGen == gen && len(r.vertRowRamps) > 0 {
 		return r.vertRowRamps
 	}
 	if height <= 1 {
@@ -1345,29 +1370,83 @@ func (r *SpectrumRenderer) rowRamps(width, height int, enabled bool) [][]color.C
 	}
 	r.vertLastWidth = float64(width)
 	r.vertLastHeight = height
+	r.vertRowRampsStyleGen = gen
 	return r.vertRowRamps
+}
+
+// resolvedBarRamps returns the final per-row ramp used by bar styles after
+// vertical/horizontal gradient combination, cached per (width, height, style
+// generation, gradient flags). Returns nil when no gradient is enabled — the
+// caller falls back to the plain progress ramp.
+func (r *SpectrumRenderer) resolvedBarRamps(width, height int, vertEnabled, horizEnabled bool) [][]color.Color {
+	if !vertEnabled && !horizEnabled {
+		return nil
+	}
+	var flags uint8
+	if vertEnabled {
+		flags |= 1
+	}
+	if horizEnabled {
+		flags |= 2
+	}
+	gen := foxfulStyle.StyleGeneration()
+	if r.resolvedRampCacheW == width && r.resolvedRampCacheH == height && r.resolvedRampCacheGen == gen && r.resolvedRampFlags == flags {
+		return r.resolvedRowRamps
+	}
+
+	rowRamps := r.rowRamps(width, height, vertEnabled)
+	progressRamp := r.ramp(width)
+	resolved := make([][]color.Color, height)
+	for row := 0; row < height; row++ {
+		ramp := progressRamp
+		if len(rowRamps) > 0 {
+			ramp = rowRamps[row]
+		}
+		if horizEnabled {
+			horizColor := r.horizontalColor(row, height)
+			if !vertEnabled {
+				// Uniform-color ramp per row.
+				uniform := make([]color.Color, len(progressRamp))
+				for i := range uniform {
+					uniform[i] = horizColor
+				}
+				ramp = uniform
+			} else {
+				ramp = blendRamps(ramp, horizColor)
+			}
+		}
+		resolved[row] = ramp
+	}
+	r.resolvedRowRamps = resolved
+	r.resolvedRampCacheW, r.resolvedRampCacheH = width, height
+	r.resolvedRampCacheGen, r.resolvedRampFlags = gen, flags
+	return resolved
+}
+
+// ensureHorizontalColors precomputes the per-row horizontal gradient colors,
+// cached per (height, style generation).
+func (r *SpectrumRenderer) ensureHorizontalColors(height int) {
+	gen := foxfulStyle.StyleGeneration()
+	if r.horizColorsCacheH == height && r.horizColorsCacheGen == gen && len(r.horizColors) > 0 {
+		return
+	}
+	start, end := model.GetProgressColor()
+	cStart, _ := colorful.Hex(start)
+	cEnd, _ := colorful.Hex(end)
+	colors := make([]color.Color, max(height, 1))
+	for row := range colors {
+		t := float64(row) / float64(max(height-1, 1))
+		colors[row] = cStart.BlendLuv(cEnd, t)
+	}
+	r.horizColors = colors
+	r.horizColorsCacheH, r.horizColorsCacheGen = height, gen
 }
 
 // horizontalColor returns a single color interpolated between theme start/end
 // based on the row position within the total height.
 func (r *SpectrumRenderer) horizontalColor(row, height int) color.Color {
-	start, end := model.GetProgressColor()
-	cStart, _ := colorful.Hex(start)
-	cEnd, _ := colorful.Hex(end)
-	t := float64(row) / float64(max(height-1, 1))
-	return cStart.BlendLuv(cEnd, t)
-}
-
-// horizontalBarRamp returns a uniform-color ramp (all entries the same color)
-// for a given row, derived from the horizontal gradient position.
-func (r *SpectrumRenderer) horizontalBarRamp(row, width, height int) []color.Color {
-	c := r.horizontalColor(row, height)
-	rampLen := width * 2
-	result := make([]color.Color, rampLen)
-	for i := range result {
-		result[i] = c
-	}
-	return result
+	r.ensureHorizontalColors(height)
+	return r.horizColors[row]
 }
 
 // blendRamps blends a horizontal color into each entry of a row ramp at 50%.
@@ -1379,6 +1458,73 @@ func blendRamps(rowRamp []color.Color, horizColor color.Color) []color.Color {
 		result[i] = hColor.BlendLuv(horizColorful, 0.5)
 	}
 	return result
+}
+
+// sgrReset is the SGR reset emitted after every styled cell, matching
+// lipgloss's rendering ("\x1b[m").
+var sgrReset = []byte("\x1b[m")
+
+// sgrWorthEmitting reports whether a color produces a channel in the escape
+// sequence: nil colors and lipgloss.NoColor ("absence of color", the sentinel
+// for unconfigured theme backgrounds) are both skipped, exactly like lipgloss
+// does when rendering a style.
+func sgrWorthEmitting(c color.Color) bool {
+	if c == nil {
+		return false
+	}
+	if _, isNoColor := c.(lipgloss.NoColor); isNoColor {
+		return false
+	}
+	return true
+}
+
+// appendSGRFgBg appends the SGR prefix for fg over bg, in the same combined
+// truecolor format lipgloss v2 emits ("\x1b[38;2;R;G;B;48;2;R;G;Bm"). Either
+// color may be nil or NoColor; neither emitting yields no escape sequence at
+// all (the returned buffer is unchanged).
+func appendSGRFgBg(buf []byte, fg, bg color.Color) []byte {
+	fgOn := sgrWorthEmitting(fg)
+	bgOn := sgrWorthEmitting(bg)
+	if !fgOn && !bgOn {
+		return buf
+	}
+	buf = append(buf, '\x1b', '[')
+	if fgOn {
+		buf = appendSGRColor(buf, '3', fg)
+	}
+	if bgOn {
+		if fgOn {
+			buf = append(buf, ';')
+		}
+		buf = appendSGRColor(buf, '4', bg)
+	}
+	buf = append(buf, 'm')
+	return buf
+}
+
+// appendSGRColor appends a "38;2;R;G;B" (mode '3') or "48;2;R;G;B" (mode '4')
+// truecolor prefix. Channel values are the 16-bit RGBA values scaled to 8-bit,
+// identical to what lipgloss emits on a truecolor profile.
+func appendSGRColor(buf []byte, mode byte, c color.Color) []byte {
+	if c == nil {
+		return buf
+	}
+	// lipgloss.NoColor ("absence of color") must be detected by type assertion:
+	// its RGBA() returns (0,0,0,65535), indistinguishable from a legitimate
+	// black background. lipgloss skips NoColor channels entirely; so must we,
+	// otherwise transparent themes (Default, Transparent) render the whole
+	// visualizer as an opaque black block.
+	if _, isNoColor := c.(lipgloss.NoColor); isNoColor {
+		return buf
+	}
+	r, g, b, _ := c.RGBA()
+	buf = append(buf, mode, '8', ';', '2', ';')
+	buf = strconv.AppendInt(buf, int64(r>>8), 10)
+	buf = append(buf, ';')
+	buf = strconv.AppendInt(buf, int64(g>>8), 10)
+	buf = append(buf, ';')
+	buf = strconv.AppendInt(buf, int64(b>>8), 10)
+	return buf
 }
 
 func spectrumHalfBlockStyle(foreground, background color.Color) lipgloss.Style {
@@ -1394,21 +1540,29 @@ func spectrumAppBg() color.Color {
 
 // spectrumFgGlyph renders a single foreground-colored glyph, painting it over
 // bg when non-nil so the glyph cell never stays transparent (which would reveal
-// content drawn beneath the TUI, e.g. the cover image).
+// content drawn beneath the TUI, e.g. the cover image). Uses raw SGR sequences
+// instead of per-cell lipgloss styles, which were the dominant per-frame
+// allocation at high frame rates.
 func spectrumFgGlyph(char string, fg, bg color.Color) string {
-	if bg != nil {
-		return util.SetFgBgStyle(char, fg, bg)
+	buf := appendSGRFgBg(nil, fg, bg)
+	if buf == nil {
+		return char
 	}
-	return util.SetFgStyle(char, fg)
+	buf = append(buf, char...)
+	buf = append(buf, sgrReset...)
+	return string(buf)
 }
 
 // spectrumEmptyGlyph renders an empty/plain glyph, painting it over bg when
 // non-nil so empty cells carry the app background too.
 func spectrumEmptyGlyph(char string, bg color.Color) string {
-	if bg != nil {
-		return foxfulStyle.CurrentStyleSet().AppBackground.Render(char)
+	buf := appendSGRFgBg(nil, nil, bg)
+	if buf == nil {
+		return char
 	}
-	return char
+	buf = append(buf, char...)
+	buf = append(buf, sgrReset...)
+	return string(buf)
 }
 
 func spectrumRowLevel(frame player.SpectrumFrame, row, height int) float64 {

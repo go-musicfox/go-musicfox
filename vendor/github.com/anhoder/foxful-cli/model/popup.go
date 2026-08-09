@@ -146,6 +146,16 @@ type Popup struct {
 	totalContentLines   int
 	visibleContentLines int
 
+	// Body render cache (go-musicfox 定制)：可见行 + 滚动几何 + 样式代不变时
+	// 复用上次的 UV 渲染结果，避免打开的弹窗每帧全量渲染。
+	cachedBody          string
+	cachedBodyKey       string
+	cachedBodyW         int
+	cachedBodySb        []string
+	cachedBodyMaxW      int
+	cachedBodyScrolling bool
+	cachedBodyGen       uint64
+
 	dragging      bool
 	dragMouseX    int
 	dragMouseY    int
@@ -509,7 +519,22 @@ func (p *Popup) render(styles style.PopupStyleSet) popupRender {
 	if p.hasSelection {
 		visibleLines = p.applySelectionHighlight(visibleLines)
 	}
-	bodyStr, contentWidth, scrollbarLines := renderPopupBody(visibleLines, scrolling, p.scrollOffset, p.maxScrollOffset(), maxContentWidth, styles)
+	// Cache the body render: an open popup re-renders every frame, and UV
+	// line processing is expensive. The key covers the visible lines, scroll
+	// geometry and style generation — scrolling or resizing invalidates it.
+	// Local customization: 上游每帧全量渲染（go-musicfox 定制）。
+	var bodyStr string
+	var contentWidth int
+	var scrollbarLines []string
+	bodyKey := strings.Join(visibleLines, "\x00")
+	gen := style.StyleGeneration()
+	if p.cachedBodyKey == bodyKey && p.cachedBodyMaxW == maxContentWidth && p.cachedBodyScrolling == scrolling && p.cachedBodyGen == gen && p.cachedBody != "" {
+		bodyStr, contentWidth, scrollbarLines = p.cachedBody, p.cachedBodyW, p.cachedBodySb
+	} else {
+		bodyStr, contentWidth, scrollbarLines = renderPopupBody(visibleLines, scrolling, p.scrollOffset, p.maxScrollOffset(), maxContentWidth, styles)
+		p.cachedBody, p.cachedBodyKey, p.cachedBodyW, p.cachedBodySb = bodyStr, bodyKey, contentWidth, scrollbarLines
+		p.cachedBodyMaxW, p.cachedBodyScrolling, p.cachedBodyGen = maxContentWidth, scrolling, gen
+	}
 
 	// Compute bodyWidth: content width + scrollbar overhead when scrolling.
 	bodyWidth := contentWidth

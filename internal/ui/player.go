@@ -86,6 +86,10 @@ type Player struct {
 
 	renderTicker *tickerByPlayer // renderTicker 用于渲染
 
+	// mprisPosThrottle 限制 MPRIS Position 属性更新频率：每个时间 tick 都
+	// 广播会以 UI 帧率灌满 DBus 会话总线（60fps 时 60 次/秒）。
+	mprisPosThrottle mprisPositionThrottle
+
 	player.Player // 播放器
 	reporter      reporter.Service
 }
@@ -152,7 +156,9 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			case <-ctx.Done():
 				return
 			case duration := <-p.TimeChan():
-				p.stateHandler.SetPosition(p.PassedTime())
+				if pos := p.PassedTime(); p.mprisPosThrottle.shouldEmit(pos, time.Now()) {
+					p.stateHandler.SetPosition(pos)
+				}
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					p.NextSong(false)
 				}
