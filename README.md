@@ -781,4 +781,10 @@ See [CHANGELOG.md](./CHANGELOG.md)
 * [gcli](https://github.com/gookit/gcli)
 * ...
 
-[![Star History Chart](https://api.star-history.com/svg?repos=go-musicfox/go-musicfox&type=Date)](https://star-history.com/#go-musicfox/go-musicfox&Date)
+<a href="https://www.star-history.com/?type=date&repos=go-musicfox%2Fgo-musicfox">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=go-musicfox/go-musicfox&type=date&theme=dark&legend=top-left&sealed_token=ZAtixBzEM1DC7Qb_x7HYTNMRwdWVEMvfdIf1dn6luTNC7vpVblPHzXHcA96fQ-DGGqRQSaVqgSPOU6aV7F_yK2rPlNEqJXG6uvK488Wd9BtQHTDLfKt4_s3y3O1NUElqoMtH8IcJHj2oYLr_-jq6v7K3nx47Udzs4BDC9eSZHRBac-7pVqfi8dZdWrPL" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=go-musicfox/go-musicfox&type=date&legend=top-left&sealed_token=ZAtixBzEM1DC7Qb_x7HYTNMRwdWVEMvfdIf1dn6luTNC7vpVblPHzXHcA96fQ-DGGqRQSaVqgSPOU6aV7F_yK2rPlNEqJXG6uvK488Wd9BtQHTDLfKt4_s3y3O1NUElqoMtH8IcJHj2oYLr_-jq6v7K3nx47Udzs4BDC9eSZHRBac-7pVqfi8dZdWrPL" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=go-musicfox/go-musicfox&type=date&legend=top-left&sealed_token=ZAtixBzEM1DC7Qb_x7HYTNMRwdWVEMvfdIf1dn6luTNC7vpVblPHzXHcA96fQ-DGGqRQSaVqgSPOU6aV7F_yK2rPlNEqJXG6uvK488Wd9BtQHTDLfKt4_s3y3O1NUElqoMtH8IcJHj2oYLr_-jq6v7K3nx47Udzs4BDC9eSZHRBac-7pVqfi8dZdWrPL" />
+ </picture>
+</a>
