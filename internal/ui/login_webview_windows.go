@@ -457,7 +457,9 @@ func (c *webviewLoginController) handleCookies(result *webview2.ICoreWebView2Coo
 	}
 	count, err := result.GetCount()
 	if err != nil {
-		releaseWebview2Com(unsafe.Pointer(result), &result.Vtbl.IUnknownVtbl)
+		// The list is a borrowed reference owned by WebView2: it is released
+		// by the runtime after Invoke returns, so it must not be released
+		// here (a Release would free it while the runtime still holds it).
 		return
 	}
 	var (
@@ -483,11 +485,13 @@ func (c *webviewLoginController) handleCookies(result *webview2.ICoreWebView2Coo
 		if name == musicUCookieName {
 			found = true
 		}
-		// Each cookie returned by GetValueAtIndex carries its own reference.
+		// Each cookie returned by GetValueAtIndex is AddRef'd and owned by
+		// the handler, so it must be released here. The list itself is
+		// borrowed (owned by WebView2, released after Invoke returns) and is
+		// deliberately NOT released, mirroring the official WebView2 sample
+		// (ScenarioCookieManagement.cpp).
 		releaseWebview2Com(unsafe.Pointer(cookie), &cookie.Vtbl.IUnknownVtbl)
 	}
-	// The caller transfers ownership of the cookie list to the handler.
-	releaseWebview2Com(unsafe.Pointer(result), &result.Vtbl.IUnknownVtbl)
 
 	if !found {
 		return
@@ -768,9 +772,8 @@ func (h *webview2CookiesHandler) GetCookiesCompleted(errorCode uintptr, result *
 	c.inFlight = false
 
 	if errorCode != 0 || result == nil {
-		if result != nil {
-			releaseWebview2Com(unsafe.Pointer(result), &result.Vtbl.IUnknownVtbl)
-		}
+		// A non-nil result here is still a borrowed reference owned by
+		// WebView2; it is released by the runtime after Invoke returns.
 		return 0
 	}
 	c.handleCookies(result)
