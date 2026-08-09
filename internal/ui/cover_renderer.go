@@ -445,7 +445,14 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Dispatch tasks (inline to avoid goroutine overhead)
 				for i := range frameCount {
 					angle := float64(i) * step
-					tasks <- frameTask{index: i, angle: angle}
+					// Workers exit early on ctx.Done (see above); without a
+					// cancellation check here the buffered channel fills up and
+					// this goroutine blocks forever once all workers have left.
+					select {
+					case tasks <- frameTask{index: i, angle: angle}:
+					case <-ctx.Done():
+						return
+					}
 				}
 				close(tasks)
 
