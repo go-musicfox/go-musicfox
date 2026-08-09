@@ -78,7 +78,6 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 
 	// Render the injected components first — their text may change per frame.
 	// If nothing else changed, reuse the fully rendered bar.
-	// Local customization: 上游每帧全量渲染（go-musicfox 定制）。
 	componentViews := make([]string, 0, len(d.Components))
 	for _, component := range d.Components {
 		if component == nil {

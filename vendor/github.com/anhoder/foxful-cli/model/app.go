@@ -61,7 +61,6 @@ type App struct {
 	// rerenderPending 标记是否有一个 Rerender 投递 goroutine 正在等待
 	// program.Send。用于合并 Rerender 调用，防止 ticker 在帧渲染慢于 tick
 	// 间隔（高帧率 + 重渲染）时堆积无界数量的阻塞 goroutine。
-	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
 	rerenderPending atomic.Bool
 }
 
@@ -567,7 +566,6 @@ func (a *App) Rerender(cleanScreen bool) {
 	// goroutines that each hold a stale poke message. The delivered message
 	// is just a re-render poke and View always renders the current state, so
 	// dropping intermediate pokes is safe.
-	// Local customization: 上游仅每次 spawn goroutine（go-musicfox 定制）。
 	if !a.rerenderPending.CompareAndSwap(false, true) {
 		return
 	}

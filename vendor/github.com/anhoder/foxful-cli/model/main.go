@@ -80,17 +80,14 @@ type Main struct {
 	// menuItemCache 缓存每行菜单项的渲染结果。鼠标划过菜单时 hover 只影响
 	// 单行，其余行的 lipgloss 渲染可整帧复用；否则每次 hover 变化都全量
 	// 重渲染所有菜单行，CPU 被鼠标事件驱动到接近单核满载。
-	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
 	menuItemCache map[int]menuItemViewCacheEntry
 
 	// menuLineCache 缓存整行（含双列间隙与左侧填充）的组装结果，避免每帧
 	// 对 29 行未变化的行重复 lipgloss 组装。
-	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
 	menuLineCache map[int]menuLineViewCacheEntry
 
 	// lastViewAt 记录 Main.View 最近一次执行时间，用于把鼠标 hover 引发的
 	// 渲染合并到 tick 帧率（hover 状态即时更新，渲染 ≤33ms 延迟由 tick 兜底）。
-	// Local customization: 上游 foxful-cli 无此字段（go-musicfox 定制）。
 	lastViewAt time.Time
 
 	// Mouse hover tracking for tabs
@@ -492,7 +489,6 @@ func (m *Main) View(a *App) string {
 	}
 	// Track the last frame time so hover state changes can merge their
 	// render into the frame-rate cycle instead of re-rendering per event.
-	// Local customization: 上游无此记录（go-musicfox 定制）。
 	m.lastViewAt = time.Now()
 
 	a.ClearAppBackgroundExclusion()
@@ -620,7 +616,6 @@ func (m *Main) View(a *App) string {
 // frame on every render — that was the dominant per-frame cost during mouse
 // sweeps (components already paint their own cells with the background, so
 // only empty, plain-text and short rows need explicit filling).
-// Local customization: 上游用 lipgloss 全帧处理（go-musicfox 定制）。
 func renderAppBackground(content string, width int, background lipgloss.Style, exclusion backgroundRect) string {
 	bg := background.GetBackground()
 	if bg == nil || width <= 0 {
@@ -1293,7 +1288,6 @@ func (m *Main) menuListView(a *App) string {
 		// Each row is already fully rendered (styles baked in), so joining
 		// with plain newlines is equivalent to lipgloss.JoinVertical but
 		// avoids re-processing every row's ANSI content per frame.
-		// Local customization: 上游用 lipgloss.JoinVertical（go-musicfox 定制）。
 		var menuLines []string
 		for i := 0; i < lines; i++ {
 			menuLines = append(menuLines, m.menuLineView(a, i))
@@ -1367,7 +1361,7 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 	isSelected := m.isSelected(index)
 	isHovered := !m.inSearching && index == m.hoveredMenuItemIdx
 
-	// Row-level render cache (Local customization): a mouse sweep changes only
+	// Row-level render cache: a mouse sweep changes only
 	// the hovered row; re-rendering every menu line with lipgloss on each
 	// hover change dominated CPU during mouse sweeps at high frame rates.
 	if index >= 0 && index < len(m.menuList) && m.menuItemCache != nil {
@@ -1501,7 +1495,7 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 
 	view := menuItemBuilder.String()
 
-	// Store the row render in the cache (Local customization). Cap the map at
+	// Store the row render in the cache. Cap the map at
 	// two pages: scrolling past that means the page changed, and the old
 	// entries are useless anyway.
 	if index >= 0 && index < len(m.menuList) {
@@ -1560,7 +1554,7 @@ func (m *Main) menuLineView(a *App, line int) string {
 		return "" // beyond menu bounds — empty row
 	}
 
-	// Row-level render cache (Local customization): assembling the row (gap +
+	// Row-level render cache: assembling the row (gap +
 	// padding + JoinVertical) with lipgloss on every frame for every row was
 	// the remaining per-frame cost during mouse sweeps.
 	{
@@ -1615,7 +1609,7 @@ func (m *Main) menuLineView(a *App, line int) string {
 		row = lipgloss.NewStyle().Inherit(style.CurrentStyleSet().AppBackground).PaddingLeft(m.menuStartColumn - 4).Render(row)
 	}
 
-	// Store the assembled row (Local customization), with the same cap as the
+	// Store the assembled row, with the same cap as the
 	// per-item cache: page changes invalidate naturally via the key fields.
 	if m.menuLineCache == nil {
 		m.menuLineCache = make(map[int]menuLineViewCacheEntry, m.menuPageSize+2)
@@ -2867,7 +2861,6 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 		// hoverRenderInterval (the ticker renders during playback anyway, so
 		// this only matters while idle). This bounds the render rate to the
 		// frame rate architecturally — mouse events never drive rendering.
-		// Local customization: 上游每次 hover 变化都立即全量重渲染
 		//（go-musicfox 定制）。
 		if time.Since(m.lastViewAt) >= hoverRenderInterval {
 			cmds = append(cmds, a.RerenderCmd(true))
