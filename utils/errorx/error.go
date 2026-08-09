@@ -1,3 +1,5 @@
+// Package errorx 提供错误与 panic 处理工具：panic 捕获记录到日志、
+// goroutine 安全启动与崩溃提示。
 package errorx
 
 import (
