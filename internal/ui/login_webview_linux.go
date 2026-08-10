@@ -18,8 +18,11 @@ import (
 )
 
 // webviewLoginAvailable reports whether the native WebKitGTK login window is
-// available on the current platform (Linux only).
-const webviewLoginAvailable = true
+// available on the current platform (Linux only). A supported WebKitGTK
+// stack must be loadable; WebKitGTKVersion() returns 0 when none is found.
+func webviewLoginAvailable() bool {
+	return webkitgtk.WebKitGTKVersion() != 0
+}
 
 func usesLegacyWebKitAPI(version int) bool {
 	return version == webkitgtk.Version41 || version == webkitgtk.Version40

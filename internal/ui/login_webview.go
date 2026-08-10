@@ -5,11 +5,13 @@ package ui
 // webviewLoginAvailable reports whether the native WebView login window is
 // available on the current platform. It is implemented on macOS (WKWebView),
 // Windows (WebView2) and Linux (WebKitGTK); unsupported platforms fall back
-// to this stub.
-const webviewLoginAvailable = false
+// to this stub. The login entry is hidden when it reports false.
+func webviewLoginAvailable() bool {
+	return false
+}
 
 // webviewLoginController is a no-op stub on unsupported platforms. The login
-// entry button stays visible and shows an unsupported message when activated.
+// entry button is hidden when the WebView is unavailable.
 type webviewLoginController struct{}
 
 func newWebviewLoginController() *webviewLoginController {

@@ -84,11 +84,12 @@ type LoginPage struct {
 	backBtnEndX   int
 
 	// Hover 状态跟踪
-	backBtnHovered  bool
-	hoveredTab      int // 悬停的 Tab 索引（0=账号登录，1=Cookie，-1=无）
-	hoveredInputBox int // 悬停的输入框（0=account，1=password，2=cookie，-1=无）
-	hoveredButton   int // 悬停的按钮（0=提交，1=扫码，2=网页登录，-1=无）
-	mousePointer    string
+	backBtnHovered   bool
+	hoveredTab       int // 悬停的 Tab 索引（0=账号登录，1=Cookie，-1=无）
+	hoveredInputBox  int // 悬停的输入框（0=account，1=password，2=cookie，-1=无）
+	hoveredButton    int // 悬停的按钮（0=提交，1=扫码，2=网页登录，-1=无）
+	mousePointer     string
+	webviewAvailable bool // 网页登录（原生 WebView）是否可用，初始化时检测一次
 }
 
 // 执行登录操作回显的信息结构体
@@ -125,6 +126,7 @@ func NewLoginPage(netease *Netease) (login *LoginPage) {
 		hoveredInputBox:    -1,
 		hoveredButton:      -1,
 		mousePointer:       "default",
+		webviewAvailable:   webviewLoginAvailable(),
 	}
 	login.updateTabStyle()
 	login.applyFocus()
@@ -190,7 +192,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 				l.hoveredButton = 0
 			} else if l.activeTab() == tabAccount && x >= l.qrStartX && x <= l.qrEndX {
 				l.hoveredButton = 1
-			} else if l.activeTab() == tabAccount && x >= l.webviewStartX && x <= l.webviewEndX {
+			} else if l.webviewAvailable && l.activeTab() == tabAccount && x >= l.webviewStartX && x <= l.webviewEndX {
 				l.hoveredButton = 2
 			}
 		}
@@ -260,7 +262,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 					l.index = qrLoginIndex
 					return l.enterHandler()
 				}
-				if x >= l.webviewStartX && x <= l.webviewEndX {
+				if l.webviewAvailable && x >= l.webviewStartX && x <= l.webviewEndX {
 					l.index = webviewLoginIndex
 					return l.enterHandler()
 				}
@@ -363,7 +365,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 					l.index = qrLoginIndex
 				}
 			case qrLoginIndex:
-				if l.activeTab() == tabAccount {
+				if l.activeTab() == tabAccount && l.webviewAvailable {
 					l.index = webviewLoginIndex
 				}
 			case 0:
@@ -490,10 +492,6 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 	if l.hoveredButton == 1 {
 		qrButtonView = pageButtonHoverView(l.qrButtonTextByStep())
 	}
-	webviewButtonView := l.webviewLoginButton
-	if l.hoveredButton == 2 {
-		webviewButtonView = pageButtonHoverView(model.T(MsgLoginWebviewButton))
-	}
 
 	submitW := lipgloss.Width(submitButtonView)
 	l.submitStartX = submitX
@@ -511,16 +509,27 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 
 	write(qrButtonView)
 
-	write(btnBlank)
-	// 网页登录按钮坐标
-	webviewX := qrX + qrW + lipgloss.Width(btnBlank)
-	webviewW := lipgloss.Width(webviewButtonView)
-	l.webviewStartX = webviewX
-	l.webviewEndX = webviewX + webviewW - 1
+	// 网页登录按钮仅在使用 WebView 可用时渲染
+	var webviewW int
+	if l.webviewAvailable {
+		webviewButtonView := l.webviewLoginButton
+		if l.hoveredButton == 2 {
+			webviewButtonView = pageButtonHoverView(model.T(MsgLoginWebviewButton))
+		}
+		write(btnBlank)
+		// 网页登录按钮坐标
+		webviewX := qrX + qrW + lipgloss.Width(btnBlank)
+		webviewW = lipgloss.Width(webviewButtonView)
+		l.webviewStartX = webviewX
+		l.webviewEndX = webviewX + webviewW - 1
 
-	write(webviewButtonView)
+		write(webviewButtonView)
+	}
 
-	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(submitButtonView) - lipgloss.Width(qrButtonView) - lipgloss.Width(webviewButtonView) - 2*lipgloss.Width(btnBlank)
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(submitButtonView) - lipgloss.Width(qrButtonView) - webviewW - 2*lipgloss.Width(btnBlank)
+	if !l.webviewAvailable {
+		spaceLen += lipgloss.Width(btnBlank)
+	}
 	if spaceLen > 0 {
 		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
 	}
@@ -747,7 +756,7 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 
 // loginByWebview 跳转到网页登录界面（仅 macOS 支持原生 WKWebView 窗口）
 func (l *LoginPage) loginByWebview() (model.Page, tea.Cmd) {
-	if !webviewLoginAvailable {
+	if !l.webviewAvailable {
 		l.tips = util.SetFgStyle(model.T(MsgLoginWebviewUnsupported), lipgloss.BrightRed)
 		return l, nil
 	}

@@ -16,8 +16,11 @@ import (
 )
 
 // webviewLoginAvailable reports whether the native WKWebView login window is
-// available on the current platform (macOS only).
-const webviewLoginAvailable = true
+// available on the current platform (macOS only). WebKit ships with macOS,
+// so it is always available.
+func webviewLoginAvailable() bool {
+	return true
+}
 
 // webviewLoginController opens the native WKWebView login window and polls the
 // WKHTTPCookieStore until the MUSIC_U cookie appears. All ObjC window

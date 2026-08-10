@@ -23,8 +23,12 @@ import (
 )
 
 // webviewLoginAvailable reports whether the native WebView2 login window is
-// available on the current platform (Windows only).
-const webviewLoginAvailable = true
+// available on the current platform (Windows only). It requires the WebView2
+// Runtime (ships with Win11; most Win10 installs have it).
+func webviewLoginAvailable() bool {
+	version, err := webviewloader.GetAvailableCoreWebView2BrowserVersionString("")
+	return err == nil && version != ""
+}
 
 // webviewLoginController opens a native WebView2 login window and polls the
 // WebView2 cookie manager until the MUSIC_U cookie appears.
