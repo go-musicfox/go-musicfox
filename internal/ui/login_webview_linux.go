@@ -21,6 +21,10 @@ import (
 // available on the current platform (Linux only).
 const webviewLoginAvailable = true
 
+func usesLegacyWebKitAPI(version int) bool {
+	return version == webkitgtk.Version41 || version == webkitgtk.Version40
+}
+
 // webviewLoginController opens a native WebKitGTK login window and polls the
 // WebKitCookieManager until the MUSIC_U cookie appears.
 //
@@ -28,11 +32,10 @@ const webviewLoginAvailable = true
 // runs the GTK main loop. Open() starts a dedicated goroutine (runGTK) locked
 // to an OS thread that initializes GTK, builds the window and blocks in
 // gtk_main. Cookie polling is a g_timeout_add source running on that same
-// thread; the asynchronous get_all_cookies completion callback also runs
-// there. The controller only forwards events through the buffered channel,
-// which is safe from any goroutine. Close() only calls gtk_main_quit() (safe
-// from any thread); the GTK thread then destroys the window during its
-// cleanup.
+// thread; the asynchronous CookieManager completion callback also runs there.
+// The controller only forwards events through the buffered channel, which is
+// safe from any goroutine. Close() only calls gtk_main_quit() (safe from any
+// thread); the GTK thread then destroys the window during its cleanup.
 type webviewLoginController struct {
 	mu sync.Mutex
 
@@ -162,10 +165,9 @@ func (c *webviewLoginController) runGTK() {
 		cookieManager uintptr
 		webView       uintptr
 	)
-	if webkitgtk.WebKitGTKVersion() == webkitgtk.Version40 {
-		// Legacy 4.0 API (WebKitGTK < 2.40): no WebKitNetworkSession. The
-		// web view uses the default web context; the cookie manager is a
-		// borrowed reference of the context and must not be unref'd.
+	if usesLegacyWebKitAPI(webkitgtk.WebKitGTKVersion()) {
+		// WebKitGTK 4.1 and 4.0 use the WebContext/CookieManager API; 4.1
+		// differs from 4.0 only in its libsoup ABI.
 		ctx := webkitgtk.WebContextGetDefault()
 		cookieManager = webkitgtk.WebContextGetCookieManager(ctx)
 		webView = webkitgtk.WebViewNew()
@@ -258,16 +260,16 @@ func (c *webviewLoginController) pollTick(_ uintptr) int32 {
 	c.inFlight = true
 	c.mu.Unlock()
 
-	if webkitgtk.WebKitGTKVersion() == webkitgtk.Version40 {
-		webkitgtk.CookieManagerGetCookiesAsync(manager, 0, cb, 0)
+	if usesLegacyWebKitAPI(webkitgtk.WebKitGTKVersion()) {
+		webkitgtk.CookieManagerGetCookies(manager, loginURL, 0, cb, 0)
 	} else {
 		webkitgtk.CookieManagerGetAllCookies(manager, 0, cb, 0)
 	}
 	return 1
 }
 
-// cookiesReady is the GAsyncReadyCallback of webkit_cookie_manager_get_all_cookies.
-// It runs on the GTK main loop thread, marshals the cookies into a cookie
+// cookiesReady is the GAsyncReadyCallback of the active WebKitCookieManager
+// API. It runs on the GTK main loop thread, marshals the cookies into a cookie
 // string and forwards an event once MUSIC_U is found.
 func (c *webviewLoginController) cookiesReady(_ uintptr, res uintptr, _ uintptr) {
 	c.mu.Lock()
@@ -283,7 +285,7 @@ func (c *webviewLoginController) cookiesReady(_ uintptr, res uintptr, _ uintptr)
 	// itself must be freed.
 	var errPtr uintptr
 	var list uintptr
-	if webkitgtk.WebKitGTKVersion() == webkitgtk.Version40 {
+	if usesLegacyWebKitAPI(webkitgtk.WebKitGTKVersion()) {
 		list = webkitgtk.CookieManagerGetCookiesFinish(manager, res, uintptr(unsafe.Pointer(&errPtr)))
 	} else {
 		list = webkitgtk.CookieManagerGetAllCookiesFinish(manager, res, uintptr(unsafe.Pointer(&errPtr)))

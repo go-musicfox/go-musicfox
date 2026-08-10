@@ -36,13 +36,13 @@ const (
 	GTK_WINDOW_TOPLEVEL = 0
 )
 
-// webkitVersion is the active API version: Version6, Version41, or 0 when no
-// supported WebKitGTK stack could be loaded. It is written once during init()
-// before any goroutine runs, so the exported getter needs no lock.
+// webkitVersion is the active API version: Version6, Version41, Version40, or
+// 0 when no supported WebKitGTK stack could be loaded. It is written once
+// during init() before any goroutine runs, so the exported getter needs no lock.
 var webkitVersion int
 
-// WebKit bindings (same symbols in libwebkitgtk-6.0.so.4 and
-// libwebkit2gtk-4.1.so.0).
+// WebKitGTK 6.0 bindings (libwebkitgtk-6.0.so.4): WebKitNetworkSession and
+// the all-cookies API are only available in this GTK4 API version.
 var (
 	webkitNetworkSessionNewEphemeral       func() uintptr
 	webkitNetworkSessionGetCookieManager   func(session uintptr) uintptr
@@ -52,13 +52,13 @@ var (
 	webkitCookieManagerGetAllCookiesFinish func(manager, result, err uintptr) uintptr
 )
 
-// WebKitGTK 4.0 bindings (libwebkit2gtk-4.0.so.37, pre-2.40 API): the legacy
-// web view creation and cookie manager access without WebKitNetworkSession.
+// WebKitGTK 4.0/4.1 bindings (libwebkit2gtk-4.0.so.37 and
+// libwebkit2gtk-4.1.so.0): both use the legacy WebContext/CookieManager API.
 var (
 	webkitWebViewNew                    func() uintptr
 	webkitWebContextGetDefault          func() uintptr
 	webkitWebContextGetCookieManager    func(ctx uintptr) uintptr
-	webkitCookieManagerGetCookiesAsync  func(manager, cancellable, callback, userData uintptr)
+	webkitCookieManagerGetCookies       func(manager uintptr, uri *byte, cancellable, callback, userData uintptr)
 	webkitCookieManagerGetCookiesFinish func(manager, result, err uintptr) uintptr
 )
 
@@ -98,7 +98,8 @@ var (
 	gErrorFree         func(err uintptr)
 )
 
-// Soup bindings (libsoup-3.0, shared by both versions).
+// Soup bindings use libsoup-3.0 for WebKitGTK 6.0/4.1 and libsoup-2.4 for
+// the legacy WebKitGTK 4.0 stack.
 var (
 	soupCookieGetName  func(cookie uintptr) *byte
 	soupCookieGetValue func(cookie uintptr) *byte
@@ -106,10 +107,10 @@ var (
 )
 
 func init() {
-	// The GObject/GLib/Soup libraries are shared by both stacks; load them
-	// once. Each failure is logged by dlopen so the reason (missing library
-	// vs. missing symbols) is visible in musicfox.log.
-	sharedOK :=
+	// GObject and GLib are shared by every supported WebKitGTK stack. Each
+	// failure is logged by dlopen so the reason (missing library vs. missing
+	// dependency) is visible when debug logging is enabled.
+	commonOK :=
 		dlopen("libgobject-2.0.so.0", func(lib uintptr) {
 			registerSymbol(&gSignalConnectData, lib, "g_signal_connect_data")
 			registerSymbol(&gObjectUnref, lib, "g_object_unref")
@@ -120,50 +121,60 @@ func init() {
 				registerSymbol(&gListNthData, lib, "g_list_nth_data")
 				registerSymbol(&gListFree, lib, "g_list_free")
 				registerSymbol(&gErrorFree, lib, "g_error_free")
-			}) &&
-			dlopen("libsoup-3.0.so.0", func(lib uintptr) {
-				registerSymbol(&soupCookieGetName, lib, "soup_cookie_get_name")
-				registerSymbol(&soupCookieGetValue, lib, "soup_cookie_get_value")
-				registerSymbol(&soupCookieFree, lib, "soup_cookie_free")
 			})
 
-	// Prefer the WebKitGTK 6.0 (GTK4) stack. A stack is only usable when the
-	// library actually exports the WebKit API we call: an older library may
-	// load fine (RTLD_LAZY) while missing newer symbols (e.g.
-	// webkit_network_session_new_ephemeral, added in WebKitGTK 2.40). Those
-	// symbols stay nil through registerSymbol, so a nil check here decides
-	// whether the stack really works.
+	// WebKitGTK 6.0 is the only supported stack using WebKitNetworkSession.
+	// WebKitGTK 4.1 keeps the WebKitGTK 4.0 WebContext/CookieManager API; its
+	// only ABI difference from 4.0 is the libsoup 3 vs. libsoup 2 dependency.
 	webkitUsable := func() bool {
-		return webkitNetworkSessionNewEphemeral != nil && webkitWebViewNewWithNetworkSession != nil && webkitCookieManagerGetAllCookies != nil
+		return webkitNetworkSessionNewEphemeral != nil &&
+			webkitNetworkSessionGetCookieManager != nil &&
+			webkitWebViewNewWithNetworkSession != nil &&
+			webkitCookieManagerGetAllCookies != nil &&
+			webkitCookieManagerGetAllCookiesFinish != nil &&
+			soupCookieGetName != nil && soupCookieGetValue != nil && soupCookieFree != nil
 	}
-	if sharedOK {
+	webkitUsableLegacy := func() bool {
+		return webkitWebViewNew != nil &&
+			webkitWebContextGetDefault != nil &&
+			webkitWebContextGetCookieManager != nil &&
+			webkitWebViewLoadURI != nil &&
+			webkitCookieManagerGetCookies != nil &&
+			webkitCookieManagerGetCookiesFinish != nil &&
+			soupCookieGetName != nil && soupCookieGetValue != nil && soupCookieFree != nil
+	}
+
+	if commonOK {
 		// Prefer the WebKitGTK 6.0 (GTK4) stack.
-		if dlopen("libwebkitgtk-6.0.so.4", registerWebKit) {
+		if dlopen("libsoup-3.0.so.0", registerSoup) && dlopen("libwebkitgtk-6.0.so.4", registerWebKit) {
 			if webkitUsable() && dlopen("libgtk-4.so.1", registerGTK4) {
 				webkitVersion = Version6
 				return
 			}
 			if !webkitUsable() {
-				slog.Warn("webkitgtk: libwebkitgtk-6.0.so.4 loaded but missing required symbols (webkit_network_session_new_ephemeral or friends); falling back to 4.1")
+				slog.Warn("webkitgtk: libwebkitgtk-6.0.so.4 loaded but missing required symbols; falling back to 4.1")
 			}
 		}
-		// Fall back to WebKitGTK 4.1 (GTK3).
-		if dlopen("libwebkit2gtk-4.1.so.0", registerWebKit) && webkitUsable() && dlopen("libgtk-3.so.0", registerGTK3) {
+
+		// Fall back to WebKitGTK 4.1 (GTK3). This API version uses the legacy
+		// WebContext/CookieManager functions, not WebKitNetworkSession.
+		if dlopen("libwebkit2gtk-4.1.so.0", registerWebKitLegacy) &&
+			webkitUsableLegacy() && dlopen("libgtk-3.so.0", registerGTK3) {
 			webkitVersion = Version41
 			return
 		}
+
 		// Last resort: legacy WebKitGTK 4.0 (GTK3, < 2.40), preinstalled on
 		// Debian 11 and Ubuntu 22.04 GNOME desktops (via gnome-software).
-		// It has no WebKitNetworkSession; the legacy symbols drive the web
-		// view and cookie manager instead.
-		webkitUsable40 := func() bool {
-			return webkitWebViewNew != nil && webkitWebContextGetDefault != nil && webkitCookieManagerGetCookiesAsync != nil
-		}
-		if dlopen("libwebkit2gtk-4.0.so.37", registerWebKit40) && webkitUsable40() && dlopen("libgtk-3.so.0", registerGTK3) {
+		// It uses the same WebKit API as 4.1 but requires libsoup 2.4.
+		if dlopen("libsoup-2.4.so.1", registerSoup) &&
+			dlopen("libwebkit2gtk-4.0.so.37", registerWebKitLegacy) &&
+			webkitUsableLegacy() && dlopen("libgtk-3.so.0", registerGTK3) {
 			webkitVersion = Version40
 			return
 		}
 	}
+
 	// No supported stack is available: keep version 0. The exported functions
 	// degrade to no-ops / zero values through their nil guards.
 	webkitVersion = 0
@@ -198,8 +209,16 @@ func registerSymbol(fptr any, lib uintptr, name string) {
 	purego.RegisterFunc(fptr, sym)
 }
 
-// registerWebKit binds the WebKit functions that are identical in both API
-// versions.
+// registerSoup binds the common SoupCookie functions from the active libsoup
+// ABI. The function signatures are identical in libsoup 2.4 and 3.0.
+func registerSoup(lib uintptr) {
+	registerSymbol(&soupCookieGetName, lib, "soup_cookie_get_name")
+	registerSymbol(&soupCookieGetValue, lib, "soup_cookie_get_value")
+	registerSymbol(&soupCookieFree, lib, "soup_cookie_free")
+}
+
+// registerWebKit binds the WebKitNetworkSession functions used by WebKitGTK
+// 6.0.
 func registerWebKit(lib uintptr) {
 	registerSymbol(&webkitNetworkSessionNewEphemeral, lib, "webkit_network_session_new_ephemeral")
 	registerSymbol(&webkitNetworkSessionGetCookieManager, lib, "webkit_network_session_get_cookie_manager")
@@ -209,13 +228,14 @@ func registerWebKit(lib uintptr) {
 	registerSymbol(&webkitCookieManagerGetAllCookiesFinish, lib, "webkit_cookie_manager_get_all_cookies_finish")
 }
 
-// registerWebKit40 binds the legacy 4.0 API (WebKitGTK < 2.40) symbols.
-func registerWebKit40(lib uintptr) {
+// registerWebKitLegacy binds the WebContext/CookieManager functions shared by
+// WebKitGTK 4.0 and 4.1.
+func registerWebKitLegacy(lib uintptr) {
 	registerSymbol(&webkitWebViewNew, lib, "webkit_web_view_new")
 	registerSymbol(&webkitWebContextGetDefault, lib, "webkit_web_context_get_default")
 	registerSymbol(&webkitWebContextGetCookieManager, lib, "webkit_web_context_get_cookie_manager")
 	registerSymbol(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
-	registerSymbol(&webkitCookieManagerGetCookiesAsync, lib, "webkit_cookie_manager_get_cookies_async")
+	registerSymbol(&webkitCookieManagerGetCookies, lib, "webkit_cookie_manager_get_cookies")
 	registerSymbol(&webkitCookieManagerGetCookiesFinish, lib, "webkit_cookie_manager_get_cookies_finish")
 }
 
@@ -248,8 +268,8 @@ func registerGTK3(lib uintptr) {
 
 // WebKit.
 
-// WebKitGTKVersion returns the active API version: Version6, Version41, or 0
-// when no supported WebKitGTK stack could be loaded.
+// WebKitGTKVersion returns the active API version: Version6, Version41,
+// Version40, or 0 when no supported WebKitGTK stack could be loaded.
 func WebKitGTKVersion() int {
 	return webkitVersion
 }
@@ -275,8 +295,8 @@ func WebViewNewWithNetworkSession(session uintptr) uintptr {
 	return webkitWebViewNewWithNetworkSession(session)
 }
 
-// WebViewNew creates a WebKitWebView on the legacy 4.0 API (uses the default
-// web context).
+// WebViewNew creates a WebKitWebView on the legacy 4.0/4.1 API (uses the
+// default web context).
 func WebViewNew() uintptr {
 	if webkitWebViewNew == nil {
 		return 0
@@ -285,7 +305,7 @@ func WebViewNew() uintptr {
 }
 
 // WebContextGetDefault returns the default WebKitWebContext (borrowed
-// reference) on the legacy 4.0 API.
+// reference) on the legacy 4.0/4.1 API.
 func WebContextGetDefault() uintptr {
 	if webkitWebContextGetDefault == nil {
 		return 0
@@ -294,7 +314,7 @@ func WebContextGetDefault() uintptr {
 }
 
 // WebContextGetCookieManager returns the cookie manager (borrowed reference)
-// of a web context on the legacy 4.0 API.
+// of a web context on the legacy 4.0/4.1 API.
 func WebContextGetCookieManager(ctx uintptr) uintptr {
 	if webkitWebContextGetCookieManager == nil {
 		return 0
@@ -323,17 +343,17 @@ func CookieManagerGetAllCookiesFinish(manager, result, err uintptr) uintptr {
 	return webkitCookieManagerGetAllCookiesFinish(manager, result, err)
 }
 
-// CookieManagerGetCookiesAsync starts an asynchronous cookie fetch on the
-// legacy 4.0 API.
-func CookieManagerGetCookiesAsync(manager, cancellable, callback, userData uintptr) {
-	if webkitCookieManagerGetCookiesAsync == nil {
+// CookieManagerGetCookies starts an asynchronous cookie fetch for uri on the
+// WebKitGTK 4.0/4.1 API.
+func CookieManagerGetCookies(manager uintptr, uri string, cancellable, callback, userData uintptr) {
+	if webkitCookieManagerGetCookies == nil {
 		return
 	}
-	webkitCookieManagerGetCookiesAsync(manager, cancellable, callback, userData)
+	webkitCookieManagerGetCookies(manager, cString(uri), cancellable, callback, userData)
 }
 
 // CookieManagerGetCookiesFinish completes an asynchronous cookie fetch on the
-// legacy 4.0 API and returns the GList of SoupCookie.
+// WebKitGTK 4.0/4.1 API and returns the GList of SoupCookie.
 func CookieManagerGetCookiesFinish(manager, result, err uintptr) uintptr {
 	if webkitCookieManagerGetCookiesFinish == nil {
 		return 0

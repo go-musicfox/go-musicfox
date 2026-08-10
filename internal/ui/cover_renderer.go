@@ -209,8 +209,15 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	// Calculate start column to align with menu arrow (same as song info start)
+	// Calculate start column. In centerEverything mode, center the cover and the
+	// lyric block together as a single group so they stay visually grouped and
+	// centered in the window; otherwise align with the menu arrow.
 	coverStartCol := max(main.MenuStartColumn(), 1)
+	if main.CenterEverything() {
+		if c, _, _ := centeredCoverLyricLayout(r.netease.WindowWidth(), r.cols); c > 0 {
+			coverStartCol = c
+		}
+	}
 
 	song := r.state.CurSong()
 	picUrl := getCoverUrl(song)
@@ -693,6 +700,35 @@ func (r *CoverRenderer) GetCoverEndColumn() int {
 		r.calculateDimensions()
 	}
 	return startCol + r.cols
+}
+
+// centeredCoverLyricLayout computes horizontal positions for the cover +
+// lyric group in centerEverything mode. It returns the 1-indexed terminal
+// column where the cover starts, the number of leading spaces before the
+// lyric block, and the lyric block width used to center each lyric line.
+//
+// The cover, a fixed gap, and the lyric block are treated as one group that is
+// centered in the window. lyricWidth is derived from windowWidth (not the
+// current lyric text) so the cover's column stays stable while lyrics scroll.
+// When coverWidth <= 0 (cover disabled) lyrics center across the full window,
+// preserving the previous no-cover behavior.
+func centeredCoverLyricLayout(windowWidth, coverWidth int) (coverStartCol, lyricStartCol, lyricWidth int) {
+	if coverWidth <= 0 {
+		return 1, 0, windowWidth
+	}
+	gap := CoverRightPadding
+	lyricWidth = windowWidth / CenteredLyricBlockDivisor
+	if coverWidth+gap+lyricWidth > windowWidth {
+		lyricWidth = windowWidth - coverWidth - gap
+	}
+	if lyricWidth < MinLyricWidth {
+		lyricWidth = MinLyricWidth
+	}
+	groupWidth := coverWidth + gap + lyricWidth
+	groupStart := max(0, (windowWidth-groupWidth)/2)
+	coverStartCol = groupStart + 1 // 1-indexed terminal column
+	lyricStartCol = coverStartCol + coverWidth + gap
+	return coverStartCol, lyricStartCol, lyricWidth
 }
 
 // getCoverUrl extracts the cover URL from a song, with resize parameter.
