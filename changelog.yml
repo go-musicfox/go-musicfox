@@ -1,3 +1,555 @@
+- semver: 5.1.0
+  date: 2026-08-10T23:01:46+08:00
+  packager: go-musicfox
+  changes:
+    - commit: ad6e3fa254761d9ca22cbc94175fed35946ebe49
+      note: 'feat: optimize webview login & add changelog'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f9b26929abeba366eabc9a074526826bff44a91d
+      note: 'feat: optimize renderer'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ef2af03590bc50899dfe42e02e2f58278335a6c8
+      note: |-
+        fix(webview): show error when webview login window unavailable
+
+        When the native login window cannot be opened (missing WebKitGTK on
+        Linux, missing WebView2 Runtime on Windows, no display, GTK init
+        failure), the controller reported only WindowClosed and the page
+        silently returned to the login form with no feedback.
+
+        Add ErrMsg to WebviewLoginEvent; failure paths on Linux (3) and
+        Windows (8) now carry the reason, and the page stays on the webview
+        login page showing the error in red instead of returning. User-initiated
+        window close keeps the original behavior.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 1a85d9e10b77932f163464d2a11dd5b030dfcd99
+      note: |-
+        fix(webview): stop releasing borrowed cookie list on Windows
+
+        GetCookiesCompleted receives the cookie list as a borrowed reference:
+        WebView2 releases it after Invoke returns. Releasing it in handleCookies
+        freed the object while the runtime still held it, corrupting the WebView2
+        heap and crashing the next poll inside the message pump (0xc0000005,
+        read at 0xffffffffffffffff in DispatchMessageW). Individual cookies from
+        GetValueAtIndex are AddRef'd and owned by the handler, so their releases
+        stay.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 46a311136a8638ebefa55aafd63260b110479a62
+      note: |-
+        fix(errorx): windows console & crash log restore
+
+        - Implement SaveTerminalState/RestoreTerminalState on Windows via
+          GetConsoleMode/SetConsoleMode: console modes persist after process
+          exit, so crashes left raw input mode (no echo) behind
+        - Tee child process stderr to both terminal and log file via pipe in
+          wrapper process: Go runtime stderr handle is fixed at process start
+          on Windows, so runtime fatal details never reached the log file
+        - Export slogx.LogFile() for the wrapper stderr tee
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: a632f4911975535b28a9ba4203ef2d65157c8838
+      note: 'chore: update responsive star history chart'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9e343d6159bdf9bac077ccfe784bd0e1efcbf016
+      note: |-
+        feat(webview): support legacy WebKitGTK 4.0 API
+
+        Debian 11 and Ubuntu 22.04 GNOME desktops preinstall
+        libwebkit2gtk-4.0.so.37 (via gnome-software) but it predates
+        WebKitNetworkSession (WebKitGTK 2.40). Detect the 4.0 stack last and
+        drive it with the legacy symbols: webkit_web_view_new + default web
+        context + webkit_cookie_manager_get_cookies_async.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f7ad98aa4c2bc696408c2d56b975c33bd4dd7e91
+      note: 'fix(slogx): truncate oversized log instead of renaming to .old'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: eb48008d7aa5f83d4f6925d10d9d2d8e393a3a9e
+      note: 'chore: optimize Makefile for windows'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d4df6ef5e156abe3e99acf559975ad757b0728d8
+      note: |-
+        fix(webkitgtk): log dlopen failures for stack diagnosis
+
+        The fallback message only said WebKitGTK was not found; now the log
+        records which shared library failed to load and why, and warns when
+        the 6.0 library loads but lacks required symbols before falling back.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: aa050d1799c7feb00895adbffe31955b7f290ebe
+      note: |-
+        fix(ui): cover render goroutine stuck on cancel
+
+        Animation workers exit early on ctx.Done, but the dispatch loop kept
+        sending into the bounded tasks channel without checking cancellation,
+        blocking forever once all workers had left. Check ctx.Done on send.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 280ffa871366221c588f4c861da27d291e637959
+      note: |-
+        fix(ui): deadlock on quit after logout confirm
+
+        app.Quit() blocks sending tea.Quit on the unbuffered message channel;
+        the confirm popup callback runs inside the event loop, so the send
+        deadlocks against itself. Send asynchronously, matching the goroutine
+        Send pattern already used by App.Rerender.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f4586da250e61003bfa8acd9e8637f04c457d4cc
+      note: |-
+        feat(crash): log panics and crashes with report hints
+
+        - slogx: append-mode log with rotation, startup banner, stderr
+          redirected to the log file (Unix) so runtime panics, fatal errors
+          and cgo output are captured even on abnormal exit
+        - errorx: Recover(false) restores the terminal, prints a friendly
+          crash report (log path + GitHub issue link) and exits with code 1
+        - errorx: RunWrapped runs the app in a wrapper process that restores
+          the terminal and prints a hint (with log tail) when the child dies
+          with exit code 2 (cgo/purego fatal errors)
+        - cmd: initialize logging early in main, run through the wrapper
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 87579a50e751c57470ec58c8b168d6104238cd03
+      note: |-
+        feat(login): polish webview login across platforms
+
+        - darwin: close window before removing NSNotificationCenter observer
+        - darwin: fix removeObserver:name:object: message arity (selector was
+          passed as an extra argument, causing SIGTRAP on window close)
+        - windows: controller cleanup and cookie polling refinements
+        - linux: document symbol resolution (Dlsym + RegisterFunc, no panic)
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 38f4570e274e53396ec91dd7ee79785a9512dcc4
+      note: |-
+        chore(vendor): sync go vendor directory (#623)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2d02efc18449712020526e712d1ba74db5efe2f7
+      note: 'chore: upgrade deps'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 9e9840eb323d4463b08c4bd643a0a8e4d05be7ad
+      note: |-
+        fix(webview): AddRef borrowed COM refs in controller callback
+
+        WebView2 completed-handler params (controller, core from
+        get_CoreWebView2) are borrowed references: WebView2 releases its own
+        reference right after the callback returns, destroying the objects while
+        cleanup() still holds the pointers. This left the login window blank
+        (rendering bridge torn down) and crashed cleanup() with a SIGSEGV
+        reading the freed vtable (0xffffffffffffffff) on Close().
+
+        AddRef before storing controller/core and drop the premature Releases in
+        the early-return paths, mirroring wails v2 chromium.go. The cookie
+        manager from GetCookieManager is already AddRef'd (caller releases), so
+        it keeps its single cleanup() Release.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: ddafb6590df6510e0900e20bfccb43d94548e7bf
+      note: |-
+        perf: bound UI render rate and eliminate per-frame rendering costs; fix player/spectrum races (#619)
+
+        * fix(player): guard beep timer reads against song-switch races
+
+        OnTick reads curStreamer/curFormat from the timer goroutine while reset()
+        replaces them (and nils curStreamer) under p.l during song switches —
+        lock-free reads race with that and can panic on a nil interface. Take p.l
+        inside OnTick with a nil check, and assign/read curMusic under the same
+        lock so CurMusic() never sees a torn value.
+
+        * fix(player): lock PCM raw ring buffer against concurrent reads
+
+        consume() wrote the raw sample ring without rawMu while RawSamples()
+        linearized it under the lock — a data race that corrupts oscilloscope/
+        vectorscope samples at high render rates. Reset and write the ring under
+        the same lock, with concurrent read/write regression tests (run -race).
+
+        * fix(timex): make Timer fields race-free and harden the Run loop
+
+        passed/actualRuntime/lastTick were written by the Run goroutine without
+        the lock while Passed()/ActualRuntime()/SetPassed() read and wrote them
+        concurrently; Stop/Pause also nilled t.ticker under lock while Run's
+        select re-read it, risking a nil-pointer panic. Update fields under the
+        lock, keep local ticker/done references in Run, and add a concurrency
+        test (run -race) that hammers the accessors during ticking.
+
+        * fix(ui): normalize spectrogram and lyric scroll speed by wall time
+
+        Both scrolled per render frame, so the visible speed scaled with the
+        configured frame rate (12x faster at 60 FPS vs 5 FPS). Advance both by
+        accumulated wall time (speed*5 columns/sec at 5 FPS behavior preserved),
+        freeze across long gaps (paused playback), and drive the injectable
+        clocks with fake time in the new tests.
+
+        * fix(ui): throttle MPRIS position broadcasts to DBus
+
+        SetPosition ran on every render tick, flooding the session bus at high
+        frame rates (60 updates/sec at 60 FPS). Emit at most every 500ms, or
+        immediately on a >10s jump (seek). The throttle logic is extracted into
+        a pure, unit-tested type.
+
+        * perf(ui): eliminate per-frame spectrum renderer allocations
+
+        The braille/block renderers rebuilt the vertical gradient ramps and
+        wrapped every cell in a fresh lipgloss style on each frame — at 200x20
+        that was ~49ms/frame (26k allocs) for the line style, making high frame
+        rates impossible. Cache the ramps per (width, height, style generation),
+        build raw SGR sequences byte-identical to lipgloss's truecolor output
+        (verified by an equivalence test), batch empty cells, and invalidate all
+        color caches on theme switches. Line style: 49.3ms -> 0.45ms per frame.
+
+        * fix(ui): serialize cover renderer stdout writes and drop GOMAXPROCS mutation
+
+        The animation goroutine, the static render and View all wrote kitty
+        sequences to stdout concurrently, so escape streams could interleave and
+        corrupt the image. Route every write through one mutex, transmit
+        animation frames in chunks with cancellation checks, pass the z-index
+        captured under lock instead of reading the mutable global from the
+        goroutine (new TransmitAndDisplayWithIDZ), and remove the
+        runtime.GOMAXPROCS side effect.
+
+        * perf(model): bound render rate and cache per-frame rendering
+
+        Mouse sweeps drove CPU to a single core (99% sampled): every motion
+        event triggered a full View whose per-frame costs were lipgloss over the
+        whole frame (renderAppBackground), per-row menu rendering, the status
+        bar and open popups.
+
+        - Coalesce App.Rerender deliveries (bounded ticker backlog)
+        - Throttle MouseMotionMsg to ~30Hz; hover state updates stay cheap
+        - Merge hover-triggered renders into the frame-rate cycle (50ms floor)
+        - Cache menuItemView/menuLineView rows keyed by content+state+style gen
+        - Rewrite renderAppBackground to raw SGR with fast paths (empty rows,
+          plain rows, full-width ANSI rows skipped; lipgloss fallback for
+          unusual colors); NoColor/empty backgrounds skip processing entirely
+        - Cache the status bar per (width, minute, style gen, components,
+          breadcrumb hover) and the popup body per visible lines
+        - Equivalence tests pin renderAppBackground to the lipgloss output
+
+        Measured with real mouse sweeps via pprof: 92-99% -> ~16% CPU.
+
+        * fix(ui): skip NoColor backgrounds in spectrum SGR builder
+
+        lipgloss.NoColor (the sentinel for unconfigured theme backgrounds) has an
+        RGBA() of (0,0,0,65535) — indistinguishable from black, so it must be
+        detected by type assertion. spectrumAppBg resolves through
+        ResolveBackground, which returns the app background whenever the theme
+        sets none, so Default/Transparent themes painted the entire visualizer
+        (oscilloscope, spectrum, vectorscope) as an opaque black block.
+
+        Skipping NoColor channels matches lipgloss's own behavior; equivalence
+        test extended with NoColor cases and an explicit no-opaque-black check.
+
+        * fix(player): drop redundant analyzer state resets racing the run loop
+
+        NewConsumer reset avgLevelsL/R and target, but both are owned by the
+        analyze goroutine, which already resets them on generation change (the
+        Add(1) above guarantees the bump is observed). The concurrent writes
+        raced with analyzeLatest under -race. The new
+        TestPCMAnalyzerStateResetConcurrentNoRace (short analyze interval +
+        concurrent NewConsumer) reproduces the race on the old code and passes
+        clean on the new.
+
+        * fix(model): measure visible width instead of byte heuristic in background filler
+
+        The len(line) < width*2 shortcut assumed byte length tracks visible
+        width; rows with many short styled segments (long ANSI, short visible)
+        or CJK text fell through unpainted, and over-wide rows were neither
+        truncated nor wrapped as lipgloss's Width() pass does.
+
+        Every row now measures its visible width: pad precisely when short,
+        and fall back to the full lipgloss pipeline for over-wide rows (which
+        wrap into extra lines and cannot be reproduced line-by-line). Manual
+        path stays ~14x faster than lipgloss (1.3ms vs 18.8ms on a 200x40
+        visualizer frame; bench added) and the equivalence test now covers the
+        boundary cases.
+
+        * chore(model): remove dead mouse-motion throttle fields
+
+        lastMouseMotionAt and mouseMotionThrottle were declared but never used
+        — the effective mechanism is the 50ms hover render merge in main.go.
+        Dead code removed so the PR description's claimed 30Hz event throttle
+        isn't mistaken for a real implementation.
+
+        * fix(model): include breadcrumb content in status bar cache key
+
+        Navigation changes only menuStack/menuTitle, which the status bar cache
+        key (width, minute, styleGen, components, breadcrumbHover) did not
+        cover — entering or returning from a submenu kept rendering the stale
+        breadcrumb until the next minute boundary, song change or theme switch.
+        Same class of miss as the earlier breadcrumb-hover key gap (hover was
+        covered, content itself was not).
+
+        Regression test TestStatusBarCacheInvalidatesOnNavigation reproduces the
+        stale breadcrumb on the old key and passes on the new one; the cache
+        still hits for identical state.
+
+        * fix(player): make beep state atomic and lock PassedTime/PlayedTime
+
+        p.state was written lock-free inside p.l-held setters (pausedNoLock and
+        friends) and read lock-free from the UI thread — a data race with
+        setState. Switched to atomic.Uint32 (State is uint8), all access points
+        updated. PassedTime also read curStreamer/curFormat lock-free, the same
+        gap fixed for OnTick in the first round; both it and PlayedTime now
+        take p.l (callers are outside the lock, no deadlock: same p.l -> t.l
+        order OnTick already uses).
+
+        * fix(app): zero scroll elapsed when content changes
+
+        Content reset happened after elapsed was computed, so the new line's
+        first frame advanced offsetF by the inter-frame elapsed — after a
+        render pause under 1s (playback resuming) the line head jumped 1-3
+        cells immediately.
+
+        * docs(model): correct misleading background-filler comments
+
+        The 'falls back to lipgloss for ANSI palette colors' note was wrong:
+        ansi.BasicColor/IndexedColor have non-zero RGBA and always take the
+        truecolor path (lipgloss would emit 48;5;n — an accepted difference).
+        Also annotate the exclusion branch as currently unreachable
+        (SetAppBackgroundExclusion has no callers in go-musicfox).
+      author:
+        name: DslsDZC
+        email: dsls.dzc@gmail.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: bc242ba2d9e82b3f960492e0d882e5ace5092808
+      note: |-
+        fix: graceful degradation on missing native libs
+
+        - webkitgtk: use registerSymbol (Dlsym, no panic) so a loaded but
+          outdated libwebkit2gtk missing webkit_network_session_new_ephemeral
+          degrades to form login instead of crashing at package init
+        - mediaplayer/unnotifications: MediaPlayer (10.12.2+) and
+          UserNotifications (10.14+) dlopen failures no longer panic; nil
+          classes keep the app starting on older macOS
+        - update AGENTS.md with the degradation notes
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 89633abdce9250db66f2f219dae8e1090a4e69a8
+      note: |-
+        fix(webview): use 13thgoutham go-webview2 fork
+
+        wailsapp/go-webview2 v1.0.23 generates handler callbacks with string
+        params, which panic at package init on Go >= 1.22 (compileCallback
+        per-arg limit <= uintptr). Upstream has no fixed release (PR #36/#37
+        unmerged), so switch to the 13thgoutham fork v1.0.25 which includes
+        generator-level fixes. Update AGENTS.md dependency note.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d9f683328db84738726277140bfb8535f785eb0c
+      note: |-
+        feat: support webview login on Windows and Linux
+
+        - Windows: WebView2 via wailsapp/go-webview2 (zero CGO, COM bindings),
+          single UI-thread model with WM_TIMER cookie polling, MUSIC_U detection
+        - Linux: purego bindings to WebKitGTK 6.0 with fallback to 4.1
+          (GTK3), ephemeral network session, g_timeout_add async cookie polling
+        - Extract shared login constants to login_webview_consts.go and narrow
+          the stub build tag to !darwin && !windows && !linux
+        - Update AGENTS.md with per-platform implementation details
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 964378fdefc00ea6eacc82024d47abf1a599f378
+      note: 'feat: mac支持webview网页登录'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: c0edae7a2471d3a0c9a6da8377ca938b6c9b2d2f
+      note: |-
+        chore(vendor): sync go vendor directory (#622)
+
+        Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+      author:
+        name: github-actions[bot]
+        email: 41898282+github-actions[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9341df0ecced9aaf66fcd6d9851190bdf41e059b
+      note: 'chore(ci): update create-pull-request action to version 8'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d30cd5bf2a2ef6623de90d8b9715110b1547d1ae
+      note: 'fix: 优化二维码登录(from go-musicfox-WindowsGUI)'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f5189d78ed27470740f68732214b88a34300b6c4
+      note: |-
+        chore: update README header and remove subtitle
+
+        Removed the subtitle and simplified the README header.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: cdf2e6205aa08e0ad5524cd3eeeb33a6fecbdb65
+      note: |-
+        chore: replace local video links with GitHub asset links
+
+        Updated video sources in the preview section of README.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 8325ae1383a9bca22ae7c9bc8310b52195ed21f7
+      note: 'chore(doc): add logo'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d58eec4b3aea47d0eb1c044ee3bbe858aced0d8e
+      note: 'chore: update README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2a7ed20b4184af32b1e75faf61287edfe545d194
+      note: |-
+        chore: update README.md
+
+        Removed duplicate badge section and cleaned up README formatting.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 903b59ba34d5a027b40724da795efa0f2ddfb720
+      note: 'chore: update README'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 2d5ff32736693f110c217dd4447a14ce074a2179
+      note: 'fix(track): 修复 FLAC 下载缺少专辑封面 (#606)'
+      author:
+        name: ayixiayi
+        email: ayixiayi@pm.me
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: cb12bf53c2b92cfd323cf412ffc7ac912c35cf83
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 5.0.2
   date: 2026-08-03T20:54:33+08:00
   packager: go-musicfox
