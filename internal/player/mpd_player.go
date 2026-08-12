@@ -42,6 +42,10 @@ type mpdPlayer struct {
 	watcher *mpd.Watcher
 	l       sync.Mutex
 
+	// audioProxy 本地音频代理, 用于修复网络音频流播时的数据错位杂音。
+	// 为 nil 时回退为直连源站 URL。
+	audioProxy *mpdAudioProxy
+
 	curMusic       URLMusic
 	curSongId      int
 	timer          *timex.Timer
@@ -114,6 +118,14 @@ func NewMpdPlayer(conf *MpdConfig) *mpdPlayer {
 
 	errorx.WaitGoStart(p.listen)
 	errorx.WaitGoStart(p.watch)
+
+	// 网络音频经本地代理转发, 注入浏览器请求头并正确处理 Range,
+	// 避免 MPD 直连源站因字节错位导致的高音质(FLAC)杂音。失败时回退直连。
+	if proxy, err := newMPDAudioProxy(); err != nil {
+		slog.Warn("mpd audio proxy disabled, fall back to direct url", slogx.Error(err))
+	} else {
+		p.audioProxy = proxy
+	}
 
 	p.syncMpdStatus("")
 	return p
@@ -204,6 +216,9 @@ func (p *mpdPlayer) listen() {
 			)
 			if isLocal {
 				url = path.Base(p.curMusic.URL)
+			}
+			if !isLocal && p.audioProxy != nil && !p.audioProxy.isOurs(url) {
+				url = p.audioProxy.wrapURL(url)
 			}
 
 			if isLocal {
@@ -406,6 +421,13 @@ func (p *mpdPlayer) Close() {
 
 	if p.timer != nil {
 		p.timer.Stop()
+	}
+
+	if p.audioProxy != nil {
+		if err := p.audioProxy.Close(); err != nil {
+			slog.Warn("mpd audio proxy close failed", slogx.Error(err))
+		}
+		p.audioProxy = nil
 	}
 
 	err := p.watcher.Close()

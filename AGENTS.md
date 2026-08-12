@@ -161,6 +161,8 @@ type Player interface {
 | AVFoundation | macOS | 原生集成 |
 | MediaPlayer | Windows | WinRT API |
 
+**MPD 网络流本地代理**：MPD 引擎播放网络音频时不再把源站 URL 直接交给 mpd 的 curl input 插件，而是经 musicfox 内置的本地 HTTP 代理（`internal/player/mpd_audio_proxy.go`，绑定 `127.0.0.1` 随机端口）转发：代理向上游注入浏览器 UA（网易云域名额外带 `Referer: https://music.163.com/`），并正确处理 `Range` 请求——上游忽略 Range 返回 200 全量数据时代理自行丢弃偏移字节并按 206 对齐返回，避免 MPD 断线续传/seek 时字节错位导致 FLAC 解码杂音。代理创建失败时静默回退直连（行为与旧版一致）；仅对非 `file://` 的远程 URL 生效，播放器退出时随 `Close()` 释放。
+
 ### 事件处理
 
 **文件**：`internal/ui/event_handler.go`
