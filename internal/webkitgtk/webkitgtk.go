@@ -42,11 +42,16 @@ const (
 var webkitVersion int
 
 // WebKitGTK 6.0 bindings (libwebkitgtk-6.0.so.4): WebKitNetworkSession and
-// the all-cookies API are only available in this GTK4 API version.
+// the all-cookies API are only available in this GTK4 API version. Note that
+// the symbol "webkit_web_view_new_with_network_session" does not exist in any
+// WebKitGTK release: since 6.0 (2.40) the session is attached to the web view
+// through the "network-session" construct property of g_object_new (see
+// WebViewNewWithNetworkSession), which is why only webkit_web_view_get_type is
+// bound here.
 var (
 	webkitNetworkSessionNewEphemeral       func() uintptr
 	webkitNetworkSessionGetCookieManager   func(session uintptr) uintptr
-	webkitWebViewNewWithNetworkSession     func(session uintptr) uintptr
+	webkitWebViewGetType                   func() uintptr
 	webkitWebViewLoadURI                   func(webView uintptr, uri *byte)
 	webkitCookieManagerGetAllCookies       func(manager, cancellable, callback, userData uintptr)
 	webkitCookieManagerGetAllCookiesFinish func(manager, result, err uintptr) uintptr
@@ -96,6 +101,13 @@ var (
 	gListNthData       func(list uintptr, n uint) uintptr
 	gListFree          func(list uintptr)
 	gErrorFree         func(err uintptr)
+
+	// gObjectNew is the variadic g_object_new(GType, const gchar*, ...). Only
+	// the integer-only four-argument form used to pass the "network-session"
+	// construct property is bound. purego's call trampoline clears AL ("no
+	// float args") before every call, which matches the SysV varargs
+	// convention for calls whose varargs are all integer/pointer arguments.
+	gObjectNew func(objectType uintptr, firstPropertyName *byte, propValue uintptr, terminator uintptr) uintptr
 )
 
 // Soup bindings use libsoup-3.0 for WebKitGTK 6.0/4.1 and libsoup-2.4 for
@@ -114,6 +126,7 @@ func init() {
 		dlopen("libgobject-2.0.so.0", func(lib uintptr) {
 			registerSymbol(&gSignalConnectData, lib, "g_signal_connect_data")
 			registerSymbol(&gObjectUnref, lib, "g_object_unref")
+			registerSymbol(&gObjectNew, lib, "g_object_new")
 		}) &&
 			dlopen("libglib-2.0.so.0", func(lib uintptr) {
 				registerSymbol(&gTimeoutAdd, lib, "g_timeout_add")
@@ -126,13 +139,25 @@ func init() {
 	// WebKitGTK 6.0 is the only supported stack using WebKitNetworkSession.
 	// WebKitGTK 4.1 keeps the WebKitGTK 4.0 WebContext/CookieManager API; its
 	// only ABI difference from 4.0 is the libsoup 3 vs. libsoup 2 dependency.
-	webkitUsable := func() bool {
-		return webkitNetworkSessionNewEphemeral != nil &&
-			webkitNetworkSessionGetCookieManager != nil &&
-			webkitWebViewNewWithNetworkSession != nil &&
-			webkitCookieManagerGetAllCookies != nil &&
-			webkitCookieManagerGetAllCookiesFinish != nil &&
-			soupCookieGetName != nil && soupCookieGetValue != nil && soupCookieFree != nil
+	// webkitMissingSymbols returns the names of the WebKitGTK 6.0 symbols that
+	// could not be resolved (empty when the 6.0 stack is usable).
+	webkitMissingSymbols := func() []string {
+		var missing []string
+		require := func(ok bool, name string) {
+			if !ok {
+				missing = append(missing, name)
+			}
+		}
+		require(webkitNetworkSessionNewEphemeral != nil, "webkit_network_session_new_ephemeral")
+		require(webkitNetworkSessionGetCookieManager != nil, "webkit_network_session_get_cookie_manager")
+		require(webkitWebViewGetType != nil, "webkit_web_view_get_type")
+		require(gObjectNew != nil, "g_object_new")
+		require(webkitCookieManagerGetAllCookies != nil, "webkit_cookie_manager_get_all_cookies")
+		require(webkitCookieManagerGetAllCookiesFinish != nil, "webkit_cookie_manager_get_all_cookies_finish")
+		require(soupCookieGetName != nil, "soup_cookie_get_name")
+		require(soupCookieGetValue != nil, "soup_cookie_get_value")
+		require(soupCookieFree != nil, "soup_cookie_free")
+		return missing
 	}
 	webkitUsableLegacy := func() bool {
 		return webkitWebViewNew != nil &&
@@ -147,12 +172,11 @@ func init() {
 	if commonOK {
 		// Prefer the WebKitGTK 6.0 (GTK4) stack.
 		if dlopen("libsoup-3.0.so.0", registerSoup) && dlopen("libwebkitgtk-6.0.so.4", registerWebKit) {
-			if webkitUsable() && dlopen("libgtk-4.so.1", registerGTK4) {
+			if missing := webkitMissingSymbols(); len(missing) == 0 && dlopen("libgtk-4.so.1", registerGTK4) {
 				webkitVersion = Version6
 				return
-			}
-			if !webkitUsable() {
-				slog.Warn("webkitgtk: libwebkitgtk-6.0.so.4 loaded but missing required symbols; falling back to 4.1")
+			} else if len(missing) > 0 {
+				slog.Warn("webkitgtk: libwebkitgtk-6.0.so.4 loaded but missing required symbols; falling back to 4.1", "missing", missing)
 			}
 		}
 
@@ -204,6 +228,7 @@ func dlopen(name string, register func(lib uintptr)) bool {
 func registerSymbol(fptr any, lib uintptr, name string) {
 	sym, err := purego.Dlsym(lib, name)
 	if err != nil {
+		slog.Debug("webkitgtk: symbol not found", "symbol", name)
 		return
 	}
 	purego.RegisterFunc(fptr, sym)
@@ -222,7 +247,7 @@ func registerSoup(lib uintptr) {
 func registerWebKit(lib uintptr) {
 	registerSymbol(&webkitNetworkSessionNewEphemeral, lib, "webkit_network_session_new_ephemeral")
 	registerSymbol(&webkitNetworkSessionGetCookieManager, lib, "webkit_network_session_get_cookie_manager")
-	registerSymbol(&webkitWebViewNewWithNetworkSession, lib, "webkit_web_view_new_with_network_session")
+	registerSymbol(&webkitWebViewGetType, lib, "webkit_web_view_get_type")
 	registerSymbol(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
 	registerSymbol(&webkitCookieManagerGetAllCookies, lib, "webkit_cookie_manager_get_all_cookies")
 	registerSymbol(&webkitCookieManagerGetAllCookiesFinish, lib, "webkit_cookie_manager_get_all_cookies_finish")
@@ -288,11 +313,18 @@ func NetworkSessionGetCookieManager(session uintptr) uintptr {
 	return webkitNetworkSessionGetCookieManager(session)
 }
 
+// WebViewNewWithNetworkSession creates a WebKitWebView attached to the given
+// WebKitNetworkSession on the WebKitGTK 6.0 API. The convenience constructors
+// (webkit_web_view_new_with_context and friends) were removed in WebKitGTK
+// 6.0; the session is passed as the "network-session" construct-only property
+// via g_object_new, exactly as the upstream migration guide recommends. The
+// symbol "webkit_web_view_new_with_network_session" does not exist in any
+// WebKitGTK release.
 func WebViewNewWithNetworkSession(session uintptr) uintptr {
-	if webkitWebViewNewWithNetworkSession == nil {
+	if webkitWebViewGetType == nil || gObjectNew == nil {
 		return 0
 	}
-	return webkitWebViewNewWithNetworkSession(session)
+	return gObjectNew(webkitWebViewGetType(), cString("network-session"), session, 0)
 }
 
 // WebViewNew creates a WebKitWebView on the legacy 4.0/4.1 API (uses the
