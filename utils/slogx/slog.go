@@ -22,7 +22,7 @@ var levelVar slog.LevelVar
 // LogFileName 日志文件名
 const LogFileName = "musicfox.log"
 
-// maxLogFileSize 日志文件超过该大小后，启动时轮转为 musicfox.log.old
+// maxLogFileSize 日志文件超过该大小后，启动时直接清空（见 rotateLogFile）
 const maxLogFileSize = 10 << 20 // 10 MiB
 
 var (
@@ -48,7 +48,11 @@ func Init() {
 
 		f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 		if err != nil {
-			panic(fmt.Sprintf("failed to open log file, err: %v", err))
+			// 日志目录不可写（只读 HOME/快照环境）时降级到 stderr 继续运行：
+			// 此处 panic 发生在包装进程内（RunWrapped 的 wrapper 路径无
+			// recover），会输出原始 Go panic 堆栈且应用无法启动
+			fmt.Fprintf(os.Stderr, "failed to open log file %s, falling back to stderr: %v\n", logPath, err)
+			return
 		}
 		logFile = f
 
