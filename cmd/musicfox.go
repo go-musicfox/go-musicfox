@@ -54,6 +54,9 @@ func musicfox() {
 		commands.GlobalOptions.PureMode = true
 		// 纯净模式下忽略会绕过 MUSICFOX_ROOT 的登录态环境变量，确保干净启动
 		_ = os.Unsetenv("MUSICFOX_COOKIE")
+		// 退出时清理临时目录（含日志、缓存），避免每次 --pure 运行在 /tmp
+		// 遗留一个 musicfox-pure-* 目录
+		defer os.RemoveAll(pureDir)
 		fmt.Fprintf(os.Stderr, "Pure mode enabled. Temp root: %s\n", pureDir)
 	}
 

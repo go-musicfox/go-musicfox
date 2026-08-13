@@ -87,8 +87,15 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	// Output caching: skip rebuild when progress has not ticked to the next second.
 	// styleGen guards against replaying stale-colored output after a theme switch.
+	// wave/glow 模式的相位由 PassedTime 秒数（浮点）驱动，秒级缓存会把动画
+	// 冻结成 1Hz 步进，因此这两种模式改用 50ms 粒度作缓存键。
 	styleGen := style.StyleGeneration()
-	if passedDuration == r.cachedPassedSec && allDuration == r.cachedDuration &&
+	mode := r.getRenderMode()
+	phaseKey := passedDuration
+	if mode == progressRenderModeWave || mode == progressRenderModeGlow {
+		phaseKey = int(r.state.PassedTime().Milliseconds() / 50)
+	}
+	if phaseKey == r.cachedPassedSec && allDuration == r.cachedDuration &&
 		width == r.cachedWidth && styleGen == r.cachedStyleGen {
 		return r.cachedView, r.cachedLines
 	}
@@ -96,7 +103,6 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	fullSize := int(math.Round(float64(width) * progress))
 
 	progressOptions := configs.AppConfig.Theme.Progress.ToModel()
-	mode := r.getRenderMode()
 	animationTime := r.state.PassedTime().Seconds()
 
 	var progressView string

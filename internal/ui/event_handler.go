@@ -489,8 +489,12 @@ func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main 
 	menuStartColumn := main.MenuStartColumn()
 
 	if menuStartColumn > MenuArrowWidth {
-		playModeEndX := menuStartColumn + PlayModeClickWidth
-		if msg.Mouse().X >= menuStartColumn-MenuArrowWidth && msg.Mouse().X <= playModeEndX {
+		// 与渲染器一致：模式文本从 leftPad 起、宽 modeWidth（"[xx] " 最长
+		// 11 列）。原实现用固定 PlayModeClickWidth=5，比渲染文本窄，点击
+		// 文本尾部（] 附近）无响应。
+		leftPad := menuStartColumn - MenuArrowWidth
+		modeWidth := runewidth.StringWidth(fmt.Sprintf("[%s] ", player.Mode().Name()))
+		if msg.Mouse().X >= leftPad && msg.Mouse().X < leftPad+modeWidth {
 			player.SwitchMode()
 			return true, main, a.Tick(time.Nanosecond)
 		}
