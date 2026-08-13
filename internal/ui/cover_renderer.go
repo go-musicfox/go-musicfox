@@ -576,31 +576,66 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 	r.mu.Unlock()
 
-	// Fetch and generate kitty sequence
-	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picUrl, r.cols, r.rows)
-	if err != nil {
-		slog.Debug("CoverRenderer: failed to fetch image", slog.Any("error", err))
+	// 静态模式同样走异步渲染：GetOrFetch 可能发起网络抓图（最长 10s），同步
+	// 执行会冻结整个渲染线程（TUI 卡死、spin 模式每次切歌都触发）。先返回空
+	// 视图，结果经 renderChan 送达后应用（与 spin 模式同一机制）。
+	select {
+	case res := <-r.renderChan:
+		if res.songID == song.Id {
+			// Apply to terminal
+			r.writeToTerminal(res.sequence, res.startRow, res.startCol, true)
+
+			r.currentSongId = res.songID
+			r.cachedSeq = res.sequence
+			r.lastStartRow = res.startRow
+			r.lastStartCol = res.startCol
+			r.imageRendered = true
+			r.forceRerender = false
+			r.renderingID = 0 // Clear rendering flag
+			return "", 0
+		}
+		// Old result for different song, ignore but clear flag if it matched
+		if r.renderingID == res.songID {
+			r.renderingID = 0
+		}
+	default:
+	}
+
+	// 正在生成这首歌，等下一帧
+	if r.renderingID == song.Id {
 		return "", 0
 	}
-	if kittySeq == "" {
-		return "", 0
+
+	// 取消上一轮生成，启动异步抓图
+	if r.cancelFunc != nil {
+		r.cancelFunc()
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	r.cancelFunc = cancel
+	r.renderingID = song.Id
+	cols, rows := r.cols, r.rows
 
-	// Cache the result and render
-	r.mu.Lock()
-	r.currentSongId = song.Id
-	r.cachedSeq = kittySeq
-	r.lastStartRow = coverStartRow
-	r.lastStartCol = coverStartCol
-	r.mu.Unlock()
-
-	// Write directly to stdout, delete old images when song changes
-	r.writeToTerminal(kittySeq, coverStartRow, coverStartCol, true)
-
-	r.mu.Lock()
-	r.imageRendered = true
-	r.forceRerender = false // Reset forceRerender after successful render
-	r.mu.Unlock()
+	go func(ctx context.Context, songID int64, picUrl string, startRow, startCol, cols, rows int) {
+		kittySeq, err := r.imageCache.GetOrFetch(ctx, picUrl, cols, rows)
+		if err != nil || kittySeq == "" {
+			slog.Debug("CoverRenderer: failed to fetch image", slog.Any("error", err))
+			r.mu.Lock()
+			r.renderingID = 0
+			r.mu.Unlock()
+			return
+		}
+		// Send result (only if not cancelled)
+		select {
+		case <-ctx.Done():
+			return
+		case r.renderChan <- renderResult{
+			songID:   songID,
+			sequence: kittySeq,
+			startRow: startRow,
+			startCol: startCol,
+		}:
+		}
+	}(ctx, song.Id, picUrl, coverStartRow, coverStartCol, cols, rows)
 
 	return "", 0
 }
