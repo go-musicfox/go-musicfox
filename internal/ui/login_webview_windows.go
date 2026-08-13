@@ -315,12 +315,20 @@ func (c *webviewLoginController) messageLoop() {
 	if err := c.setupWebView2(hwnd); err != nil {
 		c.mu.Lock()
 		closed = c.closed
+		userDataDir := c.userDataDir
+		c.userDataDir = ""
 		c.mu.Unlock()
 		if !closed {
 			slog.Error("初始化 WebView2 登录窗口失败", slogx.Error(err))
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: fmt.Sprintf("初始化 WebView2 登录窗口失败: %v", err)})
 		}
 		user32DestroyWindow.Call(hwnd)
+		// 失败路径不经过 cleanup()：补删临时目录（最常见场景：未安装
+		// WebView2 Runtime），否则每次失败的登录尝试都在 %TEMP% 遗留一个
+		// go-musicfox-webview2-* 目录，无上限累积
+		if userDataDir != "" {
+			_ = os.RemoveAll(userDataDir)
+		}
 		return
 	}
 
