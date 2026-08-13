@@ -34,7 +34,16 @@ func RunWrapped(app func()) {
 	// 恢复 stderr 后再 exec，保证子进程继承到真正的 stderr（终端）。
 	// Windows 上 stderr 无法在进程内重定向，childStderr 经管道双写终端与日志
 	restoreStderr()
-	cmd.Env = append(os.Environ(), childEnv+"=1")
+	// 去重后追加：若用户环境里已存在 childEnv（值非 "1"），getenv 返回首个
+	// 匹配，子进程会把自己当 wrapper 再 exec 一次（理论上的递归 exec）
+	env := os.Environ()
+	for i, e := range env {
+		if strings.HasPrefix(e, childEnv+"=") {
+			env = append(env[:i], env[i+1:]...)
+			break
+		}
+	}
+	cmd.Env = append(env, childEnv+"=1")
 	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
 	cmd.Stderr = childStderr()
 

@@ -27,10 +27,11 @@ func RandStringRunes(n int) string {
 }
 
 func ApplyRequestStrategy(jar http.CookieJar) {
-	// 注入反风控参数
+	// 注入反风控参数。NMTID 用随机值：固定值会让所有 go-musicfox 用户共享
+	// 同一追踪 ID，易被风控关联（且会覆盖之前随机生成的 NMTID）
 	strategyCookies := []*http.Cookie{
 		{Name: "os", Value: "pc"},
-		{Name: "NMTID", Value: "some_random_id_from_strategy"},
+		{Name: "NMTID", Value: hex.EncodeToString([]byte(RandStringRunes(16)))},
 	}
 	targetUrl, _ := url.Parse("https://music.163.com")
 	jar.SetCookies(targetUrl, strategyCookies)
