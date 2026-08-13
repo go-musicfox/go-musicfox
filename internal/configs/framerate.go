@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"strconv"
 	"time"
 )
 
@@ -32,5 +33,5 @@ func (f FrameRate) DurationMs() int {
 
 // String returns the string representation of the frame rate (e.g., "30 FPS").
 func (f FrameRate) String() string {
-	return string(rune(f+'0')) + " FPS"
+	return strconv.Itoa(int(f)) + " FPS"
 }

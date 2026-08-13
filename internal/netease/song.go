@@ -14,7 +14,7 @@ func FetchDailySongs() (playlist []structs.Song, err error) {
 	code, response := recommendSongs.RecommendSongs()
 	codeType := _struct.CheckCode(code)
 	if codeType != _struct.Success {
-		err = NetworkErr
+		err = mapResCodeToErr(codeType)
 		return
 	}
 	playlist = _struct.GetDailySongs(response)
@@ -50,12 +50,12 @@ func FetchLikeSongs(userId int64, getAll bool) (playlist []structs.Song, err err
 	)
 	codeType, playlists, _ = FetchUserPlaylists(userId, 1, 0)
 	if codeType != _struct.Success {
-		err = NetworkErr
+		err = mapResCodeToErr(codeType)
 		return
 	}
 	codeType, songs = FetchSongsOfPlaylist(playlists[0].Id, getAll)
 	if codeType != _struct.Success {
-		err = NetworkErr
+		err = mapResCodeToErr(codeType)
 		return
 	}
 	playlist = songs

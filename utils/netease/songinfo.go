@@ -2,6 +2,7 @@ package netease
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -35,10 +36,15 @@ func FetchPlayableInfo(songID int64, quality service.SongQualityLevel) (Playable
 		Level:   quality,
 		SkipUNM: true,
 	}
-	code, response, _ := urlService.SongUrl()
+	code, response, err := urlService.SongUrl()
 	slog.Debug("fetch song url", "code", code, "response", string(response))
 	if code != 200 {
-		return PlayableInfo{}, errors.New(string(response))
+		// 保留底层错误：网络失败时 response 可能为空，errors.New(string(nil))
+		// 会得到空字符串错误，播放失败时用户看到空白报错
+		if err != nil {
+			return PlayableInfo{}, fmt.Errorf("failed to fetch song url (code %d): %w", code, err)
+		}
+		return PlayableInfo{}, fmt.Errorf("failed to fetch song url (code %d): %s", code, string(response))
 	}
 
 	var (
