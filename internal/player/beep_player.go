@@ -57,6 +57,11 @@ type beepPlayer struct {
 
 	spectrum         *PCMAnalyzer
 	spectrumConsumer func(sampleRate float64, samplesL, samplesR []float32)
+
+	// spectrumSamplesL/R 是 streamer 馈送频谱数据的复用缓冲（仅 streamer
+	// 使用，持 p.l 访问，无并发）
+	spectrumSamplesL []float32
+	spectrumSamplesR []float32
 }
 
 func NewBeepPlayer() *beepPlayer {
@@ -89,19 +94,16 @@ func NewBeepPlayer() *beepPlayer {
 // listen 开始监听
 func (p *beepPlayer) listen() {
 	var (
-		done       = make(chan struct{})
+		// done 是当前歌曲的结束信号通道。每首歌创建独立的缓冲通道：
+		// 旧歌残留的结束信号不会误停新歌；缓冲 1 + 非阻塞发送保证拉取路径
+		// （持有 speaker 全局锁）绝不会阻塞在发送上。
+		done       chan struct{}
 		resp       *http.Response
 		reader     io.ReadCloser
 		err        error
 		ctx        context.Context
 		cancel     context.CancelFunc
 		prevSongId int64
-		doneHandle = func() {
-			select {
-			case done <- struct{}{}:
-			case <-p.close:
-			}
-		}
 	)
 
 	if err = speaker.Init(sampleRate, sampleRate.N(time.Millisecond*200)); err != nil {
@@ -119,6 +121,7 @@ func (p *beepPlayer) listen() {
 		case <-done:
 			p.Stop()
 		case music := <-p.musicChan:
+			started := false
 			p.l.Lock()
 			// curMusic is read by CurMusic() (UI thread) under p.l, so assign
 			// it while holding the lock too.
@@ -133,6 +136,16 @@ func (p *beepPlayer) listen() {
 			}
 			p.reset()
 			ctx, cancel = context.WithCancel(context.Background())
+
+			// 每首歌独立的结束信号通道（见 listen 顶部注释）
+			curDone := make(chan struct{}, 1)
+			done = curDone
+			doneHandle := func() {
+				select {
+				case curDone <- struct{}{}:
+				default:
+				}
+			}
 
 			if prevSongId != p.curMusic.Id || !filex.FileOrDirExists(cacheFile) {
 				// FIXME: 先这样处理，暂时没想到更好的办法
@@ -157,11 +170,15 @@ func (p *beepPlayer) listen() {
 				}
 
 				// 边下载边播放
-				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
+				songID := p.curMusic.Id
+				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser, songID int64) {
 					_, _ = iox.CopyClose(ctx, cacheWFile, read)
 					p.l.Lock()
 					defer p.l.Unlock()
-					if p.curStreamer == nil {
+					// 下载期间可能已切歌（cancel 打断）：此时 p.curMusic/p.curStreamer
+					// 已属于新歌，绝不能用自己（旧歌）的缓存数据替换新歌的 streamer
+					//（否则新歌会从旧歌位置开始、被瞬间跳过，甚至被切走）。
+					if songID != p.curMusic.Id || p.curStreamer == nil {
 						// nil说明外层解析还没开始或解析失败，这里直接退出
 						return
 					}
@@ -187,7 +204,7 @@ func (p *beepPlayer) listen() {
 						p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 					}
 					p.cacheDownloaded = true
-				}(ctx, p.cacheWriter, reader)
+				}(ctx, p.cacheWriter, reader, songID)
 
 				N := 512
 				if p.curMusic.Type == Flac {
@@ -219,7 +236,6 @@ func (p *beepPlayer) listen() {
 
 			p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 			p.volume.Streamer = p.ctrl
-			speaker.Play(p.volume)
 
 			// 计时器
 			p.timer = timex.NewTimer(timex.Options{
@@ -246,9 +262,17 @@ func (p *beepPlayer) listen() {
 			})
 			p.resumeNoLock()
 			prevSongId = p.curMusic.Id
+			started = true
 
 		nextLoop:
 			p.l.Unlock()
+			// speaker.* 必须在不持有 p.l 时调用：拉取路径持 speaker 锁后再取
+			// p.l，此处反向取锁会与拉取互等造成死锁。失败路径同样要 Clear，
+			// 否则 speaker 仍拉取已被关闭的旧链，streamer 会空指针。
+			speaker.Clear()
+			if started {
+				speaker.Play(p.volume)
+			}
 		}
 	}
 }
@@ -311,18 +335,25 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *beepPlayer) Seek(duration time.Duration) {
-	if duration < 0 || !p.cacheDownloaded {
+	if duration < 0 {
 		return
 	}
+	// 锁序与拉取路径一致（speaker mu → p.l）：切歌路径（reset 置 nil、关闭
+	// 旧 streamer）只在 p.l 下进行，此处必须持 p.l 全程校验，否则切歌瞬间
+	// 跳转会对已关闭/已置 nil 的 streamer 操作（空指针或 use-after-close）。
+	speaker.Lock()
+	defer speaker.Unlock()
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	// FIXME: 暂时仅对MP3格式提供跳转功能
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
 	// minimp3未实现Seek
-	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.AppConfig.Player.Beep.Mp3Decoder == types.BeepMiniMp3Decoder {
+	if !p.cacheDownloaded || p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.AppConfig.Player.Beep.Mp3Decoder == types.BeepMiniMp3Decoder {
 		return
 	}
 	if types.State(p.state.Load()) == types.Playing || types.State(p.state.Load()) == types.Paused {
-		speaker.Lock()
 		newPos := p.curFormat.SampleRate.N(duration)
 
 		if newPos < 0 {
@@ -331,16 +362,13 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 		if newPos >= p.curStreamer.Len() {
 			newPos = p.curStreamer.Len() - 1
 		}
-		if p.curStreamer != nil {
-			err := p.curStreamer.Seek(newPos)
-			if err != nil {
-				slog.Error("seek error", slogx.Error(err))
-			}
+		err := p.curStreamer.Seek(newPos)
+		if err != nil {
+			slog.Error("seek error", slogx.Error(err))
 		}
 		if p.timer != nil {
 			p.timer.SetPassed(duration)
 		}
-		speaker.Unlock()
 	}
 }
 
@@ -454,7 +482,6 @@ func (p *beepPlayer) Toggle() {
 // Close 关闭
 func (p *beepPlayer) Close() {
 	p.l.Lock()
-	defer p.l.Unlock()
 
 	if p.timer != nil {
 		p.timer.Stop()
@@ -466,6 +493,9 @@ func (p *beepPlayer) Close() {
 	if p.spectrum != nil {
 		p.spectrum.Close()
 	}
+	p.l.Unlock()
+
+	// speaker.* 必须在 p.l 外调用（锁序纪律：拉取路径持 speaker 锁后再取 p.l）
 	speaker.Clear()
 	speaker.Close()
 }
@@ -487,20 +517,35 @@ func (p *beepPlayer) reset() {
 	}
 	p.cacheDownloaded = false
 	p.spectrumConsumer = nil
-	speaker.Clear()
+	// 注意：不在此处调用 speaker.Clear()——speaker.* 必须在 p.l 外调用
+	// （锁序纪律见 listen 的 nextLoop 处），调用方负责。
 }
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	p.l.Lock()
-	defer p.l.Unlock()
+	// 切歌失败路径（HTTP 错误/WaitForNBytes 超时/DecodeSong 失败）里 reset
+	// 已把 curStreamer 置 nil，且 speaker.Clear() 在 p.l 外执行——阻塞在
+	// p.l 上的拉取会在解锁瞬间拿到 nil，必须在此守卫（返回 !ok 结束旧链，
+	// 其 Callback 落入孤儿通道，无害）。
+	if p.curStreamer == nil {
+		p.l.Unlock()
+		return 0, false
+	}
 
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
 
-	// Spectrum: feed PCM samples to analyzer
+	// Spectrum: feed PCM samples to analyzer。
+	// 复用预分配缓冲（p.spectrumSamplesL/R）：每次拉取（约 10-50ms 一次、
+	// 持锁期间）make 两个切片是纯 GC 压力。缓冲仅本函数使用，且本函数
+	// 全程持 p.l 与 speaker 锁，无并发访问。
 	if p.spectrumConsumer != nil && n > 0 {
-		samplesL := make([]float32, n)
-		samplesR := make([]float32, n)
+		if cap(p.spectrumSamplesL) < n {
+			p.spectrumSamplesL = make([]float32, n)
+			p.spectrumSamplesR = make([]float32, n)
+		}
+		samplesL := p.spectrumSamplesL[:n]
+		samplesR := p.spectrumSamplesR[:n]
 		for i := 0; i < n; i++ {
 			samplesL[i] = float32(samples[i][0])
 			samplesR[i] = float32(samples[i][1])
@@ -510,28 +555,45 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 
 	err := p.curStreamer.Err()
 	if err == nil && (ok || p.cacheDownloaded) {
+		p.l.Unlock()
 		return
 	}
 	p.pausedNoLock()
 
+	// 重试期间不持 p.l：拉取路径已持有 speaker 锁，若再持 p.l 睡眠，会同时
+	// 冻结音频管线与 UI（PassedTime/CurMusic 均需 p.l），最长 20 秒。
+	myStreamer := p.curStreamer
+	isFlac := p.curMusic.Type == Flac
+	p.l.Unlock()
+
 	retry := 4
 	for !ok && retry > 0 {
-		if p.curMusic.Type == Flac {
-			if err = p.curStreamer.Seek(pos); err != nil {
+		if isFlac {
+			if err = myStreamer.Seek(pos); err != nil {
 				return
 			}
 		}
-		errorx.ResetError(p.curStreamer)
+		errorx.ResetError(myStreamer)
 
 		select {
 		case <-time.After(time.Second * 5):
-			n, ok = p.curStreamer.Stream(samples)
+			p.l.Lock()
+			// 等待期间可能已切歌：旧 streamer 已被 reset 关闭，直接放弃重试
+			if p.curStreamer != myStreamer {
+				p.l.Unlock()
+				return
+			}
+			n, ok = myStreamer.Stream(samples)
+			err = myStreamer.Err()
+			p.l.Unlock()
 		case <-p.close:
 			return
 		}
 		retry--
 	}
+	p.l.Lock()
 	p.resumeNoLock()
+	p.l.Unlock()
 	return
 }
 

@@ -84,7 +84,7 @@ const (
 type command struct {
 	cmd    cmdType
 	param  any
-	result chan<- any
+	result chan any
 }
 
 type dlnaPlayer struct {
@@ -94,10 +94,14 @@ type dlnaPlayer struct {
 	audioURL            string
 	audioDur            time.Duration
 	httpClient          *http.Client
-	state               types.State
-	stateChan           chan types.State
-	closed              chan struct{}
-	cmdQueue            chan command
+	// mu 保护 state/curPos/audioURL/audioDur/cachedVolume 及播放计时字段：
+	// worker goroutine（executeCmd/pollStateTask）写入，UI 线程读取
+	mu        sync.RWMutex
+	state     types.State
+	stateChan chan types.State
+	closed    chan struct{}
+	closeOnce sync.Once // 保证 closed 只关闭一次（永不置 nil，sendCmd 依赖它）
+	cmdQueue  chan command
 
 	curPos   time.Duration
 	timeChan chan time.Duration
@@ -225,22 +229,37 @@ func (p *dlnaPlayer) worker() {
 }
 
 func (p *dlnaPlayer) pollStateTask() {
-	state, _ := p.getTransportInfo()
+	state, err := p.getTransportInfo()
+	if err != nil {
+		// 查询失败不覆盖状态：网络抖动时设备可能短暂不可达
+		return
+	}
 	if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
+		p.mu.Lock()
+		changed := p.state != types.Stopped
 		p.state = types.Stopped
-		p.sendState()
+		p.mu.Unlock()
+		// 仅状态确实变化时上报：设备持续返回 STOPPED（如无法播放该 URL）时
+		// 避免每 5s 触发一次 UI 的自动切歌
+		if changed {
+			p.sendState(types.Stopped)
+		}
 		return
 	}
 	curPos, _, _ := p.getPositionInfo()
 	if curPos > 0 {
+		p.mu.Lock()
 		p.curPos = curPos
+		p.mu.Unlock()
 		select {
 		case p.timeChan <- curPos:
 		default:
 		}
 	}
 	if vol, err := p.getVolume(); err == nil {
+		p.mu.Lock()
 		p.cachedVolume = vol
+		p.mu.Unlock()
 	}
 }
 
@@ -248,8 +267,10 @@ func (p *dlnaPlayer) executeCmd(cmd command) {
 	switch cmd.cmd {
 	case cmdPlay:
 		music := cmd.param.(URLMusic)
+		p.mu.Lock()
 		p.audioURL = music.URL
 		p.audioDur = music.Duration
+		p.mu.Unlock()
 		p.fileMapMu.Lock()
 		for k := range p.fileMap {
 			delete(p.fileMap, k)
@@ -263,43 +284,53 @@ func (p *dlnaPlayer) executeCmd(cmd command) {
 			p.fileMapMu.Unlock()
 			audioURL = fmt.Sprintf("http://%s:%d/dlna/%d", p.localIP, p.httpPort, music.Id)
 		}
+		p.mu.Lock()
 		p.audioURL = audioURL
+		p.mu.Unlock()
 
-		slog.Info("DLNA: setting AVTransport URI", "audioURL", p.audioURL)
-		p.doSOAP("AVTransport", "SetAVTransportURI", fmt.Sprintf(setAvTransportURIBody, p.audioURL))
+		slog.Info("DLNA: setting AVTransport URI", "audioURL", audioURL)
+		p.doSOAP("AVTransport", "SetAVTransportURI", fmt.Sprintf(setAvTransportURIBody, audioURL))
 
 		slog.Info("DLNA: starting playback")
 		p.doSOAP("AVTransport", "Play", playBody)
 
+		p.mu.Lock()
 		p.state = types.Playing
-		p.sendState()
 		p.startTime = time.Now()
 		p.pausedTime = 0
 		p.wasEverPlayed = true
+		p.mu.Unlock()
+		p.sendState(types.Playing)
 		cmd.result <- true
 
 	case cmdPause:
 		p.doSOAP("AVTransport", "Pause", pauseBody)
+		p.mu.Lock()
 		p.state = types.Paused
-		p.sendState()
 		p.pauseStart = time.Now()
+		p.mu.Unlock()
+		p.sendState(types.Paused)
 		cmd.result <- true
 
 	case cmdResume:
 		p.doSOAP("AVTransport", "Play", playBody)
+		p.mu.Lock()
 		p.state = types.Playing
-		p.sendState()
 		p.pausedTime += time.Since(p.pauseStart)
+		p.mu.Unlock()
+		p.sendState(types.Playing)
 		cmd.result <- true
 
 	case cmdStop:
 		p.doSOAP("AVTransport", "Stop", stopBody)
+		p.mu.Lock()
 		p.curPos = 0
 		p.state = types.Stopped
-		p.sendState()
 		p.startTime = time.Time{}
 		p.pausedTime = 0
 		p.wasEverPlayed = false
+		p.mu.Unlock()
+		p.sendState(types.Stopped)
 		cmd.result <- true
 
 	case cmdSeek:
@@ -310,10 +341,15 @@ func (p *dlnaPlayer) executeCmd(cmd command) {
 
 	case cmdSetVolume:
 		volume := cmd.param.(int)
-		if volume >= 0 && volume <= 100 && volume != p.cachedVolume {
+		p.mu.RLock()
+		curVol := p.cachedVolume
+		p.mu.RUnlock()
+		if volume >= 0 && volume <= 100 && volume != curVol {
 			body := fmt.Sprintf(setVolumeBody, volume)
 			p.doSOAP("RenderingControl", "SetVolume", body)
+			p.mu.Lock()
 			p.cachedVolume = volume
+			p.mu.Unlock()
 		}
 		cmd.result <- true
 	}
@@ -427,22 +463,35 @@ func (p *dlnaPlayer) getPositionInfo() (time.Duration, time.Duration, error) {
 }
 
 // sendState sends state update non-blockingly, with 2 second timeout
-func (p *dlnaPlayer) sendState() {
+func (p *dlnaPlayer) sendState(state types.State) {
 	select {
-	case p.stateChan <- p.state:
+	case p.stateChan <- state:
 	case <-time.After(time.Second * 2):
 		slog.Warn("DLNA: stateChan send timeout, drop state update")
 	}
 }
 
 func (p *dlnaPlayer) Play(music URLMusic) {
-	result := make(chan any)
-	p.cmdQueue <- command{
+	p.sendCmd(command{
 		cmd:    cmdPlay,
 		param:  music,
-		result: result,
+		result: make(chan any, 1),
+	})
+}
+
+// sendCmd 向 worker 投递命令并等待结果。worker 在 Close 后退场、不再消费
+// cmdQueue，直接发送会在队列满后永久阻塞 UI 线程；select p.closed 保证
+// 播放器已关闭时立即返回。
+func (p *dlnaPlayer) sendCmd(cmd command) {
+	select {
+	case p.cmdQueue <- cmd:
+	case <-p.closed:
+		return
 	}
-	<-result
+	select {
+	case <-cmd.result:
+	case <-p.closed:
+	}
 }
 
 func (p *dlnaPlayer) getTransportInfo() (string, error) {
@@ -474,6 +523,8 @@ func (p *dlnaPlayer) normalizeURL(base, controlURL string) string {
 }
 
 func (p *dlnaPlayer) CurMusic() URLMusic {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	music := URLMusic{
 		URL: p.audioURL,
 	}
@@ -482,25 +533,19 @@ func (p *dlnaPlayer) CurMusic() URLMusic {
 }
 
 func (p *dlnaPlayer) Pause() {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdPause, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdPause, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) Resume() {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdResume, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdResume, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) Stop() {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdStop, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdStop, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) Toggle() {
-	if p.state == types.Playing {
+	if p.State() == types.Playing {
 		p.Pause()
 	} else {
 		p.Resume()
@@ -508,16 +553,18 @@ func (p *dlnaPlayer) Toggle() {
 }
 
 func (p *dlnaPlayer) Seek(duration time.Duration) {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdSeek, param: duration, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdSeek, param: duration, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) PassedTime() time.Duration {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.curPos
 }
 
 func (p *dlnaPlayer) PlayedTime() time.Duration {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	if !p.wasEverPlayed {
 		return 0
 	}
@@ -528,7 +575,11 @@ func (p *dlnaPlayer) TimeChan() <-chan time.Duration {
 	return p.timeChan
 }
 
-func (p *dlnaPlayer) State() types.State { return p.state }
+func (p *dlnaPlayer) State() types.State {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.state
+}
 
 func (p *dlnaPlayer) StateChan() <-chan types.State { return p.stateChan }
 
@@ -556,13 +607,13 @@ func (p *dlnaPlayer) getVolume() (int, error) {
 }
 
 func (p *dlnaPlayer) Volume() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.cachedVolume
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdSetVolume, param: volume, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdSetVolume, param: volume, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) UpVolume() {
@@ -574,10 +625,10 @@ func (p *dlnaPlayer) DownVolume() {
 }
 
 func (p *dlnaPlayer) Close() {
-	if p.closed != nil {
+	// closed 通道永不置 nil：sendCmd 依赖它对已关闭的播放器立即返回
+	p.closeOnce.Do(func() {
 		close(p.closed)
-		p.closed = nil
-	}
+	})
 	if p.httpServer != nil {
 		if err := p.httpServer.Close(); err != nil {
 			slog.Error("DLNA: failed to close HTTP server", "error", err)

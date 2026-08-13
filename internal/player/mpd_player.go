@@ -138,37 +138,47 @@ func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 	mpdErrorHandler(err, true)
 
 	state := stateMapping[status["state"]]
-	if subsystem == "player" && (state != types.Stopped || time.Since(p.latestPlayTime) >= time.Second*2) {
+	// latestPlayTime 由 listen 持锁写入，此处无锁读构成数据竞争（time.Time
+	// 是 24 字节结构，-race 必报）
+	p.l.Lock()
+	recentSwitch := time.Since(p.latestPlayTime) < time.Second*2
+	p.l.Unlock()
+	if subsystem == "player" && (state != types.Stopped || !recentSwitch) {
+		p.l.Lock()
 		switch state {
 		case types.Playing:
 			if p.timer != nil {
 				go p.timer.Run()
 			}
-			p.setState(types.Playing)
 		case types.Paused:
 			if p.timer != nil {
 				p.timer.Pause()
 			}
-			p.setState(types.Paused)
 		case types.Stopped:
 			if p.timer != nil {
 				p.timer.Stop()
 			}
-			p.setState(types.Stopped)
 		default:
 		}
+		p.l.Unlock()
+		p.setState(state)
 	}
 	if vol := status["volume"]; vol != "" {
-		p.volume, _ = strconv.Atoi(vol)
+		v, _ := strconv.Atoi(vol)
+		p.l.Lock()
+		p.volume = v
+		p.l.Unlock()
 	}
 	if elapsed := status["elapsed"]; elapsed != "" {
 		duration, _ := time.ParseDuration(elapsed + "s")
+		p.l.Lock()
 		if p.timer != nil {
 			p.timer.SetPassed(duration)
-			select {
-			case p.timeChan <- p.timer.Passed():
-			default:
-			}
+		}
+		p.l.Unlock()
+		select {
+		case p.timeChan <- duration:
+		default:
 		}
 	}
 }
@@ -181,17 +191,18 @@ func (p *mpdPlayer) listen() {
 		select {
 		case <-p.close:
 			return
-		case p.curMusic = <-p.musicChan:
-			p.Pause()
+		case music := <-p.musicChan:
+			p.l.Lock()
+			p.curMusic = music
 			if p.timer != nil {
 				p.timer.SetPassed(0)
+				p.timer.Stop()
 			}
 			p.latestPlayTime = time.Now()
+			p.l.Unlock()
+			p.Pause()
 			// 重置
 			{
-				if p.timer != nil {
-					p.timer.Stop()
-				}
 				if p.curSongId != 0 {
 					err = p.client().DeleteID(p.curSongId)
 					mpdErrorHandler(err, true)
@@ -227,19 +238,24 @@ func (p *mpdPlayer) listen() {
 			mpdErrorHandler(err, false)
 
 			// 计时器
-			p.timer = timex.NewTimer(timex.Options{
+			p.l.Lock()
+			var timer *timex.Timer
+			timer = timex.NewTimer(timex.Options{
 				Duration:       8760 * time.Hour,
 				TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
 				OnRun:          func(started bool) {},
 				OnPause:        func() {},
 				OnDone:         func(stopped bool) {},
 				OnTick: func() {
+					// 闭包捕获 timer 自身而非 p.timer，避免与并发置 nil 竞争
 					select {
-					case p.timeChan <- p.timer.Passed():
+					case p.timeChan <- timer.Passed():
 					default:
 					}
 				},
 			})
+			p.timer = timer
+			p.l.Unlock()
 
 			err = p.client().PlayID(p.curSongId)
 			mpdErrorHandler(err, false)
@@ -272,7 +288,9 @@ func (p *mpdPlayer) watch() {
 }
 
 func (p *mpdPlayer) setState(state types.State) {
+	p.l.Lock()
 	p.state = state
+	p.l.Unlock()
 	select {
 	case p.stateChan <- state:
 	case <-time.After(time.Second * 2):
@@ -289,6 +307,8 @@ func (p *mpdPlayer) Play(music URLMusic) {
 }
 
 func (p *mpdPlayer) CurMusic() URLMusic {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.curMusic
 }
 
@@ -335,6 +355,8 @@ func (p *mpdPlayer) Seek(duration time.Duration) {
 }
 
 func (p *mpdPlayer) PassedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -342,6 +364,8 @@ func (p *mpdPlayer) PassedTime() time.Duration {
 }
 
 func (p *mpdPlayer) PlayedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -353,6 +377,8 @@ func (p *mpdPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *mpdPlayer) State() types.State {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.state
 }
 
@@ -383,6 +409,8 @@ func (p *mpdPlayer) DownVolume() {
 }
 
 func (p *mpdPlayer) Volume() int {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.volume
 }
 

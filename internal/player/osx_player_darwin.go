@@ -73,9 +73,13 @@ func (p *osxPlayer) listen() {
 		select {
 		case <-p.close:
 			return
-		case p.curMusic = <-p.musicChan:
+		case music := <-p.musicChan:
+			p.l.Lock()
+			p.curMusic = music
+			p.l.Unlock()
 			core.Autorelease(func() {
 				p.Pause()
+				p.l.Lock()
 				if p.timer != nil {
 					p.timer.SetPassed(0)
 				}
@@ -83,6 +87,7 @@ func (p *osxPlayer) listen() {
 					p.timer.Stop()
 					// p.timer = nil
 				}
+				p.l.Unlock()
 
 				item := avcore.AVPlayerItem_playerItemWithURL(core.NSURL_URLWithString(core.String(p.curMusic.URL)))
 				if p.spectrum != nil {
@@ -103,7 +108,9 @@ func (p *osxPlayer) listen() {
 					AddObserverSelectorNameObject(p.handler.ID, sel_handleFailed, core.String("AVPlayerItemFailedToPlayToEndTimeNotification"), p.player.CurrentItem().NSObject)
 
 				// 计时器
-				p.timer = timex.NewTimer(timex.Options{
+				p.l.Lock()
+				var timer *timex.Timer
+				timer = timex.NewTimer(timex.Options{
 					Duration:       8760 * time.Hour,
 					TickerInternal: p.renderInterval,
 					OnRun:          func(started bool) {},
@@ -121,11 +128,13 @@ func (p *osxPlayer) listen() {
 						select {
 						// osx_player存在一点延迟
 						case p.timeChan <- curTime + time.Millisecond*800:
-						// case p.timeChan <- p.timer.Passed():
+						// case p.timeChan <- timer.Passed():
 						default:
 						}
 					},
 				})
+				p.timer = timer
+				p.l.Unlock()
 				p.Resume()
 			})
 		}
@@ -150,6 +159,8 @@ func (p *osxPlayer) Play(music URLMusic) {
 }
 
 func (p *osxPlayer) CurMusic() URLMusic {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.curMusic
 }
 
@@ -215,6 +226,8 @@ func (p *osxPlayer) Seek(duration time.Duration) {
 }
 
 func (p *osxPlayer) PassedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -230,6 +243,8 @@ func (p *osxPlayer) PassedTime() time.Duration {
 }
 
 func (p *osxPlayer) PlayedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -241,6 +256,8 @@ func (p *osxPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *osxPlayer) State() types.State {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.state
 }
 
@@ -289,6 +306,8 @@ func (p *osxPlayer) DownVolume() {
 }
 
 func (p *osxPlayer) Volume() int {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.volume
 }
 
