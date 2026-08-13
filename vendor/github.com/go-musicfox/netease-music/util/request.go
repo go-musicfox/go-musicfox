@@ -342,7 +342,10 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 
 	resCode, err = jsonparser.GetFloat(resResp, "code")
 	if err != nil {
-		resCode = 200
+		// 响应没有 code 字段：风控/网关可能返回 HTML、空体或非 JSON 错误。
+		// 不能默认当 200——上层会拿到空结果且无任何错误提示，用户看到
+		// "歌单为空" 而不是 "请求被拦截"。
+		resCode = 520
 	}
 	return
 }
