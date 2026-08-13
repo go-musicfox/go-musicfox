@@ -212,7 +212,14 @@ func (p *mpvPlayer) handleNewSong(music URLMusic) {
 	cmd := fmt.Sprintf(`{ "command": ["loadfile", %s, "replace"] }`, jsonString(music.URL))
 	slog.Info("mpv handleNewSong: 发送loadfile命令", slog.String("cmd", cmd))
 	if err := p.sendCommand(cmd); err != nil {
-		slog.Error("mpv handleNewSong: loadfile失败", slogx.Error(err))
+		// loadfile 失败：mpv 仍播旧歌（或无声），但 curMusic 已更新、旧 timer
+		// 已停——UI 显示新歌、实际播旧歌，且无重试。置回旧状态，让 UI 感知
+		// 失败（状态监听会切下一首或提示），而不是显示一个不存在的"新歌"。
+		slog.Error("mpv handleNewSong: loadfile失败，恢复旧状态", slogx.Error(err))
+		p.mu.Lock()
+		p.timer = nil
+		p.mu.Unlock()
+		p.setState(types.Interrupted)
 		return
 	}
 	slog.Info("mpv handleNewSong: loadfile发送成功")
