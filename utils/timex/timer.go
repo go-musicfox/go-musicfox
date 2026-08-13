@@ -49,6 +49,15 @@ func (t *Timer) SetPassed(passed time.Duration) {
 	t.passed = passed
 }
 
+// Reset starts elapsed-time accounting for a new item without interrupting the ticker.
+func (t *Timer) Reset() {
+	t.l.Lock()
+	defer t.l.Unlock()
+	t.passed = 0
+	t.actualRuntime = 0
+	t.lastTick = time.Now()
+}
+
 // Remaining returns how much time is left to end.
 func (t *Timer) Remaining() time.Duration {
 	return t.options.Duration - t.Passed()

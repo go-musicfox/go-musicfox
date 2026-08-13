@@ -38,20 +38,24 @@ type beepPlayer struct {
 	curMusic URLMusic
 	timer    *timex.Timer
 
-	cacheReader     *os.File
-	cacheWriter     *os.File
-	cacheDownloaded bool
+	cacheReader      *os.File
+	cacheWriter      *os.File
+	cacheDownloaded  bool
+	gaplessCachePath string
 
 	curStreamer beep.StreamSeekCloser
 	curFormat   beep.Format
 
-	state      atomic.Uint32 // types.State, atomically read/written (setState runs under p.l; State() is called from the UI thread)
-	ctrl       *beep.Ctrl
-	volume     *effects.Volume
-	timeChan   chan time.Duration
-	stateChan  chan types.State
-	musicChan  chan URLMusic
-	httpClient *http.Client
+	state             atomic.Uint32 // types.State, atomically read/written (setState runs under p.l; State() is called from the UI thread)
+	ctrl              *beep.Ctrl
+	volume            *effects.Volume
+	timeChan          chan time.Duration
+	stateChan         chan types.State
+	musicChan         chan URLMusic
+	httpClient        *http.Client
+	gapless           *gaplessState
+	gaplessOutput     beep.Streamer
+	gaplessOutputRate beep.SampleRate
 
 	close chan struct{}
 
@@ -73,6 +77,9 @@ func NewBeepPlayer() *beepPlayer {
 		},
 		httpClient: &http.Client{},
 		close:      make(chan struct{}),
+	}
+	if configs.AppConfig.Player.Beep.Gapless {
+		p.gapless = newGaplessState()
 	}
 
 	if configs.AppConfig.Main.Visualizer.Enable || (configs.AppConfig.Main.Lyric.DesktopLyrics.SpectrumEnabled && desktopLyricsAvailable) {
@@ -173,7 +180,7 @@ func (p *beepPlayer) listen() {
 						lastStreamer := p.curStreamer
 						defer func() { _ = lastStreamer.Close() }()
 						pos := lastStreamer.Position()
-						if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, cacheReader); err != nil {
+						if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, cacheReader, p.curMusic.Duration); err != nil {
 							p.stopNoLock()
 							return
 						}
@@ -206,7 +213,7 @@ func (p *beepPlayer) listen() {
 				}
 			}
 
-			if p.curStreamer, p.curFormat, err = DecodeSong(p.curMusic.Type, p.cacheReader); err != nil {
+			if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, p.cacheReader, p.curMusic.Duration); err != nil {
 				p.stopNoLock()
 				goto nextLoop
 			}
@@ -261,6 +268,32 @@ func (p *beepPlayer) Play(music URLMusic) {
 	case p.musicChan <- music:
 	case <-timer.C:
 	}
+}
+
+func (p *beepPlayer) Preload(music URLMusic) {
+	if p.gapless != nil {
+		p.l.Lock()
+		fromID := p.curMusic.Id
+		outputRate := p.gaplessOutputRate
+		if outputRate == 0 {
+			outputRate = p.curFormat.SampleRate
+		}
+		p.l.Unlock()
+		p.gapless.preload(fromID, music, outputRate, p.httpClient, p.close)
+	}
+}
+
+func (p *beepPlayer) CancelPreload() {
+	if p.gapless != nil {
+		p.gapless.cancel()
+	}
+}
+
+func (p *beepPlayer) GaplessTransitionChan() <-chan GaplessTransition {
+	if p.gapless == nil {
+		return nil
+	}
+	return p.gapless.transitions
 }
 
 func (p *beepPlayer) CurMusic() URLMusic {
@@ -455,6 +488,7 @@ func (p *beepPlayer) Toggle() {
 func (p *beepPlayer) Close() {
 	p.l.Lock()
 	defer p.l.Unlock()
+	p.CancelPreload()
 
 	if p.timer != nil {
 		p.timer.Stop()
@@ -471,6 +505,7 @@ func (p *beepPlayer) Close() {
 }
 
 func (p *beepPlayer) reset() {
+	p.CancelPreload()
 	// 关闭旧计时器
 	if p.timer != nil {
 		p.timer.Stop()
@@ -481,12 +516,18 @@ func (p *beepPlayer) reset() {
 	if p.cacheWriter != nil {
 		_ = p.cacheWriter.Close()
 	}
+	if p.gaplessCachePath != "" {
+		_ = os.Remove(p.gaplessCachePath)
+		p.gaplessCachePath = ""
+	}
 	if p.curStreamer != nil {
 		_ = p.curStreamer.Close()
 		p.curStreamer = nil
 	}
 	p.cacheDownloaded = false
 	p.spectrumConsumer = nil
+	p.gaplessOutput = nil
+	p.gaplessOutputRate = 0
 	speaker.Clear()
 }
 
@@ -495,7 +536,23 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	defer p.l.Unlock()
 
 	pos := p.curStreamer.Position()
-	n, ok = p.curStreamer.Stream(samples)
+	current := beep.Streamer(p.curStreamer)
+	if p.gaplessOutput != nil {
+		current = p.gaplessOutput
+	}
+	var prepared *preparedGapless
+	n, ok, switched := streamAcrossBoundary(samples, current, func() beep.Streamer {
+		if p.gapless != nil {
+			prepared = p.gapless.takeIfReady(p.curMusic.Id)
+		}
+		if prepared == nil {
+			return nil
+		}
+		return prepared.stream
+	})
+	if switched {
+		p.finishGapless(prepared)
+	}
 
 	// Spectrum: feed PCM samples to analyzer
 	if p.spectrumConsumer != nil && n > 0 {
@@ -535,7 +592,40 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	return
 }
 
+func (p *beepPlayer) finishGapless(prepared *preparedGapless) {
+	old := p.curStreamer
+	playedTime := p.timer.ActualRuntime()
+	if p.cacheReader != nil {
+		_ = p.cacheReader.Close()
+	}
+	if p.cacheWriter != nil {
+		_ = p.cacheWriter.Close()
+		p.cacheWriter = nil
+	}
+	if p.gaplessCachePath != "" {
+		_ = os.Remove(p.gaplessCachePath)
+	}
+	p.curMusic = prepared.music
+	p.curStreamer = prepared.raw
+	p.curFormat = prepared.format
+	p.gaplessOutput = prepared.stream
+	p.cacheReader = prepared.file
+	p.gaplessCachePath = prepared.file.Name()
+	p.cacheDownloaded = true
+	p.timer.Reset()
+	if old != nil {
+		_ = old.Close()
+	}
+	select {
+	case p.gapless.transitions <- GaplessTransition{Music: prepared.music, PlayedTime: playedTime}:
+	default:
+	}
+}
+
 func (p *beepPlayer) resampleStreamer(old beep.SampleRate) beep.Streamer {
+	if p.gapless != nil {
+		p.gaplessOutputRate = old
+	}
 	if old == sampleRate {
 		return beep.StreamerFunc(p.streamer)
 	}
