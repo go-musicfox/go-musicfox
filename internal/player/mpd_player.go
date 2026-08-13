@@ -138,7 +138,12 @@ func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 	mpdErrorHandler(err, true)
 
 	state := stateMapping[status["state"]]
-	if subsystem == "player" && (state != types.Stopped || time.Since(p.latestPlayTime) >= time.Second*2) {
+	// latestPlayTime 由 listen 持锁写入，此处无锁读构成数据竞争（time.Time
+	// 是 24 字节结构，-race 必报）
+	p.l.Lock()
+	recentSwitch := time.Since(p.latestPlayTime) < time.Second*2
+	p.l.Unlock()
+	if subsystem == "player" && (state != types.Stopped || !recentSwitch) {
 		p.l.Lock()
 		switch state {
 		case types.Playing:
