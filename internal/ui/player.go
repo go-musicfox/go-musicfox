@@ -517,6 +517,8 @@ func (p *Player) Close() error {
 		p.stateHandler.Release()
 	}
 	p.Player.Close()
+	// 等待 in-flight 上报完成（否则退出时正在进行的 netease/lastfm 上报被丢弃）
+	p.reporter.Shutdown()
 	return nil
 }
 
