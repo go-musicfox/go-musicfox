@@ -51,7 +51,7 @@ Loop:
 	for {
 		codeType, playlists, hasMore = FetchUserPlaylists(userId, 30, offset)
 		if codeType != _struct.Success {
-			err = NetworkErr
+			err = mapResCodeToErr(codeType)
 			return
 		}
 		offset += len(playlists)
@@ -68,7 +68,7 @@ Loop:
 	}
 	codeType, songs = FetchSongsOfPlaylist(playlistId, getAll)
 	if codeType != _struct.Success {
-		err = NetworkErr
+		err = mapResCodeToErr(codeType)
 		return
 	}
 	return
