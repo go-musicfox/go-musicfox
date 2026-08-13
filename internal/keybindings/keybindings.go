@@ -4,6 +4,7 @@ package keybindings
 import (
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 )
 
@@ -276,6 +277,32 @@ func UserOperateToKeys() map[OperateType][]string {
 }
 
 // InitDefaults 生成操作绑定的 map
+// resolveDefaultConflicts 以确定顺序消解默认绑定内的重复键：按操作名倒序
+// 处理，后序操作先声明按键，先序操作让出（如 OpSearch 保留 "、"，
+// OpDeleteSongFromPlaylist 让出）。键的归属与启动次数无关，行为确定。
+func resolveDefaultConflicts(bindings map[OperateType][]string) {
+	ops := make([]OperateType, 0, len(bindings))
+	for op := range bindings {
+		ops = append(ops, op)
+	}
+	sort.Slice(ops, func(i, j int) bool { return ops[i] > ops[j] })
+
+	keyToOp := make(map[string]OperateType, 64)
+	for _, op := range ops {
+		keys := bindings[op]
+		valid := keys[:0]
+		for _, key := range keys {
+			if owner, found := keyToOp[key]; found {
+				slog.Debug(fmt.Sprintf("默认绑定按键 '%s' 同时属于 %s 与 %s，已从 %s 移除", key, owner, op, op))
+				continue
+			}
+			keyToOp[key] = op
+			valid = append(valid, key)
+		}
+		bindings[op] = valid
+	}
+}
+
 func InitDefaults(useDefault bool) map[OperateType][]string {
 	if !useDefault {
 		baseCopy := make(map[OperateType][]string, len(defaultBaseOperateToKeys))
@@ -458,6 +485,11 @@ func BuildEffectiveBindings(userBindings map[OperateType][]string, useDefault bo
 	for op, keys := range defaultBindings {
 		effectiveBindings[op] = append([]string(nil), keys...)
 	}
+
+	// 默认绑定自身可能存在重复键（如 "、" 同时属于 OpSearch 与
+	// OpDeleteSongFromPlaylist）。不消解的话，反向映射遍历 map 的随机顺序
+	// 会让胜出方每次启动都不同，且把破坏性操作绑定到中文输入法高频误触键上。
+	resolveDefaultConflicts(effectiveBindings)
 
 	if len(userBindings) == 0 {
 		return effectiveBindings
