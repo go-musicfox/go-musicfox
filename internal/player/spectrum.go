@@ -97,8 +97,7 @@ type PCMAnalyzer struct {
 	rawRingCount  atomic.Uint32
 	rawSampleRate atomic.Uint64 // math.Float64bits(sampleRate)
 
-	rawMu   sync.RWMutex
-	rawSnap RawSampleFrame // pre-allocated snapshot buffers
+	rawMu sync.RWMutex
 
 	window       [spectrumFFTSize]float64
 	fft          [spectrumFFTSize]complex128
@@ -131,8 +130,6 @@ func NewPCMAnalyzer(interval time.Duration) *PCMAnalyzer {
 		springL:  harmonica.NewSpring(interval.Seconds(), 9, 1),
 		springR:  harmonica.NewSpring(interval.Seconds(), 9, 1),
 	}
-	a.rawSnap.SamplesL = make([]float64, rawSampleBufferSize)
-	a.rawSnap.SamplesR = make([]float64, rawSampleBufferSize)
 	for i := range a.window {
 		a.window[i] = 0.5 * (1 - math.Cos(2*math.Pi*float64(i)/float64(spectrumFFTSize-1)))
 	}
@@ -585,6 +582,10 @@ func (a *PCMAnalyzer) Spectrum() SpectrumFrame {
 
 // RawSamples returns a linearized snapshot of the raw PCM ring buffer
 // for oscilloscope and vectorscope rendering.
+//
+// 返回的切片必须是新分配的：a.rawSnap 的切片是共享后备数组，直接返回
+// 其拷贝会让调用方持有的帧与下一次 RawSamples 的线性化互相改写（撕裂
+// 波形 + 数据竞争，desktop lyrics 会存帧供后续渲染）。
 func (a *PCMAnalyzer) RawSamples() RawSampleFrame {
 	pos := int(a.rawRingPos.Load())
 	count := int(a.rawRingCount.Load())
@@ -593,17 +594,20 @@ func (a *PCMAnalyzer) RawSamples() RawSampleFrame {
 	a.rawMu.Lock()
 	defer a.rawMu.Unlock()
 
-	snap := &a.rawSnap
+	frame := RawSampleFrame{
+		SamplesL:   make([]float64, count),
+		SamplesR:   make([]float64, count),
+		Count:      count,
+		SampleRate: sr,
+	}
 	// Linearize the circular buffer: oldest = count samples before pos.
 	start := (pos - count + rawSampleBufferSize) % rawSampleBufferSize
 	for i := 0; i < count; i++ {
 		idx := (start + i) % rawSampleBufferSize
-		snap.SamplesL[i] = a.rawRingL[idx]
-		snap.SamplesR[i] = a.rawRingR[idx]
+		frame.SamplesL[i] = a.rawRingL[idx]
+		frame.SamplesR[i] = a.rawRingR[idx]
 	}
-	snap.Count = count
-	snap.SampleRate = sr
-	return *snap
+	return frame
 }
 
 func (a *PCMAnalyzer) Close() {
