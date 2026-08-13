@@ -19,7 +19,20 @@ type Tracker struct {
 	onlyFirstArtist bool
 	pending         *storage.ScrobbleList // 待上报项
 	nowPlaying      storage.Scrobble      // 当前播放
+
+	// processing 保证同一时间至多一个上报 goroutine；consecutiveFailures
+	// 记录队头连续可重试失败次数，超过阈值后把队头挪到队尾，避免阻塞
+	// 其后所有条目
+	processing          bool
+	consecutiveFailures int
 }
+
+const (
+	// maxHeadRetries 是队头连续可重试失败的最大次数，超过后挪到队尾
+	maxHeadRetries = 3
+	// scrobbleRetryInterval 是可重试失败后的重试间隔
+	scrobbleRetryInterval = 5 * time.Second
+)
 
 func NewTracker(client *Client) *Tracker {
 	t := &Tracker{
@@ -35,23 +48,44 @@ func NewTracker(client *Client) *Tracker {
 }
 
 func (t *Tracker) processPendingScrobbles() {
-	t.l.Lock()
-	defer t.l.Unlock()
-	for len(t.pending.Scrobbles) > 0 {
-		if !t.Status() { // 随时终止
-			break
+	for {
+		t.l.Lock()
+		if !t.Status() || len(t.pending.Scrobbles) == 0 {
+			t.processing = false
+			t.l.Unlock()
+			return
 		}
-		if retry, err := t.scrobble(t.pending.Scrobbles[0]); err != nil {
-			slog.Error("上报出错，已暂停", slog.Any("error", err.Error()))
-			if !retry {
-				t.pending.Scrobbles = t.pending.Scrobbles[1:]
+
+		head := t.pending.Scrobbles[0]
+		retry, err := t.scrobble(head)
+		switch {
+		case err == nil:
+			t.pending.Scrobbles = t.pending.Scrobbles[1:]
+			t.consecutiveFailures = 0
+		case !retry:
+			// 永久失败（已过期/鉴权失效）：丢弃队头
+			slog.Error("上报失败，已丢弃", slog.Any("error", err.Error()))
+			t.pending.Scrobbles = t.pending.Scrobbles[1:]
+			t.consecutiveFailures = 0
+		case t.consecutiveFailures >= maxHeadRetries:
+			// 队头持续可重试失败：挪到队尾（每条记录自带时间戳，顺序不影响
+			// 正确性；14 天过期策略最终兜底），避免阻塞其后所有条目无限堆积
+			slog.Warn("队头连续失败，挪到队尾", slog.Any("error", err.Error()))
+			t.pending.Scrobbles = append(t.pending.Scrobbles[1:], head)
+			t.consecutiveFailures = 0
+		default:
+			t.consecutiveFailures++
+		}
+
+		if err != nil {
+			t.pending.Store() // 持久化进度
+			t.l.Unlock()
+			if retry {
+				time.Sleep(scrobbleRetryInterval)
 			}
-			break
+			continue
 		}
-		t.pending.Scrobbles = t.pending.Scrobbles[1:]
-	}
-	if len(t.pending.Scrobbles) > 0 {
-		t.pending.Store() // 更新本地存储队列
+		t.l.Unlock()
 	}
 }
 
@@ -105,13 +139,18 @@ func (t *Tracker) Scrobble(scrobble storage.Scrobble) {
 	if !t.Status() {
 		return
 	}
-	t.l.Lock()
-	defer t.l.Unlock()
 	if t.onlyFirstArtist {
 		scrobble.FilterArtist()
 	}
+	t.l.Lock()
 	t.pending.Add(scrobble)
-	go t.processPendingScrobbles()
+	processing := t.processing
+	t.processing = true
+	t.l.Unlock()
+	// 有界唤醒：同一时间至多一个上报 goroutine，避免每个 Scrobble spawn 一个
+	if !processing {
+		go t.processPendingScrobbles()
+	}
 }
 
 func (t *Tracker) Playing(scrobble storage.Scrobble) {
@@ -145,7 +184,17 @@ func (t *Tracker) Toggle() {
 		if t.nowPlaying.Track != "" {
 			go t.Playing(t.nowPlaying)
 		}
-		if len(t.pending.Scrobbles) > 0 {
+		t.l.Lock()
+		pending := len(t.pending.Scrobbles)
+		// processing 只在实际 spawn worker 时置位：若队列为空（常见）也置
+		// true，会钉死标志且无人复位，此后所有 Scrobble 都以为有 worker
+		// 接管而不再 spawn——条目永久躺在队列里不被上报
+		spawn := pending > 0 && !t.processing
+		if spawn {
+			t.processing = true
+		}
+		t.l.Unlock()
+		if spawn {
 			go t.processPendingScrobbles()
 		}
 	}
@@ -189,5 +238,7 @@ func (t *Tracker) IsScrobbleExpired(scrobble storage.Scrobble) bool {
 }
 
 func (m *Tracker) Count() int {
+	m.l.Lock()
+	defer m.l.Unlock()
 	return len(m.pending.Scrobbles)
 }

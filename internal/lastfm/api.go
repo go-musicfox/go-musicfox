@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"time"
 
 	"github.com/pkg/errors"
 	lastfmgo "github.com/shkh/lastfm-go"
@@ -153,13 +154,20 @@ func (c *Client) GetUserInfo(args map[string]any) (lastfmgo.UserGetInfo, error) 
 		_, err := c.errorHandle(errors.New("empty session key"))
 		return lastfmgo.UserGetInfo{}, err
 	}
-	userInfo, err := c.api.User.GetInfo(args)
-
-	var retry bool
-	if retry, err = c.errorHandle(err); retry {
-		return c.GetUserInfo(args)
+	// 与 updateNowPlaying 对齐：可重试错误（网络/last.fm 服务端错误）最多
+	// 重试 3 次并带指数退避，避免断网时无限递归重试——每 5s 一次的重试风暴
+	// 会触发 last.fm 限流封禁
+	const maxRetries = 3
+	var userInfo lastfmgo.UserGetInfo
+	for retries := 0; ; retries++ {
+		var err error
+		userInfo, err = c.api.User.GetInfo(args)
+		var retry bool
+		if retry, err = c.errorHandle(err); !retry || retries >= maxRetries {
+			return userInfo, err
+		}
+		time.Sleep(time.Duration(retries+1) * time.Second)
 	}
-	return userInfo, err
 }
 
 func (c *Client) Close() {
