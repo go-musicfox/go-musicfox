@@ -11,6 +11,10 @@ import (
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// maxPlaylistSearchPages 限制按名称查找歌单的最大翻页数，防止服务端异常
+// 时无限请求
+const maxPlaylistSearchPages = 100
+
 func FetchUserPlaylists(userId int64, limit int, offset int) (codeType _struct.ResCode, playlists []structs.Playlist, hasMore bool) {
 	userPlaylists := service.UserPlaylistService{
 		Uid:    strconv.FormatInt(userId, 10),
@@ -48,7 +52,7 @@ func FetchUserPlaylistByName(userId int64, playlistName string, getAll bool) (so
 	)
 	// 寻找歌单
 Loop:
-	for {
+	for page := 0; ; page++ {
 		codeType, playlists, hasMore = FetchUserPlaylists(userId, 30, offset)
 		if codeType != _struct.Success {
 			err = mapResCodeToErr(codeType)
@@ -61,7 +65,8 @@ Loop:
 				break Loop
 			}
 		}
-		if !hasMore {
+		if !hasMore || len(playlists) == 0 || page >= maxPlaylistSearchPages {
+			// len==0 防服务端异常持续返回"空列表+more=true"导致的死循环
 			err = Error{Msg: "未找到歌单:" + playlistName}
 			return
 		}
