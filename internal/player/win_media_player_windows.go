@@ -186,6 +186,7 @@ func (p *winMediaPlayer) listen() {
 		mediaSource  *core.MediaSource
 		playbackItem *playback.MediaPlaybackItem
 		reset        = func() {
+			p.l.Lock()
 			if p.timer != nil {
 				p.timer.SetPassed(0)
 			}
@@ -193,6 +194,7 @@ func (p *winMediaPlayer) listen() {
 				p.timer.Stop()
 				p.timer = nil
 			}
+			p.l.Unlock()
 			if uri != nil {
 				uri.Release()
 			}
@@ -209,16 +211,20 @@ func (p *winMediaPlayer) listen() {
 		case <-p.close:
 			reset()
 			return
-		case p.curMusic = <-p.musicChan:
+		case music := <-p.musicChan:
 			p.Pause()
 			reset()
 			p.failed.Store(false)
 
+			p.l.Lock()
+			p.curMusic = music
+			p.l.Unlock()
 			uri = Must1(foundation.UriCreateUri(p.curMusic.URL))
 			mediaSource = Must1(core.MediaSourceCreateFromUri(uri))
 			Must(p.player.SetSource((*playback.IMediaPlaybackSource)(unsafe.Pointer(mediaSource))))
 
 			// 计时器
+			p.l.Lock()
 			p.timer = NewTimer(Options{
 				Duration:       8760 * time.Hour,
 				TickerInternal: configs.AppConfig.Main.FrameRate.Interval(),
@@ -239,13 +245,16 @@ func (p *winMediaPlayer) listen() {
 					}
 				},
 			})
+			p.l.Unlock()
 			p.Resume()
 		}
 	}
 }
 
 func (p *winMediaPlayer) playbackEnded() bool {
+	p.l.Lock()
 	duration := p.curMusic.Duration
+	p.l.Unlock()
 	if duration <= 0 {
 		return false
 	}
@@ -253,7 +262,9 @@ func (p *winMediaPlayer) playbackEnded() bool {
 }
 
 func (p *winMediaPlayer) setState(state types.State) {
+	p.l.Lock()
 	p.state = state
+	p.l.Unlock()
 	select {
 	case p.stateChan <- state:
 	case <-time.After(time.Second * 2):
@@ -270,6 +281,8 @@ func (p *winMediaPlayer) Play(music URLMusic) {
 }
 
 func (p *winMediaPlayer) CurMusic() URLMusic {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.curMusic
 }
 
@@ -332,6 +345,8 @@ func (p *winMediaPlayer) Seek(duration time.Duration) {
 }
 
 func (p *winMediaPlayer) PassedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -347,6 +362,8 @@ func (p *winMediaPlayer) PassedTime() time.Duration {
 }
 
 func (p *winMediaPlayer) PlayedTime() time.Duration {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if p.timer == nil {
 		return 0
 	}
@@ -358,6 +375,8 @@ func (p *winMediaPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *winMediaPlayer) State() types.State {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.state
 }
 
@@ -392,6 +411,8 @@ func (p *winMediaPlayer) DownVolume() {
 }
 
 func (p *winMediaPlayer) Volume() int {
+	p.l.Lock()
+	defer p.l.Unlock()
 	return p.volume
 }
 
