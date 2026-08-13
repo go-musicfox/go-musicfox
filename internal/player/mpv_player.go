@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -32,15 +33,20 @@ type mpvPlayer struct {
 	ipcConn  net.Conn
 	ipcMutex sync.Mutex
 
-	curMusic URLMusic
+	// mu 保护 curMusic/timer/volume：handleNewSong（listen goroutine）写入，
+	// watch goroutine 停用 timer，UI 线程读取，三方并发无锁即数据竞争
+	//（-race 必报）；state 用原子读写（与 beep 引擎同一模式）。
+	mu sync.RWMutex
 
-	volume    int
-	state     types.State
+	curMusic URLMusic
+	timer    *timex.Timer
+	volume   int
+
+	state     atomic.Uint32
 	timeChan  chan time.Duration
 	stateChan chan types.State
 	closeCh   chan struct{}
 
-	timer     *timex.Timer  // 播放位置追踪（参考 mpdPlayer）
 	musicChan chan URLMusic // 异步切歌信号（参考 mpdPlayer）
 
 	watchOnce sync.Once // 确保 watch 只启动一次
@@ -76,13 +82,13 @@ func NewMpvPlayer(conf *MpvConfig) *mpvPlayer {
 	p := &mpvPlayer{
 		binPath:      binPath,
 		volume:       50,
-		state:        types.Stopped,
 		timeChan:     make(chan time.Duration, 1),
 		stateChan:    make(chan types.State, 10),
 		musicChan:    make(chan URLMusic, 1),
 		closeCh:      make(chan struct{}),
 		songLoadedCh: make(chan struct{}, 1),
 	}
+	p.state.Store(uint32(types.Stopped))
 
 	if err := p.startDaemon(); err != nil {
 		slog.Error("mpv daemon: 启动守护进程失败", slogx.Error(err))
@@ -191,6 +197,7 @@ func (p *mpvPlayer) handleNewSong(music URLMusic) {
 		slog.String("url", music.URL),
 	)
 
+	p.mu.Lock()
 	p.curMusic = music
 
 	// 停止旧 timer
@@ -199,6 +206,7 @@ func (p *mpvPlayer) handleNewSong(music URLMusic) {
 		p.timer.Stop()
 		p.timer = nil
 	}
+	p.mu.Unlock()
 
 	// 发送 loadfile 命令加载新歌曲
 	cmd := fmt.Sprintf(`{ "command": ["loadfile", %s, "replace"] }`, jsonString(music.URL))
@@ -229,19 +237,25 @@ func (p *mpvPlayer) handleNewSong(music URLMusic) {
 		slog.Duration("interval", interval),
 		slog.String("duration", "8760h"),
 	)
-	p.timer = timex.NewTimer(timex.Options{
+	p.mu.Lock()
+	var timer *timex.Timer
+	timer = timex.NewTimer(timex.Options{
 		Duration:       8760 * time.Hour,
 		TickerInternal: interval,
 		OnRun:          func(started bool) {},
 		OnPause:        func() {},
 		OnDone:         func(stopped bool) {},
 		OnTick: func() {
+			// 闭包捕获 timer 自身而非 p.timer：watch/Stop 并发置 nil 时
+			// 不会空指针，也不与 p.timer 的读写竞争
 			select {
-			case p.timeChan <- p.timer.Passed():
+			case p.timeChan <- timer.Passed():
 			default:
 			}
 		},
 	})
+	p.timer = timer
+	p.mu.Unlock()
 	p.Resume()
 
 	// go p.timer.Run()
@@ -355,6 +369,14 @@ func (p *mpvPlayer) watch() {
 			}
 			readCount++
 			msg := string(buf[:n])
+
+			// 事件连接与命令连接分离：end-file 事件可能在 handleNewSong 已切换
+			// 歌曲后才被读到（旧歌的迟到事件）。记录收到事件时的当前歌曲，
+			// 处理时若已切歌则视为旧歌残留，忽略之（否则会误杀新歌的 timer、
+			// 把用户刚选的新歌切走）。
+			p.mu.RLock()
+			songAtReceive := p.curMusic.Id
+			p.mu.RUnlock()
 			slog.Info("mpv watch: 收到IPC事件",
 				slog.Int("readCount", readCount),
 				slog.String("raw", msg),
@@ -377,12 +399,19 @@ func (p *mpvPlayer) watch() {
 
 				// 只有自然结束(eof)或出错才触发状态变更
 				if isEOF || isError {
+					p.mu.Lock()
+					if p.curMusic.Id != songAtReceive {
+						p.mu.Unlock()
+						slog.Info("mpv watch: 忽略旧歌的迟到end-file事件（已切歌）")
+						continue
+					}
 					slog.Info("mpv watch: 触发歌曲结束", slog.Bool("isEOF", isEOF))
 					if p.timer != nil {
 						slog.Debug("mpv watch: 停止timer")
 						p.timer.Stop()
 						p.timer = nil
 					}
+					p.mu.Unlock()
 					p.setState(types.Stopped)
 					slog.Info("mpv watch: 状态已设为Stopped")
 				} else {
@@ -571,39 +600,47 @@ func (p *mpvPlayer) Play(music URLMusic) {
 
 // CurMusic 获取当前播放的音乐
 func (p *mpvPlayer) CurMusic() URLMusic {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.curMusic
 }
 
 // Pause 暂停播放
 func (p *mpvPlayer) Pause() {
-	slog.Info("mpv Pause: 请求暂停", slog.Any("state", p.state))
-	if p.state != types.Playing {
+	state := types.State(p.state.Load())
+	slog.Info("mpv Pause: 请求暂停", slog.Any("state", state))
+	if state != types.Playing {
 		slog.Debug("mpv Pause: 当前状态非Playing，忽略")
 		return
 	}
 
 	_ = p.sendCommand(`{ "command": ["set_property", "pause", true] }`)
+	p.mu.Lock()
 	if p.timer != nil {
 		slog.Debug("mpv Pause: 暂停timer")
 		p.timer.Pause()
 	}
+	p.mu.Unlock()
 	p.setState(types.Paused)
 	slog.Info("mpv Pause: 完成")
 }
 
 // Resume 恢复播放
 func (p *mpvPlayer) Resume() {
-	slog.Info("mpv Resume: 请求恢复", slog.Any("state", p.state))
-	if p.state != types.Paused && p.state != types.Stopped {
+	state := types.State(p.state.Load())
+	slog.Info("mpv Resume: 请求恢复", slog.Any("state", state))
+	if state != types.Paused && state != types.Stopped {
 		slog.Debug("mpv Resume: 当前状态不可恢复，忽略")
 		return
 	}
 
 	_ = p.sendCommand(`{ "command": ["set_property", "pause", false] }`)
+	p.mu.Lock()
 	if p.timer != nil {
 		slog.Debug("mpv Resume: 恢复timer")
 		go p.timer.Run()
 	}
+	p.mu.Unlock()
 	p.setState(types.Playing)
 	slog.Info("mpv Resume: 完成")
 }
@@ -612,11 +649,13 @@ func (p *mpvPlayer) Resume() {
 func (p *mpvPlayer) Stop() {
 	slog.Info("mpv Stop: 请求停止")
 	_ = p.sendCommand(`{ "command": ["stop"] }`)
+	p.mu.Lock()
 	if p.timer != nil {
 		slog.Debug("mpv Stop: 停止timer")
 		p.timer.Stop()
 		p.timer = nil
 	}
+	p.mu.Unlock()
 	p.setState(types.Stopped)
 	slog.Info("mpv Stop: 完成")
 }
@@ -642,29 +681,35 @@ func (p *mpvPlayer) Seek(duration time.Duration) {
 		return
 	}
 
+	p.mu.Lock()
 	if p.timer != nil {
 		slog.Debug("mpv Seek: 更新timer位置")
 		p.timer.SetPassed(duration)
 	}
+	p.mu.Unlock()
 	slog.Info("mpv Seek: 完成")
 }
 
 // PassedTime 获取已播放时间（基于 timer，不轮询 mpv）
 func (p *mpvPlayer) PassedTime() time.Duration {
-	pt := time.Duration(0)
+	p.mu.RLock()
+	var pt time.Duration
 	if p.timer != nil {
 		pt = p.timer.Passed()
 	}
+	p.mu.RUnlock()
 	slog.Debug("mpv PassedTime", slog.Duration("passed", pt))
 	return pt
 }
 
 // PlayedTime 获取从播放开始到现在的时间
 func (p *mpvPlayer) PlayedTime() time.Duration {
-	art := time.Duration(0)
+	p.mu.RLock()
+	var art time.Duration
 	if p.timer != nil {
 		art = p.timer.ActualRuntime()
 	}
+	p.mu.RUnlock()
 	slog.Debug("mpv PlayedTime", slog.Duration("actualRuntime", art))
 	return art
 }
@@ -676,7 +721,7 @@ func (p *mpvPlayer) TimeChan() <-chan time.Duration {
 
 // State 获取当前状态
 func (p *mpvPlayer) State() types.State {
-	return p.state
+	return types.State(p.state.Load())
 }
 
 // StateChan 获取状态更新通道
@@ -687,7 +732,7 @@ func (p *mpvPlayer) StateChan() <-chan types.State {
 // setState 设置状态并通知
 func (p *mpvPlayer) setState(state types.State) {
 	slog.Info("mpv setState: 状态变更", slog.Any("state", state))
-	p.state = state
+	p.state.Store(uint32(state))
 	p.sendStateToChan(state)
 }
 
@@ -700,6 +745,8 @@ func (p *mpvPlayer) sendStateToChan(state types.State) {
 
 // Volume 获取当前音量
 func (p *mpvPlayer) Volume() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.volume
 }
 
@@ -713,30 +760,38 @@ func (p *mpvPlayer) SetVolume(volume int) {
 		volume = 0
 	}
 
+	p.mu.Lock()
 	p.volume = volume
+	p.mu.Unlock()
 	_ = p.sendCommand(fmt.Sprintf(`{ "command": ["set_property", "volume", %d] }`, volume))
 }
 
 // UpVolume 增加音量
 func (p *mpvPlayer) UpVolume() {
 	slog.Debug("mpv UpVolume")
+	p.mu.Lock()
 	if p.volume+5 >= 100 {
 		p.volume = 100
 	} else {
 		p.volume += 5
 	}
-	_ = p.sendCommand(fmt.Sprintf(`{ "command": ["set_property", "volume", %d] }`, p.volume))
+	v := p.volume
+	p.mu.Unlock()
+	_ = p.sendCommand(fmt.Sprintf(`{ "command": ["set_property", "volume", %d] }`, v))
 }
 
 // DownVolume 降低音量
 func (p *mpvPlayer) DownVolume() {
 	slog.Debug("mpv DownVolume")
+	p.mu.Lock()
 	if p.volume-5 <= 0 {
 		p.volume = 0
 	} else {
 		p.volume -= 5
 	}
-	_ = p.sendCommand(fmt.Sprintf(`{ "command": ["set_property", "volume", %d] }`, p.volume))
+	v := p.volume
+	p.mu.Unlock()
+	_ = p.sendCommand(fmt.Sprintf(`{ "command": ["set_property", "volume", %d] }`, v))
 }
 
 // Close 关闭播放器，发送 quit 命令并等待 mpv 退出
@@ -744,11 +799,13 @@ func (p *mpvPlayer) Close() {
 	slog.Info("mpv Close: 开始关闭播放器")
 
 	// 停止 timer
+	p.mu.Lock()
 	if p.timer != nil {
 		slog.Debug("mpv Close: 停止timer")
 		p.timer.Stop()
 		p.timer = nil
 	}
+	p.mu.Unlock()
 
 	// 关闭信号通道，通知 listen/watch 退出
 	if p.closeCh != nil {
