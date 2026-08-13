@@ -42,9 +42,9 @@ func FetchPlayableInfo(songID int64, quality service.SongQualityLevel) (Playable
 		// 保留底层错误：网络失败时 response 可能为空，errors.New(string(nil))
 		// 会得到空字符串错误，播放失败时用户看到空白报错
 		if err != nil {
-			return PlayableInfo{}, fmt.Errorf("failed to fetch song url (code %d): %w", code, err)
+			return PlayableInfo{}, fmt.Errorf("failed to fetch song url (code %v): %w", code, err)
 		}
-		return PlayableInfo{}, fmt.Errorf("failed to fetch song url (code %d): %s", code, string(response))
+		return PlayableInfo{}, fmt.Errorf("failed to fetch song url (code %v): %s", code, string(response))
 	}
 
 	var (

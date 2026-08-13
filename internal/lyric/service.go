@@ -211,7 +211,7 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 				s.transFragments = trans.fragments
 				slog.Debug("ignoring lyric translation parsing error", "error", err)
 			} else {
-				slog.Error("failed to parse lyric translationd", "error", err)
+				slog.Error("failed to parse lyric translation", "error", err)
 			}
 		}
 	}
