@@ -518,7 +518,6 @@ func (p *beepPlayer) reset() {
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	p.l.Lock()
-	defer p.l.Unlock()
 
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
@@ -536,28 +535,45 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 
 	err := p.curStreamer.Err()
 	if err == nil && (ok || p.cacheDownloaded) {
+		p.l.Unlock()
 		return
 	}
 	p.pausedNoLock()
 
+	// 重试期间不持 p.l：拉取路径已持有 speaker 锁，若再持 p.l 睡眠，会同时
+	// 冻结音频管线与 UI（PassedTime/CurMusic 均需 p.l），最长 20 秒。
+	myStreamer := p.curStreamer
+	isFlac := p.curMusic.Type == Flac
+	p.l.Unlock()
+
 	retry := 4
 	for !ok && retry > 0 {
-		if p.curMusic.Type == Flac {
-			if err = p.curStreamer.Seek(pos); err != nil {
+		if isFlac {
+			if err = myStreamer.Seek(pos); err != nil {
 				return
 			}
 		}
-		errorx.ResetError(p.curStreamer)
+		errorx.ResetError(myStreamer)
 
 		select {
 		case <-time.After(time.Second * 5):
-			n, ok = p.curStreamer.Stream(samples)
+			p.l.Lock()
+			// 等待期间可能已切歌：旧 streamer 已被 reset 关闭，直接放弃重试
+			if p.curStreamer != myStreamer {
+				p.l.Unlock()
+				return
+			}
+			n, ok = myStreamer.Stream(samples)
+			err = myStreamer.Err()
+			p.l.Unlock()
 		case <-p.close:
 			return
 		}
 		retry--
 	}
+	p.l.Lock()
 	p.resumeNoLock()
+	p.l.Unlock()
 	return
 }
 
