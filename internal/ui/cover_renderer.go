@@ -198,11 +198,19 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	// Position cover purely based on lyrics: align the cover's bottom edge to the
-	// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
-	// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
-	// compensating for the Kitty image not filling the bottom terminal cell exactly.
-	coverStartRow := lyricStartRow + lyricLines - r.rows/2 - 1
+	var coverStartRow int
+	if lyricLines > 0 {
+		// Position cover purely based on lyrics: align the cover's bottom edge to the
+		// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
+		// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
+		// compensating for the Kitty image not filling the bottom terminal cell exactly.
+		coverStartRow = lyricStartRow + lyricLines - r.rows/2 - 1 + CoverBottomAlignOffset
+	} else {
+		// 无歌词（歌词关闭或窗口过矮）：GetLyricPosition 返回 (0,0)，按歌词公式
+		// 会算出负行号，writeToTerminal 拼出 \x1b[-N;M H 这类非法 CSI，终端行为
+		// 未定义、封面与菜单标题重叠。改为从窗口底部向上定位，预留底部边距。
+		coverStartRow = windowHeight - FixedTopBottomRows - CoverEndRowMargin - r.rows
+	}
 
 	// If cover can't fit at all, skip rendering
 	if r.rows > windowHeight-FixedTopBottomRows {
