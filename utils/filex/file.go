@@ -32,7 +32,10 @@ func CopyFileFromEmbed(src, dst string) error {
 	}
 	defer srcfd.Close()
 
-	if dstfd, err = os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0766); err != nil {
+	// 0600：该文件（config.toml）会写入 neteaseCookie、lastfm key/secret 等
+	// 凭据，0766 在默认 umask 下实际为 0744（group/other 可读），同机其他
+	// 用户可读登录 cookie；与 bbolt 数据库（0600）保持一致
+	if dstfd, err = os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600); err != nil {
 		return err
 	}
 	defer dstfd.Close()
@@ -49,7 +52,7 @@ func CopyDirFromEmbed(src, dst string) error {
 		fds []fs.DirEntry
 	)
 
-	if err = os.MkdirAll(dst, 0766); err != nil {
+	if err = os.MkdirAll(dst, 0700); err != nil {
 		return err
 	}
 	if fds, err = embedDir.ReadDir(src); err != nil {

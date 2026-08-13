@@ -249,9 +249,17 @@ func (req *Request) Proxy(proxyurl string) {
 		log.Println("Set proxy failed")
 		return
 	}
+	// 仅在代理自身为 TLS（https://，通常自带自签 CA 做 MITM）时跳过证书校验；
+	// 普通 http:// 代理只是隧道，端到端到目标站的 TLS 必须保持校验——否则配置
+	// UNM 代理后到 music.163.com 的全部流量（含登录 cookie）可被任意代理
+	// 透明 MITM（域名正确也无感知）。
+	var tlsConfig *tls.Config
+	if urlproxy.Scheme == "https" {
+		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 	req.Client.Transport = &http.Transport{
 		Proxy:           http.ProxyURL(urlproxy),
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: tlsConfig,
 	}
 
 }
