@@ -89,19 +89,16 @@ func NewBeepPlayer() *beepPlayer {
 // listen 开始监听
 func (p *beepPlayer) listen() {
 	var (
-		done       = make(chan struct{})
+		// done 是当前歌曲的结束信号通道。每首歌创建独立的缓冲通道：
+		// 旧歌残留的结束信号不会误停新歌；缓冲 1 + 非阻塞发送保证拉取路径
+		// （持有 speaker 全局锁）绝不会阻塞在发送上。
+		done       chan struct{}
 		resp       *http.Response
 		reader     io.ReadCloser
 		err        error
 		ctx        context.Context
 		cancel     context.CancelFunc
 		prevSongId int64
-		doneHandle = func() {
-			select {
-			case done <- struct{}{}:
-			case <-p.close:
-			}
-		}
 	)
 
 	if err = speaker.Init(sampleRate, sampleRate.N(time.Millisecond*200)); err != nil {
@@ -119,6 +116,7 @@ func (p *beepPlayer) listen() {
 		case <-done:
 			p.Stop()
 		case music := <-p.musicChan:
+			started := false
 			p.l.Lock()
 			// curMusic is read by CurMusic() (UI thread) under p.l, so assign
 			// it while holding the lock too.
@@ -133,6 +131,16 @@ func (p *beepPlayer) listen() {
 			}
 			p.reset()
 			ctx, cancel = context.WithCancel(context.Background())
+
+			// 每首歌独立的结束信号通道（见 listen 顶部注释）
+			curDone := make(chan struct{}, 1)
+			done = curDone
+			doneHandle := func() {
+				select {
+				case curDone <- struct{}{}:
+				default:
+				}
+			}
 
 			if prevSongId != p.curMusic.Id || !filex.FileOrDirExists(cacheFile) {
 				// FIXME: 先这样处理，暂时没想到更好的办法
@@ -219,7 +227,6 @@ func (p *beepPlayer) listen() {
 
 			p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 			p.volume.Streamer = p.ctrl
-			speaker.Play(p.volume)
 
 			// 计时器
 			p.timer = timex.NewTimer(timex.Options{
@@ -246,9 +253,17 @@ func (p *beepPlayer) listen() {
 			})
 			p.resumeNoLock()
 			prevSongId = p.curMusic.Id
+			started = true
 
 		nextLoop:
 			p.l.Unlock()
+			// speaker.* 必须在不持有 p.l 时调用：拉取路径持 speaker 锁后再取
+			// p.l，此处反向取锁会与拉取互等造成死锁。失败路径同样要 Clear，
+			// 否则 speaker 仍拉取已被关闭的旧链，streamer 会空指针。
+			speaker.Clear()
+			if started {
+				speaker.Play(p.volume)
+			}
 		}
 	}
 }
@@ -454,7 +469,6 @@ func (p *beepPlayer) Toggle() {
 // Close 关闭
 func (p *beepPlayer) Close() {
 	p.l.Lock()
-	defer p.l.Unlock()
 
 	if p.timer != nil {
 		p.timer.Stop()
@@ -466,6 +480,9 @@ func (p *beepPlayer) Close() {
 	if p.spectrum != nil {
 		p.spectrum.Close()
 	}
+	p.l.Unlock()
+
+	// speaker.* 必须在 p.l 外调用（锁序纪律：拉取路径持 speaker 锁后再取 p.l）
 	speaker.Clear()
 	speaker.Close()
 }
@@ -487,7 +504,8 @@ func (p *beepPlayer) reset() {
 	}
 	p.cacheDownloaded = false
 	p.spectrumConsumer = nil
-	speaker.Clear()
+	// 注意：不在此处调用 speaker.Clear()——speaker.* 必须在 p.l 外调用
+	// （锁序纪律见 listen 的 nextLoop 处），调用方负责。
 }
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
