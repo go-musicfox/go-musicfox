@@ -168,12 +168,19 @@ func (c *webviewLoginController) runGTK() {
 		cookieManager uintptr
 		webView       uintptr
 	)
+	// webkit_web_view_new() 返回 floating reference（WebKitWebView 派生自
+	// GInitiallyUnowned）。必须立即 g_object_ref_sink 接管所有权：GtkWindowAddChild
+	// 对非 floating 对象只增计数，于是引用计数变为「我们 1 + 窗口 1」；defer unref
+	// 归还我们的 1，窗口销毁时再归零。若不对 floating 引用做 sink，AddChild 会把它
+	// 吞掉（窗口成为唯一持有者），窗口销毁时 webview 即被释放，随后的 defer unref
+	// 将作用在已释放内存上（use-after-free）。
 	if usesLegacyWebKitAPI(webkitgtk.WebKitGTKVersion()) {
 		// WebKitGTK 4.1 and 4.0 use the WebContext/CookieManager API; 4.1
 		// differs from 4.0 only in its libsoup ABI.
 		ctx := webkitgtk.WebContextGetDefault()
 		cookieManager = webkitgtk.WebContextGetCookieManager(ctx)
 		webView = webkitgtk.WebViewNew()
+		webkitgtk.GObjectRefSink(webView)
 	} else {
 		session = webkitgtk.NetworkSessionNewEphemeral()
 		// Release our application-side references (transfer-full from the
@@ -185,6 +192,7 @@ func (c *webviewLoginController) runGTK() {
 		defer webkitgtk.GObjectUnref(session)
 		cookieManager = webkitgtk.NetworkSessionGetCookieManager(session)
 		webView = webkitgtk.WebViewNewWithNetworkSession(session)
+		webkitgtk.GObjectRefSink(webView)
 	}
 	defer webkitgtk.GObjectUnref(webView)
 	window := webkitgtk.GtkWindowNew()

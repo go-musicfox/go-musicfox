@@ -96,6 +96,7 @@ var (
 var (
 	gSignalConnectData func(instance uintptr, detailedSignal *byte, cHandler, data, destroyData uintptr, connectFlags int32) uint
 	gObjectUnref       func(object uintptr)
+	gObjectRefSink     func(object uintptr) uintptr
 	gTimeoutAdd        func(interval uint32, function, data uintptr) uint
 	gListLength        func(list uintptr) uint
 	gListNthData       func(list uintptr, n uint) uintptr
@@ -126,6 +127,7 @@ func init() {
 		dlopen("libgobject-2.0.so.0", func(lib uintptr) {
 			registerSymbol(&gSignalConnectData, lib, "g_signal_connect_data")
 			registerSymbol(&gObjectUnref, lib, "g_object_unref")
+			registerSymbol(&gObjectRefSink, lib, "g_object_ref_sink")
 			registerSymbol(&gObjectNew, lib, "g_object_new")
 		}) &&
 			dlopen("libglib-2.0.so.0", func(lib uintptr) {
@@ -533,6 +535,17 @@ func GObjectUnref(object uintptr) {
 		return
 	}
 	gObjectUnref(object)
+}
+
+// GObjectRefSink 将 floating reference 变为普通引用（g_object_ref_sink）：
+// 对 floating 对象仅取消 floating 标志不增计数，对非 floating 对象增计数。
+// 用于接管构造函数的 floating 所有权（如 webkit_web_view_new），使后续
+// defer unref 与容器持有的引用精确配对。
+func GObjectRefSink(object uintptr) {
+	if gObjectRefSink == nil {
+		return
+	}
+	gObjectRefSink(object)
 }
 
 func GTimeoutAdd(interval uint32, function, data uintptr) uint {
