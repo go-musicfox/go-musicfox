@@ -1068,7 +1068,8 @@ func (m *Main) backButtonIcon() string {
 	return ss.BackButton.Render("←")
 }
 
-// menuTitleViewContent renders the menu title content string, left-aligned
+// menuTitleViewContent renders the menu title content string.
+// In centerEverything mode, the title is centered; otherwise it's left-aligned
 // at menuStartColumn to match the menu items' horizontal position.
 // The loading tips should be injected by the caller (see View).
 func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
@@ -1079,18 +1080,43 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 	startCol := m.menuStartColumn
 	ss := style.CurrentStyleSet()
 
-	// When in a submenu, show a back button to the left of the title.
-	// The back button is positioned at startCol - backButtonWidth so the
-	// title itself remains at its original startCol position.
 	showBack := m.menuStack.Len() > 0
-
-	maxLen := windowWidth - startCol
 	realString := menuTitle.OriginString()
 	formatString := menuTitle.String()
 
+	// In centerEverything mode, center the title without fixed width padding
+	if m.options.CenterEverything {
+		var titleText string
+		if lipgloss.Width(realString) > windowWidth-4 {
+			tmp := *menuTitle
+			titleLen := lipgloss.Width(tmp.Title)
+			subTitleLen := lipgloss.Width(tmp.Subtitle)
+			maxTitleLen := windowWidth - 4
+			if titleLen >= maxTitleLen-1 {
+				tmp.Title = lipgloss.NewStyle().MaxWidth(maxTitleLen - 1).Render(tmp.Title)
+				tmp.Subtitle = ""
+			} else if subTitleLen >= maxTitleLen-titleLen-1 {
+				tmp.Subtitle = lipgloss.NewStyle().MaxWidth(maxTitleLen - titleLen - 1).Render(tmp.Subtitle)
+			}
+			titleText = tmp.String()
+		} else {
+			titleText = formatString
+		}
+		styledTitle := ss.MenuTitle.Render(titleText)
+
+		if showBack {
+			backIcon := m.backButtonIcon()
+			sep := ss.AppBackground.Render(" ")
+			content := backIcon + sep + styledTitle
+			return layout.Place(windowWidth, 1, lipgloss.Center, lipgloss.Top, content)
+		}
+		return layout.Place(windowWidth, 1, lipgloss.Center, lipgloss.Top, styledTitle)
+	}
+
+	// Default left-aligned mode
+	maxLen := windowWidth - startCol
 	var titleText string
 	if lipgloss.Width(realString) > maxLen {
-		// Truncate long titles: prioritize title, clip subtitle if needed
 		tmp := *menuTitle
 		titleLen := lipgloss.Width(tmp.Title)
 		subTitleLen := lipgloss.Width(tmp.Subtitle)
@@ -1105,15 +1131,9 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		titleText = lipgloss.NewStyle().Inherit(ss.AppBackground).Width(maxLen).Render(formatString)
 	}
 
-	// Style the title independently — back button must NOT affect its color.
 	styledTitle := ss.MenuTitle.Render(titleText)
 
 	if showBack {
-		// Back button at startCol - backButtonWidth, title unchanged at startCol.
-		// Layout: [padding]←[space][title...]
-		// backIcon and styledTitle are pre-rendered and emit their own reset
-		// sequences, which clear the outer AppBackground mid-line; paint the
-		// separating space explicitly so it never reveals content beneath the TUI.
 		backIcon := m.backButtonIcon()
 		padding := startCol - backButtonWidth
 		if padding < 0 {
@@ -1123,7 +1143,6 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		return lipgloss.NewStyle().Inherit(ss.AppBackground).Render(strings.Repeat(" ", padding) + backIcon + sep + styledTitle)
 	}
 
-	// No back button: original padding + title
 	if startCol > 0 {
 		styledTitle = lipgloss.NewStyle().Inherit(ss.AppBackground).PaddingLeft(startCol).Render(styledTitle)
 	}
@@ -1152,9 +1171,15 @@ func (m *Main) forceEntryLength(item *MenuItem, targetLength int) string {
 	titleWidth := layout.Width(item.Title)
 	minSubtitleWidth := 5
 	if titleWidth >= targetLength-minSubtitleWidth {
+		title := item.Title
+		// Truncate overlong titles to avoid lipgloss wrapping to a second line.
+		if titleWidth > targetLength {
+			title = truncateVisualWidth(title, targetLength)
+		}
 		return lipgloss.NewStyle().
 			Width(targetLength).
-			Render(item.Title)
+			MaxWidth(targetLength).
+			Render(title)
 	}
 	// Case 2:
 	// Enough space for everything.
@@ -1189,19 +1214,59 @@ func (m *Main) formatEntry(item *MenuItem, index int, targetLength int) string {
 	if item == nil {
 		return lipgloss.NewStyle().Inherit(style.CurrentStyleSet().MenuItem).Width(targetLength).Render("")
 	}
-	var fmtStart string
-	if !m.inSearching && index == m.selectedIndex {
-		fmtStart = " => "
-	} else {
-		fmtStart = "    "
+	ss := style.CurrentStyleSet()
+	selected := m.isSelected(index)
+
+	fmtStart := "    "
+	if selected {
+		// No leading space: leftSep(1) + "=> "(3) == unselected "    "(4), so the
+		// index column aligns between selected and unselected rows.
+		fmtStart = "=> "
 	}
-	titleLength := targetLength - m.getMaxIndexWidth() - 6
+
+	// Reserve the left separator in the content budget. The right separator
+	// replaces trailing padding when available, or gets a dedicated cell.
+	var leftSep, rightSep string
+	leftSepWidth, rightSepWidth := 0, 0
+	if selected {
+		leftSep = ss.MenuSelectedSepLeft
+		if leftSep == "" {
+			leftSep = " "
+		}
+		rightSep = ss.MenuSelectedSepRight
+		if rightSep == "" {
+			rightSep = " "
+		}
+		leftSepWidth = lipgloss.Width(leftSep)
+		rightSepWidth = lipgloss.Width(rightSep)
+	}
+
+	// Overhead before the title: prefix width + ". " (2) + the left
+	// separator. The right separator uses trailing padding or an extra cell.
+	titleLength := targetLength - m.getMaxIndexWidth() - lipgloss.Width(fmtStart) - 2 - leftSepWidth
 	songEntry := fmt.Sprintf(
 		fmt.Sprintf("%s%%%dd. %%s", fmtStart, m.getMaxIndexWidth()),
 		index,
 		m.forceEntryLength(item, titleLength))
-	if m.isSelected(index) {
-		return style.CurrentStyleSet().SelectedItem.Render(songEntry)
+	if selected {
+		// Arc glyphs: foreground = selected background, background = surrounding
+		// (menu) background, forming rounded caps against the row's fill cells.
+		selBg := ss.SelectedItem.GetBackground()
+		sepBg := ss.MenuItem.GetBackground()
+		sepStyle := lipgloss.NewStyle().Foreground(selBg).Background(sepBg)
+		rightSepView := ""
+		if rightSepWidth > 0 {
+			plainEntry := ansi.Strip(songEntry)
+			trimmedEntry := strings.TrimRightFunc(plainEntry, unicode.IsSpace)
+			trailingSpaceWidth := runewidth.StringWidth(plainEntry) - runewidth.StringWidth(trimmedEntry)
+			if trailingSpaceWidth >= rightSepWidth {
+				songEntry = ansi.Truncate(songEntry, ansi.StringWidth(songEntry)-rightSepWidth, "")
+			}
+			rightSepView = sepStyle.Render(rightSep)
+		}
+		return sepStyle.Render(leftSep) +
+			ss.SelectedItem.Render(songEntry) +
+			rightSepView
 	}
 	return songEntry
 }
@@ -1228,18 +1293,39 @@ func (m *Main) centeredMenuView(a *App, lines int) string {
 
 	entryLength := m.centeredEntryLength(a, titleLengths)
 
+	// Anchor every row using the nominal entry width. An overflowing selected
+	// item may append a dedicated right-separator cell; centering its actual
+	// width would shift the title one column left.
+	rowStartColumn := max((a.windowWidth-entryLength*m.getNumColumns())/2, 0)
+	rowStyle := lipgloss.NewStyle().Width(a.windowWidth)
+
 	var rows []string
 	for i := 0; i < lines; i++ {
 		index := i * m.getNumColumns()
 		menuIndex := m.getPageStartIndex() + index
-		left := m.formatEntry(allSongs[index], menuIndex, entryLength)
+		row := m.formatEntry(allSongs[index], menuIndex, entryLength)
 		if m.isDualColumn {
 			right := m.formatEntry(allSongs[index+1], menuIndex+1, entryLength)
-			row := layout.JoinHorizontal(lipgloss.Center, left, right)
-			rows = append(rows, lipgloss.NewStyle().Width(a.windowWidth).Align(lipgloss.Center).Render(row))
-		} else {
-			rows = append(rows, lipgloss.NewStyle().Width(a.windowWidth).Align(lipgloss.Center).Render(left))
+			if overflow := ansi.StringWidth(row) - entryLength; overflow > 0 {
+				// A left entry can grow for its dedicated right separator. Consume
+				// that growth from the right entry's structural leading spaces so
+				// the second column keeps its nominal start position.
+				plainRight := ansi.Strip(right)
+				leadingSpaceWidth := 0
+				for _, r := range plainRight {
+					if !unicode.IsSpace(r) {
+						break
+					}
+					leadingSpaceWidth += runewidth.RuneWidth(r)
+				}
+				trimWidth := min(overflow, leadingSpaceWidth)
+				if trimWidth > 0 {
+					right = ansi.Cut(right, trimWidth, ansi.StringWidth(right))
+				}
+			}
+			row = layout.JoinHorizontal(lipgloss.Center, row, right)
 		}
+		rows = append(rows, rowStyle.Render(strings.Repeat(" ", rowStartColumn)+row))
 	}
 	return layout.JoinVertical(lipgloss.Left, rows...)
 }
@@ -1677,15 +1763,36 @@ func (m *Main) menuTitleY() int {
 
 // isOverBackButton checks if the given screen position falls within the back
 // button area shown before the menu title when inside a submenu.
-func (m *Main) isOverBackButton(x, y int, _ *App) bool {
+func (m *Main) isOverBackButton(x, y int, a *App) bool {
 	if m.menuStack.Len() <= 0 {
 		return false
 	}
 	if y != m.menuTitleY() {
 		return false
 	}
-	// The back icon "←" is rendered at column (menuStartColumn - backButtonWidth).
-	iconCol := m.menuStartColumn - backButtonWidth
+
+	var iconCol int
+	if m.options.CenterEverything {
+		// In centerEverything mode, the back button and title are centered together.
+		titleWidth := lipgloss.Width(m.menuTitle.String())
+		windowWidth := a.WindowWidth()
+
+		// Account for truncation
+		if titleWidth > windowWidth-4 {
+			titleWidth = windowWidth - 4
+		}
+
+		// Total content width: back icon (2 cols) + separator (1 col) + title
+		contentWidth := backButtonWidth + 1 + titleWidth
+
+		// Content starts at the centered position
+		contentStartCol := (windowWidth - contentWidth) / 2
+		iconCol = contentStartCol
+	} else {
+		// Default left-aligned mode
+		iconCol = m.menuStartColumn - backButtonWidth
+	}
+
 	return iconCol >= 0 && x >= iconCol && x < iconCol+backButtonWidth
 }
 

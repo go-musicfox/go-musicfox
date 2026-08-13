@@ -20,6 +20,11 @@ charm.land/glamour/v2/styles
 ## explicit; go 1.25.0
 charm.land/lipgloss/v2
 charm.land/lipgloss/v2/table
+# github.com/13thgoutham/go-webview2 v1.0.25
+## explicit; go 1.20
+github.com/13thgoutham/go-webview2/pkg/combridge
+github.com/13thgoutham/go-webview2/pkg/webview2
+github.com/13thgoutham/go-webview2/webviewloader
 # github.com/BurntSushi/toml v1.6.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml
@@ -38,7 +43,11 @@ github.com/alecthomas/chroma/v2/formatters/svg
 github.com/alecthomas/chroma/v2/lexers
 github.com/alecthomas/chroma/v2/quick
 github.com/alecthomas/chroma/v2/styles
-# github.com/anhoder/foxful-cli v1.1.2
+# github.com/andybalholm/brotli v1.2.0
+## explicit; go 1.22
+github.com/andybalholm/brotli
+github.com/andybalholm/brotli/matchfinder
+# github.com/anhoder/foxful-cli v1.1.4
 ## explicit; go 1.25.8
 github.com/anhoder/foxful-cli/layout
 github.com/anhoder/foxful-cli/model
@@ -179,6 +188,9 @@ github.com/go-viper/mapstructure/v2/internal/errors
 github.com/godbus/dbus/v5
 github.com/godbus/dbus/v5/introspect
 github.com/godbus/dbus/v5/prop
+# github.com/google/go-querystring v1.1.0
+## explicit; go 1.10
+github.com/google/go-querystring/query
 # github.com/gookit/color v1.5.3
 ## explicit; go 1.18
 github.com/gookit/color
@@ -233,9 +245,44 @@ github.com/hajimehoshi/go-mp3/internal/huffman
 github.com/hajimehoshi/go-mp3/internal/imdct
 github.com/hajimehoshi/go-mp3/internal/maindata
 github.com/hajimehoshi/go-mp3/internal/sideinfo
+# github.com/icholy/digest v1.1.0
+## explicit; go 1.20
+github.com/icholy/digest
+github.com/icholy/digest/internal/param
 # github.com/icza/bitio v1.1.0
 ## explicit; go 1.13
 github.com/icza/bitio
+# github.com/imroc/req/v3 v3.59.0
+## explicit; go 1.25.0
+github.com/imroc/req/v3
+github.com/imroc/req/v3/http2
+github.com/imroc/req/v3/internal
+github.com/imroc/req/v3/internal/altsvcutil
+github.com/imroc/req/v3/internal/ascii
+github.com/imroc/req/v3/internal/bisect
+github.com/imroc/req/v3/internal/charsets
+github.com/imroc/req/v3/internal/common
+github.com/imroc/req/v3/internal/compress
+github.com/imroc/req/v3/internal/dump
+github.com/imroc/req/v3/internal/godebug
+github.com/imroc/req/v3/internal/godebugs
+github.com/imroc/req/v3/internal/header
+github.com/imroc/req/v3/internal/http2
+github.com/imroc/req/v3/internal/http3
+github.com/imroc/req/v3/internal/netutil
+github.com/imroc/req/v3/internal/socks
+github.com/imroc/req/v3/internal/transport
+github.com/imroc/req/v3/internal/util
+github.com/imroc/req/v3/pkg/altsvc
+github.com/imroc/req/v3/pkg/tls
+# github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e
+## explicit; go 1.14
+github.com/jchv/go-winloader
+github.com/jchv/go-winloader/internal/loader
+github.com/jchv/go-winloader/internal/memloader
+github.com/jchv/go-winloader/internal/pe
+github.com/jchv/go-winloader/internal/vmem
+github.com/jchv/go-winloader/internal/winloader
 # github.com/jezek/xgb v1.3.1
 ## explicit; go 1.11
 github.com/jezek/xgb
@@ -253,6 +300,16 @@ github.com/juju/go4/lock
 # github.com/juju/persistent-cookiejar v1.0.0
 ## explicit
 github.com/juju/persistent-cookiejar
+# github.com/klauspost/compress v1.18.2
+## explicit; go 1.23
+github.com/klauspost/compress
+github.com/klauspost/compress/fse
+github.com/klauspost/compress/huff0
+github.com/klauspost/compress/internal/cpuinfo
+github.com/klauspost/compress/internal/le
+github.com/klauspost/compress/internal/snapref
+github.com/klauspost/compress/zstd
+github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/knadh/koanf/maps v0.1.2
 ## explicit; go 1.18
 github.com/knadh/koanf/maps
@@ -324,6 +381,42 @@ github.com/pelletier/go-toml/v2/unstable/edit
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/quic-go/qpack v0.6.0
+## explicit; go 1.24
+github.com/quic-go/qpack
+# github.com/quic-go/quic-go v0.60.0
+## explicit; go 1.25.0
+github.com/quic-go/quic-go
+github.com/quic-go/quic-go/http3/qlog
+github.com/quic-go/quic-go/internal/ackhandler
+github.com/quic-go/quic-go/internal/congestion
+github.com/quic-go/quic-go/internal/flowcontrol
+github.com/quic-go/quic-go/internal/handshake
+github.com/quic-go/quic-go/internal/monotime
+github.com/quic-go/quic-go/internal/protocol
+github.com/quic-go/quic-go/internal/qerr
+github.com/quic-go/quic-go/internal/utils
+github.com/quic-go/quic-go/internal/utils/linkedlist
+github.com/quic-go/quic-go/internal/utils/ringbuffer
+github.com/quic-go/quic-go/internal/wire
+github.com/quic-go/quic-go/qlog
+github.com/quic-go/quic-go/qlogwriter
+github.com/quic-go/quic-go/qlogwriter/jsontext
+github.com/quic-go/quic-go/quicvarint
+# github.com/refraction-networking/utls v1.8.2
+## explicit; go 1.24
+github.com/refraction-networking/utls
+github.com/refraction-networking/utls/dicttls
+github.com/refraction-networking/utls/internal/boring
+github.com/refraction-networking/utls/internal/byteorder
+github.com/refraction-networking/utls/internal/fips140tls
+github.com/refraction-networking/utls/internal/helper
+github.com/refraction-networking/utls/internal/hkdf
+github.com/refraction-networking/utls/internal/hpke
+github.com/refraction-networking/utls/internal/quicvarint
+github.com/refraction-networking/utls/internal/quicvarint/protocol
+github.com/refraction-networking/utls/internal/tls12
+github.com/refraction-networking/utls/internal/tls13
 # github.com/rivo/uniseg v0.4.7
 ## explicit; go 1.18
 github.com/rivo/uniseg
@@ -419,11 +512,28 @@ github.com/yuin/goldmark-emoji/definition
 go.etcd.io/bbolt
 # golang.org/x/crypto v0.52.0
 ## explicit; go 1.25.0
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/chacha20poly1305
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
+golang.org/x/crypto/hkdf
+golang.org/x/crypto/internal/alias
+golang.org/x/crypto/internal/poly1305
+golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.55.0
 ## explicit; go 1.25.0
+golang.org/x/net/bpf
 golang.org/x/net/html
 golang.org/x/net/html/atom
+golang.org/x/net/html/charset
+golang.org/x/net/http/httpguts
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
 golang.org/x/net/publicsuffix
 # golang.org/x/sync v0.21.0
 ## explicit; go 1.25.0
@@ -431,6 +541,7 @@ golang.org/x/sync/errgroup
 golang.org/x/sync/singleflight
 # golang.org/x/sys v0.46.0
 ## explicit; go 1.25.0
+golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -443,8 +554,14 @@ golang.org/x/term
 golang.org/x/text/cases
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
+golang.org/x/text/encoding/htmlindex
+golang.org/x/text/encoding/ianaindex
 golang.org/x/text/encoding/internal
 golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/encoding/japanese
+golang.org/x/text/encoding/korean
+golang.org/x/text/encoding/simplifiedchinese
+golang.org/x/text/encoding/traditionalchinese
 golang.org/x/text/encoding/unicode
 golang.org/x/text/internal
 golang.org/x/text/internal/language
@@ -453,7 +570,9 @@ golang.org/x/text/internal/tag
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
+golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # gopkg.in/errgo.v1 v1.0.1

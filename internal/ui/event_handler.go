@@ -111,7 +111,10 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpLogout:
 		showConfirmPopup(app, "退出登录", "确定要退出登录吗？将清除登录状态并清除 Cookie。", func() {
 			logout()
-			app.Quit()
+			// app.Quit() 向 bubbletea 消息通道阻塞发送（无缓冲），而本回调运行在
+			// 事件循环内，直接调用会自锁死（q 键退出走的是返回 tea.Quit 命令路径）。
+			// 异步发送，与 foxful-cli Rerender 的 goroutine Send 模式一致。
+			go app.Quit()
 		})
 		return true, nil, nil
 	case keybindings.OpVolumeDown: // half-width, full-width and katakana

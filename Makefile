@@ -16,7 +16,11 @@ MODVENDOR_BIN := $(shell go env GOPATH)/bin/modvendor
 
 # ── OS 检测 ──────────────────────────────────────────────────────────────────
 # Windows_NT → 使用 PowerShell 构建脚本；其他系统 → 使用 Bash 构建脚本
-UNAME_S := $(shell uname -s)
+ifeq ($(OS),Windows_NT)
+    UNAME_S := Windows_NT
+else
+    UNAME_S := $(shell uname -s)
+endif
 IS_MACOS := $(filter Darwin,$(UNAME_S))
 
 ifeq ($(OS),Windows_NT)

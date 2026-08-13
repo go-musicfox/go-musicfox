@@ -425,15 +425,13 @@ func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, cu
 // buildLyricsCentered contains the rendering logic for the centered layout.
 func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings.Builder) {
 	windowWidth := r.netease.WindowWidth()
-	coverEndCol := r.netease.GetCoverEndColumn()
+	coverWidth := r.netease.GetCoverWidth()
 
-	// Adjust available width for lyrics when cover is displayed
-	// coverEndCol is the column where cover ends (1-indexed), so we need to offset by coverEndCol
-	lyricStartCol := coverEndCol
-	if lyricStartCol > 0 {
-		lyricStartCol += CoverRightPadding // Add some padding after cover
-	}
-	availableWidth := windowWidth - lyricStartCol
+	// Center the cover + lyric block as a single group. availableWidth is the
+	// lyric block width used to center each line; lyricStartCol is the block's
+	// left offset (leading spaces). This keeps the cover and lyrics visually
+	// grouped and centered together instead of drifting to opposite sides.
+	_, lyricStartCol, availableWidth := centeredCoverLyricLayout(windowWidth, coverWidth)
 
 	// 以 lyrics 数组的中心为高亮行（3 行模式索引 1，5 行模式索引 2）。
 	highlightLine := (r.lyricLines - 1) / 2

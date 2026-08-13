@@ -1,0 +1,281 @@
+package http3
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/textproto"
+	"slices"
+	"strconv"
+	"strings"
+
+	"golang.org/x/net/http/httpguts"
+
+	"github.com/imroc/req/v3/internal/dump"
+	"github.com/quic-go/qpack"
+)
+
+type qpackError struct{ err error }
+
+func (e *qpackError) Error() string { return fmt.Sprintf("qpack: %v", e.err) }
+func (e *qpackError) Unwrap() error { return e.err }
+
+var errHeaderTooLarge = errors.New("http3: headers too large")
+
+type header struct {
+	// Pseudo header fields defined in RFC 9114
+	Path      string
+	Method    string
+	Authority string
+	Scheme    string
+	Status    string
+	// for Extended connect
+	Protocol string
+	// parsed and deduplicated. -1 if no Content-Length header is sent
+	ContentLength int64
+	// all non-pseudo headers
+	Headers http.Header
+}
+
+// connection-specific header fields must not be sent on HTTP/3
+var invalidHeaderFields = [...]string{
+	"connection",
+	"keep-alive",
+	"proxy-connection",
+	"transfer-encoding",
+	"upgrade",
+}
+
+func parseHeaders(decodeFn qpack.DecodeFunc, isRequest bool, sizeLimit int, headerFields *[]qpack.HeaderField, ds dump.Dumpers) (header, error) {
+	hdr := header{Headers: make(http.Header)}
+	var readFirstRegularHeader, readContentLength bool
+	var contentLengthStr string
+
+	for {
+		h, err := decodeFn()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return header{}, &qpackError{err}
+		}
+		if ds.ShouldDump() {
+			ds.DumpResponseHeader(fmt.Appendf([]byte{}, "%s: %s\r\n", h.Name, h.Value))
+		}
+
+		if headerFields != nil {
+			*headerFields = append(*headerFields, h)
+		}
+		// RFC 9114, section 4.2.2:
+		// The size of a field list is calculated based on the uncompressed size of fields,
+		// including the length of the name and value in bytes plus an overhead of 32 bytes for each field.
+		sizeLimit -= len(h.Name) + len(h.Value) + 32
+		if sizeLimit < 0 {
+			return header{}, errHeaderTooLarge
+		}
+		if err := validateHeaderFieldNameAndValue(h); err != nil {
+			return header{}, err
+		}
+		if h.IsPseudo() {
+			if readFirstRegularHeader {
+				// all pseudo headers must appear before regular header fields, see section 4.3 of RFC 9114
+				return header{}, fmt.Errorf("received pseudo header %s after a regular header field", h.Name)
+			}
+			var isResponsePseudoHeader bool  // pseudo headers are either valid for requests or for responses
+			var isDuplicatePseudoHeader bool // pseudo headers are allowed to appear exactly once
+			switch h.Name {
+			case ":path":
+				isDuplicatePseudoHeader = hdr.Path != ""
+				hdr.Path = h.Value
+			case ":method":
+				isDuplicatePseudoHeader = hdr.Method != ""
+				hdr.Method = h.Value
+			case ":authority":
+				isDuplicatePseudoHeader = hdr.Authority != ""
+				hdr.Authority = h.Value
+			case ":protocol": // RFC 9220
+				isDuplicatePseudoHeader = hdr.Protocol != ""
+				hdr.Protocol = h.Value
+			case ":scheme":
+				isDuplicatePseudoHeader = hdr.Scheme != ""
+				hdr.Scheme = h.Value
+			case ":status":
+				isDuplicatePseudoHeader = hdr.Status != ""
+				hdr.Status = h.Value
+				isResponsePseudoHeader = true
+			default:
+				return header{}, fmt.Errorf("unknown pseudo header: %s", h.Name)
+			}
+			if isDuplicatePseudoHeader {
+				return header{}, fmt.Errorf("duplicate pseudo header: %s", h.Name)
+			}
+			if isRequest && isResponsePseudoHeader {
+				return header{}, fmt.Errorf("invalid request pseudo header: %s", h.Name)
+			}
+			if !isRequest && !isResponsePseudoHeader {
+				return header{}, fmt.Errorf("invalid response pseudo header: %s", h.Name)
+			}
+		} else {
+			if err := validateRegularHeaderField(h); err != nil {
+				return header{}, err
+			}
+			readFirstRegularHeader = true
+			switch h.Name {
+			case "content-length":
+				// Ignore duplicate Content-Length headers.
+				// Fail if the duplicates differ.
+				if !readContentLength {
+					readContentLength = true
+					contentLengthStr = h.Value
+				} else if contentLengthStr != h.Value {
+					return header{}, fmt.Errorf("contradicting content lengths (%s and %s)", contentLengthStr, h.Value)
+				}
+			default:
+				hdr.Headers.Add(h.Name, h.Value)
+			}
+		}
+	}
+	if ds.ShouldDump() && len(hdr.Headers) > 0 {
+		ds.DumpResponseHeader([]byte("\r\n"))
+	}
+	hdr.ContentLength = -1
+	if len(contentLengthStr) > 0 {
+		// use ParseUint instead of ParseInt, so that parsing fails on negative values
+		cl, err := strconv.ParseUint(contentLengthStr, 10, 63)
+		if err != nil {
+			return header{}, fmt.Errorf("invalid content length: %w", err)
+		}
+		hdr.Headers.Set("Content-Length", contentLengthStr)
+		hdr.ContentLength = int64(cl)
+	}
+	return hdr, nil
+}
+
+func validateHeaderFieldNameAndValue(h qpack.HeaderField) error {
+	// field names need to be lowercase, see section 4.2 of RFC 9114
+	if strings.ToLower(h.Name) != h.Name {
+		return fmt.Errorf("header field is not lower-case: %s", h.Name)
+	}
+	if !httpguts.ValidHeaderFieldValue(h.Value) {
+		return fmt.Errorf("invalid header field value for %s: %q", h.Name, h.Value)
+	}
+	return nil
+}
+
+func validateRegularHeaderField(h qpack.HeaderField) error {
+	if !httpguts.ValidHeaderFieldName(h.Name) {
+		return fmt.Errorf("invalid header field name: %q", h.Name)
+	}
+	if slices.Contains(invalidHeaderFields[:], h.Name) {
+		return fmt.Errorf("invalid header field name: %q", h.Name)
+	}
+	if h.Name == "te" && h.Value != "trailers" {
+		return fmt.Errorf("invalid TE header field value: %q", h.Value)
+	}
+	return nil
+}
+
+func validateTrailerHeaderField(h qpack.HeaderField) error {
+	if err := validateRegularHeaderField(h); err != nil {
+		return err
+	}
+	if !httpguts.ValidTrailerHeader(h.Name) {
+		return fmt.Errorf("invalid trailer field name: %q", h.Name)
+	}
+	return nil
+}
+
+func parseTrailers(decodeFn qpack.DecodeFunc, sizeLimit int, headerFields *[]qpack.HeaderField) (http.Header, error) {
+	h := make(http.Header)
+	for {
+		hf, err := decodeFn()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, &qpackError{err}
+		}
+		if headerFields != nil {
+			*headerFields = append(*headerFields, hf)
+		}
+		// RFC 9114, section 4.2.2:
+		// The size of a field list is calculated based on the uncompressed size of fields,
+		// including the length of the name and value in bytes plus an overhead of 32 bytes for each field.
+		sizeLimit -= len(hf.Name) + len(hf.Value) + 32
+		if sizeLimit < 0 {
+			return nil, errHeaderTooLarge
+		}
+		if err := validateHeaderFieldNameAndValue(hf); err != nil {
+			return nil, err
+		}
+		if hf.IsPseudo() {
+			return nil, fmt.Errorf("http3: received pseudo header in trailer: %s", hf.Name)
+		}
+		if err := validateTrailerHeaderField(hf); err != nil {
+			return nil, err
+		}
+		h.Add(hf.Name, hf.Value)
+	}
+	return h, nil
+}
+
+func validExtendedConnectProtocol(protocol string) bool {
+	// RFC 9220 specifies that the semantics of the :protocol pseudo are the same as defined in RFC 8441.
+	// RFC 8441, Section 4 specifies that :protocol is a single value from the HTTP Upgrade Token Registry.
+	// RFC 9110, Section 16.7 specifies that HTTP Upgrade Token Registry uses token grammar.
+	// Therefore, ValidHeaderFieldName is the right syntax check here, despite the misleading name.
+	return httpguts.ValidHeaderFieldName(protocol)
+}
+
+// updateResponseFromHeaders sets up http.Response as an HTTP/3 response,
+// using the decoded qpack header filed.
+// It is only called for the HTTP header (and not the HTTP trailer).
+// It takes an http.Response as an argument to allow the caller to set the trailer later on.
+func updateResponseFromHeaders(rsp *http.Response, decodeFn qpack.DecodeFunc, sizeLimit int, headerFields *[]qpack.HeaderField, ds dump.Dumpers) error {
+	hdr, err := parseHeaders(decodeFn, false, sizeLimit, headerFields, ds)
+	if err != nil {
+		return err
+	}
+	if hdr.Status == "" {
+		return errors.New("missing :status field")
+	}
+	rsp.Proto = "HTTP/3.0"
+	rsp.ProtoMajor = 3
+	rsp.Header = hdr.Headers
+	rsp.Trailer = extractAnnouncedTrailers(rsp.Header)
+	rsp.ContentLength = hdr.ContentLength
+
+	status, err := strconv.Atoi(hdr.Status)
+	if err != nil {
+		return fmt.Errorf("invalid status code: %w", err)
+	}
+	rsp.StatusCode = status
+	rsp.Status = hdr.Status + " " + http.StatusText(status)
+	return nil
+}
+
+// extractAnnouncedTrailers extracts trailer keys from the "Trailer" header.
+// It returns a map with the announced keys set to nil values, and removes the "Trailer" header.
+// It handles both duplicate as well as comma-separated values for the Trailer header.
+// For example:
+//
+//	Trailer: Trailer1, Trailer2
+//	Trailer: Trailer3
+//
+// Will result in a map containing the keys "Trailer1", "Trailer2", "Trailer3" with nil values.
+func extractAnnouncedTrailers(header http.Header) http.Header {
+	rawTrailers, ok := header["Trailer"]
+	if !ok {
+		return nil
+	}
+
+	trailers := make(http.Header)
+	for _, rawVal := range rawTrailers {
+		for val := range strings.SplitSeq(rawVal, ",") {
+			trailers[http.CanonicalHeaderKey(textproto.TrimString(val))] = nil
+		}
+	}
+	delete(header, "Trailer")
+	return trailers
+}

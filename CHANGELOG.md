@@ -1,4 +1,42 @@
 
+5.1.0
+=============
+2026-08-10
+
+* feat: optimize webview login & add changelog (ad6e3fa2)
+* feat: optimize renderer (f9b26929)
+* fix(webview): show error when webview login window unavailable (ef2af035)
+* fix(webview): stop releasing borrowed cookie list on Windows (1a85d9e1)
+* fix(errorx): windows console & crash log restore (46a31113)
+* chore: update responsive star history chart (a632f491)
+* feat(webview): support legacy WebKitGTK 4.0 API (9e343d61)
+* fix(slogx): truncate oversized log instead of renaming to .old (f7ad98aa)
+* chore: optimize Makefile for windows (eb48008d)
+* fix(webkitgtk): log dlopen failures for stack diagnosis (d4df6ef5)
+* fix(ui): cover render goroutine stuck on cancel (aa050d17)
+* fix(ui): deadlock on quit after logout confirm (280ffa87)
+* feat(crash): log panics and crashes with report hints (f4586da2)
+* feat(login): polish webview login across platforms (87579a50)
+* chore(vendor): sync go vendor directory (#623) (38f4570e)
+* chore: upgrade deps (2d02efc1)
+* fix(webview): AddRef borrowed COM refs in controller callback (9e9840eb)
+* perf: bound UI render rate and eliminate per-frame rendering costs; fix player/spectrum races (#619) (ddafb659)
+* fix: graceful degradation on missing native libs (bc242ba2)
+* fix(webview): use 13thgoutham go-webview2 fork (89633abd)
+* feat: support webview login on Windows and Linux (d9f68332)
+* feat: mac支持webview网页登录 (964378fd)
+* chore(vendor): sync go vendor directory (#622) (c0edae7a)
+* chore(ci): update create-pull-request action to version 8 (9341df0e)
+* fix: 优化二维码登录(from go-musicfox-WindowsGUI) (d30cd5bf)
+* chore: update README header and remove subtitle (f5189d78)
+* chore: replace local video links with GitHub asset links (cdf2e620)
+* chore(doc): add logo (8325ae13)
+* chore: update README (d58eec4b)
+* chore: update README.md (2a7ed20b)
+* chore: update README (903b59ba)
+* fix(track): 修复 FLAC 下载缺少专辑封面 (#606) (2d5ff327)
+* chore: update scoop config & changelog [skip ci] (cb12bf53)
+
 5.0.2
 =============
 2026-08-03
