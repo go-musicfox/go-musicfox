@@ -475,7 +475,7 @@ func (p *dlnaPlayer) Play(music URLMusic) {
 	p.sendCmd(command{
 		cmd:    cmdPlay,
 		param:  music,
-		result: make(chan any),
+		result: make(chan any, 1),
 	})
 }
 
@@ -533,15 +533,15 @@ func (p *dlnaPlayer) CurMusic() URLMusic {
 }
 
 func (p *dlnaPlayer) Pause() {
-	p.sendCmd(command{cmd: cmdPause, result: make(chan any)})
+	p.sendCmd(command{cmd: cmdPause, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) Resume() {
-	p.sendCmd(command{cmd: cmdResume, result: make(chan any)})
+	p.sendCmd(command{cmd: cmdResume, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) Stop() {
-	p.sendCmd(command{cmd: cmdStop, result: make(chan any)})
+	p.sendCmd(command{cmd: cmdStop, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) Toggle() {
@@ -553,7 +553,7 @@ func (p *dlnaPlayer) Toggle() {
 }
 
 func (p *dlnaPlayer) Seek(duration time.Duration) {
-	p.sendCmd(command{cmd: cmdSeek, param: duration, result: make(chan any)})
+	p.sendCmd(command{cmd: cmdSeek, param: duration, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) PassedTime() time.Duration {
@@ -613,7 +613,7 @@ func (p *dlnaPlayer) Volume() int {
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
-	p.sendCmd(command{cmd: cmdSetVolume, param: volume, result: make(chan any)})
+	p.sendCmd(command{cmd: cmdSetVolume, param: volume, result: make(chan any, 1)})
 }
 
 func (p *dlnaPlayer) UpVolume() {
