@@ -326,18 +326,25 @@ func (p *beepPlayer) TimeChan() <-chan time.Duration {
 }
 
 func (p *beepPlayer) Seek(duration time.Duration) {
-	if duration < 0 || !p.cacheDownloaded {
+	if duration < 0 {
 		return
 	}
+	// 锁序与拉取路径一致（speaker mu → p.l）：切歌路径（reset 置 nil、关闭
+	// 旧 streamer）只在 p.l 下进行，此处必须持 p.l 全程校验，否则切歌瞬间
+	// 跳转会对已关闭/已置 nil 的 streamer 操作（空指针或 use-after-close）。
+	speaker.Lock()
+	defer speaker.Unlock()
+	p.l.Lock()
+	defer p.l.Unlock()
+
 	// FIXME: 暂时仅对MP3格式提供跳转功能
 	// FLAC格式(其他未测)跳转会占用大量CPU资源，比特率越高占用越高
 	// 导致Seek方法卡住20-40秒的时间，之后方可随意跳转
 	// minimp3未实现Seek
-	if p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.AppConfig.Player.Beep.Mp3Decoder == types.BeepMiniMp3Decoder {
+	if !p.cacheDownloaded || p.curStreamer == nil || p.curMusic.Type != Mp3 || configs.AppConfig.Player.Beep.Mp3Decoder == types.BeepMiniMp3Decoder {
 		return
 	}
 	if types.State(p.state.Load()) == types.Playing || types.State(p.state.Load()) == types.Paused {
-		speaker.Lock()
 		newPos := p.curFormat.SampleRate.N(duration)
 
 		if newPos < 0 {
@@ -346,16 +353,13 @@ func (p *beepPlayer) Seek(duration time.Duration) {
 		if newPos >= p.curStreamer.Len() {
 			newPos = p.curStreamer.Len() - 1
 		}
-		if p.curStreamer != nil {
-			err := p.curStreamer.Seek(newPos)
-			if err != nil {
-				slog.Error("seek error", slogx.Error(err))
-			}
+		err := p.curStreamer.Seek(newPos)
+		if err != nil {
+			slog.Error("seek error", slogx.Error(err))
 		}
 		if p.timer != nil {
 			p.timer.SetPassed(duration)
 		}
-		speaker.Unlock()
 	}
 }
 
