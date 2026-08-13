@@ -37,12 +37,20 @@ type MasterReporter struct {
 	// 队列缓冲防止上报阻塞切歌路径
 	queues []chan reporterTask
 	wg     sync.WaitGroup
+
+	// done 在 Shutdown 时关闭：enqueue 先检查再发送，配合 m.mu 互斥
+	// （ReportStart/End 持 m.mu 调用 enqueue，Shutdown 持 m.mu 关通道），
+	// 保证 Shutdown 之后绝无对已关闭通道的发送
+	done      chan struct{}
+	closeOnce sync.Once
 }
 
 type Option func(*MasterReporter)
 
 func NewService(options ...Option) Service {
-	master := &MasterReporter{}
+	master := &MasterReporter{
+		done: make(chan struct{}),
+	}
 	for _, option := range options {
 		option(master)
 	}
@@ -80,8 +88,14 @@ func WithNetease() Option {
 }
 
 // enqueue 把任务投递给单个 reporter 的串行队列；队列满（reporter 卡死）时
-// 丢弃并告警，绝不阻塞调用方（切歌路径）
+// 丢弃并告警，绝不阻塞调用方（切歌路径）。调用方须持 m.mu（ReportStart/
+// ReportEnd 已持），与 Shutdown 的关通道互斥，Shutdown 后不会发送。
 func (m *MasterReporter) enqueue(i int, task reporterTask) {
+	select {
+	case <-m.done:
+		return
+	default:
+	}
 	select {
 	case m.queues[i] <- task:
 	default:
@@ -126,11 +140,17 @@ func (m *MasterReporter) ReportEnd(passedTime time.Duration) {
 }
 
 func (m *MasterReporter) Shutdown() {
-	// 关闭队列并等待 worker 排空：退出前正在进行的 netease/lastfm 上报
-	// 不会被丢弃
-	for _, q := range m.queues {
-		close(q)
-	}
+	m.closeOnce.Do(func() {
+		// 持 m.mu 关闭：ReportStart/End 在锁内 enqueue，保证关闭后无发送。
+		// 关闭队列并等待 worker 排空：退出前正在进行的 netease/lastfm 上报
+		// 不会被丢弃
+		m.mu.Lock()
+		close(m.done)
+		for _, q := range m.queues {
+			close(q)
+		}
+		m.mu.Unlock()
+	})
 	m.wg.Wait()
 	for _, r := range m.reporters {
 		r.close()
