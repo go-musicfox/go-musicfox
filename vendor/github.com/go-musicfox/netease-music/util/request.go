@@ -95,10 +95,74 @@ func CookieValueByName(cookies []*http.Cookie, name string, fallback string) str
 	return cookie.Value
 }
 
+// sensitiveKey 判断日志中需要脱敏的字段名
+func sensitiveKey(k string) bool {
+	k = strings.ToLower(k)
+	return strings.Contains(k, "password") || strings.Contains(k, "pwd") ||
+		strings.Contains(k, "token") || strings.Contains(k, "cookie") ||
+		strings.Contains(k, "credit") || strings.Contains(k, "csrf")
+}
+
+// RedactedData 脱敏请求参数中的敏感字段值
+func RedactedData(data map[string]string) map[string]string {
+	if len(data) == 0 {
+		return data
+	}
+	redacted := make(map[string]string, len(data))
+	for k, v := range data {
+		if sensitiveKey(k) {
+			redacted[k] = "[REDACTED]"
+		} else {
+			redacted[k] = v
+		}
+	}
+	return redacted
+}
+
+// RedactedOptions 脱敏 Options 中的 cookie 值与 Token
+func RedactedOptions(options *Options) *Options {
+	if options == nil {
+		return options
+	}
+	redacted := *options
+	redacted.Cookies = RedactedCookies(options.Cookies)
+	if redacted.Token != "" {
+		redacted.Token = "[REDACTED]"
+	}
+	return &redacted
+}
+
+// RedactedCookies 隐藏 cookie 值，仅保留名称
+func RedactedCookies(cookies []*http.Cookie) []*http.Cookie {
+	if len(cookies) == 0 {
+		return cookies
+	}
+	redacted := make([]*http.Cookie, 0, len(cookies))
+	for _, c := range cookies {
+		cp := *c
+		if cp.Value != "" {
+			cp.Value = "[REDACTED]"
+		}
+		redacted = append(redacted, &cp)
+	}
+	return redacted
+}
+
+// TruncateBytes 截断日志中的响应体
+func TruncateBytes(b []byte, max int) string {
+	if len(b) <= max {
+		return string(b)
+	}
+	return string(b[:max]) + "..."
+}
+
 func CreateRequest(method, url string, data map[string]string, options *Options) (resCode float64, resResp []byte, resCookies []*http.Cookie) {
 	defer func() {
 		if resCode != 200 {
-			log.Printf("url: %s, method: %s, reqData: %#v, reqOptions: %+v, resCode: %f, resResp: %s, resCookies: %#v", url, method, data, options, resCode, resResp, resCookies)
+			// 日志脱敏：cookie 值（含 MUSIC_U 等完整会话凭证）、敏感请求字段
+			// 与 Token 不得明文落盘；响应体截断防止大体积内容刷屏
+			log.Printf("url: %s, method: %s, reqData: %#v, reqOptions: %+v, resCode: %f, resResp: %s, resCookies: %#v",
+				url, method, RedactedData(data), RedactedOptions(options), resCode, TruncateBytes(resResp, 512), RedactedCookies(resCookies))
 		}
 	}()
 
