@@ -186,10 +186,15 @@ func (t *Tracker) Toggle() {
 		}
 		t.l.Lock()
 		pending := len(t.pending.Scrobbles)
-		processing := t.processing
-		t.processing = true
+		// processing 只在实际 spawn worker 时置位：若队列为空（常见）也置
+		// true，会钉死标志且无人复位，此后所有 Scrobble 都以为有 worker
+		// 接管而不再 spawn——条目永久躺在队列里不被上报
+		spawn := pending > 0 && !t.processing
+		if spawn {
+			t.processing = true
+		}
 		t.l.Unlock()
-		if pending > 0 && !processing {
+		if spawn {
 			go t.processPendingScrobbles()
 		}
 	}
