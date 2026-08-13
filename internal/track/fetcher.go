@@ -53,6 +53,13 @@ func WithFetcherSongQuality(quality service.SongQualityLevel) Option {
 }
 
 func (f *fetcher) FetchPlayableInfo(ctx context.Context, songID int64) (*netease.PlayableInfo, error) {
+	// ctx 未传入底层（netease 包暂不支持取消）；至少确认调用方未取消，
+	// 避免应用退出后继续进行中的请求
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 	info, err := netease.FetchPlayableInfo(songID, f.quality)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playable info for song %d: %w", songID, err)
@@ -78,6 +85,11 @@ func (f *fetcher) FetchStream(ctx context.Context, source PlayableSource) (io.Re
 }
 
 func (f *fetcher) FetchLyric(ctx context.Context, songID int64) (structs.LRCData, error) {
+	select {
+	case <-ctx.Done():
+		return structs.LRCData{}, ctx.Err()
+	default:
+	}
 	lrcData, err := netease.FetchLyric(songID)
 	if err != nil {
 		return structs.LRCData{}, errors.Wrapf(err, "failed to fetch lyric for song %d", songID)
@@ -86,6 +98,11 @@ func (f *fetcher) FetchLyric(ctx context.Context, songID int64) (structs.LRCData
 }
 
 func (f *fetcher) FetchCloudLyric(ctx context.Context, userID, songID int64) (structs.LRCData, error) {
+	select {
+	case <-ctx.Done():
+		return structs.LRCData{}, ctx.Err()
+	default:
+	}
 	lrcData, err := netease.FetchCloudLyric(userID, songID)
 	if err != nil {
 		return structs.LRCData{}, errors.Wrapf(err, "failed to fetch cloud lyric for song %d", songID)
