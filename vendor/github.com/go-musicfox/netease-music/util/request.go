@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/buger/jsonparser"
@@ -53,32 +54,38 @@ func chooseUserAgent(ua string) string {
 }
 
 var (
-	globalCookieJar http.CookieJar
+	// globalCookieJar 在登录/刷新 token（UI 线程）与并发 API 请求（tea cmd、
+	// 播放器 goroutine）之间共享。jar 内部（cookiejar.Jar）并发安全，但接口
+	// 变量本身必须原子读写，否则 SetGlobalCookieJar 与每请求读取构成数据竞争
+	// （go run -race 必报，也是登录失效难排查的根源之一）。
+	globalCookieJar atomic.Value // http.CookieJar
 	once            sync.Once
 )
 
 func SetGlobalCookieJar(jar http.CookieJar) {
-	globalCookieJar = jar
+	globalCookieJar.Store(jar)
 }
 
 func GetGlobalCookieJar() http.CookieJar {
 	once.Do(func() {
-		if globalCookieJar == nil {
+		jar, ok := globalCookieJar.Load().(http.CookieJar)
+		if !ok || jar == nil {
 			// 为空时才新建一个jar对象
-			jar, _ := cookiejar.New(nil)
-			globalCookieJar = jar
+			jar, _ = cookiejar.New(nil)
+			globalCookieJar.Store(jar)
 		}
-		if CheckSDeviceId(globalCookieJar) == "" {
+		if CheckSDeviceId(jar) == "" {
 			// jar中没有sDeviceId则生成一个并添加
 			sDeviceId := GenerateSDeviceId()
 			cookieMap := map[string]string{
 				"sDeviceId": sDeviceId,
 			}
 			host := "https://music.163.com"
-			AddCookiesToJar(globalCookieJar, cookieMap, host)
+			AddCookiesToJar(jar, cookieMap, host)
 		}
 	})
-	return globalCookieJar
+	jar, _ := globalCookieJar.Load().(http.CookieJar)
+	return jar
 }
 
 func CookieValueByName(cookies []*http.Cookie, name string, fallback string) string {
@@ -171,10 +178,10 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		globalDeviceId = deviceIds[idx]
 	})
 
-	globalCookieJar = GetGlobalCookieJar()
+	jar := GetGlobalCookieJar()
 
 	if u, err := urlpkg.Parse(url); err == nil {
-		options.Cookies = append(options.Cookies, globalCookieJar.Cookies(u)...)
+		options.Cookies = append(options.Cookies, jar.Cookies(u)...)
 	}
 	req := requests.Requests()
 	if len(UNMProxyURL) > 0 {
@@ -199,7 +206,7 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		csrfToken   = CookieValueByName(options.Cookies, "__csrf", "")
 	)
 
-	req.Client.Jar = globalCookieJar
+	req.Client.Jar = jar
 	req.Header.Set("User-Agent", chooseUserAgent(options.Ua))
 	req.Header.Set("os", os)
 	req.Header.Set("appver", appver)
