@@ -57,6 +57,11 @@ type beepPlayer struct {
 
 	spectrum         *PCMAnalyzer
 	spectrumConsumer func(sampleRate float64, samplesL, samplesR []float32)
+
+	// spectrumSamplesL/R 是 streamer 馈送频谱数据的复用缓冲（仅 streamer
+	// 使用，持 p.l 访问，无并发）
+	spectrumSamplesL []float32
+	spectrumSamplesR []float32
 }
 
 func NewBeepPlayer() *beepPlayer {
@@ -522,10 +527,17 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
 
-	// Spectrum: feed PCM samples to analyzer
+	// Spectrum: feed PCM samples to analyzer。
+	// 复用预分配缓冲（p.spectrumSamplesL/R）：每次拉取（约 10-50ms 一次、
+	// 持锁期间）make 两个切片是纯 GC 压力。缓冲仅本函数使用，且本函数
+	// 全程持 p.l 与 speaker 锁，无并发访问。
 	if p.spectrumConsumer != nil && n > 0 {
-		samplesL := make([]float32, n)
-		samplesR := make([]float32, n)
+		if cap(p.spectrumSamplesL) < n {
+			p.spectrumSamplesL = make([]float32, n)
+			p.spectrumSamplesR = make([]float32, n)
+		}
+		samplesL := p.spectrumSamplesL[:n]
+		samplesR := p.spectrumSamplesR[:n]
 		for i := 0; i < n; i++ {
 			samplesL[i] = float32(samples[i][0])
 			samplesR[i] = float32(samples[i][1])
