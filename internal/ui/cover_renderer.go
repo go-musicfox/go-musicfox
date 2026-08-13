@@ -148,7 +148,8 @@ func (r *CoverRenderer) calculateDimensions() {
 // rectsOverlap returns true if two rectangles overlap.
 // All coordinates are 0-indexed.
 func rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2 int) bool {
-	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h2 > y2
+	// 第二项垂直条件应为 y1+h1 > y2（原实现误用 h2，只对等高矩形碰巧正确）
+	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h1 > y2
 }
 
 // isAppBackgroundTransparent returns true when the current theme's app
