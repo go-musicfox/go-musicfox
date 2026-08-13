@@ -499,8 +499,17 @@ func BuildEffectiveBindings(userBindings map[OperateType][]string, useDefault bo
 	keyToOp := BuildKeyToOperateTypeMap(effectiveBindings) // 构建初始的 按键 -> 操作 反向映射
 	conflicts := make(map[string][]OperateType)            // 用于记录所有发生的冲突
 
+	// 按操作名排序处理用户绑定：map 迭代顺序随机时，冲突的"最终胜出方"由
+	// 遍历顺序决定且每次启动都可能不同
+	userOps := make([]OperateType, 0, len(userBindings))
+	for op := range userBindings {
+		userOps = append(userOps, op)
+	}
+	sort.Slice(userOps, func(i, j int) bool { return userOps[i] < userOps[j] })
+
 	// 遍历用户配置，解决冲突并记录
-	for op, keys := range userBindings {
+	for _, op := range userOps {
+		keys := userBindings[op]
 		validKeys := make([]string, 0, len(keys))
 		var skippedKeys []string
 
@@ -571,7 +580,9 @@ func BuildKeyToOperateTypeMap(effectiveBindings map[OperateType][]string) map[st
 		return keyMap
 	}
 
-	for op, keys := range userOperateToKeys {
+	// 遍历参数而非全局 userOperateToKeys：两者在当前调用顺序下碰巧一致，
+	// 但一旦在 InitDefaults 前调用会静默得到错误映射
+	for op, keys := range effectiveBindings {
 		for _, key := range keys {
 			keyMap[key] = op
 		}
