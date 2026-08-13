@@ -180,7 +180,7 @@ func (p *beepPlayer) listen() {
 						lastStreamer := p.curStreamer
 						defer func() { _ = lastStreamer.Close() }()
 						pos := lastStreamer.Position()
-						if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, cacheReader, p.curMusic.Duration); err != nil {
+						if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, cacheReader, p.curMusic.Duration, true); err != nil {
 							p.stopNoLock()
 							return
 						}
@@ -213,7 +213,7 @@ func (p *beepPlayer) listen() {
 				}
 			}
 
-			if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, p.cacheReader, p.curMusic.Duration); err != nil {
+			if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, p.cacheReader, p.curMusic.Duration, p.cacheDownloaded); err != nil {
 				p.stopNoLock()
 				goto nextLoop
 			}

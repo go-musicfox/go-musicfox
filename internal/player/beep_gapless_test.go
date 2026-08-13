@@ -24,7 +24,7 @@ func TestStreamAcrossBoundaryFillsSameBufferWithoutSilence(t *testing.T) {
 
 func TestTrimmedMP3RemovesEncoderPadding(t *testing.T) {
 	raw := &sampleSeekStreamer{samples: [][2]float64{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}}
-	stream := &trimmedMP3{StreamSeekCloser: raw, start: 1, end: 2}
+	stream := &trimmedMP3{StreamSeekCloser: raw, start: 1, end: 2, trimEnd: true}
 	buffer := make([][2]float64, 3)
 	n, ok := stream.Stream(buffer)
 	if n != 3 || ok {
@@ -44,6 +44,19 @@ func TestTrimmedMP3RemovesEncoderPadding(t *testing.T) {
 	var one [1][2]float64
 	if n, _ := stream.Stream(one[:]); n != 1 || one[0][0] != 2 {
 		t.Fatalf("seeked sample = %v", one[0][0])
+	}
+}
+
+func TestTrimmedMP3DoesNotUseFixedLengthWhileStreaming(t *testing.T) {
+	raw := &sampleSeekStreamer{samples: [][2]float64{{0, 0}, {1, 1}, {2, 2}, {3, 3}}}
+	stream := &trimmedMP3{StreamSeekCloser: raw, start: 1, end: 2}
+	buffer := make([][2]float64, 3)
+	n, ok := stream.Stream(buffer)
+	if n != 3 || ok {
+		t.Fatalf("n=%d ok=%v, want 3 false at the underlying EOF", n, ok)
+	}
+	if stream.Len() != 3 {
+		t.Fatalf("streaming logical length=%d, want underlying length minus start", stream.Len())
 	}
 }
 

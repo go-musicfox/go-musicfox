@@ -195,7 +195,7 @@ func prepareGapless(ctx context.Context, fromID int64, music URLMusic, outputRat
 		_ = os.Remove(file.Name())
 		return nil
 	}
-	raw, format, err := decodeSong(music.Type, file, music.Duration)
+	raw, format, err := decodeSong(music.Type, file, music.Duration, true)
 	if err != nil {
 		slog.Warn("gapless preload decode error", "song_id", music.Id, "bytes", bytes, "error", err)
 		_ = file.Close()

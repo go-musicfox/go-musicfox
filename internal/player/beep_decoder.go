@@ -21,10 +21,10 @@ import (
 )
 
 func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
-	return decodeSong(t, r, 0)
+	return decodeSong(t, r, 0, false)
 }
 
-func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
+func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration, finalized bool) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
 	switch t {
 	case Mp3:
 		gaplessDelay, gaplessPadding := mp3GaplessSamples(r)
@@ -35,7 +35,7 @@ func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration) (stream
 		default:
 			streamer, format, err = mp3.Decode(r)
 			if err == nil && configs.AppConfig.Player.Beep.Gapless {
-				if duration > 0 && format.SampleRate > 0 {
+				if finalized && duration > 0 && format.SampleRate > 0 {
 					target := int(math.Round(duration.Seconds() * float64(format.SampleRate)))
 					decoded := streamer.Len() - gaplessDelay
 					if target > 0 && decoded > target {
@@ -44,7 +44,7 @@ func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration) (stream
 				}
 			}
 			if err == nil && configs.AppConfig.Player.Beep.Gapless && (gaplessDelay > 0 || gaplessPadding > 0) {
-				streamer = &trimmedMP3{StreamSeekCloser: streamer, start: gaplessDelay, end: gaplessPadding}
+				streamer = &trimmedMP3{StreamSeekCloser: streamer, start: gaplessDelay, end: gaplessPadding, trimEnd: finalized}
 			}
 		}
 	case Wav:
@@ -62,12 +62,16 @@ func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration) (stream
 type trimmedMP3 struct {
 	beep.StreamSeekCloser
 	start, end int
+	trimEnd    bool
 	pos        int
 	discarded  int
 }
 
 func (d *trimmedMP3) Len() int {
 	length := d.StreamSeekCloser.Len() - d.start - d.end
+	if !d.trimEnd {
+		length = d.StreamSeekCloser.Len() - d.start
+	}
 	if length < 0 {
 		return 0
 	}
@@ -77,7 +81,7 @@ func (d *trimmedMP3) Len() int {
 func (d *trimmedMP3) Position() int { return d.pos }
 
 func (d *trimmedMP3) Stream(samples [][2]float64) (n int, ok bool) {
-	if d.pos >= d.Len() {
+	if d.trimEnd && d.pos >= d.Len() {
 		return 0, false
 	}
 	if d.discarded < d.start {
@@ -90,12 +94,17 @@ func (d *trimmedMP3) Stream(samples [][2]float64) (n int, ok bool) {
 			return 0, rawOK
 		}
 	}
-	remaining := d.Len() - d.pos
-	if remaining < len(samples) {
-		samples = samples[:remaining]
+	if d.trimEnd {
+		remaining := d.Len() - d.pos
+		if remaining < len(samples) {
+			samples = samples[:remaining]
+		}
 	}
 	n, rawOK := d.StreamSeekCloser.Stream(samples)
 	d.pos += n
+	if !d.trimEnd {
+		return n, rawOK
+	}
 	if n < len(samples) {
 		return n, rawOK
 	}
