@@ -523,6 +523,14 @@ func (p *beepPlayer) reset() {
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 	p.l.Lock()
+	// 切歌失败路径（HTTP 错误/WaitForNBytes 超时/DecodeSong 失败）里 reset
+	// 已把 curStreamer 置 nil，且 speaker.Clear() 在 p.l 外执行——阻塞在
+	// p.l 上的拉取会在解锁瞬间拿到 nil，必须在此守卫（返回 !ok 结束旧链，
+	// 其 Callback 落入孤儿通道，无害）。
+	if p.curStreamer == nil {
+		p.l.Unlock()
+		return 0, false
+	}
 
 	pos := p.curStreamer.Position()
 	n, ok = p.curStreamer.Stream(samples)
