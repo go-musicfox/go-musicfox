@@ -816,6 +816,21 @@ func (r *CoverRenderer) Close() {
 		return
 	}
 
+	// 取消在途的封面生成 goroutine：退出后它仍会向 os.Stdout 写 kitty 序列，
+	// 在 bubbletea 已还原屏幕的窗口期内可能把帧数据写进 shell（垃圾/残影）。
+	// 与 ClearDisplayed 保持一致的生命周期管理。
+	r.mu.Lock()
+	if r.cancelFunc != nil {
+		r.cancelFunc()
+		r.cancelFunc = nil
+	}
+	r.mu.Unlock()
+	// 排空可能残留的渲染结果，生成 goroutine 的发送带 ctx.Done 兜底不会阻塞
+	select {
+	case <-r.renderChan:
+	default:
+	}
+
 	r.mu.Lock()
 	wasRendered := r.imageRendered
 	r.mu.Unlock()
