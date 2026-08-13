@@ -764,8 +764,12 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	_ = core.Navigate(loginURL)
 
 	// Arm the cookie polling timer. The wParam of the resulting WM_TIMER
-	// messages carries cookiePollTimerID.
-	user32SetTimer.Call(h.hwnd, cookiePollTimerID, uintptr(webviewLoginPollInterval/time.Millisecond), 0)
+	// messages carries cookiePollTimerID. SetTimer 失败（返回 0）时窗口照常
+	// 打开但永远无轮询——用户面对白屏无任何提示，必须告警。
+	ret, _, _ := user32SetTimer.Call(h.hwnd, cookiePollTimerID, uintptr(webviewLoginPollInterval/time.Millisecond), 0)
+	if ret == 0 {
+		slog.Error("webview login: SetTimer 失败，cookie 轮询不会启动")
+	}
 	return 0
 }
 

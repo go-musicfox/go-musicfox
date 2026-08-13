@@ -184,14 +184,13 @@ func (t *Tracker) Toggle() {
 		if t.nowPlaying.Track != "" {
 			go t.Playing(t.nowPlaying)
 		}
-		if len(t.pending.Scrobbles) > 0 {
-			t.l.Lock()
-			processing := t.processing
-			t.processing = true
-			t.l.Unlock()
-			if !processing {
-				go t.processPendingScrobbles()
-			}
+		t.l.Lock()
+		pending := len(t.pending.Scrobbles)
+		processing := t.processing
+		t.processing = true
+		t.l.Unlock()
+		if pending > 0 && !processing {
+			go t.processPendingScrobbles()
 		}
 	}
 }
@@ -234,5 +233,7 @@ func (t *Tracker) IsScrobbleExpired(scrobble storage.Scrobble) bool {
 }
 
 func (m *Tracker) Count() int {
+	m.l.Lock()
+	defer m.l.Unlock()
 	return len(m.pending.Scrobbles)
 }
