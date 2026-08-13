@@ -165,11 +165,15 @@ func (p *beepPlayer) listen() {
 				}
 
 				// 边下载边播放
-				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser) {
+				songID := p.curMusic.Id
+				go func(ctx context.Context, cacheWFile *os.File, read io.ReadCloser, songID int64) {
 					_, _ = iox.CopyClose(ctx, cacheWFile, read)
 					p.l.Lock()
 					defer p.l.Unlock()
-					if p.curStreamer == nil {
+					// 下载期间可能已切歌（cancel 打断）：此时 p.curMusic/p.curStreamer
+					// 已属于新歌，绝不能用自己（旧歌）的缓存数据替换新歌的 streamer
+					//（否则新歌会从旧歌位置开始、被瞬间跳过，甚至被切走）。
+					if songID != p.curMusic.Id || p.curStreamer == nil {
 						// nil说明外层解析还没开始或解析失败，这里直接退出
 						return
 					}
@@ -195,7 +199,7 @@ func (p *beepPlayer) listen() {
 						p.ctrl.Streamer = beep.Seq(p.resampleStreamer(p.curFormat.SampleRate), beep.Callback(doneHandle))
 					}
 					p.cacheDownloaded = true
-				}(ctx, p.cacheWriter, reader)
+				}(ctx, p.cacheWriter, reader, songID)
 
 				N := 512
 				if p.curMusic.Type == Flac {
