@@ -647,7 +647,8 @@ func (r *CoverRenderer) writeStdout(s string) {
 	r.writeMu.Lock()
 	defer r.writeMu.Unlock()
 	_, _ = os.Stdout.WriteString(s)
-	_ = os.Stdout.Sync()
+	// 注意：不再调用 os.Stdout.Sync()——tty 上 fsync 返回 EINVAL（错误被忽略），
+	// 纯属多余 syscall，每帧渲染都在空转
 }
 
 // writeToTerminal writes the kitty graphics sequence directly to stdout,
