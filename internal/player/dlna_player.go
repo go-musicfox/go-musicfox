@@ -84,7 +84,7 @@ const (
 type command struct {
 	cmd    cmdType
 	param  any
-	result chan<- any
+	result chan any
 }
 
 type dlnaPlayer struct {
@@ -100,6 +100,7 @@ type dlnaPlayer struct {
 	state     types.State
 	stateChan chan types.State
 	closed    chan struct{}
+	closeOnce sync.Once // 保证 closed 只关闭一次（永不置 nil，sendCmd 依赖它）
 	cmdQueue  chan command
 
 	curPos   time.Duration
@@ -228,12 +229,21 @@ func (p *dlnaPlayer) worker() {
 }
 
 func (p *dlnaPlayer) pollStateTask() {
-	state, _ := p.getTransportInfo()
+	state, err := p.getTransportInfo()
+	if err != nil {
+		// 查询失败不覆盖状态：网络抖动时设备可能短暂不可达
+		return
+	}
 	if state == "STOPPED" || state == "NO_MEDIA_PRESENT" {
 		p.mu.Lock()
+		changed := p.state != types.Stopped
 		p.state = types.Stopped
 		p.mu.Unlock()
-		p.sendState(types.Stopped)
+		// 仅状态确实变化时上报：设备持续返回 STOPPED（如无法播放该 URL）时
+		// 避免每 5s 触发一次 UI 的自动切歌
+		if changed {
+			p.sendState(types.Stopped)
+		}
 		return
 	}
 	curPos, _, _ := p.getPositionInfo()
@@ -462,13 +472,26 @@ func (p *dlnaPlayer) sendState(state types.State) {
 }
 
 func (p *dlnaPlayer) Play(music URLMusic) {
-	result := make(chan any)
-	p.cmdQueue <- command{
+	p.sendCmd(command{
 		cmd:    cmdPlay,
 		param:  music,
-		result: result,
+		result: make(chan any),
+	})
+}
+
+// sendCmd 向 worker 投递命令并等待结果。worker 在 Close 后退场、不再消费
+// cmdQueue，直接发送会在队列满后永久阻塞 UI 线程；select p.closed 保证
+// 播放器已关闭时立即返回。
+func (p *dlnaPlayer) sendCmd(cmd command) {
+	select {
+	case p.cmdQueue <- cmd:
+	case <-p.closed:
+		return
 	}
-	<-result
+	select {
+	case <-cmd.result:
+	case <-p.closed:
+	}
 }
 
 func (p *dlnaPlayer) getTransportInfo() (string, error) {
@@ -510,21 +533,15 @@ func (p *dlnaPlayer) CurMusic() URLMusic {
 }
 
 func (p *dlnaPlayer) Pause() {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdPause, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdPause, result: make(chan any)})
 }
 
 func (p *dlnaPlayer) Resume() {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdResume, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdResume, result: make(chan any)})
 }
 
 func (p *dlnaPlayer) Stop() {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdStop, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdStop, result: make(chan any)})
 }
 
 func (p *dlnaPlayer) Toggle() {
@@ -536,9 +553,7 @@ func (p *dlnaPlayer) Toggle() {
 }
 
 func (p *dlnaPlayer) Seek(duration time.Duration) {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdSeek, param: duration, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdSeek, param: duration, result: make(chan any)})
 }
 
 func (p *dlnaPlayer) PassedTime() time.Duration {
@@ -598,9 +613,7 @@ func (p *dlnaPlayer) Volume() int {
 }
 
 func (p *dlnaPlayer) SetVolume(volume int) {
-	result := make(chan any)
-	p.cmdQueue <- command{cmd: cmdSetVolume, param: volume, result: result}
-	<-result
+	p.sendCmd(command{cmd: cmdSetVolume, param: volume, result: make(chan any)})
 }
 
 func (p *dlnaPlayer) UpVolume() {
@@ -612,10 +625,10 @@ func (p *dlnaPlayer) DownVolume() {
 }
 
 func (p *dlnaPlayer) Close() {
-	if p.closed != nil {
+	// closed 通道永不置 nil：sendCmd 依赖它对已关闭的播放器立即返回
+	p.closeOnce.Do(func() {
 		close(p.closed)
-		p.closed = nil
-	}
+	})
 	if p.httpServer != nil {
 		if err := p.httpServer.Close(); err != nil {
 			slog.Error("DLNA: failed to close HTTP server", "error", err)
