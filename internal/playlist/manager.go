@@ -336,9 +336,14 @@ func (pm *playlistManager) LoadState() error {
 		return err
 	}
 
-	// 恢复播放列表状态
-	pm.currentIndex = snapshot.CurSongIndex
+	// 恢复播放列表状态。快照可能损坏（手工改库、旧版本 bug、schema 变化），
+	// 必须校验 index 在界内，否则后续删除歌曲等操作会越界 panic。
 	pm.playlist = snapshot.Playlist
+	if snapshot.CurSongIndex < 0 || snapshot.CurSongIndex >= len(pm.playlist) {
+		pm.currentIndex = -1
+	} else {
+		pm.currentIndex = snapshot.CurSongIndex
+	}
 
 	// 通知播放模式播放列表已变化
 	if pm.playMode != nil {
