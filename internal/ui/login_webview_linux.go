@@ -177,7 +177,13 @@ func (c *webviewLoginController) runGTK() {
 	if usesLegacyWebKitAPI(webkitgtk.WebKitGTKVersion()) {
 		// WebKitGTK 4.1 and 4.0 use the WebContext/CookieManager API; 4.1
 		// differs from 4.0 only in its libsoup ABI.
-		ctx := webkitgtk.WebContextGetDefault()
+		// 必须用 ephemeral context：默认 context 是进程级持久单例，WebKit 会把
+		// 登录 cookie（含 MUSIC_U 会话令牌）明文写进 website-data 目录、永不
+		// 清理，违约"登录数据不留痕"契约（6.0 ephemeral session / Windows
+		// 临时目录 / macOS non-persistent store 均遵守）。cookieManager 是
+		// context 的借用引用，ctx 的 unref 注册在最前（LIFO 最后执行）。
+		ctx := webkitgtk.WebContextNewEphemeral()
+		defer webkitgtk.GObjectUnref(ctx)
 		cookieManager = webkitgtk.WebContextGetCookieManager(ctx)
 		webView = webkitgtk.WebViewNew()
 		webkitgtk.GObjectRefSink(webView)

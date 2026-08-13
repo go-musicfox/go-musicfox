@@ -62,6 +62,7 @@ var (
 var (
 	webkitWebViewNew                    func() uintptr
 	webkitWebContextGetDefault          func() uintptr
+	webkitWebContextNewEphemeral        func() uintptr
 	webkitWebContextGetCookieManager    func(ctx uintptr) uintptr
 	webkitCookieManagerGetCookies       func(manager uintptr, uri *byte, cancellable, callback, userData uintptr)
 	webkitCookieManagerGetCookiesFinish func(manager, result, err uintptr) uintptr
@@ -163,7 +164,7 @@ func init() {
 	}
 	webkitUsableLegacy := func() bool {
 		return webkitWebViewNew != nil &&
-			webkitWebContextGetDefault != nil &&
+			webkitWebContextNewEphemeral != nil &&
 			webkitWebContextGetCookieManager != nil &&
 			webkitWebViewLoadURI != nil &&
 			webkitCookieManagerGetCookies != nil &&
@@ -260,6 +261,7 @@ func registerWebKit(lib uintptr) {
 func registerWebKitLegacy(lib uintptr) {
 	registerSymbol(&webkitWebViewNew, lib, "webkit_web_view_new")
 	registerSymbol(&webkitWebContextGetDefault, lib, "webkit_web_context_get_default")
+	registerSymbol(&webkitWebContextNewEphemeral, lib, "webkit_web_context_new_ephemeral")
 	registerSymbol(&webkitWebContextGetCookieManager, lib, "webkit_web_context_get_cookie_manager")
 	registerSymbol(&webkitWebViewLoadURI, lib, "webkit_web_view_load_uri")
 	registerSymbol(&webkitCookieManagerGetCookies, lib, "webkit_cookie_manager_get_cookies")
@@ -345,6 +347,15 @@ func WebContextGetDefault() uintptr {
 		return 0
 	}
 	return webkitWebContextGetDefault()
+}
+
+// WebContextNewEphemeral creates an ephemeral WebKitWebContext (transfer-full)
+// on the legacy 4.0/4.1 API: cookies and website data never persist to disk.
+func WebContextNewEphemeral() uintptr {
+	if webkitWebContextNewEphemeral == nil {
+		return 0
+	}
+	return webkitWebContextNewEphemeral()
 }
 
 // WebContextGetCookieManager returns the cookie manager (borrowed reference)
