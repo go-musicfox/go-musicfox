@@ -532,64 +532,79 @@ func (p *beepPlayer) reset() {
 }
 
 func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
-	p.l.Lock()
-	defer p.l.Unlock()
-
-	pos := p.curStreamer.Position()
-	current := beep.Streamer(p.curStreamer)
-	if p.gaplessOutput != nil {
-		current = p.gaplessOutput
-	}
-	var prepared *preparedGapless
-	n, ok, switched := streamAcrossBoundary(samples, current, func() beep.Streamer {
-		if p.gapless != nil {
-			prepared = p.gapless.takeIfReady(p.curMusic.Id)
-		}
-		if prepared == nil {
-			return nil
-		}
-		return prepared.stream
-	})
-	if switched {
-		p.finishGapless(prepared)
-	}
-
-	// Spectrum: feed PCM samples to analyzer
-	if p.spectrumConsumer != nil && n > 0 {
-		samplesL := make([]float32, n)
-		samplesR := make([]float32, n)
-		for i := 0; i < n; i++ {
-			samplesL[i] = float32(samples[i][0])
-			samplesR[i] = float32(samples[i][1])
-		}
-		p.spectrumConsumer(float64(sampleRate), samplesL, samplesR)
-	}
-
-	err := p.curStreamer.Err()
-	if err == nil && (ok || p.cacheDownloaded) {
-		return
-	}
-	p.pausedNoLock()
-
+	filled := 0
 	retry := 4
-	for !ok && retry > 0 {
-		if p.curMusic.Type == Flac {
-			if err = p.curStreamer.Seek(pos); err != nil {
-				return
-			}
+	for {
+		p.l.Lock()
+		if p.curStreamer == nil || filled >= len(samples) {
+			p.l.Unlock()
+			return filled, filled == len(samples)
 		}
-		errorx.ResetError(p.curStreamer)
 
+		current := beep.Streamer(p.curStreamer)
+		if p.gaplessOutput != nil {
+			current = p.gaplessOutput
+		}
+		var prepared *preparedGapless
+		chunk, streamOK, switched := streamAcrossBoundary(samples[filled:], current, func() beep.Streamer {
+			if p.gapless != nil {
+				prepared = p.gapless.takeIfReady(p.curMusic.Id)
+			}
+			if prepared == nil {
+				return nil
+			}
+			return prepared.stream
+		})
+		filled += chunk
+		if switched {
+			p.finishGapless(prepared)
+		}
+
+		// Spectrum: feed PCM samples to analyzer.
+		if p.spectrumConsumer != nil && chunk > 0 {
+			samplesL := make([]float32, chunk)
+			samplesR := make([]float32, chunk)
+			for i := 0; i < chunk; i++ {
+				samplesL[i] = float32(samples[filled-chunk+i][0])
+				samplesR[i] = float32(samples[filled-chunk+i][1])
+			}
+			p.spectrumConsumer(float64(sampleRate), samplesL, samplesR)
+		}
+
+		err := p.curStreamer.Err()
+		downloaded := p.cacheDownloaded
+		if err == nil && (streamOK || downloaded) {
+			p.l.Unlock()
+			return filled, streamOK
+		}
+		if filled == len(samples) {
+			p.l.Unlock()
+			if err == nil && !downloaded {
+				return filled, true
+			}
+			return filled, streamOK
+		}
+		if retry == 0 {
+			p.resumeNoLock()
+			p.l.Unlock()
+			return filled, streamOK
+		}
+
+		p.pausedNoLock()
+		p.l.Unlock()
 		select {
 		case <-time.After(time.Second * 5):
-			n, ok = p.curStreamer.Stream(samples)
+			retry--
 		case <-p.close:
-			return
+			return filled, streamOK
 		}
-		retry--
+		p.l.Lock()
+		if p.curStreamer != nil {
+			errorx.ResetError(p.curStreamer)
+			p.resumeNoLock()
+		}
+		p.l.Unlock()
 	}
-	p.resumeNoLock()
-	return
 }
 
 func (p *beepPlayer) finishGapless(prepared *preparedGapless) {

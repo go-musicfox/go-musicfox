@@ -81,6 +81,16 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 		p.gaplessMu.Unlock()
 		return
 	}
+	// The stream boundary can race with the normal Stopped notification. In
+	// that case the playlist manager has already advanced to this song and the
+	// transition event must only finalize gapless bookkeeping, not advance again.
+	if current := p.CurSong(); current.Id == transition.Music.Id {
+		p.gaplessPending = 0
+		p.gaplessLoading = false
+		p.gaplessTriedFor = 0
+		p.gaplessMu.Unlock()
+		return
+	}
 	p.gaplessPending = 0
 	p.gaplessLoading = false
 	p.gaplessTriedFor = 0

@@ -22,6 +22,20 @@ func TestStreamAcrossBoundaryFillsSameBufferWithoutSilence(t *testing.T) {
 	}
 }
 
+func TestStreamAcrossBoundaryKeepsExactBufferBoundaryAlive(t *testing.T) {
+	current := &sampleStreamer{samples: [][2]float64{{1, 1}, {2, 2}}}
+	next := &sampleStreamer{samples: [][2]float64{{3, 3}}}
+	buffer := make([][2]float64, 2)
+
+	n, ok, switched := streamAcrossBoundary(buffer, current, func() beep.Streamer { return next })
+	if n != len(buffer) || !ok || !switched {
+		t.Fatalf("n=%d ok=%v switched=%v, want exact-boundary switch", n, ok, switched)
+	}
+	if next.pos != 0 {
+		t.Fatalf("next stream advanced to %d, want it untouched until the next callback", next.pos)
+	}
+}
+
 func TestTrimmedMP3RemovesEncoderPadding(t *testing.T) {
 	raw := &sampleSeekStreamer{samples: [][2]float64{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}}
 	stream := &trimmedMP3{StreamSeekCloser: raw, start: 1, end: 2, trimEnd: true}

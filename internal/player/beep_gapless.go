@@ -53,12 +53,19 @@ func newGaplessState() *gaplessState {
 
 func streamAcrossBoundary(samples [][2]float64, current beep.Streamer, next func() beep.Streamer) (n int, ok, switched bool) {
 	n, ok = current.Stream(samples)
-	if ok || next == nil || n == len(samples) {
+	if ok || next == nil {
 		return n, ok, false
 	}
 	nextStreamer := next()
 	if nextStreamer == nil {
 		return n, ok, false
+	}
+	// If the current stream ends exactly at the buffer boundary, switch now
+	// but leave the next stream untouched for the following callback. Returning
+	// ok=true prevents beep.Seq from firing its completion callback between the
+	// two tracks.
+	if n == len(samples) {
+		return n, true, true
 	}
 	more, nextOK := nextStreamer.Stream(samples[n:])
 	deClickBoundary(samples, n, more)
