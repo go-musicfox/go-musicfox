@@ -609,7 +609,10 @@ func (p *beepPlayer) streamer(samples [][2]float64) (n int, ok bool) {
 
 func (p *beepPlayer) finishGapless(prepared *preparedGapless) {
 	old := p.curStreamer
-	playedTime := p.timer.ActualRuntime()
+	var playedTime time.Duration
+	if p.timer != nil {
+		playedTime = p.timer.ActualRuntime()
+	}
 	if p.cacheReader != nil {
 		_ = p.cacheReader.Close()
 	}
@@ -627,7 +630,9 @@ func (p *beepPlayer) finishGapless(prepared *preparedGapless) {
 	p.cacheReader = prepared.file
 	p.gaplessCachePath = prepared.file.Name()
 	p.cacheDownloaded = true
-	p.timer.Reset()
+	if p.timer != nil {
+		p.timer.Reset()
+	}
 	if old != nil {
 		_ = old.Close()
 	}

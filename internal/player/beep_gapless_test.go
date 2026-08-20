@@ -1,6 +1,7 @@
 package player
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/gopxl/beep"
@@ -71,6 +72,55 @@ func TestTrimmedMP3DoesNotUseFixedLengthWhileStreaming(t *testing.T) {
 	}
 	if stream.Len() != 3 {
 		t.Fatalf("streaming logical length=%d, want underlying length minus start", stream.Len())
+	}
+}
+
+func TestEstimateMP3PaddingIsConservative(t *testing.T) {
+	const rate = beep.SampleRate(44100)
+	maxPadding := int(maxEstimatedMP3Padding.Seconds() * float64(rate))
+	for _, test := range []struct {
+		name        string
+		decoded     int
+		target      int
+		wantPadding int
+	}{
+		{name: "typical padding", decoded: 101000, target: 100000, wantPadding: 1000},
+		{name: "maximum padding", decoded: 100000 + maxPadding, target: 100000, wantPadding: maxPadding},
+		{name: "duration mismatch", decoded: 100001 + maxPadding, target: 100000, wantPadding: 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := estimateMP3Padding(test.decoded, test.target, rate); got != test.wantPadding {
+				t.Fatalf("padding=%d, want %d", got, test.wantPadding)
+			}
+		})
+	}
+}
+
+func TestMP3GaplessSamplesTreatsExplicitZeroPaddingAsReliable(t *testing.T) {
+	lame := make([]byte, 64)
+	copy(lame[4:], "LAME")
+	copy(lame[4+21:], []byte{0x45, 0x10, 0x00}) // delay=0x451, padding=0
+
+	for _, test := range []struct {
+		name string
+		data []byte
+	}{
+		{name: "LAME", data: lame},
+		{name: "iTunSMPB", data: []byte("iTunSMPB 00000000 00000451 00000000")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			delay, padding, hasPadding := mp3GaplessSamples(bytes.NewReader(test.data))
+			if delay != 0x451 || padding != 0 || !hasPadding {
+				t.Fatalf("delay=%d padding=%d hasPadding=%v", delay, padding, hasPadding)
+			}
+		})
+	}
+}
+
+func TestMP3GaplessSamplesRejectsInvalidITunSMPB(t *testing.T) {
+	delay, padding, hasPadding := mp3GaplessSamples(bytes.NewReader([]byte("iTunSMPB 00000000 invalid invalid")))
+	if delay != 0 || padding != 0 || hasPadding {
+		t.Fatalf("delay=%d padding=%d hasPadding=%v, want invalid metadata ignored", delay, padding, hasPadding)
 	}
 }
 

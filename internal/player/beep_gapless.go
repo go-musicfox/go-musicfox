@@ -181,13 +181,16 @@ func prepareGapless(ctx context.Context, fromID int64, music URLMusic, outputRat
 		}
 	}
 	if err != nil || reader == nil {
+		if reader != nil {
+			_ = reader.Close()
+		}
 		slog.Warn("gapless preload open error", "song_id", music.Id, "error", err)
 		return nil
 	}
-	defer reader.Close()
 
 	file, err := os.CreateTemp(app.RuntimeDir(), "beep_gapless_*")
 	if err != nil {
+		_ = reader.Close()
 		return nil
 	}
 	bytes, copyErr := iox.CopyClose(ctx, file, reader)

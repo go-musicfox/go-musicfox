@@ -20,6 +20,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
+const maxEstimatedMP3Padding = 200 * time.Millisecond
+
 func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
 	return decodeSong(t, r, 0, false)
 }
@@ -27,7 +29,7 @@ func DecodeSong(t SongType, r io.ReadSeekCloser) (streamer beep.StreamSeekCloser
 func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration, finalized bool) (streamer beep.StreamSeekCloser, format beep.Format, err error) {
 	switch t {
 	case Mp3:
-		gaplessDelay, gaplessPadding := mp3GaplessSamples(r)
+		gaplessDelay, gaplessPadding, hasGaplessPadding := mp3GaplessSamples(r)
 		switch configs.AppConfig.Player.Beep.Mp3Decoder {
 		case types.BeepMiniMp3Decoder:
 			minimp3pkg.BufferSize = 1024 * 50
@@ -35,12 +37,10 @@ func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration, finaliz
 		default:
 			streamer, format, err = mp3.Decode(r)
 			if err == nil && configs.AppConfig.Player.Beep.Gapless {
-				if finalized && duration > 0 && format.SampleRate > 0 {
+				if finalized && !hasGaplessPadding && duration > 0 && format.SampleRate > 0 {
 					target := int(math.Round(duration.Seconds() * float64(format.SampleRate)))
 					decoded := streamer.Len() - gaplessDelay
-					if target > 0 && decoded > target {
-						gaplessPadding = decoded - target
-					}
+					gaplessPadding = estimateMP3Padding(decoded, target, format.SampleRate)
 				}
 			}
 			if err == nil && configs.AppConfig.Player.Beep.Gapless && (gaplessDelay > 0 || gaplessPadding > 0) {
@@ -57,6 +57,15 @@ func decodeSong(t SongType, r io.ReadSeekCloser, duration time.Duration, finaliz
 		err = errors.Errorf("Unknown song type(%d)", t)
 	}
 	return
+}
+
+func estimateMP3Padding(decoded, target int, sampleRate beep.SampleRate) int {
+	padding := decoded - target
+	maxPadding := int(maxEstimatedMP3Padding.Seconds() * float64(sampleRate))
+	if target <= 0 || padding <= 0 || padding > maxPadding {
+		return 0
+	}
+	return padding
 }
 
 type trimmedMP3 struct {
@@ -122,7 +131,7 @@ func (d *trimmedMP3) Seek(pos int) error {
 	return nil
 }
 
-func mp3GaplessSamples(r io.ReadSeeker) (delay, padding int) {
+func mp3GaplessSamples(r io.ReadSeeker) (delay, padding int, hasPadding bool) {
 	if _, err := r.Seek(0, io.SeekStart); err != nil {
 		return
 	}
@@ -142,22 +151,24 @@ func mp3GaplessSamples(r io.ReadSeeker) (delay, padding int) {
 			break
 		}
 		value := uint32(data[i+21])<<16 | uint32(data[i+22])<<8 | uint32(data[i+23])
-		return int(value >> 12), int(value & 0xfff)
+		return int(value >> 12), int(value & 0xfff), true
 	}
 	// FFmpeg-authored MP3s commonly retain Xing/Info but omit a LAME delay
 	// field. Their demuxer-visible start skip is the standard 576 encoder plus
 	// 529 decoder samples.
 	header := string(data[:metadataEnd])
 	if strings.Contains(header, "Xing") || strings.Contains(header, "Info") {
-		return 1105, 0
+		return 1105, 0, false
 	}
 	// Some encoders write the same values in the iTunSMPB ID3 text frame.
 	if i := strings.Index(string(data), "iTunSMPB"); i >= 0 {
 		fields := strings.Fields(string(data[i:]))
 		if len(fields) >= 4 {
-			d, _ := strconv.ParseInt(fields[2], 16, 32)
-			p, _ := strconv.ParseInt(fields[3], 16, 32)
-			return int(d), int(p)
+			d, delayErr := strconv.ParseInt(fields[2], 16, 32)
+			p, paddingErr := strconv.ParseInt(fields[3], 16, 32)
+			if delayErr == nil && paddingErr == nil {
+				return int(d), int(p), true
+			}
 		}
 	}
 	return
