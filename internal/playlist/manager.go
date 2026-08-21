@@ -292,6 +292,11 @@ func (pm *playlistManager) GetPlayModeName() string {
 
 // SaveState 保存播放列表状态到存储
 func (pm *playlistManager) SaveState() error {
+	if storage.DBManager == nil {
+		// 存储未初始化（如测试环境）时跳过保存
+		return nil
+	}
+
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
 
@@ -309,6 +314,11 @@ func (pm *playlistManager) SaveState() error {
 
 // LoadState 从存储加载播放列表状态
 func (pm *playlistManager) LoadState() error {
+	if storage.DBManager == nil {
+		// 存储未初始化（如测试环境）时跳过加载
+		return nil
+	}
+
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -350,6 +360,11 @@ func (pm *playlistManager) LoadState() error {
 
 // saveStateAsync 异步保存状态，避免阻塞主线程
 func (pm *playlistManager) saveStateAsync() {
+	if storage.DBManager == nil {
+		// 存储未初始化（如测试环境）时跳过保存
+		return
+	}
+
 	// 创建播放列表快照
 	pm.mu.RLock()
 	snapshot := storage.PlayerSnapshot{
