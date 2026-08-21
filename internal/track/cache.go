@@ -71,9 +71,6 @@ func (m *Cacher) Put(song structs.Song, quality service.SongQualityLevel, fileTy
 		return err
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if err := m.ensureDirExists(); err != nil {
 		return fmt.Errorf("cannot put cache, directory check failed: %w", err)
 	}
@@ -88,6 +85,9 @@ func (m *Cacher) Put(song structs.Song, quality service.SongQualityLevel, fileTy
 	defer os.Remove(tempFile.Name())
 	defer tempFile.Close()
 
+	// 网络→磁盘拷贝不持锁：GetPath（切歌解析路径）需要 RLock，慢速 FLAC
+	// 后台缓存期间持锁会让每次切歌阻塞数秒到数十秒。锁只覆盖目录检查、
+	// 建临时文件与最后的 rename。
 	_, err = io.Copy(tempFile, data)
 	if err != nil {
 		return fmt.Errorf("failed to copy data to temp file: %w", err)
@@ -97,9 +97,12 @@ func (m *Cacher) Put(song structs.Song, quality service.SongQualityLevel, fileTy
 		return fmt.Errorf("failed to close temp file: %w", err)
 	}
 
+	m.mu.Lock()
 	if err := os.Rename(tempFile.Name(), filePath); err != nil {
+		m.mu.Unlock()
 		return fmt.Errorf("failed to rename temp file to %s: %w", filePath, err)
 	}
+	m.mu.Unlock()
 
 	slog.Debug("Song cached successfully.", "key", key)
 

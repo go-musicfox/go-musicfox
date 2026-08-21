@@ -67,7 +67,13 @@ func notImplemented(c *prop.Change) *dbus.Error {
 
 // OnVolume handles volume changes.
 func (p *Player) OnVolume(c *prop.Change) *dbus.Error {
-	val := int(math.Round(c.Value.(float64) * 100))
+	// MPRIS 音量是 0..1 浮点；钳制到合法区间，防御 NaN/Inf/越界值
+	vol := c.Value.(float64)
+	if math.IsNaN(vol) || math.IsInf(vol, 0) {
+		vol = 0
+	}
+	vol = math.Max(0, math.Min(1, vol))
+	val := int(math.Round(vol * 100))
 
 	p.RemoteControl.player.CtrlSetVolume(val)
 	return nil
