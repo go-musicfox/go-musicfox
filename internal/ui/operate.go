@@ -36,6 +36,9 @@ import (
 // isSelected: true 获取当前选择歌曲，false 获取当前播放歌曲
 // 返回获取到的歌曲和一个布尔值，表示是否成功获取。
 func getTargetSong(n *Netease, isSelected bool) (structs.Song, bool) {
+	if n == nil || n.player == nil {
+		return structs.Song{}, false
+	}
 	if !isSelected {
 		if n.player.CurSongIndex() >= len(n.player.Playlist()) {
 			return structs.Song{}, false
