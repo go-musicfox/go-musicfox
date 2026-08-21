@@ -45,6 +45,6 @@
 
 ### Phase 2: 核心框架层
 
-- [ ] 2.1 Context + 服务注册/解析/覆写
-- [ ] 2.2 作用域生命周期（start/stop/dispose 递归）
-- [ ] 2.3 事件链（listener/middleware/parallel/serial）
+- [x] 2.1 Context + 服务注册/解析/覆写 — 48746903
+- [x] 2.2 作用域生命周期（start/stop/dispose 递归） — 48746903
+- [x] 2.3 事件链（listener/middleware/parallel/serial） — 48746903
