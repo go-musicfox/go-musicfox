@@ -4,7 +4,7 @@
 
 ## 路由入口：ask-anhoder
 
-不确定该用哪个技能时，直接说你的诉求，`ask-anhoder` 会给出唯一的路由建议：`Next: om-<skill> <参数>` + 理由 + 用法示例。它只路由不执行；长诉求只给主入口，后续环节由技能间的 `PR:`/`Issue:`/`Spec:` 标记行自动串联。本文件速查表是它的兜底索引。
+不确定该用哪个技能时，直接说你的诉求，`ask-anhoder` 会给出唯一的路由并**自动调用**目标技能执行：加载该技能的 `SKILL.md`，按其工作流 verbatim 运行，而非只输出建议。长诉求只给主入口，后续环节由技能间的 `PR:`/`Issue:`/`Spec:` 标记行自动串联。本文件速查表是它的兜底索引。
 
 ## 安装与配置
 
@@ -98,7 +98,7 @@ om-ux-review-pr <pr>    # 证据优先的 PR UI 设计评审
 
 | 技能 | 职责 | 典型用法 |
 |---|---|---|
-| `ask-anhoder` | 总路由：按场景推荐唯一技能入口 | `ask-anhoder "我想把想法做成 PR"` |
+| `ask-anhoder` | 总路由：按场景路由并自动调用目标技能执行 | `ask-anhoder "我想把想法做成 PR"` |
 | `om-auto-fix-issue` | 一条命令端到端修 issue | `om-auto-fix-issue 123` |
 | `om-auto-create-pr` | 任务 brief → 计划 → 分阶段实现 → PR | `om-auto-create-pr "brief" --loop` |
 | `om-auto-continue-pr` / `-loop` | 恢复未完成的 PR（无计划则收养） | `om-auto-continue-pr 456` |
