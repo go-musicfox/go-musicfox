@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -80,9 +81,13 @@ type Player struct {
 
 	lyricService *lyric.Service
 
-	playErrCount int // 错误计数，当错误连续超过5次，停止播放
-	stateHandler *control.RemoteControl
-	ctrl         chan CtrlSignal
+	playErrCount    int // 错误计数，当错误连续超过5次，停止播放
+	stateHandler    *control.RemoteControl
+	ctrl            chan CtrlSignal
+	gaplessMu       sync.Mutex
+	gaplessPending  int64
+	gaplessLoading  bool
+	gaplessTriedFor int64
 
 	renderTicker *tickerByPlayer // renderTicker 用于渲染
 
@@ -115,6 +120,10 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 	ctx, p.cancel = context.WithCancel(context.Background())
 
 	p.Player = player.NewPlayerFromConfig()
+	var gaplessTransitions <-chan player.GaplessTransition
+	if gapless, ok := p.Player.(player.GaplessPlayer); ok {
+		gaplessTransitions = gapless.GaplessTransitionChan()
+	}
 	p.stateHandler = control.NewRemoteControl(p, p.PlayingInfo())
 
 	p.renderTicker = newTickerByPlayer(p)
@@ -138,9 +147,9 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			case <-ctx.Done():
 				return
 			case s := <-p.StateChan():
-			p.stateHandler.SetPlayingInfo(p.PlayingInfo())
-			p.updateDesktopLyrics()
-			if s != types.Stopped {
+				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+				p.updateDesktopLyrics()
+				if s != types.Stopped {
 					p.netease.Rerender(false)
 					break
 				}
@@ -155,6 +164,8 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			select {
 			case <-ctx.Done():
 				return
+			case transition := <-gaplessTransitions:
+				p.commitGaplessTransition(transition)
 			case duration := <-p.TimeChan():
 				if pos := p.PassedTime(); p.mprisPosThrottle.shouldEmit(pos, time.Now()) {
 					p.stateHandler.SetPosition(pos)
@@ -162,6 +173,7 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 				if duration.Seconds()-p.CurMusic().Duration.Seconds() > 10 {
 					p.NextSong(false)
 				}
+				p.maybePreloadGapless(duration)
 
 				p.lyricService.UpdatePosition(duration)
 
@@ -240,6 +252,7 @@ func (p *Player) LocatePlayingSong() {
 
 // PlaySong 播放歌曲
 func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
+	p.cancelGaplessPreload()
 	p.reporter.ReportEnd(p.PlayedTime())
 
 	loading := model.NewLoading(p.netease.MustMain())
@@ -323,6 +336,7 @@ func (p *Player) Playlist() []structs.Song {
 }
 
 func (p *Player) InitSongManager(index int, playlist []structs.Song) {
+	p.cancelGaplessPreload()
 	_ = p.playlistManager.Initialize(index, playlist)
 }
 
@@ -401,6 +415,7 @@ func (p *Player) Seek(duration time.Duration) {
 
 // SetMode 设置播放模式
 func (p *Player) SetMode(playMode types.Mode) {
+	p.cancelGaplessPreload()
 	if p.lastMode != p.netease.player.Mode() {
 		p.lastMode = p.netease.player.Mode()
 	}

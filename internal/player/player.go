@@ -30,6 +30,20 @@ type Player interface {
 	Close()
 }
 
+// GaplessTransition describes an audio-boundary switch completed by a player.
+type GaplessTransition struct {
+	Music      URLMusic
+	PlayedTime time.Duration
+}
+
+// GaplessPlayer is implemented by players that can prepare the next track and
+// switch streams without inserting silence between audio samples.
+type GaplessPlayer interface {
+	Preload(URLMusic)
+	CancelPreload()
+	GaplessTransitionChan() <-chan GaplessTransition
+}
+
 func NewPlayerFromConfig() Player {
 	cfg := configs.AppConfig
 	var player Player

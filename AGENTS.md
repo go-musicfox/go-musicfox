@@ -154,7 +154,7 @@ type Player interface {
 
 | 引擎 | 平台 | 特点 |
 |------|------|------|
-| Beep（默认） | 跨平台 | MP3/FLAC/OGG/WAV |
+| Beep（默认） | 跨平台 | MP3/FLAC/OGG/WAV；可选 MP3 无缝播放，使用 go-mp3 时额外支持编码器延迟和尾部填充裁剪 |
 | DLNA | 跨平台 | 设备投送 |
 | MPV | 跨平台 | IPC 控制（命令连接带排空 goroutine 防 mpv 发送缓冲堆积，切歌带 file-loaded 超时 watchdog 兜底） |
 | MPD | Linux | 远程服务器 |

@@ -324,6 +324,11 @@ mouseVolumeStep = 1
 # MP3解码器，可选: "go-mp3", "minimp3"
 # "minimp3" CPU占用更低，但稳定性可能稍逊于 "go-mp3"
 mp3Decoder = "go-mp3"
+# 无缝播放（仅 beep 引擎），默认关闭；MP3 使用 go-mp3 时会裁剪编码器延迟和尾部填充
+# minimp3 仅支持连续流切换，不处理 MP3 编码器延迟和尾部填充
+gapless = false
+# 开始预加载下一首时，当前歌曲的剩余秒数
+gaplessPreloadSeconds = 15
 
 # `mpd` 引擎专属配置，需要安装mpd
 [player.mpd]
