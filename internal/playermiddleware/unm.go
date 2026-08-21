@@ -18,9 +18,8 @@ import (
 //     already resolves URLs with SkipUNM: true, so the engine is not triggered
 //     there; this middleware only guards the resolved URL, never re-triggers
 //     the engine on the main path.
-//  2. ProxyURL non-empty forces the engine off — mirrored from the vendored
-//     SDK (util/config.go:40-42); when a UNM proxy is configured the engine
-//     stays disabled and no interception applies.
+//  2. ProxyURL non-empty forces the engine off — enforced inside the vendored
+//     SDK (util/config.go:40-42); the middleware does not re-implement it.
 //  3. banned-path interception — when UNM.SkipInvalidTracks is enabled, URLs
 //     whose suffix matches the banned-link features (netease.HasBannedPathSuffix)
 //     are rejected with ErrBlockedTrack, exactly like today's player.go check.
@@ -30,12 +29,6 @@ import (
 // current code makes.
 func NewUNMMiddleware() URLMiddleware {
 	return func(ctx context.Context, urlMusic *player.URLMusic, next MiddlewareNext) error {
-		// Constraint 2: a configured UNM proxy disables the engine, and with
-		// it the banned-path interception the engine-backed flow relies on.
-		if configs.AppConfig.UNM.ProxyURL != "" {
-			return next(ctx, urlMusic)
-		}
-
 		// Constraint 3: banned-path interception (SkipInvalidTracks).
 		if configs.AppConfig.UNM.SkipInvalidTracks {
 			skip, err := netease.HasBannedPathSuffix(urlMusic.URL)
@@ -48,7 +41,8 @@ func NewUNMMiddleware() URLMiddleware {
 			}
 		}
 
-		// Constraint 1 is handled upstream (fetch layer), nothing to do here.
+		// Constraints 1 and 2 are enforced upstream (fetch layer and the
+		// vendored SDK engine switch respectively), nothing to do here.
 		return next(ctx, urlMusic)
 	}
 }

@@ -20,14 +20,16 @@ func withUNMConfig(t *testing.T, proxyURL string, skipInvalid bool) {
 	t.Cleanup(func() { configs.AppConfig = previous })
 }
 
-func TestUNMProxyURLDisablesInterception(t *testing.T) {
+func TestUNMProxyURLDoesNotAffectBannedInterception(t *testing.T) {
 	withUNMConfig(t, "http://127.0.0.1:8080", true)
 	c := NewChain().Use(NewUNMMiddleware())
-	// A banned URL must pass through untouched when a proxy is configured,
-	// mirroring the SDK's "ProxyURL non-empty forces UNM off" rule.
+	// A configured UNM proxy only disables the SDK engine (util/config.go);
+	// the SkipInvalidTracks banned-path interception still applies, exactly
+	// like today's player.go behavior.
 	m := testURLMusic("https://music.163.com/resource/n2/73/84/3759149332.mp3")
-	if err := c.Execute(context.Background(), m); err != nil {
-		t.Fatalf("expected no error with proxy configured, got %v", err)
+	err := c.Execute(context.Background(), m)
+	if !errors.Is(err, ErrBlockedTrack) {
+		t.Fatalf("expected ErrBlockedTrack despite proxy config, got %v", err)
 	}
 }
 
