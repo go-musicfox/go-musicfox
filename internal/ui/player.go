@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
+	"github.com/go-musicfox/go-musicfox/internal/playermiddleware"
 	"github.com/go-musicfox/go-musicfox/internal/playlist"
 	control "github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/reporter"
@@ -97,6 +99,10 @@ type Player struct {
 
 	player.Player // 播放器
 	reporter      reporter.Service
+
+	// middlewareChain 播放链中间件链：在 ResolvePlayableSource 之后、引擎
+	// Play 之前运行（如 UNM banned-path 拦截），可改写 URLMusic。
+	middlewareChain *playermiddleware.Chain
 }
 
 func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
@@ -115,6 +121,7 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 		playlistManager: playlist.NewPlaylistManager(),
 		ctrl:            make(chan CtrlSignal, 10),
 		reporter:        reporter.NewService(reporterOptions...),
+		middlewareChain: playermiddleware.NewChain().Use(playermiddleware.NewUNMMiddleware()),
 	}
 	var ctx context.Context
 	ctx, p.cancel = context.WithCancel(context.Background())
@@ -270,11 +277,21 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	p.Pause()
 	url, musicType, err := p.getPlayInfo(song)
 
-	var skip bool
+	// 构造 URLMusic 并经过中间件链（如 UNM banned-path 拦截），
+	// 中间件可改写 URL 或以 ErrBlockedTrack 拦截播放。
+	urlMusic := &player.URLMusic{URL: url, Song: song, Type: player.SongTypeMapping[musicType]}
 	logger := slog.With(slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
-	if configs.AppConfig.UNM.SkipInvalidTracks {
-		skip, _ = netease.HasBannedPathSuffix(url)
+	var skip bool
+	if err == nil {
+		if mwErr := p.middlewareChain.Execute(context.Background(), urlMusic); mwErr != nil {
+			if errors.Is(mwErr, playermiddleware.ErrBlockedTrack) {
+				skip = true
+			} else {
+				err = mwErr
+			}
+		}
 	}
+	url = urlMusic.URL
 
 	if url == "" || err != nil || skip {
 		p.playErrCount++
@@ -299,11 +316,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		p.lyricService.SetSong(context.Background(), song)
 	}, true)
 
-	p.Play(player.URLMusic{
-		URL:  url,
-		Song: song,
-		Type: player.SongTypeMapping[musicType],
-	})
+	p.Play(*urlMusic)
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	// 上报开始播放
