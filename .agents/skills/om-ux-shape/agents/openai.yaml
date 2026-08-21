@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shape Useful Features (om-ux-shape)"
+  short_description: "Shape simple, valuable AI product features"
+  default_prompt: "Use $om-ux-shape to turn this product idea into a simple, valuable, development-ready feature."
