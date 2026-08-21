@@ -148,7 +148,8 @@ func (r *CoverRenderer) calculateDimensions() {
 // rectsOverlap returns true if two rectangles overlap.
 // All coordinates are 0-indexed.
 func rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2 int) bool {
-	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h2 > y2
+	// 第二项垂直条件应为 y1+h1 > y2（原实现误用 h2，只对等高矩形碰巧正确）
+	return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h1 > y2
 }
 
 // isAppBackgroundTransparent returns true when the current theme's app
@@ -198,11 +199,19 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	// Position cover purely based on lyrics: align the cover's bottom edge to the
-	// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
-	// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
-	// compensating for the Kitty image not filling the bottom terminal cell exactly.
-	coverStartRow := lyricStartRow + lyricLines - r.rows/2 - 1
+	var coverStartRow int
+	if lyricLines > 0 {
+		// Position cover purely based on lyrics: align the cover's bottom edge to the
+		// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
+		// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
+		// compensating for the Kitty image not filling the bottom terminal cell exactly.
+		coverStartRow = lyricStartRow + lyricLines - r.rows/2 - 1 + CoverBottomAlignOffset
+	} else {
+		// 无歌词（歌词关闭或窗口过矮）：GetLyricPosition 返回 (0,0)，按歌词公式
+		// 会算出负行号，writeToTerminal 拼出 \x1b[-N;M H 这类非法 CSI，终端行为
+		// 未定义、封面与菜单标题重叠。改为从窗口底部向上定位，预留底部边距。
+		coverStartRow = windowHeight - FixedTopBottomRows - CoverEndRowMargin - r.rows
+	}
 
 	// If cover can't fit at all, skip rendering
 	if r.rows > windowHeight-FixedTopBottomRows {
@@ -568,31 +577,66 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 	r.mu.Unlock()
 
-	// Fetch and generate kitty sequence
-	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picUrl, r.cols, r.rows)
-	if err != nil {
-		slog.Debug("CoverRenderer: failed to fetch image", slog.Any("error", err))
+	// 静态模式同样走异步渲染：GetOrFetch 可能发起网络抓图（最长 10s），同步
+	// 执行会冻结整个渲染线程（TUI 卡死、spin 模式每次切歌都触发）。先返回空
+	// 视图，结果经 renderChan 送达后应用（与 spin 模式同一机制）。
+	select {
+	case res := <-r.renderChan:
+		if res.songID == song.Id {
+			// Apply to terminal
+			r.writeToTerminal(res.sequence, res.startRow, res.startCol, true)
+
+			r.currentSongId = res.songID
+			r.cachedSeq = res.sequence
+			r.lastStartRow = res.startRow
+			r.lastStartCol = res.startCol
+			r.imageRendered = true
+			r.forceRerender = false
+			r.renderingID = 0 // Clear rendering flag
+			return "", 0
+		}
+		// Old result for different song, ignore but clear flag if it matched
+		if r.renderingID == res.songID {
+			r.renderingID = 0
+		}
+	default:
+	}
+
+	// 正在生成这首歌，等下一帧
+	if r.renderingID == song.Id {
 		return "", 0
 	}
-	if kittySeq == "" {
-		return "", 0
+
+	// 取消上一轮生成，启动异步抓图
+	if r.cancelFunc != nil {
+		r.cancelFunc()
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	r.cancelFunc = cancel
+	r.renderingID = song.Id
+	cols, rows := r.cols, r.rows
 
-	// Cache the result and render
-	r.mu.Lock()
-	r.currentSongId = song.Id
-	r.cachedSeq = kittySeq
-	r.lastStartRow = coverStartRow
-	r.lastStartCol = coverStartCol
-	r.mu.Unlock()
-
-	// Write directly to stdout, delete old images when song changes
-	r.writeToTerminal(kittySeq, coverStartRow, coverStartCol, true)
-
-	r.mu.Lock()
-	r.imageRendered = true
-	r.forceRerender = false // Reset forceRerender after successful render
-	r.mu.Unlock()
+	go func(ctx context.Context, songID int64, picUrl string, startRow, startCol, cols, rows int) {
+		kittySeq, err := r.imageCache.GetOrFetch(ctx, picUrl, cols, rows)
+		if err != nil || kittySeq == "" {
+			slog.Debug("CoverRenderer: failed to fetch image", slog.Any("error", err))
+			r.mu.Lock()
+			r.renderingID = 0
+			r.mu.Unlock()
+			return
+		}
+		// Send result (only if not cancelled)
+		select {
+		case <-ctx.Done():
+			return
+		case r.renderChan <- renderResult{
+			songID:   songID,
+			sequence: kittySeq,
+			startRow: startRow,
+			startCol: startCol,
+		}:
+		}
+	}(ctx, song.Id, picUrl, coverStartRow, coverStartCol, cols, rows)
 
 	return "", 0
 }
@@ -603,7 +647,8 @@ func (r *CoverRenderer) writeStdout(s string) {
 	r.writeMu.Lock()
 	defer r.writeMu.Unlock()
 	_, _ = os.Stdout.WriteString(s)
-	_ = os.Stdout.Sync()
+	// 注意：不再调用 os.Stdout.Sync()——tty 上 fsync 返回 EINVAL（错误被忽略），
+	// 纯属多余 syscall，每帧渲染都在空转
 }
 
 // writeToTerminal writes the kitty graphics sequence directly to stdout,
@@ -771,6 +816,21 @@ func (r *CoverRenderer) ClearDisplayed() {
 func (r *CoverRenderer) Close() {
 	if !r.kittySupport {
 		return
+	}
+
+	// 取消在途的封面生成 goroutine：退出后它仍会向 os.Stdout 写 kitty 序列，
+	// 在 bubbletea 已还原屏幕的窗口期内可能把帧数据写进 shell（垃圾/残影）。
+	// 与 ClearDisplayed 保持一致的生命周期管理。
+	r.mu.Lock()
+	if r.cancelFunc != nil {
+		r.cancelFunc()
+		r.cancelFunc = nil
+	}
+	r.mu.Unlock()
+	// 排空可能残留的渲染结果，生成 goroutine 的发送带 ctx.Done 兜底不会阻塞
+	select {
+	case <-r.renderChan:
+	default:
 	}
 
 	r.mu.Lock()
