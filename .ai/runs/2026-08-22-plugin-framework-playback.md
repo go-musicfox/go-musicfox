@@ -38,10 +38,10 @@
 
 ### Phase 1: 播放链路插件化
 
-- [ ] 1.1 定义 URLMiddleware 类型与中间件链容器
-- [ ] 1.2 UNM 中间件插件（三层交互约束复刻）
-- [ ] 1.3 PlayableSourceProvider 接口 + 网易云 provider 实现
-- [ ] 1.4 播放链接入 + 全量门禁
+- [x] 1.1 定义 URLMiddleware 类型与中间件链容器 — 685648c2
+- [x] 1.2 UNM 中间件插件（三层交互约束复刻） — ad52348d
+- [x] 1.3 PlayableSourceProvider 接口 + 网易云 provider 实现 — 64b89420
+- [x] 1.4 播放链接入 + 全量门禁 — 64b89420
 
 ### Phase 2: 核心框架层
 
