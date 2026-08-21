@@ -15,7 +15,8 @@ type ArtistsOfSongMenu struct {
 
 func NewArtistsOfSongMenu(base baseMenu, song structs.Song) *ArtistsOfSongMenu {
 	artistsMenu := &ArtistsOfSongMenu{
-		song: song,
+		baseMenu: base,
+		song:     song,
 	}
 	var subTitle = "「" + song.Name + "」所属歌手"
 	for _, artist := range song.Artists {
