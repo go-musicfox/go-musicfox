@@ -56,7 +56,7 @@
 
 ### Phase 3.0: 证伪原型
 
-- [ ] 3.0.1 双形态最小注册表原型
+- [x] 3.0.1 双形态最小注册表原型 — evidence: `.ai/runs/proto-3.0-evidence.md` (both shapes compile + tests green; call sites wired to B)
 - [ ] 3.0.2 裁决 A/B 记录决策点
 
 ### Phase 3.1: 服务化

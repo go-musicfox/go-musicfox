@@ -21,7 +21,11 @@ func NewArtistsOfSongMenu(base baseMenu, song structs.Song) *ArtistsOfSongMenu {
 	var subTitle = "「" + song.Name + "」所属歌手"
 	for _, artist := range song.Artists {
 		artistsMenu.menus = append(artistsMenu.menus, model.MenuItem{Title: artist.Name, Subtitle: subTitle})
-		artistsMenu.menuList = append(artistsMenu.menuList, NewArtistDetailMenu(base, artist.Id, artist.Name))
+		artistMenu, err := BuildMenuB("artist_detail", base, ArtistDetailOpts{ArtistID: artist.Id, Name: artist.Name})
+		if err != nil {
+			continue // cannot happen with the static registry; skip on error
+		}
+		artistsMenu.menuList = append(artistsMenu.menuList, artistMenu)
 	}
 
 	return artistsMenu

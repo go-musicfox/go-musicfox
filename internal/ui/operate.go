@@ -420,9 +420,12 @@ func goToArtistOfSong(n *Netease, isSelected bool) {
 			if detail, ok := menu.(*ArtistDetailMenu); ok && detail.artistId == song.Artists[0].Id {
 				return nil
 			}
-			newMenu := NewArtistDetailMenu(newBaseMenu(n), song.Artists[0].Id, song.Artists[0].Name)
+			artistMenu, err := BuildMenuB("artist_detail", newBaseMenu(n), ArtistDetailOpts{ArtistID: song.Artists[0].Id, Name: song.Artists[0].Name})
+			if err != nil {
+				return nil
+			}
 			newTitle := &model.MenuItem{Title: song.Artists[0].Name, Subtitle: "「" + song.Name + "」所属歌手"}
-			main.EnterMenu(newMenu, newTitle)
+			main.EnterMenu(artistMenu, newTitle)
 			return nil
 		}
 		if artists, ok := menu.(*ArtistsOfSongMenu); ok && artists.song.Id == song.Id {
@@ -726,9 +729,12 @@ func openAddSongToUserPlaylistMenu(n *Netease, isSelected, isAdd bool) model.Pag
 		if !isAdd {
 			subtitle = "将「" + song.Name + "」从歌单中删除"
 		}
-		newMenu := NewAddToUserPlaylistMenu(newBaseMenu(n), n.user.UserId, song, isAdd)
+		addMenu, err := BuildMenuB("add_to_user_playlist", newBaseMenu(n), AddToUserPlaylistOpts{UserID: n.user.UserId, Song: song, IsAdd: isAdd})
+		if err != nil {
+			return nil
+		}
 		newTitle := &model.MenuItem{Title: model.T(MsgMenuMyPlaylists), Subtitle: subtitle}
-		main.EnterMenu(newMenu, newTitle)
+		main.EnterMenu(addMenu, newTitle)
 		return nil
 	}
 
@@ -1007,7 +1013,11 @@ func searchSong(n *Netease, isSelected bool) {
 		n.search.searchType = StSingleSong
 		n.search.result = _struct.GetSongsOfSearchResult(response)
 
-		return main.EnterMenu(NewSearchResultMenu(newBaseMenu(n), StSingleSong), &model.MenuItem{Title: model.T(MsgMenuSearchResult)})
+		searchResultMenu, err := BuildMenuB("search_result", newBaseMenu(n), SearchResultOpts{SearchType: StSingleSong})
+		if err != nil {
+			return nil
+		}
+		return main.EnterMenu(searchResultMenu, &model.MenuItem{Title: model.T(MsgMenuSearchResult)})
 	})
 	op.ShowLoading().Execute()
 }

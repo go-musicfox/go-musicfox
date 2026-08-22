@@ -47,5 +47,9 @@ func (m *SearchTypeMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return NewSearchResultMenu(m.baseMenu, typeArr[index])
+	searchResultMenu, err := BuildMenuB("search_result", m.baseMenu, SearchResultOpts{SearchType: typeArr[index]})
+	if err != nil {
+		return nil
+	}
+	return searchResultMenu
 }

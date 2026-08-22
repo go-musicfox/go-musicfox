@@ -51,7 +51,11 @@ func (m *UserPlaylistMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.playlists) < index {
 		return nil
 	}
-	return NewPlaylistDetailMenu(m.baseMenu, m.playlists[index].Id)
+	playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
+	if err != nil {
+		return nil
+	}
+	return playlistMenu
 }
 
 func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {

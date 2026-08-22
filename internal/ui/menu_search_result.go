@@ -79,12 +79,20 @@ func (m *SearchResultMenu) SubMenu(_ *model.App, index int) model.Menu {
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewPlaylistDetailMenu(m.baseMenu, resultWithType[index].Id)
+		playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: resultWithType[index].Id})
+		if err != nil {
+			return nil
+		}
+		return playlistMenu
 	case []ds2.Artist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewArtistDetailMenu(m.baseMenu, resultWithType[index].Id, resultWithType[index].Name)
+		artistMenu, err := BuildMenuB("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: resultWithType[index].Id, Name: resultWithType[index].Name})
+		if err != nil {
+			return nil
+		}
+		return artistMenu
 	case []ds2.User:
 		if index >= len(resultWithType) {
 			return nil

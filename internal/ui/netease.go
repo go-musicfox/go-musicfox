@@ -107,7 +107,11 @@ func NewNetease(app *model.App) *Netease {
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
-	n.login = NewLoginPage(n)
+	loginPage, err := BuildPageB("login", LoginPageOpts{Netease: n})
+	if err != nil {
+		return nil
+	}
+	n.login = loginPage.(*LoginPage) // proto: BuildPageB returns model.Page; concrete type asserted back
 	n.search = NewSearchPage(n)
 	n.App = app
 

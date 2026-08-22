@@ -36,7 +36,11 @@ func (m *HighQualityPlaylistsMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.playlists) {
 		return nil
 	}
-	return NewPlaylistDetailMenu(m.baseMenu, m.playlists[index].Id)
+	playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
+	if err != nil {
+		return nil
+	}
+	return playlistMenu
 }
 
 func (m *HighQualityPlaylistsMenu) Playlists() []structs.Playlist {
