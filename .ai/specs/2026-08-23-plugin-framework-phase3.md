@@ -57,18 +57,17 @@ netease.go 是 734 行的枢纽型协调器，持有 player、lyricService、tra
 
 内部 UI 部件（lyricRenderer/songInfoRenderer/progressRenderer/spectrumRenderer/spectrogramRenderer）留在薄壳组合中，不服务化（Resolved assumptions Q3）。
 
-**Provider 接口**（草案形态，**以 Phase 3.0 原型裁决结论为准**；研究参考见 Proposed Solution）：
+**Provider 接口**（**已裁决：候选形态 B（泛型注册），2026-08-23 Phase 3.0 原型**；研究参考见 Proposed Solution）：
 
 ```go
-// 候选形态 A：变参工厂（最贴近现有构造函数，零类型安全）
-type MenuProvider interface {
-    Key() string
-    Build(base baseMenu, args ...any) (Menu, error)
+// 菜单 provider——泛型注册，参数契约进类型系统（opts 结构体即插件契约）
+type menuFactory[T any] struct {
+    Key   string
+    Build func(base baseMenu, opts T) (Menu, error)
 }
-// 候选形态 B（kopia/go-git 式）：泛型注册，注册侧类型安全
-//   Register[T](key string, factory func(base baseMenu, opts T) (Menu, error))
-//   —— 每个异构菜单一个 options 类型 T；调用侧构造 T 后按 key 构建
-// 候选形态 C（对照）：map[string]any 参数 + 工厂内类型断言（最不推荐）
+func RegisterMenu[T any](key string, f func(base baseMenu, opts T) (Menu, error))  // 编译期 init() 注册
+func BuildMenu[T any](key string, base baseMenu, opts T) (Menu, error)             // 跳转；唯一断言在 registry 内部
+// 无参菜单：共享占位类型 NoArgMenuOpts struct{} + mustBuildNoArg(key, base) 紧凑辅助
 // 页面 provider 同理（返回 model.Page）
 ```
 
@@ -118,7 +117,7 @@ type MenuProvider interface {
 ### Phase 3.0: 证伪原型（spec 硬性前置，临时分支）
 
 - [ ] 3.0.1 双形态最小注册表原型：选 4 个异构菜单（`PlaylistDetail(playlistId int64)`、`ArtistDetail(artistId int64, name string)`、`SearchResult(searchType SearchType)`、`AddToUserPlaylist(userId int64, song structs.Song, action bool)`）+ 1 个无参菜单（`Ranks`）+ 1 页面（login），**分别实现候选形态 A（变参 `Build(base, args ...any) (Menu, error)`）与候选形态 B（kopia/go-git 式泛型 `Register[T](key, factory)`）两套最小注册表**，各记录：迁移改动行数、调用侧类型安全（类型断言 vs 泛型）、跳转代码可读性；注明 MainMenu 引导路径（`NewMainMenu(netease)`）的构建方式 → 验证: 两套原型均可编译；跳转路径与现状等价（行为对比）
-- [ ] 3.0.2 按证据裁决：若 A 在 4 个异构 + 1 无参菜单上类型安全/可维护性可接受（判定标准：每个菜单迁移 ≤N 行、零类型断言、跳转点可读），选 A；否则选 B；记录裁决结论与理由到本 spec 决策点 → 验证: 决策点文档化；形态未定不得进入 3.2
+- [ ] 3.0.2 按证据裁决：**已裁决——候选形态 B（泛型注册）胜出（2026-08-23 原型，证据见 `.ai/runs/proto-3.0-evidence.md`）**：迁移成本与 A 持平（15 调用点 +54 行、调用点零断言），但 B 把参数契约放进类型系统、注册闭包零变参断言（唯一断言藏在 registry 内部）、opts 结构体成为显式插件契约；B 的 `NoArgMenuOpts{}` 噪音用 `mustBuildNoArg` 紧凑辅助形式缓解 → 验证: 决策点文档化；**3.2 按形态 B 实现**
 
 ### Phase 3.1: 服务化
 
@@ -153,7 +152,7 @@ type MenuProvider interface {
 
 | # | Question | Applied default | Why |
 |---|----------|-----------------|-----|
-| Q1 | 参数化工厂候选形态与原型判据 | 候选形态 A（变参 `Build(base, args ...any) (Menu, error)`）与 B（kopia/go-git 式泛型注册 `Register[T](key, factory)`）为原型主裁决对象，C（map[string]any）仅对照；原型必须覆盖 4 个异构菜单 + 1 页面，裁决结论写入 spec 决策点后才进入 3.2 | 研究（lib-1）确认业界无"泛型 + 异构参数"混合先例，A/B 覆盖两个可行方向；原型是硬前置 gate，不是可跳过的假设 |
+| Q1 | 参数化工厂候选形态与原型判据 | **已裁决：候选形态 B（泛型注册）**（2026-08-23 原型：迁移成本与 A 持平、类型安全与插件契约优势；`NoArgMenuOpts{}` 用紧凑辅助缓解） | 原型证据 `.ai/runs/proto-3.0-evidence.md`；研究（lib-1）确认 kopia-style 是异构参数主流方案；3.2 按 B 实现 |
 | Q2 | 服务化 + 菜单 provider + 页面 provider + 迁移是一个 spec 还是 bundle | 保持单 spec | 三 capability 共享服务容器 + baseMenu 签名互锁（3.1 决定访问器形状，3.2 工厂签名依赖它）+ 单一行为保真验证故事；独立 spec 会分裂机制设计。**3.1 先行理由**：先收窄 baseMenu 依赖面，注册表工厂签名才稳定（否则 3.2 建在旧 baseMenu 上，3.1 换访问器后工厂要返工）。用户已确认同分支分批 + 合并拆 PR，Phasing 提供独立交付边界 |
 | Q3 | 服务化清单边界 | 核心业务 + 跨组件共享组件（player/lyricService/trackManager/desktopLyrics/coverRenderer/user/login/search/shareSvc/lastfm/cookieJar）服务化；内部 UI 部件（lyric/songInfo/progress/spectrum/spectrogram renderer）留薄壳 | 用户选的"全部业务能力"指跨组件业务能力；renderer 是薄壳 UI 组合内部件，服务化零收益且增加 Context 噪音 |
 | Q4 | 注册时机与位置 | 每菜单/页面文件 `init()` 注册 + 启动时注册表完整性断言 | 符合"编译期注册（import + 注册）"；新文件自带注册行，对未来外部插件（import 即注册）是标准心智；完整性断言兜底遗漏 |
