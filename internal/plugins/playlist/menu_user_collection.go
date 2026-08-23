@@ -1,23 +1,27 @@
-package ui
+package playlist
 
-import "github.com/anhoder/foxful-cli/model"
+import (
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
 
 type UserCollectionMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus    []model.MenuItem
-	menuList []Menu
+	menuList []ui.Menu
 }
 
-func NewUserCollectionMenu(base baseMenu) *UserCollectionMenu {
+func NewUserCollectionMenu(base ui.BaseMenu) *UserCollectionMenu {
 	menu := &UserCollectionMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		menus: []model.MenuItem{
 			{Title: "收藏专辑"},
 			{Title: "收藏歌手"},
 		},
-		menuList: []Menu{
-			mustBuildNoArg("album_sub_list", base),
-			mustBuildNoArg("artists_sub_list", base),
+		menuList: []ui.Menu{
+			ui.MustBuildNoArg("album_sub_list", base),
+			ui.MustBuildNoArg("artists_sub_list", base),
 		},
 	}
 

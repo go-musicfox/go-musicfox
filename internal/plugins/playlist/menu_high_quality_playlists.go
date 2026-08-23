@@ -1,22 +1,23 @@
-package ui
+package playlist
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type HighQualityPlaylistsMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus     []model.MenuItem
 	playlists []structs.Playlist
 }
 
-func NewHighQualityPlaylistsMenu(base baseMenu) *HighQualityPlaylistsMenu {
+func NewHighQualityPlaylistsMenu(base ui.BaseMenu) *HighQualityPlaylistsMenu {
 	return &HighQualityPlaylistsMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -36,7 +37,7 @@ func (m *HighQualityPlaylistsMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.playlists) {
 		return nil
 	}
-	playlistMenu, err := BuildMenu("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
+	playlistMenu, err := ui.BuildMenu("playlist_detail", m.BaseMenu, ui.PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
 	if err != nil {
 		return nil
 	}

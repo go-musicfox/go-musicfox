@@ -12,9 +12,12 @@ import "github.com/anhoder/foxful-cli/model"
 // internal/plugins/dj (Phase 3.9.x), the whole album cluster
 // (album_menu / album_* + album_detail) moved into internal/plugins/album
 // (Phase 3.9.x), the whole artist cluster (artist_detail / artist_* +
-// hot_artists) moved into internal/plugins/artist (Phase 3.9.x), and the
+// hot_artists) moved into internal/plugins/artist (Phase 3.9.x), the
 // recommend cluster (daily_songs / daily_playlists / personal_fm /
-// recent_songs / ranks) moved into internal/plugins/recommend (Phase 3.9.x).
+// recent_songs / ranks) moved into internal/plugins/recommend (Phase 3.9.x),
+// and the playlist & cloud cluster (user_playlist / user_collect /
+// high_quality_playlists / could) moved into internal/plugins/playlist
+// (Phase 3.9.x).
 func init() {
 	RegisterMenu("playlist_detail", func(base baseMenu, opts PlaylistDetailOpts) (Menu, error) {
 		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
@@ -42,21 +45,15 @@ func init() {
 	// production registry (call sites in menu_search_result.go). album_detail
 	// moved into the internal/plugins/album plugin with the album cluster
 	// (Phase 3.9.x); its key and ui.AlbumDetailOpts stay, and the search-result
-	// / artist-album / operate call sites jump into it unchanged.
-	RegisterMenu("user_playlist", func(base baseMenu, opts UserPlaylistOpts) (Menu, error) {
-		return NewUserPlaylistMenu(base, opts.UserID), nil
-	})
-
-	RegisterMenu("high_quality_playlists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewHighQualityPlaylistsMenu(base), nil
-	})
+	// / artist-album / operate call sites jump into it unchanged. user_playlist
+	// / user_collect / high_quality_playlists / could moved into the
+	// internal/plugins/playlist plugin with the playlist & cloud cluster
+	// (Phase 3.9.x); ui.UserPlaylistOpts stays (the search-result jump site
+	// uses it), and the menu_search_result call site jumps into user_playlist
+	// unchanged.
 
 	RegisterMenu("simi_songs", func(base baseMenu, opts SimiSongsOpts) (Menu, error) {
 		return NewSimilarSongsMenu(base, opts.Song), nil
-	})
-
-	RegisterMenu("user_collect", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewUserCollectionMenu(base), nil
 	})
 
 	// --- Phase 3.3.1 batch 4: main menu cluster + misc ---
@@ -65,10 +62,6 @@ func init() {
 	// menus registered here; their providers moved into the
 	// internal/plugins/recommend plugin with the recommend cluster
 	// (Phase 3.9.x), which also declares their main-menu items.
-
-	RegisterMenu("could", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewCloudMenu(base), nil
-	})
 
 	RegisterMenu("search_type", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return NewSearchTypeMenu(base), nil

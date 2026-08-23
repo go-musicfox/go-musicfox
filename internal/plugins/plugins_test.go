@@ -193,3 +193,73 @@ func TestBlankImportRegistersRecommendPlugin(t *testing.T) {
 		}
 	}
 }
+
+// TestBlankImportRegistersPlaylistPlugin proves the seventh real plugin
+// (internal/plugins/playlist — the whole playlist & cloud cluster) links
+// through the same aggregator: its menu providers are registered with their
+// original keys and every entry menu declares its own main-menu item.
+// user_playlist is the parameterized entry — it must carry a Build (the
+// RegisterMainMenuItemWith form) that constructs the menu with ui.CurUser.
+func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
+	for _, key := range []string{"user_playlist", "user_collect", "high_quality_playlists", "could"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("playlist menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+
+	// user_playlist is parameterized: it builds with UserPlaylistOpts.
+	up, err := ui.BuildMenu("user_playlist", ui.BaseMenu{}, ui.UserPlaylistOpts{UserID: 0})
+	if err != nil {
+		t.Fatalf("BuildMenu(user_playlist) error = %v", err)
+	}
+	if key := up.GetMenuKey(); key != "user_playlist_0" {
+		t.Fatalf("GetMenuKey() = %q, want %q", key, "user_playlist_0")
+	}
+
+	for _, tc := range []struct{ key, title string }{
+		{"user_collect", "我的收藏"},
+		{"high_quality_playlists", "精选歌单"},
+		{"could", "云盘"},
+	} {
+		menu, err := ui.BuildMenu(tc.key, ui.BaseMenu{}, ui.NoArgMenuOpts{})
+		if err != nil {
+			t.Fatalf("BuildMenu(%s) error = %v", tc.key, err)
+		}
+		if key := menu.GetMenuKey(); key != tc.key {
+			t.Fatalf("GetMenuKey() = %q, want %q", key, tc.key)
+		}
+	}
+
+	wantItems := map[string]string{
+		"user_playlist":          "我的歌单",
+		"user_collect":           "我的收藏",
+		"high_quality_playlists": "精选歌单",
+		"could":                  "云盘",
+	}
+	foundItems := map[string]string{}
+	var userPlaylistBuilder func(base ui.BaseMenu) ui.Menu
+	for _, item := range ui.MainMenuPluginItems() {
+		if title, ok := wantItems[item.Key]; ok && title == item.Title {
+			foundItems[item.Key] = item.Title
+		}
+		if item.Key == "user_playlist" {
+			userPlaylistBuilder = item.Build
+		}
+	}
+	for key, title := range wantItems {
+		if foundItems[key] != title {
+			t.Fatalf("%s main-menu item (%s) not registered via aggregator blank import", key, title)
+		}
+	}
+
+	// user_playlist must be the parameterized main-menu entry: it carries a
+	// Build (not built via mustBuildNoArg — it is a parameterized provider)
+	// that constructs the menu with ui.CurUser (0).
+	if userPlaylistBuilder == nil {
+		t.Fatal("user_playlist main-menu item has no Build (want RegisterMainMenuItemWith builder)")
+	}
+	menu := userPlaylistBuilder(ui.BaseMenu{})
+	if key := menu.GetMenuKey(); key != "user_playlist_0" {
+		t.Fatalf("user_playlist builder GetMenuKey() = %q, want %q (built with ui.CurUser)", key, "user_playlist_0")
+	}
+}

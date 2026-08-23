@@ -355,19 +355,16 @@ func (PageRegistry) Keys() []string {
 // registered at startup (Phase 3.2 bootstrap completeness assertion). Keep in
 // sync with the init() registrations in registry_registrations.go. Keys moved
 // into plugins (check_update / last_fm / the DJ radio cluster / the album
-// cluster / the artist cluster / the recommend cluster) are plugin-supplied
-// and intentionally absent — the assertion only locks the built-in set.
+// cluster / the artist cluster / the recommend cluster / the playlist & cloud
+// cluster) are plugin-supplied and intentionally absent — the assertion only
+// locks the built-in set.
 var expectedMenuKeys = []string{
 	// Phase 3.2 base set + demo migrations.
 	"playlist_detail",
 	"search_result",
 	"add_to_user_playlist",
-	"user_playlist",
-	"high_quality_playlists",
 	"simi_songs",
-	"user_collect",
 	// Phase 3.3.1 batch 4: main menu cluster + misc.
-	"could",
 	"search_type",
 	"local_search",
 	"main_menu",

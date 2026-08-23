@@ -1,4 +1,4 @@
-package ui
+package playlist
 
 import (
 	"strconv"
@@ -8,12 +8,13 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type CloudMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus   []model.MenuItem
 	songs   []structs.Song
 	limit   int
@@ -21,9 +22,9 @@ type CloudMenu struct {
 	hasMore bool
 }
 
-func NewCloudMenu(base baseMenu) *CloudMenu {
+func NewCloudMenu(base ui.BaseMenu) *CloudMenu {
 	return &CloudMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		limit:    100,
 		offset:   0,
 	}
@@ -47,8 +48,8 @@ func (m *CloudMenu) MenuViews() []model.MenuItem {
 
 func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		}
 
@@ -64,7 +65,7 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -95,7 +96,7 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(func() model.Page {
+			page, _ := m.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})

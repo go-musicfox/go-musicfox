@@ -12,6 +12,13 @@ import (
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// CurUser is the sentinel user ID meaning "the current logged-in user"
+// (userID == 0). The user_playlist menu (now in the internal/plugins/playlist
+// plugin) and this menu resolve it to svc.User().UserId at runtime; the
+// plugin's parameterized main-menu entry builds user_playlist with CurUser,
+// exactly like the built-in entry used to.
+const CurUser int64 = 0
+
 type AddToUserPlaylistMenu struct {
 	baseMenu
 	menus     []model.MenuItem

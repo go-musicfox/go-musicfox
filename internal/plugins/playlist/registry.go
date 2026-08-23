@@ -1,0 +1,63 @@
+// Package playlist implements the playlist & cloud cluster (我的歌单 / 我的收藏 /
+// 精选歌单 / 云盘) as the seventh real plugin. The four menus moved from
+// internal/ui verbatim with their provider keys unchanged — user_playlist (我的
+// 歌单), user_collect (我的收藏), high_quality_playlists (精选歌单) and could
+// (云盘) — and each declares its own main-menu item (the four built-in entries
+// were removed from menu_main.go; plugin items are appended after all
+// built-ins). user_playlist is the parameterized main-menu entry demo (Phase
+// 3.9.9): it is built via RegisterMainMenuItemWith with
+// ui.UserPlaylistOpts{UserID: ui.CurUser}, exactly like the built-in entry
+// used to construct it. Cross-menu jumps into ui stay key-based (user_playlist
+// / high_quality_playlists -> "playlist_detail"), and user_collect builds its
+// album_sub_list / artists_sub_list sub-menus through the same registry keys
+// the album / artist plugins register (their keys are plugin-supplied now).
+package playlist
+
+import (
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
+
+// enterMenuCallback mirrors ui.EnterMenuCallback (unexported there): the login
+// callback re-enters the requesting menu once login succeeds.
+func enterMenuCallback(main *model.Main) ui.LoginCallback {
+	return func() model.Page {
+		return main.EnterMenu(nil, nil)
+	}
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
+// identical to the one the menu registered under in internal/ui before the
+// extraction: user_playlist / user_collect / high_quality_playlists / could.
+// The user_playlist menu is parameterized (UserPlaylistOpts carries the user
+// ID); its main-menu entry uses the RegisterMainMenuItemWith builder form so
+// it is constructed with UserID = ui.CurUser (当前用户歌单) exactly as the
+// built-in main-menu entry did. The other three are no-arg menus and declare
+// their own main-menu items — the built-in 我的歌单 / 我的收藏 / 精选歌单 /
+// 云盘 entries were removed from menu_main.go (plugin items are appended after
+// all built-ins).
+func init() {
+	ui.RegisterMenu("user_playlist", func(base ui.BaseMenu, opts ui.UserPlaylistOpts) (ui.Menu, error) {
+		return NewUserPlaylistMenu(base, opts.UserID), nil
+	})
+	ui.RegisterMenu("user_collect", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return NewUserCollectionMenu(base), nil
+	})
+	ui.RegisterMenu("high_quality_playlists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return NewHighQualityPlaylistsMenu(base), nil
+	})
+	ui.RegisterMenu("could", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return NewCloudMenu(base), nil
+	})
+	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加这些项（原先为内置
+	// 索引 0/1/3/4，现为插件主菜单项，排在全部内置项之后）。user_playlist
+	// 经参数化 builder 构造（UserID = ui.CurUser，与内置入口行为一致）。
+	ui.RegisterMainMenuItemWith("user_playlist", "我的歌单", func(base ui.BaseMenu) ui.Menu {
+		return ui.MustBuild("user_playlist", base, ui.UserPlaylistOpts{UserID: ui.CurUser})
+	})
+	ui.RegisterMainMenuItem("user_collect", "我的收藏")
+	ui.RegisterMainMenuItem("high_quality_playlists", "精选歌单")
+	ui.RegisterMainMenuItem("could", "云盘")
+}

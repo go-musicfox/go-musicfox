@@ -161,50 +161,6 @@ func (m *testCheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) 
 	return a.MustMain(), func() tea.Msg { return model.ShowNotificationMsg{} }
 }
 
-// testAlbumSubListMenu is the ui test-double for the plugin-supplied
-// "album_sub_list" provider (the album cluster moved into
-// internal/plugins/album, Phase 3.9.x). The built-in 我的收藏 menu
-// (NewUserCollectionMenu) builds its album_sub_list sub-menu through
-// mustBuildNoArg, which needs the key registered in this ui test binary — the
-// plugin cannot be linked here (ui must not import plugins).
-type testAlbumSubListMenu struct {
-	baseMenu
-}
-
-func (m *testAlbumSubListMenu) GetMenuKey() string          { return "album_sub_list" }
-func (m *testAlbumSubListMenu) MenuViews() []model.MenuItem { return nil }
-func (m *testAlbumSubListMenu) SubMenu(_ *model.App, _ int) model.Menu {
-	return nil
-}
-
-// testArtistsSubListMenu is the ui test-double for the plugin-supplied
-// "artists_sub_list" provider (the artist cluster moved into
-// internal/plugins/artist, Phase 3.9.x). Same rationale as the album double:
-// NewUserCollectionMenu builds its artists_sub_list sub-menu through
-// mustBuildNoArg, which needs the key registered in this ui test binary.
-type testArtistsSubListMenu struct {
-	baseMenu
-}
-
-func (m *testArtistsSubListMenu) GetMenuKey() string          { return "artists_sub_list" }
-func (m *testArtistsSubListMenu) MenuViews() []model.MenuItem { return nil }
-func (m *testArtistsSubListMenu) SubMenu(_ *model.App, _ int) model.Menu {
-	return nil
-}
-
-// init registers the album_sub_list and artists_sub_list test-doubles so
-// NewMainMenu / the built-in user_collect menu construction works in this ui
-// test binary (the album/artist plugins' init() registrations are not linked
-// here).
-func init() {
-	RegisterMenu("album_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return &testAlbumSubListMenu{baseMenu: base}, nil
-	})
-	RegisterMenu("artists_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return &testArtistsSubListMenu{baseMenu: base}, nil
-	})
-}
-
 // TestCheckUpdateResultRendersDirectlyInTUI 验证 model.ShowNotificationMsg
 // 经 app.Update 直接渲染为 TUI 通知。检查更新消息的构造已随插件提取移入
 // internal/plugins/checkupdate，这里内联构造等效消息验证框架渲染路径。
