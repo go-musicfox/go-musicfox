@@ -1,4 +1,4 @@
-package ui
+package album
 
 import (
 	"fmt"
@@ -10,62 +10,64 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
-type AlbumSubscribeListMenu struct {
-	baseMenu
+type AlbumTopMenu struct {
+	ui.BaseMenu
 	menus   []model.MenuItem
 	albums  []structs.Album
+	area    string
 	offset  int
 	limit   int
 	hasMore bool
 }
 
-func NewAlbumSubscribeListMenu(base baseMenu) *AlbumSubscribeListMenu {
-	return &AlbumSubscribeListMenu{
-		baseMenu: base,
+func NewAlbumTopMenu(base ui.BaseMenu, area string) *AlbumTopMenu {
+	return &AlbumTopMenu{
+		BaseMenu: base,
+		area:     area,
 		offset:   0,
 		limit:    50,
 	}
 }
 
-func (m *AlbumSubscribeListMenu) IsSearchable() bool {
+func (m *AlbumTopMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *AlbumSubscribeListMenu) GetMenuKey() string {
-	return "album_sub_list"
+func (m *AlbumTopMenu) GetMenuKey() string {
+	return fmt.Sprintf("album_top_%s", m.area)
 }
 
-func (m *AlbumSubscribeListMenu) MenuViews() []model.MenuItem {
+func (m *AlbumTopMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumSubscribeListMenu) SubMenu(_ *model.App, index int) model.Menu {
+func (m *AlbumTopMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.albums) < index {
 		return nil
 	}
 
-	return buildMenuOrToast("album_detail", m.baseMenu, AlbumDetailOpts{AlbumID: m.albums[index].Id})
+	return ui.BuildMenuOrToast("album_detail", m.BaseMenu, ui.AlbumDetailOpts{AlbumID: m.albums[index].Id})
 }
 
-func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
+func (m *AlbumTopMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
+
 		if len(m.menus) > 0 && len(m.albums) > 0 {
 			return true, nil
 		}
 
-		albumService := service.AlbumSublistService{
+		topAlbumService := service.TopAlbumService{
+			Area:   m.area,
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
-		code, response := albumService.AlbumSublist()
+		code, response := topAlbumService.TopAlbum()
 		codeType := _struct.CheckCode(code)
-		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
-			return false, page
-		} else if codeType != _struct.Success {
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -74,7 +76,7 @@ func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		m.albums = _struct.GetAlbumsSublist(response)
+		m.albums = _struct.GetTopAlbums(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -89,22 +91,20 @@ func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 	}
 }
 
-func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
+func (m *AlbumTopMenu) BottomOutHook() model.Hook {
 	if !m.hasMore {
 		return nil
 	}
 	return func(main *model.Main) (bool, model.Page) {
 		m.offset = m.offset + len(m.menus)
-		newAlbumService := service.AlbumSublistService{
+		topAlbumService := service.TopAlbumService{
+			Area:   m.area,
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
-		code, response := newAlbumService.AlbumSublist()
+		code, response := topAlbumService.TopAlbum()
 		codeType := _struct.CheckCode(code)
-		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
-			return false, page
-		} else if codeType != _struct.Success {
+		if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -113,7 +113,7 @@ func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		albums := _struct.GetAlbumsSublist(response)
+		albums := _struct.GetTopAlbums(response)
 
 		for _, album := range albums {
 			var artists []string
@@ -130,6 +130,6 @@ func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 	}
 }
 
-func (m *AlbumSubscribeListMenu) Albums() []structs.Album {
+func (m *AlbumTopMenu) Albums() []structs.Album {
 	return m.albums
 }

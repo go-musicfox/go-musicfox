@@ -36,6 +36,35 @@ func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
 	}
 }
 
+// TestBlankImportRegistersAlbumPlugin proves the fourth real plugin
+// (internal/plugins/album — the whole album cluster) links through the same
+// aggregator: its menu providers are registered with their original keys and
+// its entry menu declares the 专辑列表 main-menu item.
+func TestBlankImportRegistersAlbumPlugin(t *testing.T) {
+	for _, key := range []string{"album_menu", "album_new_area", "album_top_area", "album_new_hot", "album_new", "album_top", "album_sub_list", "album_detail"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("album menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+	entry, err := ui.BuildMenu("album_menu", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(album_menu) error = %v", err)
+	}
+	if key := entry.GetMenuKey(); key != "album_menu" {
+		t.Fatalf("GetMenuKey() = %q, want album_menu", key)
+	}
+	found := false
+	for _, item := range ui.MainMenuPluginItems() {
+		if item.Key == "album_menu" && item.Title == "专辑列表" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("album_menu main-menu item not registered via aggregator blank import")
+	}
+}
+
 // TestBlankImportRegistersDjPlugin proves the third real plugin
 // (internal/plugins/dj — the whole DJ/radio cluster) links through the same
 // aggregator: its menu providers are registered with their original keys and

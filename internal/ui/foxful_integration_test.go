@@ -161,6 +161,31 @@ func (m *testCheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) 
 	return a.MustMain(), func() tea.Msg { return model.ShowNotificationMsg{} }
 }
 
+// testAlbumSubListMenu is the ui test-double for the plugin-supplied
+// "album_sub_list" provider (the album cluster moved into
+// internal/plugins/album, Phase 3.9.x). The built-in 我的收藏 menu
+// (NewUserCollectionMenu) builds its album_sub_list sub-menu through
+// mustBuildNoArg, which needs the key registered in this ui test binary — the
+// plugin cannot be linked here (ui must not import plugins).
+type testAlbumSubListMenu struct {
+	baseMenu
+}
+
+func (m *testAlbumSubListMenu) GetMenuKey() string          { return "album_sub_list" }
+func (m *testAlbumSubListMenu) MenuViews() []model.MenuItem { return nil }
+func (m *testAlbumSubListMenu) SubMenu(_ *model.App, _ int) model.Menu {
+	return nil
+}
+
+// init registers the album_sub_list test-double so NewMainMenu / the built-in
+// user_collect menu construction works in this test binary (the album plugin's
+// init() registration is not linked here).
+func init() {
+	RegisterMenu("album_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return &testAlbumSubListMenu{baseMenu: base}, nil
+	})
+}
+
 // TestCheckUpdateResultRendersDirectlyInTUI 验证 model.ShowNotificationMsg
 // 经 app.Update 直接渲染为 TUI 通知。检查更新消息的构造已随插件提取移入
 // internal/plugins/checkupdate，这里内联构造等效消息验证框架渲染路径。

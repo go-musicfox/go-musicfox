@@ -1,4 +1,4 @@
-package ui
+package album
 
 import (
 	"fmt"
@@ -8,20 +8,21 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type AlbumDetailMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus   []model.MenuItem
 	songs   []structs.Song
 	albumID int64
 }
 
-func NewAlbumDetailMenu(base baseMenu, albumID int64) *AlbumDetailMenu {
+func NewAlbumDetailMenu(base ui.BaseMenu, albumID int64) *AlbumDetailMenu {
 	return &AlbumDetailMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		albumID:  albumID,
 	}
 }
@@ -50,7 +51,7 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := albumService.Album()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

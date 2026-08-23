@@ -39,12 +39,11 @@ type (
 	UserPlaylistOpts  struct{ UserID int64 }
 	DjRadioDetailOpts struct{ DjRadioID int64 }
 
-	// AlbumTopOpts and the following Phase 3.3.1 parameterized menu contracts.
-	// Menus whose GetMenuKey() is parameterized (e.g. album_top_<area>)
-	// register under the static key prefix; the runtime menu key keeps its
-	// dynamic form.
-	AlbumTopOpts      struct{ Area string }
-	AlbumNewOpts      struct{ Area string }
+	// ArtistAlbumOpts and the following Phase 3.3.1 parameterized menu
+	// contracts. Menus whose GetMenuKey() is parameterized (e.g.
+	// artist_album_<id>) register under the static key prefix; the runtime menu
+	// key keeps its dynamic form. AlbumTopOpts / AlbumNewOpts moved into the
+	// internal/plugins/album plugin with the album cluster (Phase 3.9.x).
 	ArtistAlbumOpts   struct{ ArtistID int64 }
 	ArtistSongOpts    struct{ ArtistID int64 }
 	ArtistsOfSongOpts struct{ Song structs.Song }
@@ -335,9 +334,9 @@ func (PageRegistry) Keys() []string {
 // expectedMenuKeys is the canonical menu provider key set that must be
 // registered at startup (Phase 3.2 bootstrap completeness assertion). Keep in
 // sync with the init() registrations in registry_registrations.go. Keys moved
-// into plugins (check_update / last_fm / the DJ radio cluster) are
-// plugin-supplied and intentionally absent — the assertion only locks the
-// built-in set.
+// into plugins (check_update / last_fm / the DJ radio cluster / the album
+// cluster) are plugin-supplied and intentionally absent — the assertion only
+// locks the built-in set.
 var expectedMenuKeys = []string{
 	// Phase 3.2 base set + demo migrations.
 	"playlist_detail",
@@ -345,16 +344,7 @@ var expectedMenuKeys = []string{
 	"search_result",
 	"add_to_user_playlist",
 	"ranks",
-	"album_detail",
 	"user_playlist",
-	// Phase 3.3.1 batch 2: album cluster.
-	"album_new_area",
-	"album_top_area",
-	"album_new_hot",
-	"album_menu",
-	"album_top",
-	"album_new",
-	"album_sub_list",
 	"high_quality_playlists",
 	// Phase 3.3.1 batch 3: artist cluster.
 	"artist_of_song",

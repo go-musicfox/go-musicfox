@@ -398,7 +398,7 @@ func goToAlbumOfSong(svc *menuServices, isSelected bool) {
 		}
 		main := svc.MustMain()
 		menu := main.CurMenu()
-		if detail, ok := menu.(*AlbumDetailMenu); ok && detail.albumID == song.Album.Id {
+		if detail, ok := menu.(AlbumDetailIDGetter); ok && detail.AlbumID() == song.Album.Id {
 			return nil // 避免重复进入
 		}
 		newTitle := &model.MenuItem{Title: song.Album.Name, Subtitle: "「" + song.Name + "」所属专辑"}

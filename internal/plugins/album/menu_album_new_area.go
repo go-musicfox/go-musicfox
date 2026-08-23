@@ -1,15 +1,19 @@
-package ui
+package album
 
-import "github.com/anhoder/foxful-cli/model"
+import (
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
 
 type AlbumNewAreaMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 }
 
-func NewAlbumNewAreaMenu(base baseMenu) *AlbumNewAreaMenu {
+func NewAlbumNewAreaMenu(base ui.BaseMenu) *AlbumNewAreaMenu {
 	areaMenu := &AlbumNewAreaMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		menus: []model.MenuItem{
 			{Title: "全部"},
 			{Title: "华语"},
@@ -39,5 +43,5 @@ func (m *AlbumNewAreaMenu) SubMenu(_ *model.App, index int) model.Menu {
 		"JP",
 	}
 
-	return buildMenuOrToast("album_new", m.baseMenu, AlbumNewOpts{Area: areaValueMapping[index]})
+	return ui.BuildMenuOrToast("album_new", m.BaseMenu, AlbumNewOpts{Area: areaValueMapping[index]})
 }

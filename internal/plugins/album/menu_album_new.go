@@ -1,4 +1,4 @@
-package ui
+package album
 
 import (
 	"fmt"
@@ -10,11 +10,12 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type AlbumNewMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus  []model.MenuItem
 	albums []structs.Album
 	area   string
@@ -23,9 +24,9 @@ type AlbumNewMenu struct {
 	total  int
 }
 
-func NewAlbumNewMenu(base baseMenu, area string) *AlbumNewMenu {
+func NewAlbumNewMenu(base ui.BaseMenu, area string) *AlbumNewMenu {
 	return &AlbumNewMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		area:     area,
 		offset:   0,
 		limit:    50,
@@ -50,7 +51,7 @@ func (m *AlbumNewMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("album_detail", m.baseMenu, AlbumDetailOpts{AlbumID: m.albums[index].Id})
+	return ui.BuildMenuOrToast("album_detail", m.BaseMenu, ui.AlbumDetailOpts{AlbumID: m.albums[index].Id})
 }
 
 func (m *AlbumNewMenu) BeforeEnterMenuHook() model.Hook {

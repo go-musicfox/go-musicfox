@@ -44,6 +44,14 @@ type DjRadioDetailSortable interface {
 	Reload() (bool, model.Page)
 }
 
+// AlbumDetailIDGetter is implemented by the album detail menu (the concrete
+// type now lives in the internal/plugins/album plugin). operate.go's
+// goToAlbumOfSong avoids re-entering the same album through this interface
+// instead of a concrete ui type — package ui must not import plugin packages.
+type AlbumDetailIDGetter interface {
+	AlbumID() int64
+}
+
 type SongsMenu interface {
 	Menu
 	Songs() []structs.Song

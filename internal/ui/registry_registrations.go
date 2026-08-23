@@ -7,9 +7,11 @@ import "github.com/anhoder/foxful-cli/model"
 // evidence); demo migrations add album_detail / user_playlist / dj_radio_detail
 // and the login/search pages. Phase 3.3.1 extends the set to every menu_*.go
 // menu (batches 1-4). The Last.fm menu and pages moved into the
-// internal/plugins/lastfm plugin with their registrations (Phase 3.9), and the
+// internal/plugins/lastfm plugin with their registrations (Phase 3.9), the
 // whole DJ/radio cluster (dj_* + radio_dj_type) moved into
-// internal/plugins/dj (Phase 3.9.x).
+// internal/plugins/dj (Phase 3.9.x), and the whole album cluster
+// (album_menu / album_* + album_detail) moved into internal/plugins/album
+// (Phase 3.9.x).
 func init() {
 	RegisterMenu("playlist_detail", func(base baseMenu, opts PlaylistDetailOpts) (Menu, error) {
 		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
@@ -34,43 +36,12 @@ func init() {
 	})
 
 	// Phase 3.2.2 demo migrations — non-prototype menus proven on the
-	// production registry (call sites in menu_search_result.go).
-	RegisterMenu("album_detail", func(base baseMenu, opts AlbumDetailOpts) (Menu, error) {
-		return NewAlbumDetailMenu(base, opts.AlbumID), nil
-	})
-
+	// production registry (call sites in menu_search_result.go). album_detail
+	// moved into the internal/plugins/album plugin with the album cluster
+	// (Phase 3.9.x); its key and ui.AlbumDetailOpts stay, and the search-result
+	// / artist-album / operate call sites jump into it unchanged.
 	RegisterMenu("user_playlist", func(base baseMenu, opts UserPlaylistOpts) (Menu, error) {
 		return NewUserPlaylistMenu(base, opts.UserID), nil
-	})
-
-	// --- Phase 3.3.1 batch 2: album cluster ---
-
-	RegisterMenu("album_new_area", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewAlbumNewAreaMenu(base), nil
-	})
-
-	RegisterMenu("album_top_area", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewAlbumTopAreaMenu(base), nil
-	})
-
-	RegisterMenu("album_new_hot", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewAlbumNewestMenu(base), nil
-	})
-
-	RegisterMenu("album_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewAlbumListMenu(base), nil
-	})
-
-	RegisterMenu("album_top", func(base baseMenu, opts AlbumTopOpts) (Menu, error) {
-		return NewAlbumTopMenu(base, opts.Area), nil
-	})
-
-	RegisterMenu("album_new", func(base baseMenu, opts AlbumNewOpts) (Menu, error) {
-		return NewAlbumNewMenu(base, opts.Area), nil
-	})
-
-	RegisterMenu("album_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewAlbumSubscribeListMenu(base), nil
 	})
 
 	RegisterMenu("high_quality_playlists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {

@@ -11,7 +11,7 @@ import (
 // last built-in item; plugin main-menu items are appended after it and thus
 // never shift this index). Its submenu placeholder is nil and Action handles
 // the Markdown popup directly.
-const mainMenuHelpIndex = 12
+const mainMenuHelpIndex = 11
 
 type MainMenu struct {
 	baseMenu
@@ -28,7 +28,6 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			{Title: "我的歌单"},
 			{Title: "我的收藏"},
 			{Title: "私人FM"},
-			{Title: "专辑列表"},
 			{Title: "搜索"},
 			{Title: "排行榜"},
 			{Title: "精选歌单"},
@@ -43,7 +42,6 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			mustBuild("user_playlist", base, UserPlaylistOpts{UserID: CurUser}),
 			mustBuildNoArg("user_collect", base),
 			mustBuildNoArg("personal_fm", base),
-			mustBuildNoArg("album_menu", base),
 			mustBuildNoArg("search_type", base),
 			mustBuildNoArg("ranks", base),
 			mustBuildNoArg("high_quality_playlists", base),

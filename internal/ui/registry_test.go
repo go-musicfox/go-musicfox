@@ -140,8 +140,9 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// A test-double plugin menu + main-menu item must be appended after the
 	// built-ins (the registry is a package global shared with other tests, so
 	// only the presence/position-relative-to-builtins is asserted).
-	// 13 built-ins: 主播电台 moved into the dj plugin (Phase 3.9.x), 帮助 last.
-	const builtinMenuCount = 13
+	// 12 built-ins: 主播电台 moved into the dj plugin and 专辑列表 into the
+	// album plugin (Phase 3.9.x), 帮助 last.
+	const builtinMenuCount = 12
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -282,7 +283,7 @@ func TestPageNavigationSmoke(t *testing.T) {
 
 // TestMenuNavigationSmoke builds navigation chains through the production
 // registry (Ranks -> PlaylistDetail; SearchType -> SearchResult -> the demo
-// album/artist/user/dj menus) and asserts each constructed menu has the
+// artist/user/dj menus) and asserts each constructed menu has the
 // expected concrete type, key and non-nil views. Network-fed menu data is
 // stubbed directly; the edges exercised are the real SubMenu implementations.
 func TestMenuNavigationSmoke(t *testing.T) {
@@ -324,10 +325,6 @@ func TestMenuNavigationSmoke(t *testing.T) {
 		sr.result = result
 		got := sr.SubMenu(nil, 0)
 		switch wantType.(type) {
-		case *AlbumDetailMenu:
-			if album, ok := got.(*AlbumDetailMenu); !ok || album.albumID != result.([]structs.Album)[0].Id {
-				t.Fatalf("%s.SubMenu(0) = %T, want *AlbumDetailMenu(id=%d)", name, got, result.([]structs.Album)[0].Id)
-			}
 		case *ArtistDetailMenu:
 			if artist, ok := got.(*ArtistDetailMenu); !ok || artist.artistId != result.([]structs.Artist)[0].Id {
 				t.Fatalf("%s.SubMenu(0) = %T, want *ArtistDetailMenu(id=%d)", name, got, result.([]structs.Artist)[0].Id)
@@ -339,7 +336,6 @@ func TestMenuNavigationSmoke(t *testing.T) {
 		}
 	}
 
-	checkSub("album", []structs.Album{{Id: 456}}, (*AlbumDetailMenu)(nil))
 	checkSub("artist", []structs.Artist{{Id: 457, Name: "artist"}}, (*ArtistDetailMenu)(nil))
 	checkSub("user", []structs.User{{UserId: 458}}, (*UserPlaylistMenu)(nil))
 

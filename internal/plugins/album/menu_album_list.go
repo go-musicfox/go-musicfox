@@ -1,25 +1,29 @@
-package ui
+package album
 
-import "github.com/anhoder/foxful-cli/model"
+import (
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
 
 type AlbumListMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus    []model.MenuItem
-	menuList []Menu
+	menuList []ui.Menu
 }
 
-func NewAlbumListMenu(base baseMenu) *AlbumListMenu {
+func NewAlbumListMenu(base ui.BaseMenu) *AlbumListMenu {
 	albumMenu := &AlbumListMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		menus: []model.MenuItem{
 			{Title: "全部新碟"},
 			{Title: "新碟上架"},
 			{Title: "最新专辑"},
 		},
-		menuList: []Menu{
-			mustBuildNoArg("album_new_area", base),
-			mustBuildNoArg("album_top_area", base),
-			mustBuildNoArg("album_new_hot", base),
+		menuList: []ui.Menu{
+			ui.MustBuildNoArg("album_new_area", base),
+			ui.MustBuildNoArg("album_top_area", base),
+			ui.MustBuildNoArg("album_new_hot", base),
 		},
 	}
 

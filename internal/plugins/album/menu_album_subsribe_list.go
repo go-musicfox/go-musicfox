@@ -1,4 +1,4 @@
-package ui
+package album
 
 import (
 	"fmt"
@@ -10,63 +10,63 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
-type AlbumTopMenu struct {
-	baseMenu
+type AlbumSubscribeListMenu struct {
+	ui.BaseMenu
 	menus   []model.MenuItem
 	albums  []structs.Album
-	area    string
 	offset  int
 	limit   int
 	hasMore bool
 }
 
-func NewAlbumTopMenu(base baseMenu, area string) *AlbumTopMenu {
-	return &AlbumTopMenu{
-		baseMenu: base,
-		area:     area,
+func NewAlbumSubscribeListMenu(base ui.BaseMenu) *AlbumSubscribeListMenu {
+	return &AlbumSubscribeListMenu{
+		BaseMenu: base,
 		offset:   0,
 		limit:    50,
 	}
 }
 
-func (m *AlbumTopMenu) IsSearchable() bool {
+func (m *AlbumSubscribeListMenu) IsSearchable() bool {
 	return true
 }
 
-func (m *AlbumTopMenu) GetMenuKey() string {
-	return fmt.Sprintf("album_top_%s", m.area)
+func (m *AlbumSubscribeListMenu) GetMenuKey() string {
+	return "album_sub_list"
 }
 
-func (m *AlbumTopMenu) MenuViews() []model.MenuItem {
+func (m *AlbumSubscribeListMenu) MenuViews() []model.MenuItem {
 	return m.menus
 }
 
-func (m *AlbumTopMenu) SubMenu(_ *model.App, index int) model.Menu {
+func (m *AlbumSubscribeListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.albums) < index {
 		return nil
 	}
 
-	return buildMenuOrToast("album_detail", m.baseMenu, AlbumDetailOpts{AlbumID: m.albums[index].Id})
+	return ui.BuildMenuOrToast("album_detail", m.BaseMenu, ui.AlbumDetailOpts{AlbumID: m.albums[index].Id})
 }
 
-func (m *AlbumTopMenu) BeforeEnterMenuHook() model.Hook {
+func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-
 		if len(m.menus) > 0 && len(m.albums) > 0 {
 			return true, nil
 		}
 
-		topAlbumService := service.TopAlbumService{
-			Area:   m.area,
+		albumService := service.AlbumSublistService{
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
-		code, response := topAlbumService.TopAlbum()
+		code, response := albumService.AlbumSublist()
 		codeType := _struct.CheckCode(code)
-		if codeType != _struct.Success {
+		if codeType == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
+			return false, page
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -75,7 +75,7 @@ func (m *AlbumTopMenu) BeforeEnterMenuHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		m.albums = _struct.GetTopAlbums(response)
+		m.albums = _struct.GetAlbumsSublist(response)
 
 		for _, album := range m.albums {
 			var artists []string
@@ -90,20 +90,22 @@ func (m *AlbumTopMenu) BeforeEnterMenuHook() model.Hook {
 	}
 }
 
-func (m *AlbumTopMenu) BottomOutHook() model.Hook {
+func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 	if !m.hasMore {
 		return nil
 	}
 	return func(main *model.Main) (bool, model.Page) {
 		m.offset = m.offset + len(m.menus)
-		topAlbumService := service.TopAlbumService{
-			Area:   m.area,
+		newAlbumService := service.AlbumSublistService{
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
-		code, response := topAlbumService.TopAlbum()
+		code, response := newAlbumService.AlbumSublist()
 		codeType := _struct.CheckCode(code)
-		if codeType != _struct.Success {
+		if codeType == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
+			return false, page
+		} else if codeType != _struct.Success {
 			return false, nil
 		}
 
@@ -112,7 +114,7 @@ func (m *AlbumTopMenu) BottomOutHook() model.Hook {
 			m.hasMore = hasMore
 		}
 
-		albums := _struct.GetTopAlbums(response)
+		albums := _struct.GetAlbumsSublist(response)
 
 		for _, album := range albums {
 			var artists []string
@@ -129,6 +131,6 @@ func (m *AlbumTopMenu) BottomOutHook() model.Hook {
 	}
 }
 
-func (m *AlbumTopMenu) Albums() []structs.Album {
+func (m *AlbumSubscribeListMenu) Albums() []structs.Album {
 	return m.albums
 }
