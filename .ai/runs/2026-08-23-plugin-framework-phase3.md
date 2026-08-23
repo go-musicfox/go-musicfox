@@ -35,7 +35,7 @@
 
 ### Phase 3.3: 全量迁移
 
-- [ ] 3.3.1 菜单迁移（分批 8-10 个）：硬编码跳转 → BuildMenu — 验证: 每批后冒烟 + lint/test 绿
+- [x] 3.3.1 菜单迁移（分批 8-10 个）：硬编码跳转 → BuildMenu — 验证: 每批后冒烟 + lint/test 绿 — 21fbb303 / fd38c384 / ad9b3ea4 / 7b45fc6a
 - [ ] 3.3.2 页面迁移：ToXxxPage → BuildPage — 验证: 页面跳转冒烟
 - [ ] 3.3.3 深耦合点手术：event_handler/operate + player_controller/player_gapless/cur_playlist/status_bar/lastfm*/qr_login_client/toast/theme_persistence — 验证: 全部导航测试绿
 - [ ] 3.3.4 旧路径清理：旧构造函数移除 — 验证: lint/test/build 绿 + 手动回归清单全过
@@ -90,7 +90,7 @@
 
 ### Phase 3.3: 全量迁移
 
-- [ ] 3.3.1 菜单迁移（分批）
+- [x] 3.3.1 菜单迁移（分批 8-10 个）：硬编码跳转 → BuildMenu — 验证: 每批后冒烟 + lint/test 绿 — 21fbb303 / fd38c384 / ad9b3ea4 / 7b45fc6a（32 菜单注册 + 全部内部导航调用点迁移；main_menu/local_search 因构造器签名保留 bootstrap 直构，注册仅为完整性断言覆盖）
 - [ ] 3.3.2 页面迁移
 - [ ] 3.3.3 深耦合点手术
 - [ ] 3.3.4 旧路径清理
