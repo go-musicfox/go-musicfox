@@ -38,7 +38,7 @@ func (m *DjCategoryMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return NewDjCategoryDetailMenu(m.baseMenu, m.categories[index].Id)
+	return buildMenuOrToast("dj_category_detail", m.baseMenu, DjCategoryDetailOpts{CategoryID: m.categories[index].Id})
 }
 
 func (m *DjCategoryMenu) BeforeEnterMenuHook() model.Hook {

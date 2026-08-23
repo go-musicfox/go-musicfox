@@ -37,6 +37,18 @@ type (
 	UserPlaylistOpts  struct{ UserID int64 }
 	DjRadioDetailOpts struct{ DjRadioID int64 }
 
+	// Phase 3.3.1 parameterized menu contracts. Menus whose GetMenuKey() is
+	// parameterized (e.g. album_top_<area>) register under the static key
+	// prefix; the runtime menu key keeps its dynamic form.
+	AlbumTopOpts         struct{ Area string }
+	AlbumNewOpts         struct{ Area string }
+	ArtistAlbumOpts      struct{ ArtistID int64 }
+	ArtistSongOpts       struct{ ArtistID int64 }
+	ArtistsOfSongOpts    struct{ Song structs.Song }
+	SimiSongsOpts        struct{ Song structs.Song }
+	DjCategoryDetailOpts struct{ CategoryID int64 }
+	DjHotOpts            struct{ HotType DjHotType }
+
 	// NoArgMenuOpts is the shared placeholder opts type for no-arg menus.
 	NoArgMenuOpts struct{}
 )
@@ -73,15 +85,22 @@ func BuildMenu[T any](key string, base baseMenu, opts T) (Menu, error) {
 	return factory.Build(base, opts)
 }
 
+// mustBuild is the typed equivalent of mustBuildNoArg for parameterized menus
+// whose construction sites are static code (menuList initializers): a build
+// error with the in-code registry is a programmer error, so panic.
+func mustBuild[T any](key string, base baseMenu, opts T) Menu {
+	menu, err := BuildMenu(key, base, opts)
+	if err != nil {
+		panic(fmt.Sprintf("mustBuild(%q): %v", key, err))
+	}
+	return menu
+}
+
 // mustBuildNoArg is the compact helper for no-arg menus (uses NoArgMenuOpts{}).
 // Registration errors with the static in-code registry are programmer errors,
 // so panic instead of threading an error through a bootstrap constructor.
 func mustBuildNoArg(key string, base baseMenu) Menu {
-	menu, err := BuildMenu(key, base, NoArgMenuOpts{})
-	if err != nil {
-		panic(fmt.Sprintf("mustBuildNoArg(%q): %v", key, err))
-	}
-	return menu
+	return mustBuild(key, base, NoArgMenuOpts{})
 }
 
 // buildMenuOrToast resolves a menu through the registry for jump sites that

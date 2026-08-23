@@ -43,14 +43,14 @@ func (m *DjCategoryDetailMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return NewDjRadioDetailMenu(m.baseMenu, m.radios[index].Id)
+	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjCategoryDetailMenu) ItemToShare(index int) any {
-		if index >= 0 && index < len(m.radios) {
-			return m.radios[index]
-		}
-		return  nil
+	if index >= 0 && index < len(m.radios) {
+		return m.radios[index]
+	}
+	return nil
 }
 
 func (m *DjCategoryDetailMenu) BeforeEnterMenuHook() model.Hook {

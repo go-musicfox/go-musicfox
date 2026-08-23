@@ -47,7 +47,7 @@ func (m *DjSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return NewDjRadioDetailMenu(m.baseMenu, m.radios[index].Id)
+	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjSubListMenu) ItemToShare(index int) any {

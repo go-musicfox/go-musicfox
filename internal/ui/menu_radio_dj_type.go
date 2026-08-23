@@ -22,14 +22,14 @@ func NewRadioDjTypeMenu(base baseMenu) *RadioDjTypeMenu {
 			{Title: "24小时节目榜"},
 		},
 		menuList: []Menu{
-			NewDjSubListMenu(base),
-			NewDjRecommendMenu(base),
-			NewDjTodayRecommendMenu(base),
-			NewDjHotMenu(base, DjHot),
-			NewDjHotMenu(base, DjNotHot),
-			NewDjCategoryMenu(base),
-			NewDjProgramRankMenu(base),
-			NewDjProgramHoursRankMenu(base),
+			mustBuildNoArg("dj_sub", base),
+			mustBuildNoArg("dj_recommend", base),
+			mustBuildNoArg("dj_today_recommend", base),
+			mustBuild("dj_hot", base, DjHotOpts{HotType: DjHot}),
+			mustBuild("dj_hot", base, DjHotOpts{HotType: DjNotHot}),
+			mustBuildNoArg("dj_category", base),
+			mustBuildNoArg("dj_program_rank", base),
+			mustBuildNoArg("dj_program_hour_rank", base),
 		},
 	}
 

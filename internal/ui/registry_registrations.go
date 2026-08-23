@@ -43,6 +43,44 @@ func init() {
 		return NewDjRadioDetailMenu(base, opts.DjRadioID), nil
 	})
 
+	// --- Phase 3.3.1 batch 1: DJ / radio cluster ---
+
+	RegisterMenu("dj_category_detail", func(base baseMenu, opts DjCategoryDetailOpts) (Menu, error) {
+		return NewDjCategoryDetailMenu(base, opts.CategoryID), nil
+	})
+
+	RegisterMenu("dj_category", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDjCategoryMenu(base), nil
+	})
+
+	RegisterMenu("dj_program_rank", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDjProgramRankMenu(base), nil
+	})
+
+	RegisterMenu("dj_program_hour_rank", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDjProgramHoursRankMenu(base), nil
+	})
+
+	RegisterMenu("dj_hot", func(base baseMenu, opts DjHotOpts) (Menu, error) {
+		return NewDjHotMenu(base, opts.HotType), nil
+	})
+
+	RegisterMenu("dj_sub", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDjSubListMenu(base), nil
+	})
+
+	RegisterMenu("dj_recommend", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDjRecommendMenu(base), nil
+	})
+
+	RegisterMenu("dj_today_recommend", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDjTodayRecommendMenu(base), nil
+	})
+
+	RegisterMenu("radio_dj_type", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewRadioDjTypeMenu(base), nil
+	})
+
 	RegisterPage("login", func(opts LoginPageOpts) (model.Page, error) {
 		return NewLoginPage(opts.Netease), nil
 	})
