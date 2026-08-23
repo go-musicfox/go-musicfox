@@ -16,7 +16,7 @@
 |------|-----|------|
 | 菜单注册 | `RegisterMenu[T](key, factory)` | `internal/ui/registry.go` |
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
-| 菜单跳转 | `BuildMenu[T]` / `mustBuildNoArg` / `buildMenuOrToast` | `internal/ui/registry.go` |
+| 菜单跳转 | `BuildMenu[T]` / `MustBuildNoArg` / `MustBuild` / `BuildMenuOrToast`（导出形式，供插件使用） | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
 | 主菜单入口 | `RegisterMainMenuItem(key, title)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
 | 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
@@ -44,6 +44,11 @@ func mustBuildNoArg(key string, base baseMenu) Menu
 
 // 跳转失败经 toast 降级（不 panic），返回 nil。
 func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu
+
+// 插件内的菜单跳转用导出形式（语义与上面的内置形式逐一等价）：
+func MustBuild[T any](key string, base baseMenu, opts T) Menu        // = mustBuild：静态 menuList 构建失败 panic（编程错误）
+func MustBuildNoArg(key string, base baseMenu) Menu                  // = mustBuildNoArg：无参菜单的紧凑形式
+func BuildMenuOrToast[T any](key string, base baseMenu, opts T) Menu // = buildMenuOrToast：SubMenu 跳转失败 toast 降级
 
 // 页面 provider：返回 model.Page。
 func RegisterPage[T any](key string, f func(opts T) (model.Page, error))
@@ -192,13 +197,13 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 **当前边界注意**：
 
 - `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`；首个真实插件 `internal/plugins/checkupdate` 即此形态）。
-- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api` 由插件注册即可通过）。
+- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api` 以及整个 DJ/电台集群的 `dj_*` / `radio_dj_type` 由插件注册即可通过）。
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
 ## 工作示例
 
-> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一为已合入仓库的真实插件（`internal/plugins/checkupdate`），示例二/三为最小演示形态。
+> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj`），示例二/三为最小演示形态。
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
@@ -300,6 +305,7 @@ package plugins
 
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
 )
 
@@ -452,6 +458,29 @@ return ui.NewMenuToPage(m.BaseMenu, page, m.CoverRenderer().ClearDisplayed)
 
 Last.fm 菜单/页面的服务访问全部走访问器（`m.Lastfm()` / `svc.Lastfm()`），不触碰任何未导出 ui 符号——这正是插件边界的目标形态。
 
+### 示例五：DJ / 电台集群（批量菜单提取）
+
+> `internal/plugins/dj` 是第三个真实插件：把「主播电台」整个集群（10 个菜单）整体提取为外部式插件，是最大的可见集群批量提取示范。所有 provider key 与提取前**逐一相同**（`dj_radio_detail` / `dj_category_detail` / `dj_category` / `dj_program_rank` / `dj_program_hour_rank` / `dj_hot` / `dj_sub` / `dj_recommend` / `dj_today_recommend` / `radio_dj_type`），因此 ui 侧跳入集群的调用点（如 `menu_search_result.go` 跳 `dj_radio_detail`）无需改动。集群内部跨菜单跳转（子菜单互相跳转）改走导出的 `ui.BuildMenuOrToast` / `ui.MustBuild` / `ui.MustBuildNoArg`，行为与提取前的 `buildMenuOrToast` / `mustBuild` / `mustBuildNoArg` 逐一等价：
+
+```go
+// 文件：internal/plugins/dj/menu_dj_recommend.go（节选）——集群内跳转
+func (m *DjRecommendMenu) SubMenu(_ *model.App, index int) model.Menu {
+	if index >= len(m.radios) {
+		return nil
+	}
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+}
+
+// 文件：internal/plugins/dj/registry.go（节选）——入口菜单声明主菜单项
+func init() {
+	// ... RegisterMenu("dj_recommend", ...) 等 10 个注册，key 与原内置注册一致
+	// 主播电台主菜单入口：原为内置索引 12，现为插件主菜单项排在全部内置项之后。
+	ui.RegisterMainMenuItem("radio_dj_type", "主播电台")
+}
+```
+
+集群内共享的 opts 契约类型（`DjCategoryDetailOpts` / `DjHotOpts`，仅集群内部使用）随菜单移入插件包；被 ui 侧共享的 `DjRadioDetailOpts` 留在 ui（跳入该菜单的调用点在 ui）。参数化菜单的 `GetMenuKey()` 仍返回动态形式（如 `dj_radio_detail_<id>`），注册 key 保持静态前缀。集群中唯一被 ui 反向引用的能力是「排序切换」（`OpToggleSortOrder` 键处理对 `DjRadioDetailMenu` 做类型断言）——ui 不能反向导入插件包，故改经导出接口 `ui.DjRadioDetailSortable`（`ToggleSortOrder` / `Reload`）访问，插件菜单实现该接口即保持键处理行为不变。
+
 ### 接入二进制（聚合器）
 
 正式插件的标准接入方式：每个插件子包被聚合器空导入（见示例一），入口只需空导入聚合器即可，不必逐个列插件：
@@ -462,6 +491,7 @@ package plugins
 
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
 )
 
