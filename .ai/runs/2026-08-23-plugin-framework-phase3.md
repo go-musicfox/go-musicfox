@@ -58,8 +58,11 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 
 5 个 renderer 目前持有 `netease *Netease`，仅用于 (a) 嵌入式 `*model.App` 方法、(b) 访问器已有成员、(c) 5 个 shell 持有的跨 renderer 几何方法。目标：renderer 依赖 `*menuServices`（访问器）+ 自有业务服务，不再持有 `*Netease`。仅访问路径变更，布局/渲染逻辑不动。
 
-- [ ] 3.8.1 访问器几何转发：menuServices 新增 EffectiveWindowHeight/SpectrumLines/GetCoverWidth/GetCoverEndColumn/GetLyricPosition — 验证: 编译 + 单测绿
-- [ ] 3.8.2 renderer 去壳：5 个 renderer 的 netease 字段 → svc，构造器签名同步；netease.go 组合接线与 renderer 测试更新 — 验证: grep renderer netease 为 0 + make lint/test/build 绿
+- [x] 3.8.1 访问器几何转发：menuServices 新增 EffectiveWindowHeight/SpectrumLines/GetCoverWidth/GetCoverEndColumn/GetLyricPosition — 验证: 编译 + 单测绿 — e2c369fc
+- [x] 3.8.2 renderer 去壳：5 个 renderer 的 netease 字段 → svc，构造器签名同步；netease.go 组合接线与 renderer 测试更新 — 验证: grep renderer netease 为 0 + make lint/test/build 绿 — ae33e2f8
+- [x] 3.8.3 lastfm 页面 opts 去壳：LastfmCustomAPIPageOpts/LastfmAuthPageOpts 携带 svc 访问器取代 *Netease；lastfm 三页构造器收 svc — 验证: svc.Netease() 降 2 + make lint/test/build 绿 — a4c1fb3a
+- [x] 3.8.4 bootstrap 构造器收窄：NewMainMenu/NewLocalSearchMenu 改收 baseMenu；新增导出 NewBaseMenu 桥接 commands 入口；删除 neteaseFromBase — 验证: neteaseFromBase 为 0 + make lint/test/build 绿 — 579d3505
+- [x] 3.8.5 player 桌面歌词走访问器：p.svc.DesktopLyrics()/GetDesktopLyricsLines()（menuServices 转发）— 验证: 编译 + 单测绿 — ae382fe5
 
 ## Progress
 
@@ -178,6 +181,9 @@ framework 生命周期语义加固（#646 评审后续第二轮）。**正确用
 
 - [x] 3.8.1 访问器几何转发 — e2c369fc（menuServices 新增 5 个薄壳几何转发：EffectiveWindowHeight/SpectrumLines/GetCoverWidth/GetCoverEndColumn/GetLyricPosition，各转发至 Netease 薄壳方法并 nil 安全）
 - [x] 3.8.2 renderer 去壳 — ae33e2f8（lyric/songInfo/progress/cover/composite 的 `netease *Netease` 字段 → `svc *menuServices`；构造器首参 netease → svc；`WindowWidth` → `svc.App().WindowWidth()`，`Player()` → `svc.Player()`，`playbarHoveredElement` → `svc.PlaybarHoveredElement()`，跨 renderer 几何走新转发；netease.go Components 构造点与 renderer 测试同步；`grep -n netease internal/ui/*renderer*.go` 为 0；顺带修复 whole-file lint 暴露的既有债务：ST1003 initialism 重命名（currentSongId→currentSongID/picUrl→picURL/getCoverUrl→getCoverURL/cachedSongId→cachedSongID）、SA1019（util.SetFg*Style → style.FG/FGBG）、移除 dead 字段 lastAngle/lastViewTime）
+- [x] 3.8.3 lastfm 页面 opts 去壳 — a4c1fb3a（`LastfmCustomAPIPageOpts`/`LastfmAuthPageOpts` 携带 `svc *menuServices` 取代 `Netease *Netease`；lastfm_custom_api_account/lastfm_auth/lastfm_qr_auth 三页构造器收 svc 并删 netease 字段，导航改经 `svc.MustMain()`/`svc.App().RerenderCmd(true)`；lastfm_profile 跳转点直传 `m.svc`；lastfm 三页 `grep netease` 为 0；`svc.Netease()` 计数 3 → 1；配套 registry_test/custom_page_background_test/lastfm_custom_api_account_test 同步）
+- [x] 3.8.4 bootstrap 构造器收窄 — 579d3505（`NewMainMenu`/`NewLocalSearchMenu` 签名 `*Netease` → `baseMenu`，函数体不再经 `newBaseMenu` 派生；新增导出 `NewBaseMenu(n *Netease) BaseMenu` 桥接 internal/commands 入口（`newBaseMenuFromSvc` 收 `*menuServices` 不可导出）；删除 `neteaseFromBase`（唯一使用方随 3.8.4 注册改直传 base 而消亡）；顺带修复 commands/netease.go 被 whole-file lint 暴露的既有 gci import 分组（neteaseutil 移入 default 段）与 ST1000 包注释）
+- [x] 3.8.5 player 桌面歌词访问器 — ae382fe5（`updateDesktopLyrics` 的 `p.netease.DesktopLyrics()` → `p.svc.DesktopLyrics()`、`p.netease.GetDesktopLyricsLines()` → `p.svc.GetDesktopLyricsLines()`；menuServices 新增 `GetDesktopLyricsLines` 转发至 shell 方法并 nil 安全返回零值/-1；player.go 不再直连 `p.netease` 服务方法）
 
 验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
 
