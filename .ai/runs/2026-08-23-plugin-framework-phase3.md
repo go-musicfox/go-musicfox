@@ -21,11 +21,11 @@
 
 ### Phase 3.1: 服务化
 
-- [ ] 3.1.1 framework 生命周期小切片：shareSvc、lastfm 经 Scope/Plugin 真实接入 — 验证: 接入单测 + 启动/退出无泄漏
-- [ ] 3.1.2 服务名常量 + 注册点：services.go 集中定义，启动注册 — 验证: 注册表完整性单测
-- [ ] 3.1.3 InitHook 拆分：顺序约束逐条枚举（cookie → 用户 → playmode → 音量 → 播放列表 → extInfo → likelist → 签到 → 检查更新 → 自动播放 → changelog），跨服务依赖显式（loginService jar 先于 userService 回调）— 验证: 启动序冒烟测试（游客 + 登录两路径）
-- [ ] 3.1.4 baseMenu 访问器：baseMenu.netease → 类型安全访问器 — 验证: 全部菜单编译 + 现有测试绿
-- [ ] 3.1.5 服务化迁移：业务能力注册为服务，引用点经 ServiceOf 解析（不丢弃 bool）— 验证: make lint/test/build 全绿 + 手动回归
+- [x] 3.1.1 framework 生命周期小切片：shareSvc、lastfm 经 Scope/Plugin 真实接入 — 验证: 接入单测 + 启动/退出无泄漏 — 82eb8322
+- [x] 3.1.2 服务名常量 + 注册点：services.go 集中定义，启动注册 — 验证: 注册表完整性单测 — 9b9eb953
+- [x] 3.1.3 InitHook 拆分：顺序约束逐条枚举（cookie → 用户 → playmode → 音量 → 播放列表 → extInfo → likelist → 签到 → 检查更新 → 自动播放 → changelog），跨服务依赖显式（loginService jar 先于 userService 回调）— 验证: 启动序冒烟测试（游客 + 登录两路径）— e1c91719
+- [x] 3.1.4 baseMenu 访问器：baseMenu.netease → 类型安全访问器 — 验证: 全部菜单编译 + 现有测试绿 — e7919c86
+- [x] 3.1.5 服务化迁移：业务能力注册为服务，引用点经 ServiceOf 解析（不丢弃 bool）— 验证: make lint/test/build 全绿 + 手动回归 — d567a2c2 / 883f1a3e / c0d6d9ad
 
 ### Phase 3.2: provider 机制
 
@@ -65,7 +65,22 @@
 - [x] 3.1.2 服务名常量 + 注册点
 - [x] 3.1.3 InitHook 拆分 — e1c91719（cookie-jar 生命周期 → LoginService.InitJar；用户恢复 + cookie 登录流 → UserService.LoadFromStorage/LoginWithCookie；InitHook 保留 12 步顺序注释 + 序列测试）
 - [x] 3.1.4 baseMenu 访问器 — e7919c86（menuServices 类型安全访问器；baseMenu 自带代码迁移；netease 字段保留至 3.1.5）
-- [ ] 3.1.5 服务化迁移
+- [x] 3.1.5 服务化迁移 — d567a2c2 / 883f1a3e / c0d6d9ad（43 菜单 + lastfm/lastfm_profile/cur_playlist/action_select → svc 访问器；event_handler/operate/executor/player_controller → 服务解析；baseMenu.netease 移除，编译强制收尾）
+
+### 手动回归要点（3.1.5 迁移后必须重检）
+
+3.1.5 只改服务访问路径（`*.netease.<服务字段>` → `svc` 访问器 / ServiceOf 解析），不改任何逻辑。但以下用户可见行为全部经过服务解析链路，需手动回归确认行为不变：
+
+- **播放控制**：播放/暂停、上一首/下一首、进度 seek、音量滚轮/快捷键（event_handler + operate 的 player 解析）
+- **右键菜单**：任意菜单右键 → 播放控制分组 / 选中项分组（收藏/下载/喜欢/相似/网页打开/分享），确认分组完整、点击行为与以前一致（action_select + operate 闭包经 svc.Netease() 逃生口）
+- **主题切换**：快捷键 OpSwitchTheme 与右键「切换主题」的 toast 通知、theme.activeTheme 持久化（Netease().saveActiveTheme/notifyThemeSwitch 逃生口）
+- **桌面歌词开关**：菜单内开关、Player().DesktopLyrics() 逃生口路径
+- **搜索**：进入搜索、搜索结果的加载更多（BottomOut）、搜索结果页 before/back hook 中 `netease.search` 逃生口
+- **登录流程**：进入需登录菜单（云盘/每日推荐/歌单收藏等）→ ToLoginPage 逃生口；登录成功回调链路（Operation.NeedsAuth → UserService）；Last.fm 授权/主页/队列（svc.Lastfm()）
+- **喜欢/收藏操作**：点赞/取消、收藏歌单/专辑/歌手、添加至歌单（operate 中 svc.User()/svc.Player()/svc.TrackManager()/svc.ShareSvc() 解析）
+- **远程控制**：macOS Now Playing 的喜欢/取消喜欢（player_controller 的 svc.User() 实时槽读取）
+
+若上述任一行为异常，优先怀疑对应服务的注册时序（`registerServices` 在 NewNetease 内、任何菜单渲染前执行）。
 
 ### Phase 3.2: provider 机制
 
