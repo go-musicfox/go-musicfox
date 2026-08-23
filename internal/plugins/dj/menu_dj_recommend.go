@@ -1,23 +1,24 @@
-package ui
+package dj
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjRecommendMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus  []model.MenuItem
 	radios []structs.DjRadio
 }
 
-func NewDjRecommendMenu(base baseMenu) *DjRecommendMenu {
+func NewDjRecommendMenu(base ui.BaseMenu) *DjRecommendMenu {
 	return &DjRecommendMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -38,7 +39,7 @@ func (m *DjRecommendMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjRecommendMenu) ItemToShare(index int) any {

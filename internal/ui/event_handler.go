@@ -271,7 +271,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpShareSelectItem:
 		shareItem(h.svc, true, main.SelectedIndex())
 	case keybindings.OpToggleSortOrder:
-		if djMenu, ok := menu.(*DjRadioDetailMenu); ok {
+		if djMenu, ok := menu.(DjRadioDetailSortable); ok {
 			djMenu.ToggleSortOrder()
 			loading := model.NewLoading(h.svc.MustMain())
 			loading.Start()

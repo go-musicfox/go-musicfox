@@ -1,23 +1,24 @@
-package ui
+package dj
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjProgramRankMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 	songs []structs.Song
 }
 
-func NewDjProgramRankMenu(base baseMenu) *DjProgramRankMenu {
+func NewDjProgramRankMenu(base ui.BaseMenu) *DjProgramRankMenu {
 	return &DjProgramRankMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 

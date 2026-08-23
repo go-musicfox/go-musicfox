@@ -36,6 +36,35 @@ func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
 	}
 }
 
+// TestBlankImportRegistersDjPlugin proves the third real plugin
+// (internal/plugins/dj — the whole DJ/radio cluster) links through the same
+// aggregator: its menu providers are registered with their original keys and
+// its entry menu declares the 主播电台 main-menu item.
+func TestBlankImportRegistersDjPlugin(t *testing.T) {
+	for _, key := range []string{"dj_radio_detail", "dj_category_detail", "dj_category", "dj_program_rank", "dj_program_hour_rank", "dj_hot", "dj_sub", "dj_recommend", "dj_today_recommend", "radio_dj_type"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("dj menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+	entry, err := ui.BuildMenu("radio_dj_type", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(radio_dj_type) error = %v", err)
+	}
+	if key := entry.GetMenuKey(); key != "radio_dj_type" {
+		t.Fatalf("GetMenuKey() = %q, want radio_dj_type", key)
+	}
+	found := false
+	for _, item := range ui.MainMenuPluginItems() {
+		if item.Key == "radio_dj_type" && item.Title == "主播电台" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("radio_dj_type main-menu item not registered via aggregator blank import")
+	}
+}
+
 // TestBlankImportRegistersLastfmPlugin proves the second real plugin
 // (internal/plugins/lastfm) links through the same aggregator: its menu and
 // page providers are registered and its main-menu item is appended after the

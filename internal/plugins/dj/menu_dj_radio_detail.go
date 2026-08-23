@@ -1,4 +1,4 @@
-package ui
+package dj
 
 import (
 	"fmt"
@@ -9,25 +9,29 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// DjRadioDetailMenu 展示单个电台的节目列表（支持排序切换与滚动加载）。菜单
+// 本体已移入本插件包，ui 侧 OpToggleSortOrder 键处理经 ui.DjRadioDetailSortable
+// 接口访问（ToggleSortOrder/Reload），不再依赖具体类型。
 type DjRadioDetailMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus     []model.MenuItem
 	songs     []structs.Song
-	djRadioId int64
+	djRadioID int64
 	limit     int
 	offset    int
 	total     int
 	sortOrder string
 }
 
-func NewDjRadioDetailMenu(base baseMenu, djRadioId int64) *DjRadioDetailMenu {
+func NewDjRadioDetailMenu(base ui.BaseMenu, djRadioID int64) *DjRadioDetailMenu {
 	return &DjRadioDetailMenu{
-		baseMenu:  base,
-		djRadioId: djRadioId,
+		BaseMenu:  base,
+		djRadioID: djRadioID,
 		limit:     300,
 		sortOrder: "true",
 	}
@@ -50,7 +54,7 @@ func (m *DjRadioDetailMenu) IsPlayable() bool {
 }
 
 func (m *DjRadioDetailMenu) GetMenuKey() string {
-	return fmt.Sprintf("dj_radio_detail_%d", m.djRadioId)
+	return fmt.Sprintf("dj_radio_detail_%d", m.djRadioID)
 }
 
 func (m *DjRadioDetailMenu) MenuViews() []model.MenuItem {
@@ -60,7 +64,7 @@ func (m *DjRadioDetailMenu) MenuViews() []model.MenuItem {
 func (m *DjRadioDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		djProgramService := service.DjProgramService{
-			RID:    strconv.FormatInt(m.djRadioId, 10),
+			RID:    strconv.FormatInt(m.djRadioID, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 			Asc:    m.sortOrder,
@@ -87,7 +91,7 @@ func (m *DjRadioDetailMenu) BottomOutHook() model.Hook {
 		}
 		offset := m.offset + m.limit
 		djProgramService := service.DjProgramService{
-			RID:    strconv.FormatInt(m.djRadioId, 10),
+			RID:    strconv.FormatInt(m.djRadioID, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(offset),
 			Asc:    m.sortOrder,
@@ -110,14 +114,14 @@ func (m *DjRadioDetailMenu) Songs() []structs.Song {
 	return m.songs
 }
 
-func (m *DjRadioDetailMenu) DjRadioId() int64 {
-	return m.djRadioId
+func (m *DjRadioDetailMenu) DjRadioID() int64 {
+	return m.djRadioID
 }
 
 func (m *DjRadioDetailMenu) Reload() (bool, model.Page) {
 	m.offset = 0
 	djProgramService := service.DjProgramService{
-		RID:    strconv.FormatInt(m.djRadioId, 10),
+		RID:    strconv.FormatInt(m.djRadioID, 10),
 		Limit:  strconv.Itoa(m.limit),
 		Offset: "0",
 		Asc:    m.sortOrder,

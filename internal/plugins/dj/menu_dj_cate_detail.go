@@ -1,4 +1,4 @@
-package ui
+package dj
 
 import (
 	"fmt"
@@ -8,21 +8,22 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjCategoryDetailMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus      []model.MenuItem
 	radios     []structs.DjRadio
-	categoryId int64
+	categoryID int64
 }
 
-func NewDjCategoryDetailMenu(base baseMenu, categoryId int64) *DjCategoryDetailMenu {
+func NewDjCategoryDetailMenu(base ui.BaseMenu, categoryID int64) *DjCategoryDetailMenu {
 	return &DjCategoryDetailMenu{
-		baseMenu:   base,
-		categoryId: categoryId,
+		BaseMenu:   base,
+		categoryID: categoryID,
 	}
 }
 
@@ -31,7 +32,7 @@ func (m *DjCategoryDetailMenu) IsSearchable() bool {
 }
 
 func (m *DjCategoryDetailMenu) GetMenuKey() string {
-	return fmt.Sprintf("dj_category_detail_%d", m.categoryId)
+	return fmt.Sprintf("dj_category_detail_%d", m.categoryID)
 }
 
 func (m *DjCategoryDetailMenu) MenuViews() []model.MenuItem {
@@ -43,7 +44,7 @@ func (m *DjCategoryDetailMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjCategoryDetailMenu) ItemToShare(index int) any {
@@ -62,7 +63,7 @@ func (m *DjCategoryDetailMenu) BeforeEnterMenuHook() model.Hook {
 		}
 
 		cateDetailService := service.DjRecommendTypeService{
-			CateId: strconv.FormatInt(m.categoryId, 10),
+			CateId: strconv.FormatInt(m.categoryID, 10),
 		}
 		code, response := cateDetailService.DjRecommendType()
 		codeType := _struct.CheckCode(code)

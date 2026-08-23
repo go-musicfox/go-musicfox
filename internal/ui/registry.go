@@ -43,14 +43,12 @@ type (
 	// Menus whose GetMenuKey() is parameterized (e.g. album_top_<area>)
 	// register under the static key prefix; the runtime menu key keeps its
 	// dynamic form.
-	AlbumTopOpts         struct{ Area string }
-	AlbumNewOpts         struct{ Area string }
-	ArtistAlbumOpts      struct{ ArtistID int64 }
-	ArtistSongOpts       struct{ ArtistID int64 }
-	ArtistsOfSongOpts    struct{ Song structs.Song }
-	SimiSongsOpts        struct{ Song structs.Song }
-	DjCategoryDetailOpts struct{ CategoryID int64 }
-	DjHotOpts            struct{ HotType DjHotType }
+	AlbumTopOpts      struct{ Area string }
+	AlbumNewOpts      struct{ Area string }
+	ArtistAlbumOpts   struct{ ArtistID int64 }
+	ArtistSongOpts    struct{ ArtistID int64 }
+	ArtistsOfSongOpts struct{ Song structs.Song }
+	SimiSongsOpts     struct{ Song structs.Song }
 
 	// CurPlaylistOpts and the following Phase 3.3.3 menu contracts: the last
 	// hardcoded constructions (event handler current-playlist, operate action
@@ -125,6 +123,27 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu {
 		return nil
 	}
 	return menu
+}
+
+// MustBuild is the exported form of mustBuild (Phase 3.9 plugin boundary):
+// plugin menu-list initializers build parameterized menus exactly like the
+// internal main menu does — a build error against the static in-code registry
+// is a programmer error, so panic.
+func MustBuild[T any](key string, base baseMenu, opts T) Menu {
+	return mustBuild(key, base, opts)
+}
+
+// MustBuildNoArg is the exported form of mustBuildNoArg for plugin menu-list
+// initializers of no-arg menus (e.g. the DJ/radio cluster entry menu).
+func MustBuildNoArg(key string, base baseMenu) Menu {
+	return mustBuildNoArg(key, base)
+}
+
+// BuildMenuOrToast is the exported form of buildMenuOrToast (Phase 3.9 plugin
+// boundary): plugin SubMenu jump sites with no error channel toast the build
+// failure and return nil, matching the internal menu-error behavior.
+func BuildMenuOrToast[T any](key string, base baseMenu, opts T) Menu {
+	return buildMenuOrToast(key, base, opts)
 }
 
 // --- Page registry ---
@@ -315,7 +334,10 @@ func (PageRegistry) Keys() []string {
 
 // expectedMenuKeys is the canonical menu provider key set that must be
 // registered at startup (Phase 3.2 bootstrap completeness assertion). Keep in
-// sync with the init() registrations in registry_registrations.go.
+// sync with the init() registrations in registry_registrations.go. Keys moved
+// into plugins (check_update / last_fm / the DJ radio cluster) are
+// plugin-supplied and intentionally absent — the assertion only locks the
+// built-in set.
 var expectedMenuKeys = []string{
 	// Phase 3.2 base set + demo migrations.
 	"playlist_detail",
@@ -325,17 +347,6 @@ var expectedMenuKeys = []string{
 	"ranks",
 	"album_detail",
 	"user_playlist",
-	"dj_radio_detail",
-	// Phase 3.3.1 batch 1: DJ / radio cluster.
-	"dj_category_detail",
-	"dj_category",
-	"dj_program_rank",
-	"dj_program_hour_rank",
-	"dj_hot",
-	"dj_sub",
-	"dj_recommend",
-	"dj_today_recommend",
-	"radio_dj_type",
 	// Phase 3.3.1 batch 2: album cluster.
 	"album_new_area",
 	"album_top_area",

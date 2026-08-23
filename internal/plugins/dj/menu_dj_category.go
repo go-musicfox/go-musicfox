@@ -1,23 +1,24 @@
-package ui
+package dj
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type DjCategoryMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus      []model.MenuItem
 	categories []structs.DjCategory
 }
 
-func NewDjCategoryMenu(base baseMenu) *DjCategoryMenu {
+func NewDjCategoryMenu(base ui.BaseMenu) *DjCategoryMenu {
 	return &DjCategoryMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -38,7 +39,7 @@ func (m *DjCategoryMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("dj_category_detail", m.baseMenu, DjCategoryDetailOpts{CategoryID: m.categories[index].Id})
+	return ui.BuildMenuOrToast("dj_category_detail", m.BaseMenu, DjCategoryDetailOpts{CategoryID: m.categories[index].Id})
 }
 
 func (m *DjCategoryMenu) BeforeEnterMenuHook() model.Hook {

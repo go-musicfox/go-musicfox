@@ -1,4 +1,4 @@
-package ui
+package dj
 
 import (
 	"strconv"
@@ -8,12 +8,15 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// DjSubListMenu 展示我订阅的电台列表（需要登录；支持滚动加载）。登录门控经
+// BaseMenu 转发方法访问（m.User()/m.ToLoginPage），与提取前行为一致。
 type DjSubListMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus  []model.MenuItem
 	radios []structs.DjRadio
 	limit  int
@@ -21,9 +24,9 @@ type DjSubListMenu struct {
 	total  int
 }
 
-func NewDjSubListMenu(base baseMenu) *DjSubListMenu {
+func NewDjSubListMenu(base ui.BaseMenu) *DjSubListMenu {
 	return &DjSubListMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		limit:    50,
 		offset:   0,
 		total:    -1,
@@ -47,7 +50,7 @@ func (m *DjSubListMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjSubListMenu) ItemToShare(index int) any {
@@ -60,8 +63,8 @@ func (m *DjSubListMenu) ItemToShare(index int) any {
 func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 
-		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		}
 
@@ -77,7 +80,7 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := djSublistService.DjSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -102,8 +105,8 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		m.offset += m.limit
 
-		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		}
 
@@ -114,7 +117,7 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 		code, response := djSublistService.DjSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -131,5 +134,13 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 		m.menus = append(m.menus, menus...)
 
 		return true, nil
+	}
+}
+
+// enterMenuCallback mirrors ui.EnterMenuCallback (unexported there): the login
+// callback re-enters the requesting menu once login succeeds.
+func enterMenuCallback(main *model.Main) ui.LoginCallback {
+	return func() model.Page {
+		return main.EnterMenu(nil, nil)
 	}
 }

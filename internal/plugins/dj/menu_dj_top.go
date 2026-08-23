@@ -1,14 +1,16 @@
-package ui
+package dj
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// DjHotType 热门电台类型（热门/新晋）。
 type DjHotType string
 
 const (
@@ -16,16 +18,18 @@ const (
 	DjNotHot DjHotType = "not_hot"
 )
 
+// DjHotMenu 展示热门/新晋电台列表；与提取前行为一致（仅嵌入基座换为
+// ui.BaseMenu，子菜单跳转经 ui.BuildMenuOrToast 走注册表）。
 type DjHotMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus   []model.MenuItem
 	radios  []structs.DjRadio
 	hotType DjHotType
 }
 
-func NewDjHotMenu(base baseMenu, hotType DjHotType) *DjHotMenu {
+func NewDjHotMenu(base ui.BaseMenu, hotType DjHotType) *DjHotMenu {
 	return &DjHotMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		hotType:  hotType,
 	}
 }
@@ -47,7 +51,7 @@ func (m *DjHotMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjHotMenu) ItemToShare(index int) any {

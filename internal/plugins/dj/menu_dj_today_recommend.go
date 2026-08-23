@@ -1,4 +1,4 @@
-package ui
+package dj
 
 import (
 	"time"
@@ -7,21 +7,22 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 type DjTodayRecommendMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus     []model.MenuItem
 	radios    []structs.DjRadio
 	fetchTime time.Time
 }
 
-func NewDjTodayRecommendMenu(base baseMenu) *DjTodayRecommendMenu {
+func NewDjTodayRecommendMenu(base ui.BaseMenu) *DjTodayRecommendMenu {
 	return &DjTodayRecommendMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -42,7 +43,7 @@ func (m *DjTodayRecommendMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
 }
 
 func (m *DjTodayRecommendMenu) ItemToShare(index int) any {

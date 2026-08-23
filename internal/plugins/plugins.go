@@ -5,5 +5,6 @@ package plugins
 
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
 )

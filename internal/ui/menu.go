@@ -34,6 +34,16 @@ type DjMenu interface {
 	Menu
 }
 
+// DjRadioDetailSortable is implemented by the DJ radio detail menu (the
+// concrete type now lives in the internal/plugins/dj plugin). The
+// OpToggleSortOrder key handler toggles the program sort order through this
+// interface instead of a concrete ui type — package ui must not import plugin
+// packages.
+type DjRadioDetailSortable interface {
+	ToggleSortOrder()
+	Reload() (bool, model.Page)
+}
+
 type SongsMenu interface {
 	Menu
 	Songs() []structs.Song

@@ -140,7 +140,8 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// A test-double plugin menu + main-menu item must be appended after the
 	// built-ins (the registry is a package global shared with other tests, so
 	// only the presence/position-relative-to-builtins is asserted).
-	const builtinMenuCount = 14
+	// 13 built-ins: 主播电台 moved into the dj plugin (Phase 3.9.x), 帮助 last.
+	const builtinMenuCount = 13
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -335,17 +336,12 @@ func TestMenuNavigationSmoke(t *testing.T) {
 			if user, ok := got.(*UserPlaylistMenu); !ok || user.userID != result.([]structs.User)[0].UserId {
 				t.Fatalf("%s.SubMenu(0) = %T, want *UserPlaylistMenu(userId=%d)", name, got, result.([]structs.User)[0].UserId)
 			}
-		case *DjRadioDetailMenu:
-			if dj, ok := got.(*DjRadioDetailMenu); !ok || dj.djRadioId != result.([]structs.DjRadio)[0].Id {
-				t.Fatalf("%s.SubMenu(0) = %T, want *DjRadioDetailMenu(id=%d)", name, got, result.([]structs.DjRadio)[0].Id)
-			}
 		}
 	}
 
 	checkSub("album", []structs.Album{{Id: 456}}, (*AlbumDetailMenu)(nil))
 	checkSub("artist", []structs.Artist{{Id: 457, Name: "artist"}}, (*ArtistDetailMenu)(nil))
 	checkSub("user", []structs.User{{UserId: 458}}, (*UserPlaylistMenu)(nil))
-	checkSub("dj", []structs.DjRadio{{Id: 459}}, (*DjRadioDetailMenu)(nil))
 
 	// add_to_user_playlist builds through the registry with its song payload.
 	addMenu, err := BuildMenu("add_to_user_playlist", testBase, AddToUserPlaylistOpts{
