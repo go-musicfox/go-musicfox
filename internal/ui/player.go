@@ -208,6 +208,40 @@ func (p *Player) InPlayingMenu() bool {
 	return key == p.playingMenuKey || key == CurPlaylistKey
 }
 
+// SetPlayingMenu records the menu that owns the currently playing playlist.
+// A non-ui.Menu resets the playing menu to nil while keeping the key.
+func (p *Player) SetPlayingMenu(key string, menu model.Menu) {
+	p.playingMenuKey = key
+	p.playingMenu, _ = menu.(Menu)
+}
+
+// PlayingMenuKey returns the menu key of the currently playing menu.
+func (p *Player) PlayingMenuKey() string {
+	return p.playingMenuKey
+}
+
+// PlayingMenu returns the currently playing menu.
+func (p *Player) PlayingMenu() Menu {
+	return p.playingMenu
+}
+
+// MarkPlaylistModified invalidates the playing-menu association after the
+// playlist is mutated externally, avoiding stale menu data.
+func (p *Player) MarkPlaylistModified() {
+	p.playingMenu = nil
+	p.playingMenuKey += "modified"
+}
+
+// MarkPlaylistUpdated stamps the playlist update time.
+func (p *Player) MarkPlaylistUpdated() {
+	p.playlistUpdateAt = time.Now()
+}
+
+// PlaylistUpdateAt returns the playlist update time.
+func (p *Player) PlaylistUpdateAt() time.Time {
+	return p.playlistUpdateAt
+}
+
 // CompareWithCurPlaylist 与当前播放列表对比，是否一致
 func (p *Player) CompareWithCurPlaylist(playlist []structs.Song) bool {
 	if len(playlist) != len(p.Playlist()) {
@@ -352,7 +386,22 @@ func (p *Player) Playlist() []structs.Song {
 
 func (p *Player) InitSongManager(index int, playlist []structs.Song) {
 	p.cancelGaplessPreload()
+	p.ReinitializePlaylist(index, playlist)
+}
+
+// ReinitializePlaylist re-initializes the playlist with the given index and songs.
+func (p *Player) ReinitializePlaylist(index int, playlist []structs.Song) {
 	_ = p.playlistManager.Initialize(index, playlist)
+}
+
+// RemoveSong removes the song at the given index from the playlist.
+func (p *Player) RemoveSong(index int) (structs.Song, error) {
+	return p.playlistManager.RemoveSong(index)
+}
+
+// LoadPlaylistState restores the persisted playlist state from storage.
+func (p *Player) LoadPlaylistState() error {
+	return p.playlistManager.LoadState()
 }
 
 func (p *Player) CurSongIndex() int {

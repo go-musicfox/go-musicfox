@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
@@ -18,7 +17,7 @@ type SimilarSongsMenu struct {
 	menus        []model.MenuItem
 	songs        []structs.Song
 	existSongIds map[int64]struct{}
-	relateSongId int64
+	relateSongID int64
 }
 
 var _ SongsMenu = (*SimilarSongsMenu)(nil)
@@ -30,7 +29,7 @@ func NewSimilarSongsMenu(base baseMenu, song structs.Song) *SimilarSongsMenu {
 		menus:        menux.GetViewFromSongs(songs),
 		songs:        songs,
 		existSongIds: map[int64]struct{}{song.Id: {}},
-		relateSongId: song.Id,
+		relateSongID: song.Id,
 	}
 }
 
@@ -43,7 +42,7 @@ func (m *SimilarSongsMenu) IsPlayable() bool {
 }
 
 func (m *SimilarSongsMenu) GetMenuKey() string {
-	return fmt.Sprintf("simi_songs_%d", m.relateSongId)
+	return fmt.Sprintf("simi_songs_%d", m.relateSongID)
 }
 
 func (m *SimilarSongsMenu) MenuViews() []model.MenuItem {
@@ -52,7 +51,7 @@ func (m *SimilarSongsMenu) MenuViews() []model.MenuItem {
 
 func (m *SimilarSongsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		return m.fetchSimilarSongs(m.relateSongId, 2), nil
+		return m.fetchSimilarSongs(m.relateSongID, 2), nil
 	}
 }
 
@@ -66,9 +65,9 @@ func (m *SimilarSongsMenu) BottomOutHook() model.Hook {
 	}
 }
 
-func (m *SimilarSongsMenu) fetchSimilarSongs(songId int64, maxTry int) bool {
+func (m *SimilarSongsMenu) fetchSimilarSongs(songID int64, maxTry int) bool {
 	simiSongService := service.SimiSongService{
-		ID: strconv.FormatInt(songId, 10),
+		ID: strconv.FormatInt(songID, 10),
 	}
 	code, response := simiSongService.SimiSong()
 	codeType := _struct.CheckCode(code)
@@ -88,12 +87,12 @@ func (m *SimilarSongsMenu) fetchSimilarSongs(songId int64, maxTry int) bool {
 		if maxTry <= 0 {
 			return false
 		}
-		return m.fetchSimilarSongs(songId, maxTry-1)
+		return m.fetchSimilarSongs(songID, maxTry-1)
 	}
 
 	m.songs = append(m.songs, songs...)
 	m.menus = menux.GetViewFromSongs(m.songs)
-	_ = m.svc.Player().playlistManager.Initialize(m.svc.Player().CurSongIndex(), m.songs)
-	m.svc.Player().playlistUpdateAt = time.Now()
+	m.svc.Player().ReinitializePlaylist(m.svc.Player().CurSongIndex(), m.songs)
+	m.svc.Player().MarkPlaylistUpdated()
 	return true
 }

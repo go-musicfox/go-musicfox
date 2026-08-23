@@ -45,10 +45,11 @@ func (m *CurPlaylist) Songs() []structs.Song {
 
 func (m *CurPlaylist) BottomOutHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if m.svc.Player().playingMenu == nil || m.svc.Player().playingMenu.GetMenuKey() == CurPlaylistKey {
+		playingMenu := m.svc.Player().PlayingMenu()
+		if playingMenu == nil || playingMenu.GetMenuKey() == CurPlaylistKey {
 			return true, nil
 		}
-		hook := m.svc.Player().playingMenu.BottomOutHook()
+		hook := playingMenu.BottomOutHook()
 		if hook == nil {
 			return true, nil
 		}

@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"time"
-
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
@@ -74,8 +72,8 @@ func (m *PersonalFmMenu) BottomOutHook() model.Hook {
 
 		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)
-		_ = m.svc.Player().playlistManager.Initialize(m.svc.Player().CurSongIndex(), m.songs)
-		m.svc.Player().playlistUpdateAt = time.Now()
+		m.svc.Player().ReinitializePlaylist(m.svc.Player().CurSongIndex(), m.songs)
+		m.svc.Player().MarkPlaylistUpdated()
 
 		return true, nil
 	}

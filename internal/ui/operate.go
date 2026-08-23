@@ -375,7 +375,7 @@ func findSimilarSongs(svc *menuServices, isSelected bool) {
 		}
 		main := svc.MustMain()
 		menu := main.CurMenu()
-		if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongId == song.Id {
+		if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongID == song.Id {
 			return nil // 避免重复进入
 		}
 		newTitle := &model.MenuItem{Title: model.T(MsgMenuSimilarSongs), Subtitle: "与「" + song.Name + "」相似的歌曲"}
@@ -688,7 +688,7 @@ func appendSongsToCurPlaylist(svc *menuServices, addToNext bool) {
 		if addToNext && len(svc.Player().Playlist()) > 0 {
 			// 添加为下一曲
 			targetIndex := svc.Player().CurSongIndex() + 1
-			_ = svc.Player().playlistManager.Initialize(
+			svc.Player().ReinitializePlaylist(
 				svc.Player().CurSongIndex(),
 				slices.Concat(
 					svc.Player().Playlist()[:targetIndex],
@@ -699,7 +699,7 @@ func appendSongsToCurPlaylist(svc *menuServices, addToNext bool) {
 			notifyTitle = "已添加到下一曲"
 		} else {
 			// 添加到播放列表末尾
-			_ = svc.Player().playlistManager.Initialize(
+			svc.Player().ReinitializePlaylist(
 				svc.Player().CurSongIndex(),
 				append(svc.Player().Playlist(), appendSongs...),
 			)
@@ -707,8 +707,7 @@ func appendSongsToCurPlaylist(svc *menuServices, addToNext bool) {
 		}
 
 		// 替换播放中数据，避免数据错乱
-		svc.Player().playingMenu = nil
-		svc.Player().playingMenuKey += "modified"
+		svc.Player().MarkPlaylistModified()
 		if curPlaylist, ok := menu.(*CurPlaylist); ok {
 			curPlaylist.songs = svc.Player().Playlist()
 			curPlaylist.menus = menux.GetViewFromSongs(svc.Player().Playlist())
@@ -832,7 +831,7 @@ func delSongFromPlaylist(svc *menuServices) model.Page {
 			return nil
 		}
 
-		if removedSong, err := svc.Player().playlistManager.RemoveSong(selectedIndex); err == nil {
+		if removedSong, err := svc.Player().RemoveSong(selectedIndex); err == nil {
 			svc.Player().PlaySong(removedSong, DurationNext)
 		}
 		songs := svc.Player().Playlist()
@@ -845,8 +844,7 @@ func delSongFromPlaylist(svc *menuServices) model.Page {
 		}
 
 		// 替换播放中数据，避免数据错乱
-		svc.Player().playingMenu = nil
-		svc.Player().playingMenuKey += "modified"
+		svc.Player().MarkPlaylistModified()
 
 		// 如果播放列表中已经没有歌曲，停止播放
 		if len(svc.Player().Playlist()) == 0 {

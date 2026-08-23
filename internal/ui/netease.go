@@ -290,7 +290,7 @@ func (n *Netease) InitHook(_ *model.App) {
 		}
 
 		// 加载播放列表状态
-		if err := n.player.playlistManager.LoadState(); err != nil {
+		if err := n.player.LoadPlaylistState(); err != nil {
 			// 如果加载失败，记录错误但不影响启动
 			slog.Warn("Failed to load playlist state", slogx.Error(err))
 		}

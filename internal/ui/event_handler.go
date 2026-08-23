@@ -63,8 +63,8 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpCurPlaylist:
 		if _, ok := menu.(*CurPlaylist); !ok {
 			var subTitle string
-			if !player.playlistUpdateAt.IsZero() {
-				subTitle = player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
+			if updatedAt := player.PlaylistUpdateAt(); !updatedAt.IsZero() {
+				subTitle = updatedAt.Format("[更新于2006-01-02 15:04:05]")
 			}
 			curPlaylist := buildMenuOrToast("cur_playlist", newBaseMenuFromSvc(h.svc), CurPlaylistOpts{Songs: player.Playlist()})
 			if curPlaylist == nil {
@@ -376,20 +376,17 @@ func playOrToggle(svc *menuServices, selectedIndex int) {
 
 	newPlaylist := make([]structs.Song, len(songs))
 	copy(newPlaylist, songs)
-	_ = player.playlistManager.Initialize(selectedIndex, newPlaylist)
+	player.ReinitializePlaylist(selectedIndex, newPlaylist)
 
-	player.playingMenuKey = menu.GetMenuKey()
-	if me, ok := menu.(Menu); ok {
-		player.playingMenu = me
-	}
+	player.SetPlayingMenu(menu.GetMenuKey(), menu)
 
 	// 如果当前不是心动模式菜单
 	mode := player.Mode()
-	if !inPlayingMenu && mode == types.PmIntelligent && player.playingMenuKey != "Intelligent" {
+	if !inPlayingMenu && mode == types.PmIntelligent && player.PlayingMenuKey() != "Intelligent" {
 		player.SetMode(types.PmListLoop)
 	}
 
-	player.playlistUpdateAt = time.Now()
+	player.MarkPlaylistUpdated()
 	player.StartPlay()
 }
 
