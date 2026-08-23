@@ -121,6 +121,12 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu {
 type (
 	LoginPageOpts      struct{ Netease *Netease }
 	LastfmAuthPageOpts struct{ Netease *Netease }
+	// Phase 3.3.2 page contracts. SearchPageOpts builds the shell-owned search
+	// singleton (its wordsInput/result/searchType state is shared with the
+	// SearchResultMenu flow); LastfmCustomApiPageOpts is the Last.fm profile
+	// "设置 API account" entry.
+	SearchPageOpts          struct{ Netease *Netease }
+	LastfmCustomApiPageOpts struct{ Netease *Netease }
 )
 
 // pageFactory[T] is a typed page provider stored behind `any` in the registry.
@@ -271,6 +277,8 @@ var expectedMenuKeys = []string{
 var expectedPageKeys = []string{
 	"login",
 	"lastfm_auth",
+	"search",
+	"lastfm_custom_api",
 }
 
 // AssertMenuRegistryComplete panics listing the missing keys when any expected

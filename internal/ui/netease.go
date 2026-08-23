@@ -46,7 +46,6 @@ type Netease struct {
 	lastfm *lastfm.Client
 
 	*model.App
-	login  *LoginPage
 	search *SearchPage
 
 	lyricService *lyric.Service
@@ -110,12 +109,16 @@ func NewNetease(app *model.App) *Netease {
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
-	loginPage, err := BuildPage("login", LoginPageOpts{Netease: n})
+	// The search page is a shell-owned singleton: its wordsInput/result/
+	// searchType state is shared with the SearchResultMenu flow (and operate.go
+	// searchSong), so the shell keeps one instance built through the registry.
+	// The login page is built per-navigation in ToLoginPage (no cross-component
+	// state to preserve), so the shell holds no login field.
+	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
 	if err != nil {
 		return nil
 	}
-	n.login = loginPage.(*LoginPage) // BuildPage returns model.Page; concrete type asserted back
-	n.search = NewSearchPage(n)
+	n.search = searchPage.(*SearchPage) // BuildPage returns model.Page; concrete type asserted back
 	n.App = app
 
 	n.shareSvc = composer.NewShareService()
@@ -182,9 +185,13 @@ func (n *Netease) EffectiveWindowHeight() int {
 
 // ToLoginPage 需要登录的处理
 func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
-	n.login.AfterLogin = callback
+	page := buildPageOrToast("login", LoginPageOpts{Netease: n})
+	if page == nil {
+		return nil, nil
+	}
+	page.(*LoginPage).AfterLogin = callback
 	n.coverRenderer.ClearDisplayed()
-	return n.login, tickLogin(time.Nanosecond)
+	return page, tickLogin(time.Nanosecond)
 }
 
 // ToSearchPage 搜索

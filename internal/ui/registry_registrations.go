@@ -191,6 +191,19 @@ func init() {
 	RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
 		return NewLastfmAuthPage(opts.Netease), nil
 	})
+
+	// --- Phase 3.3.2 page migrations ---
+
+	// Search page: the shell keeps the built instance as a singleton because
+	// its wordsInput/result/searchType state is read back by SearchResultMenu
+	// and operate.go through the shell (3.3.3 addresses those readers).
+	RegisterPage("search", func(opts SearchPageOpts) (model.Page, error) {
+		return NewSearchPage(opts.Netease), nil
+	})
+
+	RegisterPage("lastfm_custom_api", func(opts LastfmCustomApiPageOpts) (model.Page, error) {
+		return NewLastfmCustomApiPage(opts.Netease), nil
+	})
 }
 
 // neteaseFromBase extracts the *Netease shell from a baseMenu for bootstrap

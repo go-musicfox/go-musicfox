@@ -39,8 +39,11 @@ func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		page := NewLastfmCustomApiPage(m.svc.Netease())
-		page.AfterAction = func() {
+		page := buildPageOrToast("lastfm_custom_api", LastfmCustomApiPageOpts{Netease: m.svc.Netease()})
+		if page == nil {
+			return nil
+		}
+		page.(*LastfmCustomApiPage).AfterAction = func() {
 			app.MustMain().RefreshMenuList()
 		}
 		return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)

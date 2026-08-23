@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
@@ -127,6 +129,84 @@ func TestBuildPageOrToastMissingKeyReturnsNil(t *testing.T) {
 	withDummyConfig(t)
 	if page := buildPageOrToast("no_such_page", LoginPageOpts{}); page != nil {
 		t.Fatalf("buildPageOrToast(missing key) = %v, want nil", page)
+	}
+}
+
+// --- page build + navigation smoke (3.3.2) ---
+
+func TestRegisterAndBuildSearchPage(t *testing.T) {
+	page, err := BuildPage("search", SearchPageOpts{Netease: nil})
+	if err != nil {
+		t.Fatalf("BuildPage(search) error = %v", err)
+	}
+	if _, ok := page.(*SearchPage); !ok {
+		t.Fatalf("BuildPage(search) = %T, want *SearchPage", page)
+	}
+}
+
+func TestRegisterAndBuildLastfmCustomApiPage(t *testing.T) {
+	withDummyConfig(t)
+	// NewLastfmCustomApiPage reloads the stored API account on construction, so
+	// the provider needs a Netease with a non-nil lastfm client. lastfm.NewClient
+	// reads the account through storage.DBManager, which the runtime bootstrap
+	// normally sets; provide a zero-value manager so the test avoids a nil
+	// receiver (GetByKVModel errors are swallowed by InitFromStorage).
+	previousDB := storage.DBManager
+	storage.DBManager = &storage.LocalDBManager{}
+	t.Cleanup(func() {
+		_ = storage.DBManager.Close()
+		storage.DBManager = previousDB
+	})
+
+	n := testNetease()
+	n.lastfm = lastfm.NewClient()
+	page, err := BuildPage("lastfm_custom_api", LastfmCustomApiPageOpts{Netease: n})
+	if err != nil {
+		t.Fatalf("BuildPage(lastfm_custom_api) error = %v", err)
+	}
+	if _, ok := page.(*LastfmCustomApiPage); !ok {
+		t.Fatalf("BuildPage(lastfm_custom_api) = %T, want *LastfmCustomApiPage", page)
+	}
+}
+
+// TestPageNavigationSmoke exercises the thin-shell navigation methods through
+// the page provider registry: ToLoginPage builds a fresh login page with the
+// AfterLogin callback wired; ToSearchPage returns the shell-owned search
+// singleton (its shared wordsInput/result/searchType state is read back by the
+// SearchResultMenu flow).
+func TestPageNavigationSmoke(t *testing.T) {
+	withDummyConfig(t)
+	n := testNetease()
+	n.search = &SearchPage{}
+
+	// ToLoginPage: fresh page through the "login" provider, callback wired.
+	callback := func() model.Page { return nil }
+	page, cmd := n.ToLoginPage(callback)
+	login, ok := page.(*LoginPage)
+	if !ok {
+		t.Fatalf("ToLoginPage() = %T, want *LoginPage", page)
+	}
+	if login.AfterLogin == nil {
+		t.Fatal("ToLoginPage() did not wire AfterLogin")
+	}
+	if cmd == nil {
+		t.Fatal("ToLoginPage() cmd is nil")
+	}
+
+	// ToSearchPage: returns the shell-owned singleton with searchType set.
+	spage, scmd := n.ToSearchPage(StSingleSong)
+	search, ok := spage.(*SearchPage)
+	if !ok {
+		t.Fatalf("ToSearchPage() = %T, want *SearchPage", spage)
+	}
+	if search != n.search {
+		t.Fatal("ToSearchPage() did not return the shell-owned search singleton")
+	}
+	if search.searchType != StSingleSong {
+		t.Fatalf("searchType = %d, want %d", search.searchType, StSingleSong)
+	}
+	if scmd == nil {
+		t.Fatal("ToSearchPage() cmd is nil")
 	}
 }
 
