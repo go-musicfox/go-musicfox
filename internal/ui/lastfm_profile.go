@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/anhoder/foxful-cli/model"
+
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
@@ -45,8 +46,11 @@ func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 		return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)
 	case 1:
 		if m.svc.Lastfm().NeedAuth() {
-			page := NewLastfmAuthPage(m.svc.Netease())
-			page.AfterAction = func() {
+			page := buildPageOrToast("lastfm_auth", LastfmAuthPageOpts{Netease: m.svc.Netease()})
+			if page == nil {
+				return nil
+			}
+			page.(*LastfmAuthPage).AfterAction = func() {
 				app.MustMain().RefreshMenuList()
 			}
 			return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)

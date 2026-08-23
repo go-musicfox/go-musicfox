@@ -74,35 +74,27 @@ func (m *SearchResultMenu) SubMenu(_ *model.App, index int) model.Menu {
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewAlbumDetailMenu(m.baseMenu, resultWithType[index].Id)
+		return buildMenuOrToast("album_detail", m.baseMenu, AlbumDetailOpts{AlbumID: resultWithType[index].Id})
 	case []ds2.Playlist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: resultWithType[index].Id})
-		if err != nil {
-			return nil
-		}
-		return playlistMenu
+		return buildMenuOrToast("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: resultWithType[index].Id})
 	case []ds2.Artist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		artistMenu, err := BuildMenuB("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: resultWithType[index].Id, Name: resultWithType[index].Name})
-		if err != nil {
-			return nil
-		}
-		return artistMenu
+		return buildMenuOrToast("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: resultWithType[index].Id, Name: resultWithType[index].Name})
 	case []ds2.User:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewUserPlaylistMenu(m.baseMenu, resultWithType[index].UserId)
+		return buildMenuOrToast("user_playlist", m.baseMenu, UserPlaylistOpts{UserID: resultWithType[index].UserId})
 	case []ds2.DjRadio:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return NewDjRadioDetailMenu(m.baseMenu, resultWithType[index].Id)
+		return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: resultWithType[index].Id})
 	}
 
 	return nil
