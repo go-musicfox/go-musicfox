@@ -50,9 +50,10 @@ func NewMainMenu(base baseMenu) *MainMenu {
 		},
 	}
 
-	// 追加插件声明的主菜单项（Phase 3.9）。插件主菜单项 MUST 是无参菜单：
-	// 经 mustBuildNoArg 构建，key 未注册或为参数化菜单会在启动时 panic
-	// （程序错误，作为启动完整性信号；先显式断言以给出清晰错误）。
+	// 追加插件声明的主菜单项（Phase 3.9）。无 Build 的插件主菜单项 MUST 是
+	// 无参菜单：经 mustBuildNoArg 构建，key 未注册或为参数化菜单会在启动时
+	// panic（程序错误，作为启动完整性信号；先显式断言以给出清晰错误）。
+	// 带 Build 的项由插件以自身 options 构造菜单（参数化 provider 入口）。
 	// 触发由插件菜单自身的 Action / BeforeEnterMenuHook 承担——主菜单不再
 	// 对插件索引做特判（检查更新的 index-15 特判已随插件化移除）。
 	for _, item := range MainMenuPluginItems() {
@@ -60,7 +61,11 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			panic(fmt.Sprintf("main menu plugin item %q: menu provider not registered", item.Key))
 		}
 		mainMenu.menus = append(mainMenu.menus, model.MenuItem{Title: item.Title})
-		mainMenu.menuList = append(mainMenu.menuList, mustBuildNoArg(item.Key, base))
+		if item.Build != nil {
+			mainMenu.menuList = append(mainMenu.menuList, item.Build(base))
+		} else {
+			mainMenu.menuList = append(mainMenu.menuList, mustBuildNoArg(item.Key, base))
+		}
 	}
 	return mainMenu
 }

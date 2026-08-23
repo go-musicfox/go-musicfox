@@ -221,22 +221,39 @@ func toastRegistryError(title string, err error) {
 // --- Plugin main-menu items (Phase 3.9) ---
 
 // MainMenuItem is a plugin-declared entry appended to the main menu after the
-// built-in items. The Key MUST be a registered no-arg menu provider: the main
-// menu builds the entry via mustBuildNoArg, so an unregistered or
-// parameterized key surfaces as a startup panic in NewMainMenu (programmer
-// error / startup integrity signal).
+// built-in items. The Key MUST be registered in the menu registry: NewMainMenu
+// asserts it explicitly so an unregistered key surfaces as a startup panic
+// (programmer error / startup integrity signal). Build optionally constructs
+// the entry menu with the plugin's own options (e.g. a parameterized provider);
+// when nil the main menu builds the entry via mustBuildNoArg, so the key must
+// then be a no-arg menu provider.
 type MainMenuItem struct {
 	Key   string
 	Title string
+	// Build optionally constructs the entry menu from the menu base. nil means
+	// the main menu builds the entry via mustBuildNoArg(Key, base).
+	Build func(base BaseMenu) Menu
 }
 
 // mainMenuPluginItems holds the plugin-declared main-menu items in
 // registration order (compile-time registration via init()).
 var mainMenuPluginItems []MainMenuItem
 
-// RegisterMainMenuItem appends a plugin main-menu entry. Panics on empty
-// key/title or a duplicate key (programmer error).
+// RegisterMainMenuItem appends a plugin main-menu entry with a nil builder
+// (the entry menu is built via mustBuildNoArg, so the key must be a registered
+// no-arg menu provider). Panics on empty key/title or a duplicate key
+// (programmer error).
 func RegisterMainMenuItem(key, title string) {
+	RegisterMainMenuItemWith(key, title, nil)
+}
+
+// RegisterMainMenuItemWith appends a plugin main-menu entry with an optional
+// builder. When build is nil the main menu builds the entry via mustBuildNoArg
+// (the key must be a registered no-arg menu provider); when non-nil the builder
+// constructs the entry menu with its own options, letting a parameterized
+// provider serve as a main-menu entry. Panics on empty key/title or a duplicate
+// key (programmer error).
+func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu) {
 	if key == "" || title == "" {
 		panic("RegisterMainMenuItem: empty key or title")
 	}
@@ -245,7 +262,7 @@ func RegisterMainMenuItem(key, title string) {
 			panic("RegisterMainMenuItem: duplicate key " + key)
 		}
 	}
-	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title})
+	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title, Build: build})
 }
 
 // MainMenuPluginItems returns a snapshot of the registered plugin main-menu
