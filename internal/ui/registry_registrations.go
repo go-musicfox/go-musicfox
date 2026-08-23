@@ -5,7 +5,8 @@ import "github.com/anhoder/foxful-cli/model"
 // Production provider registrations (Phase 3.2.1/3.2.2). The 5 sample menus
 // move here from the Phase 3.0 prototype (registry_proto_b.go, kept as
 // evidence); demo migrations add album_detail / user_playlist / dj_radio_detail
-// and the lastfm_auth page.
+// and the lastfm_auth page. Phase 3.3.1 extends the set to every menu_*.go
+// menu (batches 1-4).
 func init() {
 	RegisterMenu("playlist_detail", func(base baseMenu, opts PlaylistDetailOpts) (Menu, error) {
 		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
@@ -145,6 +146,44 @@ func init() {
 		return NewUserCollectionMenu(base), nil
 	})
 
+	// --- Phase 3.3.1 batch 4: main menu cluster + misc ---
+
+	RegisterMenu("personal_fm", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewPersonalFmMenu(base), nil
+	})
+
+	RegisterMenu("could", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewCloudMenu(base), nil
+	})
+
+	RegisterMenu("recent_songs", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewRecentSongsMenu(base), nil
+	})
+
+	RegisterMenu("daily_playlists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDailyRecommendPlaylistMenu(base), nil
+	})
+
+	RegisterMenu("daily_songs", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewDailyRecommendSongsMenu(base), nil
+	})
+
+	RegisterMenu("search_type", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewSearchTypeMenu(base), nil
+	})
+
+	// Bootstrap menus whose constructors predate the baseMenu signature
+	// (they take *Netease). The app-bootstrap call sites keep the plain
+	// constructors; these providers exist for registration completeness so
+	// the startup assertion covers every menu.
+	RegisterMenu("local_search", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewLocalSearchMenu(neteaseFromBase(base)), nil
+	})
+
+	RegisterMenu("main_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewMainMenu(neteaseFromBase(base)), nil
+	})
+
 	RegisterPage("login", func(opts LoginPageOpts) (model.Page, error) {
 		return NewLoginPage(opts.Netease), nil
 	})
@@ -152,4 +191,14 @@ func init() {
 	RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
 		return NewLastfmAuthPage(opts.Netease), nil
 	})
+}
+
+// neteaseFromBase extracts the *Netease shell from a baseMenu for bootstrap
+// menus whose constructors predate the baseMenu signature (local_search /
+// main_menu take *Netease). Nil-safe for zero-value bases used in tests.
+func neteaseFromBase(base baseMenu) *Netease {
+	if base.svc == nil {
+		return nil
+	}
+	return base.svc.Netease()
 }

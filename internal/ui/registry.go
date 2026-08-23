@@ -220,6 +220,7 @@ func (PageRegistry) Keys() []string {
 // registered at startup (Phase 3.2 bootstrap completeness assertion). Keep in
 // sync with the init() registrations in registry_registrations.go.
 var expectedMenuKeys = []string{
+	// Phase 3.2 base set + demo migrations.
 	"playlist_detail",
 	"artist_detail",
 	"search_result",
@@ -228,6 +229,42 @@ var expectedMenuKeys = []string{
 	"album_detail",
 	"user_playlist",
 	"dj_radio_detail",
+	// Phase 3.3.1 batch 1: DJ / radio cluster.
+	"dj_category_detail",
+	"dj_category",
+	"dj_program_rank",
+	"dj_program_hour_rank",
+	"dj_hot",
+	"dj_sub",
+	"dj_recommend",
+	"dj_today_recommend",
+	"radio_dj_type",
+	// Phase 3.3.1 batch 2: album cluster.
+	"album_new_area",
+	"album_top_area",
+	"album_new_hot",
+	"album_menu",
+	"album_top",
+	"album_new",
+	"album_sub_list",
+	"high_quality_playlists",
+	// Phase 3.3.1 batch 3: artist cluster.
+	"artist_of_song",
+	"artist_album",
+	"artist_song",
+	"artists_sub_list",
+	"hot_artists",
+	"simi_songs",
+	"user_collect",
+	// Phase 3.3.1 batch 4: main menu cluster + misc.
+	"personal_fm",
+	"could",
+	"recent_songs",
+	"daily_playlists",
+	"daily_songs",
+	"search_type",
+	"local_search",
+	"main_menu",
 }
 
 // expectedPageKeys is the canonical page provider key set.
