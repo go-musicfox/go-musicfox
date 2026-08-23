@@ -140,9 +140,9 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// A test-double plugin menu + main-menu item must be appended after the
 	// built-ins (the registry is a package global shared with other tests, so
 	// only the presence/position-relative-to-builtins is asserted).
-	// 12 built-ins: 主播电台 moved into the dj plugin and 专辑列表 into the
-	// album plugin (Phase 3.9.x), 帮助 last.
-	const builtinMenuCount = 12
+	// 11 built-ins: 主播电台 moved into the dj plugin, 专辑列表 into the album
+	// plugin and 热门歌手 into the artist plugin (Phase 3.9.x), 帮助 last.
+	const builtinMenuCount = 11
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -283,9 +283,9 @@ func TestPageNavigationSmoke(t *testing.T) {
 
 // TestMenuNavigationSmoke builds navigation chains through the production
 // registry (Ranks -> PlaylistDetail; SearchType -> SearchResult -> the demo
-// artist/user/dj menus) and asserts each constructed menu has the
-// expected concrete type, key and non-nil views. Network-fed menu data is
-// stubbed directly; the edges exercised are the real SubMenu implementations.
+// user menu) and asserts each constructed menu has the expected concrete type,
+// key and non-nil views. Network-fed menu data is stubbed directly; the edges
+// exercised are the real SubMenu implementations.
 func TestMenuNavigationSmoke(t *testing.T) {
 	// Ranks -> PlaylistDetail (SubMenu edge; stub the network-fed ranks).
 	ranks, err := BuildMenu("ranks", testBase, NoArgMenuOpts{})
@@ -325,10 +325,6 @@ func TestMenuNavigationSmoke(t *testing.T) {
 		sr.result = result
 		got := sr.SubMenu(nil, 0)
 		switch wantType.(type) {
-		case *ArtistDetailMenu:
-			if artist, ok := got.(*ArtistDetailMenu); !ok || artist.artistId != result.([]structs.Artist)[0].Id {
-				t.Fatalf("%s.SubMenu(0) = %T, want *ArtistDetailMenu(id=%d)", name, got, result.([]structs.Artist)[0].Id)
-			}
 		case *UserPlaylistMenu:
 			if user, ok := got.(*UserPlaylistMenu); !ok || user.userID != result.([]structs.User)[0].UserId {
 				t.Fatalf("%s.SubMenu(0) = %T, want *UserPlaylistMenu(userId=%d)", name, got, result.([]structs.User)[0].UserId)
@@ -336,7 +332,6 @@ func TestMenuNavigationSmoke(t *testing.T) {
 		}
 	}
 
-	checkSub("artist", []structs.Artist{{Id: 457, Name: "artist"}}, (*ArtistDetailMenu)(nil))
 	checkSub("user", []structs.User{{UserId: 458}}, (*UserPlaylistMenu)(nil))
 
 	// add_to_user_playlist builds through the registry with its song payload.

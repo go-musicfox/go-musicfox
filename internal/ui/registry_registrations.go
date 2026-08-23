@@ -9,17 +9,20 @@ import "github.com/anhoder/foxful-cli/model"
 // menu (batches 1-4). The Last.fm menu and pages moved into the
 // internal/plugins/lastfm plugin with their registrations (Phase 3.9), the
 // whole DJ/radio cluster (dj_* + radio_dj_type) moved into
-// internal/plugins/dj (Phase 3.9.x), and the whole album cluster
+// internal/plugins/dj (Phase 3.9.x), the whole album cluster
 // (album_menu / album_* + album_detail) moved into internal/plugins/album
-// (Phase 3.9.x).
+// (Phase 3.9.x), and the whole artist cluster (artist_detail / artist_* +
+// hot_artists) moved into internal/plugins/artist (Phase 3.9.x).
 func init() {
 	RegisterMenu("playlist_detail", func(base baseMenu, opts PlaylistDetailOpts) (Menu, error) {
 		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
 	})
 
-	RegisterMenu("artist_detail", func(base baseMenu, opts ArtistDetailOpts) (Menu, error) {
-		return NewArtistDetailMenu(base, opts.ArtistID, opts.Name), nil
-	})
+	// artist_detail was one of the Phase 3.0 prototype sample menus; its
+	// provider registration moved into the internal/plugins/artist plugin with
+	// the artist cluster (Phase 3.9.x). Its key and ui.ArtistDetailOpts stay —
+	// the search-result / artists-of-song / subscribed-artists / operate call
+	// sites jump into it unchanged.
 
 	RegisterMenu("search_result", func(base baseMenu, opts SearchResultOpts) (Menu, error) {
 		return NewSearchResultMenu(base, opts.SearchType), nil
@@ -46,28 +49,6 @@ func init() {
 
 	RegisterMenu("high_quality_playlists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return NewHighQualityPlaylistsMenu(base), nil
-	})
-
-	// --- Phase 3.3.1 batch 3: artist cluster ---
-
-	RegisterMenu("artist_of_song", func(base baseMenu, opts ArtistsOfSongOpts) (Menu, error) {
-		return NewArtistsOfSongMenu(base, opts.Song), nil
-	})
-
-	RegisterMenu("artist_album", func(base baseMenu, opts ArtistAlbumOpts) (Menu, error) {
-		return NewArtistAlbumMenu(base, opts.ArtistID), nil
-	})
-
-	RegisterMenu("artist_song", func(base baseMenu, opts ArtistSongOpts) (Menu, error) {
-		return NewArtistSongMenu(base, opts.ArtistID), nil
-	})
-
-	RegisterMenu("artists_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewArtistsSubscribeListMenu(base), nil
-	})
-
-	RegisterMenu("hot_artists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewHotArtistsMenu(base), nil
 	})
 
 	RegisterMenu("simi_songs", func(base baseMenu, opts SimiSongsOpts) (Menu, error) {

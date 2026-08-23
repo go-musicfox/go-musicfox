@@ -1,4 +1,4 @@
-package ui
+package artist
 
 import (
 	"fmt"
@@ -8,21 +8,23 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// ArtistSongMenu 展示歌手的热门歌曲。
 type ArtistSongMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus    []model.MenuItem
 	songs    []structs.Song
-	artistId int64
+	artistID int64
 }
 
-func NewArtistSongMenu(base baseMenu, artistId int64) *ArtistSongMenu {
+func NewArtistSongMenu(base ui.BaseMenu, artistID int64) *ArtistSongMenu {
 	return &ArtistSongMenu{
-		baseMenu: base,
-		artistId: artistId,
+		BaseMenu: base,
+		artistID: artistID,
 	}
 }
 
@@ -35,7 +37,7 @@ func (m *ArtistSongMenu) IsPlayable() bool {
 }
 
 func (m *ArtistSongMenu) GetMenuKey() string {
-	return fmt.Sprintf("artist_song_%d", m.artistId)
+	return fmt.Sprintf("artist_song_%d", m.artistID)
 }
 
 func (m *ArtistSongMenu) MenuViews() []model.MenuItem {
@@ -45,7 +47,7 @@ func (m *ArtistSongMenu) MenuViews() []model.MenuItem {
 func (m *ArtistSongMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 
-		artistSongService := service.ArtistTopSongService{Id: strconv.FormatInt(m.artistId, 10)}
+		artistSongService := service.ArtistTopSongService{Id: strconv.FormatInt(m.artistID, 10)}
 		code, response := artistSongService.ArtistTopSong()
 		codeType := _struct.CheckCode(code)
 		if codeType != _struct.Success {

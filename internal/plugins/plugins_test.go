@@ -94,6 +94,35 @@ func TestBlankImportRegistersDjPlugin(t *testing.T) {
 	}
 }
 
+// TestBlankImportRegistersArtistPlugin proves the fifth real plugin
+// (internal/plugins/artist — the whole artist cluster) links through the same
+// aggregator: its menu providers are registered with their original keys and
+// its entry menu declares the 热门歌手 main-menu item.
+func TestBlankImportRegistersArtistPlugin(t *testing.T) {
+	for _, key := range []string{"hot_artists", "artist_detail", "artist_song", "artist_album", "artist_of_song", "artists_sub_list"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("artist menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+	entry, err := ui.BuildMenu("hot_artists", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(hot_artists) error = %v", err)
+	}
+	if key := entry.GetMenuKey(); key != "hot_artists" {
+		t.Fatalf("GetMenuKey() = %q, want hot_artists", key)
+	}
+	found := false
+	for _, item := range ui.MainMenuPluginItems() {
+		if item.Key == "hot_artists" && item.Title == "热门歌手" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("hot_artists main-menu item not registered via aggregator blank import")
+	}
+}
+
 // TestBlankImportRegistersLastfmPlugin proves the second real plugin
 // (internal/plugins/lastfm) links through the same aggregator: its menu and
 // page providers are registered and its main-menu item is appended after the

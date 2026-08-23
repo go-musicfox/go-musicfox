@@ -426,7 +426,7 @@ func goToArtistOfSong(svc *menuServices, isSelected bool) {
 			return nil
 		}
 		if artistCount == 1 {
-			if detail, ok := menu.(*ArtistDetailMenu); ok && detail.artistId == song.Artists[0].Id {
+			if detail, ok := menu.(ArtistDetailIDGetter); ok && detail.ArtistID() == song.Artists[0].Id {
 				return nil
 			}
 			artistMenu, err := BuildMenu("artist_detail", newBaseMenuFromSvc(svc), ArtistDetailOpts{ArtistID: song.Artists[0].Id, Name: song.Artists[0].Name})
@@ -437,7 +437,7 @@ func goToArtistOfSong(svc *menuServices, isSelected bool) {
 			main.EnterMenu(artistMenu, newTitle)
 			return nil
 		}
-		if artists, ok := menu.(*ArtistsOfSongMenu); ok && artists.song.Id == song.Id {
+		if artists, ok := menu.(ArtistsOfSongSongIDGetter); ok && artists.SongID() == song.Id {
 			return nil
 		}
 		newTitle := &model.MenuItem{Title: "「" + song.Name + "」所属歌手"}

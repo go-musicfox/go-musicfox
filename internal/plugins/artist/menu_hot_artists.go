@@ -1,22 +1,24 @@
-package ui
+package artist
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// HotArtistsMenu 展示热门歌手（主菜单「热门歌手」入口对应的插件菜单）。
 type HotArtistsMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus   []model.MenuItem
 	artists []structs.Artist
 }
 
-func NewHotArtistsMenu(base baseMenu) *HotArtistsMenu {
+func NewHotArtistsMenu(base ui.BaseMenu) *HotArtistsMenu {
 	return &HotArtistsMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -36,7 +38,7 @@ func (m *HotArtistsMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.artists) {
 		return nil
 	}
-	artistMenu, err := BuildMenu("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: m.artists[index].Id, Name: m.artists[index].Name})
+	artistMenu, err := ui.BuildMenu("artist_detail", m.BaseMenu, ui.ArtistDetailOpts{ArtistID: m.artists[index].Id, Name: m.artists[index].Name})
 	if err != nil {
 		return nil
 	}

@@ -52,6 +52,21 @@ type AlbumDetailIDGetter interface {
 	AlbumID() int64
 }
 
+// ArtistDetailIDGetter is implemented by the artist detail menu (the concrete
+// type now lives in the internal/plugins/artist plugin). operate.go's
+// goToArtistOfSong avoids re-entering the same artist through this interface.
+type ArtistDetailIDGetter interface {
+	ArtistID() int64
+}
+
+// ArtistsOfSongSongIDGetter is implemented by the artists-of-song menu (the
+// concrete type now lives in the internal/plugins/artist plugin). operate.go's
+// goToArtistOfSong avoids re-entering the same multi-artist list through this
+// interface.
+type ArtistsOfSongSongIDGetter interface {
+	SongID() int64
+}
+
 type SongsMenu interface {
 	Menu
 	Songs() []structs.Song

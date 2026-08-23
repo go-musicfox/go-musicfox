@@ -1,4 +1,4 @@
-package ui
+package artist
 
 import (
 	"strconv"
@@ -8,11 +8,14 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
+// ArtistsSubscribeListMenu 展示我收藏的歌手列表（需要登录；支持滚动加载）。
+// 登录门控经 BaseMenu 转发方法访问（m.ToLoginPage），与提取前行为一致。
 type ArtistsSubscribeListMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus   []model.MenuItem
 	artists []structs.Artist
 	offset  int
@@ -20,9 +23,9 @@ type ArtistsSubscribeListMenu struct {
 	hasMore bool
 }
 
-func NewArtistsSubscribeListMenu(base baseMenu) *ArtistsSubscribeListMenu {
+func NewArtistsSubscribeListMenu(base ui.BaseMenu) *ArtistsSubscribeListMenu {
 	return &ArtistsSubscribeListMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		offset:   0,
 		limit:    50,
 	}
@@ -44,7 +47,7 @@ func (m *ArtistsSubscribeListMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.artists) {
 		return nil
 	}
-	artistMenu, err := BuildMenu("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: m.artists[index].Id, Name: m.artists[index].Name})
+	artistMenu, err := ui.BuildMenu("artist_detail", m.BaseMenu, ui.ArtistDetailOpts{ArtistID: m.artists[index].Id, Name: m.artists[index].Name})
 	if err != nil {
 		return nil
 	}
@@ -65,7 +68,7 @@ func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := artistService.ArtistSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -98,7 +101,7 @@ func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
 		code, response := artistService.ArtistSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

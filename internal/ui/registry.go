@@ -39,13 +39,16 @@ type (
 	UserPlaylistOpts  struct{ UserID int64 }
 	DjRadioDetailOpts struct{ DjRadioID int64 }
 
-	// ArtistAlbumOpts and the following Phase 3.3.1 parameterized menu
-	// contracts. Menus whose GetMenuKey() is parameterized (e.g.
-	// artist_album_<id>) register under the static key prefix; the runtime menu
-	// key keeps its dynamic form. AlbumTopOpts / AlbumNewOpts moved into the
-	// internal/plugins/album plugin with the album cluster (Phase 3.9.x).
-	ArtistAlbumOpts   struct{ ArtistID int64 }
-	ArtistSongOpts    struct{ ArtistID int64 }
+	// ArtistsOfSongOpts is the parameter contract of the "artist_of_song" menu
+	// provider (the artists-of-song menu, multi-artist jump). It stays shared
+	// with ui — operate.go's goToArtistOfSong carries the song payload. The
+	// following Phase 3.3.1 parameterized menu contracts register under the
+	// static key prefix; the runtime menu key keeps its dynamic form (e.g.
+	// artist_album_<id>). AlbumTopOpts / AlbumNewOpts moved into the
+	// internal/plugins/album plugin with the album cluster (Phase 3.9.x), and
+	// ArtistAlbumOpts / ArtistSongOpts moved into internal/plugins/artist with
+	// the artist cluster (Phase 3.9.x). ArtistDetailOpts stays shared —
+	// search_result / operate jump into that menu.
 	ArtistsOfSongOpts struct{ Song structs.Song }
 	SimiSongsOpts     struct{ Song structs.Song }
 
@@ -335,23 +338,16 @@ func (PageRegistry) Keys() []string {
 // registered at startup (Phase 3.2 bootstrap completeness assertion). Keep in
 // sync with the init() registrations in registry_registrations.go. Keys moved
 // into plugins (check_update / last_fm / the DJ radio cluster / the album
-// cluster) are plugin-supplied and intentionally absent — the assertion only
-// locks the built-in set.
+// cluster / the artist cluster) are plugin-supplied and intentionally absent —
+// the assertion only locks the built-in set.
 var expectedMenuKeys = []string{
 	// Phase 3.2 base set + demo migrations.
 	"playlist_detail",
-	"artist_detail",
 	"search_result",
 	"add_to_user_playlist",
 	"ranks",
 	"user_playlist",
 	"high_quality_playlists",
-	// Phase 3.3.1 batch 3: artist cluster.
-	"artist_of_song",
-	"artist_album",
-	"artist_song",
-	"artists_sub_list",
-	"hot_artists",
 	"simi_songs",
 	"user_collect",
 	// Phase 3.3.1 batch 4: main menu cluster + misc.
