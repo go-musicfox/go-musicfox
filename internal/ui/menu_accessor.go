@@ -3,6 +3,8 @@ package ui
 import (
 	"log/slog"
 
+	"github.com/anhoder/foxful-cli/model"
+
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
@@ -118,4 +120,82 @@ func (s *menuServices) Ctx() *framework.Context {
 // (3.1.5 removes the remaining *Netease reach-throughs).
 func (s *menuServices) Netease() *Netease {
 	return s.n
+}
+
+// --- Thin-shell methods (Phase 3.3.3): shell capabilities routed through the
+// accessor so deep-coupled files no longer reach into the *Netease shell
+// directly. Each method forwards to the shell and is nil-safe (missing shell
+// degrades to the zero value with no panic).
+
+// App returns the foxful app shell (embedded *model.App).
+func (s *menuServices) App() *model.App {
+	if s.n == nil {
+		return nil
+	}
+	return s.n.App
+}
+
+// Main returns the foxful main page (nil when the app has not started).
+func (s *menuServices) Main() *model.Main {
+	if s.n == nil || s.n.App == nil {
+		return nil
+	}
+	return s.n.Main()
+}
+
+// MustMain returns the foxful main page (nil when the app has not started;
+// callers use it where the embedded model.App method was reached before).
+func (s *menuServices) MustMain() *model.Main {
+	if s.n == nil || s.n.App == nil {
+		return nil
+	}
+	return s.n.MustMain()
+}
+
+// Rerender triggers a foxful re-render on the app shell.
+func (s *menuServices) Rerender(force bool) {
+	if s.n == nil || s.n.App == nil {
+		return
+	}
+	s.n.App.Rerender(force)
+}
+
+// Search returns the shell-owned search page singleton (shared state with the
+// SearchResultMenu flow; nil when the shell is missing).
+func (s *menuServices) Search() *SearchPage {
+	if s.n == nil {
+		return nil
+	}
+	return s.n.search
+}
+
+// SaveActiveTheme persists the active theme name (theme_persistence.go).
+func (s *menuServices) SaveActiveTheme(name string) {
+	if s.n != nil {
+		s.n.saveActiveTheme(name)
+	}
+}
+
+// NotifyThemeSwitch shows or updates the theme-switch notification
+// (netease.go notifyThemeSwitch).
+func (s *menuServices) NotifyThemeSwitch(app *model.App, title, name string) {
+	if s.n != nil {
+		s.n.notifyThemeSwitch(app, title, name)
+	}
+}
+
+// PlaybarHoveredElement returns the hovered playbar element tracked by the shell.
+func (s *menuServices) PlaybarHoveredElement() PlaybarElement {
+	if s.n == nil {
+		return PlaybarElementNone
+	}
+	return s.n.playbarHoveredElement
+}
+
+// SetPlaybarHoveredElement records the hovered playbar element on the shell.
+func (s *menuServices) SetPlaybarHoveredElement(e PlaybarElement) {
+	if s.n == nil {
+		return
+	}
+	s.n.playbarHoveredElement = e
 }

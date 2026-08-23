@@ -59,6 +59,12 @@ func newBaseMenu(netease *Netease) baseMenu {
 	}
 }
 
+// newBaseMenuFromSvc builds a baseMenu from an existing accessor, avoiding a
+// round trip through the *Netease shell (Phase 3.3.3 menu constructions).
+func newBaseMenuFromSvc(svc *menuServices) baseMenu {
+	return baseMenu{svc: svc}
+}
+
 func (e *baseMenu) HelpHints() []model.HelpHint {
 	return nil
 }
@@ -174,8 +180,8 @@ func handleGenericContextAction(svc *menuServices, a *model.App, id string) (mod
 			style.SetStyleSet(*newSS)
 			a.SetStyleSet(*newSS)
 			themeName := registry.CurrentName(style.HasDarkBackground())
-			svc.Netease().saveActiveTheme(themeName)
-			svc.Netease().notifyThemeSwitch(a, "切换主题", themeName)
+			svc.SaveActiveTheme(themeName)
+			svc.NotifyThemeSwitch(a, "切换主题", themeName)
 		}
 		return nil, a.RerenderCmd(true)
 	}

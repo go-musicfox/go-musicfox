@@ -52,7 +52,7 @@ func NewMainMenu(netease *Netease) *MainMenu {
 			mustBuildNoArg("recent_songs", base),
 			mustBuildNoArg("could", base),
 			mustBuildNoArg("radio_dj_type", base),
-			NewLastfm(base),
+			mustBuildNoArg("last_fm", base),
 			nil, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
 			nil, // 检查更新由 Action 异步执行，并直接显示 TUI 通知。
 		},

@@ -54,7 +54,7 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.P
 func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea.Cmd) {
 	var (
 		player = h.svc.Player()
-		app    = h.netease.App
+		app    = h.svc.App()
 		main   = app.MustMain()
 		menu   = main.CurMenu()
 	)
@@ -68,7 +68,11 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			if !player.playlistUpdateAt.IsZero() {
 				subTitle = player.playlistUpdateAt.Format("[更新于2006-01-02 15:04:05]")
 			}
-			main.EnterMenu(NewCurPlaylist(newBaseMenu(h.netease), player.Playlist()), &model.MenuItem{Title: model.T(MsgMenuCurrentPlaylist), Subtitle: subTitle})
+			curPlaylist := buildMenuOrToast("cur_playlist", newBaseMenuFromSvc(h.svc), CurPlaylistOpts{Songs: player.Playlist()})
+			if curPlaylist == nil {
+				return true, nil, nil
+			}
+			main.EnterMenu(curPlaylist, &model.MenuItem{Title: model.T(MsgMenuCurrentPlaylist), Subtitle: subTitle})
 			player.LocatePlayingSong()
 		}
 	case keybindings.OpPlayOrToggle:
@@ -149,7 +153,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpHelp:
 		// 帮助（Markdown 弹窗，支持滚动/缩放/Esc 关闭）
-		showHelpPopup(h.netease.App)
+		showHelpPopup(h.svc.App())
 	case keybindings.OpAddSelectedToUserPlaylist:
 		newPage := openAddSongToUserPlaylistMenu(h.netease, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
@@ -271,7 +275,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpToggleSortOrder:
 		if djMenu, ok := menu.(*DjRadioDetailMenu); ok {
 			djMenu.ToggleSortOrder()
-			loading := model.NewLoading(h.netease.MustMain())
+			loading := model.NewLoading(h.svc.MustMain())
 			loading.Start()
 			defer loading.Complete()
 			reloadSuccess, _ := djMenu.Reload()
@@ -291,8 +295,8 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			style.SetStyleSet(*newSS)
 			app.SetStyleSet(*newSS)
 			themeName := registry.CurrentName(style.HasDarkBackground())
-			h.netease.saveActiveTheme(themeName)
-			h.netease.notifyThemeSwitch(app, "切换主题", themeName)
+			h.svc.SaveActiveTheme(themeName)
+			h.svc.NotifyThemeSwitch(app, "切换主题", themeName)
 			return true, main, app.RerenderCmd(true)
 		}
 	default:
@@ -303,42 +307,43 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 }
 
 func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {
-	loading := model.NewLoading(h.netease.MustMain())
+	loading := model.NewLoading(h.svc.MustMain())
 	loading.Start()
 	defer loading.Complete()
 
-	menu := h.netease.MustMain().CurMenu()
+	menu := h.svc.MustMain().CurMenu()
 	if m, ok := menu.(*AddToUserPlaylistMenu); ok {
 		if !m.action {
 			// Removing a song from a cloud playlist: confirm AFTER the user
 			// picked the target playlist (late guard), with full context.
 			content := "确定从歌单移除这首歌曲吗？"
-			if idx := m.RealDataIndex(h.netease.MustMain().SelectedIndex()); idx >= 0 && idx < len(m.playlists) {
+			if idx := m.RealDataIndex(h.svc.MustMain().SelectedIndex()); idx >= 0 && idx < len(m.playlists) {
 				content = fmt.Sprintf("确定从歌单「%s」移除「%s」吗？", m.playlists[idx].Name, m.song.Name)
 			}
-			showConfirmPopup(h.netease.App, "从歌单移除", content, func() {
+			showConfirmPopup(h.svc.App(), "从歌单移除", content, func() {
 				addSongToUserPlaylist(h.netease, false)
-				h.netease.App.Rerender(false)
+				h.svc.App().Rerender(false)
 			})
-			return true, h.netease.MustMain(), nil
+			return true, h.svc.MustMain(), nil
 		}
 		addSongToUserPlaylist(h.netease, m.action)
-		return true, h.netease.MustMain(), h.netease.Tick(time.Nanosecond)
+		return true, h.svc.MustMain(), h.svc.App().Tick(time.Nanosecond)
 	}
 	return false, nil, nil
 }
 
 func (h *EventHandler) playOrToggleHandle() {
-	main := h.netease.MustMain()
+	main := h.svc.MustMain()
 	playOrToggle(h.netease, main.CurMenu().RealDataIndex(main.SelectedIndex()))
 }
 
 func playOrToggle(netease *Netease, selectedIndex int) {
+	svc := newMenuServices(netease)
 	var (
 		songs         []structs.Song
-		main          = netease.MustMain()
+		main          = svc.MustMain()
 		menu          = main.CurMenu()
-		player        = netease.player
+		player        = svc.Player()
 		inPlayingMenu = player.InPlayingMenu()
 	)
 	if me, ok := menu.(SongsMenu); ok {
@@ -670,8 +675,8 @@ func (h *EventHandler) handlePlaybarMotion(msg tea.MouseMsg, a *model.App, main 
 		}
 	}
 
-	if newHover != h.netease.playbarHoveredElement {
-		h.netease.playbarHoveredElement = newHover
+	if newHover != h.svc.PlaybarHoveredElement() {
+		h.svc.SetPlaybarHoveredElement(newHover)
 		pointer := "default"
 		if needsPointer {
 			pointer = "pointer"

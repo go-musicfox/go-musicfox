@@ -294,6 +294,42 @@ func TestMenuNavigationSmoke(t *testing.T) {
 	}
 }
 
+// --- last hardcoded menu constructions (3.3.3) ---
+
+func TestBuildLastHardcodedMenus(t *testing.T) {
+	// cur_playlist carries the current playlist snapshot.
+	cp, err := BuildMenu("cur_playlist", testBase, CurPlaylistOpts{Songs: []structs.Song{{Id: 1}, {Id: 2}}})
+	if err != nil {
+		t.Fatalf("BuildMenu(cur_playlist) error = %v", err)
+	}
+	cpMenu, ok := cp.(*CurPlaylist)
+	if !ok {
+		t.Fatalf("BuildMenu(cur_playlist) = %T, want *CurPlaylist", cp)
+	}
+	if len(cpMenu.Songs()) != 2 {
+		t.Fatalf("cur_playlist Songs() = %d, want 2", len(cpMenu.Songs()))
+	}
+
+	// action_menu carries the originating menu key + playing flag.
+	am, err := BuildMenu("action_menu", testBase, ActionMenuOpts{From: "playlist_detail", CurPlaying: true})
+	if err != nil {
+		t.Fatalf("BuildMenu(action_menu) error = %v", err)
+	}
+	amMenu, ok := am.(*ActionMenu)
+	if !ok {
+		t.Fatalf("BuildMenu(action_menu) = %T, want *ActionMenu", am)
+	}
+	if amMenu.from != "playlist_detail" || !amMenu.playing {
+		t.Fatalf("action_menu from=%q playing=%v, want playlist_detail/true", amMenu.from, amMenu.playing)
+	}
+
+	// last_fm is a no-arg menu (main menu entry).
+	lf := mustBuildNoArg("last_fm", testBase)
+	if _, ok := lf.(*Lastfm); !ok {
+		t.Fatalf("mustBuildNoArg(last_fm) = %T, want *Lastfm", lf)
+	}
+}
+
 // Login callback ordering (jar-init before user-callback) is covered by
 // TestJarInitPrecedesUserCallback in user_service_test.go (3.2.3.c); the
 // registry exercises the same LoginPage provider used by that flow via

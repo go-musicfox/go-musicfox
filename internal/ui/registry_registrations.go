@@ -184,6 +184,20 @@ func init() {
 		return NewMainMenu(neteaseFromBase(base)), nil
 	})
 
+	// --- Phase 3.3.3: last hardcoded menu constructions ---
+
+	RegisterMenu("cur_playlist", func(base baseMenu, opts CurPlaylistOpts) (Menu, error) {
+		return NewCurPlaylist(base, opts.Songs), nil
+	})
+
+	RegisterMenu("action_menu", func(base baseMenu, opts ActionMenuOpts) (Menu, error) {
+		return NewActionMenu(base, opts.From, opts.CurPlaying), nil
+	})
+
+	RegisterMenu("last_fm", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewLastfm(base), nil
+	})
+
 	RegisterPage("login", func(opts LoginPageOpts) (model.Page, error) {
 		return NewLoginPage(opts.Netease), nil
 	})

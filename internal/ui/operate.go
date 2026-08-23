@@ -37,10 +37,10 @@ import (
 // isSelected: true 获取当前选择歌曲，false 获取当前播放歌曲
 // 返回获取到的歌曲和一个布尔值，表示是否成功获取。
 func getTargetSong(n *Netease, isSelected bool) (structs.Song, bool) {
-	if n == nil || n.player == nil {
+	svc := newMenuServices(n)
+	if svc.Player() == nil {
 		return structs.Song{}, false
 	}
-	svc := newMenuServices(n)
 	if !isSelected {
 		if svc.Player().CurSongIndex() >= len(svc.Player().Playlist()) {
 			return structs.Song{}, false
@@ -49,7 +49,7 @@ func getTargetSong(n *Netease, isSelected bool) (structs.Song, bool) {
 		return song, song.Id != 0
 	}
 
-	main := n.MustMain()
+	main := svc.MustMain()
 	menu := main.CurMenu()
 	songsMenu, ok := menu.(SongsMenu)
 	if !ok {
@@ -106,7 +106,8 @@ func logout() {
 
 // getSelectedPlaylist 获取选中的歌单
 func getSelectedPlaylist(n *Netease) (structs.Playlist, bool) {
-	main := n.MustMain()
+	svc := newMenuServices(n)
+	main := svc.MustMain()
 	menu := main.CurMenu()
 	playlistMenu, ok := menu.(PlaylistsMenu)
 	if !ok {
@@ -182,7 +183,7 @@ func likeSong(n *Netease, isLike bool, isSelected bool) model.Page {
 
 		go func() {
 			likelist.RefreshLikeList(svc.User().UserId)
-			n.Rerender(false)
+			svc.Rerender(false)
 		}()
 
 		title := model.T(MsgOperationLikeAdded)
@@ -230,13 +231,14 @@ func trashSong(n *Netease, isSelected bool) model.Page {
 // DeferWithLoading); app.Rerender(false) flushes the deferred work so the
 // loading state does not stall when the player ticker is idle.
 func confirmTrashSong(n *Netease, isSelected bool) {
+	svc := newMenuServices(n)
 	content := "确定将歌曲标记为不喜欢吗？会影响个性化推荐。"
 	if song, ok := getTargetSong(n, isSelected); ok {
 		content = fmt.Sprintf("确定将「%s」标记为不喜欢吗？会影响个性化推荐。", song.Name)
 	}
-	showConfirmPopup(n.App, "标记为不喜欢", content, func() {
+	showConfirmPopup(svc.App(), "标记为不喜欢", content, func() {
 		trashSong(n, isSelected)
-		n.Rerender(false)
+		svc.Rerender(false)
 	})
 }
 
@@ -371,11 +373,12 @@ func handleLyricDownload(n *Netease, song structs.Song) {
 // findSimilarSongs 查找相似歌曲
 func findSimilarSongs(n *Netease, isSelected bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
+		svc := newMenuServices(n)
 		song, ok := getTargetSong(n, isSelected)
 		if !ok {
 			return nil
 		}
-		main := n.MustMain()
+		main := svc.MustMain()
 		menu := main.CurMenu()
 		if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongId == song.Id {
 			return nil // 避免重复进入
@@ -394,11 +397,12 @@ func findSimilarSongs(n *Netease, isSelected bool) {
 // goToAlbumOfSong 查看歌曲所属专辑
 func goToAlbumOfSong(n *Netease, isSelected bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
+		svc := newMenuServices(n)
 		song, ok := getTargetSong(n, isSelected)
 		if !ok {
 			return nil
 		}
-		main := n.MustMain()
+		main := svc.MustMain()
 		menu := main.CurMenu()
 		if detail, ok := menu.(*AlbumDetailMenu); ok && detail.albumId == song.Album.Id {
 			return nil // 避免重复进入
@@ -417,11 +421,12 @@ func goToAlbumOfSong(n *Netease, isSelected bool) {
 // goToArtistOfSong 查看歌曲所属歌手
 func goToArtistOfSong(n *Netease, isSelected bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
+		svc := newMenuServices(n)
 		song, ok := getTargetSong(n, isSelected)
 		if !ok {
 			return nil
 		}
-		main := n.MustMain()
+		main := svc.MustMain()
 		menu := main.CurMenu()
 		artistCount := len(song.Artists)
 		if artistCount <= 0 {
@@ -463,7 +468,8 @@ func openInWeb(n *Netease, isSelected bool, selectedIndex int) {
 			return nil
 		}
 
-		main := n.MustMain()
+		svc := newMenuServices(n)
+		main := svc.MustMain()
 		menu := main.CurMenu()
 		selectedIndex := menu.RealDataIndex(selectedIndex)
 
@@ -657,10 +663,10 @@ func subscribeArtist(n *Netease, isSub bool, isSelected bool) model.Page {
 func appendSongsToCurPlaylist(n *Netease, addToNext bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
 		svc := newMenuServices(n)
-		main := n.MustMain()
+		main := svc.MustMain()
 		menu := main.CurMenu()
 		selectedIndex := menu.RealDataIndex(main.SelectedIndex())
-		subMenu := menu.SubMenu(n.App, selectedIndex)
+		subMenu := menu.SubMenu(svc.App(), selectedIndex)
 		var appendSongs []structs.Song
 		var notifyURL string
 
@@ -676,7 +682,7 @@ func appendSongsToCurPlaylist(n *Netease, addToNext bool) {
 			notifyURL = netease.WebUrlOfSong(song.Id)
 		case subIsSongsMenu: // 选中项菜单是 SongsMenu
 			// 触发 BeforeEnterMenuHook 获取歌曲
-			if ok, _ := subSm.BeforeEnterMenuHook()(n.Main()); !ok {
+			if ok, _ := subSm.BeforeEnterMenuHook()(svc.Main()); !ok {
 				return nil
 			}
 			appendSongs = subSm.Songs()
@@ -731,12 +737,13 @@ func appendSongsToCurPlaylist(n *Netease, addToNext bool) {
 // openAddSongToUserPlaylistMenu 打开“添加歌曲到歌单”菜单
 func openAddSongToUserPlaylistMenu(n *Netease, isSelected, isAdd bool) model.Page {
 	coreLogic := func(n *Netease) model.Page {
+		svc := newMenuServices(n)
 		song, ok := getTargetSong(n, isSelected)
 		if !ok {
 			return nil
 		}
 
-		main := n.MustMain()
+		main := svc.MustMain()
 		if _, ok := main.CurMenu().(*AddToUserPlaylistMenu); ok {
 			return nil // 避免重复进入
 		}
@@ -745,7 +752,7 @@ func openAddSongToUserPlaylistMenu(n *Netease, isSelected, isAdd bool) model.Pag
 		if !isAdd {
 			subtitle = "将「" + song.Name + "」从歌单中删除"
 		}
-		addMenu, err := BuildMenu("add_to_user_playlist", newBaseMenu(n), AddToUserPlaylistOpts{UserID: newMenuServices(n).User().UserId, Song: song, IsAdd: isAdd})
+		addMenu, err := BuildMenu("add_to_user_playlist", newBaseMenu(n), AddToUserPlaylistOpts{UserID: svc.User().UserId, Song: song, IsAdd: isAdd})
 		if err != nil {
 			return nil
 		}
@@ -760,7 +767,8 @@ func openAddSongToUserPlaylistMenu(n *Netease, isSelected, isAdd bool) model.Pag
 // addSongToUserPlaylist 添加或从歌单删除歌曲（仅在 AddToUserPlaylistMenu 中调用）
 func addSongToUserPlaylist(n *Netease, isAdd bool) model.Page {
 	coreLogic := func(n *Netease) model.Page {
-		main := n.MustMain()
+		svc := newMenuServices(n)
+		main := svc.MustMain()
 		menu, ok := main.CurMenu().(*AddToUserPlaylistMenu)
 		if !ok {
 			return nil
@@ -826,7 +834,7 @@ func addSongToUserPlaylist(n *Netease, isAdd bool) model.Page {
 func delSongFromPlaylist(n *Netease) model.Page {
 	op := NewOperation(n, func(n *Netease) model.Page {
 		svc := newMenuServices(n)
-		main := n.MustMain()
+		main := svc.MustMain()
 		menu, ok := main.CurMenu().(*CurPlaylist)
 		if !ok {
 			return nil
@@ -865,7 +873,8 @@ func delSongFromPlaylist(n *Netease) model.Page {
 
 // clearSongCache 清除歌曲缓存
 func clearSongCache(n *Netease) {
-	showConfirmPopup(n.App, model.T(MsgPromptClearCache), "确定清除所有歌曲缓存吗？此操作不可撤销。", func() {
+	svc := newMenuServices(n)
+	showConfirmPopup(svc.App(), model.T(MsgPromptClearCache), "确定清除所有歌曲缓存吗？此操作不可撤销。", func() {
 		op := NewOperation(n, func(n *Netease) model.Page {
 			err := newMenuServices(n).TrackManager().ClearCache()
 			if err != nil {
@@ -888,13 +897,14 @@ func clearSongCache(n *Netease) {
 			return nil
 		})
 		op.ShowLoading().Execute()
-		n.Rerender(false)
+		svc.Rerender(false)
 	})
 }
 
 // action 打开操作菜单
 func action(n *Netease, curPlaying bool) {
-	main := n.MustMain()
+	svc := newMenuServices(n)
+	main := svc.MustMain()
 	menu := main.CurMenu()
 
 	menuKey := menu.GetMenuKey()
@@ -924,7 +934,10 @@ func action(n *Netease, curPlaying bool) {
 		}
 	}
 
-	newMenu := NewActionMenu(newBaseMenu(n), menuKey, curPlaying)
+	newMenu := buildMenuOrToast("action_menu", newBaseMenuFromSvc(svc), ActionMenuOpts{From: menuKey, CurPlaying: curPlaying})
+	if newMenu == nil {
+		return
+	}
 	main.EnterMenu(newMenu, newTitle)
 }
 
@@ -936,7 +949,8 @@ func shareItem(n *Netease, isSelected bool, selectedIndex int) {
 			itemToShare = song
 		}
 	} else {
-		main := n.MustMain()
+		svc := newMenuServices(n)
+		main := svc.MustMain()
 		menu := main.CurMenu()
 		selectedIndex := menu.RealDataIndex(selectedIndex)
 		if sharer, ok := menu.(composer.Sharer); ok {
@@ -1009,12 +1023,13 @@ func shareItem(n *Netease, isSelected bool, selectedIndex int) {
 // searchSong 搜索歌名
 func searchSong(n *Netease, isSelected bool) {
 	op := NewOperation(n, func(n *Netease) model.Page {
+		svc := newMenuServices(n)
 		song, ok := getTargetSong(n, isSelected)
 		if !ok {
 			return nil
 		}
 
-		main := n.MustMain()
+		main := svc.MustMain()
 		searchService := service.SearchService{
 			S:     song.Name,
 			Type:  strconv.Itoa(int(StSingleSong)),
@@ -1026,9 +1041,9 @@ func searchSong(n *Netease, isSelected bool) {
 			return nil
 		}
 
-		n.search.wordsInput.SetValue(song.Name)
-		n.search.searchType = StSingleSong
-		n.search.result = _struct.GetSongsOfSearchResult(response)
+		svc.Search().wordsInput.SetValue(song.Name)
+		svc.Search().searchType = StSingleSong
+		svc.Search().result = _struct.GetSongsOfSearchResult(response)
 
 		searchResultMenu, err := BuildMenu("search_result", newBaseMenu(n), SearchResultOpts{SearchType: StSingleSong})
 		if err != nil {

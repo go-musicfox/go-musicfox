@@ -49,6 +49,14 @@ type (
 	DjCategoryDetailOpts struct{ CategoryID int64 }
 	DjHotOpts            struct{ HotType DjHotType }
 
+	// Phase 3.3.3 menu contracts: the last hardcoded constructions (event
+	// handler current-playlist, operate action menu, main menu Last.fm entry).
+	CurPlaylistOpts struct{ Songs []structs.Song }
+	ActionMenuOpts  struct {
+		From       string
+		CurPlaying bool
+	}
+
 	// NoArgMenuOpts is the shared placeholder opts type for no-arg menus.
 	NoArgMenuOpts struct{}
 )
@@ -271,6 +279,10 @@ var expectedMenuKeys = []string{
 	"search_type",
 	"local_search",
 	"main_menu",
+	// Phase 3.3.3: last hardcoded constructions.
+	"cur_playlist",
+	"action_menu",
+	"last_fm",
 }
 
 // expectedPageKeys is the canonical page provider key set.
