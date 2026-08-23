@@ -577,20 +577,20 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	}
 
 	if _struct.CheckUserInfo(p.svc.User()) == _struct.NeedLogin {
-		page, _ := p.netease.ToLoginPage(nil)
+		page, _ := p.svc.ToLoginPage(nil)
 		return page
 	}
 
 	// 获取智能推荐歌曲
 	intelligenceService := service.PlaymodeIntelligenceListService{
 		SongId:       strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
-		PlaylistId:   strconv.FormatInt(playlist.playlistId, 10),
+		PlaylistId:   strconv.FormatInt(playlist.playlistID, 10),
 		StartMusicId: strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
 	}
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := _struct.CheckCode(code)
 	if codeType == _struct.NeedLogin {
-		page, _ := p.netease.ToLoginPage(func() model.Page {
+		page, _ := p.svc.ToLoginPage(func() model.Page {
 			p.Intelligence(appendMode)
 			return nil
 		})

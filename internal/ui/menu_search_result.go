@@ -46,8 +46,8 @@ func (m *SearchResultMenu) IsSearchable() bool {
 
 func (m *SearchResultMenu) BeforeBackMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if m.svc.Netease().search.wordsInput.Value() != "" {
-			m.svc.Netease().search.wordsInput.SetValue("")
+		if m.svc.Search().wordsInput.Value() != "" {
+			m.svc.Search().wordsInput.SetValue("")
 		}
 
 		return true, nil
@@ -129,15 +129,15 @@ func (m *SearchResultMenu) BottomOutHook() model.Hook {
 
 func (m *SearchResultMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if m.svc.Netease().search.wordsInput.Value() == "" {
+		if m.svc.Search().wordsInput.Value() == "" {
 			// 显示搜索页面
-			page, _ := m.svc.Netease().ToSearchPage(m.searchType)
+			page, _ := m.svc.ToSearchPage(m.searchType)
 			return false, page
 		}
 
-		m.result = m.svc.Netease().search.result
-		m.searchType = m.svc.Netease().search.searchType
-		m.keyword = m.svc.Netease().search.wordsInput.Value()
+		m.result = m.svc.Search().result
+		m.searchType = m.svc.Search().searchType
+		m.keyword = m.svc.Search().wordsInput.Value()
 		m.convertMenus()
 		return true, nil
 	}

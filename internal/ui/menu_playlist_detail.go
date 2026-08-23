@@ -16,13 +16,13 @@ type PlaylistDetailMenu struct {
 	baseMenu
 	menus      []model.MenuItem
 	songs      []structs.Song
-	playlistId int64
+	playlistID int64
 }
 
-func NewPlaylistDetailMenu(base baseMenu, playlistId int64) *PlaylistDetailMenu {
+func NewPlaylistDetailMenu(base baseMenu, playlistID int64) *PlaylistDetailMenu {
 	return &PlaylistDetailMenu{
 		baseMenu:   base,
-		playlistId: playlistId,
+		playlistID: playlistID,
 	}
 }
 
@@ -35,7 +35,7 @@ func (m *PlaylistDetailMenu) IsPlayable() bool {
 }
 
 func (m *PlaylistDetailMenu) GetMenuKey() string {
-	return fmt.Sprintf("playlist_detail_%d", m.playlistId)
+	return fmt.Sprintf("playlist_detail_%d", m.playlistID)
 }
 
 func (m *PlaylistDetailMenu) MenuViews() []model.MenuItem {
@@ -48,9 +48,9 @@ func (m *PlaylistDetailMenu) SubMenu(_ *model.App, _ int) model.Menu {
 
 func (m *PlaylistDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		codeType, songs := netease.FetchSongsOfPlaylist(m.playlistId, configs.AppConfig.Player.ShowAllSongsOfPlaylist)
+		codeType, songs := netease.FetchSongsOfPlaylist(m.playlistID, configs.AppConfig.Player.ShowAllSongsOfPlaylist)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -66,6 +66,6 @@ func (m *PlaylistDetailMenu) Songs() []structs.Song {
 	return m.songs
 }
 
-func (m *PlaylistDetailMenu) PlaylistId() int64 {
-	return m.playlistId
+func (m *PlaylistDetailMenu) PlaylistID() int64 {
+	return m.playlistID
 }

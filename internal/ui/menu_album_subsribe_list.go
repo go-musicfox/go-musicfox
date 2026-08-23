@@ -63,7 +63,7 @@ func (m *AlbumSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := albumService.AlbumSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -102,7 +102,7 @@ func (m *AlbumSubscribeListMenu) BottomOutHook() model.Hook {
 		code, response := newAlbumService.AlbumSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

@@ -404,7 +404,7 @@ func goToAlbumOfSong(n *Netease, isSelected bool) {
 		}
 		main := svc.MustMain()
 		menu := main.CurMenu()
-		if detail, ok := menu.(*AlbumDetailMenu); ok && detail.albumId == song.Album.Id {
+		if detail, ok := menu.(*AlbumDetailMenu); ok && detail.albumID == song.Album.Id {
 			return nil // 避免重复进入
 		}
 		newTitle := &model.MenuItem{Title: song.Album.Name, Subtitle: "「" + song.Name + "」所属专辑"}
@@ -817,7 +817,7 @@ func addSongToUserPlaylist(n *Netease, isAdd bool) model.Page {
 		// 刷新原歌单详情页
 		if !isAdd {
 			originalMenu, ok := main.CurMenu().(*PlaylistDetailMenu)
-			if ok && originalMenu.playlistId == playlist.Id {
+			if ok && originalMenu.playlistID == playlist.Id {
 				t := main.MenuTitle()
 				main.BackMenu()
 				_, page := originalMenu.BeforeEnterMenuHook()(main)

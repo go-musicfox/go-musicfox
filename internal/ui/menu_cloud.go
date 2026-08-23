@@ -48,7 +48,7 @@ func (m *CloudMenu) MenuViews() []model.MenuItem {
 func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
@@ -64,7 +64,7 @@ func (m *CloudMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -95,7 +95,7 @@ func (m *CloudMenu) BottomOutHook() model.Hook {
 		code, response := cloudService.UserCloud()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(func() model.Page {
+			page, _ := m.svc.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})

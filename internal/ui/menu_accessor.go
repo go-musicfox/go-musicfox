@@ -3,6 +3,7 @@ package ui
 import (
 	"log/slog"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/composer"
@@ -122,6 +123,24 @@ func (s *menuServices) Netease() *Netease {
 	return s.n
 }
 
+// ToLoginPage forwards to the thin-shell login navigation (builds a fresh
+// login page through the "login" provider and wires the AfterLogin callback).
+func (s *menuServices) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
+	if s.n == nil {
+		return nil, nil
+	}
+	return s.n.ToLoginPage(callback)
+}
+
+// ToSearchPage forwards to the thin-shell search navigation (returns the
+// shell-owned search singleton with searchType set).
+func (s *menuServices) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
+	if s.n == nil {
+		return nil, nil
+	}
+	return s.n.ToSearchPage(searchType)
+}
+
 // --- Thin-shell methods (Phase 3.3.3): shell capabilities routed through the
 // accessor so deep-coupled files no longer reach into the *Netease shell
 // directly. Each method forwards to the shell and is nil-safe (missing shell
@@ -157,7 +176,7 @@ func (s *menuServices) Rerender(force bool) {
 	if s.n == nil || s.n.App == nil {
 		return
 	}
-	s.n.App.Rerender(force)
+	s.n.Rerender(force)
 }
 
 // Search returns the shell-owned search page singleton (shared state with the

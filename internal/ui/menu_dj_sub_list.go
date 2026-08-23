@@ -61,7 +61,7 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 
 		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
@@ -77,7 +77,7 @@ func (m *DjSubListMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := djSublistService.DjSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -103,7 +103,7 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 		m.offset += m.limit
 
 		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
@@ -114,7 +114,7 @@ func (m *DjSubListMenu) BottomOutHook() model.Hook {
 		code, response := djSublistService.DjSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

@@ -17,17 +17,17 @@ type AddToUserPlaylistMenu struct {
 	menus     []model.MenuItem
 	playlists []structs.Playlist
 	song      structs.Song
-	userId    int64
+	userID    int64
 	offset    int
 	limit     int
 	hasMore   bool
 	action    bool // true for add, false for del
 }
 
-func NewAddToUserPlaylistMenu(base baseMenu, userId int64, song structs.Song, action bool) *AddToUserPlaylistMenu {
+func NewAddToUserPlaylistMenu(base baseMenu, userID int64, song structs.Song, action bool) *AddToUserPlaylistMenu {
 	return &AddToUserPlaylistMenu{
 		baseMenu: base,
-		userId:   userId,
+		userID:   userID,
 		offset:   0,
 		limit:    100,
 		action:   action,
@@ -40,7 +40,7 @@ func (m *AddToUserPlaylistMenu) IsSearchable() bool {
 }
 
 func (m *AddToUserPlaylistMenu) GetMenuKey() string {
-	return fmt.Sprintf("add_to_user_playlist_%d", m.userId)
+	return fmt.Sprintf("add_to_user_playlist_%d", m.userID)
 }
 
 func (m *AddToUserPlaylistMenu) MenuViews() []model.MenuItem {
@@ -58,26 +58,26 @@ func (m *AddToUserPlaylistMenu) SubMenu(_ *model.App, _ int) model.Menu {
 func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userId == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+		if m.userID == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
-		userId := m.userId
-		if m.userId == CurUser {
+		userID := m.userID
+		if m.userID == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = m.svc.User().UserId
+			userID = m.svc.User().UserId
 		}
 
 		userPlaylists := service.UserPlaylistService{
-			Uid:    strconv.FormatInt(userId, 10),
+			Uid:    strconv.FormatInt(userID, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := userPlaylists.UserPlaylist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -104,22 +104,22 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() model.Hook {
 		return nil
 	}
 	return func(main *model.Main) (bool, model.Page) {
-		userId := m.userId
-		if m.userId == CurUser {
+		userID := m.userID
+		if m.userID == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = m.svc.User().UserId
+			userID = m.svc.User().UserId
 		}
 
 		m.offset = m.offset + len(m.menus)
 		userPlaylists := service.UserPlaylistService{
-			Uid:    strconv.FormatInt(userId, 10),
+			Uid:    strconv.FormatInt(userID, 10),
 			Limit:  strconv.Itoa(m.limit),
 			Offset: strconv.Itoa(m.offset),
 		}
 		code, response := userPlaylists.UserPlaylist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(nil)
+			page, _ := m.svc.ToLoginPage(nil)
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

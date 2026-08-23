@@ -48,8 +48,8 @@ func TestRegisterAndBuildMenu(t *testing.T) {
 	if !ok {
 		t.Fatalf("BuildMenu(playlist_detail) = %T, want *PlaylistDetailMenu", menu)
 	}
-	if pd.playlistId != 42 {
-		t.Fatalf("playlistId = %d, want 42", pd.playlistId)
+	if pd.playlistID != 42 {
+		t.Fatalf("playlistId = %d, want 42", pd.playlistID)
 	}
 	if pd.GetMenuKey() != "playlist_detail_42" {
 		t.Fatalf("GetMenuKey() = %q, want %q", pd.GetMenuKey(), "playlist_detail_42")
@@ -237,8 +237,8 @@ func TestMenuNavigationSmoke(t *testing.T) {
 	if !ok {
 		t.Fatalf("ranks.SubMenu(0) = %T, want *PlaylistDetailMenu", sub)
 	}
-	if pd.playlistId != 123 {
-		t.Fatalf("playlistId = %d, want 123", pd.playlistId)
+	if pd.playlistID != 123 {
+		t.Fatalf("playlistId = %d, want 123", pd.playlistID)
 	}
 	if pd.GetMenuKey() != "playlist_detail_123" {
 		t.Fatalf("GetMenuKey() = %q, want %q", pd.GetMenuKey(), "playlist_detail_123")
@@ -264,7 +264,7 @@ func TestMenuNavigationSmoke(t *testing.T) {
 		got := sr.SubMenu(nil, 0)
 		switch wantType.(type) {
 		case *AlbumDetailMenu:
-			if album, ok := got.(*AlbumDetailMenu); !ok || album.albumId != result.([]structs.Album)[0].Id {
+			if album, ok := got.(*AlbumDetailMenu); !ok || album.albumID != result.([]structs.Album)[0].Id {
 				t.Fatalf("%s.SubMenu(0) = %T, want *AlbumDetailMenu(id=%d)", name, got, result.([]structs.Album)[0].Id)
 			}
 		case *ArtistDetailMenu:

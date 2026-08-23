@@ -62,7 +62,7 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
 		if m.userID == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
@@ -74,7 +74,7 @@ func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 
 		codeType, playlists, hasMore := netease.FetchUserPlaylists(userID, m.limit, m.offset)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -106,7 +106,7 @@ func (m *UserPlaylistMenu) BottomOutHook() model.Hook {
 		m.offset = m.offset + len(m.menus)
 		codeType, playlists, hasMore := netease.FetchUserPlaylists(userID, m.limit, m.offset)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(func() model.Page {
+			page, _ := m.svc.ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
 				return nil
 			})

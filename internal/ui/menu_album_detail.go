@@ -16,13 +16,13 @@ type AlbumDetailMenu struct {
 	baseMenu
 	menus   []model.MenuItem
 	songs   []structs.Song
-	albumId int64
+	albumID int64
 }
 
-func NewAlbumDetailMenu(base baseMenu, albumId int64) *AlbumDetailMenu {
+func NewAlbumDetailMenu(base baseMenu, albumID int64) *AlbumDetailMenu {
 	return &AlbumDetailMenu{
 		baseMenu: base,
-		albumId:  albumId,
+		albumID:  albumID,
 	}
 }
 
@@ -35,7 +35,7 @@ func (m *AlbumDetailMenu) IsPlayable() bool {
 }
 
 func (m *AlbumDetailMenu) GetMenuKey() string {
-	return fmt.Sprintf("album_detail_%d", m.albumId)
+	return fmt.Sprintf("album_detail_%d", m.albumID)
 }
 
 func (m *AlbumDetailMenu) MenuViews() []model.MenuItem {
@@ -45,12 +45,12 @@ func (m *AlbumDetailMenu) MenuViews() []model.MenuItem {
 func (m *AlbumDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		albumService := service.AlbumService{
-			ID: strconv.FormatInt(m.albumId, 10),
+			ID: strconv.FormatInt(m.albumID, 10),
 		}
 		code, response := albumService.Album()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -67,6 +67,6 @@ func (m *AlbumDetailMenu) Songs() []structs.Song {
 	return m.songs
 }
 
-func (m *AlbumDetailMenu) AlbumId() int64 {
-	return m.albumId
+func (m *AlbumDetailMenu) AlbumID() int64 {
+	return m.albumID
 }
