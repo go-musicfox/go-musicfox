@@ -73,6 +73,7 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 - **check_update 改造（internal/plugins/checkupdate）**：init() 追加 `ui.RegisterMainMenuItem("check_update", "检查更新")` 与 `ui.RegisterStartupHook(startupCheck)`；启动自动检查逻辑（config-gated `config.Startup.CheckUpdate`）自 netease.go 移入新文件 startup.go。`CheckUpdateMenu` 新增 `BeforeEnterMenuHook`（后台 goroutine 检查 + `app.Notify` 弹 TUI 通知 + 返回 (false, main) 弹回主页面）；Action 保留原检查命令路径。netease.go 删除硬编码启动检查块。
 - **文档**：docs/plugin_development.md 记录两个 API（边界表面表 + 规则 + 行为保持契约新增启动钩子不得 panic / 主菜单项 key 必须无参两条）+ 示例一按新形态更新（进入钩子 / 主菜单入口 / startup.go / 调用点）；AGENTS.md 同步 registry.go 表项与插件开发段落。
 - **测试**：registry_test 新增注册校验（重复/空 key panic、快照拷贝隔离）、NewMainMenu 追加插件项（内置项后、帮助索引不漂移、未注册 key panic）、runStartupHooks panic 隔离（顺序保持 + 中间 hook panic 被跳过）；ui 集成测试改为 TestMainMenuPluginItemRoutesToPluginMenu（Action 落默认分支 + SubMenu 路由到插件菜单）；plugins 聚合器测试断言 MainMenuPluginItems 含 check_update；checkupdate 测试新增进入钩子安装与 startupCheck 配置门控。
+- **3.9.5 Last.fm 提取为第二个真实插件**：`menu_accessor.go` 导出 `MenuServices = *menuServices` 别名 + `NewMenuServices(ctx)`；`BaseMenu.Services()` 取访问器；ui 导出页面布局助手（`PageTitleView`/`PageMenuTitleView[WithBack]`/`PageInput*`/`PageSubmit*`/`PageButton*`/`FinishCustomPageView`/`PageBreadcrumb*`/`PageBackButtonWidth`/`PageMenuTitleRow`/`SetPageInputCursor`）与 `TickLogin`/`ShowConfirmPopup`/`BuildPageOrToast`。`internal/plugins/lastfm`：`Lastfm` 菜单（嵌入 `ui.BaseMenu`，经 `m.Lastfm()` 服务访问）+ `LastfmProfile` + 三页（`NewLastfmAuthPage(svc ui.MenuServices)` 等，QR 页不注册、仅由 auth 页 `authByQRCode` 内部直构）+ `registry.go`（注册 `last_fm`/`lastfm_auth`/`lastfm_custom_api` + `RegisterMainMenuItem("last_fm","LastFM")`；页面 opts 类型随页面移入插件，字段 `Svc ui.MenuServices`）。ui 侧：删除 5 个 lastfm 文件 + 其测试；`registry_registrations.go` 删除三项注册；`menu_main.go` 删除内置 LastFM 入口（索引 13，帮助索引 14→13）——**主菜单位置变更：LastFM 从内置索引 13 变为插件项，排在全部内置项之后**；`expectedMenuKeys`/`expectedPageKeys` 移除 `last_fm`/`lastfm_auth`/`lastfm_custom_api`（插件 key 不参与内置完整性断言，与 check_update 一致）；`registry_test.go`/`custom_page_background_test.go` 移除已移动用例（lastfm 页背景渲染仍经共享 `FinishCustomPageView` 覆盖，插件侧不可构造 shell 故不重复）。测试移到 `internal/plugins/lastfm/`（菜单/页面经 registry 构建 + 服务经测试 context 解析）。聚合器 `plugins.go` 空导入 lastfm。— 验证: make lint 0 issues · make test 绿（avcore 为既有环境性偶发）· make build 绿 · gofmt 干净
 
 ## Progress
 
@@ -163,6 +164,7 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 - [x] 3.9.2 Mechanism B：启动钩子（RegisterStartupHook + runStartupHooks 于 InitHook 第 10 步调用，recover 隔离）
 - [x] 3.9.3 check_update 插件化改造：主菜单入口 + 启动检查钩子 + BeforeEnterMenuHook 单次 Enter 触发；移除 mainMenuCheckUpdateIndex 特判与 netease.go 硬编码启动检查
 - [x] 3.9.4 测试与门禁：make lint 0 issues · make test 绿 · make build 绿 · gofmt 干净
+- [x] 3.9.5 Last.fm 提取为第二个真实插件（服务访问 + 页面插件 + 主菜单项）— 见提交（上方 Implementation Plan 3.9.5；主菜单位置变更：LastFM 由内置索引 13 → 插件项排在全部内置项之后）
 
 验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
 

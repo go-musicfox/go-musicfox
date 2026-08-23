@@ -143,7 +143,8 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 | `internal/ui/menu_accessor.go` | `menuServices` 类型安全访问器（服务解析 + 薄壳方法转发） |
 | `internal/ui/menu.go` | `Menu` 接口与 `baseMenu`（经访问器接线） |
 | `internal/plugins/plugins.go` | 编译期插件聚合器（空导入各插件子包；`cmd/musicfox.go` 空导入触发注册） |
-| `internal/plugins/checkupdate/` | 首个真实插件：`CheckUpdateMenu`（嵌入 `ui.BaseMenu`，`init()` 注册 `check_update`） |
+| `internal/plugins/checkupdate/` | 首个真实插件：`CheckUpdateMenu`（嵌入 `ui.BaseMenu`，`init()` 注册 `check_update`，声明主菜单入口 + 启动钩子） |
+| `internal/plugins/lastfm/` | 第二个真实插件：Last.fm 菜单/页面整体提取（`last_fm` 菜单 + `lastfm_auth`/`lastfm_custom_api` 页面，opts 携带 `ui.MenuServices`；`RegisterMainMenuItem("last_fm", "LastFM")` 主菜单入口） |
 | `internal/ui/event_handler.go` | 键盘/鼠标事件处理 |
 | `internal/ui/operate.go` | 右键操作表 |
 
@@ -225,7 +226,7 @@ type Player interface {
 
 对外插件边界（注册表 API、`framework.Context`/`ServiceOf` 服务解析、`Scope`/`Plugin` 生命周期、编译期注册示例与行为保持契约）见 `docs/plugin_development.md`。当前仅支持编译期注册（import + `init()`），运行时动态加载不在范围内。
 
-插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件子包（如 `internal/plugins/checkupdate`，首个真实插件——`CheckUpdateMenu` 嵌入 `ui.BaseMenu`，init() 经 `ui.RegisterMenu` 注册 `"check_update"`，并声明主菜单入口 `RegisterMainMenuItem("check_update", "检查更新")` 与启动钩子 `RegisterStartupHook(startupCheck)`），`cmd/musicfox.go` 空导入聚合器触发注册。插件 key 不得与内置 key（`expectedMenuKeys`）冲突；`ui` 不得反向导入插件包（import cycle）。插件主菜单项在 `NewMainMenu` 于全部内置项之后追加（必须是已注册的无参菜单，key 未注册时启动 panic 作为完整性信号）；启动钩子在 `InitHook` 启动序第 10 步（用户/登录就绪后、自动播放前）经 `runStartupHooks` 按注册序调用，每个 hook 带 recover 隔离，panic 仅记日志不阻断启动。
+插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件子包（如 `internal/plugins/checkupdate`，首个真实插件——`CheckUpdateMenu` 嵌入 `ui.BaseMenu`，init() 经 `ui.RegisterMenu` 注册 `"check_update"`，并声明主菜单入口 `RegisterMainMenuItem("check_update", "检查更新")` 与启动钩子 `RegisterStartupHook(startupCheck)`；`internal/plugins/lastfm` 为第二个真实插件——Last.fm 菜单/页面整体提取，init() 注册 `"last_fm"` 菜单与 `"lastfm_auth"`/`"lastfm_custom_api"` 页面（opts 携带 `ui.MenuServices`，`MenuServices` 是 `*menuServices` 的导出别名），并声明主菜单入口 `RegisterMainMenuItem("last_fm", "LastFM")`），`cmd/musicfox.go` 空导入聚合器触发注册。插件 key 不得与内置 key（`expectedMenuKeys`）冲突；`ui` 不得反向导入插件包（import cycle）。插件主菜单项在 `NewMainMenu` 于全部内置项之后追加（必须是已注册的无参菜单，key 未注册时启动 panic 作为完整性信号；内置 LastFM 入口已随 lastfm 插件化移除，现为插件主菜单项排在末尾）；启动钩子在 `InitHook` 启动序第 10 步（用户/登录就绪后、自动播放前）经 `runStartupHooks` 按注册序调用，每个 hook 带 recover 隔离，panic 仅记日志不阻断启动。
 
 ### 添加新播放器引擎
 

@@ -17,12 +17,14 @@
 | 菜单注册 | `RegisterMenu[T](key, factory)` | `internal/ui/registry.go` |
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
 | 菜单跳转 | `BuildMenu[T]` / `mustBuildNoArg` / `buildMenuOrToast` | `internal/ui/registry.go` |
-| 页面跳转 | `BuildPage[T]` / `buildPageOrToast` | `internal/ui/registry.go` |
+| 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
 | 主菜单入口 | `RegisterMainMenuItem(key, title)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
 | 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
-| 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法） | `internal/ui/menu.go` |
+| 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法 + `Services()`） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
-| 类型安全访问器 | `menuServices`（`svc.Player()` 等） | `internal/ui/menu_accessor.go` |
+| 类型安全访问器 | `menuServices`（`svc.Player()` 等；导出别名 `MenuServices` + `NewMenuServices(ctx)`） | `internal/ui/menu_accessor.go` |
+| 自定义页面布局助手 | `PageTitleView` / `PageMenuTitleView[WithBack]` / `PageInput*` / `FinishCustomPageView` 等（页面插件渲染用） | `internal/ui/page_layout.go` |
+| 确认弹窗 | `ShowConfirmPopup(app, title, content, onConfirm)` | `internal/ui/confirm_popup.go` |
 | 服务名常量 | `ServicePlayer` 等 | `internal/ui/services.go` |
 | 生命周期 | `framework.Scope` / `framework.Plugin` | `internal/framework/plugin.go` |
 
@@ -46,6 +48,9 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu
 // 页面 provider：返回 model.Page。
 func RegisterPage[T any](key string, f func(opts T) (model.Page, error))
 func BuildPage[T any](key string, opts T) (model.Page, error)
+
+// 跳转失败经 toast 降级（不 panic），返回 nil。插件内页面打开点用导出形式。
+func BuildPageOrToast[T any](key string, opts T) model.Page
 
 // 主菜单入口（Phase 3.9）：key 必须是无参菜单 provider，主菜单在全部内置项
 // 之后追加该入口并按 key 构建菜单（未注册的 key 在 NewMainMenu 启动时 panic，
@@ -90,6 +95,10 @@ base.Search()                    // *SearchPage（shell 单例）
 base.ToLoginPage(callback)       // (model.Page, tea.Cmd)
 base.ToSearchPage(searchType)    // (model.Page, tea.Cmd)
 
+// 访问器本体（Phase 3.9）：把菜单自身的 menuServices 访问器传给页面 opts
+// 或构造函数（页面插件的 opts 字段类型就是 MenuServices，见示例四）。
+base.Services()                  // ui.MenuServices
+
 // 逃生口（旧辅助函数仍收 *Netease；新插件代码优先用上面的访问器）：
 base.Netease()                   // *Netease
 ```
@@ -111,7 +120,7 @@ func ServiceOf[T any](c *Context, name string) (T, bool)
 
 业务能力（player / lyricService / trackManager / desktopLyrics / coverRenderer / userService / loginService / shareSvc / lastfm 以及两个注册表）在启动时经 `registerServices`（`internal/ui/services.go`）注册进容器。
 
-### 类型安全访问器：menuServices
+### 类型安全访问器：menuServices / MenuServices
 
 菜单代码不直接持有 `*Netease` 字段，而是经 `baseMenu.svc`（`*menuServices`）访问：
 
@@ -132,6 +141,13 @@ svc.MustMain() / svc.Rerender(force) / svc.SaveActiveTheme(name) / ...
 // 逃生口（迁移窗口用，新代码避免）：
 svc.Netease() // *Netease 薄壳
 ```
+
+插件边界（Phase 3.9）：`MenuServices` 是 `*menuServices` 的导出别名（alias），外部包可引用访问器类型于签名/opts 字段/页面构造函数（如 `NewLastfmAuthPage(svc ui.MenuServices)`）。外部获取访问器有两个入口：
+
+- `base.Services()`（`BaseMenu` 方法）——菜单把自身访问器传给页面 opts；
+- `ui.NewMenuServices(ctx *framework.Context)`——只挂 context 不挂 shell 的访问器（shell 相关转发降级为 nil/零值），插件测试与 shell 无关的页面流使用。
+
+页面插件渲染自定义页面（标题/返回按钮/输入框/按钮/面包屑）复用 ui 导出的布局助手（`PageTitleView`、`PageMenuTitleView[WithBack]`、`PageInputStyles`、`FocusPageInput`/`BlurPageInput`、`PageInputView`、`PageSubmitButton`、`PageButton`、`PageButtonHoverView`、`PageSubmitText`、`SetPageInputCursor`、`PageMenuTitleRow`、`PageBackButtonWidth`、`PageBreadcrumbMotion`/`PageBreadcrumbClick`、`FinishCustomPageView`），确认弹窗用 `ui.ShowConfirmPopup`——示例四（Last.fm 插件）即此形态。
 
 ### 服务名常量
 
@@ -176,7 +192,7 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 **当前边界注意**：
 
 - `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`；首个真实插件 `internal/plugins/checkupdate` 即此形态）。
-- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` 由插件注册即可通过）。
+- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api` 由插件注册即可通过）。
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
@@ -284,6 +300,7 @@ package plugins
 
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
 )
 
 // 文件：cmd/musicfox.go（入口空导入聚合器）
@@ -398,6 +415,43 @@ func init() {
 page, err := ui.BuildPage("example_hello_page", ExampleHelloPageOpts{})
 ```
 
+### 示例四：Last.fm 插件（服务访问 + 页面插件 + 主菜单项）
+
+> `internal/plugins/lastfm` 是第二个真实插件，把内置 Last.fm 菜单/页面整体提取为外部式插件。它补全了示例一的插件能力矩阵：**服务访问**（`svc.Lastfm()`——访问器解析 `ServiceLastfm` 客户端）、**页面插件**（`lastfm_auth` / `lastfm_custom_api` 经 `RegisterPage` 注册，opts 携带 `ui.MenuServices`）、**主菜单项**（`RegisterMainMenuItem("last_fm", "LastFM")`——原内置入口已从 `menu_main.go` 移除，现排在全部内置项之后）。页面通过 `ui.BuildPageOrToast` 打开，渲染复用 ui 导出的自定义页面布局助手。
+
+```go
+// 文件：internal/plugins/lastfm/page_auth.go（节选）——页面 opts 携带访问器
+// LastfmAuthPageOpts / LastfmCustomAPIPageOpts 是页面插件的参数契约：
+type LastfmAuthPageOpts struct {
+	Svc ui.MenuServices // 访问器：页面经 svc.MustMain()/svc.App()/svc.Lastfm() 解析 shell 与服务
+}
+
+// 文件：internal/plugins/lastfm/registry.go——编译期注册入口
+func init() {
+	ui.RegisterMenu("last_fm", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return NewLastfm(base), nil
+	})
+	ui.RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
+		return NewLastfmAuthPage(opts.Svc), nil
+	})
+	ui.RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
+		return NewLastfmCustomAPIPage(opts.Svc), nil
+	})
+	// 主菜单项：NewMainMenu 在全部内置项之后追加「LastFM」（内置入口已移除）。
+	ui.RegisterMainMenuItem("last_fm", "LastFM")
+}
+
+// 文件：internal/plugins/lastfm/profile.go（节选）——菜单内打开页面：
+// 访问器经 base.Services() 传给页面 opts，失败经 ui.BuildPageOrToast 降级。
+page := ui.BuildPageOrToast("lastfm_custom_api", LastfmCustomAPIPageOpts{Svc: m.Services()})
+if page == nil {
+	return nil
+}
+return ui.NewMenuToPage(m.BaseMenu, page, m.CoverRenderer().ClearDisplayed)
+```
+
+Last.fm 菜单/页面的服务访问全部走访问器（`m.Lastfm()` / `svc.Lastfm()`），不触碰任何未导出 ui 符号——这正是插件边界的目标形态。
+
 ### 接入二进制（聚合器）
 
 正式插件的标准接入方式：每个插件子包被聚合器空导入（见示例一），入口只需空导入聚合器即可，不必逐个列插件：
@@ -408,6 +462,7 @@ package plugins
 
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
 )
 
 // cmd/musicfox.go 或入口处空导入聚合器，触发全部插件 init() 注册：
