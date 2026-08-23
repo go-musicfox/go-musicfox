@@ -58,13 +58,13 @@ func TestCustomPagesLeaveTransparentAppBackgroundUnpainted(t *testing.T) {
 	}
 }
 
-func newLastfmCustomAPIPageForBackgroundTest(netease *Netease) *LastfmCustomApiPage {
+func newLastfmCustomAPIPageForBackgroundTest(netease *Netease) *LastfmCustomAPIPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
 	secretInput := textinput.New()
 	secretInput.Placeholder = " Secret"
 
-	return &LastfmCustomApiPage{
+	return &LastfmCustomAPIPage{
 		netease:      netease,
 		menuTitle:    &model.MenuItem{Title: "Lastfm API account"},
 		keyInput:     keyInput,

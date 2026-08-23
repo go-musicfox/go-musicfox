@@ -215,8 +215,8 @@ func init() {
 		return NewSearchPage(opts.Netease), nil
 	})
 
-	RegisterPage("lastfm_custom_api", func(opts LastfmCustomApiPageOpts) (model.Page, error) {
-		return NewLastfmCustomApiPage(opts.Netease), nil
+	RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
+		return NewLastfmCustomAPIPage(opts.Netease), nil
 	})
 }
 

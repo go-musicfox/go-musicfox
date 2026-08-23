@@ -10,7 +10,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
 	"github.com/mattn/go-runewidth"
 	"github.com/skratchdot/open-golang/open"
 
@@ -36,6 +35,7 @@ type lastfmQRErrorMsg struct{ err error }
 // LastfmQRAuthPage Last.fm 二维码授权页面
 type LastfmQRAuthPage struct {
 	netease *Netease
+	svc     *menuServices // service accessor (Phase 3.3.5)
 	from    model.Page
 
 	token       string
@@ -58,6 +58,7 @@ func (p *LastfmQRAuthPage) Msg() tea.Msg {
 func NewLastfmQRAuthPage(netease *Netease, from model.Page, afterAction func()) *LastfmQRAuthPage {
 	page := &LastfmQRAuthPage{
 		netease:     netease,
+		svc:         newMenuServices(netease),
 		from:        from,
 		AfterAction: afterAction,
 		statusMsg:   "正在生成二维码，请稍候...",
@@ -89,7 +90,7 @@ func (p *LastfmQRAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cm
 
 	case lastfmQRErrorMsg:
 		p.loading.Complete()
-		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), lipgloss.BrightRed)
+		p.statusMsg = style.FG("发生错误: "+msg.err.Error(), lipgloss.BrightRed)
 		return p, nil
 
 	case tea.KeyPressMsg:
@@ -103,7 +104,7 @@ func (p *LastfmQRAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cm
 			if p.qrCodePath != "" {
 				err := open.Start(p.qrCodePath)
 				if err != nil {
-					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), lipgloss.BrightRed)
+					p.statusMsg = style.FG("打开二维码失败: "+err.Error(), lipgloss.BrightRed)
 				}
 			}
 		case "enter":
@@ -163,7 +164,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 			padding = 0
 		}
 		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
-		builder.WriteString(util.SetFgStyle(confirmTip, lipgloss.BrightBlue))
+		builder.WriteString(style.FG(confirmTip, lipgloss.BrightBlue))
 		builder.WriteString("\n")
 	}
 
@@ -173,7 +174,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 		padding = 0
 	}
 	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
-	builder.WriteString(util.SetFgStyle(bottomTip, lipgloss.BrightBlack))
+	builder.WriteString(style.FG(bottomTip, lipgloss.BrightBlack))
 	builder.WriteString("\n")
 
 	if p.qrCodePath != "" {
@@ -183,7 +184,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 			padding = 0
 		}
 		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
-		builder.WriteString(util.SetFgStyle(viewTip, lipgloss.BrightBlack))
+		builder.WriteString(style.FG(viewTip, lipgloss.BrightBlack))
 		builder.WriteString("\n")
 	} else {
 		builder.WriteString("\n")
@@ -198,7 +199,7 @@ func (p *LastfmQRAuthPage) generateQRCodeCmd() tea.Msg {
 		return lastfmQRErrorMsg{fmt.Errorf("请确保正确设置 API key 及 secret")}
 	}
 
-	token, url, err := p.netease.lastfm.GetAuthUrlWithToken()
+	token, url, err := p.svc.Lastfm().GetAuthUrlWithToken()
 	if err != nil {
 		slog.Error("获取 Last.fm 授权 token 失败", slogx.Error(err))
 		return lastfmQRErrorMsg{fmt.Errorf("token 或 url 获取失败")}
@@ -229,23 +230,23 @@ func (p *LastfmQRAuthPage) confirmAuth() (model.Page, tea.Cmd) {
 	defer loading.Complete()
 
 	// 获取 session key
-	sessionKey, err := p.netease.lastfm.GetSession(p.token)
+	sessionKey, err := p.svc.Lastfm().GetSession(p.token)
 	if err != nil {
-		p.statusMsg = util.SetFgStyle("获取授权失败，请确认已在浏览器中完成授权", lipgloss.BrightRed)
+		p.statusMsg = style.FG("获取授权失败，请确认已在浏览器中完成授权", lipgloss.BrightRed)
 		slog.Error("sessionKey 获取失败", slogx.Error(err))
 		return p, nil
 	}
 
 	// 获取用户信息
-	user, err := p.netease.lastfm.GetUserInfo(map[string]any{})
+	user, err := p.svc.Lastfm().GetUserInfo(map[string]any{})
 	if err != nil {
-		p.statusMsg = util.SetFgStyle("用户信息获取失败", lipgloss.BrightRed)
+		p.statusMsg = style.FG("用户信息获取失败", lipgloss.BrightRed)
 		slog.Error("用户信息获取失败", slogx.Error(err))
 		return p, nil
 	}
 
 	// 保存用户信息
-	p.netease.lastfm.InitUserInfo(&storage.LastfmUser{
+	p.svc.Lastfm().InitUserInfo(&storage.LastfmUser{
 		Id:         user.Id,
 		Name:       user.Name,
 		RealName:   user.RealName,
@@ -266,7 +267,7 @@ func (p *LastfmQRAuthPage) confirmAuth() (model.Page, tea.Cmd) {
 	// 显示成功通知
 	notify.Notify(notify.NotifyContent{
 		Title:   "授权成功",
-		Text:    fmt.Sprintf("Last.fm 用户 %s 授权成功", p.netease.lastfm.UserName()),
+		Text:    fmt.Sprintf("Last.fm 用户 %s 授权成功", p.svc.Lastfm().UserName()),
 		GroupId: types.GroupID,
 	})
 

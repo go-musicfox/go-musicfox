@@ -3,9 +3,9 @@ package ui
 import (
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	tea "charm.land/bubbletea/v2"
 	"github.com/mattn/go-runewidth"
 )
 

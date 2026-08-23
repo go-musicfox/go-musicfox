@@ -1,3 +1,7 @@
+// Package ui implements the foxful-cli TUI layer: the thin-shell Netease
+// coordinator (navigation/assembly/event dispatch), provider-registered menus
+// and pages, and the lyric/cover/spectrum renderers composed by the shell.
+// Business capabilities are resolved by name through internal/framework.
 package ui
 
 import (

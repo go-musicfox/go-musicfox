@@ -37,9 +37,10 @@ type (
 	UserPlaylistOpts  struct{ UserID int64 }
 	DjRadioDetailOpts struct{ DjRadioID int64 }
 
-	// Phase 3.3.1 parameterized menu contracts. Menus whose GetMenuKey() is
-	// parameterized (e.g. album_top_<area>) register under the static key
-	// prefix; the runtime menu key keeps its dynamic form.
+	// AlbumTopOpts and the following Phase 3.3.1 parameterized menu contracts.
+	// Menus whose GetMenuKey() is parameterized (e.g. album_top_<area>)
+	// register under the static key prefix; the runtime menu key keeps its
+	// dynamic form.
 	AlbumTopOpts         struct{ Area string }
 	AlbumNewOpts         struct{ Area string }
 	ArtistAlbumOpts      struct{ ArtistID int64 }
@@ -49,8 +50,9 @@ type (
 	DjCategoryDetailOpts struct{ CategoryID int64 }
 	DjHotOpts            struct{ HotType DjHotType }
 
-	// Phase 3.3.3 menu contracts: the last hardcoded constructions (event
-	// handler current-playlist, operate action menu, main menu Last.fm entry).
+	// CurPlaylistOpts and the following Phase 3.3.3 menu contracts: the last
+	// hardcoded constructions (event handler current-playlist, operate action
+	// menu, main menu Last.fm entry).
 	CurPlaylistOpts struct{ Songs []structs.Song }
 	ActionMenuOpts  struct {
 		From       string
@@ -129,12 +131,13 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu {
 type (
 	LoginPageOpts      struct{ Netease *Netease }
 	LastfmAuthPageOpts struct{ Netease *Netease }
-	// Phase 3.3.2 page contracts. SearchPageOpts builds the shell-owned search
-	// singleton (its wordsInput/result/searchType state is shared with the
-	// SearchResultMenu flow); LastfmCustomApiPageOpts is the Last.fm profile
+	// SearchPageOpts and LastfmCustomAPIPageOpts are the Phase 3.3.2 page
+	// contracts. SearchPageOpts builds the shell-owned search singleton (its
+	// wordsInput/result/searchType state is shared with the SearchResultMenu
+	// flow); LastfmCustomAPIPageOpts is the Last.fm profile
 	// "设置 API account" entry.
 	SearchPageOpts          struct{ Netease *Netease }
-	LastfmCustomApiPageOpts struct{ Netease *Netease }
+	LastfmCustomAPIPageOpts struct{ Netease *Netease }
 )
 
 // pageFactory[T] is a typed page provider stored behind `any` in the registry.

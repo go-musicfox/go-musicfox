@@ -144,9 +144,9 @@ func TestRegisterAndBuildSearchPage(t *testing.T) {
 	}
 }
 
-func TestRegisterAndBuildLastfmCustomApiPage(t *testing.T) {
+func TestRegisterAndBuildLastfmCustomAPIPage(t *testing.T) {
 	withDummyConfig(t)
-	// NewLastfmCustomApiPage reloads the stored API account on construction, so
+	// NewLastfmCustomAPIPage reloads the stored API account on construction, so
 	// the provider needs a Netease with a non-nil lastfm client. lastfm.NewClient
 	// reads the account through storage.DBManager, which the runtime bootstrap
 	// normally sets; provide a zero-value manager so the test avoids a nil
@@ -160,12 +160,19 @@ func TestRegisterAndBuildLastfmCustomApiPage(t *testing.T) {
 
 	n := testNetease()
 	n.lastfm = lastfm.NewClient()
-	page, err := BuildPage("lastfm_custom_api", LastfmCustomApiPageOpts{Netease: n})
+	// The page resolves lastfm through the service registry (Phase 3.3.5:
+	// pages use the accessor, not the shell field), so the test must register
+	// the services into a context for the accessor to resolve.
+	n.ctx = &framework.Context{}
+	if err := registerServices(n.ctx, n); err != nil {
+		t.Fatalf("registerServices() error = %v", err)
+	}
+	page, err := BuildPage("lastfm_custom_api", LastfmCustomAPIPageOpts{Netease: n})
 	if err != nil {
 		t.Fatalf("BuildPage(lastfm_custom_api) error = %v", err)
 	}
-	if _, ok := page.(*LastfmCustomApiPage); !ok {
-		t.Fatalf("BuildPage(lastfm_custom_api) = %T, want *LastfmCustomApiPage", page)
+	if _, ok := page.(*LastfmCustomAPIPage); !ok {
+		t.Fatalf("BuildPage(lastfm_custom_api) = %T, want *LastfmCustomAPIPage", page)
 	}
 }
 

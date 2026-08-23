@@ -431,8 +431,8 @@ func (p *Player) Seek(duration time.Duration) {
 // SetMode 设置播放模式
 func (p *Player) SetMode(playMode types.Mode) {
 	p.cancelGaplessPreload()
-	if p.lastMode != p.netease.player.Mode() {
-		p.lastMode = p.netease.player.Mode()
+	if p.lastMode != p.Mode() {
+		p.lastMode = p.Mode()
 	}
 
 	// 直接使用PlaylistManager设置播放模式
@@ -551,7 +551,7 @@ func (p *Player) Close() error {
 }
 
 func (p *Player) getPlayInfo(song structs.Song) (string, string, error) {
-	source, err := p.netease.trackManager.ResolvePlayableSource(context.Background(), song)
+	source, err := p.svc.TrackManager().ResolvePlayableSource(context.Background(), song)
 	if err != nil || source.Info == nil {
 		return "", "", err
 	}
@@ -576,7 +576,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		return nil
 	}
 
-	if _struct.CheckUserInfo(p.netease.user) == _struct.NeedLogin {
+	if _struct.CheckUserInfo(p.svc.User()) == _struct.NeedLogin {
 		page, _ := p.netease.ToLoginPage(nil)
 		return page
 	}

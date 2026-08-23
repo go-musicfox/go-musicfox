@@ -9,14 +9,15 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
-const LastfmCustomApiPageType model.PageType = "lastfm_custom_api"
+const LastfmCustomAPIPageType model.PageType = "lastfm_custom_api"
 
-type LastfmCustomApiPage struct {
+type LastfmCustomAPIPage struct {
 	netease *Netease
+	svc     *menuServices // service accessor (Phase 3.3.5)
 
 	menuTitle    *model.MenuItem
 	index        int
@@ -55,13 +56,13 @@ type LastfmCustomApiPage struct {
 	mousePointer  string
 }
 
-func NewLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
-	page := newLastfmCustomApiPage(netease)
-	page.reloadApiAccount()
+func NewLastfmCustomAPIPage(netease *Netease) *LastfmCustomAPIPage {
+	page := newLastfmCustomAPIPage(netease)
+	page.reloadAPIAccount()
 	return page
 }
 
-func newLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
+func newLastfmCustomAPIPage(netease *Netease) *LastfmCustomAPIPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
 	keyInput.CharLimit = 32
@@ -74,8 +75,9 @@ func newLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 	secretInput.CharLimit = 32
 	secretInput.SetStyles(pageInputStyles())
 
-	page := &LastfmCustomApiPage{
+	page := &LastfmCustomAPIPage{
 		netease:       netease,
+		svc:           newMenuServices(netease),
 		menuTitle:     &model.MenuItem{Title: "Lastfm API account"},
 		keyInput:      keyInput,
 		secretInput:   secretInput,
@@ -92,15 +94,15 @@ func newLastfmCustomApiPage(netease *Netease) *LastfmCustomApiPage {
 	return page
 }
 
-func (l *LastfmCustomApiPage) IgnoreQuitKeyMsg(_ tea.KeyMsg) bool {
+func (l *LastfmCustomAPIPage) IgnoreQuitKeyMsg(_ tea.KeyMsg) bool {
 	return true
 }
 
-func (l *LastfmCustomApiPage) Type() model.PageType {
-	return LastfmCustomApiPageType
+func (l *LastfmCustomAPIPage) Type() model.PageType {
+	return LastfmCustomAPIPageType
 }
 
-func (l *LastfmCustomApiPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
+func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
 		mouse := mouseMsg.Mouse()
 		mainPage := l.netease.MustMain()
@@ -232,7 +234,7 @@ func (l *LastfmCustomApiPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 	return l.updateAccountInputs(msg)
 }
 
-func (l *LastfmCustomApiPage) View(a *model.App) string {
+func (l *LastfmCustomAPIPage) View(a *model.App) string {
 	var (
 		builder  strings.Builder
 		top      int
@@ -319,11 +321,11 @@ func (l *LastfmCustomApiPage) View(a *model.App) string {
 	return finishCustomPageView(&builder, a)
 }
 
-func (l *LastfmCustomApiPage) Msg() tea.Msg {
+func (l *LastfmCustomAPIPage) Msg() tea.Msg {
 	return nil
 }
 
-func (l *LastfmCustomApiPage) updateAccountInputs(msg tea.Msg) (model.Page, tea.Cmd) {
+func (l *LastfmCustomAPIPage) updateAccountInputs(msg tea.Msg) (model.Page, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -338,7 +340,7 @@ func (l *LastfmCustomApiPage) updateAccountInputs(msg tea.Msg) (model.Page, tea.
 	return l, tea.Batch(cmds...)
 }
 
-func (l *LastfmCustomApiPage) applyFocus() {
+func (l *LastfmCustomAPIPage) applyFocus() {
 	blurPageInput(&l.keyInput)
 	blurPageInput(&l.secretInput)
 	l.tips = ""
@@ -348,18 +350,18 @@ func (l *LastfmCustomApiPage) applyFocus() {
 	case 1:
 		focusPageInput(&l.secretInput)
 	case l.submitIndex:
-		l.tips = util.SetFgStyle("保存至数据库，优先使用此值", lipgloss.BrightBlue)
+		l.tips = style.FG("保存至数据库，优先使用此值", lipgloss.BrightBlue)
 	case l.reloadIndex:
-		l.tips = util.SetFgStyle("从数据库或本次启动时的配置文件中加载 API account", lipgloss.BrightBlue)
+		l.tips = style.FG("从数据库或本次启动时的配置文件中加载 API account", lipgloss.BrightBlue)
 	case l.clearIndex:
-		l.tips = util.SetFgStyle("清除当前值及已设置值", lipgloss.BrightBlue)
+		l.tips = style.FG("清除当前值及已设置值", lipgloss.BrightBlue)
 	}
 	l.submitButton = pageSubmitButton(l.index == l.submitIndex)
 	l.reloadButton = pageButton(l.reloadText, l.index == l.reloadIndex)
 	l.clearButton = pageButton(l.clearText, l.index == l.clearIndex)
 }
 
-func (l *LastfmCustomApiPage) enterHandler() (model.Page, tea.Cmd) {
+func (l *LastfmCustomAPIPage) enterHandler() (model.Page, tea.Cmd) {
 	loading := model.NewLoading(l.netease.MustMain(), l.menuTitle)
 	loading.DisplayNotOnlyOnMain()
 	loading.Start()
@@ -369,21 +371,21 @@ func (l *LastfmCustomApiPage) enterHandler() (model.Page, tea.Cmd) {
 	case l.submitIndex:
 		// 提交
 		if len(l.keyInput.Value()) != 32 || len(l.secretInput.Value()) != 32 {
-			l.tips = util.SetFgStyle("请输入正确的 API 账号或密码", lipgloss.BrightRed)
+			l.tips = style.FG("请输入正确的 API 账号或密码", lipgloss.BrightRed)
 			return l, nil
 		}
-		l.netease.lastfm.SetApiAccount(l.keyInput.Value(), l.secretInput.Value())
-		l.tips = util.SetFgStyle("已保存至数据库", lipgloss.BrightGreen)
+		l.svc.Lastfm().SetApiAccount(l.keyInput.Value(), l.secretInput.Value())
+		l.tips = style.FG("已保存至数据库", lipgloss.BrightGreen)
 	case l.reloadIndex:
-		l.reloadApiAccount()
+		l.reloadAPIAccount()
 	case l.clearIndex:
 		if len(l.keyInput.Value()) != 0 && len(l.secretInput.Value()) != 0 {
 			l.keyInput.Reset()
 			l.secretInput.Reset()
-			l.tips = util.SetFgStyle("已清空，请重新填写, 为空时再次按下以清除数据库内 Api account", lipgloss.BrightRed)
+			l.tips = style.FG("已清空，请重新填写, 为空时再次按下以清除数据库内 Api account", lipgloss.BrightRed)
 		} else {
-			l.netease.lastfm.ClearApiAccount()
-			l.tips = util.SetFgStyle("已清除数据库内 Api account，需重新登录", lipgloss.BrightRed)
+			l.svc.Lastfm().ClearApiAccount()
+			l.tips = style.FG("已清除数据库内 Api account，需重新登录", lipgloss.BrightRed)
 		}
 	}
 	if l.AfterAction != nil {
@@ -393,21 +395,21 @@ func (l *LastfmCustomApiPage) enterHandler() (model.Page, tea.Cmd) {
 	return l, tickLogin(time.Nanosecond)
 }
 
-func (l *LastfmCustomApiPage) reloadApiAccount() (model.Page, tea.Cmd) {
+func (l *LastfmCustomAPIPage) reloadAPIAccount() (model.Page, tea.Cmd) {
 	// var key, secret string
-	key, secret := l.netease.lastfm.GetApiAccount()
+	key, secret := l.svc.Lastfm().GetApiAccount()
 	if key != "" && secret != "" {
 		l.keyInput.SetValue(key)
 		l.secretInput.SetValue(secret)
-		l.tips = util.SetFgStyle("已从已配置值(TUI 设置值)加载", lipgloss.BrightGreen)
+		l.tips = style.FG("已从已配置值(TUI 设置值)加载", lipgloss.BrightGreen)
 	} else if configs.AppConfig.Reporter.Lastfm.Key != "" && configs.AppConfig.Reporter.Lastfm.Secret != "" {
 		l.keyInput.SetValue(configs.AppConfig.Reporter.Lastfm.Key)
 		l.secretInput.SetValue(configs.AppConfig.Reporter.Lastfm.Secret)
-		l.tips = util.SetFgStyle("已从本次启动时的配置文件中加载", lipgloss.BrightGreen)
+		l.tips = style.FG("已从本次启动时的配置文件中加载", lipgloss.BrightGreen)
 	} else {
 		l.keyInput.Reset()
 		l.secretInput.Reset()
-		l.tips = util.SetFgStyle("未获取到内容，已重置", lipgloss.BrightGreen)
+		l.tips = style.FG("未获取到内容，已重置", lipgloss.BrightGreen)
 	}
 
 	return l, nil
