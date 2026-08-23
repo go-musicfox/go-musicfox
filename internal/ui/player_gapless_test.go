@@ -11,9 +11,7 @@ import (
 func TestPeekGaplessSongDeterministicModes(t *testing.T) {
 	p := &Player{playlistManager: playlist.NewPlaylistManager()}
 	songs := []structs.Song{{Id: 1}, {Id: 2}, {Id: 3}}
-	if err := p.playlistManager.Initialize(1, songs); err != nil {
-		t.Fatal(err)
-	}
+	p.ReinitializePlaylist(1, songs)
 
 	tests := []struct {
 		mode types.Mode
@@ -40,9 +38,7 @@ func TestPeekGaplessSongDeterministicModes(t *testing.T) {
 
 func TestPeekGaplessSongWrapsListLoop(t *testing.T) {
 	p := &Player{playlistManager: playlist.NewPlaylistManager()}
-	if err := p.playlistManager.Initialize(1, []structs.Song{{Id: 1}, {Id: 2}}); err != nil {
-		t.Fatal(err)
-	}
+	p.ReinitializePlaylist(1, []structs.Song{{Id: 1}, {Id: 2}})
 	if err := p.playlistManager.SetPlayMode(types.PmListLoop); err != nil {
 		t.Fatal(err)
 	}
