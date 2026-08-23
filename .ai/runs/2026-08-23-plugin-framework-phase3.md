@@ -111,6 +111,15 @@
 
 验证：`make lint` 0 issues · `make test` 绿（framework 全量含 -race）· `make build` 绿 · `gofmt -l` 干净。macdriver cocoa/mediaplayer 的 2 项网络依赖测试（TestNSImage/TestMPMediaItemArtwork）为既有环境性偶发（master 同样失败，与本阶段无关）。
 
+### Phase 3.6: 解耦调查 + 插件边界（BaseMenu 导出）
+
+解耦调查 work package 1（访问器导航 + Search）+ 插件边界的 BaseMenu 导出，两组逻辑单元：
+
+- [x] 3.6.1 访问器导航 + Search — bde4a9ac（`menuServices` 新增 `ToLoginPage`/`ToSearchPage` 转发；登录门控菜单 25 处 + player.go 2 处 `ToLoginPage` 改走 `svc`；`menu_search_result` 的 `svc.Netease().search.*` 改经 `svc.Search()`；`.Netease()` 逃生口 internal/ui 43 → 11（剩余为 menu.go 6 / action_select 2 / lastfm_profile 2 / registry_registrations 1，均为收 `*Netease` 的旧辅助函数）；顺带修复 whole-file lint 暴露的既有债务：menu_add_to_user_playlist/menu_album_detail/menu_playlist_detail 的 ST1003（userId/albumId/playlistId → userID/albumID/playlistID，含 operate/player/registry_test 引用点）与 menu_accessor QF1008（`s.n.App.Rerender` → `s.n.Rerender`））
+- [x] 3.6.2 BaseMenu 导出 — 72cf880a（`type BaseMenu struct{ model.DefaultMenu; svc *menuServices }` + `type baseMenu = BaseMenu` 别名，全部既有代码与注册零改动（嵌入式别名字段名保持 `baseMenu`，40+ 处 `m.baseMenu` 引用不受影响）；BaseMenu 新增 17 个导出转发方法（服务解析/薄壳/导航，nil 安全）；外部包编译校验 `internal/ui/plugin_boundary_external_test.go`（`package ui_test`，嵌入 `ui.BaseMenu`、注册闭包 `func(base ui.BaseMenu, _ ui.NoArgMenuOpts)` 编译通过、BuildMenu 零值基座构建 + 转发方法零值降级）；docs/plugin_development.md 更新 BaseMenu 基座/转发方法/外部形态示例）
+
+验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净（`foxful_integration_test.go`/`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。
+
 ### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
 
 - **页面导航形态（3.3.2）**：login 页在 ToLoginPage 每次经 `buildPageOrToast("login")` 构建新实例（登录页无跨组件状态；webviewAvailable 检测缓存在 NewLoginPage 实例内，回调/返回语义不变），shell 移除 `n.login` 字段；search 页保留 shell 单例（`n.search`），其 wordsInput/result/searchType 被 SearchResultMenu.BeforeEnterMenuHook 与 operate.searchSong 共享，必须保持同一实例。
