@@ -18,6 +18,8 @@
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
 | 菜单跳转 | `BuildMenu[T]` / `mustBuildNoArg` / `buildMenuOrToast` | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `buildPageOrToast` | `internal/ui/registry.go` |
+| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
+| 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
 | 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
 | 类型安全访问器 | `menuServices`（`svc.Player()` 等） | `internal/ui/menu_accessor.go` |
@@ -44,6 +46,16 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu
 // 页面 provider：返回 model.Page。
 func RegisterPage[T any](key string, f func(opts T) (model.Page, error))
 func BuildPage[T any](key string, opts T) (model.Page, error)
+
+// 主菜单入口（Phase 3.9）：key 必须是无参菜单 provider，主菜单在全部内置项
+// 之后追加该入口并按 key 构建菜单（未注册的 key 在 NewMainMenu 启动时 panic，
+// 作为启动完整性信号）。
+func RegisterMainMenuItem(key, title string) // 空 key/title 或重复 key 会 panic
+func MainMenuPluginItems() []MainMenuItem    // 快照，供 NewMainMenu 构造
+
+// 启动钩子（Phase 3.9）：注册启动任务。shell 在 InitHook 中用户/登录就绪后
+// 按注册序调用，每个 hook 带 panic 隔离（recover + 日志，不阻断启动）。
+func RegisterStartupHook(fn func()) // nil 会 panic
 ```
 
 规则：
@@ -174,9 +186,9 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
-> `internal/plugins/checkupdate` 是把内置「检查更新」菜单提取为外部式插件的第一个真实插件，完整走通编译期插件链路：`BaseMenu` 嵌入 + `RegisterMenu` 注册 + `BuildMenu` 导航 + 聚合器 + 空导入。菜单 key 仍为 `check_update`，行为与提取前一致。
+> `internal/plugins/checkupdate` 是把内置「检查更新」菜单提取为外部式插件的第一个真实插件，完整走通编译期插件链路：`BaseMenu` 嵌入 + `RegisterMenu` 注册 + `RegisterMainMenuItem` 主菜单入口 + `RegisterStartupHook` 启动钩子 + 聚合器 + 空导入。菜单 key 仍为 `check_update`，行为与提取前一致。
 
-`menu.go`（菜单类型 + 检查/通知逻辑，与提取前 `internal/ui/menu_check_update.go` 一致）：
+`menu.go`（菜单类型 + 检查/通知逻辑 + 进入钩子）：
 
 ```go
 // 文件：internal/plugins/checkupdate/menu.go
@@ -206,20 +218,28 @@ func (m *CheckUpdateMenu) MenuViews() []model.MenuItem {
 
 func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu { return nil }
 
+// BeforeEnterMenuHook 进入即触发检查并弹回主页面（单次 Enter 完成检查，
+// 等价于提取前 main_menu 的 index-15 特判）。检查在后台 goroutine 执行，
+// 结果经 app.Notify 安全投递。
+func (m *CheckUpdateMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		go func() {
+			hasUpdate, latestVersion := version.CheckUpdate()
+			if app := m.App(); app != nil {
+				app.Notify(checkUpdateNotificationSpec(hasUpdate, latestVersion))
+			}
+		}()
+		return false, main
+	}
+}
+
 // Action 触发检查更新并留在当前页面（非 nil 的 page/cmd 会跳过子菜单导航）。
 func (m *CheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) {
 	return a.MustMain(), checkUpdateCmd()
 }
-
-func checkUpdateCmd() tea.Cmd {
-	return func() tea.Msg {
-		hasUpdate, latestVersion := version.CheckUpdate()
-		return checkUpdateNotificationMsg(hasUpdate, latestVersion)
-	}
-}
-// ... checkUpdateNotificationMsg / newVersionNotifyContent 与提取前逐字一致；
-// 「发现新版本」toast 经 ui.BuildToastNotificationSpec 构建（ui 导出的
-// toast-spec 助手，插件对 ui 的唯一依赖）。
+// ... checkUpdateNotificationSpec / checkUpdateNotificationMsg /
+// newVersionNotifyContent 与提取前逐字一致；「发现新版本」toast 经
+// ui.BuildToastNotificationSpec 构建（ui 导出的 toast-spec 助手）。
 ```
 
 `registry.go`（编译期注册入口，`init()` 触发）：
@@ -230,6 +250,29 @@ func init() {
 	ui.RegisterMenu("check_update", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 		return &CheckUpdateMenu{BaseMenu: base}, nil
 	})
+	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加「检查更新」。
+	ui.RegisterMainMenuItem("check_update", "检查更新")
+	// 注册启动自动检查（原 shell 级硬编码启动检查，见 startup.go）。
+	ui.RegisterStartupHook(startupCheck)
+}
+```
+
+`startup.go`（启动钩子：配置门控的自动检查）：
+
+```go
+// 文件：internal/plugins/checkupdate/startup.go
+func startupCheck() {
+	if !configs.AppConfig.Startup.CheckUpdate {
+		return
+	}
+	if ok, newVersion := version.CheckUpdate(); ok {
+		notify.Notify(notify.NotifyContent{
+			Title:       "发现新版本: " + newVersion,
+			Text:        "去看看呗",
+			Url:         types.AppGithubUrl + "/releases/tag/" + newVersion,
+			ActionLabel: "前往 GitHub",
+		})
+	}
 }
 ```
 
@@ -249,17 +292,9 @@ import (
 )
 ```
 
-主菜单跳转点经注册表构建并执行插件菜单的 Action（`internal/ui/menu_main.go`）：
+主菜单不再对「检查更新」做索引特判（`mainMenuCheckUpdateIndex` 已随插件化移除）：`NewMainMenu` 读取 `MainMenuPluginItems()`，在全部内置项之后追加插件入口并按 key 构建菜单；选中后进入插件菜单，由插件自身的 `BeforeEnterMenuHook` / `Action` 承担检查与通知。
 
-```go
-checkUpdate := buildMenuOrToast("check_update", m.baseMenu, NoArgMenuOpts{})
-if checkUpdate == nil {
-	return app.MustMain(), nil
-}
-return checkUpdate.Action(app, 0)
-```
-
-**启动钩子限制**：插件只接管菜单触发的检查；启动时的自动检查（配置 `[startup] checkUpdate`）仍留在 shell（`netease.go`）直连执行——当前没有启动钩子机制，且 `ui` 不得反向导入插件包（避免 import cycle）。启动检查的 notify 内容在 shell 内联，与插件内 `newVersionNotifyContent` 文案保持一致。
+**启动钩子调用点**：shell 的 `InitHook`（`internal/ui/netease.go`）在用户/登录恢复之后、自动播放之前的位置调用 `runStartupHooks()`（即原 shell 级启动自动检查所在位置，启动序第 10 步）。此时 services 已注册、toast 已接线；每个 hook 带 recover 隔离，panic 仅记日志不阻断启动。
 
 ### 示例二：hello 菜单插件（静态菜单项）
 
@@ -381,7 +416,7 @@ import (
 )
 ```
 
-> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。`ui` 不得反向导入插件包（import cycle），因此 shell 侧需要复用插件逻辑时须内联（如启动自动检查）。
+> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。`ui` 不得反向导入插件包（import cycle），shell 需要插件能力时通过注册机制调用：插件能力经 `RegisterMainMenuItem` / `RegisterStartupHook` 声明，由 shell 在构建主菜单 / `InitHook` 时统一消费（不再需要内联插件逻辑）。
 
 ## 行为保持契约
 
@@ -389,6 +424,7 @@ import (
 - **错误经 `(Menu, error)` + toast 暴露**：构建失败返回 error，跳转处经 `buildMenuOrToast` / `buildPageOrToast` toast 报错并降级（返回 nil），**不 panic**。`mustBuildNoArg` 的 panic 语义只适用于静态代码中的注册表编程错误。
 - **服务解析不得丢弃 bool**：`framework.ServiceOf[T]` 的第二个返回值必须处理（记录错误 + 降级路径），禁止裸断言。
 - 插件 key 全局唯一：不得与内置 key（`expectedMenuKeys` / `expectedPageKeys`）或其它插件冲突。
+- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须是无参菜单 provider（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 经 `mustBuildNoArg` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）。
 
 ## 未来演进（预留边界，未实现）
 

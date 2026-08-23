@@ -64,6 +64,16 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 - [x] 3.8.4 bootstrap 构造器收窄：NewMainMenu/NewLocalSearchMenu 改收 baseMenu；新增导出 NewBaseMenu 桥接 commands 入口；删除 neteaseFromBase — 验证: neteaseFromBase 为 0 + make lint/test/build 绿 — 579d3505
 - [x] 3.8.5 player 桌面歌词走访问器：p.svc.DesktopLyrics()/GetDesktopLyricsLines()（menuServices 转发）— 验证: 编译 + 单测绿 — ae382fe5
 
+### Phase 3.9: plugin ecosystem practicalization — main-menu items and startup hooks
+
+两个机制让编译期插件生态真正可用：插件可以 (a) 声明自己的主菜单入口、(b) 注册启动任务；并把 check_update 插件改造为同时使用两者（移除其硬编码主菜单入口与 shell 级启动检查）。
+
+- **Mechanism A（主菜单插件项，registry.go + menu_main.go）**：`MainMenuItem{Key, Title}` + `RegisterMainMenuItem(key, title)`（追加，重复 key panic）+ `MainMenuPluginItems()`（快照）。`NewMainMenu` 在全部内置项之后追加插件项：`{Title: item.Title}` 入 `menus`、`mustBuildNoArg(item.Key, base)` 入 `menuList`（插件主菜单项 MUST 是无参菜单；key 未注册时启动 panic 作为完整性信号，先显式断言再构建以给出清晰错误）。`mainMenuCheckUpdateIndex`（15）与其 Action 特判分支随 check_update 插件化移除；`mainMenuHelpIndex`（14）保留（内置项末尾，插件项只追加在其后、不会使其漂移）。触发等价性：以前选中「检查更新」经 Action 特判直接触发检查；现在 Action 落到默认分支（返回 nil/nil）→ SubMenu 进入插件菜单 → 插件菜单自身的 `BeforeEnterMenuHook`（进入即触发检查并弹回主页面，单次 Enter）承担检查与通知。
+- **Mechanism B（启动钩子，registry.go + netease.go InitHook）**：`var startupHooks []func()` + `RegisterStartupHook(fn)`（追加，nil 拒绝）。`runStartupHooks()` 在 InitHook 启动序第 10 步调用（即原 shell 级「检查更新」自动检查位置：用户/登录恢复后、自动播放前，`errorx.Go` goroutine 内；此时 services 已注册、toast 已接线）。每个 hook 按注册序调用并包 recover——panic 经 slog/slogx 记日志、跳过该 hook，不阻断启动（framework panic 隔离 house style）。
+- **check_update 改造（internal/plugins/checkupdate）**：init() 追加 `ui.RegisterMainMenuItem("check_update", "检查更新")` 与 `ui.RegisterStartupHook(startupCheck)`；启动自动检查逻辑（config-gated `config.Startup.CheckUpdate`）自 netease.go 移入新文件 startup.go。`CheckUpdateMenu` 新增 `BeforeEnterMenuHook`（后台 goroutine 检查 + `app.Notify` 弹 TUI 通知 + 返回 (false, main) 弹回主页面）；Action 保留原检查命令路径。netease.go 删除硬编码启动检查块。
+- **文档**：docs/plugin_development.md 记录两个 API（边界表面表 + 规则 + 行为保持契约新增启动钩子不得 panic / 主菜单项 key 必须无参两条）+ 示例一按新形态更新（进入钩子 / 主菜单入口 / startup.go / 调用点）；AGENTS.md 同步 registry.go 表项与插件开发段落。
+- **测试**：registry_test 新增注册校验（重复/空 key panic、快照拷贝隔离）、NewMainMenu 追加插件项（内置项后、帮助索引不漂移、未注册 key panic）、runStartupHooks panic 隔离（顺序保持 + 中间 hook panic 被跳过）；ui 集成测试改为 TestMainMenuPluginItemRoutesToPluginMenu（Action 落默认分支 + SubMenu 路由到插件菜单）；plugins 聚合器测试断言 MainMenuPluginItems 含 check_update；checkupdate 测试新增进入钩子安装与 startupCheck 配置门控。
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -138,6 +148,23 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 - [x] 3.6.3 首个真实插件提取（check_update）— 08b5d7dd（`internal/plugins/checkupdate`：`CheckUpdateMenu` 嵌入 `ui.BaseMenu`，检查/通知逻辑自 `menu_check_update.go` 原样迁入；`registry.go` init() 注册 `"check_update"`；聚合器 `internal/plugins/plugins.go` 空导入 + `cmd/musicfox.go` 空导入聚合器；menu_main 检查更新入口经 `buildMenuOrToast("check_update")` 路由并执行插件菜单 Action；删除 `menu_check_update.go`；`check_update` 原本就不在内置注册与 `expectedMenuKeys` 中（无需删除），完整性断言不受影响、无重复 key panic。启动自动检查（netease.go config 门控）保留 shell 级：无启动钩子机制，ui 不得反向导入插件包，notify 内容在 shell 内联。`BuildToastNotificationSpec` 导出供插件复用；ui 测试二进制无法链接插件（import cycle），以行为等价 test-double 注册 `check_update`。测试：插件菜单经 registry 工厂构建/key/MenuViews、通知 spec 三态、聚合器空导入路径注册断言）
 
 验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净（`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。avcore 测试在 `make test` 全量运行时偶发 FAIL、单独/重跑即绿（与本阶段改动无关）。
+
+### Phase 3.8: decoupling round 2 — renderer interface refactor
+
+- [x] 3.8.1 访问器几何转发 — e2c369fc
+- [x] 3.8.2 renderer 去壳 — ae33e2f8
+- [x] 3.8.3 lastfm 页面 opts 去壳 — a4c1fb3a
+- [x] 3.8.4 bootstrap 构造器收窄 — 579d3505
+- [x] 3.8.5 player 桌面歌词访问器 — ae382fe5
+
+### Phase 3.9: plugin ecosystem practicalization — main-menu items and startup hooks
+
+- [x] 3.9.1 Mechanism A：主菜单插件项（RegisterMainMenuItem/MainMenuPluginItems + NewMainMenu 追加构建 + 完整性断言）— 见提交（上方 Implementation Plan 3.9 节）
+- [x] 3.9.2 Mechanism B：启动钩子（RegisterStartupHook + runStartupHooks 于 InitHook 第 10 步调用，recover 隔离）
+- [x] 3.9.3 check_update 插件化改造：主菜单入口 + 启动检查钩子 + BeforeEnterMenuHook 单次 Enter 触发；移除 mainMenuCheckUpdateIndex 特判与 netease.go 硬编码启动检查
+- [x] 3.9.4 测试与门禁：make lint 0 issues · make test 绿 · make build 绿 · gofmt 干净
+
+验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
 
 ### Phase 3.6 handler-services（解耦调查 work package 2）
 

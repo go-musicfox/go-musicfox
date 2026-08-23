@@ -138,7 +138,7 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 | `internal/ui/netease.go` | 薄壳协调器（App 集成/导航/事件分派/renderer 组合/服务实例持有） |
 | `internal/ui/services.go` | 服务名常量（`ServicePlayer` 等）+ `registerServices` 注册点 |
 | `internal/ui/services_scope.go` | framework Scope/Plugin 生命周期接线（shareSvc、lastfm 小切片） |
-| `internal/ui/registry.go` | provider 注册表：`RegisterMenu[T]`/`BuildMenu`/`mustBuildNoArg`/`buildMenuOrToast`、`RegisterPage[T]`/`BuildPage`、opts 契约类型 |
+| `internal/ui/registry.go` | provider 注册表：`RegisterMenu[T]`/`BuildMenu`/`mustBuildNoArg`/`buildMenuOrToast`、`RegisterPage[T]`/`BuildPage`、opts 契约类型；插件主菜单入口（`RegisterMainMenuItem`/`MainMenuPluginItems`）与启动钩子（`RegisterStartupHook`/`runStartupHooks`） |
 | `internal/ui/registry_registrations.go` | 内置菜单/页面 provider 的 `init()` 注册 |
 | `internal/ui/menu_accessor.go` | `menuServices` 类型安全访问器（服务解析 + 薄壳方法转发） |
 | `internal/ui/menu.go` | `Menu` 接口与 `baseMenu`（经访问器接线） |
@@ -225,7 +225,7 @@ type Player interface {
 
 对外插件边界（注册表 API、`framework.Context`/`ServiceOf` 服务解析、`Scope`/`Plugin` 生命周期、编译期注册示例与行为保持契约）见 `docs/plugin_development.md`。当前仅支持编译期注册（import + `init()`），运行时动态加载不在范围内。
 
-插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件子包（如 `internal/plugins/checkupdate`，首个真实插件——`CheckUpdateMenu` 嵌入 `ui.BaseMenu`，init() 经 `ui.RegisterMenu` 注册 `"check_update"`），`cmd/musicfox.go` 空导入聚合器触发注册。插件 key 不得与内置 key（`expectedMenuKeys`）冲突；`ui` 不得反向导入插件包（import cycle）。
+插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件子包（如 `internal/plugins/checkupdate`，首个真实插件——`CheckUpdateMenu` 嵌入 `ui.BaseMenu`，init() 经 `ui.RegisterMenu` 注册 `"check_update"`，并声明主菜单入口 `RegisterMainMenuItem("check_update", "检查更新")` 与启动钩子 `RegisterStartupHook(startupCheck)`），`cmd/musicfox.go` 空导入聚合器触发注册。插件 key 不得与内置 key（`expectedMenuKeys`）冲突；`ui` 不得反向导入插件包（import cycle）。插件主菜单项在 `NewMainMenu` 于全部内置项之后追加（必须是已注册的无参菜单，key 未注册时启动 panic 作为完整性信号）；启动钩子在 `InitHook` 启动序第 10 步（用户/登录就绪后、自动播放前）经 `runStartupHooks` 按注册序调用，每个 hook 带 recover 隔离，panic 仅记日志不阻断启动。
 
 ### 添加新播放器引擎
 
