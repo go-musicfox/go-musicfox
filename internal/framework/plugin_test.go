@@ -220,7 +220,7 @@ func TestScopeDisposeDetachesChildrenAndIsIdempotent(t *testing.T) {
 	assertHistory(t, history, []string{"dispose:child", "dispose:parent"})
 }
 
-func TestScopeStartErrorStopsRemainingPlugins(t *testing.T) {
+func TestScopeStartErrorRollsBackStartedPlugins(t *testing.T) {
 	var history []string
 	scope := &Scope{}
 	scope.Add(&trackingPlugin{name: "p1", history: &history})
@@ -231,10 +231,12 @@ func TestScopeStartErrorStopsRemainingPlugins(t *testing.T) {
 	if err == nil {
 		t.Fatal("Start() error = nil, want non-nil")
 	}
-	assertHistory(t, history, []string{"start:p1", "deps:bad", "start:bad"})
+	// p1 started before bad's Start failed; it must be rolled back (stopped in
+	// reverse order). p3 never starts.
+	assertHistory(t, history, []string{"start:p1", "deps:bad", "start:bad", "stop:p1"})
 }
 
-func TestScopeDepsErrorStopsRemainingPlugins(t *testing.T) {
+func TestScopeDepsErrorRollsBackStartedPlugins(t *testing.T) {
 	var history []string
 	scope := &Scope{}
 	scope.Add(&trackingPlugin{name: "p1", history: &history})
@@ -245,6 +247,45 @@ func TestScopeDepsErrorStopsRemainingPlugins(t *testing.T) {
 	if err == nil {
 		t.Fatal("Start() error = nil, want non-nil")
 	}
-	// bad's Deps fails, so its Start and p3 must never run.
-	assertHistory(t, history, []string{"start:p1", "deps:bad"})
+	// bad's Deps fails, so its Start and p3 must never run; p1 is rolled back.
+	assertHistory(t, history, []string{"start:p1", "deps:bad", "stop:p1"})
+}
+
+func TestScopeStartErrorRollsBackStartedChildScopes(t *testing.T) {
+	var history []string
+	scope := &Scope{}
+	scope.Add(&trackingPlugin{name: "root", history: &history})
+	child1 := scope.NewScope()
+	child1.Add(&trackingPlugin{name: "c1", history: &history})
+	child2 := scope.NewScope()
+	child2.Add(&failingPlugin{name: "c2bad", history: &history, errOn: "start"})
+	child3 := scope.NewScope()
+	child3.Add(&trackingPlugin{name: "c3", history: &history})
+
+	err := scope.Start(&Context{})
+	if err == nil {
+		t.Fatal("Start() error = nil, want non-nil")
+	}
+	// root plugin and child1 started before child2's plugin failed. Rollback
+	// stops child1 then root in reverse order; child3 never starts.
+	assertHistory(t, history, []string{
+		"start:root", "start:c1", "deps:c2bad", "start:c2bad",
+		"stop:c1", "stop:root",
+	})
+}
+
+func TestScopeStartErrorRollsBackDeepChildScope(t *testing.T) {
+	var history []string
+	scope := &Scope{}
+	child := scope.NewScope()
+	child.Add(&trackingPlugin{name: "child", history: &history})
+	deep := child.NewScope()
+	deep.Add(&failingPlugin{name: "deepbad", history: &history, errOn: "start"})
+
+	err := scope.Start(&Context{})
+	if err == nil {
+		t.Fatal("Start() error = nil, want non-nil")
+	}
+	// child started, then its nested deep scope failed; child must be stopped.
+	assertHistory(t, history, []string{"start:child", "deps:deepbad", "start:deepbad", "stop:child"})
 }

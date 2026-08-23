@@ -50,24 +50,46 @@ func (s *Scope) NewScope() *Scope {
 
 // Start starts all plugins in registration order. For plugins implementing
 // PluginWithDeps, Deps is invoked first to inject dependencies. Child scopes
-// are started after the receiver's own plugins.
+// are started after the receiver's own plugins. When any plugin or child scope
+// fails to start, the already-started plugins and child scopes are rolled back
+// (stopped in reverse start order) before the error is returned.
 func (s *Scope) Start(ctx *Context) error {
-	for _, p := range s.plugins {
+	startedPlugins := 0
+	for i, p := range s.plugins {
 		if withDeps, ok := p.(PluginWithDeps); ok {
 			if err := withDeps.Deps(ctx); err != nil {
+				s.rollback(startedPlugins, 0)
 				return err
 			}
 		}
 		if err := p.Start(ctx); err != nil {
+			s.rollback(startedPlugins, 0)
 			return err
 		}
+		startedPlugins = i + 1
 	}
-	for _, child := range s.children {
+	startedChildren := 0
+	for i, child := range s.children {
 		if err := child.Start(ctx); err != nil {
+			s.rollback(startedPlugins, startedChildren)
 			return err
 		}
+		startedChildren = i + 1
 	}
 	return nil
+}
+
+// rollback stops the successfully started child scopes (first startedChildren)
+// and plugins (first startedPlugins) in reverse start order, mirroring Stop.
+// Rollback errors are best-effort and ignored; the original start error is
+// what the caller receives.
+func (s *Scope) rollback(startedPlugins, startedChildren int) {
+	for i := startedChildren - 1; i >= 0; i-- {
+		_ = s.children[i].Stop()
+	}
+	for i := startedPlugins - 1; i >= 0; i-- {
+		_ = s.plugins[i].Stop()
+	}
 }
 
 // Stop stops the receiver's child scopes first, then its plugins, both in
