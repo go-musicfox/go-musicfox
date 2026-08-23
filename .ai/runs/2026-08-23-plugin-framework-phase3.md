@@ -54,6 +54,13 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 - [ ] 3.7.2 事件 handler panic 隔离 — 验证: 四类 handler panic 单测（-race）+ make lint/test/build 绿
 - [ ] 3.7.3 测试覆盖 — 验证: 全部门禁绿
 
+### Phase 3.8: decoupling round 2 — renderer interface refactor
+
+5 个 renderer 目前持有 `netease *Netease`，仅用于 (a) 嵌入式 `*model.App` 方法、(b) 访问器已有成员、(c) 5 个 shell 持有的跨 renderer 几何方法。目标：renderer 依赖 `*menuServices`（访问器）+ 自有业务服务，不再持有 `*Netease`。仅访问路径变更，布局/渲染逻辑不动。
+
+- [ ] 3.8.1 访问器几何转发：menuServices 新增 EffectiveWindowHeight/SpectrumLines/GetCoverWidth/GetCoverEndColumn/GetLyricPosition — 验证: 编译 + 单测绿
+- [ ] 3.8.2 renderer 去壳：5 个 renderer 的 netease 字段 → svc，构造器签名同步；netease.go 组合接线与 renderer 测试更新 — 验证: grep renderer netease 为 0 + make lint/test/build 绿
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -164,6 +171,15 @@ framework 生命周期语义加固（#646 评审后续第二轮）。**正确用
 - [x] 3.7.3 测试覆盖 — b52926b2（状态机：双启动拒绝/Stop 前置 no-op/Dispose 隐式 Stop 已启动作用域/Start 与 Add 于 dispose 后拒绝/失败启动保持未启动可重试；错误聚合：Stop 聚合插件与子作用域失败仍全停、Dispose 聚合子+插件失败仍清状态、Dispose 已启动作用域透出隐式 Stop 失败；panic 隔离：listener/middleware/serial panic 中断链返回框架错误、parallel panic 经 errCh 且其余 handler 仍跑完（-race 下全绿）；既有 Dispose 测试断言更新为隐式 Stop 顺序）
 
 验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净。
+
+### Phase 3.8: decoupling round 2 — renderer interface refactor
+
+5 个 renderer（lyric/songInfo/progress/cover/composite）不再持有 `*Netease`，改为依赖 `*menuServices` 访问器 + 自有业务服务：
+
+- [x] 3.8.1 访问器几何转发 — e2c369fc（menuServices 新增 5 个薄壳几何转发：EffectiveWindowHeight/SpectrumLines/GetCoverWidth/GetCoverEndColumn/GetLyricPosition，各转发至 Netease 薄壳方法并 nil 安全）
+- [x] 3.8.2 renderer 去壳 — ae33e2f8（lyric/songInfo/progress/cover/composite 的 `netease *Netease` 字段 → `svc *menuServices`；构造器首参 netease → svc；`WindowWidth` → `svc.App().WindowWidth()`，`Player()` → `svc.Player()`，`playbarHoveredElement` → `svc.PlaybarHoveredElement()`，跨 renderer 几何走新转发；netease.go Components 构造点与 renderer 测试同步；`grep -n netease internal/ui/*renderer*.go` 为 0；顺带修复 whole-file lint 暴露的既有债务：ST1003 initialism 重命名（currentSongId→currentSongID/picUrl→picURL/getCoverUrl→getCoverURL/cachedSongId→cachedSongID）、SA1019（util.SetFg*Style → style.FG/FGBG）、移除 dead 字段 lastAngle/lastViewTime）
+
+验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
 
 ### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
 
