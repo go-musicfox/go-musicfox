@@ -23,14 +23,6 @@ type CompositeColumn struct {
 	WidthRatio float64 // Width percentage (0.0-1.0)
 }
 
-// NewCompositeRenderer creates a new composite renderer with the given columns.
-func NewCompositeRenderer(netease *Netease, columns []CompositeColumn) *CompositeRenderer {
-	return &CompositeRenderer{
-		netease: netease,
-		columns: columns,
-	}
-}
-
 // Update handles UI messages and forwards them to all child components.
 func (r *CompositeRenderer) Update(msg tea.Msg, a *model.App) {
 	for _, col := range r.columns {
