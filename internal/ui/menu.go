@@ -8,8 +8,14 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
 
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/track"
 )
 
 // Menu menu interface
@@ -48,10 +54,21 @@ type ArtistsMenu interface {
 	Artists() []structs.Artist
 }
 
-type baseMenu struct {
+// BaseMenu is the embeddable base for menus. It is exported so external plugin
+// factories (outside package ui) can embed it and implement the ui.Menu
+// interface; it carries the menuServices accessor through which plugins reach
+// services and the thin-shell navigation surface (see the forwarding methods
+// below and docs/plugin_development.md). baseMenu is an alias, so all existing
+// internal code and registry registrations keep compiling untouched.
+type BaseMenu struct {
 	model.DefaultMenu
 	svc *menuServices
 }
+
+// baseMenu is the unexported alias kept for internal call sites and the
+// RegisterMenu/BuildMenu signatures (aliases are interchangeable, so factories
+// written with BaseMenu are accepted as-is).
+type baseMenu = BaseMenu
 
 func newBaseMenu(netease *Netease) baseMenu {
 	return baseMenu{
@@ -65,11 +82,146 @@ func newBaseMenuFromSvc(svc *menuServices) baseMenu {
 	return baseMenu{svc: svc}
 }
 
-func (e *baseMenu) HelpHints() []model.HelpHint {
+// --- Exported accessor forwarding (plugin boundary, Phase 3.6). External
+// plugin menus embed BaseMenu and reach services/navigation through these
+// methods; each forwards to the menuServices accessor and is nil-safe (a
+// zero-value BaseMenu degrades to the zero value without a panic).
+
+// Player resolves the player service.
+func (e *BaseMenu) Player() *Player {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Player()
+}
+
+// User resolves the current user (nil until login).
+func (e *BaseMenu) User() *structs.User {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.User()
+}
+
+// TrackManager resolves the track manager service.
+func (e *BaseMenu) TrackManager() *track.Manager {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.TrackManager()
+}
+
+// LyricService resolves the lyric service.
+func (e *BaseMenu) LyricService() *lyric.Service {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.LyricService()
+}
+
+// DesktopLyrics resolves the desktop lyrics controller.
+func (e *BaseMenu) DesktopLyrics() desktop_lyrics.Controller {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.DesktopLyrics()
+}
+
+// CoverRenderer resolves the cover renderer.
+func (e *BaseMenu) CoverRenderer() *CoverRenderer {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.CoverRenderer()
+}
+
+// ShareSvc resolves the share service.
+func (e *BaseMenu) ShareSvc() *composer.ShareService {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.ShareSvc()
+}
+
+// Lastfm resolves the Last.fm client.
+func (e *BaseMenu) Lastfm() *lastfm.Client {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Lastfm()
+}
+
+// Ctx returns the app-wide framework context backing the accessor.
+func (e *BaseMenu) Ctx() *framework.Context {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Ctx()
+}
+
+// App returns the foxful app shell (nil when unset).
+func (e *BaseMenu) App() *model.App {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.App()
+}
+
+// MustMain returns the foxful main page (nil when the app has not started).
+func (e *BaseMenu) MustMain() *model.Main {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.MustMain()
+}
+
+// Rerender returns a tea.Cmd that forces a re-render on the app shell.
+func (e *BaseMenu) Rerender() tea.Cmd {
+	if e.svc == nil || e.svc.App() == nil {
+		return nil
+	}
+	return e.svc.App().RerenderCmd(true)
+}
+
+// Search returns the shell-owned search page singleton (nil when unset).
+func (e *BaseMenu) Search() *SearchPage {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Search()
+}
+
+// ToLoginPage forwards to the thin-shell login navigation.
+func (e *BaseMenu) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
+	if e.svc == nil {
+		return nil, nil
+	}
+	return e.svc.ToLoginPage(callback)
+}
+
+// ToSearchPage forwards to the thin-shell search navigation.
+func (e *BaseMenu) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
+	if e.svc == nil {
+		return nil, nil
+	}
+	return e.svc.ToSearchPage(searchType)
+}
+
+// Netease returns the Netease shell. Escape hatch for legacy helper calls that
+// still take *Netease; new external plugin code should prefer the accessor
+// methods above.
+func (e *BaseMenu) Netease() *Netease {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Netease()
+}
+
+func (e *BaseMenu) HelpHints() []model.HelpHint {
 	return nil
 }
 
-func (e *baseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
+func (e *BaseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
 	menu := a.MustMain().CurMenu()
 	songsMenu, ok := menu.(SongsMenu)
 	if !ok || !songsMenu.IsPlayable() {
@@ -85,7 +237,7 @@ func (e *baseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
 	return nil, a.RerenderCmd(true)
 }
 
-func (e *baseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenuItem {
+func (e *BaseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenuItem {
 	main := a.MustMain()
 	menu := main.CurMenu()
 	if menu.GetMenuKey() == actionMenuKey {
@@ -113,7 +265,7 @@ func (e *baseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenu
 	return appendContextMenuGlobalItems(items, len(e.svc.Player().Playlist()) > 0)
 }
 
-func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.ContextMenuItem) (model.Page, tea.Cmd) {
+func (e *BaseMenu) ContextMenuAction(a *model.App, index int, item model.ContextMenuItem) (model.Page, tea.Cmd) {
 	main := a.MustMain()
 	menu := main.CurMenu()
 	if menu.GetMenuKey() == actionMenuKey {
@@ -188,10 +340,10 @@ func handleGenericContextAction(svc *menuServices, a *model.App, id string) (mod
 	return nil, nil
 }
 
-func (e *baseMenu) IsPlayable() bool {
+func (e *BaseMenu) IsPlayable() bool {
 	return false
 }
 
-func (e *baseMenu) IsLocatable() bool {
+func (e *BaseMenu) IsLocatable() bool {
 	return true
 }

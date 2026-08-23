@@ -18,6 +18,7 @@
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
 | 菜单跳转 | `BuildMenu[T]` / `mustBuildNoArg` / `buildMenuOrToast` | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `buildPageOrToast` | `internal/ui/registry.go` |
+| 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
 | 类型安全访问器 | `menuServices`（`svc.Player()` 等） | `internal/ui/menu_accessor.go` |
 | 服务名常量 | `ServicePlayer` 等 | `internal/ui/services.go` |
@@ -26,7 +27,9 @@
 ### 注册表：key → 参数化工厂
 
 ```go
-// 菜单 provider：opts 类型 T 即该菜单的参数契约。
+// 菜单 provider：opts 类型 T 即该菜单的参数契约。factory 的 base 参数用
+// baseMenu（BaseMenu 的别名），等价地可写为 BaseMenu——注册签名对
+// BaseMenu 类型工厂直接兼容（别名可互换）。
 func RegisterMenu[T any](key string, f func(base baseMenu, opts T) (Menu, error))
 
 // 跳转：唯一运行时类型断言藏在 registry 内部，调用侧零断言。
@@ -48,6 +51,38 @@ func BuildPage[T any](key string, opts T) (model.Page, error)
 - 注册时机：编译期 `init()`。key 为空、factory 为 nil 或 key 重复注册都会 panic（程序员错误，启动即暴露）。
 - 参数契约进类型系统：如 `PlaylistDetailOpts{PlaylistID int64}`、`ArtistDetailOpts{ArtistID, Name}`；与注册类型不匹配的构建在 registry 内部报错。
 - 注册表本身是 framework 服务（`ServiceMenuRegistry` / `ServicePageRegistry`），提供 `Registered(key)` / `Keys()` 供完整性断言与测试使用。
+
+### 菜单基座：BaseMenu
+
+`BaseMenu`（`internal/ui/menu.go`）是菜单的导出基座，外部插件菜单**嵌入它**即获得 `ui.Menu` 接口的默认实现（`IsPlayable`/`IsLocatable`/`Action`/`ContextMenuItems` 等）与 `menuServices` 访问器。`baseMenu` 是它的别名（alias），内置菜单与注册签名不受影响，二者可互换。
+
+`BaseMenu` 导出以下转发方法（每个都转发到 `menuServices`，nil 安全）：
+
+```go
+// 服务解析：
+base.Player()       // *Player
+base.User()         // *structs.User（未登录为 nil）
+base.TrackManager() // *track.Manager
+base.LyricService() // *lyric.Service
+base.DesktopLyrics()
+base.CoverRenderer()
+base.ShareSvc()
+base.Lastfm()
+base.Ctx()          // *framework.Context
+
+// 薄壳/导航：
+base.App()                       // *model.App
+base.MustMain()                  // *model.Main
+base.Rerender()                  // tea.Cmd（强制重绘）
+base.Search()                    // *SearchPage（shell 单例）
+base.ToLoginPage(callback)       // (model.Page, tea.Cmd)
+base.ToSearchPage(searchType)    // (model.Page, tea.Cmd)
+
+// 逃生口（旧辅助函数仍收 *Netease；新插件代码优先用上面的访问器）：
+base.Netease()                   // *Netease
+```
+
+外部菜单只需实现/覆写少量方法（`GetMenuKey`、`MenuViews`、`SubMenu`、数据加载的 `BeforeEnterMenuHook` 等），即可被注册并导航。
 
 ### 服务解析：Context / ServiceOf
 
@@ -128,23 +163,30 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 
 **当前边界注意**：
 
-- `internal/ui` 是 internal 包（仅本模块可导入）；`baseMenu` / `Netease` 是 `ui` 包**未导出**类型——注册闭包签名 `func(base baseMenu, opts T) (Menu, error)` 目前只能在 `ui` 包内书写。因此示例代码按 **`ui` 包内注册文件** 呈现（与内置菜单的注册形态完全一致）；独立仓库插件需要未来的导出适配层，属预留边界。
+- `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`）。
+- `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `github.com/go-musicfox/go-musicfox/plugins/example_hello`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
+- `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
 ## 工作示例
 
-> 以下代码与 `internal/ui/plugin_example_test.go` 中的编译校验一一对应。
+> 以下代码与 `internal/ui/plugin_example_test.go`（包内编译校验）及 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）一一对应。
 
 ### 示例一：hello 菜单插件（静态菜单项）
 
 ```go
-// 文件：plugin_example_hello.go（ui 包内注册文件）
-package ui
+// 文件：plugins/example_hello/plugin.go（go-musicfox 模块树内的插件子包）
+package example_hello
 
-import "github.com/anhoder/foxful-cli/model"
+import (
+	"github.com/anhoder/foxful-cli/model"
 
-// ExampleHelloMenu 展示一个静态菜单项的示例插件菜单。
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
+
+// ExampleHelloMenu 展示一个静态菜单项的示例插件菜单：嵌入 ui.BaseMenu，
+// 无需在外部包中接触未导出类型。
 type ExampleHelloMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 }
 
@@ -165,10 +207,11 @@ func (m *ExampleHelloMenu) BeforeEnterMenuHook() model.Hook {
 	}
 }
 
-// init() 是编译期注册入口：包被链接进二进制后自动执行。
+// init() 是编译期注册入口：包被链接进二进制后自动执行。factory 的 base
+// 参数类型写成 ui.BaseMenu（注册签名用其别名 baseMenu，二者可互换）。
 func init() {
-	RegisterMenu("example_hello", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return &ExampleHelloMenu{baseMenu: base}, nil
+	ui.RegisterMenu("example_hello", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return &ExampleHelloMenu{BaseMenu: base}, nil
 	})
 }
 ```
@@ -191,12 +234,14 @@ func (m *SomeParentMenu) SubMenu(_ *model.App, index int) model.Menu {
 ### 示例二：页面插件
 
 ```go
-// 文件：plugin_example_hello_page.go（ui 包内注册文件）
-package ui
+// 文件：plugins/example_hello/page.go（插件子包）
+package example_hello
 
 import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
 // ExampleHelloPageOpts 是页面插件的参数契约（可按需携带任意字段）。
@@ -216,7 +261,7 @@ func (p *ExampleHelloPage) View(*model.App) string { return "你好，插件页�
 func (p *ExampleHelloPage) Msg() tea.Msg { return nil }
 
 func init() {
-	RegisterPage("example_hello_page", func(_ ExampleHelloPageOpts) (model.Page, error) {
+	ui.RegisterPage("example_hello_page", func(_ ExampleHelloPageOpts) (model.Page, error) {
 		return &ExampleHelloPage{}, nil
 	})
 }
@@ -225,7 +270,7 @@ func init() {
 页面导航经 `BuildPage` / `buildPageOrToast`：
 
 ```go
-page, err := BuildPage("example_hello_page", ExampleHelloPageOpts{})
+page, err := ui.BuildPage("example_hello_page", ExampleHelloPageOpts{})
 ```
 
 ### 接入二进制
@@ -233,11 +278,11 @@ page, err := BuildPage("example_hello_page", ExampleHelloPageOpts{})
 ```go
 // cmd/musicfox.go 或入口处空导入插件包，触发其 init() 注册：
 import (
-    _ "github.com/go-musicfox/example-plugins/example_hello" // 触发插件 init() 注册
+    _ "github.com/go-musicfox/go-musicfox/plugins/example_hello" // 触发插件 init() 注册
 )
 ```
 
-> 注：当前未导出类型 `baseMenu` 使注册闭包只能在 `ui` 包内书写；独立仓库插件需在边界类型导出后（预留工作）才能以本示例的 import 形态直接编译。
+> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。
 
 ## 行为保持契约
 
@@ -249,5 +294,5 @@ import (
 ## 未来演进（预留边界，未实现）
 
 - 运行时动态加载（Go `plugin` / 共享库热加载）与插件清单/配置化启停。
-- 导出边界类型（`baseMenu` / `Netease` 的导出适配层），使插件可在独立仓库中编译并空导入接入。
+- 突破 `internal` 导入规则的外部仓库形态（独立插件仓库直接导入边界包）；`Netease` 薄壳的导出适配层（当前仅经 `BaseMenu.Netease()` 逃生口）。
 - 插件元数据（名称/版本/作者）与贡献点声明。
