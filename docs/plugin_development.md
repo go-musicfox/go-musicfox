@@ -18,7 +18,7 @@
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
 | 菜单跳转 | `BuildMenu[T]` / `MustBuildNoArg` / `MustBuild` / `BuildMenuOrToast`（导出形式，供插件使用） | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
-| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
+| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
 | 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
 | 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法 + `Services()`） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
@@ -57,11 +57,14 @@ func BuildPage[T any](key string, opts T) (model.Page, error)
 // 跳转失败经 toast 降级（不 panic），返回 nil。插件内页面打开点用导出形式。
 func BuildPageOrToast[T any](key string, opts T) model.Page
 
-// 主菜单入口（Phase 3.9）：key 必须是无参菜单 provider，主菜单在全部内置项
-// 之后追加该入口并按 key 构建菜单（未注册的 key 在 NewMainMenu 启动时 panic，
-// 作为启动完整性信号）。
-func RegisterMainMenuItem(key, title string) // 空 key/title 或重复 key 会 panic
-func MainMenuPluginItems() []MainMenuItem    // 快照，供 NewMainMenu 构造
+// 主菜单入口（Phase 3.9）：key 必须已在菜单注册表中注册（主菜单在全部内置项
+// 之后追加该入口并按 key 构建菜单；未注册的 key 在 NewMainMenu 启动时 panic，
+// 作为启动完整性信号）。无 Build 的入口 key 必须是无参菜单 provider（经
+// mustBuildNoArg 构建）；带 Build 的入口由插件以自身 options 构造菜单
+// （参数化 provider 主菜单入口）。
+func RegisterMainMenuItem(key, title string)                            // 便捷形式，Build = nil
+func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu) // 空 key/title 或重复 key 会 panic
+func MainMenuPluginItems() []MainMenuItem                               // 快照，供 NewMainMenu 构造
 
 // 启动钩子（Phase 3.9）：注册启动任务。shell 在 InitHook 中用户/登录就绪后
 // 按注册序调用，每个 hook 带 panic 隔离（recover + 日志，不阻断启动）。
@@ -197,13 +200,13 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 **当前边界注意**：
 
 - `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`；首个真实插件 `internal/plugins/checkupdate` 即此形态）。
-- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api`、整个 DJ/电台集群的 `dj_*` / `radio_dj_type`、整个专辑集群的 `album_menu` / `album_*` / `album_detail` 以及整个歌手集群的 `artist_detail` / `artist_*` / `hot_artists` / `artists_sub_list` 由插件注册即可通过）。
+- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api`、整个 DJ/电台集群的 `dj_*` / `radio_dj_type`、整个专辑集群的 `album_menu` / `album_*` / `album_detail`、整个歌手集群的 `artist_detail` / `artist_*` / `hot_artists` / `artists_sub_list` 以及整个推荐集群的 `daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks` 由插件注册即可通过）。
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
 ## 工作示例
 
-> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五/六/七为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj` / `internal/plugins/album` / `internal/plugins/artist`），示例二/三为最小演示形态。
+> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五/六/七/八为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj` / `internal/plugins/album` / `internal/plugins/artist` / `internal/plugins/recommend`），示例二/三为最小演示形态。
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
@@ -309,6 +312,7 @@ import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/recommend"
 )
 
 // 文件：cmd/musicfox.go（入口空导入聚合器）
@@ -511,6 +515,24 @@ func init() {
 
 集群内共享的 opts 契约（`ArtistAlbumOpts` / `ArtistSongOpts`，仅集群内部使用）随菜单移入插件包；被 ui 侧共享的 `ArtistDetailOpts` / `ArtistsOfSongOpts` 留在 ui（`menu_search_result.go` / `operate.go` 均跳 `artist_detail`，operate.go 的 `goToArtistOfSong` 以 `ArtistsOfSongOpts` 携带歌曲载荷）。参数化菜单的 `GetMenuKey()` 仍返回动态形式（如 `artist_detail_<id>` / `artist_song_<id>` / `artist_album_<id>`），注册 key 保持静态前缀。集群中被 ui 反向引用的能力是「查看歌曲所属歌手的去重判断」（`operate.go` 对 `ArtistDetailMenu` / `ArtistsOfSongMenu` 做类型断言取 id）——ui 不能反向导入插件包，故改经导出接口 `ui.ArtistDetailIDGetter`（`ArtistID() int64`）与 `ui.ArtistsOfSongSongIDGetter`（`SongID() int64`）访问，插件菜单实现该接口即保持行为不变。
 
+### 示例八：推荐集群（第六个真实插件 + 批量主菜单项）
+
+> `internal/plugins/recommend` 是第六个真实插件：把「推荐/播放历史」集群（每日推荐歌曲、每日推荐歌单、私人FM、最近播放歌曲、排行榜）5 个菜单整体提取为外部式插件，与示例五/六/七同为集群批量提取示范，且是**一次声明 5 个主菜单项**的示范。所有 provider key 与提取前**逐一相同**（`daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks`），ui 侧跳入集群的调用点零改动；集群内跳转（`ranks` / `daily_playlists` 的 SubMenu 跳 `playlist_detail`）经 `ui.BuildMenu` 按 key 解析，`playlist_detail` 留在 ui。5 个入口菜单各自声明主菜单项「每日推荐歌曲 / 每日推荐歌单 / 私人FM / 最近播放歌曲 / 排行榜」（原内置索引 0/1/4/6/8，现为插件主菜单项排在全部内置项之后，帮助索引随之 10→5）：
+
+```go
+// 文件：internal/plugins/recommend/registry.go（节选）——入口菜单声明主菜单项
+func init() {
+	// ... RegisterMenu("daily_songs", ...) 等 5 个注册，key 与原内置注册一致
+	ui.RegisterMainMenuItem("daily_songs", "每日推荐歌曲")
+	ui.RegisterMainMenuItem("daily_playlists", "每日推荐歌单")
+	ui.RegisterMainMenuItem("personal_fm", "私人FM")
+	ui.RegisterMainMenuItem("recent_songs", "最近播放歌曲")
+	ui.RegisterMainMenuItem("ranks", "排行榜")
+}
+```
+
+本集群还是**登录门控 + 播放器服务经访问器**的示范：`daily_songs` / `daily_playlists` / `recent_songs` 的 `BeforeEnterMenuHook` 经 `m.User()` / `m.ToLoginPage(enterMenuCallback(main))` 走 `ui.BaseMenu` 转发（`enterMenuCallback` 在插件内镜像 ui 未导出的 `EnterMenuCallback`）；`personal_fm` 的 `BottomOutHook` 经 `m.Player()` 更新播放列表（`ReinitializePlaylist` / `MarkPlaylistUpdated`，Phase 3.6 播放列表 API）。
+
 ### 接入二进制（聚合器）
 
 正式插件的标准接入方式：每个插件子包被聚合器空导入（见示例一），入口只需空导入聚合器即可，不必逐个列插件：
@@ -525,6 +547,7 @@ import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/recommend"
 )
 
 // cmd/musicfox.go 或入口处空导入聚合器，触发全部插件 init() 注册：
@@ -541,7 +564,7 @@ import (
 - **错误经 `(Menu, error)` + toast 暴露**：构建失败返回 error，跳转处经 `buildMenuOrToast` / `buildPageOrToast` toast 报错并降级（返回 nil），**不 panic**。`mustBuildNoArg` 的 panic 语义只适用于静态代码中的注册表编程错误。
 - **服务解析不得丢弃 bool**：`framework.ServiceOf[T]` 的第二个返回值必须处理（记录错误 + 降级路径），禁止裸断言。
 - 插件 key 全局唯一：不得与内置 key（`expectedMenuKeys` / `expectedPageKeys`）或其它插件冲突。
-- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须是无参菜单 provider（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 经 `mustBuildNoArg` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）。
+- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须已在菜单注册表中注册（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）；无 `Build` 的入口 key 必须是无参菜单 provider（经 `mustBuildNoArg` 构建），参数化菜单入口需用 `RegisterMainMenuItemWith` 提供 `Build`。
 
 ## 未来演进（预留边界，未实现）
 
