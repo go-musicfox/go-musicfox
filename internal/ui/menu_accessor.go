@@ -26,6 +26,22 @@ type menuServices struct {
 	n   *Netease
 }
 
+// MenuServices is the exported alias of the menuServices accessor type
+// (Phase 3.9 plugin boundary). External packages (plugins) reference it in
+// their signatures, opts fields and page constructors — e.g.
+// `NewLastfmAuthPage(svc ui.MenuServices)`. Internal code keeps using
+// menuServices unchanged; aliases are interchangeable. The alias is to the
+// pointer form (as the accessor is always used via *menuServices).
+type MenuServices = *menuServices
+
+// NewMenuServices builds an accessor rooted at the framework context, without
+// attaching to a Netease shell (shell-dependent forwards — MustMain/App/
+// ToLoginPage etc. — degrade to nil/zero). Exported for plugin page flows and
+// tests that resolve services from a context.
+func NewMenuServices(ctx *framework.Context) MenuServices {
+	return &menuServices{ctx: ctx}
+}
+
 // newMenuServices builds the accessor from the framework context owned by the
 // Netease shell.
 func newMenuServices(n *Netease) *menuServices {

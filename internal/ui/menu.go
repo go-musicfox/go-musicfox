@@ -214,6 +214,13 @@ func (e *BaseMenu) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 	return e.svc.ToSearchPage(searchType)
 }
 
+// Services returns the underlying menuServices accessor (exported alias).
+// Plugins pass it into page-opts fields and constructors that require the
+// accessor type — the unexported svc field itself is unreachable outside ui.
+func (e *BaseMenu) Services() MenuServices {
+	return e.svc
+}
+
 // Netease returns the Netease shell. Escape hatch for legacy helper calls that
 // still take *Netease; new external plugin code should prefer the accessor
 // methods above.
