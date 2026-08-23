@@ -16,8 +16,7 @@ import (
 const LastfmCustomAPIPageType model.PageType = "lastfm_custom_api"
 
 type LastfmCustomAPIPage struct {
-	netease *Netease
-	svc     *menuServices // service accessor (Phase 3.3.5)
+	svc *menuServices // service accessor (Phase 3.3.5)
 
 	menuTitle    *model.MenuItem
 	index        int
@@ -56,13 +55,13 @@ type LastfmCustomAPIPage struct {
 	mousePointer  string
 }
 
-func NewLastfmCustomAPIPage(netease *Netease) *LastfmCustomAPIPage {
-	page := newLastfmCustomAPIPage(netease)
+func NewLastfmCustomAPIPage(svc *menuServices) *LastfmCustomAPIPage {
+	page := newLastfmCustomAPIPage(svc)
 	page.reloadAPIAccount()
 	return page
 }
 
-func newLastfmCustomAPIPage(netease *Netease) *LastfmCustomAPIPage {
+func newLastfmCustomAPIPage(svc *menuServices) *LastfmCustomAPIPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
 	keyInput.CharLimit = 32
@@ -76,8 +75,7 @@ func newLastfmCustomAPIPage(netease *Netease) *LastfmCustomAPIPage {
 	secretInput.SetStyles(pageInputStyles())
 
 	page := &LastfmCustomAPIPage{
-		netease:       netease,
-		svc:           newMenuServices(netease),
+		svc:           svc,
 		menuTitle:     &model.MenuItem{Title: "Lastfm API account"},
 		keyInput:      keyInput,
 		secretInput:   secretInput,
@@ -105,7 +103,7 @@ func (l *LastfmCustomAPIPage) Type() model.PageType {
 func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
 		mouse := mouseMsg.Mouse()
-		mainPage := l.netease.MustMain()
+		mainPage := l.svc.MustMain()
 		oldBackHovered := l.backBtnHovered
 		oldInputHovered := l.hoveredInput
 		oldButtonHovered := l.hoveredButton
@@ -151,14 +149,14 @@ func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 		if mouse.Button != tea.MouseLeft {
 			return l.updateAccountInputs(msg)
 		}
-		mainPage := l.netease.MustMain()
+		mainPage := l.svc.MustMain()
 		if newPage := pageBreadcrumbClick(a, mainPage, mouse.X, mouse.Y); newPage != nil {
 			l.tips = ""
-			return newPage, l.netease.RerenderCmd(true)
+			return newPage, l.svc.App().RerenderCmd(true)
 		}
 		if mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+pageBackButtonWidth {
 			l.tips = ""
-			return mainPage, l.netease.RerenderCmd(true)
+			return mainPage, l.svc.App().RerenderCmd(true)
 		}
 		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
 			switch mouse.Y {
@@ -203,7 +201,7 @@ func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 		fallthrough
 	case "esc":
 		l.tips = ""
-		return l.netease.MustMain(), l.netease.RerenderCmd(true)
+		return l.svc.MustMain(), l.svc.App().RerenderCmd(true)
 	case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 		if keyName == "enter" && l.index >= l.submitIndex {
 			return l.enterHandler()
@@ -238,7 +236,7 @@ func (l *LastfmCustomAPIPage) View(a *model.App) string {
 	var (
 		builder  strings.Builder
 		top      int
-		mainPage = l.netease.MustMain()
+		mainPage = l.svc.MustMain()
 	)
 	lineCount := 0
 	write := func(text string) {
@@ -362,7 +360,7 @@ func (l *LastfmCustomAPIPage) applyFocus() {
 }
 
 func (l *LastfmCustomAPIPage) enterHandler() (model.Page, tea.Cmd) {
-	loading := model.NewLoading(l.netease.MustMain(), l.menuTitle)
+	loading := model.NewLoading(l.svc.MustMain(), l.menuTitle)
 	loading.DisplayNotOnlyOnMain()
 	loading.Start()
 	defer loading.Complete()

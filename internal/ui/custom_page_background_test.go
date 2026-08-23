@@ -22,8 +22,8 @@ func TestCustomPagesFillExplicitAppBackground(t *testing.T) {
 		"search":             NewSearchPage(netease),
 		"login":              login,
 		"qr-login":           NewQRLoginPage(netease, login, nil),
-		"lastfm-auth":        NewLastfmAuthPage(netease),
-		"lastfm-qr-auth":     NewLastfmQRAuthPage(netease, login, nil),
+		"lastfm-auth":        NewLastfmAuthPage(newMenuServices(netease)),
+		"lastfm-qr-auth":     NewLastfmQRAuthPage(newMenuServices(netease), login, nil),
 		"lastfm-api-account": newLastfmCustomAPIPageForBackgroundTest(netease),
 	}
 	for name, page := range pages {
@@ -40,8 +40,8 @@ func TestCustomPagesLeaveTransparentAppBackgroundUnpainted(t *testing.T) {
 		"search":             NewSearchPage(netease),
 		"login":              login,
 		"qr-login":           NewQRLoginPage(netease, login, nil),
-		"lastfm-auth":        NewLastfmAuthPage(netease),
-		"lastfm-qr-auth":     NewLastfmQRAuthPage(netease, login, nil),
+		"lastfm-auth":        NewLastfmAuthPage(newMenuServices(netease)),
+		"lastfm-qr-auth":     NewLastfmQRAuthPage(newMenuServices(netease), login, nil),
 		"lastfm-api-account": newLastfmCustomAPIPageForBackgroundTest(netease),
 	}
 	for name, page := range pages {
@@ -65,7 +65,7 @@ func newLastfmCustomAPIPageForBackgroundTest(netease *Netease) *LastfmCustomAPIP
 	secretInput.Placeholder = " Secret"
 
 	return &LastfmCustomAPIPage{
-		netease:      netease,
+		svc:          newMenuServices(netease),
 		menuTitle:    &model.MenuItem{Title: "Lastfm API account"},
 		keyInput:     keyInput,
 		secretInput:  secretInput,

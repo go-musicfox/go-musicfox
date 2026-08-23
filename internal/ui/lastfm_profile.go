@@ -39,7 +39,7 @@ func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		page := buildPageOrToast("lastfm_custom_api", LastfmCustomAPIPageOpts{Netease: m.svc.Netease()})
+		page := buildPageOrToast("lastfm_custom_api", LastfmCustomAPIPageOpts{svc: m.svc})
 		if page == nil {
 			return nil
 		}
@@ -49,7 +49,7 @@ func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 		return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)
 	case 1:
 		if m.svc.Lastfm().NeedAuth() {
-			page := buildPageOrToast("lastfm_auth", LastfmAuthPageOpts{Netease: m.svc.Netease()})
+			page := buildPageOrToast("lastfm_auth", LastfmAuthPageOpts{svc: m.svc})
 			if page == nil {
 				return nil
 			}

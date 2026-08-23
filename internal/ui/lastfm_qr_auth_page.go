@@ -34,9 +34,8 @@ type lastfmQRErrorMsg struct{ err error }
 
 // LastfmQRAuthPage Last.fm 二维码授权页面
 type LastfmQRAuthPage struct {
-	netease *Netease
-	svc     *menuServices // service accessor (Phase 3.3.5)
-	from    model.Page
+	svc  *menuServices // service accessor (Phase 3.3.5)
+	from model.Page
 
 	token       string
 	url         string
@@ -55,15 +54,14 @@ func (p *LastfmQRAuthPage) Msg() tea.Msg {
 	return nil
 }
 
-func NewLastfmQRAuthPage(netease *Netease, from model.Page, afterAction func()) *LastfmQRAuthPage {
+func NewLastfmQRAuthPage(svc *menuServices, from model.Page, afterAction func()) *LastfmQRAuthPage {
 	page := &LastfmQRAuthPage{
-		netease:     netease,
-		svc:         newMenuServices(netease),
+		svc:         svc,
 		from:        from,
 		AfterAction: afterAction,
 		statusMsg:   "正在生成二维码，请稍候...",
 	}
-	page.loading = model.NewLoading(netease.MustMain(), &model.MenuItem{Title: "Last.fm 二维码授权"})
+	page.loading = model.NewLoading(svc.MustMain(), &model.MenuItem{Title: "Last.fm 二维码授权"})
 	page.loading.DisplayNotOnlyOnMain()
 	return page
 }
@@ -99,7 +97,7 @@ func (p *LastfmQRAuthPage) Update(msg tea.Msg, _ *model.App) (model.Page, tea.Cm
 			if p.qrCodePath != "" {
 				_ = os.Remove(p.qrCodePath)
 			}
-			return p.from, p.netease.RerenderCmd(true)
+			return p.from, p.svc.App().RerenderCmd(true)
 		case "v":
 			if p.qrCodePath != "" {
 				err := open.Start(p.qrCodePath)
@@ -120,7 +118,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 	var builder strings.Builder
 
 	var top int
-	mainPage := p.netease.MustMain()
+	mainPage := p.svc.MustMain()
 	builder.WriteString(pageTitleView(a, mainPage, &top))
 	builder.WriteString(pageMenuTitleView(a, mainPage, &top, &model.MenuItem{Title: "Last.fm 二维码授权"}))
 	builder.WriteString("\n\n")
@@ -224,7 +222,7 @@ func (p *LastfmQRAuthPage) generateQRCodeCmd() tea.Msg {
 
 // confirmAuth 用户确认已授权，尝试获取 session
 func (p *LastfmQRAuthPage) confirmAuth() (model.Page, tea.Cmd) {
-	loading := model.NewLoading(p.netease.MustMain(), &model.MenuItem{Title: "Last.fm 二维码授权"})
+	loading := model.NewLoading(p.svc.MustMain(), &model.MenuItem{Title: "Last.fm 二维码授权"})
 	loading.DisplayNotOnlyOnMain()
 	loading.Start()
 	defer loading.Complete()
@@ -271,5 +269,5 @@ func (p *LastfmQRAuthPage) confirmAuth() (model.Page, tea.Cmd) {
 		GroupId: types.GroupID,
 	})
 
-	return p.netease.MustMain(), p.netease.RerenderCmd(true)
+	return p.svc.MustMain(), p.svc.App().RerenderCmd(true)
 }

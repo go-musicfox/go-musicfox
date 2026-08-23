@@ -203,7 +203,7 @@ func init() {
 	})
 
 	RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
-		return NewLastfmAuthPage(opts.Netease), nil
+		return NewLastfmAuthPage(opts.svc), nil
 	})
 
 	// --- Phase 3.3.2 page migrations ---
@@ -216,7 +216,7 @@ func init() {
 	})
 
 	RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
-		return NewLastfmCustomAPIPage(opts.Netease), nil
+		return NewLastfmCustomAPIPage(opts.svc), nil
 	})
 }
 

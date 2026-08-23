@@ -25,8 +25,7 @@ import (
 const LastfmAuthPageType model.PageType = "lastfm_auth"
 
 type LastfmAuthPage struct {
-	netease *Netease
-	svc     *menuServices // service accessor (Phase 3.3.5)
+	svc *menuServices // service accessor (Phase 3.3.5)
 
 	menuTitle       *model.MenuItem
 	index           int
@@ -70,7 +69,7 @@ type LastfmAuthPage struct {
 	mousePointer  string
 }
 
-func NewLastfmAuthPage(netease *Netease) *LastfmAuthPage {
+func NewLastfmAuthPage(svc *menuServices) *LastfmAuthPage {
 	accountInput := textinput.New()
 	accountInput.Placeholder = " 用户名或邮箱"
 	accountInput.CharLimit = 32
@@ -84,8 +83,7 @@ func NewLastfmAuthPage(netease *Netease) *LastfmAuthPage {
 	passwordInput.SetStyles(pageInputStyles())
 
 	page := &LastfmAuthPage{
-		netease:       netease,
-		svc:           newMenuServices(netease),
+		svc:           svc,
 		menuTitle:     &model.MenuItem{Title: "Lastfm用户登录/授权"},
 		accountInput:  accountInput,
 		passwordInput: passwordInput,
@@ -114,7 +112,7 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd)
 	// 处理鼠标移动事件
 	if mouseMsg, ok := msg.(tea.MouseMotionMsg); ok {
 		mouse := mouseMsg.Mouse()
-		mainPage := l.netease.MustMain()
+		mainPage := l.svc.MustMain()
 		oldBackHovered := l.backBtnHovered
 		oldInputHovered := l.hoveredInput
 		oldButtonHovered := l.hoveredButton
@@ -161,14 +159,14 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd)
 		if mouse.Button != tea.MouseLeft {
 			return l.updateLoginInputs(msg)
 		}
-		mainPage := l.netease.MustMain()
+		mainPage := l.svc.MustMain()
 		if newPage := pageBreadcrumbClick(a, mainPage, mouse.X, mouse.Y); newPage != nil {
 			l.tips = ""
-			return newPage, l.netease.RerenderCmd(true)
+			return newPage, l.svc.App().RerenderCmd(true)
 		}
 		if mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnEndX {
 			l.tips = ""
-			return mainPage, l.netease.RerenderCmd(true)
+			return mainPage, l.svc.App().RerenderCmd(true)
 		}
 		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
 			switch mouse.Y {
@@ -218,7 +216,7 @@ func (l *LastfmAuthPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd)
 		fallthrough
 	case "esc":
 		l.tips = ""
-		return l.netease.MustMain(), l.netease.RerenderCmd(true)
+		return l.svc.MustMain(), l.svc.App().RerenderCmd(true)
 	case "tab", "shift+tab", "enter", "up", "down", "left", "right":
 		s := key.String()
 
@@ -263,7 +261,7 @@ func (l *LastfmAuthPage) View(a *model.App) string {
 	var (
 		builder  strings.Builder
 		top      int
-		mainPage = l.netease.MustMain()
+		mainPage = l.svc.MustMain()
 	)
 
 	lineCount := 0
@@ -418,7 +416,7 @@ func (l *LastfmAuthPage) browserButtonTextByStep() string {
 }
 
 func (l *LastfmAuthPage) enterHandler() (model.Page, tea.Cmd) {
-	loading := model.NewLoading(l.netease.MustMain(), l.menuTitle)
+	loading := model.NewLoading(l.svc.MustMain(), l.menuTitle)
 	loading.DisplayNotOnlyOnMain()
 	loading.Start()
 	defer loading.Complete()
@@ -513,7 +511,7 @@ func (l *LastfmAuthPage) authByLogin() (model.Page, tea.Cmd) {
 }
 
 func (l *LastfmAuthPage) authByQRCode() (model.Page, tea.Cmd) {
-	qrPage := NewLastfmQRAuthPage(l.netease, l, l.AfterAction)
+	qrPage := NewLastfmQRAuthPage(l.svc, l, l.AfterAction)
 	return qrPage, qrPage.Init()
 }
 
@@ -554,5 +552,5 @@ func (l *LastfmAuthPage) authSuccessHandle() (model.Page, tea.Cmd) {
 		Text:    fmt.Sprintf("Last.fm 用户 %s 授权成功", l.svc.Lastfm().UserName()),
 		GroupId: types.GroupID,
 	})
-	return l.netease.MustMain(), model.TickMain(time.Second)
+	return l.svc.MustMain(), model.TickMain(time.Second)
 }

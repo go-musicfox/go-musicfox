@@ -107,7 +107,7 @@ func TestBuildMenuOrToastMissingKeyReturnsNil(t *testing.T) {
 }
 
 func TestRegisterAndBuildPage(t *testing.T) {
-	page, err := BuildPage("lastfm_auth", LastfmAuthPageOpts{Netease: nil})
+	page, err := BuildPage("lastfm_auth", LastfmAuthPageOpts{svc: nil})
 	if err != nil {
 		t.Fatalf("BuildPage(lastfm_auth) error = %v", err)
 	}
@@ -167,7 +167,7 @@ func TestRegisterAndBuildLastfmCustomAPIPage(t *testing.T) {
 	if err := registerServices(n.ctx, n); err != nil {
 		t.Fatalf("registerServices() error = %v", err)
 	}
-	page, err := BuildPage("lastfm_custom_api", LastfmCustomAPIPageOpts{Netease: n})
+	page, err := BuildPage("lastfm_custom_api", LastfmCustomAPIPageOpts{svc: newMenuServices(n)})
 	if err != nil {
 		t.Fatalf("BuildPage(lastfm_custom_api) error = %v", err)
 	}

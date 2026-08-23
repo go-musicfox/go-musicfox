@@ -130,14 +130,14 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu {
 // Parameter-object types (the discoverable "contract") of registered pages.
 type (
 	LoginPageOpts      struct{ Netease *Netease }
-	LastfmAuthPageOpts struct{ Netease *Netease }
+	LastfmAuthPageOpts struct{ svc *menuServices }
 	// SearchPageOpts and LastfmCustomAPIPageOpts are the Phase 3.3.2 page
 	// contracts. SearchPageOpts builds the shell-owned search singleton (its
 	// wordsInput/result/searchType state is shared with the SearchResultMenu
 	// flow); LastfmCustomAPIPageOpts is the Last.fm profile
 	// "设置 API account" entry.
 	SearchPageOpts          struct{ Netease *Netease }
-	LastfmCustomAPIPageOpts struct{ Netease *Netease }
+	LastfmCustomAPIPageOpts struct{ svc *menuServices }
 )
 
 // pageFactory[T] is a typed page provider stored behind `any` in the registry.

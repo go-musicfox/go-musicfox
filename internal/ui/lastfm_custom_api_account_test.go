@@ -93,7 +93,7 @@ func TestLastfmCustomAPIPageMouseControlsAndActiveStyles(t *testing.T) {
 
 func newLastfmCustomAPIPageForStyles(t *testing.T, netease *Netease) *LastfmCustomAPIPage {
 	t.Helper()
-	return newLastfmCustomAPIPage(netease)
+	return newLastfmCustomAPIPage(newMenuServices(netease))
 }
 
 func assertLastfmInputUsesActivePageStyles(t *testing.T, styles focusedInputStyles) {
@@ -110,7 +110,7 @@ func assertLastfmInputUsesActivePageStyles(t *testing.T, styles focusedInputStyl
 func newLastfmCustomAPIPageTest(t *testing.T) (*model.App, *Netease, *LastfmCustomAPIPage) {
 	t.Helper()
 	app, netease := newFormPageTestApp(t)
-	return app, netease, newLastfmCustomAPIPage(netease)
+	return app, netease, newLastfmCustomAPIPage(newMenuServices(netease))
 }
 
 func visibleColumnContaining(t *testing.T, view string, row int, marker string) int {
