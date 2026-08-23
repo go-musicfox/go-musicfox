@@ -233,7 +233,7 @@ func (e *BaseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
 		return nil, nil
 	}
 
-	playOrToggle(e.svc.Netease(), selectedIndex)
+	playOrToggle(e.svc, selectedIndex)
 	return nil, a.RerenderCmd(true)
 }
 
@@ -247,15 +247,15 @@ func (e *BaseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenu
 	var items []model.ContextMenuItem
 
 	if index >= 0 && index < len(menu.MenuViews()) {
-		selActions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), false, index)
+		selActions := actionItemsForMenu(e.svc, menu.GetMenuKey(), false, index)
 		if len(selActions) > 0 {
 			title := selectedContextTitle(menu, index)
 			items = append(items, buildGroupItems("sel", title, selActions, false)...)
 		}
 	}
 
-	if song, ok := getTargetSong(e.svc.Netease(), false); ok {
-		playActions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), true, -1)
+	if song, ok := getTargetSong(e.svc, false); ok {
+		playActions := actionItemsForMenu(e.svc, menu.GetMenuKey(), true, -1)
 		if len(playActions) > 0 {
 			title := iconMusicNote + "当前播放：" + songTitleBrief(song.Name)
 			items = append(items, buildGroupItems("play", title, playActions, len(items) > 0)...)
@@ -280,7 +280,7 @@ func (e *BaseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		if err != nil {
 			return nil, nil
 		}
-		actions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), false, index)
+		actions := actionItemsForMenu(e.svc, menu.GetMenuKey(), false, index)
 		return runContextAction(actions, i, a)
 	}
 	if rest, ok := strings.CutPrefix(item.ID, "play:"); ok {
@@ -288,7 +288,7 @@ func (e *BaseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		if err != nil {
 			return nil, nil
 		}
-		actions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), true, -1)
+		actions := actionItemsForMenu(e.svc, menu.GetMenuKey(), true, -1)
 		return runContextAction(actions, i, a)
 	}
 	return nil, nil

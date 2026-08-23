@@ -109,10 +109,10 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		newPage := player.Intelligence(false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLikePlayingSong:
-		newPage := likeSong(h.netease, true, false)
+		newPage := likeSong(h.svc, true, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpDislikePlayingSong:
-		newPage := likeSong(h.netease, false, false)
+		newPage := likeSong(h.svc, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLogout:
 		showConfirmPopup(app, "退出登录", "确定要退出登录吗？将清除登录状态并清除 Cookie。", func() {
@@ -128,121 +128,121 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 	case keybindings.OpVolumeUp:
 		player.UpVolume()
 	case keybindings.OpDownloadPlayingSong:
-		downloadSong(h.netease, false)
+		downloadSong(h.svc, false)
 	case keybindings.OpDownloadSelectedSong:
-		downloadSong(h.netease, true)
+		downloadSong(h.svc, true)
 	case keybindings.OpTrashPlayingSong:
 		// trash playing song
-		if page := trashSongWithConfirm(h.netease, false); page != nil {
+		if page := trashSongWithConfirm(h.svc, false); page != nil {
 			return true, page, app.Tick(time.Nanosecond)
 		}
 		return true, nil, nil
 	case keybindings.OpTrashSelectedSong:
 		// trash selected song
-		if page := trashSongWithConfirm(h.netease, true); page != nil {
+		if page := trashSongWithConfirm(h.svc, true); page != nil {
 			return true, page, app.Tick(time.Nanosecond)
 		}
 		return true, nil, nil
 	case keybindings.OpLikeSelectedSong: // half-width, full-width, Japanese, Chinese and French
 		// like selected song
-		newPage := likeSong(h.netease, true, true)
+		newPage := likeSong(h.svc, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpDislikeSelectedSong:
 		// unlike selected song
-		newPage := likeSong(h.netease, false, true)
+		newPage := likeSong(h.svc, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpHelp:
 		// 帮助（Markdown 弹窗，支持滚动/缩放/Esc 关闭）
 		showHelpPopup(h.svc.App())
 	case keybindings.OpAddSelectedToUserPlaylist:
-		newPage := openAddSongToUserPlaylistMenu(h.netease, true, true)
+		newPage := openAddSongToUserPlaylistMenu(h.svc, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpRemoveSelectedFromUserPlaylist:
-		newPage := openAddSongToUserPlaylistMenu(h.netease, true, false)
+		newPage := openAddSongToUserPlaylistMenu(h.svc, true, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpAddPlayingToUserPlaylist:
-		newPage := openAddSongToUserPlaylistMenu(h.netease, false, true)
+		newPage := openAddSongToUserPlaylistMenu(h.svc, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpRemovePlayingFromUserPlaylist:
-		newPage := openAddSongToUserPlaylistMenu(h.netease, false, false)
+		newPage := openAddSongToUserPlaylistMenu(h.svc, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpOpenSimiSongsOfPlayingSong:
 		// 与当前歌曲相似的歌曲
-		findSimilarSongs(h.netease, false)
+		findSimilarSongs(h.svc, false)
 	case keybindings.OpOpenSimiSongsOfSelectedSong:
 		// 与当前选中歌曲相似的歌曲
-		findSimilarSongs(h.netease, true)
+		findSimilarSongs(h.svc, true)
 	case keybindings.OpAlbumOfPlayingSong:
 		// 当前歌曲所属专辑
-		goToAlbumOfSong(h.netease, false)
+		goToAlbumOfSong(h.svc, false)
 	case keybindings.OpAlbumOfSelectedSong:
 		// 选中歌曲所属专辑
-		goToAlbumOfSong(h.netease, true)
+		goToAlbumOfSong(h.svc, true)
 	case keybindings.OpArtistOfPlayingSong:
 		// 当前歌曲所属歌手
-		goToArtistOfSong(h.netease, false)
+		goToArtistOfSong(h.svc, false)
 	case keybindings.OpArtistOfSelectedSong:
 		// 选中歌曲所属歌手
-		goToArtistOfSong(h.netease, true)
+		goToArtistOfSong(h.svc, true)
 	case keybindings.OpOpenPlayingSongInWeb:
 		// 网页打开当前歌曲
-		openInWeb(h.netease, false, main.SelectedIndex())
+		openInWeb(h.svc, false, main.SelectedIndex())
 	case keybindings.OpOpenSelectedItemInWeb:
 		// 网页打开选中项
-		openInWeb(h.netease, true, main.SelectedIndex())
+		openInWeb(h.svc, true, main.SelectedIndex())
 	case keybindings.OpCollectSelectedPlaylist:
 		// 收藏选中歌单
-		newPage := collectSelectedPlaylist(h.netease, true)
+		newPage := collectSelectedPlaylist(h.svc, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpDiscollectSelectedPlaylist:
 		// 取消收藏选中歌单
-		newPage := collectSelectedPlaylist(h.netease, false)
+		newPage := collectSelectedPlaylist(h.svc, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpSubscribeAlbumOfPlayingSong:
 		// 收藏播放中歌曲的专辑
-		newPage := subscribeAlbum(h.netease, true, false)
+		newPage := subscribeAlbum(h.svc, true, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpUnsubscribeAlbumOfPlayingSong:
 		// 取消收藏播放中歌曲的专辑
-		newPage := subscribeAlbum(h.netease, false, false)
+		newPage := subscribeAlbum(h.svc, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpSubscribeArtistOfPlayingSong:
 		// 收藏播放中歌曲的歌手
-		newPage := subscribeArtist(h.netease, true, false)
+		newPage := subscribeArtist(h.svc, true, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpUnsubscribeArtistOfPlayingSong:
 		// 取消收藏播放中歌曲的歌手
-		newPage := subscribeArtist(h.netease, false, false)
+		newPage := subscribeArtist(h.svc, false, false)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpSubscribeAlbumOfSelectedSong:
 		// 收藏选中歌曲的专辑
-		newPage := subscribeAlbum(h.netease, true, true)
+		newPage := subscribeAlbum(h.svc, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpUnsubscribeAlbumOfSelectedSong:
 		// 取消收藏选中歌曲的专辑
-		newPage := subscribeAlbum(h.netease, false, true)
+		newPage := subscribeAlbum(h.svc, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpSubscribeArtistOfSelectedSong:
 		// 收藏选中歌曲的歌手
-		newPage := subscribeArtist(h.netease, true, true)
+		newPage := subscribeArtist(h.svc, true, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpUnsubscribeArtistOfSelectedSong:
 		// 取消收藏选中歌曲的歌手
-		newPage := subscribeArtist(h.netease, false, true)
+		newPage := subscribeArtist(h.svc, false, true)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpDeleteSongFromPlaylist:
 		// 从播放列表删除歌曲,仅在当前播放列表界面有效
-		newPage := delSongFromPlaylist(h.netease)
+		newPage := delSongFromPlaylist(h.svc)
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpAppendSongsToNext:
 		// 追加到下一曲播放
-		appendSongsToCurPlaylist(h.netease, true)
+		appendSongsToCurPlaylist(h.svc, true)
 	case keybindings.OpAppendSongsToEnd:
 		// 追加到播放列表末尾
-		appendSongsToCurPlaylist(h.netease, false)
+		appendSongsToCurPlaylist(h.svc, false)
 	case keybindings.OpClearSongCache:
 		// 清除歌曲缓存
-		clearSongCache(h.netease)
+		clearSongCache(h.svc)
 	case keybindings.OpRerenderUI:
 		// rerender
 		return true, main, app.RerenderCmd(true)
@@ -261,17 +261,17 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			main.SetSelectedIndex(curIndex)
 		}
 	case keybindings.OpDownloadPlayingSongLrc:
-		downloadSongLrc(h.netease, false)
+		downloadSongLrc(h.svc, false)
 	case keybindings.OpDownloadSelectedSongLrc:
-		downloadSongLrc(h.netease, true)
+		downloadSongLrc(h.svc, true)
 	case keybindings.OpActionOfSelected:
-		action(h.netease, false)
+		action(h.svc, false)
 	case keybindings.OpActionOfPlayingSong:
-		action(h.netease, true)
+		action(h.svc, true)
 	case keybindings.OpSharePlayingItem:
-		shareItem(h.netease, false, main.SelectedIndex())
+		shareItem(h.svc, false, main.SelectedIndex())
 	case keybindings.OpShareSelectItem:
-		shareItem(h.netease, true, main.SelectedIndex())
+		shareItem(h.svc, true, main.SelectedIndex())
 	case keybindings.OpToggleSortOrder:
 		if djMenu, ok := menu.(*DjRadioDetailMenu); ok {
 			djMenu.ToggleSortOrder()
@@ -321,12 +321,12 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 				content = fmt.Sprintf("确定从歌单「%s」移除「%s」吗？", m.playlists[idx].Name, m.song.Name)
 			}
 			showConfirmPopup(h.svc.App(), "从歌单移除", content, func() {
-				addSongToUserPlaylist(h.netease, false)
+				addSongToUserPlaylist(h.svc, false)
 				h.svc.App().Rerender(false)
 			})
 			return true, h.svc.MustMain(), nil
 		}
-		addSongToUserPlaylist(h.netease, m.action)
+		addSongToUserPlaylist(h.svc, m.action)
 		return true, h.svc.MustMain(), h.svc.App().Tick(time.Nanosecond)
 	}
 	return false, nil, nil
@@ -334,11 +334,10 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 
 func (h *EventHandler) playOrToggleHandle() {
 	main := h.svc.MustMain()
-	playOrToggle(h.netease, main.CurMenu().RealDataIndex(main.SelectedIndex()))
+	playOrToggle(h.svc, main.CurMenu().RealDataIndex(main.SelectedIndex()))
 }
 
-func playOrToggle(netease *Netease, selectedIndex int) {
-	svc := newMenuServices(netease)
+func playOrToggle(svc *menuServices, selectedIndex int) {
 	var (
 		songs         []structs.Song
 		main          = svc.MustMain()
@@ -555,7 +554,7 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 	if heartWidth > 0 {
 		if mouse.X >= currentX && mouse.X < currentX+heartWidth {
 			isLiked := likelist.IsLikeSong(curSong.Id)
-			newPage := likeSong(h.netease, !isLiked, false)
+			newPage := likeSong(h.svc, !isLiked, false)
 			return true, newPage, a.Tick(time.Nanosecond)
 		}
 		currentX += heartWidth
@@ -576,14 +575,14 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 	}
 
 	if mouse.X >= currentX && mouse.X < currentX+songShownWidth {
-		action(h.netease, true)
+		action(h.svc, true)
 		return true, main, a.Tick(time.Nanosecond)
 	}
 	currentX += songShownWidth + 1
 
 	// 歌手
 	if mouse.X >= currentX {
-		goToArtistOfSong(h.netease, false)
+		goToArtistOfSong(h.svc, false)
 		return true, main, a.Tick(time.Nanosecond)
 	}
 
