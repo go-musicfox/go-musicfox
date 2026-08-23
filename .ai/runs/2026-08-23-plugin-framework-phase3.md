@@ -283,3 +283,16 @@ framework 生命周期语义加固（#646 评审后续第二轮）。**正确用
 - P0 闸门对 PR 打开的限制相应**顺延**：3.x PR 暂不开，等用户判定功能稳定后统一处理合并（届时按批次拆 PR 或整支合入，由用户决定）。
 - #645/#646 的合并动作由用户自行掌握（#646 QA 门禁待处理）。
 - 本 runs 文档与分支提交持续作为开发基线。
+
+## Phase 3.9.12: 主菜单项保持原始顺序（Order 归并）
+
+用户需求：插件提取后主菜单项不得改变顺序——插件项须回到插件化前的原始位置（而非追加在末尾）。
+
+- **机制**：`MainMenuItem` 新增 `Order int` 字段；`RegisterMainMenuItemWithOrder(key, title, order, build)` 声明显式位置（0 为第一项，负数 panic）；`RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` 保持便捷形式，内部携带 `mainMenuUnsetOrder`（1<<30）哨兵，排在所有显式顺序项之后（保持既有"追加在末尾"行为，注册序不变）。
+- **NewMainMenu 归并**：内置项携带固定 Order（搜索=6 / 帮助=14），与插件项合并后按 Order 稳定排序（同 Order 内置优先、插件保持注册序），复现插件化前 16 项原始顺序：每日推荐歌曲0 / 每日推荐歌单1 / 我的歌单2 / 我的收藏3 / 私人FM4 / 专辑列表5 / 搜索6 / 排行榜7 / 精选歌单8 / 热门歌手9 / 最近播放歌曲10 / 云盘11 / 主播电台12 / LastFM13 / 帮助14 / 检查更新15。
+- **帮助索引动态化**：`mainMenuHelpIndex` 常量改为 `MainMenu.helpIndex` 字段，构造时按归并结果计算（生产全量集为 14，测试子集自洽）。
+- **各插件 Order 赋值**：recommend 0/1/4/10/7（daily_songs/daily_playlists/personal_fm/recent_songs/ranks）、playlist 2/3/8/11（user_playlist 经 WithOrder + CurUser builder / user_collect / high_quality_playlists / could）、album 5、artist 9、dj 12、lastfm 13、checkupdate 15。
+- **测试**：`plugins_test.go` 新增 `TestMainMenuPreservesOriginalOrder`（聚合器全插件链路的 16 项标题精确顺序断言，经新增无副作用的 `MainMenu.Titles()` 读取）；`registry_test.go` 新增 `TestNewMainMenuOrdersPluginItems`（显式 Order 落在内置项之间、未指定顺序项在末尾）并改用动态 `helpIndex`；`MainMenu.Titles()` 无副作用（不触发 FormatMenuItem，零基座可读顺序）。
+- **文档**：docs/plugin_development.md 主菜单入口契约补 Order 语义 + 行为保持契约新增"主菜单顺序保持"条；AGENTS.md 同步 registry 表项与插件开发段落。
+
+验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。

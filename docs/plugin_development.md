@@ -18,7 +18,7 @@
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
 | 菜单跳转 | `BuildMenu[T]` / `MustBuildNoArg` / `MustBuild` / `BuildMenuOrToast`（导出形式，供插件使用） | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
-| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
+| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `RegisterMainMenuItemWithOrder(key, title, order, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
 | 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
 | 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法 + `Services()`） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
@@ -57,14 +57,18 @@ func BuildPage[T any](key string, opts T) (model.Page, error)
 // 跳转失败经 toast 降级（不 panic），返回 nil。插件内页面打开点用导出形式。
 func BuildPageOrToast[T any](key string, opts T) model.Page
 
-// 主菜单入口（Phase 3.9）：key 必须已在菜单注册表中注册（主菜单在全部内置项
-// 之后追加该入口并按 key 构建菜单；未注册的 key 在 NewMainMenu 启动时 panic，
-// 作为启动完整性信号）。无 Build 的入口 key 必须是无参菜单 provider（经
-// mustBuildNoArg 构建）；带 Build 的入口由插件以自身 options 构造菜单
-// （参数化 provider 主菜单入口）。
-func RegisterMainMenuItem(key, title string)                            // 便捷形式，Build = nil
-func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu) // 空 key/title 或重复 key 会 panic
-func MainMenuPluginItems() []MainMenuItem                               // 快照，供 NewMainMenu 构造
+// 主菜单入口（Phase 3.9）：key 必须已在菜单注册表中注册（未注册的 key 在
+// NewMainMenu 启动时 panic，作为启动完整性信号）。无 Build 的入口 key 必须
+// 是无参菜单 provider（经 mustBuildNoArg 构建）；带 Build 的入口由插件以自身
+// options 构造菜单（参数化 provider 主菜单入口）。**顺序（Phase 3.9.x）**：
+// NewMainMenu 将内置项（搜索=6 / 帮助=14）与插件项按 Order 归并稳定排序，
+// 复现插件化前的主菜单原始顺序（每日推荐歌曲0 … 检查更新15）。Order 0 是
+// 合法的显式位置（第一项）；经便捷形式（不带 order）声明的项携带 unset
+// 哨兵，排在所有显式顺序项之后（保持既有"追加在末尾"行为，注册序不变）。
+func RegisterMainMenuItem(key, title string)                                             // 便捷形式，Build = nil，末尾追加
+func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu)         // 便捷形式，末尾追加
+func RegisterMainMenuItemWithOrder(key, title string, order int, build func(base BaseMenu) Menu) // 显式位置（0 为第一项；负数 panic）
+func MainMenuPluginItems() []MainMenuItem                                                // 快照，供 NewMainMenu 构造
 
 // 启动钩子（Phase 3.9）：注册启动任务。shell 在 InitHook 中用户/登录就绪后
 // 按注册序调用，每个 hook 带 panic 隔离（recover + 日志，不阻断启动）。
@@ -586,6 +590,7 @@ import (
 - **服务解析不得丢弃 bool**：`framework.ServiceOf[T]` 的第二个返回值必须处理（记录错误 + 降级路径），禁止裸断言。
 - 插件 key 全局唯一：不得与内置 key（`expectedMenuKeys` / `expectedPageKeys`）或其它插件冲突。
 - **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须已在菜单注册表中注册（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）；无 `Build` 的入口 key 必须是无参菜单 provider（经 `mustBuildNoArg` 构建），参数化菜单入口需用 `RegisterMainMenuItemWith` 提供 `Build`。
+- **主菜单顺序保持**：插件项经 `Order` 与内置项归并，复现插件化前的原始顺序（用户可见行为）；`Order` 不得与内置项（搜索=6 / 帮助=14）或其它插件项冲突，声明顺序不依赖注册时序。
 
 ## 未来演进（预留边界，未实现）
 
