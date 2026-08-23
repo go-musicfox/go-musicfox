@@ -1,6 +1,10 @@
 package framework
 
-import "sync"
+import (
+	"fmt"
+	"runtime/debug"
+	"sync"
+)
 
 // EventEmitter dispatches named events through four kinds of handlers,
 // mirroring the cordis event API semantics:
@@ -13,6 +17,13 @@ import "sync"
 //     first error is collected.
 //   - serial: handlers are invoked one by one and the first non-nil error is
 //     returned immediately.
+//
+// Handler panics are isolated: every invocation is wrapped in a recover that
+// converts the panic into a returned error carrying a short stack trace, so
+// the emitter itself never panics because of a handler. A panic follows the
+// same semantics as a returned error: listener/middleware/serial panics abort
+// the chain, while a parallel panic is delivered through the error channel and
+// all parallel handlers still run to completion.
 type EventEmitter struct {
 	listeners  map[string][]listenerFunc
 	middleware map[string][]middlewareFunc
@@ -24,6 +35,28 @@ type listenerFunc func(ctx *Context, payload any) error
 type middlewareFunc func(ctx *Context, payload any, next func() error) error
 type parallelFunc func(ctx *Context, payload any) error
 type serialFunc func(ctx *Context, payload any) error
+
+// handlerPanicError converts a recovered panic from a handler into a framework
+// error carrying a short stack trace (truncated to ~1KB) for diagnosability.
+func handlerPanicError(name string, r any) error {
+	const maxStackBytes = 1024
+	stack := debug.Stack()
+	if len(stack) > maxStackBytes {
+		stack = stack[:maxStackBytes]
+	}
+	return fmt.Errorf("framework: %s handler panicked: %v\n%s", name, r, stack)
+}
+
+// invokeHandler runs fn, converting any panic it raises into a returned error
+// so a misbehaving handler can never crash the emitter.
+func invokeHandler(name string, fn func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = handlerPanicError(name, r)
+		}
+	}()
+	return fn()
+}
 
 // NewEventEmitter creates an empty event emitter.
 func NewEventEmitter() *EventEmitter {
@@ -70,10 +103,12 @@ func (e *EventEmitter) Serial(name string, fn func(ctx *Context, payload any) er
 // handlers in order: listeners (forward), middlewares (onion), parallel
 // (concurrent) and serial (forward). The first error returned by any kind
 // stops the remaining kinds and is returned. Emitting an unregistered event is
-// a no-op that returns nil.
+// a no-op that returns nil. A panicking handler is converted into an error and
+// follows the same abort semantics as a returned error; Emit never panics
+// because of a handler.
 func (e *EventEmitter) Emit(ctx *Context, name string, payload any) error {
 	for _, fn := range e.listeners[name] {
-		if err := fn(ctx, payload); err != nil {
+		if err := invokeHandler(name, func() error { return fn(ctx, payload) }); err != nil {
 			return err
 		}
 	}
@@ -84,7 +119,9 @@ func (e *EventEmitter) Emit(ctx *Context, name string, payload any) error {
 			if i >= len(mws) {
 				return nil
 			}
-			return mws[i](ctx, payload, func() error { return run(i + 1) })
+			return invokeHandler(name, func() error {
+				return mws[i](ctx, payload, func() error { return run(i + 1) })
+			})
 		}
 		if err := run(0); err != nil {
 			return err
@@ -103,7 +140,7 @@ func (e *EventEmitter) Emit(ctx *Context, name string, payload any) error {
 			wg.Add(1)
 			go func(fn parallelFunc) {
 				defer wg.Done()
-				if err := fn(ctx, payload); err != nil {
+				if err := invokeHandler(name, func() error { return fn(ctx, payload) }); err != nil {
 					errCh <- err
 				}
 			}(fn)
@@ -116,7 +153,7 @@ func (e *EventEmitter) Emit(ctx *Context, name string, payload any) error {
 	}
 
 	for _, fn := range e.serial[name] {
-		if err := fn(ctx, payload); err != nil {
+		if err := invokeHandler(name, func() error { return fn(ctx, payload) }); err != nil {
 			return err
 		}
 	}
