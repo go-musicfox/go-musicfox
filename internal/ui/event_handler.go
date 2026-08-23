@@ -19,7 +19,6 @@ import (
 )
 
 type EventHandler struct {
-	netease         *Netease
 	svc             *menuServices
 	keyToOperateMap map[string]keybindings.OperateType // KeyStr -> OperateType
 	mouseVolumeStep int
@@ -33,7 +32,6 @@ func NewEventHandler(netease *Netease) *EventHandler {
 		step = 20
 	}
 	handler := &EventHandler{
-		netease:         netease,
 		svc:             newMenuServices(netease),
 		mouseVolumeStep: step,
 		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(configs.EffectiveKeybindings),
