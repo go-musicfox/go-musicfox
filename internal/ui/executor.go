@@ -53,7 +53,7 @@ func (op *Operation) ShowLoading() *Operation {
 func (op *Operation) Execute() model.Page {
 	// 优先处理认证检查（同步），避免对未登录用户显示无意义的加载状态
 	if op.needsAuth {
-		if _struct.CheckUserInfo(op.n.user) == _struct.NeedLogin {
+		if _struct.CheckUserInfo(newMenuServices(op.n).User()) == _struct.NeedLogin {
 			page, _ := op.n.ToLoginPage(func() model.Page {
 				return op.Execute()
 			})

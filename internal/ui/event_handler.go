@@ -20,6 +20,7 @@ import (
 
 type EventHandler struct {
 	netease         *Netease
+	svc             *menuServices
 	keyToOperateMap map[string]keybindings.OperateType // KeyStr -> OperateType
 	mouseVolumeStep int
 }
@@ -33,6 +34,7 @@ func NewEventHandler(netease *Netease) *EventHandler {
 	}
 	handler := &EventHandler{
 		netease:         netease,
+		svc:             newMenuServices(netease),
 		mouseVolumeStep: step,
 		keyToOperateMap: keybindings.BuildKeyToOperateTypeMap(configs.EffectiveKeybindings),
 	}
@@ -51,7 +53,7 @@ func (h *EventHandler) KeyMsgHandle(msg tea.KeyMsg, _ *model.App) (bool, model.P
 
 func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea.Cmd) {
 	var (
-		player = h.netease.player
+		player = h.svc.Player()
 		app    = h.netease.App
 		main   = app.MustMain()
 		menu   = main.CurMenu()
@@ -396,7 +398,7 @@ func playOrToggle(netease *Netease, selectedIndex int) {
 // 菜单区滚轮滚动、侧键菜单导航）。
 func (h *EventHandler) MouseMsgHandle(msg tea.MouseMsg, a *model.App) (stopPropagation bool, newPage model.Page, cmd tea.Cmd) {
 	var (
-		player = h.netease.player
+		player = h.svc.Player()
 		main   = a.MustMain()
 	)
 
@@ -485,7 +487,7 @@ func (h *EventHandler) handlePlayerBarClick(msg tea.MouseMsg, a *model.App, main
 
 // handlePlayModeClick 播放模式点击
 func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
-	player := h.netease.player
+	player := h.svc.Player()
 	menuStartColumn := main.MenuStartColumn()
 
 	if menuStartColumn > MenuArrowWidth {
@@ -500,7 +502,7 @@ func (h *EventHandler) handlePlayModeClick(msg tea.MouseMsg, a *model.App, main 
 
 // handlePlayerBarElementsClick 播放栏其他元素点击
 func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
-	player := h.netease.player
+	player := h.svc.Player()
 	curSong := player.CurSong()
 
 	mouse := msg.Mouse()
@@ -585,7 +587,7 @@ func (h *EventHandler) handlePlayerBarElementsClick(msg tea.MouseMsg, a *model.A
 
 // handlePlaybarMotion tracks the hovered playbar element and switches the mouse pointer.
 func (h *EventHandler) handlePlaybarMotion(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, tea.Cmd) {
-	player := h.netease.player
+	player := h.svc.Player()
 	mouse := msg.Mouse()
 	playModeRow := main.EffectiveWindowHeight(a) - PlayModeRowOffset
 	progressBarRow := main.EffectiveWindowHeight(a) - 1
@@ -688,7 +690,7 @@ func (h *EventHandler) handlePlaybarMotion(msg tea.MouseMsg, a *model.App, main 
 }
 
 func (h *EventHandler) handleProgressBarSeek(msg tea.MouseMsg, a *model.App, main *model.Main) (bool, model.Page, tea.Cmd) {
-	player := h.netease.player
+	player := h.svc.Player()
 	x, y := msg.Mouse().X, msg.Mouse().Y
 	progressBarWidth := a.WindowWidth() - ProgressTimeDisplayWidth
 	if y+1 == main.EffectiveWindowHeight(a) && x+1 <= progressBarWidth {

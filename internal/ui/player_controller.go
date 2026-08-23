@@ -76,8 +76,8 @@ func (p *Player) CtrlDislikeNowPlaying() {
 
 // likeOrDislike likes or unlikes the current playing song and updates NowPlaying info.
 func (p *Player) likeOrDislike(isLike bool) {
-	n := p.netease
-	user := n.user
+	svc := newMenuServices(p.netease)
+	user := svc.User()
 	if user == nil || user.UserId == 0 {
 		return
 	}
@@ -88,8 +88,9 @@ func (p *Player) likeOrDislike(isLike bool) {
 	}
 
 	go func() {
-		// Ensure MyLikePlaylistID is set
-		if n.user.MyLikePlaylistID == 0 {
+		// Ensure MyLikePlaylistID is set (re-read the live user slot, matching
+		// the previous n.user reach-through so a concurrent login is honored).
+		if svc.User().MyLikePlaylistID == 0 {
 			userPlaylists := service.UserPlaylistService{
 				Uid:    strconv.FormatInt(user.UserId, 10),
 				Limit:  "1",
@@ -98,12 +99,12 @@ func (p *Player) likeOrDislike(isLike bool) {
 			code, response := userPlaylists.UserPlaylist()
 			if code == 200 {
 				if id, err := jsonparser.GetInt(response, "playlist", "[0]", "id"); err == nil {
-					n.user.MyLikePlaylistID = id
+					svc.User().MyLikePlaylistID = id
 				}
 			}
 		}
 
-		if n.user.MyLikePlaylistID == 0 {
+		if svc.User().MyLikePlaylistID == 0 {
 			slog.Error("MyLikePlaylistID is still 0 after fetch")
 			return
 		}
@@ -116,7 +117,7 @@ func (p *Player) likeOrDislike(isLike bool) {
 		likeService := service.PlaylistTracksService{
 			TrackIds: []string{strconv.FormatInt(song.Id, 10)},
 			Op:       op,
-			Pid:      strconv.FormatInt(n.user.MyLikePlaylistID, 10),
+			Pid:      strconv.FormatInt(svc.User().MyLikePlaylistID, 10),
 		}
 
 		code, _ := likeService.PlaylistTracks()
@@ -137,7 +138,7 @@ func (p *Player) likeOrDislike(isLike bool) {
 		notify.Notify(notify.NotifyContent{
 			Title:   title,
 			Text:    song.Name,
-			Url:     netease.WebUrlOfPlaylist(n.user.MyLikePlaylistID),
+			Url:     netease.WebUrlOfPlaylist(svc.User().MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	}()
