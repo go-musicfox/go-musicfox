@@ -103,11 +103,11 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	}
 	p.reporter.ReportEnd(transition.PlayedTime)
 	p.reporter.ReportStart(song)
-	errorx.Go(func() { p.lyricService.SetSong(context.Background(), song) }, true)
+	errorx.Go(func() { _ = p.lyricService.SetSong(context.Background(), song) }, true)
 	p.LocatePlayingSong()
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	p.updateDesktopLyrics()
-	p.netease.Rerender(false)
+	p.svc.Rerender(false)
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),

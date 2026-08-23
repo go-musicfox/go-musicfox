@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
+
 	"github.com/go-musicfox/go-musicfox/internal/remote_control"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
-	"github.com/go-musicfox/netease-music/service"
 )
 
 var _ remote_control.Controller = (*Player)(nil)
@@ -76,8 +77,7 @@ func (p *Player) CtrlDislikeNowPlaying() {
 
 // likeOrDislike likes or unlikes the current playing song and updates NowPlaying info.
 func (p *Player) likeOrDislike(isLike bool) {
-	svc := newMenuServices(p.netease)
-	user := svc.User()
+	user := p.svc.User()
 	if user == nil || user.UserId == 0 {
 		return
 	}
@@ -90,7 +90,7 @@ func (p *Player) likeOrDislike(isLike bool) {
 	go func() {
 		// Ensure MyLikePlaylistID is set (re-read the live user slot, matching
 		// the previous n.user reach-through so a concurrent login is honored).
-		if svc.User().MyLikePlaylistID == 0 {
+		if p.svc.User().MyLikePlaylistID == 0 {
 			userPlaylists := service.UserPlaylistService{
 				Uid:    strconv.FormatInt(user.UserId, 10),
 				Limit:  "1",
@@ -99,12 +99,12 @@ func (p *Player) likeOrDislike(isLike bool) {
 			code, response := userPlaylists.UserPlaylist()
 			if code == 200 {
 				if id, err := jsonparser.GetInt(response, "playlist", "[0]", "id"); err == nil {
-					svc.User().MyLikePlaylistID = id
+					p.svc.User().MyLikePlaylistID = id
 				}
 			}
 		}
 
-		if svc.User().MyLikePlaylistID == 0 {
+		if p.svc.User().MyLikePlaylistID == 0 {
 			slog.Error("MyLikePlaylistID is still 0 after fetch")
 			return
 		}
@@ -117,7 +117,7 @@ func (p *Player) likeOrDislike(isLike bool) {
 		likeService := service.PlaylistTracksService{
 			TrackIds: []string{strconv.FormatInt(song.Id, 10)},
 			Op:       op,
-			Pid:      strconv.FormatInt(svc.User().MyLikePlaylistID, 10),
+			Pid:      strconv.FormatInt(p.svc.User().MyLikePlaylistID, 10),
 		}
 
 		code, _ := likeService.PlaylistTracks()
@@ -138,7 +138,7 @@ func (p *Player) likeOrDislike(isLike bool) {
 		notify.Notify(notify.NotifyContent{
 			Title:   title,
 			Text:    song.Name,
-			Url:     netease.WebUrlOfPlaylist(svc.User().MyLikePlaylistID),
+			Url:     netease.WebUrlOfPlaylist(p.svc.User().MyLikePlaylistID),
 			GroupId: types.GroupID,
 		})
 	}()

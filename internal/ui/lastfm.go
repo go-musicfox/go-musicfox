@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
+
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 )
@@ -52,7 +53,7 @@ func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 		}
 		showConfirmPopup(app, title, content, func() {
 			m.svc.Lastfm().Tracker.Toggle()
-			m.svc.Netease().MustMain().RefreshMenuList()
+			m.svc.MustMain().RefreshMenuList()
 		})
 		return nil
 	case 3:
@@ -64,7 +65,7 @@ func (m *Lastfm) SubMenu(app *model.App, index int) model.Menu {
 				Text:    "Last.fm Scrobble 队列已清除",
 				GroupId: types.GroupID,
 			})
-			m.svc.Netease().MustMain().RefreshMenuList()
+			m.svc.MustMain().RefreshMenuList()
 		})
 		return nil
 	}

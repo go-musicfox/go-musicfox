@@ -73,6 +73,7 @@ type playerRendererState interface {
 // Player 网易云音乐播放器
 type Player struct {
 	netease *Netease
+	svc     *menuServices // accessor for service resolution (Phase 3.3.3)
 	cancel  context.CancelFunc
 
 	playlistUpdateAt time.Time                // 播放列表更新时间
@@ -117,6 +118,7 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 
 	p := &Player{
 		netease:         n,
+		svc:             newMenuServices(n),
 		lyricService:    lyricService,
 		playlistManager: playlist.NewPlaylistManager(),
 		ctrl:            make(chan CtrlSignal, 10),
@@ -313,7 +315,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	}
 
 	errorx.Go(func() {
-		p.lyricService.SetSong(context.Background(), song)
+		_ = p.lyricService.SetSong(context.Background(), song)
 	}, true)
 
 	p.Play(*urlMusic)
@@ -389,7 +391,7 @@ func (p *Player) NextSong(manual bool) {
 	// 尝试获取下一首歌曲
 	song, err := p.playlistManager.NextSong(manual)
 	if err != nil {
-		slog.Error("Get next song error", slog.Any("err", err), slog.String("play_mode", p.playlistManager.GetPlayModeName()))
+		slog.Error("Get next song error", slog.Any("err", err), slog.String("play_mode", p.playlistManager.GetPlayMode().Name()))
 		return
 	}
 
