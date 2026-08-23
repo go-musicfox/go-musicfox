@@ -1,14 +1,17 @@
 package ui
 
 import (
+	"fmt"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 )
 
-const (
-	mainMenuHelpIndex        = 14
-	mainMenuCheckUpdateIndex = 15
-)
+// mainMenuHelpIndex is the hardcoded index of the built-in 帮助 entry (the
+// last built-in item; plugin main-menu items are appended after it and thus
+// never shift this index). Its submenu placeholder is nil and Action handles
+// the Markdown popup directly.
+const mainMenuHelpIndex = 14
 
 type MainMenu struct {
 	baseMenu
@@ -35,7 +38,6 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			{Title: "主播电台"},
 			{Title: "LastFM"},
 			{Title: "帮助"},
-			{Title: "检查更新"},
 		},
 		menuList: []Menu{
 			mustBuildNoArg("daily_songs", base),
@@ -53,8 +55,20 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			mustBuildNoArg("radio_dj_type", base),
 			mustBuildNoArg("last_fm", base),
 			nil, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
-			nil, // 检查更新由 Action 异步执行，并直接显示 TUI 通知。
 		},
+	}
+
+	// 追加插件声明的主菜单项（Phase 3.9）。插件主菜单项 MUST 是无参菜单：
+	// 经 mustBuildNoArg 构建，key 未注册或为参数化菜单会在启动时 panic
+	// （程序错误，作为启动完整性信号；先显式断言以给出清晰错误）。
+	// 触发由插件菜单自身的 Action / BeforeEnterMenuHook 承担——主菜单不再
+	// 对插件索引做特判（检查更新的 index-15 特判已随插件化移除）。
+	for _, item := range MainMenuPluginItems() {
+		if _, ok := menuRegistry[item.Key]; !ok {
+			panic(fmt.Sprintf("main menu plugin item %q: menu provider not registered", item.Key))
+		}
+		mainMenu.menus = append(mainMenu.menus, model.MenuItem{Title: item.Title})
+		mainMenu.menuList = append(mainMenu.menuList, mustBuildNoArg(item.Key, base))
 	}
 	return mainMenu
 }
@@ -92,15 +106,10 @@ func (m *MainMenu) Action(app *model.App, index int) (model.Page, tea.Cmd) {
 	case mainMenuHelpIndex:
 		showHelpPopup(app)
 		return app.MustMain(), nil
-	case mainMenuCheckUpdateIndex:
-		// 检查更新已提取为外部式插件（internal/plugins/checkupdate），经注册表
-		// 构建并执行其 Action；菜单本身承载检查与通知逻辑。
-		checkUpdate := buildMenuOrToast("check_update", m.baseMenu, NoArgMenuOpts{})
-		if checkUpdate == nil {
-			return app.MustMain(), nil
-		}
-		return checkUpdate.Action(app, 0)
 	default:
+		// 插件主菜单项（如检查更新）不再特判：Action 落到默认分支（非播放
+		// 菜单返回 nil/nil），由 SubMenu 进入插件菜单，触发由插件菜单自身的
+		// Action / BeforeEnterMenuHook 承担。
 		return m.baseMenu.Action(app, index)
 	}
 }

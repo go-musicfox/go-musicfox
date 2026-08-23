@@ -2,11 +2,13 @@ package ui
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 // Production menu/page provider registry — the adjudicated Candidate B shape
@@ -188,6 +190,79 @@ func toastRegistryError(title string, err error) {
 		Text:  err.Error(),
 		Level: notify.ToastError,
 	})
+}
+
+// --- Plugin main-menu items (Phase 3.9) ---
+
+// MainMenuItem is a plugin-declared entry appended to the main menu after the
+// built-in items. The Key MUST be a registered no-arg menu provider: the main
+// menu builds the entry via mustBuildNoArg, so an unregistered or
+// parameterized key surfaces as a startup panic in NewMainMenu (programmer
+// error / startup integrity signal).
+type MainMenuItem struct {
+	Key   string
+	Title string
+}
+
+// mainMenuPluginItems holds the plugin-declared main-menu items in
+// registration order (compile-time registration via init()).
+var mainMenuPluginItems []MainMenuItem
+
+// RegisterMainMenuItem appends a plugin main-menu entry. Panics on empty
+// key/title or a duplicate key (programmer error).
+func RegisterMainMenuItem(key, title string) {
+	if key == "" || title == "" {
+		panic("RegisterMainMenuItem: empty key or title")
+	}
+	for _, item := range mainMenuPluginItems {
+		if item.Key == key {
+			panic("RegisterMainMenuItem: duplicate key " + key)
+		}
+	}
+	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title})
+}
+
+// MainMenuPluginItems returns a snapshot of the registered plugin main-menu
+// items in registration order (NewMainMenu reads it once at construction).
+func MainMenuPluginItems() []MainMenuItem {
+	items := make([]MainMenuItem, len(mainMenuPluginItems))
+	copy(items, mainMenuPluginItems)
+	return items
+}
+
+// --- Plugin startup hooks (Phase 3.9) ---
+
+// startupHooks are the plugin-registered startup tasks, invoked by the shell's
+// InitHook after user/login init (services registered, toast hook wired) at
+// the position where the old shell-level startup auto-check ran. Registration
+// order is preserved.
+var startupHooks []func()
+
+// RegisterStartupHook registers a startup task. The shell calls hooks with the
+// app running (services registered); each hook runs with panic isolation (a
+// panicking hook is logged and does not crash startup). Panics on a nil hook
+// (programmer error).
+func RegisterStartupHook(fn func()) {
+	if fn == nil {
+		panic("RegisterStartupHook: nil hook")
+	}
+	startupHooks = append(startupHooks, fn)
+}
+
+// runStartupHooks invokes the registered startup hooks in order, each wrapped
+// in a recover so a panicking hook is logged and skipped without crashing
+// startup (framework-hardening house style).
+func runStartupHooks() {
+	for _, hook := range startupHooks {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("startup hook panicked", slogx.Error(r))
+				}
+			}()
+			hook()
+		}()
+	}
 }
 
 // --- Framework service handles ---

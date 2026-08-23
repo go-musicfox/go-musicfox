@@ -106,14 +106,15 @@ func TestMainMenuHelpActionShowsMarkdownPopup(t *testing.T) {
 	}
 }
 
-func TestMainMenuCheckUpdateActionReturnsNotificationCommand(t *testing.T) {
-	// The "check_update" provider ships with the external-style plugin
-	// (internal/plugins/checkupdate), which this ui test binary cannot link
-	// (ui must not import plugins). Register a behavior-equivalent test-double
-	// so the registry-routed main-menu action is exercised.
+func TestMainMenuPluginItemRoutesToPluginMenu(t *testing.T) {
+	// The "check_update" provider and its main-menu entry ship with the
+	// external-style plugin (internal/plugins/checkupdate), which this ui test
+	// binary cannot link (ui must not import plugins). Register behavior-
+	// equivalent test-doubles so the plugin main-menu item is exercised.
 	RegisterMenu("check_update", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
+	RegisterMainMenuItem("check_update", "检查更新")
 
 	app, netease := newFormPageTestApp(t)
 	menu := NewMainMenu(newBaseMenu(netease))
@@ -128,12 +129,18 @@ func TestMainMenuCheckUpdateActionReturnsNotificationCommand(t *testing.T) {
 		t.Fatal("main menu does not contain check-update entry")
 	}
 
-	page, cmd := menu.Action(app, updateIndex)
-	if page != app.MustMain() || cmd == nil {
-		t.Fatalf("check-update action returned page=%T cmd=%v, want current main page and notification command", page, cmd)
+	// The main menu no longer special-cases the check-update index: Action
+	// falls through (nil/nil) and the trigger is handled by the plugin menu's
+	// own BeforeEnterMenuHook/Action.
+	if page, cmd := menu.Action(app, updateIndex); page != nil || cmd != nil {
+		t.Fatalf("main menu check-update action = page=%T cmd=%v, want nil/nil (fall through to plugin menu)", page, cmd)
 	}
-	if submenu := menu.SubMenu(app, updateIndex); submenu != nil {
-		t.Fatalf("check-update entry still opens submenu %T", submenu)
+	submenu := menu.SubMenu(app, updateIndex)
+	if submenu == nil {
+		t.Fatal("check-update entry does not route to a plugin submenu")
+	}
+	if key := submenu.GetMenuKey(); key != "check_update" {
+		t.Fatalf("check-update submenu key = %q, want check_update", key)
 	}
 }
 

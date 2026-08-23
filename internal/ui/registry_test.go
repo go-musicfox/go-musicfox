@@ -99,6 +99,113 @@ func TestMustBuildNoArg(t *testing.T) {
 	})
 }
 
+// --- plugin main-menu items (Phase 3.9) ---
+
+func TestRegisterMainMenuItemValidation(t *testing.T) {
+	// Empty key/title never register.
+	assertPanics(t, func() {
+		RegisterMainMenuItem("", "空 key")
+	})
+	assertPanics(t, func() {
+		RegisterMainMenuItem("empty_title", "")
+	})
+	// Duplicate key panics; the first registration persists (compile-time
+	// registration has no unregister), so pair it with a menu provider to keep
+	// later NewMainMenu constructions buildable.
+	RegisterMenu[NoArgMenuOpts]("registry_test_dup_main_item", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return &testCheckUpdateMenu{baseMenu: base}, nil
+	})
+	assertPanics(t, func() {
+		RegisterMainMenuItem("registry_test_dup_main_item", "重复")
+		RegisterMainMenuItem("registry_test_dup_main_item", "重复")
+	})
+}
+
+func TestMainMenuPluginItemsSnapshot(t *testing.T) {
+	// Snapshot must not alias the internal registry: mutating the returned
+	// slice must not pollute later calls.
+	before := len(MainMenuPluginItems())
+	items := MainMenuPluginItems()
+	items = append(items, MainMenuItem{Key: "registry_test_snapshot", Title: "快照"})
+	for _, item := range items {
+		if item.Key == "registry_test_snapshot" {
+			if got := len(MainMenuPluginItems()); got != before {
+				t.Fatalf("MainMenuPluginItems() mutated by appending to a snapshot: %d -> %d", before, got)
+			}
+			return
+		}
+	}
+	t.Fatal("appended item not present in the local snapshot copy")
+}
+
+func TestNewMainMenuAppendsPluginItems(t *testing.T) {
+	// A test-double plugin menu + main-menu item must be appended after the
+	// built-ins (the registry is a package global shared with other tests, so
+	// only the presence/position-relative-to-builtins is asserted).
+	const builtinMenuCount = 15
+	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return &testCheckUpdateMenu{baseMenu: base}, nil
+	})
+	RegisterMainMenuItem("registry_test_plugin_menu", "插件菜单项")
+
+	menu := NewMainMenu(testBase)
+	if len(menu.menus) != len(menu.menuList) {
+		t.Fatalf("menus=%d menuList=%d, want equal lengths", len(menu.menus), len(menu.menuList))
+	}
+	pluginIndex := -1
+	for i, item := range menu.menus {
+		if item.Title == "插件菜单项" {
+			pluginIndex = i
+			break
+		}
+	}
+	if pluginIndex < 0 {
+		t.Fatal("main menu does not contain the plugin item")
+	}
+	if pluginIndex < builtinMenuCount {
+		t.Fatalf("plugin item index = %d, want appended after built-ins (%d+)", pluginIndex, builtinMenuCount)
+	}
+	if menu.menus[mainMenuHelpIndex].Title != "帮助" {
+		t.Fatalf("help entry shifted: menus[%d] = %q", mainMenuHelpIndex, menu.menus[mainMenuHelpIndex].Title)
+	}
+	if submenu := menu.SubMenu(nil, pluginIndex); submenu == nil {
+		t.Fatal("plugin item SubMenu is nil, want the built plugin menu")
+	} else if _, ok := submenu.(*testCheckUpdateMenu); !ok {
+		t.Fatalf("plugin item SubMenu = %T, want *testCheckUpdateMenu", submenu)
+	}
+
+	// A main-menu item whose key has no menu provider is a startup integrity
+	// failure (mustBuildNoArg would panic; the explicit assert in NewMainMenu
+	// must fire with a clear message). Registered last so no later test in this
+	// binary builds a main menu.
+	RegisterMainMenuItem("registry_test_missing_menu", "缺失注册")
+	assertPanics(t, func() {
+		NewMainMenu(testBase)
+	})
+}
+
+// --- plugin startup hooks (Phase 3.9) ---
+
+func TestRegisterStartupHookRejectsNil(t *testing.T) {
+	assertPanics(t, func() {
+		RegisterStartupHook(nil)
+	})
+}
+
+func TestRunStartupHooksPanicIsolation(t *testing.T) {
+	var order []string
+	RegisterStartupHook(func() { order = append(order, "first") })
+	RegisterStartupHook(func() { panic("boom") })
+	RegisterStartupHook(func() { order = append(order, "third") })
+
+	runStartupHooks()
+
+	// Registration order preserved, panicking hook skipped without aborting.
+	if len(order) != 2 || order[0] != "first" || order[1] != "third" {
+		t.Fatalf("startup hooks ran in order %v, want [first third]", order)
+	}
+}
+
 func TestBuildMenuOrToastMissingKeyReturnsNil(t *testing.T) {
 	withDummyConfig(t)
 	if menu := buildMenuOrToast("no_such_menu", testBase, NoArgMenuOpts{}); menu != nil {

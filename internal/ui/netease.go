@@ -227,7 +227,7 @@ func (n *Netease) InitHook(_ *model.App) {
 	//  7. extInfo / notifier / logo 清理。
 	//  8. like list 刷新（仅登录态）。
 	//  9. 每日签到（仅登录态，受 config.Startup.SignIn 控制）。
-	//  10. 检查更新（受 config.Startup.CheckUpdate 控制）。
+	//  10. 插件启动钩子（插件注册的启动任务，如 checkupdate 的自动检查）。
 	//  11. 自动播放（受 config.Autoplay.Enable 控制）。
 	//  12. changelog 弹窗。
 	// ---------------------------------------------------------------------
@@ -376,18 +376,12 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		// 检查更新：启动自动检查保留在 shell（无启动钩子机制；菜单触发的检查
-		// 由 internal/plugins/checkupdate 插件承载，ui 不得反向导入插件包）。
-		if config.Startup.CheckUpdate {
-			if ok, newVersion := version.CheckUpdate(); ok {
-				notify.Notify(notify.NotifyContent{
-					Title:       "发现新版本: " + newVersion,
-					Text:        "去看看呗",
-					Url:         types.AppGithubUrl + "/releases/tag/" + newVersion,
-					ActionLabel: "前往 GitHub",
-				})
-			}
-		}
+		// 插件启动钩子（Phase 3.9）：运行插件注册的启动任务。此位置即原
+		// shell 级「检查更新」自动检查（config.Startup.CheckUpdate 门控）的
+		// 位置——该逻辑已移入 internal/plugins/checkupdate 并注册为启动钩子，
+		// ui 不再反向导入插件包。此时用户/登录已就绪、services 已注册、toast
+		// 已接线；每个 hook 带 panic 隔离（recover + 日志，不阻断启动）。
+		runStartupHooks()
 
 		// 自动播放
 		if config.Autoplay.Enable {
