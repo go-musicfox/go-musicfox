@@ -101,6 +101,16 @@
 
 - [x] 3.4.1 对外插件边界文档 + 示例
 
+### Phase 3.5: framework 加固（#646 评审后续）
+
+#646 评审登记的 Phase 3 后续项（framework 生命周期/并发契约/unmproto 标注）在本阶段落地：
+
+- [x] 3.5.1 `Scope.Start` 失败回滚 — 372eab1b（任何插件/子作用域 Start 失败时，按逆序 Stop 已启动的插件与子作用域后再返回错误；测试：三插件中第二个失败 → 第一个收到 Stop 且错误返回、Deps 失败回滚、子作用域失败回滚兄弟与父插件、嵌套作用域失败回滚父作用域）
+- [x] 3.5.2 parallel 事件链并发契约文档 — eabe4b6f（parallel handler 各自 goroutine 共享 `*Context` 只读；Service/ServiceOf 并发解析安全，Provide/Override 并发写为 race 且不支持；契约落在 `Parallel` 文档注释、parallel emit 分支与包文档；新增 `TestParallelReadOnlyServiceResolutionIsRaceSafe`（32 个 parallel handler 并发解析，-race 下通过）；未加锁（按 AGENTS.md 不做投机加固））
+- [x] 3.5.3 unmproto 标注 — 0b7c549c（header 说明为 Phase 0 证伪原型常驻 harness，引用 `.ai/runs/2026-08-22-plugin-framework-playback.md` 决策记录；保留用于复现 UNM 中间件等价性检查；如不再需要可在后续清理中移除；顺带修复该文件被 whole-file lint 门禁暴露的既有 ST1003 `linuxApiData` → `linuxAPIData`）
+
+验证：`make lint` 0 issues · `make test` 绿（framework 全量含 -race）· `make build` 绿 · `gofmt -l` 干净。macdriver cocoa/mediaplayer 的 2 项网络依赖测试（TestNSImage/TestMPMediaItemArtwork）为既有环境性偶发（master 同样失败，与本阶段无关）。
+
 ### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
 
 - **页面导航形态（3.3.2）**：login 页在 ToLoginPage 每次经 `buildPageOrToast("login")` 构建新实例（登录页无跨组件状态；webviewAvailable 检测缓存在 NewLoginPage 实例内，回调/返回语义不变），shell 移除 `n.login` 字段；search 页保留 shell 单例（`n.search`），其 wordsInput/result/searchType 被 SearchResultMenu.BeforeEnterMenuHook 与 operate.searchSong 共享，必须保持同一实例。
@@ -149,3 +159,10 @@
 - B 代价（可缓解）：无参菜单需 `NoArgMenuOpts{}`（20+/43 菜单无参，用 `mustBuildNoArg` 紧凑辅助形式解决）；单字段 struct 轻微噪音
 
 **3.2 按形态 B 实现**；原型文件 `registry_proto_a.go` / `registry_proto_b.go` 于 3.3.4 移除（证据文档 `.ai/runs/proto-3.0-evidence.md` 保留）。
+
+## 节奏变更（用户决策，2026-08-23）
+
+- 用户选择：**在当前分支 `feat/plugin-framework-phase3` 持续开发，功能稳定后再合入 master**（不按 P0 先合并 #646 再拆 PR 的路径）。
+- P0 闸门对 PR 打开的限制相应**顺延**：3.x PR 暂不开，等用户判定功能稳定后统一处理合并（届时按批次拆 PR 或整支合入，由用户决定）。
+- #645/#646 的合并动作由用户自行掌握（#646 QA 门禁待处理）。
+- 本 runs 文档与分支提交持续作为开发基线。
