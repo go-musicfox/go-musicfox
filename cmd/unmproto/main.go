@@ -1,10 +1,14 @@
-// Command unmproto is the Phase 0 falsification prototype for the go-musicfox
-// plugin framework spec. It verifies that the "URL middleware" shape can
-// reproduce the UNM (UnblockNeteaseMusic) behavior the SDK currently performs
-// internally: for a known-blocked song, it compares the URL produced by the
-// SDK's built-in UNM branch against the URL produced by an explicit middleware
-// that directly drives the vendored processor (RequestBefore → request →
-// RequestAfter).
+// Command unmproto is a permanent Phase 0 falsification-prototype harness for
+// the go-musicfox plugin framework spec (decision record: .ai/runs/2026-08-22-plugin-framework-playback.md).
+// It verifies that the "URL middleware" shape can reproduce the UNM
+// (UnblockNeteaseMusic) behavior the SDK currently performs internally: for a
+// known-blocked song, it compares the URL produced by the SDK's built-in UNM
+// branch against the URL produced by an explicit middleware that directly
+// drives the vendored processor (RequestBefore → request → RequestAfter).
+//
+// It is kept in the repo so the UNM middleware equivalence check can be
+// reproduced whenever the middleware shape changes; it can be removed in a
+// later cleanup if no longer desired (see the run plan note).
 //
 // Decision gate (from the spec): if both URLs match, the middleware shape is
 // viable and Phase 1 proceeds; otherwise the shape is wrong and the design
@@ -19,8 +23,8 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/cnsilvan/UnblockNeteaseMusic/processor"
-	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/go-musicfox/netease-music/service"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/go-musicfox/requests"
 )
 
@@ -54,12 +58,12 @@ func sdkPath(songID string) (string, error) {
 // exactly like the SDK's Crypto == "linuxapi" branch), then drives the
 // vendored processor explicitly instead of letting the SDK do it internally.
 func middlewarePath(songID string) (string, error) {
-	linuxApiData := map[string]interface{}{
+	linuxAPIData := map[string]interface{}{
 		"method": "POST",
 		"url":    songURLAPI,
 		"params": map[string]string{"ids": "[" + songID + "]", "br": br},
 	}
-	data := neteaseutil.Linuxapi(linuxApiData)
+	data := neteaseutil.Linuxapi(linuxAPIData)
 
 	req := requests.Requests()
 	req.SetCookie(&http.Cookie{Name: "os", Value: "pc"})
