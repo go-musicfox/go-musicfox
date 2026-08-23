@@ -4,12 +4,10 @@ import (
 	"image/color"
 	"regexp"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
@@ -38,7 +36,7 @@ type lyricCacheKey struct {
 
 // LyricRenderer is a dedicated UI component for rendering lyrics.
 type LyricRenderer struct {
-	netease      *Netease
+	svc          *menuServices
 	lyricService *lyric.Service
 
 	isVisible         bool
@@ -46,8 +44,7 @@ type LyricRenderer struct {
 	lyricStartRow     int
 	lyrics            []string // Dynamic-size slice to hold lines for rendering
 	lyricNowScrollBar *app.XScrollBar
-	currentTimeMs     int64     // Current playback time in milliseconds for YRC rendering
-	lastViewTime      time.Time // For debug logging
+	currentTimeMs     int64 // Current playback time in milliseconds for YRC rendering
 
 	// output caching to avoid recomputation when nothing changed
 	cachedView  string
@@ -56,9 +53,9 @@ type LyricRenderer struct {
 }
 
 // NewLyricRenderer creates a new lyric renderer component.
-func NewLyricRenderer(netease *Netease, lyricService *lyric.Service, initialVisibility bool) *LyricRenderer {
+func NewLyricRenderer(svc *menuServices, lyricService *lyric.Service, initialVisibility bool) *LyricRenderer {
 	return &LyricRenderer{
-		netease:           netease,
+		svc:               svc,
 		lyricService:      lyricService,
 		isVisible:         initialVisibility,
 		lyricNowScrollBar: app.NewXScrollBar(),
@@ -179,16 +176,16 @@ func stripAnsiCodes(s string) string {
 
 // Update handles UI messages, primarily for resizing and configuration updates.
 func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
-	main := r.netease.MustMain()
-	specLines := r.netease.SpectrumLines(main)
-	spaceHeight := r.netease.EffectiveWindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - specLines
+	main := r.svc.MustMain()
+	specLines := r.svc.SpectrumLines(main)
+	spaceHeight := r.svc.EffectiveWindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - specLines
 
 	if !r.isVisible || spaceHeight < MinSpaceHeight {
 		r.lyricLines = 0
 		return
 	}
 
-	endRow := r.netease.EffectiveWindowHeight() - EndRowMargin
+	endRow := r.svc.EffectiveWindowHeight() - EndRowMargin
 	if spaceHeight >= FullLyricLines {
 		r.lyricLines = FullLyricLines
 	} else {
@@ -199,8 +196,8 @@ func (r *LyricRenderer) Update(msg tea.Msg, a *model.App) {
 
 // View renders the lyric component.
 func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
-	specLines := r.netease.SpectrumLines(main)
-	endRow := r.netease.EffectiveWindowHeight() - EndRowMargin
+	specLines := r.svc.SpectrumLines(main)
+	endRow := r.svc.EffectiveWindowHeight() - EndRowMargin
 
 	if r.lyricLines == 0 {
 		fillingLines := endRow - main.MenuBottomRow() - specLines
@@ -233,7 +230,7 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 	// Update YRC playback time for word-level progress
 	var currentTimeMs int64
-	if player := r.netease.Player(); player != nil {
+	if player := r.svc.Player(); player != nil {
 		currentTimeMs = player.PassedTime().Milliseconds()
 		r.SetCurrentTime(currentTimeMs)
 	}
@@ -249,8 +246,8 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		yrcEnabled:           state.YRCEnabled,
 		showTranslation:      state.ShowTranslation,
 		currentTimeHundredMs: currentTimeMs / 100,
-		windowWidth:          r.netease.WindowWidth(),
-		windowHeight:         r.netease.EffectiveWindowHeight(),
+		windowWidth:          r.svc.App().WindowWidth(),
+		windowHeight:         r.svc.EffectiveWindowHeight(),
 		menuBottomRow:        main.MenuBottomRow(),
 		specLines:            specLines,
 		isCentered:           main.CenterEverything(),
@@ -424,8 +421,8 @@ func (r *LyricRenderer) renderLRCWithMode(state lyric.State, centerIndex int, cu
 
 // buildLyricsCentered contains the rendering logic for the centered layout.
 func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings.Builder) {
-	windowWidth := r.netease.WindowWidth()
-	coverWidth := r.netease.GetCoverWidth()
+	windowWidth := r.svc.App().WindowWidth()
+	coverWidth := r.svc.GetCoverWidth()
 
 	// Center the cover + lyric block as a single group. availableWidth is the
 	// lyric block width used to center each line; lyricStartCol is the block's
@@ -491,14 +488,14 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 // foreground-only style when the theme leaves the app background transparent.
 func styleLyricText(text string, fg color.Color) string {
 	if bg := style.CurrentStyleSet().AppBackground.GetBackground(); bg != nil {
-		return util.SetFgBgStyle(text, fg, bg)
+		return style.FGBG(text, fg, bg)
 	}
-	return util.SetFgStyle(text, fg)
+	return style.FG(text, fg)
 }
 
 // buildLyricsTraditional contains the rendering logic for the traditional layout.
 func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *strings.Builder) {
-	coverEndCol := r.netease.GetCoverEndColumn()
+	coverEndCol := r.svc.GetCoverEndColumn()
 
 	var startCol int
 	if main.IsDualColumn() {
@@ -512,7 +509,7 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		startCol = coverEndCol + CoverRightPadding // Add some padding after cover
 	}
 
-	maxLen := r.netease.WindowWidth() - startCol - LyricHorizontalMargin
+	maxLen := r.svc.App().WindowWidth() - startCol - LyricHorizontalMargin
 	if maxLen < MinLyricWidth {
 		maxLen = MinLyricWidth
 	}
@@ -557,7 +554,7 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 		// string would include escape bytes and shrink remainingWidth to zero,
 		// leaving the trailing margin unpainted (cover bleeds through).
 		lineLen := runewidth.StringWidth(stripAnsiCodes(lyricLine))
-		remainingWidth := r.netease.WindowWidth() - startCol - lineLen
+		remainingWidth := r.svc.App().WindowWidth() - startCol - lineLen
 		if remainingWidth > 0 {
 			lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", remainingWidth)))
 		}

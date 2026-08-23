@@ -57,7 +57,7 @@ func TestLyricTextLeavesCoverPaddingTransparent(t *testing.T) {
 	appBg := lipgloss.Color("#1E1E2E")
 	withAppBackgroundTheme(t, appBg)
 
-	r := &LyricRenderer{netease: netease, lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
+	r := &LyricRenderer{svc: newMenuServices(netease), lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
 	r.lyrics = []string{"上一句歌词", "当前高亮歌词", "下一句歌词"}
 
 	var b strings.Builder
@@ -83,7 +83,7 @@ func TestLyricTraditionalFillsFullWidth(t *testing.T) {
 	app, netease := newFormPageTestApp(t)
 	withAppBackgroundTheme(t, lipgloss.Color("#1E1E2E"))
 
-	r := &LyricRenderer{netease: netease, lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
+	r := &LyricRenderer{svc: newMenuServices(netease), lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
 	// Plain strings mirror the real "no lyric" placeholders (作曲：… / 纯音乐，请欣赏).
 	r.lyrics = []string{"作曲：和乐府", "纯音乐，请欣赏", ""}
 
@@ -111,7 +111,7 @@ func TestLyricCenteredTextLeavesCoverPaddingTransparent(t *testing.T) {
 
 	main := app.MustMain()
 
-	r := &LyricRenderer{netease: netease, lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
+	r := &LyricRenderer{svc: newMenuServices(netease), lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
 	r.lyrics = []string{"上一句", "居中高亮歌词", "下一句"}
 
 	var b strings.Builder
@@ -134,7 +134,7 @@ func TestLyricYRCLineLeavesCoverPaddingTransparent(t *testing.T) {
 	appBg := lipgloss.Color("#1E1E2E")
 	withAppBackgroundTheme(t, appBg)
 
-	r := &LyricRenderer{netease: netease, lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
+	r := &LyricRenderer{svc: newMenuServices(netease), lyricLines: 3, lyricNowScrollBar: appui.NewXScrollBar()}
 	current := lyric.YRCLine{StartTime: 0, EndTime: 3000, Words: []lyric.YRCWord{
 		{Word: "当前", StartTime: 0, EndTime: 1000},
 		{Word: "歌词", StartTime: 1000, EndTime: 2000},
@@ -174,8 +174,8 @@ func TestThemeSwitchInvalidatesRendererCaches(t *testing.T) {
 
 	song := structs.Song{Name: "缓存歌曲", Duration: time.Minute}
 
-	songRenderer := NewSongInfoRenderer(netease, songInfoTestState{song: song})
-	progRenderer := NewProgressRenderer(netease, progressTestState{song: song, passed: time.Minute})
+	songRenderer := NewSongInfoRenderer(newMenuServices(netease), songInfoTestState{song: song})
+	progRenderer := NewProgressRenderer(newMenuServices(netease), progressTestState{song: song, passed: time.Minute})
 
 	main := app.MustMain()
 	songView1, _ := songRenderer.View(app, main)

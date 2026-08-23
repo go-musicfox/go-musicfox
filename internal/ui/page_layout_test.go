@@ -122,9 +122,9 @@ func renderTopStatusProgressBarRow(t *testing.T, width, height int) int {
 	netease := &Netease{}
 	state := songInfoTestState{song: structs.Song{Id: 1, Name: "Layout Song", Duration: time.Minute}}
 	opts.Components = []model.Component{
-		&LyricRenderer{netease: netease},
-		NewSongInfoRenderer(netease, state),
-		NewProgressRenderer(netease, state),
+		&LyricRenderer{svc: newMenuServices(netease)},
+		NewSongInfoRenderer(newMenuServices(netease), state),
+		NewProgressRenderer(newMenuServices(netease), state),
 	}
 	app := model.NewApp(opts)
 	netease.App = app

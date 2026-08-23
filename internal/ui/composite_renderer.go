@@ -12,7 +12,7 @@ import (
 // CompositeRenderer combines multiple components horizontally with percentage-based width allocation.
 // This is used to display the cover image alongside lyrics.
 type CompositeRenderer struct {
-	netease  *Netease
+	svc      *menuServices
 	columns  []CompositeColumn
 	maxLines int // Maximum number of lines from all columns
 }
@@ -38,7 +38,7 @@ func (r *CompositeRenderer) View(a *model.App, main *model.Main) (view string, l
 		return "", 0
 	}
 
-	windowWidth := r.netease.WindowWidth()
+	windowWidth := r.svc.App().WindowWidth()
 
 	// Calculate actual widths for each column
 	widths := make([]int, len(r.columns))

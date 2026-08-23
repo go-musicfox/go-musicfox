@@ -20,12 +20,12 @@ import (
 
 // SongInfoRenderer is a dedicated UI component for rendering the current song's information.
 type SongInfoRenderer struct {
-	netease *Netease
-	state   playerRendererState
+	svc   *menuServices
+	state playerRendererState
 
 	cachedView     string
 	cachedLines    int
-	cachedSongId   int64
+	cachedSongID   int64
 	cachedState    types.State
 	cachedVolume   int
 	cachedMode     types.Mode
@@ -37,10 +37,10 @@ type SongInfoRenderer struct {
 }
 
 // NewSongInfoRenderer creates a new song info renderer component.
-func NewSongInfoRenderer(netease *Netease, state playerRendererState) *SongInfoRenderer {
+func NewSongInfoRenderer(svc *menuServices, state playerRendererState) *SongInfoRenderer {
 	return &SongInfoRenderer{
-		netease: netease,
-		state:   state,
+		svc:   svc,
+		state: state,
 	}
 }
 
@@ -63,9 +63,9 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		state          = r.state.State()
 		volume         = r.state.Volume()
 		mode           = r.state.Mode()
-		width          = r.netease.WindowWidth()
+		width          = r.svc.App().WindowWidth()
 		centered       = main.CenterEverything()
-		hoveredElement = r.netease.playbarHoveredElement
+		hoveredElement = r.svc.PlaybarHoveredElement()
 	)
 
 	var isLike bool
@@ -76,7 +76,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// Output caching: skip full rebuild when nothing changed. styleGen guards
 	// against replaying stale-colored output after a theme switch.
 	styleGen := style.StyleGeneration()
-	if song.Id == r.cachedSongId && state == r.cachedState && volume == r.cachedVolume &&
+	if song.Id == r.cachedSongID && state == r.cachedState && volume == r.cachedVolume &&
 		mode == r.cachedMode && isLike == r.cachedLike && width == r.cachedWidth &&
 		centered == r.cachedCentered && hoveredElement == r.cachedHover &&
 		styleGen == r.cachedStyleGen {
@@ -84,14 +84,14 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 
 	var (
-		builder  strings.Builder
-		segments []Segment
-		appColors = configs.GetCurrentAppColors()
-		artistColor = configs.SafeGetForeground(appColors.PlaybarArtist, configs.PlaybarArtistColor)
-		modeColor   = configs.SafeGetForeground(appColors.PlaybarMode, configs.PlaybarModeColor)
-		volumeColor = configs.SafeGetForeground(appColors.PlaybarVolume, configs.PlaybarVolumeColor)
-		playingColor = configs.SafeGetForeground(appColors.PlaybarPlaying, configs.PlaybarPlayingColor)
-		pausedColor  = configs.SafeGetForeground(appColors.PlaybarPaused, configs.PlaybarPausedColor)
+		builder           strings.Builder
+		segments          []Segment
+		appColors         = configs.GetCurrentAppColors()
+		artistColor       = configs.SafeGetForeground(appColors.PlaybarArtist, configs.PlaybarArtistColor)
+		modeColor         = configs.SafeGetForeground(appColors.PlaybarMode, configs.PlaybarModeColor)
+		volumeColor       = configs.SafeGetForeground(appColors.PlaybarVolume, configs.PlaybarVolumeColor)
+		playingColor      = configs.SafeGetForeground(appColors.PlaybarPlaying, configs.PlaybarPlayingColor)
+		pausedColor       = configs.SafeGetForeground(appColors.PlaybarPaused, configs.PlaybarPausedColor)
 		heartLikedColor   = configs.SafeGetForeground(appColors.PlaybarHeartLiked, configs.PlaybarHeartLikedColor)
 		heartUnlikedColor = configs.SafeGetForeground(appColors.PlaybarHeartUnliked, configs.PlaybarHeartUnlikedColor)
 	)
@@ -172,7 +172,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		for _, seg := range segments {
 			prefixUsedWidth += runewidth.StringWidth(seg.text)
 		}
-		availableWidth := r.netease.WindowWidth()
+		availableWidth := r.svc.App().WindowWidth()
 
 		songName := song.Name
 		artistString := artistsString(song)
@@ -196,7 +196,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 
 	if main.CenterEverything() {
 		totalWidth := 0
-		widthLimit := r.netease.WindowWidth() - SongInfoHorizontalPadding
+		widthLimit := r.svc.App().WindowWidth() - SongInfoHorizontalPadding
 		for index, segment := range segments {
 			segmentWidth := runewidth.StringWidth(segment.text)
 			if totalWidth+segmentWidth > widthLimit {
@@ -205,12 +205,12 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 			}
 			totalWidth += segmentWidth
 		}
-		paddingLeft := (r.netease.WindowWidth() - totalWidth) / 2
+		paddingLeft := (r.svc.App().WindowWidth() - totalWidth) / 2
 		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", paddingLeft)))
 		for _, segment := range segments {
 			builder.WriteString(renderSegment(segment))
 		}
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", r.netease.WindowWidth()-paddingLeft-totalWidth)))
+		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", r.svc.App().WindowWidth()-paddingLeft-totalWidth)))
 	} else {
 		// Left-aligned: concatenate segments, then fill trailing space to window width.
 		totalWidth := 0
@@ -218,7 +218,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 			builder.WriteString(renderSegment(segment))
 			totalWidth += runewidth.StringWidth(segment.text)
 		}
-		remainingWidth := r.netease.WindowWidth() - totalWidth
+		remainingWidth := r.svc.App().WindowWidth() - totalWidth
 		if remainingWidth > 0 {
 			builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", remainingWidth)))
 		}
@@ -233,7 +233,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	// Store output cache
 	r.cachedView = builder.String() + "\n"
 	r.cachedLines = lines
-	r.cachedSongId = song.Id
+	r.cachedSongID = song.Id
 	r.cachedState = state
 	r.cachedVolume = volume
 	r.cachedMode = mode

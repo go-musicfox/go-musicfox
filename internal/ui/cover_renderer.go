@@ -24,7 +24,7 @@ import (
 // CoverRenderer is a dedicated UI component for rendering album cover images
 // using the Kitty graphics protocol.
 type CoverRenderer struct {
-	netease      *Netease
+	svc          *menuServices
 	state        playerRendererState
 	imageCache   *kitty.ImageCache
 	kittySupport bool
@@ -34,7 +34,7 @@ type CoverRenderer struct {
 	// animation goroutine and Close(), so kitty sequences never interleave
 	// and corrupt the escape stream.
 	writeMu       sync.Mutex
-	currentSongId int64  // Track currently displayed song to avoid redundant renders
+	currentSongID int64  // Track currently displayed song to avoid redundant renders
 	cachedSeq     string // Cached kitty sequence
 	lastStartRow  int    // Last rendered start row position
 	lastStartCol  int    // Last rendered start column position
@@ -43,7 +43,6 @@ type CoverRenderer struct {
 	skipFrames    int    // Number of View calls to skip before rendering (for resize timing)
 
 	animImageID     uint32      // ID for animated cover
-	lastAngle       float64     // Last rendered rotation angle
 	lastPlayerState types.State // Track player state to control animation
 
 	renderingID int64              // Song ID currently being rendered in background
@@ -69,11 +68,11 @@ type renderResult struct {
 }
 
 // NewCoverRenderer creates a new cover image renderer component.
-func NewCoverRenderer(netease *Netease, state playerRendererState) *CoverRenderer {
+func NewCoverRenderer(svc *menuServices, state playerRendererState) *CoverRenderer {
 	kittySupport := kitty.IsSupported()
 
 	r := &CoverRenderer{
-		netease:      netease,
+		svc:          svc,
 		state:        state,
 		imageCache:   kitty.NewImageCache(10),
 		kittySupport: kittySupport,
@@ -97,14 +96,14 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 	switch msg.(type) {
 	case tea.WindowSizeMsg:
 		// Reset state to force re-render after resize
-		// Note: Don't calculate dimensions here - netease.WindowWidth/Height
+		// Note: Don't calculate dimensions here - svc.App().WindowWidth/EffectiveWindowHeight
 		// might not be updated yet. We'll calculate in View instead.
 		r.mu.Lock()
 		r.cachedSeq = ""
 		r.imageRendered = false
 		r.lastStartRow = 0
 		r.lastStartCol = 0
-		r.currentSongId = 0
+		r.currentSongID = 0
 		r.forceRerender = true // Force re-render on next View call
 		r.cols = 0             // Reset to trigger recalculation in View
 		r.rows = 0
@@ -115,8 +114,8 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 
 // calculateDimensions calculates the cover image display dimensions.
 func (r *CoverRenderer) calculateDimensions() {
-	main := r.netease.MustMain()
-	spaceHeight := r.netease.EffectiveWindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - r.netease.SpectrumLines(main)
+	main := r.svc.MustMain()
+	spaceHeight := r.svc.EffectiveWindowHeight() - FixedTopBottomRows - main.MenuBottomRow() - r.svc.SpectrumLines(main)
 
 	if spaceHeight < MinSpaceHeight {
 		r.rows = 0
@@ -130,7 +129,7 @@ func (r *CoverRenderer) calculateDimensions() {
 		widthRatio = DefaultCoverWidthRatio
 	}
 
-	windowWidth := r.netease.WindowWidth()
+	windowWidth := r.svc.App().WindowWidth()
 	r.cols = max(int(float64(windowWidth)*widthRatio), MinCoverCols) // Minimum width
 
 	// Calculate rows to maintain square visual aspect ratio
@@ -194,9 +193,9 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	windowHeight := r.netease.EffectiveWindowHeight()
+	windowHeight := r.svc.EffectiveWindowHeight()
 
-	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
+	lyricStartRow, lyricLines := r.svc.GetLyricPosition()
 
 	// Position cover purely based on lyrics: align the cover's bottom edge to the
 	// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
@@ -214,15 +213,15 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// centered in the window; otherwise align with the menu arrow.
 	coverStartCol := max(main.MenuStartColumn(), 1)
 	if main.CenterEverything() {
-		if c, _, _ := centeredCoverLyricLayout(r.netease.WindowWidth(), r.cols); c > 0 {
+		if c, _, _ := centeredCoverLyricLayout(r.svc.App().WindowWidth(), r.cols); c > 0 {
 			coverStartCol = c
 		}
 	}
 
 	song := r.state.CurSong()
-	picUrl := getCoverUrl(song)
+	picURL := getCoverURL(song)
 
-	if picUrl == "" {
+	if picURL == "" {
 		return "", 0
 	}
 
@@ -274,7 +273,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// Check if we need to re-render
 	r.mu.Lock()
 	forceRerender := r.forceRerender
-	songChanged := song.Id != r.currentSongId
+	songChanged := song.Id != r.currentSongID
 	positionChanged := r.lastStartRow != coverStartRow || r.lastStartCol != coverStartCol
 
 	spin := configs.AppConfig.Main.Lyric.Cover.Spin
@@ -289,7 +288,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Apply to terminal
 				r.writeStdout(res.sequence)
 
-				r.currentSongId = res.songID
+				r.currentSongID = res.songID
 				r.animImageID = res.animID
 				r.lastStartRow = res.startRow
 				r.lastStartCol = res.startCol
@@ -358,7 +357,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 			// IMPORTANT: Render static image IMMEDIATELY while animation is being calculated
 			// This avoids a blank cover during the calculation time
-			renderStaticForAnimation(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID, zIndex)
+			renderStaticForAnimation(ctx, song, picURL, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID, zIndex)
 
 			// Capture variables for closure
 			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32, bgZIndex int) {
@@ -535,7 +534,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 					animID:   bgAnimID,
 				}:
 				}
-			}(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID, zIndex)
+			}(ctx, song, picURL, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID, zIndex)
 
 			return "", 0
 		}
@@ -569,7 +568,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	r.mu.Unlock()
 
 	// Fetch and generate kitty sequence
-	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picUrl, r.cols, r.rows)
+	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picURL, r.cols, r.rows)
 	if err != nil {
 		slog.Debug("CoverRenderer: failed to fetch image", slog.Any("error", err))
 		return "", 0
@@ -580,7 +579,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 	// Cache the result and render
 	r.mu.Lock()
-	r.currentSongId = song.Id
+	r.currentSongID = song.Id
 	r.cachedSeq = kittySeq
 	r.lastStartRow = coverStartRow
 	r.lastStartCol = coverStartCol
@@ -637,8 +636,8 @@ func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int,
 // renderStaticForAnimation renders a static (non-spinning) version of the cover image
 // immediately while the animation is being calculated in the background.
 // Animation frames will overwrite this static image when ready.
-func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32, zIndex int) {
-	img, err := r.imageCache.GetImage(ctx, picUrl, cols, rows)
+func renderStaticForAnimation(ctx context.Context, song structs.Song, picURL string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32, zIndex int) {
+	img, err := r.imageCache.GetImage(ctx, picURL, cols, rows)
 	if err != nil || img == nil {
 		return
 	}
@@ -658,7 +657,7 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 	r.writeStdout(output)
 
 	r.mu.Lock()
-	r.currentSongId = song.Id
+	r.currentSongID = song.Id
 	r.cachedSeq = kittySeq
 	r.lastStartRow = startRow
 	r.lastStartCol = startCol
@@ -671,7 +670,7 @@ func (r *CoverRenderer) ClearCache() {
 	r.imageCache.Clear()
 	r.mu.Lock()
 	r.cachedSeq = ""
-	r.currentSongId = 0
+	r.currentSongID = 0
 	r.imageRendered = false
 	r.mu.Unlock()
 }
@@ -694,7 +693,7 @@ func (r *CoverRenderer) GetCoverEndColumn() int {
 	if !r.IsEnabled() {
 		return 0
 	}
-	main := r.netease.MustMain()
+	main := r.svc.MustMain()
 	startCol := max(main.MenuStartColumn(), 1)
 	if r.cols == 0 {
 		r.calculateDimensions()
@@ -731,14 +730,14 @@ func centeredCoverLyricLayout(windowWidth, coverWidth int) (coverStartCol, lyric
 	return coverStartCol, lyricStartCol, lyricWidth
 }
 
-// getCoverUrl extracts the cover URL from a song, with resize parameter.
-func getCoverUrl(song structs.Song) string {
-	picUrl := song.PicUrl
-	if picUrl == "" {
+// getCoverURL extracts the cover URL from a song, with resize parameter.
+func getCoverURL(song structs.Song) string {
+	picURL := song.PicUrl
+	if picURL == "" {
 		return ""
 	}
 	// Add resize parameter for better performance (request smaller image)
-	return app.AddResizeParamForPicUrl(picUrl, 512)
+	return app.AddResizeParamForPicUrl(picURL, 512)
 }
 
 // ClearDisplayed clears the displayed cover image when switching pages.
@@ -759,7 +758,7 @@ func (r *CoverRenderer) ClearDisplayed() {
 
 	r.imageRendered = false
 	r.cachedSeq = ""
-	r.currentSongId = 0
+	r.currentSongID = 0
 	r.animImageID = 0
 	r.renderingID = 0
 	r.lastStartRow = 0

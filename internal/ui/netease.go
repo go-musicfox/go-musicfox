@@ -106,10 +106,10 @@ func NewNetease(app *model.App) *Netease {
 
 	n.player = NewPlayer(n, n.lyricService)
 
-	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
-	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
-	n.progressRenderer = NewProgressRenderer(n, n.player)
-	n.coverRenderer = NewCoverRenderer(n, n.player)
+	n.lyricRenderer = NewLyricRenderer(newMenuServices(n), n.lyricService, showLyric)
+	n.songInfoRenderer = NewSongInfoRenderer(newMenuServices(n), n.player)
+	n.progressRenderer = NewProgressRenderer(newMenuServices(n), n.player)
+	n.coverRenderer = NewCoverRenderer(newMenuServices(n), n.player)
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
