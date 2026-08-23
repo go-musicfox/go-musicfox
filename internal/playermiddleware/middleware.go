@@ -16,7 +16,10 @@ type MiddlewareNext func(ctx context.Context, urlMusic *player.URLMusic) error
 
 // URLMiddleware is a playback-chain middleware. It receives the resolved
 // URLMusic (URL, Song, Type), may rewrite it, and must call next to continue
-// the chain. Returning an error aborts the chain.
+// the chain. The ctx and urlMusic passed to next are propagated to the
+// following middleware, so a rewriting middleware can hand a rewritten
+// URLMusic (or a derived context) downstream. Returning an error aborts the
+// chain.
 type URLMiddleware func(ctx context.Context, urlMusic *player.URLMusic, next MiddlewareNext) error
 
 // ErrBlockedTrack is returned by middleware to mark a track as intentionally
@@ -49,14 +52,14 @@ func (c *Chain) Len() int {
 // no-op returning nil. The first non-nil error returned by any middleware
 // aborts the chain and is propagated to the caller.
 func (c *Chain) Execute(ctx context.Context, urlMusic *player.URLMusic) error {
-	var run func(i int) error
-	run = func(i int) error {
+	var run func(i int, ctx context.Context, urlMusic *player.URLMusic) error
+	run = func(i int, runCtx context.Context, runMusic *player.URLMusic) error {
 		if i >= len(c.middlewares) {
 			return nil
 		}
-		return c.middlewares[i](ctx, urlMusic, func(ctx context.Context, m *player.URLMusic) error {
-			return run(i + 1)
+		return c.middlewares[i](runCtx, runMusic, func(nextCtx context.Context, nextMusic *player.URLMusic) error {
+			return run(i+1, nextCtx, nextMusic)
 		})
 	}
-	return run(0)
+	return run(0, ctx, urlMusic)
 }

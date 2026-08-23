@@ -1,3 +1,5 @@
+// Package ui provides the TUI views, menus and player coordinator for
+// go-musicfox.
 package ui
 
 import (
@@ -316,7 +318,6 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	// 构造 URLMusic 并经过中间件链（如 UNM banned-path 拦截），
 	// 中间件可改写 URL 或以 ErrBlockedTrack 拦截播放。
 	urlMusic := &player.URLMusic{URL: url, Song: song, Type: player.SongTypeMapping[musicType]}
-	logger := slog.With(slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 	var skip bool
 	if err == nil {
 		if mwErr := p.middlewareChain.Execute(context.Background(), urlMusic); mwErr != nil {
@@ -328,6 +329,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		}
 	}
 	url = urlMusic.URL
+	// logger 在中间件链执行之后构造，记录的是实际用于播放的 URL
+	// （可能已被改写型中间件重写）。
+	logger := slog.With(slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	if url == "" || err != nil || skip {
 		p.playErrCount++

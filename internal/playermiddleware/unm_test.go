@@ -80,3 +80,24 @@ func TestUNMNextCalledOnSuccess(t *testing.T) {
 		t.Fatal("next middleware was not called")
 	}
 }
+
+func TestUNMReceivesRewrittenURLFromUpstream(t *testing.T) {
+	withUNMConfig(t, "", false)
+	// A rewriting middleware upstream hands a new URLMusic to next; the UNM
+	// middleware must operate on that propagated value, not a stale one.
+	c := NewChain().Use(
+		func(_ context.Context, _ *player.URLMusic, next MiddlewareNext) error {
+			return next(context.Background(), testURLMusic("https://m801.music.126.net/abc/def.mp3"))
+		},
+		NewUNMMiddleware(),
+		func(_ context.Context, m *player.URLMusic, next MiddlewareNext) error {
+			if m.URL != "https://m801.music.126.net/abc/def.mp3" {
+				t.Fatalf("UNM passed a wrong URLMusic downstream, got %q", m.URL)
+			}
+			return next(context.Background(), m)
+		},
+	)
+	if err := c.Execute(context.Background(), testURLMusic("https://original.example.com/x.mp3")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

@@ -100,3 +100,43 @@ func TestChainContextPassthrough(t *testing.T) {
 		t.Fatalf("context value not propagated, got %v", seen)
 	}
 }
+
+func TestChainNextPropagatesRewrittenURLMusic(t *testing.T) {
+	c := NewChain()
+	c.Use(
+		func(_ context.Context, _ *player.URLMusic, next MiddlewareNext) error {
+			// Hand a rewritten URLMusic to the next middleware via the
+			// callback argument, not in-place mutation of the shared pointer.
+			return next(context.Background(), testURLMusic("https://rewritten.example.com/y.flac"))
+		},
+		func(_ context.Context, m *player.URLMusic, next MiddlewareNext) error {
+			if m.URL != "https://rewritten.example.com/y.flac" {
+				t.Fatalf("next middleware did not receive the rewritten URLMusic, got %q", m.URL)
+			}
+			return next(context.Background(), m)
+		},
+	)
+	if err := c.Execute(context.Background(), testURLMusic("https://original.example.com/x.mp3")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestChainNextPropagatesContext(t *testing.T) {
+	type ctxKey struct{}
+	c := NewChain()
+	c.Use(
+		func(_ context.Context, _ *player.URLMusic, next MiddlewareNext) error {
+			derived := context.WithValue(context.Background(), ctxKey{}, "derived")
+			return next(derived, testURLMusic("https://example.com/a.mp3"))
+		},
+		func(ctx context.Context, _ *player.URLMusic, next MiddlewareNext) error {
+			if got := ctx.Value(ctxKey{}); got != "derived" {
+				t.Fatalf("next middleware did not receive the derived context, got %v", got)
+			}
+			return next(ctx, testURLMusic("https://example.com/a.mp3"))
+		},
+	)
+	if err := c.Execute(context.Background(), testURLMusic("https://example.com/a.mp3")); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
