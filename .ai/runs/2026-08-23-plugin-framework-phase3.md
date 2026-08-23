@@ -121,7 +121,16 @@
 
 验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净（`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。avcore 测试在 `make test` 全量运行时偶发 FAIL、单独/重跑即绿（与本阶段改动无关）。
 
-验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净（`foxful_integration_test.go`/`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。
+### Phase 3.6 handler-services（解耦调查 work package 2）
+
+operate 辅助函数 / 操作执行器 / 事件处理器全面去 `*Netease`（仅访问路径变更，行为保持）：
+
+- [x] 3.6.4 操作执行器去耦合 — a2151f29（`NewOperation(svc *menuServices, coreFunc CoreFunc)`，`CoreFunc` 改为 `func(svc *menuServices) model.Page`；认证经 `svc.User()`、登录跳转经 `svc.ToLoginPage`、loading 经 `svc.MustMain`；operate.go 全部 NewOperation 调用点传入访问器，coreLogic 闭包改收 `*menuServices`，去除闭包内 `newMenuServices(n)` 二次派生；顺带修复 executor.go 被 whole-file lint 暴露的 gci import 分组）
+- [x] 3.6.5 operate 辅助函数迁移 — 2521d7e4（~30 个辅助函数签名 `func(n *Netease, …)` → `func(svc *menuServices, …)`：getTargetSong/getSelectedPlaylist/likeSong/trashSong/confirmTrashSong/trashSongWithConfirm/downloadSong/handleSongDownload/downloadSongLrc/handleLyricDownload/findSimilarSongs/goToAlbumOfSong/goToArtistOfSong/openInWeb/collectSelectedPlaylist/subscribeAlbum/subscribeArtist/appendSongsToCurPlaylist/openAddSongToUserPlaylistMenu/addSongToUserPlaylist/delSongFromPlaylist/clearSongCache/action/shareItem/searchSong 及 getTargetSong 家族；`newBaseMenu(n)` → `newBaseMenuFromSvc(svc)`；action_select 的 actionItemsForMenu/buildSongActions/buildPlaylistActions 同迁，buildActionItems 走 `m.svc`；menu.go 右键/动作路径走 `e.svc`；event_handler 调用点走 `h.svc`；playOrToggle 收 `*menuServices`；顺带修复 action_select 被 whole-file lint 暴露的 gci import 分组 + ST1021 ActionItem 文档注释）
+- [x] 3.6.6 事件处理器字段清除 — ad4c6784（`EventHandler` 删除 `netease *Netease` 字段，仅保留 `svc` 访问器；`NewEventHandler` 参数保留以构造访问器。handler-services 解耦完成：辅助函数/执行器/处理器全部只经 `menuServices` 工作）
+- **剩余 `.Netease()` 逃生口（4 处，均有依据）**：`menu.go` BaseMenu.Netease() 方法体（对外插件边界逃生口，docs/plugin_development.md 已文档化，外部插件经 `base.Netease()` 访问薄壳）· `registry_registrations.go` neteaseFromBase（main_menu/local_search bootstrap 直构，构造器先于 baseMenu 签名，3.3.5 裁决保留）· `lastfm_profile.go` ×2（页面 opts 携带 `*Netease` 壳引用，3.3.5 合理残留「页面由 shell 构建并持有 shell 引用」）
+
+验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净。验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净（`foxful_integration_test.go`/`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。
 
 ### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
 
