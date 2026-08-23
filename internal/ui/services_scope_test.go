@@ -40,7 +40,7 @@ func TestServiceScopeStartResolvesService(t *testing.T) {
 	scope := framework.NewScope()
 	ctx := &framework.Context{}
 
-	scope.Add(&fakePlugin{
+	_ = scope.Add(&fakePlugin{
 		name:    "provider",
 		history: &history,
 		provide: func(ctx *framework.Context) error {
@@ -48,7 +48,7 @@ func TestServiceScopeStartResolvesService(t *testing.T) {
 			return nil
 		},
 	})
-	scope.Add(&fakePlugin{name: "consumer", history: &history})
+	_ = scope.Add(&fakePlugin{name: "consumer", history: &history})
 
 	if err := scope.Start(ctx); err != nil {
 		t.Fatalf("Start() error = %v", err)
@@ -63,7 +63,7 @@ func TestServiceScopeStopDisposeReverseOrder(t *testing.T) {
 	var history []string
 	scope := framework.NewScope()
 	for _, name := range []string{"p1", "p2", "p3"} {
-		scope.Add(&fakePlugin{name: name, history: &history})
+		_ = scope.Add(&fakePlugin{name: name, history: &history})
 	}
 
 	if err := scope.Start(&framework.Context{}); err != nil {
@@ -87,8 +87,8 @@ func TestServiceScopeDisposeChildBeforeParent(t *testing.T) {
 	var history []string
 	parent := framework.NewScope()
 	child := parent.NewScope()
-	parent.Add(&fakePlugin{name: "parent", history: &history})
-	child.Add(&fakePlugin{name: "child", history: &history})
+	_ = parent.Add(&fakePlugin{name: "parent", history: &history})
+	_ = child.Add(&fakePlugin{name: "child", history: &history})
 
 	if err := parent.Start(&framework.Context{}); err != nil {
 		t.Fatalf("Start() error = %v", err)
@@ -96,7 +96,9 @@ func TestServiceScopeDisposeChildBeforeParent(t *testing.T) {
 	if err := parent.Dispose(); err != nil {
 		t.Fatalf("Dispose() error = %v", err)
 	}
-	assertHistory(t, history, []string{"start:parent", "start:child", "dispose:child", "dispose:parent"})
+	// Dispose of a started scope implicitly stops it first: child and parent
+	// plugins receive Stop then Dispose (cordis dispose semantics).
+	assertHistory(t, history, []string{"start:parent", "start:child", "stop:child", "stop:parent", "dispose:child", "dispose:parent"})
 }
 
 func TestAppScopeRegistersShareAndLastfm(t *testing.T) {

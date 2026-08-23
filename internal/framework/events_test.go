@@ -3,6 +3,7 @@ package framework
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -293,5 +294,84 @@ func TestEmitUnregisteredEventIsNoop(t *testing.T) {
 	emitter := NewEventEmitter()
 	if err := emitter.Emit(&Context{}, "never-registered", nil); err != nil {
 		t.Fatalf("Emit() error = %v, want nil", err)
+	}
+}
+
+// --- panic isolation ---
+
+// assertPanicError asserts err is non-nil and reports the panicking handler
+// kind for event name "evt".
+func assertPanicError(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("Emit() error = nil, want non-nil (handler panicked)")
+	}
+	if !strings.Contains(err.Error(), "evt handler panicked") {
+		t.Fatalf("Emit() error = %v, want %q", err, "evt handler panicked")
+	}
+}
+
+func TestListenerPanicIsIsolated(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Listener("evt", func(ctx *Context, payload any) error { r.add("l1"); return nil })
+	emitter.Listener("evt", func(ctx *Context, payload any) error { panic("listener boom") })
+	emitter.Listener("evt", func(ctx *Context, payload any) error { r.add("l3"); return nil })
+
+	err := emitter.Emit(&Context{}, "evt", nil)
+	assertPanicError(t, err)
+	// The panic follows returned-error semantics: the chain is aborted and the
+	// remaining listeners must not run.
+	assertRecorder(t, r, []string{"l1"})
+}
+
+func TestMiddlewarePanicIsIsolated(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Middleware("evt", func(ctx *Context, payload any, next func() error) error {
+		r.add("in:mw1")
+		if err := next(); err != nil {
+			return err
+		}
+		r.add("out:mw1")
+		return nil
+	})
+	emitter.Middleware("evt", func(ctx *Context, payload any, next func() error) error {
+		panic("middleware boom")
+	})
+	emitter.Parallel("evt", func(ctx *Context, payload any) error { r.add("par"); return nil })
+
+	err := emitter.Emit(&Context{}, "evt", nil)
+	assertPanicError(t, err)
+	// The onion is aborted: the outer middleware's out phase and the parallel
+	// kind must not run.
+	assertRecorder(t, r, []string{"in:mw1"})
+}
+
+func TestSerialPanicIsIsolated(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Serial("evt", func(ctx *Context, payload any) error { r.add("s1"); return nil })
+	emitter.Serial("evt", func(ctx *Context, payload any) error { panic("serial boom") })
+	emitter.Serial("evt", func(ctx *Context, payload any) error { r.add("s3"); return nil })
+
+	err := emitter.Emit(&Context{}, "evt", nil)
+	assertPanicError(t, err)
+	assertRecorder(t, r, []string{"s1"})
+}
+
+func TestParallelPanicIsIsolatedAndOthersRun(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Parallel("evt", func(ctx *Context, payload any) error { r.add("p1"); return nil })
+	emitter.Parallel("evt", func(ctx *Context, payload any) error { panic("parallel boom") })
+	emitter.Parallel("evt", func(ctx *Context, payload any) error { r.add("p3"); return nil })
+
+	err := emitter.Emit(&Context{}, "evt", nil)
+	assertPanicError(t, err)
+	// All parallel handlers still run to completion: both non-panicking
+	// handlers must have been invoked.
+	if got := r.list(); len(got) != 2 {
+		t.Fatalf("recorded %v, want both non-panicking parallel handlers to run", got)
 	}
 }
