@@ -50,14 +50,12 @@ type ArtistsMenu interface {
 
 type baseMenu struct {
 	model.DefaultMenu
-	netease *Netease
-	svc     *menuServices
+	svc *menuServices
 }
 
 func newBaseMenu(netease *Netease) baseMenu {
 	return baseMenu{
-		netease: netease,
-		svc:     newMenuServices(netease),
+		svc: newMenuServices(netease),
 	}
 }
 
