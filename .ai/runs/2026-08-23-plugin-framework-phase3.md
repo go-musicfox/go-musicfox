@@ -46,6 +46,14 @@
 
 - [x] 3.4.1 对外插件边界文档 + 示例插件（编译期注册示范）— 验证: 示例编译 + 文档评审
 
+### Phase 3.7: framework lifecycle hardening (round 2)
+
+framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状态机 + Stop/Dispose 错误聚合 + 事件 handler panic 隔离。正确用法行为不变，误用语义显式化。
+
+- [ ] 3.7.1 Scope 生命周期状态机 + Stop/Dispose 错误聚合 — 验证: 状态机/聚合单测 + make lint/test/build 绿
+- [ ] 3.7.2 事件 handler panic 隔离 — 验证: 四类 handler panic 单测（-race）+ make lint/test/build 绿
+- [ ] 3.7.3 测试覆盖 — 验证: 全部门禁绿
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -142,6 +150,20 @@ Player 播放列表变更 API（最深耦合：外部代码直接变更 Player �
 **最终耦合盘点**：`.Netease()` 逃生口 4 处（不变，均有依据：menu.go BaseMenu.Netease() 方法体 / registry_registrations.go neteaseFromBase / lastfm_profile.go ×2）；`playlistManager`/`playingMenuKey`/`playingMenu`/`playlistUpdateAt` 在 player.go 之外的直接变更 **0**（`rg '\.playingMenuKey|\.playingMenu\b|\.playlistUpdateAt|\.playlistManager' internal/ui --glob '!player*.go' --glob '!*_test.go'` 为空；白盒 gapless 测试仍直接访问 playlistManager.SetPlayMode，无 Player 包装且 SetMode 含存储副作用，不适用单测隔离，属测试内部细节）。
 
 验证：`make lint` 0 issues · `make test` 绿（21 包 ok，无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净（`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。
+
+### Phase 3.7: framework lifecycle hardening (round 2)
+
+framework 生命周期语义加固（#646 评审后续第二轮）。**正确用法行为不变**，误用语义显式化：
+
+- **Scope 状态机**：`started`/`disposed` 双布尔；`Start` 对已启动/已 dispose 作用域返回显式错误（非静默双启动），失败回滚后保持未启动可重试；`Stop` 对未启动作用域为 nil no-op（`defer scope.Stop()` 恒安全）；`Dispose` 幂等且 final——已启动作用域先隐式 Stop（子作用域与插件收到 Stop 再 Dispose，cordis dispose 语义，防仅实现 Stop 的插件泄漏），dispose 后 `Start`/`Add` 返回显式错误；状态机按 Scope 独立，无父耦合（子作用域可直接 Start）。
+- **Stop/Dispose 错误聚合**：`Stop` 对插件/子作用域 Stop 失败时记录并继续逆序停止其余，`errors.Join` 聚合返回（Go stdlib，framework 保持零依赖）；`Dispose` 同样跨子作用域→插件聚合，且状态清理（children/plugins=nil、parent 解绑）在出错时仍执行；`rollback` 保持 best-effort 但同样聚合停止错误随原始 Start 错误一并返回。
+- **事件 handler panic 隔离**：`Emit` 四类 handler 每次调用均包 recover，panic 转为 `framework: <name> handler panicked: <r>` + `debug.Stack()` 截断 ~1KB 的错误；语义与返回错误一致——listener/middleware/serial 中断链，parallel 经 errCh 传递且全部 handler 仍跑完；emitter 自身永不因 handler panic 而 panic。
+
+- [x] 3.7.1 Scope 生命周期状态机 + Stop/Dispose 错误聚合 — 4280f454（`Scope` 增加 `started`/`disposed`；`Start` 双启动/已 dispose 返回显式错误、失败回滚后保持未启动可重试；`Stop` 未启动为 nil no-op、失败 `errors.Join` 聚合且继续逆序停止其余、停止后清除 started；`Dispose` 幂等且 final——已启动作用域先隐式 Stop、状态清理出错仍执行、dispose 后 Start/Add 拒绝；`rollback` 聚合停止错误随原始 Start 错误返回；`Add` 签名改为返回 error，`newAppScope` 接线点同步处理）
+- [x] 3.7.2 事件 handler panic 隔离 — 5e0d4bc2（`Emit` 四类 handler 每次调用经 `invokeHandler` recover，panic 转 `framework: <name> handler panicked: <r>` + `debug.Stack()` 截断 ~1KB 错误；语义与返回错误一致——listener/middleware/serial 中断链，parallel 经 errCh 传递且全部 handler 仍跑完；emitter 自身永不因 handler panic 而 panic）
+- [x] 3.7.3 测试覆盖 — b52926b2（状态机：双启动拒绝/Stop 前置 no-op/Dispose 隐式 Stop 已启动作用域/Start 与 Add 于 dispose 后拒绝/失败启动保持未启动可重试；错误聚合：Stop 聚合插件与子作用域失败仍全停、Dispose 聚合子+插件失败仍清状态、Dispose 已启动作用域透出隐式 Stop 失败；panic 隔离：listener/middleware/serial panic 中断链返回框架错误、parallel panic 经 errCh 且其余 handler 仍跑完（-race 下全绿）；既有 Dispose 测试断言更新为隐式 Stop 顺序）
+
+验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净。
 
 ### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
 
