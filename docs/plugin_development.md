@@ -200,13 +200,13 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 **当前边界注意**：
 
 - `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`；首个真实插件 `internal/plugins/checkupdate` 即此形态）。
-- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api`、整个 DJ/电台集群的 `dj_*` / `radio_dj_type`、整个专辑集群的 `album_menu` / `album_*` / `album_detail`、整个歌手集群的 `artist_detail` / `artist_*` / `hot_artists` / `artists_sub_list` 以及整个推荐集群的 `daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks` 由插件注册即可通过）。
+- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api`、整个 DJ/电台集群的 `dj_*` / `radio_dj_type`、整个专辑集群的 `album_menu` / `album_*` / `album_detail`、整个歌手集群的 `artist_detail` / `artist_*` / `hot_artists` / `artists_sub_list`、整个推荐集群的 `daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks` 以及整个歌单/云盘集群的 `user_playlist` / `user_collect` / `high_quality_playlists` / `could` 由插件注册即可通过）。
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
 ## 工作示例
 
-> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五/六/七/八为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj` / `internal/plugins/album` / `internal/plugins/artist` / `internal/plugins/recommend`），示例二/三为最小演示形态。
+> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五/六/七/八/九为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj` / `internal/plugins/album` / `internal/plugins/artist` / `internal/plugins/recommend` / `internal/plugins/playlist`），示例二/三为最小演示形态。
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
@@ -312,6 +312,7 @@ import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/playlist"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/recommend"
 )
 
@@ -533,6 +534,25 @@ func init() {
 
 本集群还是**登录门控 + 播放器服务经访问器**的示范：`daily_songs` / `daily_playlists` / `recent_songs` 的 `BeforeEnterMenuHook` 经 `m.User()` / `m.ToLoginPage(enterMenuCallback(main))` 走 `ui.BaseMenu` 转发（`enterMenuCallback` 在插件内镜像 ui 未导出的 `EnterMenuCallback`）；`personal_fm` 的 `BottomOutHook` 经 `m.Player()` 更新播放列表（`ReinitializePlaylist` / `MarkPlaylistUpdated`，Phase 3.6 播放列表 API）。
 
+### 示例九：歌单/云盘集群（第七个真实插件 + 参数化主菜单项）
+
+> `internal/plugins/playlist` 是第七个真实插件：把「歌单/云盘」集群（我的歌单、我的收藏、精选歌单、云盘）4 个菜单整体提取为外部式插件，与示例五/六/七/八同为集群批量提取示范，且是**参数化主菜单项**（`RegisterMainMenuItemWith`，Phase 3.9.9 机制）的生产示范。所有 provider key 与提取前**逐一相同**（`user_playlist` / `user_collect` / `high_quality_playlists` / `could`），ui 侧跳入集群的调用点零改动（`menu_search_result.go` 仍按 key 跳 `user_playlist`，`UserPlaylistOpts` 留在 ui）；集群内跳转（`user_playlist` / `high_quality_playlists` 的 SubMenu 跳 `playlist_detail`）经 `ui.BuildMenu` 按 key 解析，`playlist_detail` 留在 ui。4 个入口菜单各自声明主菜单项「我的歌单 / 我的收藏 / 精选歌单 / 云盘」（原内置索引 0/1/3/4，现为插件主菜单项排在全部内置项之后，帮助索引随之 5→1）。`user_playlist` 是参数化 provider（`ui.UserPlaylistOpts` 携带 userID），其主菜单入口经 builder 以 `UserID: ui.CurUser` 构造——与内置入口行为一致（`ui.CurUser` 常量留在 ui，`menu_add_to_user_playlist.go` 仍使用）：
+
+```go
+// 文件：internal/plugins/playlist/registry.go（节选）——参数化主菜单项 + 无参主菜单项
+func init() {
+	// ... RegisterMenu("user_playlist", ...) 等 4 个注册，key 与原内置注册一致
+	ui.RegisterMainMenuItemWith("user_playlist", "我的歌单", func(base ui.BaseMenu) ui.Menu {
+		return ui.MustBuild("user_playlist", base, ui.UserPlaylistOpts{UserID: ui.CurUser})
+	})
+	ui.RegisterMainMenuItem("user_collect", "我的收藏")
+	ui.RegisterMainMenuItem("high_quality_playlists", "精选歌单")
+	ui.RegisterMainMenuItem("could", "云盘")
+}
+```
+
+`user_collect` 的子菜单（收藏专辑 / 收藏歌手）经 `ui.MustBuildNoArg` 按 `album_sub_list` / `artists_sub_list` key 构建——这两个 key 由 album / artist 插件注册，构成**跨插件按 key 协作**（插件之间也通过注册表交互，不 import 彼此）。集群中唯一被 ui 反向引用的共享符号是 `ui.UserPlaylistOpts`（`menu_search_result.go` 跳 `user_playlist` 时携带用户 ID），其具体类型 `UserPlaylistMenu` 随集群移入插件。
+
 ### 接入二进制（聚合器）
 
 正式插件的标准接入方式：每个插件子包被聚合器空导入（见示例一），入口只需空导入聚合器即可，不必逐个列插件：
@@ -547,6 +567,7 @@ import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/playlist"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/recommend"
 )
 
