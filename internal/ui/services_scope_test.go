@@ -115,10 +115,10 @@ func TestAppScopeRegistersShareAndLastfm(t *testing.T) {
 		t.Fatalf("Start() error = %v", err)
 	}
 
-	if svc, ok := framework.ServiceOf[*composer.ShareService](ctx, "shareSvc"); !ok || svc != n.shareSvc {
+	if svc, ok := framework.ServiceOf[*composer.ShareService](ctx, ServiceShareSvc); !ok || svc != n.shareSvc {
 		t.Fatalf("ServiceOf(shareSvc) = %v, %v; want existing instance, true", svc, ok)
 	}
-	if svc, ok := framework.ServiceOf[*lastfm.Client](ctx, "lastfm"); !ok || svc != n.lastfm {
+	if svc, ok := framework.ServiceOf[*lastfm.Client](ctx, ServiceLastfm); !ok || svc != n.lastfm {
 		t.Fatalf("ServiceOf(lastfm) = %v, %v; want existing instance, true", svc, ok)
 	}
 

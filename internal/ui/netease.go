@@ -125,11 +125,16 @@ func NewNetease(app *model.App) *Netease {
 	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
 
 	// Wire the framework scope: shareSvc/lastfm are registered into the
-	// app-wide context via their scope plugins (Phase 3.1.1 slice).
+	// app-wide context via their scope plugins (Phase 3.1.1 slice), then the
+	// remaining startup services are registered (Phase 3.1.2).
 	n.ctx = &framework.Context{}
 	n.scope = newAppScope(n)
 	if err := n.scope.Start(n.ctx); err != nil {
 		slog.Error("framework scope start failed", slogx.Error(err))
+		return nil
+	}
+	if err := registerServices(n.ctx, n); err != nil {
+		slog.Error("framework service registration failed", slogx.Error(err))
 		return nil
 	}
 

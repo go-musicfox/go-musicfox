@@ -48,23 +48,23 @@ func newAppScope(n *Netease) *framework.Scope {
 	scope := framework.NewScope()
 
 	scope.Add(&servicePlugin{
-		name: "shareSvc",
+		name: ServiceShareSvc,
 		provide: func(ctx *framework.Context) error {
 			if n.shareSvc == nil {
 				return errors.New("shareSvc not initialized before scope start")
 			}
-			ctx.Provide("shareSvc", n.shareSvc)
+			provideIfAbsent(ctx, ServiceShareSvc, n.shareSvc)
 			return nil
 		},
 	})
 
 	scope.Add(&servicePlugin{
-		name: "lastfm",
+		name: ServiceLastfm,
 		provide: func(ctx *framework.Context) error {
 			if n.lastfm == nil {
 				return errors.New("lastfm not initialized before scope start")
 			}
-			ctx.Provide("lastfm", n.lastfm)
+			provideIfAbsent(ctx, ServiceLastfm, n.lastfm)
 			return nil
 		},
 	})

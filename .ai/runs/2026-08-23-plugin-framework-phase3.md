@@ -61,8 +61,8 @@
 
 ### Phase 3.1: 服务化
 
-- [ ] 3.1.1 framework 生命周期小切片
-- [ ] 3.1.2 服务名常量 + 注册点
+- [x] 3.1.1 framework 生命周期小切片 — 82eb8322
+- [x] 3.1.2 服务名常量 + 注册点
 - [ ] 3.1.3 InitHook 拆分
 - [ ] 3.1.4 baseMenu 访问器
 - [ ] 3.1.5 服务化迁移
@@ -85,3 +85,13 @@
 ### Phase 3.4: 接口层预留（可选）
 
 - [ ] 3.4.1 对外插件边界文档 + 示例
+
+## Phase 3.0 裁决（决策点，2026-08-23）
+
+**结论：候选形态 B（泛型注册 `RegisterMenuB[T](key, factory)`）胜出**，原型证据见 `.ai/runs/proto-3.0-evidence.md`（commit 1b32ef71）：
+
+- 迁移成本持平：A = B = 15 调用点 +54 行，调用点类型断言均为 0（唯一断言在 login bootstrap，A/B 相同）
+- B 优势：参数契约进类型系统（`ArtistDetailOpts{ArtistID, Name}` 消除 `(int64, string)` 歧义）；注册闭包零变参断言（唯一断言藏在 registry 内部，`.(menuFactory[T])`）；opts 结构体成为显式插件契约（未来第三方插件边界，与 kopia 研究结论一致）
+- B 代价（可缓解）：无参菜单需 `NoArgMenuOpts{}`（20+/43 菜单无参，用 `mustBuildNoArg` 紧凑辅助形式解决）；单字段 struct 轻微噪音
+
+**3.2 按形态 B 实现**；原型文件 `registry_proto_a.go` / `registry_proto_b.go` 保留为证据（标记 PROTO），3.2 正式实现时由 B 演进，3.3.4 清理旧路径时移除。
