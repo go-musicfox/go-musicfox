@@ -63,8 +63,8 @@
 
 - [x] 3.1.1 framework 生命周期小切片 — 82eb8322
 - [x] 3.1.2 服务名常量 + 注册点
-- [ ] 3.1.3 InitHook 拆分
-- [ ] 3.1.4 baseMenu 访问器
+- [x] 3.1.3 InitHook 拆分 — e1c91719（cookie-jar 生命周期 → LoginService.InitJar；用户恢复 + cookie 登录流 → UserService.LoadFromStorage/LoginWithCookie；InitHook 保留 12 步顺序注释 + 序列测试）
+- [x] 3.1.4 baseMenu 访问器 — e7919c86（menuServices 类型安全访问器；baseMenu 自带代码迁移；netease 字段保留至 3.1.5）
 - [ ] 3.1.5 服务化迁移
 
 ### Phase 3.2: provider 机制
