@@ -176,7 +176,7 @@ framework 生命周期语义加固（#646 评审后续第二轮）：Scope 状�
 - [x] 3.9.8 歌手集群提取为第五个真实插件（批量菜单提取 + 主菜单项 + 共享 opts 判定 + 多去重接口）— 1c52c9fa / 8ffec4bf（上方 Implementation Plan 3.9.8；主菜单位置变更：热门歌手由内置索引 8 → 插件项排在全部内置项之后；帮助索引 11→10）
 - [x] 3.9.9 主菜单项参数化构建（`MainMenuItem.Build` + `RegisterMainMenuItemWith`；`NewMainMenu` 走 `item.Build(base)`，nil 回退 `mustBuildNoArg`，key 已注册断言保留）— f7ed63cd（上方 Implementation Plan 3.9.9）
 - [x] 3.9.10 推荐集群提取为第六个真实插件（批量主菜单项 + 登录门控经 BaseMenu 转发）— 4f029d67（上方 Implementation Plan 3.9.10；主菜单位置变更：每日推荐歌曲/每日推荐歌单/私人FM/排行榜/最近播放歌曲 由内置索引 0/1/4/6/8 → 插件项排在全部内置项之后；帮助索引 10→5）
-- [x] 3.9.11 歌单/云盘集群提取为第七个真实插件（批量主菜单项 + 参数化主菜单项生产示范 + 跨插件按 key 协作）— 见提交（上方 Implementation Plan 3.9.11；主菜单位置变更：我的歌单/我的收藏/精选歌单/云盘 由内置索引 0/1/3/4 → 插件项排在全部内置项之后；帮助索引 5→1；`user_playlist` 主菜单入口经 `RegisterMainMenuItemWith` 以 `UserID: ui.CurUser` 构造）
+- [x] 3.9.11 歌单/云盘集群提取为第七个真实插件（批量主菜单项 + 参数化主菜单项生产示范 + 跨插件按 key 协作）— 3df6269b / f0545e95（上方 Implementation Plan 3.9.11；主菜单位置变更：我的歌单/我的收藏/精选歌单/云盘 由内置索引 0/1/3/4 → 插件项排在全部内置项之后；帮助索引 5→1；`user_playlist` 主菜单入口经 `RegisterMainMenuItemWith` 以 `UserID: ui.CurUser` 构造）
 
 验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
 
