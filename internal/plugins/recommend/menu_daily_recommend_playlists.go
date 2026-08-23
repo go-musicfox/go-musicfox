@@ -1,4 +1,4 @@
-package ui
+package recommend
 
 import (
 	"time"
@@ -7,20 +7,21 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 type DailyRecommendPlaylistsMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus     []model.MenuItem
 	playlists []structs.Playlist
 	fetchTime time.Time
 }
 
-func NewDailyRecommendPlaylistMenu(baseMenu baseMenu) *DailyRecommendPlaylistsMenu {
+func NewDailyRecommendPlaylistMenu(base ui.BaseMenu) *DailyRecommendPlaylistsMenu {
 	return &DailyRecommendPlaylistsMenu{
-		baseMenu: baseMenu,
+		BaseMenu: base,
 	}
 }
 
@@ -40,7 +41,7 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *model.App, index int) model.Men
 	if index >= len(m.playlists) {
 		return nil
 	}
-	playlistMenu, err := BuildMenu("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
+	playlistMenu, err := ui.BuildMenu("playlist_detail", m.BaseMenu, ui.PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
 	if err != nil {
 		return nil
 	}
@@ -49,8 +50,8 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *model.App, index int) model.Men
 
 func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		}
 
@@ -64,7 +65,7 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := recommendPlaylists.RecommendResource()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

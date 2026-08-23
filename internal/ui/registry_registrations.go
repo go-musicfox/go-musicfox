@@ -11,8 +11,10 @@ import "github.com/anhoder/foxful-cli/model"
 // whole DJ/radio cluster (dj_* + radio_dj_type) moved into
 // internal/plugins/dj (Phase 3.9.x), the whole album cluster
 // (album_menu / album_* + album_detail) moved into internal/plugins/album
-// (Phase 3.9.x), and the whole artist cluster (artist_detail / artist_* +
-// hot_artists) moved into internal/plugins/artist (Phase 3.9.x).
+// (Phase 3.9.x), the whole artist cluster (artist_detail / artist_* +
+// hot_artists) moved into internal/plugins/artist (Phase 3.9.x), and the
+// recommend cluster (daily_songs / daily_playlists / personal_fm /
+// recent_songs / ranks) moved into internal/plugins/recommend (Phase 3.9.x).
 func init() {
 	RegisterMenu("playlist_detail", func(base baseMenu, opts PlaylistDetailOpts) (Menu, error) {
 		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
@@ -32,11 +34,9 @@ func init() {
 		return NewAddToUserPlaylistMenu(base, opts.UserID, opts.Song, opts.IsAdd), nil
 	})
 
-	// No-arg menu: the shared NoArgMenuOpts placeholder keeps the generic
-	// signature; call sites use the mustBuildNoArg / buildMenuOrToast helpers.
-	RegisterMenu("ranks", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewRanksMenu(base), nil
-	})
+	// ranks (排行榜) was a no-arg menu registered here; its provider moved into
+	// the internal/plugins/recommend plugin with the recommend cluster
+	// (Phase 3.9.x) and now also declares the 排行榜 main-menu item.
 
 	// Phase 3.2.2 demo migrations — non-prototype menus proven on the
 	// production registry (call sites in menu_search_result.go). album_detail
@@ -61,24 +61,13 @@ func init() {
 
 	// --- Phase 3.3.1 batch 4: main menu cluster + misc ---
 
-	RegisterMenu("personal_fm", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewPersonalFmMenu(base), nil
-	})
+	// personal_fm / recent_songs / daily_playlists / daily_songs were no-arg
+	// menus registered here; their providers moved into the
+	// internal/plugins/recommend plugin with the recommend cluster
+	// (Phase 3.9.x), which also declares their main-menu items.
 
 	RegisterMenu("could", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return NewCloudMenu(base), nil
-	})
-
-	RegisterMenu("recent_songs", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewRecentSongsMenu(base), nil
-	})
-
-	RegisterMenu("daily_playlists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewDailyRecommendPlaylistMenu(base), nil
-	})
-
-	RegisterMenu("daily_songs", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewDailyRecommendSongsMenu(base), nil
 	})
 
 	RegisterMenu("search_type", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {

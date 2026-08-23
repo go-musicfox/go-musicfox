@@ -1,4 +1,4 @@
-package ui
+package recommend
 
 import (
 	"fmt"
@@ -7,18 +7,19 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type RanksMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 	ranks []structs.Rank
 }
 
-func NewRanksMenu(base baseMenu) *RanksMenu {
+func NewRanksMenu(base ui.BaseMenu) *RanksMenu {
 	return &RanksMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -39,7 +40,7 @@ func (m *RanksMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	playlistMenu, err := BuildMenu("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.ranks[index].Id})
+	playlistMenu, err := ui.BuildMenu("playlist_detail", m.BaseMenu, ui.PlaylistDetailOpts{PlaylistID: m.ranks[index].Id})
 	if err != nil {
 		return nil
 	}

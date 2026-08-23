@@ -156,3 +156,40 @@ func TestBlankImportRegistersLastfmPlugin(t *testing.T) {
 		t.Fatal("last_fm main-menu item not registered via aggregator blank import")
 	}
 }
+
+// TestBlankImportRegistersRecommendPlugin proves the sixth real plugin
+// (internal/plugins/recommend — the whole recommend cluster) links through the
+// same aggregator: its menu providers are registered with their original keys
+// and every entry menu declares its own main-menu item.
+func TestBlankImportRegistersRecommendPlugin(t *testing.T) {
+	for _, key := range []string{"daily_songs", "daily_playlists", "personal_fm", "recent_songs", "ranks"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("recommend menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+	for _, tc := range []struct{ key, title string }{
+		{"daily_songs", "每日推荐歌曲"},
+		{"daily_playlists", "每日推荐歌单"},
+		{"personal_fm", "私人FM"},
+		{"recent_songs", "最近播放歌曲"},
+		{"ranks", "排行榜"},
+	} {
+		menu, err := ui.BuildMenu(tc.key, ui.BaseMenu{}, ui.NoArgMenuOpts{})
+		if err != nil {
+			t.Fatalf("BuildMenu(%s) error = %v", tc.key, err)
+		}
+		if key := menu.GetMenuKey(); key != tc.key {
+			t.Fatalf("GetMenuKey() = %q, want %q", key, tc.key)
+		}
+		found := false
+		for _, item := range ui.MainMenuPluginItems() {
+			if item.Key == tc.key && item.Title == tc.title {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("%s main-menu item (%s) not registered via aggregator blank import", tc.key, tc.title)
+		}
+	}
+}

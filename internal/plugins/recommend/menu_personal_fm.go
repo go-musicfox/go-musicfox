@@ -1,23 +1,24 @@
-package ui
+package recommend
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type PersonalFmMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 	songs []structs.Song
 }
 
-func NewPersonalFmMenu(base baseMenu) *PersonalFmMenu {
+func NewPersonalFmMenu(base ui.BaseMenu) *PersonalFmMenu {
 	return &PersonalFmMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -72,8 +73,8 @@ func (m *PersonalFmMenu) BottomOutHook() model.Hook {
 
 		m.menus = append(m.menus, menus...)
 		m.songs = append(m.songs, songs...)
-		m.svc.Player().ReinitializePlaylist(m.svc.Player().CurSongIndex(), m.songs)
-		m.svc.Player().MarkPlaylistUpdated()
+		m.Player().ReinitializePlaylist(m.Player().CurSongIndex(), m.songs)
+		m.Player().MarkPlaylistUpdated()
 
 		return true, nil
 	}

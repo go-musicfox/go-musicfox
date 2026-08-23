@@ -1,4 +1,4 @@
-package ui
+package recommend
 
 import (
 	"time"
@@ -7,21 +7,22 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
 
 type DailyRecommendSongsMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus     []model.MenuItem
 	songs     []structs.Song
 	fetchTime time.Time
 }
 
-func NewDailyRecommendSongsMenu(baseMenu baseMenu) *DailyRecommendSongsMenu {
+func NewDailyRecommendSongsMenu(base ui.BaseMenu) *DailyRecommendSongsMenu {
 	return &DailyRecommendSongsMenu{
-		baseMenu: baseMenu,
+		BaseMenu: base,
 	}
 }
 
@@ -43,8 +44,8 @@ func (m *DailyRecommendSongsMenu) MenuViews() []model.MenuItem {
 
 func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		}
 
@@ -56,7 +57,7 @@ func (m *DailyRecommendSongsMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := recommendSongs.RecommendSongs()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

@@ -61,10 +61,10 @@ func TestBuildMenuMissingKey(t *testing.T) {
 }
 
 func TestBuildMenuOptsTypeMismatch(t *testing.T) {
-	// "ranks" is registered with NoArgMenuOpts; building it with a different
-	// opts type must fail at the single runtime type assertion.
-	if _, err := BuildMenu("ranks", testBase, PlaylistDetailOpts{PlaylistID: 1}); err == nil {
-		t.Fatal("BuildMenu(ranks, PlaylistDetailOpts) error = nil, want opts type mismatch")
+	// "user_collect" is registered with NoArgMenuOpts; building it with a
+	// different opts type must fail at the single runtime type assertion.
+	if _, err := BuildMenu("user_collect", testBase, PlaylistDetailOpts{PlaylistID: 1}); err == nil {
+		t.Fatal("BuildMenu(user_collect, PlaylistDetailOpts) error = nil, want opts type mismatch")
 	}
 }
 
@@ -88,9 +88,11 @@ func TestRegisterMenuEmptyKeyOrNilFactory(t *testing.T) {
 }
 
 func TestMustBuildNoArg(t *testing.T) {
-	ranks := mustBuildNoArg("ranks", testBase)
-	if _, ok := ranks.(*RanksMenu); !ok {
-		t.Fatalf("mustBuildNoArg(ranks) = %T, want *RanksMenu", ranks)
+	// ranks moved into the recommend plugin (Phase 3.9.x); exercise the helper
+	// on a remaining built-in no-arg menu.
+	collect := mustBuildNoArg("user_collect", testBase)
+	if _, ok := collect.(*UserCollectionMenu); !ok {
+		t.Fatalf("mustBuildNoArg(user_collect) = %T, want *UserCollectionMenu", collect)
 	}
 	assertPanics(t, func() {
 		mustBuildNoArg("no_such_menu", testBase)
@@ -136,13 +138,47 @@ func TestMainMenuPluginItemsSnapshot(t *testing.T) {
 	t.Fatal("appended item not present in the local snapshot copy")
 }
 
+func TestRegisterMainMenuItemWithBuilder(t *testing.T) {
+	// A main-menu entry with a builder constructs the menu with the plugin's
+	// own options (parameterized provider) instead of mustBuildNoArg. The entry
+	// key must stay registered (startup integrity assertion in NewMainMenu).
+	RegisterMenu("registry_test_builder_item", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return &testCheckUpdateMenu{baseMenu: base}, nil
+	})
+	RegisterMainMenuItemWith("registry_test_builder_item", "带参数入口", func(base BaseMenu) Menu {
+		return mustBuild("user_playlist", base, UserPlaylistOpts{UserID: 99})
+	})
+
+	menu := NewMainMenu(testBase)
+	builderIndex := -1
+	for i, item := range menu.menus {
+		if item.Title == "带参数入口" {
+			builderIndex = i
+			break
+		}
+	}
+	if builderIndex < 0 {
+		t.Fatal("main menu does not contain the builder item")
+	}
+	submenu := menu.SubMenu(nil, builderIndex)
+	up, ok := submenu.(*UserPlaylistMenu)
+	if !ok {
+		t.Fatalf("builder item SubMenu = %T, want *UserPlaylistMenu", submenu)
+	}
+	if up.userID != 99 {
+		t.Fatalf("userID = %d, want 99 (builder options must reach the menu)", up.userID)
+	}
+}
+
 func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// A test-double plugin menu + main-menu item must be appended after the
 	// built-ins (the registry is a package global shared with other tests, so
 	// only the presence/position-relative-to-builtins is asserted).
-	// 11 built-ins: 主播电台 moved into the dj plugin, 专辑列表 into the album
-	// plugin and 热门歌手 into the artist plugin (Phase 3.9.x), 帮助 last.
-	const builtinMenuCount = 11
+	// 6 built-ins: 主播电台 moved into the dj plugin, 专辑列表 into the album
+	// plugin, 热门歌手 into the artist plugin and the whole recommend cluster
+	// (每日推荐歌曲 / 每日推荐歌单 / 私人FM / 排行榜 / 最近播放歌曲) into the
+	// recommend plugin (Phase 3.9.x), 帮助 last.
+	const builtinMenuCount = 6
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -287,17 +323,19 @@ func TestPageNavigationSmoke(t *testing.T) {
 // key and non-nil views. Network-fed menu data is stubbed directly; the edges
 // exercised are the real SubMenu implementations.
 func TestMenuNavigationSmoke(t *testing.T) {
-	// Ranks -> PlaylistDetail (SubMenu edge; stub the network-fed ranks).
-	ranks, err := BuildMenu("ranks", testBase, NoArgMenuOpts{})
+	// HighQualityPlaylists -> PlaylistDetail (SubMenu edge; stub the
+	// network-fed playlists). ranks / daily_playlists -> PlaylistDetail moved
+	// with the recommend cluster and are covered by the plugin test.
+	hq, err := BuildMenu("high_quality_playlists", testBase, NoArgMenuOpts{})
 	if err != nil {
-		t.Fatalf("BuildMenu(ranks) error = %v", err)
+		t.Fatalf("BuildMenu(high_quality_playlists) error = %v", err)
 	}
-	ranksMenu := ranks.(*RanksMenu)
-	ranksMenu.ranks = []structs.Rank{{Id: 123}}
-	sub := ranksMenu.SubMenu(nil, 0)
+	hqMenu := hq.(*HighQualityPlaylistsMenu)
+	hqMenu.playlists = []structs.Playlist{{Id: 123}}
+	sub := hqMenu.SubMenu(nil, 0)
 	pd, ok := sub.(*PlaylistDetailMenu)
 	if !ok {
-		t.Fatalf("ranks.SubMenu(0) = %T, want *PlaylistDetailMenu", sub)
+		t.Fatalf("high_quality_playlists.SubMenu(0) = %T, want *PlaylistDetailMenu", sub)
 	}
 	if pd.playlistID != 123 {
 		t.Fatalf("playlistId = %d, want 123", pd.playlistID)

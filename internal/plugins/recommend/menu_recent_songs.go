@@ -1,23 +1,24 @@
-package ui
+package recommend
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type RecentSongsMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 	songs []structs.Song
 }
 
-func NewRecentSongsMenu(base baseMenu) *RecentSongsMenu {
+func NewRecentSongsMenu(base ui.BaseMenu) *RecentSongsMenu {
 	return &RecentSongsMenu{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -39,8 +40,8 @@ func (m *RecentSongsMenu) MenuViews() []model.MenuItem {
 
 func (m *RecentSongsMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		}
 
@@ -48,7 +49,7 @@ func (m *RecentSongsMenu) BeforeEnterMenuHook() model.Hook {
 		code, response, _ := recentSongService.RecordRecentSongs()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(enterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
