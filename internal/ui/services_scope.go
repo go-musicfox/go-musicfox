@@ -47,7 +47,7 @@ func (p *servicePlugin) Dispose() error {
 func newAppScope(n *Netease) *framework.Scope {
 	scope := framework.NewScope()
 
-	scope.Add(&servicePlugin{
+	if err := scope.Add(&servicePlugin{
 		name: ServiceShareSvc,
 		provide: func(ctx *framework.Context) error {
 			if n.shareSvc == nil {
@@ -56,9 +56,11 @@ func newAppScope(n *Netease) *framework.Scope {
 			provideIfAbsent(ctx, ServiceShareSvc, n.shareSvc)
 			return nil
 		},
-	})
+	}); err != nil {
+		panic(err) // unreachable for a fresh scope
+	}
 
-	scope.Add(&servicePlugin{
+	if err := scope.Add(&servicePlugin{
 		name: ServiceLastfm,
 		provide: func(ctx *framework.Context) error {
 			if n.lastfm == nil {
@@ -67,7 +69,9 @@ func newAppScope(n *Netease) *framework.Scope {
 			provideIfAbsent(ctx, ServiceLastfm, n.lastfm)
 			return nil
 		},
-	})
+	}); err != nil {
+		panic(err) // unreachable for a fresh scope
+	}
 
 	return scope
 }
