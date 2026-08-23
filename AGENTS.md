@@ -110,7 +110,7 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 - **配置**：TOML + mapstructure；`configs.SetTOMLValue(path, keyPath, value)` 使用 `github.com/pelletier/go-toml/v2/unstable/edit` 按键路径保真编辑既有 TOML。`configs.UpgradeConfig(path)` 将内嵌默认 TOML 中用户文件缺失的叶子项追加到对应 table；`upgrade-config` 子命令调用它。两者均保留无关注释、布局、已有值、未知键与原文件权限，并以原子替换写回。
 - **API**：netease-music SDK
 
-**项目结构**：`cmd/` 入口 | `internal/` 核心业务（22个包） | `utils/` 工具 | `configs/` 嵌入式配置
+**项目结构**：`cmd/` 入口 | `internal/` 核心业务（含 `plugins/` 编译期插件聚合器与插件子包） | `utils/` 工具 | `configs/` 嵌入式配置
 
 ## 核心架构
 
@@ -142,6 +142,8 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 | `internal/ui/registry_registrations.go` | 内置菜单/页面 provider 的 `init()` 注册 |
 | `internal/ui/menu_accessor.go` | `menuServices` 类型安全访问器（服务解析 + 薄壳方法转发） |
 | `internal/ui/menu.go` | `Menu` 接口与 `baseMenu`（经访问器接线） |
+| `internal/plugins/plugins.go` | 编译期插件聚合器（空导入各插件子包；`cmd/musicfox.go` 空导入触发注册） |
+| `internal/plugins/checkupdate/` | 首个真实插件：`CheckUpdateMenu`（嵌入 `ui.BaseMenu`，`init()` 注册 `check_update`） |
 | `internal/ui/event_handler.go` | 键盘/鼠标事件处理 |
 | `internal/ui/operate.go` | 右键操作表 |
 
@@ -222,6 +224,8 @@ type Player interface {
 ### 插件开发（外部边界）
 
 对外插件边界（注册表 API、`framework.Context`/`ServiceOf` 服务解析、`Scope`/`Plugin` 生命周期、编译期注册示例与行为保持契约）见 `docs/plugin_development.md`。当前仅支持编译期注册（import + `init()`），运行时动态加载不在范围内。
+
+插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件子包（如 `internal/plugins/checkupdate`，首个真实插件——`CheckUpdateMenu` 嵌入 `ui.BaseMenu`，init() 经 `ui.RegisterMenu` 注册 `"check_update"`），`cmd/musicfox.go` 空导入聚合器触发注册。插件 key 不得与内置 key（`expectedMenuKeys`）冲突；`ui` 不得反向导入插件包（import cycle）。
 
 ### 添加新播放器引擎
 

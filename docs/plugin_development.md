@@ -153,8 +153,8 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 第三方插件**今天**的接入方式：
 
 1. 插件包实现菜单/页面类型与注册函数，在包 `init()` 中调用 `RegisterMenu` / `RegisterPage`。
-2. 插件包被链接进 go-musicfox 二进制（入口处空导入 `_ "example.com/plugin"` 触发 `init()` 执行），注册在启动完整性断言（`AssertMenuRegistryComplete` / `AssertPageRegistryComplete`）之前完成。
-3. 启动断言锁定内置注册清单；插件 key 不得与内置 key 冲突。
+2. 插件包被聚合器（`internal/plugins/plugins.go`）空导入，入口（`cmd/musicfox.go`）空导入聚合器，`init()` 在启动完整性断言（`AssertMenuRegistryComplete` / `AssertPageRegistryComplete`）之前完成。
+3. 启动断言锁定内置注册清单；插件 key 不得与内置 key 冲突（`expectedMenuKeys` 不含插件 key）。
 
 **明确不支持（spec Non-goals）**：
 
@@ -163,15 +163,105 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 
 **当前边界注意**：
 
-- `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`）。
-- `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `github.com/go-musicfox/go-musicfox/plugins/example_hello`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
+- `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`；首个真实插件 `internal/plugins/checkupdate` 即此形态）。
+- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` 由插件注册即可通过）。
+- `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
 ## 工作示例
 
-> 以下代码与 `internal/ui/plugin_example_test.go`（包内编译校验）及 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）一一对应。
+> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一为已合入仓库的真实插件（`internal/plugins/checkupdate`），示例二/三为最小演示形态。
 
-### 示例一：hello 菜单插件（静态菜单项）
+### 示例一：检查更新插件（首个真实提取示例）
+
+> `internal/plugins/checkupdate` 是把内置「检查更新」菜单提取为外部式插件的第一个真实插件，完整走通编译期插件链路：`BaseMenu` 嵌入 + `RegisterMenu` 注册 + `BuildMenu` 导航 + 聚合器 + 空导入。菜单 key 仍为 `check_update`，行为与提取前一致。
+
+`menu.go`（菜单类型 + 检查/通知逻辑，与提取前 `internal/ui/menu_check_update.go` 一致）：
+
+```go
+// 文件：internal/plugins/checkupdate/menu.go
+package checkupdate
+
+import (
+	tea "charm.land/bubbletea/v2"
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
+
+// CheckUpdateMenu 嵌入导出基座 ui.BaseMenu（不是未导出的 baseMenu），
+// 在 ui 包之外即可实现 ui.Menu 接口。
+type CheckUpdateMenu struct {
+	ui.BaseMenu
+}
+
+func (m *CheckUpdateMenu) GetMenuKey() string { return "check_update" }
+func (m *CheckUpdateMenu) IsPlayable() bool   { return false }
+func (m *CheckUpdateMenu) IsLocatable() bool  { return false }
+
+// MenuViews 检查更新为动作菜单；返回一个静态项，不会作为子菜单被渲染。
+func (m *CheckUpdateMenu) MenuViews() []model.MenuItem {
+	return []model.MenuItem{{Title: "检查更新"}}
+}
+
+func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu { return nil }
+
+// Action 触发检查更新并留在当前页面（非 nil 的 page/cmd 会跳过子菜单导航）。
+func (m *CheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) {
+	return a.MustMain(), checkUpdateCmd()
+}
+
+func checkUpdateCmd() tea.Cmd {
+	return func() tea.Msg {
+		hasUpdate, latestVersion := version.CheckUpdate()
+		return checkUpdateNotificationMsg(hasUpdate, latestVersion)
+	}
+}
+// ... checkUpdateNotificationMsg / newVersionNotifyContent 与提取前逐字一致；
+// 「发现新版本」toast 经 ui.BuildToastNotificationSpec 构建（ui 导出的
+// toast-spec 助手，插件对 ui 的唯一依赖）。
+```
+
+`registry.go`（编译期注册入口，`init()` 触发）：
+
+```go
+// 文件：internal/plugins/checkupdate/registry.go
+func init() {
+	ui.RegisterMenu("check_update", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return &CheckUpdateMenu{BaseMenu: base}, nil
+	})
+}
+```
+
+聚合器 + 空导入（插件被链接进二进制的入口）：
+
+```go
+// 文件：internal/plugins/plugins.go（聚合器：空导入每个插件包，触发其 init()）
+package plugins
+
+import (
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+)
+
+// 文件：cmd/musicfox.go（入口空导入聚合器）
+import (
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins"
+)
+```
+
+主菜单跳转点经注册表构建并执行插件菜单的 Action（`internal/ui/menu_main.go`）：
+
+```go
+checkUpdate := buildMenuOrToast("check_update", m.baseMenu, NoArgMenuOpts{})
+if checkUpdate == nil {
+	return app.MustMain(), nil
+}
+return checkUpdate.Action(app, 0)
+```
+
+**启动钩子限制**：插件只接管菜单触发的检查；启动时的自动检查（配置 `[startup] checkUpdate`）仍留在 shell（`netease.go`）直连执行——当前没有启动钩子机制，且 `ui` 不得反向导入插件包（避免 import cycle）。启动检查的 notify 内容在 shell 内联，与插件内 `newVersionNotifyContent` 文案保持一致。
+
+### 示例二：hello 菜单插件（静态菜单项）
 
 ```go
 // 文件：plugins/example_hello/plugin.go（go-musicfox 模块树内的插件子包）
@@ -231,7 +321,7 @@ func (m *SomeParentMenu) SubMenu(_ *model.App, index int) model.Menu {
 }
 ```
 
-### 示例二：页面插件
+### 示例三：页面插件
 
 ```go
 // 文件：plugins/example_hello/page.go（插件子包）
@@ -273,16 +363,25 @@ func init() {
 page, err := ui.BuildPage("example_hello_page", ExampleHelloPageOpts{})
 ```
 
-### 接入二进制
+### 接入二进制（聚合器）
+
+正式插件的标准接入方式：每个插件子包被聚合器空导入（见示例一），入口只需空导入聚合器即可，不必逐个列插件：
 
 ```go
-// cmd/musicfox.go 或入口处空导入插件包，触发其 init() 注册：
+// 文件：internal/plugins/plugins.go —— 聚合器：空导入每个插件包
+package plugins
+
 import (
-    _ "github.com/go-musicfox/go-musicfox/plugins/example_hello" // 触发插件 init() 注册
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
+)
+
+// cmd/musicfox.go 或入口处空导入聚合器，触发全部插件 init() 注册：
+import (
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins"
 )
 ```
 
-> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。
+> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。`ui` 不得反向导入插件包（import cycle），因此 shell 侧需要复用插件逻辑时须内联（如启动自动检查）。
 
 ## 行为保持契约
 
