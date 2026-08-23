@@ -772,13 +772,13 @@ func (p *Player) RenderTicker() model.Ticker {
 }
 
 func (p *Player) updateDesktopLyrics() {
-	dl := p.netease.DesktopLyrics()
+	dl := p.svc.DesktopLyrics()
 	if dl == nil {
 		return
 	}
 
 	state := p.State()
-	curLine, nextLine, currentIndex := p.netease.GetDesktopLyricsLines()
+	curLine, nextLine, currentIndex := p.svc.GetDesktopLyricsLines()
 	hasContent := curLine.Text != "" || len(curLine.Words) > 0
 	currentTimeMs := p.PassedTime().Milliseconds()
 	if configs.AppConfig.Main.Lyric.DesktopLyrics.HideOnPause && state == types.Paused {

@@ -85,6 +85,15 @@ func (s *menuServices) DesktopLyrics() desktop_lyrics.Controller {
 	return nil
 }
 
+// GetDesktopLyricsLines returns the current lyrics lines for desktop display
+// (current line, next line, and current index; forwarded from the shell).
+func (s *menuServices) GetDesktopLyricsLines() (curLine, nextLine desktop_lyrics.LyricLine, currentIndex int) {
+	if s.n == nil {
+		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
+	}
+	return s.n.GetDesktopLyricsLines()
+}
+
 // CoverRenderer resolves the cover renderer.
 func (s *menuServices) CoverRenderer() *CoverRenderer {
 	if svc, ok := framework.ServiceOf[*CoverRenderer](s.ctx, ServiceCoverRenderer); ok {
