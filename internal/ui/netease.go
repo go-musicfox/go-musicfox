@@ -83,8 +83,8 @@ func NewNetease(app *model.App) *Netease {
 	quality := configs.AppConfig.Player.SongLevel
 	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
 	nameGen := composer.NewFileNameGenerator()
-	nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
-	nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
+	_ = nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
+	_ = nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
 	n.trackManager = track.NewManager(
 		track.WithNameGenerator(nameGen),
 		track.WithCacher(track.NewCacher(maxSizeMB)),
@@ -110,16 +110,16 @@ func NewNetease(app *model.App) *Netease {
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
-	loginPage, err := BuildPageB("login", LoginPageOpts{Netease: n})
+	loginPage, err := BuildPage("login", LoginPageOpts{Netease: n})
 	if err != nil {
 		return nil
 	}
-	n.login = loginPage.(*LoginPage) // proto: BuildPageB returns model.Page; concrete type asserted back
+	n.login = loginPage.(*LoginPage) // BuildPage returns model.Page; concrete type asserted back
 	n.search = NewSearchPage(n)
 	n.App = app
 
 	n.shareSvc = composer.NewShareService()
-	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
+	_ = n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
 
 	// Wire the framework scope: shareSvc/lastfm are registered into the
 	// app-wide context via their scope plugins (Phase 3.1.1 slice), then the
@@ -134,6 +134,11 @@ func NewNetease(app *model.App) *Netease {
 		slog.Error("framework service registration failed", slogx.Error(err))
 		return nil
 	}
+
+	// Startup completeness: a provider set missing any canonical key is a
+	// programmer error; fail loudly instead of surfacing it at navigation time.
+	AssertMenuRegistryComplete(expectedMenuKeys...)
+	AssertPageRegistryComplete(expectedPageKeys...)
 
 	return n
 }
@@ -665,10 +670,10 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ss := registry.CurrentStyleSet(isDark)
 		if ss != nil {
 			style.SetStyleSet(*ss)
-			n.App.SetStyleSet(*ss)
+			n.SetStyleSet(*ss)
 		}
 		n.notifyThemeSwitch(n.App, "外观模式已切换", configs.CurrentThemeRegistry().CurrentName(isDark))
-		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
+		return n, tea.Sequence(cmd, n.RerenderCmd(true))
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd

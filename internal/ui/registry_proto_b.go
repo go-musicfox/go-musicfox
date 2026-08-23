@@ -1,3 +1,5 @@
+package ui
+
 // PROTO: Phase 3.0 falsification prototype — Candidate B (generic registry).
 //
 // This file is part of the Phase 3.0 prototype comparing two shapes for a
@@ -9,39 +11,26 @@
 //	RegisterMenuB(key, func(base baseMenu, opts T) (Menu, error))
 //
 // so call sites pass a struct literal whose fields are checked at compile time;
-// the registry stores menuFactory[T] behind an `any` and BuildMenuB[T] recovers
+// the registry stores menuFactoryB[T] behind an `any` and BuildMenuB[T] recovers
 // it with a single runtime type assertion (the ONLY assertion, hidden inside
 // the registry, not at call sites or in providers).
-package ui
-
 import (
 	"fmt"
 
 	"github.com/anhoder/foxful-cli/model"
-
-	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
-// Parameter-object types for the 5 sample menus (Candidate B). These become the
-// discoverable "contract" of each menu provider.
-type (
-	PlaylistDetailOpts struct{ PlaylistID int64 }
-	ArtistDetailOpts   struct {
-		ArtistID int64
-		Name     string
-	}
-	SearchResultOpts      struct{ SearchType SearchType }
-	AddToUserPlaylistOpts struct {
-		UserID int64
-		Song   structs.Song
-		IsAdd  bool
-	}
-	NoArgMenuOpts struct{} // placeholder for no-arg menus (e.g. Ranks)
-	LoginPageOpts struct{ Netease *Netease }
-)
+// NOTE: the opts parameter-object types (PlaylistDetailOpts, ArtistDetailOpts,
+// SearchResultOpts, AddToUserPlaylistOpts, NoArgMenuOpts, LoginPageOpts) moved
+// to the production registry.go in Phase 3.2.1; the prototype above only kept
+// the machinery (menuFactory/pageFactory/register/build) and its init()
+// registrations, which now feed the proto registry (menuRegistryB/pageRegistryB)
+// that production code no longer reads.
 
-// menuFactory[T] is a typed menu provider stored behind `any` in the registry.
-type menuFactory[T any] struct {
+// menuFactoryB[T] is a typed menu provider stored behind `any` in the proto
+// registry (renamed from menuFactory in 3.2.1 to avoid clashing with the
+// production registry.go).
+type menuFactoryB[T any] struct {
 	Key   string
 	Build func(base baseMenu, opts T) (Menu, error)
 }
@@ -59,31 +48,26 @@ func RegisterMenuB[T any](key string, f func(base baseMenu, opts T) (Menu, error
 	if _, dup := menuRegistryB[key]; dup {
 		panic("RegisterMenuB: duplicate key " + key)
 	}
-	menuRegistryB[key] = menuFactory[T]{Key: key, Build: f}
+	menuRegistryB[key] = menuFactoryB[T]{Key: key, Build: f}
 }
 
 // BuildMenuB resolves the typed factory for key and invokes it with opts.
 // The type-parameter T is normally inferred from the opts argument; a mismatch
 // with the registered T is a runtime error here rather than a compile error.
 func BuildMenuB[T any](key string, base baseMenu, opts T) (Menu, error) {
-	factory, ok := menuRegistryB[key].(menuFactory[T])
+	factory, ok := menuRegistryB[key].(menuFactoryB[T])
 	if !ok {
 		return nil, fmt.Errorf("menu %q not registered or opts type mismatch (want %T)", key, opts)
 	}
 	return factory.Build(base, opts)
 }
 
-// mustBuildMenuB is the bootstrap-path escape hatch (see mustBuildMenuA).
-func mustBuildMenuB[T any](key string, base baseMenu, opts T) Menu {
-	menu, err := BuildMenuB(key, base, opts)
-	if err != nil {
-		panic(fmt.Sprintf("mustBuildMenuB(%q): %v", key, err))
-	}
-	return menu
-}
-
-// pageFactory[T] is a typed page provider stored behind `any` in the registry.
-type pageFactory[T any] struct {
+// mustBuildMenuB was the bootstrap-path escape hatch (see mustBuildMenuA); it
+// was removed in 3.2.1 because production call sites moved to mustBuildNoArg.
+// pageFactoryB[T] is a typed page provider stored behind `any` in the proto
+// registry (renamed from pageFactory in 3.2.1 to avoid clashing with the
+// production registry.go).
+type pageFactoryB[T any] struct {
 	Key   string
 	Build func(opts T) (model.Page, error)
 }
@@ -99,12 +83,12 @@ func RegisterPageB[T any](key string, f func(opts T) (model.Page, error)) {
 	if _, dup := pageRegistryB[key]; dup {
 		panic("RegisterPageB: duplicate key " + key)
 	}
-	pageRegistryB[key] = pageFactory[T]{Key: key, Build: f}
+	pageRegistryB[key] = pageFactoryB[T]{Key: key, Build: f}
 }
 
 // BuildPageB resolves the typed page factory for key and invokes it with opts.
 func BuildPageB[T any](key string, opts T) (model.Page, error) {
-	factory, ok := pageRegistryB[key].(pageFactory[T])
+	factory, ok := pageRegistryB[key].(pageFactoryB[T])
 	if !ok {
 		return nil, fmt.Errorf("page %q not registered or opts type mismatch (want %T)", key, opts)
 	}

@@ -39,7 +39,7 @@ func (m *RanksMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.ranks[index].Id})
+	playlistMenu, err := BuildMenu("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.ranks[index].Id})
 	if err != nil {
 		return nil
 	}

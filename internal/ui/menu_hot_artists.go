@@ -36,7 +36,7 @@ func (m *HotArtistsMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if index >= len(m.artists) {
 		return nil
 	}
-	artistMenu, err := BuildMenuB("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: m.artists[index].Id, Name: m.artists[index].Name})
+	artistMenu, err := BuildMenu("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: m.artists[index].Id, Name: m.artists[index].Name})
 	if err != nil {
 		return nil
 	}

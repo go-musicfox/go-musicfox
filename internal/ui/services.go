@@ -19,8 +19,6 @@ import (
 )
 
 // Canonical service names (spec API Contracts table, Phase 3.1).
-// menuRegistry / pageRegistry are reserved for Phase 3.2 and are NOT
-// registered here yet.
 const (
 	ServicePlayer        = "player"
 	ServiceLyricService  = "lyricService"
@@ -32,8 +30,8 @@ const (
 	ServiceShareSvc      = "shareSvc"
 	ServiceLastfm        = "lastfm"
 
-	ServiceMenuRegistry = "menuRegistry" // reserved, Phase 3.2
-	ServicePageRegistry = "pageRegistry" // reserved, Phase 3.2
+	ServiceMenuRegistry = "menuRegistry"
+	ServicePageRegistry = "pageRegistry"
 )
 
 // registeredServiceNames is the exact startup service set (no missing, no
@@ -48,6 +46,8 @@ var registeredServiceNames = []string{
 	ServiceLoginService,
 	ServiceShareSvc,
 	ServiceLastfm,
+	ServiceMenuRegistry,
+	ServicePageRegistry,
 }
 
 // UserService carries the current login state (user 状态迁移).
@@ -265,5 +265,11 @@ func registerServices(ctx *framework.Context, n *Netease) error {
 	provideIfAbsent(ctx, ServiceLoginService, &LoginService{CookieJar: &appCookieJar, User: &n.user})
 	provideIfAbsent(ctx, ServiceShareSvc, n.shareSvc)
 	provideIfAbsent(ctx, ServiceLastfm, n.lastfm)
+	// Provider registries (Phase 3.2.1): the generic RegisterMenu/BuildMenu are
+	// package-level functions (Go forbids generic methods); the service handles
+	// make the registries resolvable as framework services for completeness
+	// assertions, tests and future plugin boundaries.
+	provideIfAbsent(ctx, ServiceMenuRegistry, MenuRegistry{})
+	provideIfAbsent(ctx, ServicePageRegistry, PageRegistry{})
 	return nil
 }

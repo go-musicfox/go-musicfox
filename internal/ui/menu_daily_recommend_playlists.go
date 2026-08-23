@@ -40,7 +40,7 @@ func (m *DailyRecommendPlaylistsMenu) SubMenu(_ *model.App, index int) model.Men
 	if index >= len(m.playlists) {
 		return nil
 	}
-	playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
+	playlistMenu, err := BuildMenu("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
 	if err != nil {
 		return nil
 	}

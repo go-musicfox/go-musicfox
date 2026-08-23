@@ -46,7 +46,7 @@ func NewMainMenu(netease *Netease) *MainMenu {
 			NewPersonalFmMenu(base),
 			NewAlbumListMenu(base),
 			NewSearchTypeMenu(base),
-			mustBuildMenuB("ranks", base, NoArgMenuOpts{}),
+			mustBuildNoArg("ranks", base),
 			NewHighQualityPlaylistsMenu(base),
 			NewHotArtistsMenu(base),
 			NewRecentSongsMenu(base),

@@ -13,6 +13,10 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
+	"github.com/go-musicfox/netease-music/util"
+	"github.com/skratchdot/open-golang/open"
+
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -27,9 +31,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
-	"github.com/go-musicfox/netease-music/service"
-	"github.com/go-musicfox/netease-music/util"
-	"github.com/skratchdot/open-golang/open"
 )
 
 // getTargetSong 根据上下文获取目标歌曲。
@@ -67,8 +68,8 @@ func getTargetSong(n *Netease, isSelected bool) (structs.Song, bool) {
 // logout 登出
 func logout() {
 
-	logout_service := service.LogoutService{}
-	code, _, err := logout_service.Logout()
+	logoutService := service.LogoutService{}
+	code, _, err := logoutService.Logout()
 	if err != nil {
 		slog.Error("调用退出登录api错误", slog.String("error", err.Error()))
 	} else if code != 200 {
@@ -235,7 +236,7 @@ func confirmTrashSong(n *Netease, isSelected bool) {
 	}
 	showConfirmPopup(n.App, "标记为不喜欢", content, func() {
 		trashSong(n, isSelected)
-		n.App.Rerender(false)
+		n.Rerender(false)
 	})
 }
 
@@ -422,7 +423,7 @@ func goToArtistOfSong(n *Netease, isSelected bool) {
 			if detail, ok := menu.(*ArtistDetailMenu); ok && detail.artistId == song.Artists[0].Id {
 				return nil
 			}
-			artistMenu, err := BuildMenuB("artist_detail", newBaseMenu(n), ArtistDetailOpts{ArtistID: song.Artists[0].Id, Name: song.Artists[0].Name})
+			artistMenu, err := BuildMenu("artist_detail", newBaseMenu(n), ArtistDetailOpts{ArtistID: song.Artists[0].Id, Name: song.Artists[0].Name})
 			if err != nil {
 				return nil
 			}
@@ -732,7 +733,7 @@ func openAddSongToUserPlaylistMenu(n *Netease, isSelected, isAdd bool) model.Pag
 		if !isAdd {
 			subtitle = "将「" + song.Name + "」从歌单中删除"
 		}
-		addMenu, err := BuildMenuB("add_to_user_playlist", newBaseMenu(n), AddToUserPlaylistOpts{UserID: newMenuServices(n).User().UserId, Song: song, IsAdd: isAdd})
+		addMenu, err := BuildMenu("add_to_user_playlist", newBaseMenu(n), AddToUserPlaylistOpts{UserID: newMenuServices(n).User().UserId, Song: song, IsAdd: isAdd})
 		if err != nil {
 			return nil
 		}
@@ -875,7 +876,7 @@ func clearSongCache(n *Netease) {
 			return nil
 		})
 		op.ShowLoading().Execute()
-		n.App.Rerender(false)
+		n.Rerender(false)
 	})
 }
 
@@ -1017,7 +1018,7 @@ func searchSong(n *Netease, isSelected bool) {
 		n.search.searchType = StSingleSong
 		n.search.result = _struct.GetSongsOfSearchResult(response)
 
-		searchResultMenu, err := BuildMenuB("search_result", newBaseMenu(n), SearchResultOpts{SearchType: StSingleSong})
+		searchResultMenu, err := BuildMenu("search_result", newBaseMenu(n), SearchResultOpts{SearchType: StSingleSong})
 		if err != nil {
 			return nil
 		}

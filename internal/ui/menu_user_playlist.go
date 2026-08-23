@@ -16,16 +16,16 @@ type UserPlaylistMenu struct {
 	baseMenu
 	menus     []model.MenuItem
 	playlists []structs.Playlist
-	userId    int64
+	userID    int64
 	offset    int
 	limit     int
 	hasMore   bool
 }
 
-func NewUserPlaylistMenu(base baseMenu, userId int64) *UserPlaylistMenu {
+func NewUserPlaylistMenu(base baseMenu, userID int64) *UserPlaylistMenu {
 	return &UserPlaylistMenu{
 		baseMenu: base,
-		userId:   userId,
+		userID:   userID,
 		offset:   0,
 		limit:    100,
 	}
@@ -36,7 +36,7 @@ func (m *UserPlaylistMenu) IsSearchable() bool {
 }
 
 func (m *UserPlaylistMenu) GetMenuKey() string {
-	return fmt.Sprintf("user_playlist_%d", m.userId)
+	return fmt.Sprintf("user_playlist_%d", m.userID)
 }
 
 func (m *UserPlaylistMenu) MenuViews() []model.MenuItem {
@@ -51,7 +51,7 @@ func (m *UserPlaylistMenu) SubMenu(_ *model.App, index int) model.Menu {
 	if len(m.playlists) < index {
 		return nil
 	}
-	playlistMenu, err := BuildMenuB("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
+	playlistMenu, err := BuildMenu("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: m.playlists[index].Id})
 	if err != nil {
 		return nil
 	}
@@ -61,18 +61,18 @@ func (m *UserPlaylistMenu) SubMenu(_ *model.App, index int) model.Menu {
 func (m *UserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userId == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
+		if m.userID == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
 			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
-		userId := m.userId
-		if m.userId == CurUser {
+		userID := m.userID
+		if m.userID == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = m.svc.User().UserId
+			userID = m.svc.User().UserId
 		}
 
-		codeType, playlists, hasMore := netease.FetchUserPlaylists(userId, m.limit, m.offset)
+		codeType, playlists, hasMore := netease.FetchUserPlaylists(userID, m.limit, m.offset)
 		if codeType == _struct.NeedLogin {
 			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
@@ -97,14 +97,14 @@ func (m *UserPlaylistMenu) BottomOutHook() model.Hook {
 		return nil
 	}
 	return func(main *model.Main) (bool, model.Page) {
-		userId := m.userId
-		if m.userId == CurUser {
+		userID := m.userID
+		if m.userID == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = m.svc.User().UserId
+			userID = m.svc.User().UserId
 		}
 
 		m.offset = m.offset + len(m.menus)
-		codeType, playlists, hasMore := netease.FetchUserPlaylists(userId, m.limit, m.offset)
+		codeType, playlists, hasMore := netease.FetchUserPlaylists(userID, m.limit, m.offset)
 		if codeType == _struct.NeedLogin {
 			page, _ := m.svc.Netease().ToLoginPage(func() model.Page {
 				main.RefreshMenuList()
