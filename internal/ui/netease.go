@@ -376,10 +376,16 @@ func (n *Netease) InitHook(_ *model.App) {
 			}
 		}
 
-		// 检查更新
+		// 检查更新：启动自动检查保留在 shell（无启动钩子机制；菜单触发的检查
+		// 由 internal/plugins/checkupdate 插件承载，ui 不得反向导入插件包）。
 		if config.Startup.CheckUpdate {
 			if ok, newVersion := version.CheckUpdate(); ok {
-				notify.Notify(newVersionNotifyContent(newVersion))
+				notify.Notify(notify.NotifyContent{
+					Title:       "发现新版本: " + newVersion,
+					Text:        "去看看呗",
+					Url:         types.AppGithubUrl + "/releases/tag/" + newVersion,
+					ActionLabel: "前往 GitHub",
+				})
 			}
 		}
 

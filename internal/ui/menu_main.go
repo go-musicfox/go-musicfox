@@ -94,7 +94,13 @@ func (m *MainMenu) Action(app *model.App, index int) (model.Page, tea.Cmd) {
 		showHelpPopup(app)
 		return app.MustMain(), nil
 	case mainMenuCheckUpdateIndex:
-		return app.MustMain(), checkUpdateCmd()
+		// 检查更新已提取为外部式插件（internal/plugins/checkupdate），经注册表
+		// 构建并执行其 Action；菜单本身承载检查与通知逻辑。
+		checkUpdate := buildMenuOrToast("check_update", m.baseMenu, NoArgMenuOpts{})
+		if checkUpdate == nil {
+			return app.MustMain(), nil
+		}
+		return checkUpdate.Action(app, 0)
 	default:
 		return m.baseMenu.Action(app, index)
 	}
