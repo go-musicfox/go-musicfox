@@ -25,6 +25,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
@@ -63,6 +64,11 @@ type Netease struct {
 	player       *Player
 	shareSvc     *composer.ShareService
 	trackManager *track.Manager
+
+	// framework context + scope own the app-wide service registry and its
+	// lifecycle (see services_scope.go / services.go).
+	ctx   *framework.Context
+	scope *framework.Scope
 
 	playbarHoveredElement PlaybarElement
 
@@ -117,6 +123,15 @@ func NewNetease(app *model.App) *Netease {
 
 	n.shareSvc = composer.NewShareService()
 	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
+
+	// Wire the framework scope: shareSvc/lastfm are registered into the
+	// app-wide context via their scope plugins (Phase 3.1.1 slice).
+	n.ctx = &framework.Context{}
+	n.scope = newAppScope(n)
+	if err := n.scope.Start(n.ctx); err != nil {
+		slog.Error("framework scope start failed", slogx.Error(err))
+		return nil
+	}
 
 	return n
 }
@@ -471,7 +486,17 @@ func (n *Netease) CloseHook(_ *model.App) {
 		n.coverRenderer.Close()
 	}
 
+	if n.scope != nil {
+		_ = n.scope.Stop()
+		_ = n.scope.Dispose()
+	}
+
 	CloseGohookLogger()
+}
+
+// Ctx returns the app-wide framework context holding the service registry.
+func (n *Netease) Ctx() *framework.Context {
+	return n.ctx
 }
 
 func (n *Netease) Player() *Player {

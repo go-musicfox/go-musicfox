@@ -27,6 +27,12 @@ type Scope struct {
 	plugins  []Plugin
 }
 
+// NewScope creates a root scope. Root scopes have no parent; child scopes are
+// created with (Scope).NewScope.
+func NewScope() *Scope {
+	return &Scope{}
+}
+
 // Add registers a plugin into the scope. Plugins start in the order they are
 // added and stop/dispose in reverse order.
 func (s *Scope) Add(plugin Plugin) {

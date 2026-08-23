@@ -5,11 +5,24 @@
 // listener, middleware, parallel and serial handlers.
 package framework
 
+import "sort"
+
 // Context is the Go degradation of the cordis Context: services are registered,
 // resolved and overridden by name, stored as map[string]any and accessed via
 // type assertion.
 type Context struct {
 	services map[string]any
+}
+
+// Names returns the sorted names of all registered services. It is mainly used
+// by registration-completeness tests to assert the exact service set.
+func (c *Context) Names() []string {
+	names := make([]string, 0, len(c.services))
+	for name := range c.services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // Service resolves the service registered under name; it returns nil when the
