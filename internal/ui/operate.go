@@ -381,7 +381,11 @@ func findSimilarSongs(n *Netease, isSelected bool) {
 			return nil // 避免重复进入
 		}
 		newTitle := &model.MenuItem{Title: model.T(MsgMenuSimilarSongs), Subtitle: "与「" + song.Name + "」相似的歌曲"}
-		main.EnterMenu(NewSimilarSongsMenu(newBaseMenu(n), song), newTitle)
+		similarMenu, err := BuildMenu("simi_songs", newBaseMenu(n), SimiSongsOpts{Song: song})
+		if err != nil {
+			return nil
+		}
+		main.EnterMenu(similarMenu, newTitle)
 		return nil
 	})
 	op.ShowLoading().Execute()
@@ -400,7 +404,11 @@ func goToAlbumOfSong(n *Netease, isSelected bool) {
 			return nil // 避免重复进入
 		}
 		newTitle := &model.MenuItem{Title: song.Album.Name, Subtitle: "「" + song.Name + "」所属专辑"}
-		main.EnterMenu(NewAlbumDetailMenu(newBaseMenu(n), song.Album.Id), newTitle)
+		albumMenu, err := BuildMenu("album_detail", newBaseMenu(n), AlbumDetailOpts{AlbumID: song.Album.Id})
+		if err != nil {
+			return nil
+		}
+		main.EnterMenu(albumMenu, newTitle)
 		return nil
 	})
 	op.ShowLoading().Execute()
@@ -435,7 +443,11 @@ func goToArtistOfSong(n *Netease, isSelected bool) {
 			return nil
 		}
 		newTitle := &model.MenuItem{Title: "「" + song.Name + "」所属歌手"}
-		main.EnterMenu(NewArtistsOfSongMenu(newBaseMenu(n), song), newTitle)
+		artistsMenu, err := BuildMenu("artist_of_song", newBaseMenu(n), ArtistsOfSongOpts{Song: song})
+		if err != nil {
+			return nil
+		}
+		main.EnterMenu(artistsMenu, newTitle)
 		return nil
 	})
 	op.ShowLoading().Execute()

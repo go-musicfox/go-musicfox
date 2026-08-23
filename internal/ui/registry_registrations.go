@@ -115,6 +115,36 @@ func init() {
 		return NewHighQualityPlaylistsMenu(base), nil
 	})
 
+	// --- Phase 3.3.1 batch 3: artist cluster ---
+
+	RegisterMenu("artist_of_song", func(base baseMenu, opts ArtistsOfSongOpts) (Menu, error) {
+		return NewArtistsOfSongMenu(base, opts.Song), nil
+	})
+
+	RegisterMenu("artist_album", func(base baseMenu, opts ArtistAlbumOpts) (Menu, error) {
+		return NewArtistAlbumMenu(base, opts.ArtistID), nil
+	})
+
+	RegisterMenu("artist_song", func(base baseMenu, opts ArtistSongOpts) (Menu, error) {
+		return NewArtistSongMenu(base, opts.ArtistID), nil
+	})
+
+	RegisterMenu("artists_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewArtistsSubscribeListMenu(base), nil
+	})
+
+	RegisterMenu("hot_artists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewHotArtistsMenu(base), nil
+	})
+
+	RegisterMenu("simi_songs", func(base baseMenu, opts SimiSongsOpts) (Menu, error) {
+		return NewSimilarSongsMenu(base, opts.Song), nil
+	})
+
+	RegisterMenu("user_collect", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewUserCollectionMenu(base), nil
+	})
+
 	RegisterPage("login", func(opts LoginPageOpts) (model.Page, error) {
 		return NewLoginPage(opts.Netease), nil
 	})

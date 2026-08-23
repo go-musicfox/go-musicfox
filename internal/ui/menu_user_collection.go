@@ -16,8 +16,8 @@ func NewUserCollectionMenu(base baseMenu) *UserCollectionMenu {
 			{Title: "收藏歌手"},
 		},
 		menuList: []Menu{
-			NewAlbumSubscribeListMenu(base),
-			NewArtistsSubscribeListMenu(base),
+			mustBuildNoArg("album_sub_list", base),
+			mustBuildNoArg("artists_sub_list", base),
 		},
 	}
 

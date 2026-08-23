@@ -36,9 +36,9 @@ func (m *ArtistDetailMenu) MenuViews() []model.MenuItem {
 func (m *ArtistDetailMenu) SubMenu(_ *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		return NewArtistSongMenu(m.baseMenu, m.artistId)
+		return buildMenuOrToast("artist_song", m.baseMenu, ArtistSongOpts{ArtistID: m.artistId})
 	case 1:
-		return NewArtistAlbumMenu(m.baseMenu, m.artistId)
+		return buildMenuOrToast("artist_album", m.baseMenu, ArtistAlbumOpts{ArtistID: m.artistId})
 	}
 
 	return nil
