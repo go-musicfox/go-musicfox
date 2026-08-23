@@ -51,13 +51,14 @@ func init() {
 	ui.RegisterMenu("could", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 		return NewCloudMenu(base), nil
 	})
-	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加这些项（原先为内置
-	// 索引 0/1/3/4，现为插件主菜单项，排在全部内置项之后）。user_playlist
-	// 经参数化 builder 构造（UserID = ui.CurUser，与内置入口行为一致）。
-	ui.RegisterMainMenuItemWith("user_playlist", "我的歌单", func(base ui.BaseMenu) ui.Menu {
+	// 声明主菜单入口：NewMainMenu 按 Order 归并排序复现插件化前的主菜单
+	// 原始顺序（我的歌单2 / 我的收藏3 / 精选歌单8 / 云盘11，与其余插件及
+	// 内置项交错排列）。user_playlist 经参数化 builder 构造（UserID =
+	// ui.CurUser，与内置入口行为一致）。
+	ui.RegisterMainMenuItemWithOrder("user_playlist", "我的歌单", 2, func(base ui.BaseMenu) ui.Menu {
 		return ui.MustBuild("user_playlist", base, ui.UserPlaylistOpts{UserID: ui.CurUser})
 	})
-	ui.RegisterMainMenuItem("user_collect", "我的收藏")
-	ui.RegisterMainMenuItem("high_quality_playlists", "精选歌单")
-	ui.RegisterMainMenuItem("could", "云盘")
+	ui.RegisterMainMenuItemWithOrder("user_collect", "我的收藏", 3, nil)
+	ui.RegisterMainMenuItemWithOrder("high_quality_playlists", "精选歌单", 8, nil)
+	ui.RegisterMainMenuItemWithOrder("could", "云盘", 11, nil)
 }

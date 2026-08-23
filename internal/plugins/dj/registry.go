@@ -67,7 +67,7 @@ func init() {
 	ui.RegisterMenu("radio_dj_type", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 		return NewRadioDjTypeMenu(base), nil
 	})
-	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加「主播电台」（原先为
-	// 内置索引 12，现为插件主菜单项，排在全部内置项之后）。
-	ui.RegisterMainMenuItem("radio_dj_type", "主播电台")
+	// 声明主菜单入口：NewMainMenu 按 Order 归并排序复现插件化前的主菜单
+	// 原始顺序（主播电台12，夹在云盘11 与 LastFM13 之间）。
+	ui.RegisterMainMenuItemWithOrder("radio_dj_type", "主播电台", 12, nil)
 }

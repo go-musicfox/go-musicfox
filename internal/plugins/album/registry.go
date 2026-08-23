@@ -72,7 +72,7 @@ func init() {
 	ui.RegisterMenu("album_detail", func(base ui.BaseMenu, opts ui.AlbumDetailOpts) (ui.Menu, error) {
 		return NewAlbumDetailMenu(base, opts.AlbumID), nil
 	})
-	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加「专辑列表」（原先为
-	// 内置索引 5，现为插件主菜单项，排在全部内置项之后）。
-	ui.RegisterMainMenuItem("album_menu", "专辑列表")
+	// 声明主菜单入口：NewMainMenu 按 Order 归并排序复现插件化前的主菜单
+	// 原始顺序（专辑列表5，夹在私人FM4 与搜索6 之间）。
+	ui.RegisterMainMenuItemWithOrder("album_menu", "专辑列表", 5, nil)
 }

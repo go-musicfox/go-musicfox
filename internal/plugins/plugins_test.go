@@ -263,3 +263,27 @@ func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
 		t.Fatalf("user_playlist builder GetMenuKey() = %q, want %q (built with ui.CurUser)", key, "user_playlist_0")
 	}
 }
+
+// TestMainMenuPreservesOriginalOrder proves the order-based merge in
+// NewMainMenu: built-in entries (搜索=6, 帮助=14) and plugin entries merge by
+// their explicit Order and reproduce the original pre-extraction main-menu
+// sequence exactly (16 items). This is the integration view of the same
+// mechanism the ui package tests at the unit level — here the full plugin set
+// is linked via the aggregator. Titles() is side-effect free, so a zero-base
+// menu (no live services) is enough to read the display order.
+func TestMainMenuPreservesOriginalOrder(t *testing.T) {
+	got := ui.NewMainMenu(ui.NewBaseMenu(nil)).Titles()
+	want := []string{
+		"每日推荐歌曲", "每日推荐歌单", "我的歌单", "我的收藏", "私人FM",
+		"专辑列表", "搜索", "排行榜", "精选歌单", "热门歌手", "最近播放歌曲",
+		"云盘", "主播电台", "LastFM", "帮助", "检查更新",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("main menu has %d items, want %d: %v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("main menu item %d = %q, want %q (full sequence: %v)", i, got[i], want[i], got)
+		}
+	}
+}

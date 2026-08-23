@@ -40,7 +40,7 @@ func init() {
 	ui.RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
 		return NewLastfmCustomAPIPage(opts.Svc), nil
 	})
-	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加「LastFM」（原先为
-	// 内置索引 13，现为插件主菜单项，排在全部内置项之后）。
-	ui.RegisterMainMenuItem("last_fm", "LastFM")
+	// 声明主菜单入口：NewMainMenu 按 Order 归并排序复现插件化前的主菜单
+	// 原始顺序（LastFM13，夹在主播电台12 与帮助14 之间）。
+	ui.RegisterMainMenuItemWithOrder("last_fm", "LastFM", 13, nil)
 }

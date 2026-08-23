@@ -173,6 +173,37 @@ func TestRegisterMainMenuItemWithBuilder(t *testing.T) {
 	}
 }
 
+func TestNewMainMenuOrdersPluginItems(t *testing.T) {
+	// 插件项按 Order 与内置项归并排序（Phase 3.9.x）：显式 Order 的插件项
+	// 落在内置项之间（搜索6 之后、帮助14 之前），Order 为 0 的项追加在
+	// 末尾（既有行为，注册序保持）。测试二进制的菜单子集由内置项 +
+	// 测试注册项构成，故只断言相对顺序。
+	RegisterMenu("registry_test_ordered_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return &testCheckUpdateMenu{baseMenu: base}, nil
+	})
+	RegisterMainMenuItemWithOrder("registry_test_ordered_menu", "有序插件项", 7, nil)
+
+	menu := NewMainMenu(testBase)
+	if menu.menus[0].Title != "搜索" {
+		t.Fatalf("menus[0] = %q, want 搜索 (built-in order 6)", menu.menus[0].Title)
+	}
+	if menu.menus[1].Title != "有序插件项" {
+		t.Fatalf("menus[1] = %q, want 有序插件项 (explicit order 7, right after 搜索)", menu.menus[1].Title)
+	}
+	if menu.helpIndex != 2 {
+		t.Fatalf("helpIndex = %d, want 2 (built-in order 14, after the order-7 item)", menu.helpIndex)
+	}
+	if menu.menus[menu.helpIndex].Title != "帮助" {
+		t.Fatalf("help entry = menus[%d] = %q, want 帮助", menu.helpIndex, menu.menus[menu.helpIndex].Title)
+	}
+	// Order-0 插件项（未指定顺序）必须排在所有显式顺序项之后。
+	for i, item := range menu.menus[menu.helpIndex+1:] {
+		if item.Title == "搜索" || item.Title == "有序插件项" || item.Title == "帮助" {
+			t.Fatalf("explicit-order entry %q found after help entry at %d", item.Title, menu.helpIndex+1+i)
+		}
+	}
+}
+
 func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// A test-double plugin menu + main-menu item must be appended after the
 	// built-ins (the registry is a package global shared with other tests, so
@@ -206,8 +237,8 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	if pluginIndex < builtinMenuCount {
 		t.Fatalf("plugin item index = %d, want appended after built-ins (%d+)", pluginIndex, builtinMenuCount)
 	}
-	if menu.menus[mainMenuHelpIndex].Title != "帮助" {
-		t.Fatalf("help entry shifted: menus[%d] = %q", mainMenuHelpIndex, menu.menus[mainMenuHelpIndex].Title)
+	if menu.menus[menu.helpIndex].Title != "帮助" {
+		t.Fatalf("help entry shifted: menus[%d] = %q", menu.helpIndex, menu.menus[menu.helpIndex].Title)
 	}
 	if submenu := menu.SubMenu(nil, pluginIndex); submenu == nil {
 		t.Fatal("plugin item SubMenu is nil, want the built plugin menu")

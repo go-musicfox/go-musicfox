@@ -48,11 +48,12 @@ func init() {
 	ui.RegisterMenu("ranks", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 		return NewRanksMenu(base), nil
 	})
-	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加这些项（原先为内置
-	// 索引 0/1/4/6/8，现为插件主菜单项，排在全部内置项之后）。
-	ui.RegisterMainMenuItem("daily_songs", "每日推荐歌曲")
-	ui.RegisterMainMenuItem("daily_playlists", "每日推荐歌单")
-	ui.RegisterMainMenuItem("personal_fm", "私人FM")
-	ui.RegisterMainMenuItem("recent_songs", "最近播放歌曲")
-	ui.RegisterMainMenuItem("ranks", "排行榜")
+	// 声明主菜单入口：NewMainMenu 按 Order 归并排序复现插件化前的主菜单
+	// 原始顺序（每日推荐歌曲0 / 每日推荐歌单1 / 私人FM4 / 排行榜7 / 最近播放
+	// 歌曲10，与其余插件及内置项交错排列）。
+	ui.RegisterMainMenuItemWithOrder("daily_songs", "每日推荐歌曲", 0, nil)
+	ui.RegisterMainMenuItemWithOrder("daily_playlists", "每日推荐歌单", 1, nil)
+	ui.RegisterMainMenuItemWithOrder("personal_fm", "私人FM", 4, nil)
+	ui.RegisterMainMenuItemWithOrder("recent_songs", "最近播放歌曲", 10, nil)
+	ui.RegisterMainMenuItemWithOrder("ranks", "排行榜", 7, nil)
 }
