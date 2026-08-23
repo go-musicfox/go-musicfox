@@ -16,8 +16,6 @@ import (
 	"github.com/buger/jsonparser"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/go-musicfox/netease-music/service"
-	"github.com/go-musicfox/netease-music/util"
-	neteaseutil "github.com/go-musicfox/netease-music/util"
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/pkg/errors"
 
@@ -33,7 +31,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/utils/app"
-	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
 	"github.com/go-musicfox/go-musicfox/utils/likelist"
@@ -199,111 +196,53 @@ func (n *Netease) InitHook(_ *model.App) {
 	// 注册 TUI 内 toast 回调（此时 App.Run 已启动，program 就绪）
 	n.registerToastHook()
 
-	// 全局文件Jar
-	cookiePath := filepath.Join(dataDir, "cookie")
-	jar, err := cookiejar.New(&cookiejar.Options{
-		Filename: cookiePath,
-	})
-	if err != nil {
-		slog.Warn("检测到旧版或损坏的 Cookie 文件，准备备份并重置", slogx.Error(err))
+	// ---------------------------------------------------------------------
+	// Startup sequence — order constraints (逐条枚举，拆分后必须保持):
+	//
+	//  1. loginService.InitJar — cookie jar 初始化（损坏备份/重置、appCookieJar
+	//     全局赋值、util.SetGlobalCookieJar 同步）。必须先于 userService 回调：
+	//     LoginCallback 内部调用 appCookieJar.Save()（jar 先于 userService 回调）。
+	//  2. userService.LoadFromStorage — 从 BoltDB 恢复持久化用户。
+	//  3. userService.LoginWithCookie — cookie 登录 / token 刷新（ParseCookieFromStr
+	//     → RefreshCookieJar → jar 保存 → LoginCallback）。
+	//  4. 播放模式恢复（storage.PlayMode）。
+	//  5. 音量恢复（storage.Volume）。
+	//  6. 播放列表状态加载（playlistManager.LoadState）。
+	//  7. extInfo / notifier / logo 清理。
+	//  8. like list 刷新（仅登录态）。
+	//  9. 每日签到（仅登录态，受 config.Startup.SignIn 控制）。
+	//  10. 检查更新（受 config.Startup.CheckUpdate 控制）。
+	//  11. 自动播放（受 config.Autoplay.Enable 控制）。
+	//  12. changelog 弹窗。
+	// ---------------------------------------------------------------------
 
-		// 备份旧文件
-		timestamp := time.Now().Format("20060102-150405")
-		backupPath := fmt.Sprintf("%s.bak.%s", cookiePath, timestamp)
-
-		if renameErr := os.Rename(cookiePath, backupPath); renameErr != nil && !os.IsNotExist(renameErr) {
-			slog.Error("无法备份损坏的 Cookie 文件", slogx.Error(renameErr))
-			n.user = nil
-		} else {
-			slog.Info("已将损坏的 Cookie 文件备份", "backup_path", backupPath)
-		}
-
-		// 重新初始化
-		jar, err = cookiejar.New(&cookiejar.Options{
-			Filename: cookiePath,
-		})
+	// 1. 全局文件Jar（loginService 拥有整个 cookie-jar 生命周期）
+	loginSvc, ok := framework.ServiceOf[*LoginService](n.ctx, ServiceLoginService)
+	var jar *cookiejar.Jar
+	if !ok || loginSvc == nil {
+		slog.Error("loginService 未注册，跳过 cookie jar 初始化", slog.String("hook", "InitHook"))
+	} else {
+		var err error
+		jar, err = loginSvc.InitJar(filepath.Join(dataDir, "cookie"))
 		if err != nil {
-			slog.Error("无法创建持久化 Cookie Jar，将降级为临时会话，重启后将丢失登录状态", slogx.Error(err))
-			// 降级为内存模式
-			memJar, _ := cookiejar.New(nil)
-			jar = memJar
-
-			n.user = nil
-		} else {
-			slog.Info("Cookie 文件已重置，请重新登陆")
+			slog.Error("cookie jar 初始化失败，已降级为临时会话", slogx.Error(err))
 		}
 	}
-
-	appCookieJar = jar
-	util.SetGlobalCookieJar(appCookieJar)
 
 	// 获取用户信息
 	errorx.Go(func() {
 		table := storage.NewTable()
 
-		// 获取用户信息
-		if jsonStr, err := table.GetByKVModel(storage.User{}); err == nil {
-			if user, err := structs.NewUserFromLocalJson(jsonStr); err == nil {
-				n.user = &user
-			}
-		}
-
-		cookieStr := os.Getenv("MUSICFOX_COOKIE")
-		if cookieStr == "" {
-			cookieStr = config.Main.Account.NeteaseCookie
-		}
-		if n.user == nil && cookieStr != "" {
-			// 使用cookie登录
-
-			err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
-			if err != nil {
-				slog.Error("网易云 cookies 格式错误", "error", err)
+		// 2-3. 用户恢复 + cookie 登录（userService 拥有用户与登录流程）
+		if userSvc, ok := framework.ServiceOf[*UserService](n.ctx, ServiceUserService); ok && userSvc != nil {
+			if jar != nil {
+				userSvc.LoadFromStorage(jar)
+				userSvc.LoginWithCookie(jar, filepath.Join(dataDir, "cookie"))
 			} else {
-				neteaseutil.SetGlobalCookieJar(appCookieJar)
-				newJar, err := apputils.RefreshCookieJar()
-				if err != nil {
-					slog.Error("使用配置项的cookie登录/刷新失败，将以游客模式启动", slogx.Error(err))
-					n.user = nil
-				} else {
-					appCookieJar = newJar
-					neteaseutil.SetGlobalCookieJar(appCookieJar)
-
-					// 先保存 cookie，确保 token 刷新成功后 cookie 被持久化
-					// 即使后续 LoginCallback 失败，cookie 也已保存
-					if err := appCookieJar.Save(); err != nil {
-						slog.Warn("持久化 Cookie 失败", slogx.Error(err))
-					}
-
-					if err := n.LoginCallback(); err != nil {
-						slog.Warn("使用配置项的cookie获取用户信息失败", slogx.Error(err))
-						n.user = nil
-					}
-				}
+				slog.Error("cookie jar 不可用，跳过用户恢复，以游客模式启动")
 			}
-		}
-
-		if n.user != nil {
-			newJar, err := apputils.RefreshCookieJar()
-			if err != nil {
-				slog.Error("Token 刷新失败，Cookie已彻底失效，降级为游客模式", slogx.Error(err))
-				n.user = nil
-				_ = table.DeleteByKVModel(storage.User{})
-				_ = os.Remove(cookiePath)
-			} else {
-				appCookieJar = newJar
-				neteaseutil.SetGlobalCookieJar(appCookieJar)
-				slog.Info("Token 刷新成功~")
-
-				// 先保存 cookie，确保 token 刷新成功后 cookie 被持久化
-				// 即使后续 LoginCallback 失败，cookie 也已保存
-				if err := appCookieJar.Save(); err != nil {
-					slog.Warn("持久化 Cookie 失败", slogx.Error(err))
-				}
-
-				if err := n.LoginCallback(); err != nil {
-					slog.Warn("触发登录回调失败", slogx.Error(err))
-				}
-			}
+		} else {
+			slog.Error("userService 未注册，跳过用户恢复", slog.String("hook", "InitHook"))
 		}
 
 		cloudUserID := int64(0)
@@ -460,14 +399,14 @@ func (n *Netease) InitHook(_ *model.App) {
 				"debug", configs.AppConfig.Main.Debug,
 				"seenVersion", seen.Version,
 			)
-		if shouldShow {
-			if !configs.AppConfig.Main.Debug {
-				if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
-					slog.Error("changelog: failed to persist seen version", slogx.Error(err))
-				} else {
-					slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
+			if shouldShow {
+				if !configs.AppConfig.Main.Debug {
+					if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
+						slog.Error("changelog: failed to persist seen version", slogx.Error(err))
+					} else {
+						slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
+					}
 				}
-			}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
 				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
