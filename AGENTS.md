@@ -219,6 +219,10 @@ type Player interface {
 2. 导航经 `BuildPage`/`buildPageOrToast`（`registry.go`）；shell 持有引用的单例页（search）在 `NewNetease` 经 `BuildPage` 构建
 3. 页面持有 shell 引用用于导航（`MustMain`/`RerenderCmd`），业务能力经 `menuServices` 访问器解析（如 `svc.Lastfm()`），不直连 shell 服务字段
 
+### 插件开发（外部边界）
+
+对外插件边界（注册表 API、`framework.Context`/`ServiceOf` 服务解析、`Scope`/`Plugin` 生命周期、编译期注册示例与行为保持契约）见 `docs/plugin_development.md`。当前仅支持编译期注册（import + `init()`），运行时动态加载不在范围内。
+
 ### 添加新播放器引擎
 
 1. 实现 `internal/player.Player` 接口
