@@ -35,3 +35,37 @@ func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
 		t.Fatal("check_update main-menu item not registered via aggregator blank import")
 	}
 }
+
+// TestBlankImportRegistersLastfmPlugin proves the second real plugin
+// (internal/plugins/lastfm) links through the same aggregator: its menu and
+// page providers are registered and its main-menu item is appended after the
+// built-ins.
+func TestBlankImportRegistersLastfmPlugin(t *testing.T) {
+	if !(ui.MenuRegistry{}).Registered("last_fm") {
+		t.Fatal("last_fm menu provider not registered via aggregator blank import")
+	}
+	if !(ui.PageRegistry{}).Registered("lastfm_auth") {
+		t.Fatal("lastfm_auth page provider not registered via aggregator blank import")
+	}
+	if !(ui.PageRegistry{}).Registered("lastfm_custom_api") {
+		t.Fatal("lastfm_custom_api page provider not registered via aggregator blank import")
+	}
+	menu, err := ui.BuildMenu("last_fm", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(last_fm) error = %v", err)
+	}
+	if key := menu.GetMenuKey(); key != "last_fm" {
+		t.Fatalf("GetMenuKey() = %q, want last_fm", key)
+	}
+
+	found := false
+	for _, item := range ui.MainMenuPluginItems() {
+		if item.Key == "last_fm" && item.Title == "LastFM" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("last_fm main-menu item not registered via aggregator blank import")
+	}
+}

@@ -89,4 +89,8 @@ func TestExternalPluginBoundaryCompilesAndBuilds(t *testing.T) {
 	if page, cmd := zero.ToSearchPage(ui.StSingleSong); page != nil || cmd != nil {
 		t.Fatalf("zero BaseMenu.ToSearchPage = (%v, %v), want (nil, nil)", page, cmd)
 	}
+	// Services (Phase 3.9): the accessor getter is nil-safe on a zero base.
+	if svc := zero.Services(); svc != nil {
+		t.Fatalf("zero BaseMenu.Services() = %v, want nil", svc)
+	}
 }

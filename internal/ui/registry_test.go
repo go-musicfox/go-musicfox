@@ -8,8 +8,6 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
-	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
@@ -142,7 +140,7 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// A test-double plugin menu + main-menu item must be appended after the
 	// built-ins (the registry is a package global shared with other tests, so
 	// only the presence/position-relative-to-builtins is asserted).
-	const builtinMenuCount = 15
+	const builtinMenuCount = 14
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -213,19 +211,6 @@ func TestBuildMenuOrToastMissingKeyReturnsNil(t *testing.T) {
 	}
 }
 
-func TestRegisterAndBuildPage(t *testing.T) {
-	page, err := BuildPage("lastfm_auth", LastfmAuthPageOpts{svc: nil})
-	if err != nil {
-		t.Fatalf("BuildPage(lastfm_auth) error = %v", err)
-	}
-	if _, ok := page.(*LastfmAuthPage); !ok {
-		t.Fatalf("BuildPage(lastfm_auth) = %T, want *LastfmAuthPage", page)
-	}
-	if page.Type() == "" {
-		t.Fatal("page.Type() is empty")
-	}
-}
-
 func TestBuildPageMissingKey(t *testing.T) {
 	if _, err := BuildPage("no_such_page", LoginPageOpts{}); err == nil {
 		t.Fatal("BuildPage(missing key) error = nil, want error")
@@ -248,38 +233,6 @@ func TestRegisterAndBuildSearchPage(t *testing.T) {
 	}
 	if _, ok := page.(*SearchPage); !ok {
 		t.Fatalf("BuildPage(search) = %T, want *SearchPage", page)
-	}
-}
-
-func TestRegisterAndBuildLastfmCustomAPIPage(t *testing.T) {
-	withDummyConfig(t)
-	// NewLastfmCustomAPIPage reloads the stored API account on construction, so
-	// the provider needs a Netease with a non-nil lastfm client. lastfm.NewClient
-	// reads the account through storage.DBManager, which the runtime bootstrap
-	// normally sets; provide a zero-value manager so the test avoids a nil
-	// receiver (GetByKVModel errors are swallowed by InitFromStorage).
-	previousDB := storage.DBManager
-	storage.DBManager = &storage.LocalDBManager{}
-	t.Cleanup(func() {
-		_ = storage.DBManager.Close()
-		storage.DBManager = previousDB
-	})
-
-	n := testNetease()
-	n.lastfm = lastfm.NewClient()
-	// The page resolves lastfm through the service registry (Phase 3.3.5:
-	// pages use the accessor, not the shell field), so the test must register
-	// the services into a context for the accessor to resolve.
-	n.ctx = &framework.Context{}
-	if err := registerServices(n.ctx, n); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
-	page, err := BuildPage("lastfm_custom_api", LastfmCustomAPIPageOpts{svc: newMenuServices(n)})
-	if err != nil {
-		t.Fatalf("BuildPage(lastfm_custom_api) error = %v", err)
-	}
-	if _, ok := page.(*LastfmCustomAPIPage); !ok {
-		t.Fatalf("BuildPage(lastfm_custom_api) = %T, want *LastfmCustomAPIPage", page)
 	}
 }
 
@@ -437,11 +390,8 @@ func TestBuildLastHardcodedMenus(t *testing.T) {
 		t.Fatalf("action_menu from=%q playing=%v, want playlist_detail/true", amMenu.from, amMenu.playing)
 	}
 
-	// last_fm is a no-arg menu (main menu entry).
-	lf := mustBuildNoArg("last_fm", testBase)
-	if _, ok := lf.(*Lastfm); !ok {
-		t.Fatalf("mustBuildNoArg(last_fm) = %T, want *Lastfm", lf)
-	}
+	// last_fm moved into the internal/plugins/lastfm plugin (Phase 3.9): its
+	// build is asserted by the plugin test package.
 }
 
 // Login callback ordering (jar-init before user-callback) is covered by
@@ -496,5 +446,3 @@ func TestRegistryServicesResolvable(t *testing.T) {
 		t.Errorf("ServiceOf(pageRegistry) not resolvable or missing login")
 	}
 }
-
-var _ model.Page = (*LastfmAuthPage)(nil) // provider contract sanity check

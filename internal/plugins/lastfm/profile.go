@@ -1,20 +1,24 @@
-package ui
+package lastfm
 
 import (
 	"github.com/anhoder/foxful-cli/model"
 
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	lastfm "github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 )
 
+// LastfmProfile 是 Last.fm 子菜单：设置 API account 与授权管理。页面跳转经
+// ui.BuildPageOrToast 走页面注册表（lastfm_custom_api / lastfm_auth），
+// opts 携带 ui.MenuServices（经 m.Services() 取自身访问器）。
 type LastfmProfile struct {
-	baseMenu
+	ui.BaseMenu
 }
 
-func NewLastfmProfile(base baseMenu) *LastfmProfile {
+func NewLastfmProfile(base ui.BaseMenu) *LastfmProfile {
 	return &LastfmProfile{
-		baseMenu: base,
+		BaseMenu: base,
 	}
 }
 
@@ -28,7 +32,7 @@ func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 	}
 
 	getAuthTitle := func() string {
-		if m.svc.Lastfm().NeedAuth() {
+		if m.Lastfm().NeedAuth() {
 			return "去授权"
 		}
 		return "取消授权"
@@ -39,27 +43,27 @@ func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		page := buildPageOrToast("lastfm_custom_api", LastfmCustomAPIPageOpts{svc: m.svc})
+		page := ui.BuildPageOrToast("lastfm_custom_api", LastfmCustomAPIPageOpts{Svc: m.Services()})
 		if page == nil {
 			return nil
 		}
 		page.(*LastfmCustomAPIPage).AfterAction = func() {
 			app.MustMain().RefreshMenuList()
 		}
-		return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)
+		return ui.NewMenuToPage(m.BaseMenu, page, m.CoverRenderer().ClearDisplayed)
 	case 1:
-		if m.svc.Lastfm().NeedAuth() {
-			page := buildPageOrToast("lastfm_auth", LastfmAuthPageOpts{svc: m.svc})
+		if m.Lastfm().NeedAuth() {
+			page := ui.BuildPageOrToast("lastfm_auth", LastfmAuthPageOpts{Svc: m.Services()})
 			if page == nil {
 				return nil
 			}
 			page.(*LastfmAuthPage).AfterAction = func() {
 				app.MustMain().RefreshMenuList()
 			}
-			return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)
+			return ui.NewMenuToPage(m.BaseMenu, page, m.CoverRenderer().ClearDisplayed)
 		}
-		showConfirmPopup(app, "清除 Last.fm 授权", "确定清除 Last.fm 授权信息吗？", func() {
-			m.svc.Lastfm().ClearUserInfo()
+		ui.ShowConfirmPopup(app, "清除 Last.fm 授权", "确定清除 Last.fm 授权信息吗？", func() {
+			m.Lastfm().ClearUserInfo()
 			notify.Notify(notify.NotifyContent{
 				Title:   "清除授权成功",
 				Text:    "Last.fm 授权已清除",

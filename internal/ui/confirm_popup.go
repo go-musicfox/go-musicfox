@@ -32,3 +32,10 @@ func showConfirmPopup(app *model.App, title, content string, onConfirm func()) {
 	}
 	app.ShowPopup(popup)
 }
+
+// ShowConfirmPopup is the exported form of showConfirmPopup (Phase 3.9 plugin
+// boundary; the Last.fm menu and profile moved into internal/plugins/lastfm
+// and show confirmations through it).
+func ShowConfirmPopup(app *model.App, title, content string, onConfirm func()) {
+	showConfirmPopup(app, title, content, onConfirm)
+}

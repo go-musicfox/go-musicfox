@@ -11,7 +11,7 @@ import (
 // last built-in item; plugin main-menu items are appended after it and thus
 // never shift this index). Its submenu placeholder is nil and Action handles
 // the Markdown popup directly.
-const mainMenuHelpIndex = 14
+const mainMenuHelpIndex = 13
 
 type MainMenu struct {
 	baseMenu
@@ -36,7 +36,6 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			{Title: "最近播放歌曲"},
 			{Title: "云盘"},
 			{Title: "主播电台"},
-			{Title: "LastFM"},
 			{Title: "帮助"},
 		},
 		menuList: []Menu{
@@ -53,7 +52,6 @@ func NewMainMenu(base baseMenu) *MainMenu {
 			mustBuildNoArg("recent_songs", base),
 			mustBuildNoArg("could", base),
 			mustBuildNoArg("radio_dj_type", base),
-			mustBuildNoArg("last_fm", base),
 			nil, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
 		},
 	}

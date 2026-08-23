@@ -5,8 +5,9 @@ import "github.com/anhoder/foxful-cli/model"
 // Production provider registrations (Phase 3.2.1/3.2.2). The 5 sample menus
 // move here from the Phase 3.0 prototype (registry_proto_b.go, kept as
 // evidence); demo migrations add album_detail / user_playlist / dj_radio_detail
-// and the lastfm_auth page. Phase 3.3.1 extends the set to every menu_*.go
-// menu (batches 1-4).
+// and the login/search pages. Phase 3.3.1 extends the set to every menu_*.go
+// menu (batches 1-4). The Last.fm menu and pages moved into the
+// internal/plugins/lastfm plugin with their registrations (Phase 3.9).
 func init() {
 	RegisterMenu("playlist_detail", func(base baseMenu, opts PlaylistDetailOpts) (Menu, error) {
 		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
@@ -193,16 +194,8 @@ func init() {
 		return NewActionMenu(base, opts.From, opts.CurPlaying), nil
 	})
 
-	RegisterMenu("last_fm", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewLastfm(base), nil
-	})
-
 	RegisterPage("login", func(opts LoginPageOpts) (model.Page, error) {
 		return NewLoginPage(opts.Netease), nil
-	})
-
-	RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
-		return NewLastfmAuthPage(opts.svc), nil
 	})
 
 	// --- Phase 3.3.2 page migrations ---
@@ -212,9 +205,5 @@ func init() {
 	// and operate.go through the shell (3.3.3 addresses those readers).
 	RegisterPage("search", func(opts SearchPageOpts) (model.Page, error) {
 		return NewSearchPage(opts.Netease), nil
-	})
-
-	RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
-		return NewLastfmCustomAPIPage(opts.svc), nil
 	})
 }

@@ -1,4 +1,4 @@
-package ui
+package lastfm
 
 import (
 	"fmt"
@@ -13,9 +13,10 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/skratchdot/open-golang/open"
 
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	lastfm "github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
@@ -34,7 +35,7 @@ type lastfmQRErrorMsg struct{ err error }
 
 // LastfmQRAuthPage Last.fm 二维码授权页面
 type LastfmQRAuthPage struct {
-	svc  *menuServices // service accessor (Phase 3.3.5)
+	svc  ui.MenuServices // service accessor (Phase 3.9 plugin boundary)
 	from model.Page
 
 	token       string
@@ -54,7 +55,7 @@ func (p *LastfmQRAuthPage) Msg() tea.Msg {
 	return nil
 }
 
-func NewLastfmQRAuthPage(svc *menuServices, from model.Page, afterAction func()) *LastfmQRAuthPage {
+func NewLastfmQRAuthPage(svc ui.MenuServices, from model.Page, afterAction func()) *LastfmQRAuthPage {
 	page := &LastfmQRAuthPage{
 		svc:         svc,
 		from:        from,
@@ -119,8 +120,8 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 
 	var top int
 	mainPage := p.svc.MustMain()
-	builder.WriteString(pageTitleView(a, mainPage, &top))
-	builder.WriteString(pageMenuTitleView(a, mainPage, &top, &model.MenuItem{Title: "Last.fm 二维码授权"}))
+	builder.WriteString(ui.PageTitleView(a, mainPage, &top))
+	builder.WriteString(ui.PageMenuTitleView(a, mainPage, &top, &model.MenuItem{Title: "Last.fm 二维码授权"}))
 	builder.WriteString("\n\n")
 	top += 2
 
@@ -188,7 +189,7 @@ func (p *LastfmQRAuthPage) View(a *model.App) string {
 		builder.WriteString("\n")
 	}
 
-	return finishCustomPageView(&builder, a)
+	return ui.FinishCustomPageView(&builder, a)
 }
 
 // generateQRCodeCmd 异步获取和生成二维码

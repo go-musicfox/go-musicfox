@@ -1,4 +1,4 @@
-package ui
+package lastfm
 
 import (
 	"strings"
@@ -11,12 +11,13 @@ import (
 	"github.com/anhoder/foxful-cli/style"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
 const LastfmCustomAPIPageType model.PageType = "lastfm_custom_api"
 
 type LastfmCustomAPIPage struct {
-	svc *menuServices // service accessor (Phase 3.3.5)
+	svc ui.MenuServices // service accessor (Phase 3.9 plugin boundary)
 
 	menuTitle    *model.MenuItem
 	index        int
@@ -55,24 +56,24 @@ type LastfmCustomAPIPage struct {
 	mousePointer  string
 }
 
-func NewLastfmCustomAPIPage(svc *menuServices) *LastfmCustomAPIPage {
+func NewLastfmCustomAPIPage(svc ui.MenuServices) *LastfmCustomAPIPage {
 	page := newLastfmCustomAPIPage(svc)
 	page.reloadAPIAccount()
 	return page
 }
 
-func newLastfmCustomAPIPage(svc *menuServices) *LastfmCustomAPIPage {
+func newLastfmCustomAPIPage(svc ui.MenuServices) *LastfmCustomAPIPage {
 	keyInput := textinput.New()
 	keyInput.Placeholder = " Key"
 	keyInput.CharLimit = 32
-	keyInput.SetStyles(pageInputStyles())
+	keyInput.SetStyles(ui.PageInputStyles())
 
 	secretInput := textinput.New()
 	secretInput.Placeholder = " Secret"
 	secretInput.EchoMode = textinput.EchoPassword
 	secretInput.EchoCharacter = '•'
 	secretInput.CharLimit = 32
-	secretInput.SetStyles(pageInputStyles())
+	secretInput.SetStyles(ui.PageInputStyles())
 
 	page := &LastfmCustomAPIPage{
 		svc:           svc,
@@ -109,8 +110,8 @@ func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 		oldButtonHovered := l.hoveredButton
 		oldPointer := l.mousePointer
 
-		breadcrumbChanged, breadcrumbHovered := pageBreadcrumbMotion(a, mainPage, mouse.X, mouse.Y)
-		l.backBtnHovered = mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+pageBackButtonWidth
+		breadcrumbChanged, breadcrumbHovered := ui.PageBreadcrumbMotion(a, mainPage, mouse.X, mouse.Y)
+		l.backBtnHovered = mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+ui.PageBackButtonWidth
 		l.hoveredInput = -1
 		if mouse.X >= l.inputStartX && mouse.X <= l.inputEndX {
 			switch mouse.Y {
@@ -139,7 +140,7 @@ func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 			l.mousePointer = "pointer"
 		}
 		if l.backBtnHovered != oldBackHovered || l.hoveredInput != oldInputHovered || l.hoveredButton != oldButtonHovered || l.mousePointer != oldPointer || breadcrumbChanged {
-			return l, tea.Sequence(tickLogin(time.Nanosecond), a.SetMousePointer(l.mousePointer))
+			return l, tea.Sequence(ui.TickLogin(time.Nanosecond), a.SetMousePointer(l.mousePointer))
 		}
 		return l.updateAccountInputs(msg)
 	}
@@ -150,11 +151,11 @@ func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 			return l.updateAccountInputs(msg)
 		}
 		mainPage := l.svc.MustMain()
-		if newPage := pageBreadcrumbClick(a, mainPage, mouse.X, mouse.Y); newPage != nil {
+		if newPage := ui.PageBreadcrumbClick(a, mainPage, mouse.X, mouse.Y); newPage != nil {
 			l.tips = ""
 			return newPage, l.svc.App().RerenderCmd(true)
 		}
-		if mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+pageBackButtonWidth {
+		if mouse.Y == l.backBtnRowY && mouse.X >= l.backBtnStartX && mouse.X < l.backBtnStartX+ui.PageBackButtonWidth {
 			l.tips = ""
 			return mainPage, l.svc.App().RerenderCmd(true)
 		}
@@ -163,13 +164,13 @@ func (l *LastfmCustomAPIPage) Update(msg tea.Msg, a *model.App) (model.Page, tea
 			case l.keyRowY:
 				l.index = 0
 				l.applyFocus()
-				setPageInputCursor(&l.keyInput, mouse.X, l.inputStartX)
-				return l, tickLogin(time.Nanosecond)
+				ui.SetPageInputCursor(&l.keyInput, mouse.X, l.inputStartX)
+				return l, ui.TickLogin(time.Nanosecond)
 			case l.secretRowY:
 				l.index = 1
 				l.applyFocus()
-				setPageInputCursor(&l.secretInput, mouse.X, l.inputStartX)
-				return l, tickLogin(time.Nanosecond)
+				ui.SetPageInputCursor(&l.secretInput, mouse.X, l.inputStartX)
+				return l, ui.TickLogin(time.Nanosecond)
 			}
 		}
 		if mouse.Y == l.buttonsRowY {
@@ -245,16 +246,16 @@ func (l *LastfmCustomAPIPage) View(a *model.App) string {
 	}
 
 	if configs.AppConfig.Theme.ShowTitle {
-		write(pageTitleView(a, mainPage, &top))
+		write(ui.PageTitleView(a, mainPage, &top))
 	} else {
 		write("\n")
 		top++
 	}
 
 	topBefore := top
-	write(pageMenuTitleViewWithBack(a, mainPage, &top, l.menuTitle, l.backBtnHovered))
-	l.backBtnRowY = pageMenuTitleRow(a, mainPage, topBefore)
-	l.backBtnStartX = max(0, mainPage.MenuStartColumn()-pageBackButtonWidth)
+	write(ui.PageMenuTitleViewWithBack(a, mainPage, &top, l.menuTitle, l.backBtnHovered))
+	l.backBtnRowY = ui.PageMenuTitleRow(a, mainPage, topBefore)
+	l.backBtnStartX = max(0, mainPage.MenuStartColumn()-ui.PageBackButtonWidth)
 	write("\n\n")
 
 	l.inputStartX = max(0, mainPage.MenuStartColumn())
@@ -270,7 +271,7 @@ func (l *LastfmCustomAPIPage) View(a *model.App) string {
 			l.secretRowY = lineCount
 		}
 		input.SetWidth(max(1, a.WindowWidth()-l.inputStartX-lipgloss.Width(input.Prompt)))
-		write(pageInputView(*input, l.hoveredInput == i))
+		write(ui.PageInputView(*input, l.hoveredInput == i))
 		if i < len(inputs)-1 {
 			write("\n\n")
 		}
@@ -289,15 +290,15 @@ func (l *LastfmCustomAPIPage) View(a *model.App) string {
 	l.buttonsRowY = lineCount
 	submitButtonView := l.submitButton
 	if l.hoveredButton == 0 {
-		submitButtonView = pageButtonHoverView(pageSubmitText())
+		submitButtonView = ui.PageButtonHoverView(ui.PageSubmitText())
 	}
 	reloadButtonView := l.reloadButton
 	if l.hoveredButton == 1 {
-		reloadButtonView = pageButtonHoverView(l.reloadText)
+		reloadButtonView = ui.PageButtonHoverView(l.reloadText)
 	}
 	clearButtonView := l.clearButton
 	if l.hoveredButton == 2 {
-		clearButtonView = pageButtonHoverView(l.clearText)
+		clearButtonView = ui.PageButtonHoverView(l.clearText)
 	}
 	buttonGap := "    "
 	l.submitStartX = l.inputStartX
@@ -316,7 +317,7 @@ func (l *LastfmCustomAPIPage) View(a *model.App) string {
 	}
 	write("\n")
 
-	return finishCustomPageView(&builder, a)
+	return ui.FinishCustomPageView(&builder, a)
 }
 
 func (l *LastfmCustomAPIPage) Msg() tea.Msg {
@@ -339,14 +340,14 @@ func (l *LastfmCustomAPIPage) updateAccountInputs(msg tea.Msg) (model.Page, tea.
 }
 
 func (l *LastfmCustomAPIPage) applyFocus() {
-	blurPageInput(&l.keyInput)
-	blurPageInput(&l.secretInput)
+	ui.BlurPageInput(&l.keyInput)
+	ui.BlurPageInput(&l.secretInput)
 	l.tips = ""
 	switch l.index {
 	case 0:
-		focusPageInput(&l.keyInput)
+		ui.FocusPageInput(&l.keyInput)
 	case 1:
-		focusPageInput(&l.secretInput)
+		ui.FocusPageInput(&l.secretInput)
 	case l.submitIndex:
 		l.tips = style.FG("保存至数据库，优先使用此值", lipgloss.BrightBlue)
 	case l.reloadIndex:
@@ -354,9 +355,9 @@ func (l *LastfmCustomAPIPage) applyFocus() {
 	case l.clearIndex:
 		l.tips = style.FG("清除当前值及已设置值", lipgloss.BrightBlue)
 	}
-	l.submitButton = pageSubmitButton(l.index == l.submitIndex)
-	l.reloadButton = pageButton(l.reloadText, l.index == l.reloadIndex)
-	l.clearButton = pageButton(l.clearText, l.index == l.clearIndex)
+	l.submitButton = ui.PageSubmitButton(l.index == l.submitIndex)
+	l.reloadButton = ui.PageButton(l.reloadText, l.index == l.reloadIndex)
+	l.clearButton = ui.PageButton(l.clearText, l.index == l.clearIndex)
 }
 
 func (l *LastfmCustomAPIPage) enterHandler() (model.Page, tea.Cmd) {
@@ -390,7 +391,7 @@ func (l *LastfmCustomAPIPage) enterHandler() (model.Page, tea.Cmd) {
 		l.AfterAction()
 	}
 
-	return l, tickLogin(time.Nanosecond)
+	return l, ui.TickLogin(time.Nanosecond)
 }
 
 func (l *LastfmCustomAPIPage) reloadAPIAccount() (model.Page, tea.Cmd) {

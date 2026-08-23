@@ -12,7 +12,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/netease-music/service"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 
@@ -40,9 +39,15 @@ const (
 type tickLoginMsg struct{}
 
 func tickLogin(duration time.Duration) tea.Cmd {
-	return tea.Tick(duration, func(t time.Time) tea.Msg {
+	return tea.Tick(duration, func(time.Time) tea.Msg {
 		return tickLoginMsg{}
 	})
+}
+
+// TickLogin is the exported form of tickLogin (Phase 3.9 plugin boundary; the
+// lastfm pages moved into internal/plugins/lastfm use it to re-render).
+func TickLogin(duration time.Duration) tea.Cmd {
+	return tickLogin(duration)
 }
 
 type LoginPage struct {
@@ -74,8 +79,6 @@ type LoginPage struct {
 	qrEndX        int // 扫码按钮结束 X（0-based，闭区间）
 	webviewStartX int // 网页登录按钮起始 X（0-based）
 	webviewEndX   int // 网页登录按钮结束 X（0-based，闭区间）
-	cookieStartX  int // Cookie按钮起始 X（0-based）
-	cookieEndX    int // Cookie按钮结束 X（0-based，闭区间）
 	tabStartX     int // Tabs 起始 X（0-based）
 	tabsStartRowY int // Tabs 起始行（1-based）
 	tabsEndRowY   int // Tabs 结束行（1-based）
@@ -92,7 +95,7 @@ type LoginPage struct {
 	webviewAvailable bool // 网页登录（原生 WebView）是否可用，初始化时检测一次
 }
 
-// 执行登录操作回显的信息结构体
+// LoginMsg 执行登录操作回显的信息结构体
 type LoginMsg struct {
 	err error
 }
@@ -148,7 +151,7 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 
 	if loginMsg, ok := msg.(LoginMsg); ok {
 		if loginMsg.err != nil {
-			l.tips = util.SetFgStyle(loginMsg.err.Error(), lipgloss.BrightRed)
+			l.tips = style.FG(loginMsg.err.Error(), lipgloss.BrightRed)
 			return l, nil
 		}
 		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
@@ -451,9 +454,10 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 		write(pageInputView(*input, l.hoveredInputBox == i))
 
 		// 记录输入框所在行号（1-based）
-		if i == 0 {
+		switch i {
+		case 0:
 			l.accountRowY = curRow()
-		} else if i == 1 {
+		case 1:
 			l.passwordRowY = curRow()
 		}
 
@@ -629,7 +633,7 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 		}
 		// 提交
 		if len(l.accountInput.Value()) <= 0 || len(l.passwordInput.Value()) <= 0 {
-			l.tips = util.SetFgStyle(model.T(MsgLoginCredentialRequired), lipgloss.BrightRed)
+			l.tips = style.FG(model.T(MsgLoginCredentialRequired), lipgloss.BrightRed)
 			return l, nil
 		}
 		return l.loginByAccount()
@@ -682,7 +686,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 		code, bodyBytes, err = loginService.LoginCellphone()
 
 		if err != nil {
-			l.tips = util.SetFgStyle(model.T(MsgLoginFailed)+err.Error(), lipgloss.BrightRed)
+			l.tips = style.FG(model.T(MsgLoginFailed)+err.Error(), lipgloss.BrightRed)
 			slog.Error("使用账号密码登录失败", slogx.Error(err))
 			return l, tickLogin(time.Nanosecond)
 		}
@@ -757,7 +761,7 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 // loginByWebview 跳转到网页登录界面（仅 macOS 支持原生 WKWebView 窗口）
 func (l *LoginPage) loginByWebview() (model.Page, tea.Cmd) {
 	if !l.webviewAvailable {
-		l.tips = util.SetFgStyle(model.T(MsgLoginWebviewUnsupported), lipgloss.BrightRed)
+		l.tips = style.FG(model.T(MsgLoginWebviewUnsupported), lipgloss.BrightRed)
 		return l, nil
 	}
 	webviewPage := NewWebviewLoginPage(l.netease, l, l.AfterLogin)
@@ -876,7 +880,7 @@ func checkCookieCmd(cookieStr string) tea.Cmd {
 		jar, err := apputils.RefreshCookieJar()
 		if err != nil {
 			slog.Error("Cookie 登录失败", slogx.Error(err))
-			return LoginMsg{err: fmt.Errorf("Cookie 登录失败: %w", err)}
+			return LoginMsg{err: fmt.Errorf("cookie 登录失败: %w", err)}
 		}
 
 		slog.Info("使用 Cookie 登录成功")
@@ -894,11 +898,11 @@ func checkCookieCmd(cookieStr string) tea.Cmd {
 func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 	cookieStr := l.cookieInput.Value()
 	if len(cookieStr) <= 0 {
-		l.tips = util.SetFgStyle(model.T(MsgLoginCookieRequired), lipgloss.BrightRed)
+		l.tips = style.FG(model.T(MsgLoginCookieRequired), lipgloss.BrightRed)
 		return l, nil
 	}
 
-	l.tips = util.SetFgStyle(model.T(MsgLoginCookieVerifying), lipgloss.BrightCyan)
+	l.tips = style.FG(model.T(MsgLoginCookieVerifying), lipgloss.BrightCyan)
 	l.cookieInput.SetValue("")
 
 	return l, checkCookieCmd(cookieStr)

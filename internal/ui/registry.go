@@ -131,15 +131,13 @@ func buildMenuOrToast[T any](key string, base baseMenu, opts T) Menu {
 
 // Parameter-object types (the discoverable "contract") of registered pages.
 type (
-	LoginPageOpts      struct{ Netease *Netease }
-	LastfmAuthPageOpts struct{ svc *menuServices }
-	// SearchPageOpts and LastfmCustomAPIPageOpts are the Phase 3.3.2 page
-	// contracts. SearchPageOpts builds the shell-owned search singleton (its
-	// wordsInput/result/searchType state is shared with the SearchResultMenu
-	// flow); LastfmCustomAPIPageOpts is the Last.fm profile
-	// "设置 API account" entry.
-	SearchPageOpts          struct{ Netease *Netease }
-	LastfmCustomAPIPageOpts struct{ svc *menuServices }
+	LoginPageOpts struct{ Netease *Netease }
+	// SearchPageOpts is the Phase 3.3.2 page contract. It builds the
+	// shell-owned search singleton (its wordsInput/result/searchType state is
+	// shared with the SearchResultMenu flow). The Last.fm page opts
+	// (lastfm_auth / lastfm_custom_api) moved into the internal/plugins/lastfm
+	// plugin with the pages themselves (Phase 3.9).
+	SearchPageOpts struct{ Netease *Netease }
 )
 
 // pageFactory[T] is a typed page provider stored behind `any` in the registry.
@@ -180,6 +178,13 @@ func buildPageOrToast[T any](key string, opts T) model.Page {
 		return nil
 	}
 	return page
+}
+
+// BuildPageOrToast is the exported form of buildPageOrToast (Phase 3.9 plugin
+// boundary): plugin page-opening sites outside package ui use it to preserve
+// the toast-on-failure + nil-return behavior.
+func BuildPageOrToast[T any](key string, opts T) model.Page {
+	return buildPageOrToast(key, opts)
 }
 
 // toastRegistryError surfaces a provider build failure through the toast
@@ -360,15 +365,12 @@ var expectedMenuKeys = []string{
 	// Phase 3.3.3: last hardcoded constructions.
 	"cur_playlist",
 	"action_menu",
-	"last_fm",
 }
 
 // expectedPageKeys is the canonical page provider key set.
 var expectedPageKeys = []string{
 	"login",
-	"lastfm_auth",
 	"search",
-	"lastfm_custom_api",
 }
 
 // AssertMenuRegistryComplete panics listing the missing keys when any expected
