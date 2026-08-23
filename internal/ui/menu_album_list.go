@@ -17,9 +17,9 @@ func NewAlbumListMenu(base baseMenu) *AlbumListMenu {
 			{Title: "最新专辑"},
 		},
 		menuList: []Menu{
-			NewAlbumNewAreaMenu(base),
-			NewAlbumTopAreaMenu(base),
-			NewAlbumNewestMenu(base),
+			mustBuildNoArg("album_new_area", base),
+			mustBuildNoArg("album_top_area", base),
+			mustBuildNoArg("album_new_hot", base),
 		},
 	}
 

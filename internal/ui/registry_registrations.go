@@ -81,6 +81,40 @@ func init() {
 		return NewRadioDjTypeMenu(base), nil
 	})
 
+	// --- Phase 3.3.1 batch 2: album cluster ---
+
+	RegisterMenu("album_new_area", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewAlbumNewAreaMenu(base), nil
+	})
+
+	RegisterMenu("album_top_area", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewAlbumTopAreaMenu(base), nil
+	})
+
+	RegisterMenu("album_new_hot", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewAlbumNewestMenu(base), nil
+	})
+
+	RegisterMenu("album_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewAlbumListMenu(base), nil
+	})
+
+	RegisterMenu("album_top", func(base baseMenu, opts AlbumTopOpts) (Menu, error) {
+		return NewAlbumTopMenu(base, opts.Area), nil
+	})
+
+	RegisterMenu("album_new", func(base baseMenu, opts AlbumNewOpts) (Menu, error) {
+		return NewAlbumNewMenu(base, opts.Area), nil
+	})
+
+	RegisterMenu("album_sub_list", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewAlbumSubscribeListMenu(base), nil
+	})
+
+	RegisterMenu("high_quality_playlists", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return NewHighQualityPlaylistsMenu(base), nil
+	})
+
 	RegisterPage("login", func(opts LoginPageOpts) (model.Page, error) {
 		return NewLoginPage(opts.Netease), nil
 	})

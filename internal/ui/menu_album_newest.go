@@ -40,7 +40,7 @@ func (m *AlbumNewestMenu) SubMenu(_ *model.App, index int) model.Menu {
 		return nil
 	}
 
-	return NewAlbumDetailMenu(m.baseMenu, m.albums[index].Id)
+	return buildMenuOrToast("album_detail", m.baseMenu, AlbumDetailOpts{AlbumID: m.albums[index].Id})
 }
 
 func (m *AlbumNewestMenu) BeforeEnterMenuHook() model.Hook {

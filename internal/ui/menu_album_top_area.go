@@ -39,5 +39,5 @@ func (m *AlbumTopAreaMenu) SubMenu(_ *model.App, index int) model.Menu {
 		"JP",
 	}
 
-	return NewAlbumTopMenu(m.baseMenu, areaValueMapping[index])
+	return buildMenuOrToast("album_top", m.baseMenu, AlbumTopOpts{Area: areaValueMapping[index]})
 }
