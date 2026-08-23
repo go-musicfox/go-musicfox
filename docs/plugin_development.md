@@ -18,7 +18,7 @@
 | 页面注册 | `RegisterPage[T](key, factory)` | `internal/ui/registry.go` |
 | 菜单跳转 | `BuildMenu[T]` / `MustBuildNoArg` / `MustBuild` / `BuildMenuOrToast`（导出形式，供插件使用） | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
-| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `RegisterMainMenuItemWithOrder(key, title, order, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
+| 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `RegisterMainMenuItemAfter(key, title, after, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
 | 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
 | 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法 + `Services()`） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
@@ -60,14 +60,17 @@ func BuildPageOrToast[T any](key string, opts T) model.Page
 // 主菜单入口（Phase 3.9）：key 必须已在菜单注册表中注册（未注册的 key 在
 // NewMainMenu 启动时 panic，作为启动完整性信号）。无 Build 的入口 key 必须
 // 是无参菜单 provider（经 mustBuildNoArg 构建）；带 Build 的入口由插件以自身
-// options 构造菜单（参数化 provider 主菜单入口）。**顺序（Phase 3.9.x）**：
-// NewMainMenu 将内置项（搜索=6 / 帮助=14）与插件项按 Order 归并稳定排序，
-// 复现插件化前的主菜单原始顺序（每日推荐歌曲0 … 检查更新15）。Order 0 是
-// 合法的显式位置（第一项）；经便捷形式（不带 order）声明的项携带 unset
-// 哨兵，排在所有显式顺序项之后（保持既有"追加在末尾"行为，注册序不变）。
+// options 构造菜单（参数化 provider 主菜单入口）。**顺序（after-anchor 链）**：
+// 每个入口声明其前驱项 key（`After` = 前驱项 key），NewMainMenu 从
+// `ui.MainMenuStart`（`_main_start`，第一项的哨兵锚点）沿链走序，复现插件化
+// 前的主菜单原始顺序（每日推荐歌曲 → 每日推荐歌单 → … → 帮助 → 检查更新）。
+// 插入一个菜单 = 声明一个锚点，其余项不漂移（无需重排编号）；空 After 的项
+// （便捷形式）追加在链尾（注册序保持，既有"追加在末尾"行为）。链完整性由
+// NewMainMenu 断言：每个 After 目标必须存在、每项恰好可达一次、链长 == 总项
+// 数（孤儿/环 panic）。
 func RegisterMainMenuItem(key, title string)                                             // 便捷形式，Build = nil，末尾追加
 func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu)         // 便捷形式，末尾追加
-func RegisterMainMenuItemWithOrder(key, title string, order int, build func(base BaseMenu) Menu) // 显式位置（0 为第一项；负数 panic）
+func RegisterMainMenuItemAfter(key, title string, after string, build func(base BaseMenu) Menu) // 声明前驱项 key（after 非空；锚点存在性由 NewMainMenu 断言）
 func MainMenuPluginItems() []MainMenuItem                                                // 快照，供 NewMainMenu 构造
 
 // 启动钩子（Phase 3.9）：注册启动任务。shell 在 InitHook 中用户/登录就绪后
@@ -214,7 +217,7 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
-> `internal/plugins/checkupdate` 是把内置「检查更新」菜单提取为外部式插件的第一个真实插件，完整走通编译期插件链路：`BaseMenu` 嵌入 + `RegisterMenu` 注册 + `RegisterMainMenuItem` 主菜单入口 + `RegisterStartupHook` 启动钩子 + 聚合器 + 空导入。菜单 key 仍为 `check_update`，行为与提取前一致。
+> `internal/plugins/checkupdate` 是把内置「检查更新」菜单提取为外部式插件的第一个真实插件，完整走通编译期插件链路：`BaseMenu` 嵌入 + `RegisterMenu` 注册 + `RegisterMainMenuItemAfter` 主菜单入口 + `RegisterStartupHook` 启动钩子 + 聚合器 + 空导入。菜单 key 仍为 `check_update`，行为与提取前一致。
 
 `menu.go`（菜单类型 + 检查/通知逻辑 + 进入钩子）：
 
@@ -278,8 +281,9 @@ func init() {
 	ui.RegisterMenu("check_update", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 		return &CheckUpdateMenu{BaseMenu: base}, nil
 	})
-	// 声明主菜单入口：NewMainMenu 在全部内置项之后追加「检查更新」。
-	ui.RegisterMainMenuItem("check_update", "检查更新")
+	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并——检查更新跟在帮助
+	// （内置项）之后，位于主菜单链尾（复现插件化前顺序）。
+	ui.RegisterMainMenuItemAfter("check_update", "检查更新", "help", nil)
 	// 注册启动自动检查（原 shell 级硬编码启动检查，见 startup.go）。
 	ui.RegisterStartupHook(startupCheck)
 }
@@ -326,7 +330,7 @@ import (
 )
 ```
 
-主菜单不再对「检查更新」做索引特判（`mainMenuCheckUpdateIndex` 已随插件化移除）：`NewMainMenu` 读取 `MainMenuPluginItems()`，在全部内置项之后追加插件入口并按 key 构建菜单；选中后进入插件菜单，由插件自身的 `BeforeEnterMenuHook` / `Action` 承担检查与通知。
+主菜单不再对「检查更新」做索引特判（`mainMenuCheckUpdateIndex` 已随插件化移除）：`NewMainMenu` 读取 `MainMenuPluginItems()`，按 After 锚点链归并插件与内置入口并按 key 构建菜单；选中后进入插件菜单，由插件自身的 `BeforeEnterMenuHook` / `Action` 承担检查与通知。
 
 **启动钩子调用点**：shell 的 `InitHook`（`internal/ui/netease.go`）在用户/登录恢复之后、自动播放之前的位置调用 `runStartupHooks()`（即原 shell 级启动自动检查所在位置，启动序第 10 步）。此时 services 已注册、toast 已接线；每个 hook 带 recover 隔离，panic 仅记日志不阻断启动。
 
@@ -434,7 +438,7 @@ page, err := ui.BuildPage("example_hello_page", ExampleHelloPageOpts{})
 
 ### 示例四：Last.fm 插件（服务访问 + 页面插件 + 主菜单项）
 
-> `internal/plugins/lastfm` 是第二个真实插件，把内置 Last.fm 菜单/页面整体提取为外部式插件。它补全了示例一的插件能力矩阵：**服务访问**（`svc.Lastfm()`——访问器解析 `ServiceLastfm` 客户端）、**页面插件**（`lastfm_auth` / `lastfm_custom_api` 经 `RegisterPage` 注册，opts 携带 `ui.MenuServices`）、**主菜单项**（`RegisterMainMenuItem("last_fm", "LastFM")`——原内置入口已从 `menu_main.go` 移除，现排在全部内置项之后）。页面通过 `ui.BuildPageOrToast` 打开，渲染复用 ui 导出的自定义页面布局助手。
+> `internal/plugins/lastfm` 是第二个真实插件，把内置 Last.fm 菜单/页面整体提取为外部式插件。它补全了示例一的插件能力矩阵：**服务访问**（`svc.Lastfm()`——访问器解析 `ServiceLastfm` 客户端）、**页面插件**（`lastfm_auth` / `lastfm_custom_api` 经 `RegisterPage` 注册，opts 携带 `ui.MenuServices`）、**主菜单项**（`RegisterMainMenuItemAfter("last_fm", "LastFM", "radio_dj_type", nil)`——原内置入口已从 `menu_main.go` 移除，经 After 锚点回到原内置位置）。页面通过 `ui.BuildPageOrToast` 打开，渲染复用 ui 导出的自定义页面布局助手。
 
 ```go
 // 文件：internal/plugins/lastfm/page_auth.go（节选）——页面 opts 携带访问器
@@ -454,8 +458,9 @@ func init() {
 	ui.RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
 		return NewLastfmCustomAPIPage(opts.Svc), nil
 	})
-	// 主菜单项：NewMainMenu 在全部内置项之后追加「LastFM」（内置入口已移除）。
-	ui.RegisterMainMenuItem("last_fm", "LastFM")
+	// 主菜单项：NewMainMenu 经 After 锚点链归并——LastFM 跟在主播电台
+	// （dj 插件）之后、帮助（内置）之前（复现插件化前顺序）。
+	ui.RegisterMainMenuItemAfter("last_fm", "LastFM", "radio_dj_type", nil)
 }
 
 // 文件：internal/plugins/lastfm/profile.go（节选）——菜单内打开页面：
@@ -485,8 +490,8 @@ func (m *DjRecommendMenu) SubMenu(_ *model.App, index int) model.Menu {
 // 文件：internal/plugins/dj/registry.go（节选）——入口菜单声明主菜单项
 func init() {
 	// ... RegisterMenu("dj_recommend", ...) 等 10 个注册，key 与原内置注册一致
-	// 主播电台主菜单入口：原为内置索引 12，现为插件主菜单项排在全部内置项之后。
-	ui.RegisterMainMenuItem("radio_dj_type", "主播电台")
+	// 主播电台主菜单入口：声明前驱项 key（云盘，playlist 插件）回到原内置位置。
+	ui.RegisterMainMenuItemAfter("radio_dj_type", "主播电台", "could", nil)
 }
 ```
 
@@ -494,13 +499,14 @@ func init() {
 
 ### 示例六：专辑集群（批量菜单提取 + 主菜单项）
 
-> `internal/plugins/album` 是第四个真实插件：把「专辑列表」整个集群（8 个菜单）整体提取为外部式插件，与示例五同为集群批量提取示范。所有 provider key 与提取前**逐一相同**（`album_menu` / `album_new_area` / `album_top_area` / `album_new_hot` / `album_new` / `album_top` / `album_sub_list` / `album_detail`），因此 ui 侧跳入集群的调用点（`menu_search_result.go` / `menu_artist_album.go` 跳 `album_detail`、`menu_user_collection.go` 构建 `album_sub_list` 子菜单）全部经注册表按 key 跳转、无需改动。`album_menu`（专辑列表入口菜单）声明主菜单入口「专辑列表」（原内置索引 5，现为插件主菜单项排在全部内置项之后，帮助索引随之 12→11）：
+> `internal/plugins/album` 是第四个真实插件：把「专辑列表」整个集群（8 个菜单）整体提取为外部式插件，与示例五同为集群批量提取示范。所有 provider key 与提取前**逐一相同**（`album_menu` / `album_new_area` / `album_top_area` / `album_new_hot` / `album_new` / `album_top` / `album_sub_list` / `album_detail`），因此 ui 侧跳入集群的调用点（`menu_search_result.go` / `menu_artist_album.go` 跳 `album_detail`、`menu_user_collection.go` 构建 `album_sub_list` 子菜单）全部经注册表按 key 跳转、无需改动。`album_menu`（专辑列表入口菜单）声明主菜单入口「专辑列表」（经 After 锚点声明前驱项 key = 私人FM，回到插件化前的原始位置）：
 
 ```go
 // 文件：internal/plugins/album/registry.go（节选）——入口菜单声明主菜单项
 func init() {
 	// ... RegisterMenu("album_top", ...) 等 8 个注册，key 与原内置注册一致
-	ui.RegisterMainMenuItem("album_menu", "专辑列表")
+	// 专辑列表主菜单入口：声明前驱项 key（私人FM，recommend 插件）回到原内置位置。
+	ui.RegisterMainMenuItemAfter("album_menu", "专辑列表", "personal_fm", nil)
 }
 ```
 
@@ -508,13 +514,14 @@ func init() {
 
 ### 示例七：歌手集群（第五个真实插件）
 
-> `internal/plugins/artist` 是第五个真实插件：把「热门歌手 / 歌手详情」整个集群（6 个菜单）整体提取为外部式插件，与示例五/六同为集群批量提取示范。所有 provider key 与提取前**逐一相同**（`hot_artists` / `artist_detail` / `artist_song` / `artist_album` / `artist_of_song` / `artists_sub_list`），因此 ui 侧跳入集群的调用点（`menu_search_result.go` / `operate.go` 跳 `artist_detail`、`operate.go` 跳 `artist_of_song`、`menu_user_collection.go` 构建 `artists_sub_list` 子菜单）全部经注册表按 key 跳转、无需改动。`hot_artists`（热门歌手入口菜单）声明主菜单入口「热门歌手」（原内置索引 8，现为插件主菜单项排在全部内置项之后，帮助索引随之 11→10）：
+> `internal/plugins/artist` 是第五个真实插件：把「热门歌手 / 歌手详情」整个集群（6 个菜单）整体提取为外部式插件，与示例五/六同为集群批量提取示范。所有 provider key 与提取前**逐一相同**（`hot_artists` / `artist_detail` / `artist_song` / `artist_album` / `artist_of_song` / `artists_sub_list`），因此 ui 侧跳入集群的调用点（`menu_search_result.go` / `operate.go` 跳 `artist_detail`、`operate.go` 跳 `artist_of_song`、`menu_user_collection.go` 构建 `artists_sub_list` 子菜单）全部经注册表按 key 跳转、无需改动。`hot_artists`（热门歌手入口菜单）声明主菜单入口「热门歌手」（经 After 锚点声明前驱项 key = 精选歌单，回到插件化前的原始位置）：
 
 ```go
 // 文件：internal/plugins/artist/registry.go（节选）——入口菜单声明主菜单项
 func init() {
 	// ... RegisterMenu("hot_artists", ...) 等 6 个注册，key 与原内置注册一致
-	ui.RegisterMainMenuItem("hot_artists", "热门歌手")
+	// 热门歌手主菜单入口：声明前驱项 key（精选歌单，playlist 插件）回到原内置位置。
+	ui.RegisterMainMenuItemAfter("hot_artists", "热门歌手", "high_quality_playlists", nil)
 }
 ```
 
@@ -522,17 +529,20 @@ func init() {
 
 ### 示例八：推荐集群（第六个真实插件 + 批量主菜单项）
 
-> `internal/plugins/recommend` 是第六个真实插件：把「推荐/播放历史」集群（每日推荐歌曲、每日推荐歌单、私人FM、最近播放歌曲、排行榜）5 个菜单整体提取为外部式插件，与示例五/六/七同为集群批量提取示范，且是**一次声明 5 个主菜单项**的示范。所有 provider key 与提取前**逐一相同**（`daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks`），ui 侧跳入集群的调用点零改动；集群内跳转（`ranks` / `daily_playlists` 的 SubMenu 跳 `playlist_detail`）经 `ui.BuildMenu` 按 key 解析，`playlist_detail` 留在 ui。5 个入口菜单各自声明主菜单项「每日推荐歌曲 / 每日推荐歌单 / 私人FM / 最近播放歌曲 / 排行榜」（原内置索引 0/1/4/6/8，现为插件主菜单项排在全部内置项之后，帮助索引随之 10→5）：
+> `internal/plugins/recommend` 是第六个真实插件：把「推荐/播放历史」集群（每日推荐歌曲、每日推荐歌单、私人FM、最近播放歌曲、排行榜）5 个菜单整体提取为外部式插件，与示例五/六/七同为集群批量提取示范，且是**一次声明 5 个主菜单项**的示范。所有 provider key 与提取前**逐一相同**（`daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks`），ui 侧跳入集群的调用点零改动；集群内跳转（`ranks` / `daily_playlists` 的 SubMenu 跳 `playlist_detail`）经 `ui.BuildMenu` 按 key 解析，`playlist_detail` 留在 ui。5 个入口菜单各自声明主菜单项「每日推荐歌曲 / 每日推荐歌单 / 私人FM / 最近播放歌曲 / 排行榜」（经 After 锚点声明各自的前驱项 key，回到插件化前的原始位置）：
 
 ```go
 // 文件：internal/plugins/recommend/registry.go（节选）——入口菜单声明主菜单项
 func init() {
 	// ... RegisterMenu("daily_songs", ...) 等 5 个注册，key 与原内置注册一致
-	ui.RegisterMainMenuItem("daily_songs", "每日推荐歌曲")
-	ui.RegisterMainMenuItem("daily_playlists", "每日推荐歌单")
-	ui.RegisterMainMenuItem("personal_fm", "私人FM")
-	ui.RegisterMainMenuItem("recent_songs", "最近播放歌曲")
-	ui.RegisterMainMenuItem("ranks", "排行榜")
+	// 5 个入口各声明主菜单入口（前驱项 key）：每日推荐歌曲跟链首（MainMenuStart）、
+	// 每日推荐歌单跟每日推荐歌曲、私人FM 跟我的收藏（playlist 插件）、排行榜跟搜索
+	// （内置）、最近播放歌曲跟热门歌手（artist 插件）。
+	ui.RegisterMainMenuItemAfter("daily_songs", "每日推荐歌曲", ui.MainMenuStart, nil)
+	ui.RegisterMainMenuItemAfter("daily_playlists", "每日推荐歌单", "daily_songs", nil)
+	ui.RegisterMainMenuItemAfter("personal_fm", "私人FM", "user_collect", nil)
+	ui.RegisterMainMenuItemAfter("recent_songs", "最近播放歌曲", "hot_artists", nil)
+	ui.RegisterMainMenuItemAfter("ranks", "排行榜", "search_type", nil)
 }
 ```
 
@@ -540,18 +550,22 @@ func init() {
 
 ### 示例九：歌单/云盘集群（第七个真实插件 + 参数化主菜单项）
 
-> `internal/plugins/playlist` 是第七个真实插件：把「歌单/云盘」集群（我的歌单、我的收藏、精选歌单、云盘）4 个菜单整体提取为外部式插件，与示例五/六/七/八同为集群批量提取示范，且是**参数化主菜单项**（`RegisterMainMenuItemWith`，Phase 3.9.9 机制）的生产示范。所有 provider key 与提取前**逐一相同**（`user_playlist` / `user_collect` / `high_quality_playlists` / `could`），ui 侧跳入集群的调用点零改动（`menu_search_result.go` 仍按 key 跳 `user_playlist`，`UserPlaylistOpts` 留在 ui）；集群内跳转（`user_playlist` / `high_quality_playlists` 的 SubMenu 跳 `playlist_detail`）经 `ui.BuildMenu` 按 key 解析，`playlist_detail` 留在 ui。4 个入口菜单各自声明主菜单项「我的歌单 / 我的收藏 / 精选歌单 / 云盘」（原内置索引 0/1/3/4，现为插件主菜单项排在全部内置项之后，帮助索引随之 5→1）。`user_playlist` 是参数化 provider（`ui.UserPlaylistOpts` 携带 userID），其主菜单入口经 builder 以 `UserID: ui.CurUser` 构造——与内置入口行为一致（`ui.CurUser` 常量留在 ui，`menu_add_to_user_playlist.go` 仍使用）：
+> `internal/plugins/playlist` 是第七个真实插件：把「歌单/云盘」集群（我的歌单、我的收藏、精选歌单、云盘）4 个菜单整体提取为外部式插件，与示例五/六/七/八同为集群批量提取示范，且是**参数化主菜单项**（`RegisterMainMenuItemWith`，Phase 3.9.9 机制）的生产示范。所有 provider key 与提取前**逐一相同**（`user_playlist` / `user_collect` / `high_quality_playlists` / `could`），ui 侧跳入集群的调用点零改动（`menu_search_result.go` 仍按 key 跳 `user_playlist`，`UserPlaylistOpts` 留在 ui）；集群内跳转（`user_playlist` / `high_quality_playlists` 的 SubMenu 跳 `playlist_detail`）经 `ui.BuildMenu` 按 key 解析，`playlist_detail` 留在 ui。4 个入口菜单各自声明主菜单项「我的歌单 / 我的收藏 / 精选歌单 / 云盘」（经 After 锚点声明各自的前驱项 key，回到插件化前的原始位置）。`user_playlist` 是参数化 provider（`ui.UserPlaylistOpts` 携带 userID），其主菜单入口经 builder 以 `UserID: ui.CurUser` 构造——与内置入口行为一致（`ui.CurUser` 常量留在 ui，`menu_add_to_user_playlist.go` 仍使用）：
 
 ```go
 // 文件：internal/plugins/playlist/registry.go（节选）——参数化主菜单项 + 无参主菜单项
 func init() {
 	// ... RegisterMenu("user_playlist", ...) 等 4 个注册，key 与原内置注册一致
-	ui.RegisterMainMenuItemWith("user_playlist", "我的歌单", func(base ui.BaseMenu) ui.Menu {
+	// 4 个入口各声明主菜单入口（前驱项 key）：我的歌单跟每日推荐歌单（recommend
+	// 插件）、我的收藏跟我的歌单、精选歌单跟排行榜（recommend 插件）、云盘跟最近
+	// 播放歌曲（recommend 插件）。user_playlist 经参数化 builder 构造（UserID =
+	// ui.CurUser，与内置入口行为一致）。
+	ui.RegisterMainMenuItemAfter("user_playlist", "我的歌单", "daily_playlists", func(base ui.BaseMenu) ui.Menu {
 		return ui.MustBuild("user_playlist", base, ui.UserPlaylistOpts{UserID: ui.CurUser})
 	})
-	ui.RegisterMainMenuItem("user_collect", "我的收藏")
-	ui.RegisterMainMenuItem("high_quality_playlists", "精选歌单")
-	ui.RegisterMainMenuItem("could", "云盘")
+	ui.RegisterMainMenuItemAfter("user_collect", "我的收藏", "user_playlist", nil)
+	ui.RegisterMainMenuItemAfter("high_quality_playlists", "精选歌单", "ranks", nil)
+	ui.RegisterMainMenuItemAfter("could", "云盘", "recent_songs", nil)
 }
 ```
 
@@ -581,7 +595,30 @@ import (
 )
 ```
 
-> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。`ui` 不得反向导入插件包（import cycle），shell 需要插件能力时通过注册机制调用：插件能力经 `RegisterMainMenuItem` / `RegisterStartupHook` 声明，由 shell 在构建主菜单 / `InitHook` 时统一消费（不再需要内联插件逻辑）。
+> 注：插件子包必须位于 go-musicfox 模块树内（`internal` 导入规则）；`BaseMenu` 已导出、`baseMenu` 是其别名，注册闭包可在 `ui` 包外以 `ui.BaseMenu` 类型书写。`ui` 不得反向导入插件包（import cycle），shell 需要插件能力时通过注册机制调用：插件能力经 `RegisterMainMenuItem[After]` / `RegisterStartupHook` 声明，由 shell 在构建主菜单 / `InitHook` 时统一消费（不再需要内联插件逻辑）。
+
+### 插入一个主菜单项（after-anchor 单锚点改动）
+
+主菜单顺序由 **after-anchor 链**驱动：每个入口声明其前驱项 key（`After`），`NewMainMenu` 从 `ui.MainMenuStart` 沿链走序。**插入一个菜单 = 声明一个锚点，其余项不漂移**——不再像数值 Order 那样需要重排所有后续项：
+
+```go
+// 现状：新插件菜单「我的电台」想插在「云盘」之后（其当前后继是「主播电台」）。
+// 改动一：把「主播电台」的锚点从 could 改为 my_radio（唯一需要改的既有项）。
+func init() {
+	ui.RegisterMenu("my_radio", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return NewMyRadioMenu(base), nil
+	})
+	ui.RegisterMainMenuItemAfter("my_radio", "我的电台", "could", nil) // 新项：跟在云盘后
+}
+
+// 文件：internal/plugins/dj/registry.go（既有插件，唯一改动行）
+ui.RegisterMainMenuItemAfter("radio_dj_type", "主播电台", "my_radio", nil) // 锚点改为新项
+
+// 插入后主菜单片段：… → 云盘 → 我的电台 → 主播电台 → LastFM → …，
+// 其余所有项（daily_songs … could / last_fm … check_update）的锚点与位置零改动。
+```
+
+追加在链尾的简单场景则完全是**单锚点零改动**：新插件只声明 `RegisterMainMenuItemAfter("new_menu", "标题", "check_update", nil)`（跟在检查更新后）或便捷形式 `RegisterMainMenuItem("new_menu", "标题")`（末尾追加）。链完整性由 `NewMainMenu` 启动断言（After 目标存在 / 每项恰好可达 / 无孤儿环），插错锚点在启动时即 panic 报错。
 
 ## 行为保持契约
 
@@ -589,8 +626,8 @@ import (
 - **错误经 `(Menu, error)` + toast 暴露**：构建失败返回 error，跳转处经 `buildMenuOrToast` / `buildPageOrToast` toast 报错并降级（返回 nil），**不 panic**。`mustBuildNoArg` 的 panic 语义只适用于静态代码中的注册表编程错误。
 - **服务解析不得丢弃 bool**：`framework.ServiceOf[T]` 的第二个返回值必须处理（记录错误 + 降级路径），禁止裸断言。
 - 插件 key 全局唯一：不得与内置 key（`expectedMenuKeys` / `expectedPageKeys`）或其它插件冲突。
-- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须已在菜单注册表中注册（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）；无 `Build` 的入口 key 必须是无参菜单 provider（经 `mustBuildNoArg` 构建），参数化菜单入口需用 `RegisterMainMenuItemWith` 提供 `Build`。
-- **主菜单顺序保持**：插件项经 `Order` 与内置项归并，复现插件化前的原始顺序（用户可见行为）；`Order` 不得与内置项（搜索=6 / 帮助=14）或其它插件项冲突，声明顺序不依赖注册时序。
+- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须已在菜单注册表中注册（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）；无 `Build` 的入口 key 必须是无参菜单 provider（经 `mustBuildNoArg` 构建），参数化菜单入口需用 `RegisterMainMenuItemWith` / `RegisterMainMenuItemAfter` 提供 `Build`。
+- **主菜单顺序保持**：插件项经 **after-anchor 链**（每个入口声明其前驱项 key）复现插件化前的原始顺序（用户可见行为）。`After` 目标必须存在（`MainMenuStart` 或已注册入口 key），同一锚点只能被一个入口声明（重复锚点使另一入口成为孤儿，NewMainMenu 链完整性断言 panic 报错）；声明顺序不依赖注册时序——链在 `NewMainMenu` 构建时统一走序并断言完整性。
 
 ## 未来演进（预留边界，未实现）
 

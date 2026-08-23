@@ -296,3 +296,16 @@ framework 生命周期语义加固（#646 评审后续第二轮）。**正确用
 - **文档**：docs/plugin_development.md 主菜单入口契约补 Order 语义 + 行为保持契约新增"主菜单顺序保持"条；AGENTS.md 同步 registry 表项与插件开发段落。
 
 验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
+
+## Phase 3.9.13: 主菜单项 After 锚点链（替换 Order 数值排序）
+
+用户需求：`MainMenuItem.Order int` 难以维护——插入一个菜单需要重排其后所有项的编号。以 **After 锚点链**替换：每个入口声明其前驱项 key（`After`），插入菜单 = 声明一个锚点，其余项零改动。
+
+- **机制**：`MainMenuItem{Key, Title, After, Build}`；导出 `MainMenuStart`（`_main_start`）为链首哨兵；`RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` 保持便捷形式（空 After = 追加在链尾，注册序保持）；新增 `RegisterMainMenuItemAfter(key, title, after, build)`（after 非空，重复 key panic）；**移除** `Order` 字段与 `RegisterMainMenuItemWithOrder`（全部调用方迁移）。锚点存在性校验**延后到 NewMainMenu 构建时**：插件 init() 任意顺序注册时链存在跨插件/内置依赖环（recommend ↔ playlist、recommend → artist → playlist → recommend 等），注册期即时校验无法成立——链在 `NewMainMenu` 统一走序并断言。
+- **NewMainMenu 链走序**：内置项（搜索 After `album_menu` / 帮助 After `last_fm`）与插件项合并后，从 `MainMenuStart` 反复取 `byAfter[cur]` 走链，空 After 项追加链尾。断言（清晰 panic）：① 每个 After 目标必须存在（MainMenuStart 或已注册入口 key）；② 走链每项恰好可达一次（visited 重访 = 环/重复锚点 panic）；③ 链长 == 总项数（孤儿 panic 并列出违规 key——重复锚点使另一入口不可达，环不可达同理）。
+- **目标链（16 项原始顺序）**：`_start → daily_songs → daily_playlists → user_playlist → user_collect → personal_fm → album_menu → search_type → ranks → high_quality_playlists → hot_artists → recent_songs → could → radio_dj_type → last_fm → help → check_update`。
+- **各插件/内置 After 声明**：recommend `daily_songs`(MainMenuStart)/`daily_playlists`(daily_songs)/`personal_fm`(user_collect)/`ranks`(search_type)/`recent_songs`(hot_artists)；playlist `user_playlist`(daily_playlists, 保留 CurUser builder)/`user_collect`(user_playlist)/`high_quality_playlists`(ranks)/`could`(recent_songs)；album `album_menu`(personal_fm)；artist `hot_artists`(high_quality_playlists)；dj `radio_dj_type`(could)；lastfm `last_fm`(radio_dj_type)；checkupdate `check_update`(help)；内置 搜索(after `album_menu`)/帮助(after `last_fm`)。**注**：spec 中"搜索 after personal_fm"与目标链矛盾（album_menu 与搜索均声明 after personal_fm 会制造重复锚点使一项不可达），按目标链裁决为 搜索 after `album_menu`（album_menu 已是 personal_fm 的直接后继）。
+- **测试**：`plugins_test.go` `TestMainMenuPreservesOriginalOrder` 保持 16 项精确顺序断言（注释改链式描述，聚合器全插件链路验证）；新增 `main_menu_chain_test.go`——`TestOrderMainMenuEntriesChain`（16 项链反序输入仍走通，不依赖注册序）/`TestOrderMainMenuEntriesInsertion`（单锚点插入落位）/`TestOrderMainMenuEntriesEndAppend`（空 After 追加链尾）/`TestOrderMainMenuEntriesMissingAnchorPanics`（After 目标缺失 panic）/`TestOrderMainMenuEntriesCyclePanics`（环 panic）/`TestOrderMainMenuEntriesOrphanPanics`（重复锚点孤儿 panic）+ init() 锚点 test-double 链（ui 测试二进制无法链接插件，内置项锚定插件 key，须补齐 13 项测试链）；`registry_test.go` 重写 `TestNewMainMenuChainOrdersPluginItems`（插入场景：After `help` 落位 + 既有项不重排）与 `TestNewMainMenuAppendsPluginItems`（end-append + 缺失 provider panic 仍居末）。
+- **文档**：docs/plugin_development.md 主菜单入口契约改 After 语义 + 新增"插入一个主菜单项（after-anchor 单锚点改动）"示例 + 行为保持契约"主菜单顺序保持"改链式描述；AGENTS.md 同步 registry 表项/各插件行/插件开发段落；本 runs 文档。
+
+验证：`make lint` 0 issues · `make test` 绿（无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净。
