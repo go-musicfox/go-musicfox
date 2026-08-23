@@ -197,13 +197,13 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 **当前边界注意**：
 
 - `BaseMenu` 已导出，注册闭包可用 `BaseMenu` 书写（`baseMenu` 是别名，二者等价），插件菜单类型嵌入 `ui.BaseMenu` 即可——**可以在 `ui` 包之外实现与注册**（编译期边界验证见 `internal/ui/plugin_boundary_external_test.go`，`package ui_test`；首个真实插件 `internal/plugins/checkupdate` 即此形态）。
-- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api` 以及整个 DJ/电台集群的 `dj_*` / `radio_dj_type` 由插件注册即可通过）。
+- 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api`、整个 DJ/电台集群的 `dj_*` / `radio_dj_type` 以及整个专辑集群的 `album_menu` / `album_*` / `album_detail` 由插件注册即可通过）。
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
 ## 工作示例
 
-> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj`），示例二/三为最小演示形态。
+> 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五/六为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj` / `internal/plugins/album`），示例二/三为最小演示形态。
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
@@ -304,6 +304,7 @@ func startupCheck() {
 package plugins
 
 import (
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/album"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
@@ -481,6 +482,20 @@ func init() {
 
 集群内共享的 opts 契约类型（`DjCategoryDetailOpts` / `DjHotOpts`，仅集群内部使用）随菜单移入插件包；被 ui 侧共享的 `DjRadioDetailOpts` 留在 ui（跳入该菜单的调用点在 ui）。参数化菜单的 `GetMenuKey()` 仍返回动态形式（如 `dj_radio_detail_<id>`），注册 key 保持静态前缀。集群中唯一被 ui 反向引用的能力是「排序切换」（`OpToggleSortOrder` 键处理对 `DjRadioDetailMenu` 做类型断言）——ui 不能反向导入插件包，故改经导出接口 `ui.DjRadioDetailSortable`（`ToggleSortOrder` / `Reload`）访问，插件菜单实现该接口即保持键处理行为不变。
 
+### 示例六：专辑集群（批量菜单提取 + 主菜单项）
+
+> `internal/plugins/album` 是第四个真实插件：把「专辑列表」整个集群（8 个菜单）整体提取为外部式插件，与示例五同为集群批量提取示范。所有 provider key 与提取前**逐一相同**（`album_menu` / `album_new_area` / `album_top_area` / `album_new_hot` / `album_new` / `album_top` / `album_sub_list` / `album_detail`），因此 ui 侧跳入集群的调用点（`menu_search_result.go` / `menu_artist_album.go` 跳 `album_detail`、`menu_user_collection.go` 构建 `album_sub_list` 子菜单）全部经注册表按 key 跳转、无需改动。`album_menu`（专辑列表入口菜单）声明主菜单入口「专辑列表」（原内置索引 5，现为插件主菜单项排在全部内置项之后，帮助索引随之 12→11）：
+
+```go
+// 文件：internal/plugins/album/registry.go（节选）——入口菜单声明主菜单项
+func init() {
+	// ... RegisterMenu("album_top", ...) 等 8 个注册，key 与原内置注册一致
+	ui.RegisterMainMenuItem("album_menu", "专辑列表")
+}
+```
+
+集群内共享的 opts 契约（`AlbumTopOpts` / `AlbumNewOpts`，仅集群内部使用）随菜单移入插件包；被 ui 侧共享的 `AlbumDetailOpts` 留在 ui（`menu_search_result.go` / `menu_artist_album.go` / `operate.go` 均跳 `album_detail`）。参数化菜单的 `GetMenuKey()` 仍返回动态形式（如 `album_top_<area>` / `album_new_<area>`），注册 key 保持静态前缀。集群中唯一被 ui 反向引用的能力是「查看歌曲所属专辑的去重判断」（`operate.go` 对 `AlbumDetailMenu` 做类型断言取 `albumID`）——ui 不能反向导入插件包，故改经导出接口 `ui.AlbumDetailIDGetter`（`AlbumID() int64`）访问，插件菜单实现该接口即保持行为不变。
+
 ### 接入二进制（聚合器）
 
 正式插件的标准接入方式：每个插件子包被聚合器空导入（见示例一），入口只需空导入聚合器即可，不必逐个列插件：
@@ -490,6 +505,7 @@ func init() {
 package plugins
 
 import (
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/album"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/checkupdate"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/dj"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
