@@ -91,8 +91,8 @@
 ### Phase 3.3: 全量迁移
 
 - [x] 3.3.1 菜单迁移（分批 8-10 个）：硬编码跳转 → BuildMenu — 验证: 每批后冒烟 + lint/test 绿 — 21fbb303 / fd38c384 / ad9b3ea4 / 7b45fc6a（32 菜单注册 + 全部内部导航调用点迁移；main_menu/local_search 因构造器签名保留 bootstrap 直构，注册仅为完整性断言覆盖）
-- [ ] 3.3.2 页面迁移
-- [ ] 3.3.3 深耦合点手术
+- [x] 3.3.2 页面迁移：ToXxxPage → BuildPage — 验证: 页面跳转冒烟 — 5f18d89a（注册 search / lastfm_custom_api 页面 provider；ToLoginPage 经 buildPageOrToast 每次构建新实例并接线 AfterLogin（登录页无跨组件状态，shell 不再持有 login 单例）；search 页保持 shell 单例（wordsInput/result/searchType 与 SearchResultMenu/operate.searchSong 共享），在 NewNetease 经 BuildPage 构建；lastfm_profile 自定义 API 页入口走注册表；新增页面构建/导航冒烟测试）
+- [x] 3.3.3 深耦合点手术：event_handler/operate + player_controller/player_gapless/cur_playlist/status_bar/lastfm*/qr_login_client/toast/theme_persistence — 验证: 全部导航测试绿 — b72871f1 / efb0aefc（menuServices 增加薄壳访问器 App/Main/MustMain/Rerender/Search/SaveActiveTheme/NotifyThemeSwitch/PlaybarHoveredElement + newBaseMenuFromSvc；event_handler 全部 h.netease.* 走 h.svc，cur_playlist 菜单经注册表构建；operate 全部 helper 经 svc 解析、n.* 裸访问清零，action_menu 菜单经注册表构建；last_fm 注册为无参 provider，MainMenu 用 mustBuildNoArg；Player 增 svc 访问器字段，player_gapless/player_controller 经 p.svc；lastfm 菜单 RefreshMenuList 走 m.svc.MustMain；status_bar/qr_login_client 已无 *Netease 耦合无需改动）
 - [ ] 3.3.4 旧路径清理
 - [ ] 3.3.5 薄壳收尾
 - [ ] 3.3.6 文档维护
@@ -100,6 +100,17 @@
 ### Phase 3.4: 接口层预留（可选）
 
 - [ ] 3.4.1 对外插件边界文档 + 示例
+
+### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
+
+- **页面导航形态（3.3.2）**：login 页在 ToLoginPage 每次经 `buildPageOrToast("login")` 构建新实例（登录页无跨组件状态；webviewAvailable 检测缓存在 NewLoginPage 实例内，回调/返回语义不变），shell 移除 `n.login` 字段；search 页保留 shell 单例（`n.search`），其 wordsInput/result/searchType 被 SearchResultMenu.BeforeEnterMenuHook 与 operate.searchSong 共享，必须保持同一实例。
+- **深耦合迁移形态（3.3.3）**：`NewCurPlaylist`/`NewActionMenu`/`NewLastfm` 均注册为菜单 provider（`cur_playlist`/`action_menu`/`last_fm`），构造点改走 `buildMenuOrToast`/`mustBuildNoArg`；operate/event_handler 仍以 `*Netease` 为载体参数（承载 newMenuServices 构造），内部全部经 `svc` 访问器解析，不再出现裸 `n.*`/`h.netease.*` 访问。menu_main/local_search bootstrap 直构保留（3.3.5 裁决）。
+- **合理残留 `.netease.` 引用**（`grep -rn "\.netease\." internal/ui/` 其余匹配均属此类，非深耦合）：
+  - **renderer 组合**（lyric/cover/songInfo/progress/composite_renderer）：spec Q3 决议 renderer 留薄壳组合，持有 shell 引用属组合职责；
+  - **页面**（login/search/lastfm_auth/lastfm_custom_api/login_qr/lastfm_qr/login_webview）：页面由 shell 构建并持有 shell 引用（`l.netease.MustMain()`/`RerenderCmd` 等），随 3.3.5 字段收敛评估；
+  - **player.go**：Player 为 shell 自有组件，保留 `p.netease` 组合引用（player_gapless/player_controller 已改走 `p.svc`）。
+- **status_bar.go / qr_login_client.go**：已无 `*Netease` 耦合（纯访问器/包内工具），无需改动。
+- **toast.go / theme_persistence.go**：`registerToastHook`/`saveActiveTheme`/`notifyThemeSwitch` 为 shell 自有薄壳方法，消费方（event_handler/menu.go）已改经访问器 `svc.SaveActiveTheme`/`svc.NotifyThemeSwitch` 调用。
 
 ## Phase 3.0 裁决（决策点，2026-08-23）
 
