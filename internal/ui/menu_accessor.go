@@ -218,3 +218,49 @@ func (s *menuServices) SetPlaybarHoveredElement(e PlaybarElement) {
 	}
 	s.n.playbarHoveredElement = e
 }
+
+// EffectiveWindowHeight returns the available content height, excluding the
+// status bar if present (forwarded from the shell; Phase 3.8).
+func (s *menuServices) EffectiveWindowHeight() int {
+	if s.n == nil {
+		return 0
+	}
+	return s.n.EffectiveWindowHeight()
+}
+
+// SpectrumLines returns the line count consumed by the enabled spectrum or
+// spectrogram renderer for the given main page (forwarded from the shell).
+func (s *menuServices) SpectrumLines(main *model.Main) int {
+	if s.n == nil {
+		return 0
+	}
+	return s.n.SpectrumLines(main)
+}
+
+// GetCoverWidth returns the cover image width in columns, or 0 if the cover
+// renderer is disabled (forwarded from the shell).
+func (s *menuServices) GetCoverWidth() int {
+	if s.n == nil {
+		return 0
+	}
+	return s.n.GetCoverWidth()
+}
+
+// GetCoverEndColumn returns the column where the cover ends (start column +
+// width), or 0 if the cover renderer is disabled (forwarded from the shell).
+func (s *menuServices) GetCoverEndColumn() int {
+	if s.n == nil {
+		return 0
+	}
+	return s.n.GetCoverEndColumn()
+}
+
+// GetLyricPosition returns the current lyric display position
+// (startRow, lineCount); (0, 0) when lyrics are not visible (forwarded from
+// the shell).
+func (s *menuServices) GetLyricPosition() (startRow int, lineCount int) {
+	if s.n == nil {
+		return 0, 0
+	}
+	return s.n.GetLyricPosition()
+}
