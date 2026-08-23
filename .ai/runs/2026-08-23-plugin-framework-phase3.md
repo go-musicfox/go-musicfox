@@ -29,9 +29,9 @@
 
 ### Phase 3.2: provider 机制
 
-- [ ] 3.2.1 按原型结论实现 MenuProvider/PageProvider 接口 + 注册表 + init() 注册点 + 完整性断言 — 验证: 注册表单测（注册/构建/缺失/参数错误）
-- [ ] 3.2.2 跳转 API（BuildMenu/BuildPage）+ 示范迁移（2-3 菜单 + 1 页面）— 验证: 示范跳转行为等价
-- [ ] 3.2.3 导航冒烟测试骨架：menu→menu 全链路 + 登录回调时序 — 验证: 冒烟测试绿
+- [x] 3.2.1 按原型结论实现 MenuProvider/PageProvider 接口 + 注册表 + init() 注册点 + 完整性断言 — 验证: 注册表单测（注册/构建/缺失/参数错误）— c59a60f8
+- [x] 3.2.2 跳转 API（BuildMenu/BuildPage）+ 示范迁移（2-3 菜单 + 1 页面）— 验证: 示范跳转行为等价 — d8714c36
+- [x] 3.2.3 导航冒烟测试骨架：menu→menu 全链路 + 登录回调时序 — 验证: 冒烟测试绿 — 797f2de3
 
 ### Phase 3.3: 全量迁移
 
@@ -84,9 +84,9 @@
 
 ### Phase 3.2: provider 机制
 
-- [ ] 3.2.1 接口 + 注册表 + 注册点
-- [ ] 3.2.2 跳转 API + 示范迁移
-- [ ] 3.2.3 导航冒烟测试骨架
+- [x] 3.2.1 接口 + 注册表 + 注册点 — c59a60f8（production registry.go 按形态 B 实现；5 样本菜单 + login page 的 init() 注册；menuRegistry/pageRegistry 服务化；bootstrap 完整性断言；原型调用点全部转生产 API；proto_b 仅保留机制与注册作证据）
+- [x] 3.2.2 跳转 API + 示范迁移 — d8714c36（buildMenuOrToast/buildPageOrToast；SearchResultMenu 五个 submenu 分支走注册表；album_detail/user_playlist/dj_radio_detail 新注册；Lastfm 授权页入口走 BuildPage）
+- [x] 3.2.3 导航冒烟测试骨架 — 797f2de3（registry_test.go：注册表单测 + Ranks→PlaylistDetail、SearchType→SearchResult→demo 菜单链 + 完整性断言 + 服务解析；登录回调时序引用 user_service_test.go）
 
 ### Phase 3.3: 全量迁移
 
