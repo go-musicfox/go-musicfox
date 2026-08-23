@@ -6,6 +6,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
@@ -39,6 +40,32 @@ func TestCheckUpdateMenuBuildsViaRegistryFactory(t *testing.T) {
 	if m := checkMenu.SubMenu(nil, 0); m != nil {
 		t.Fatalf("SubMenu() = %v, want nil", m)
 	}
+}
+
+// TestCheckUpdateMenuBeforeEnterHookInstalled 验证插件菜单安装了进入钩子：
+// 主菜单选中「检查更新」即触发检查并弹回主页面（单次 Enter 等价，不再需要
+// main_menu 的 index-15 特判）。钩子内部检查在后台 goroutine 执行（走真实
+// 网络，此处不调用只验证安装）。
+func TestCheckUpdateMenuBeforeEnterHookInstalled(t *testing.T) {
+	menu, err := ui.BuildMenu("check_update", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(check_update) error = %v", err)
+	}
+	checkMenu := menu.(*CheckUpdateMenu)
+	if hook := checkMenu.BeforeEnterMenuHook(); hook == nil {
+		t.Fatal("BeforeEnterMenuHook() returned nil, want the trigger-check hook")
+	}
+}
+
+// TestStartupCheckConfigGated 验证启动钩子受 [startup] checkUpdate 配置门控：
+// 关闭时直接返回，不触发网络检查。
+func TestStartupCheckConfigGated(t *testing.T) {
+	previous := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	t.Cleanup(func() { configs.AppConfig = previous })
+
+	configs.AppConfig.Startup.CheckUpdate = false
+	startupCheck() // 门控短路，无网络调用，不 panic
 }
 
 // TestCheckUpdateNotificationMsgCoversAllResults 验证三种检查结果的

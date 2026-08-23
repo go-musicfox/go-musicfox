@@ -5,8 +5,10 @@
 // navigation. The check-and-notify logic previously lived in
 // internal/ui/menu_check_update.go and is moved here verbatim (the only
 // ui dependency, ui.BuildToastNotificationSpec, is the exported toast-spec
-// helper). The shell's startup auto-check keeps its own inline copy because ui
-// must not import plugins (see docs/plugin_development.md).
+// helper). The plugin also declares its own main-menu entry
+// (ui.RegisterMainMenuItem) and registers the startup auto-check as a startup
+// hook (ui.RegisterStartupHook, see startup.go) — both replacing the shell's
+// hardcoded special-casing.
 package checkupdate
 
 import (
@@ -53,6 +55,22 @@ func (m *CheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu {
 	return nil
 }
 
+// BeforeEnterMenuHook 触发检查更新并立即返回主页面：主菜单选中「检查更新」
+// 一次即完成检查（进入即触发，行为与提取前 main_menu 的 index-15 特判等价：
+// 不进入子菜单，仅弹 TUI 通知）。检查在后台 goroutine 执行，结果经
+// app.Notify 安全投递到事件循环（goroutine 安全，见 model.App.Notify）。
+func (m *CheckUpdateMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		go func() {
+			hasUpdate, latestVersion := version.CheckUpdate()
+			if app := m.App(); app != nil {
+				app.Notify(checkUpdateNotificationSpec(hasUpdate, latestVersion))
+			}
+		}()
+		return false, main
+	}
+}
+
 // Action 触发检查更新并留在当前页面（原 menu_main 行为：返回主页面 + 异步
 // 检查命令，非 nil 的 page/cmd 会跳过子菜单导航）。
 func (m *CheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) {
@@ -76,6 +94,12 @@ func checkUpdateCmd() tea.Cmd {
 }
 
 func checkUpdateNotificationMsg(hasUpdate bool, latestVersion string) model.ShowNotificationMsg {
+	return model.ShowNotificationMsg{Spec: checkUpdateNotificationSpec(hasUpdate, latestVersion)}
+}
+
+// checkUpdateNotificationSpec 构建三种检查结果的 NotificationSpec，供
+// Action 的 tea.Cmd 路径与 BeforeEnterMenuHook 的 app.Notify 路径共用。
+func checkUpdateNotificationSpec(hasUpdate bool, latestVersion string) model.NotificationSpec {
 	var spec model.NotificationSpec
 	switch {
 	case hasUpdate:
@@ -93,5 +117,5 @@ func checkUpdateNotificationMsg(hasUpdate bool, latestVersion string) model.Show
 			Message: "无法获取最新版本信息，请稍后重试",
 		}
 	}
-	return model.ShowNotificationMsg{Spec: spec}
+	return spec
 }
