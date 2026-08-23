@@ -69,7 +69,8 @@ func init() {
 	ui.RegisterMenu("artists_sub_list", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 		return NewArtistsSubscribeListMenu(base), nil
 	})
-	// 声明主菜单入口：NewMainMenu 按 Order 归并排序复现插件化前的主菜单
-	// 原始顺序（热门歌手9，夹在精选歌单8 与最近播放歌曲10 之间）。
-	ui.RegisterMainMenuItemWithOrder("hot_artists", "热门歌手", 9, nil)
+	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+	// 原始顺序（热门歌手跟在精选歌单（playlist 插件）后、最近播放歌曲
+	// （recommend 插件）前）。
+	ui.RegisterMainMenuItemAfter("hot_artists", "热门歌手", "high_quality_playlists", nil)
 }

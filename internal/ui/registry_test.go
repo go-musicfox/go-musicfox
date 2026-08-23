@@ -173,48 +173,38 @@ func TestRegisterMainMenuItemWithBuilder(t *testing.T) {
 	}
 }
 
-func TestNewMainMenuOrdersPluginItems(t *testing.T) {
-	// 插件项按 Order 与内置项归并排序（Phase 3.9.x）：显式 Order 的插件项
-	// 落在内置项之间（搜索6 之后、帮助14 之前），Order 为 0 的项追加在
-	// 末尾（既有行为，注册序保持）。测试二进制的菜单子集由内置项 +
-	// 测试注册项构成，故只断言相对顺序。
+func TestNewMainMenuChainOrdersPluginItems(t *testing.T) {
+	// 链式顺序 + 插入场景（after-anchor）：注册一个 After 指向 help 的插件项
+	// （本二进制链中 help 是叶子锚点），它必须落在 帮助 之后、且既有项位置
+	// 不漂移（无需重排编号）。测试二进制的链基线由 init() 的锚点 test-double
+	// 构成（main_menu_chain_test.go）——搜索@6 / LastFM@13 / 帮助@14。
 	RegisterMenu("registry_test_ordered_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
-	RegisterMainMenuItemWithOrder("registry_test_ordered_menu", "有序插件项", 7, nil)
+	RegisterMainMenuItemAfter("registry_test_ordered_menu", "有序插件项", "help", nil)
 
 	menu := NewMainMenu(testBase)
-	if menu.menus[0].Title != "搜索" {
-		t.Fatalf("menus[0] = %q, want 搜索 (built-in order 6)", menu.menus[0].Title)
+	titles := menu.Titles()
+	// 既有项位置不变（无重排）。
+	if titles[6] != "搜索" {
+		t.Fatalf("menus[6] = %q, want 搜索 (existing items must not renumber)", titles[6])
 	}
-	if menu.menus[1].Title != "有序插件项" {
-		t.Fatalf("menus[1] = %q, want 有序插件项 (explicit order 7, right after 搜索)", menu.menus[1].Title)
+	if titles[13] != "LastFM" {
+		t.Fatalf("menus[13] = %q, want LastFM (existing items must not renumber)", titles[13])
 	}
-	if menu.helpIndex != 2 {
-		t.Fatalf("helpIndex = %d, want 2 (built-in order 14, after the order-7 item)", menu.helpIndex)
+	helpIdx := menu.helpIndex
+	if helpIdx != 14 || titles[helpIdx] != "帮助" {
+		t.Fatalf("helpIndex = %d (menus[%d] = %q), want 14/帮助", helpIdx, helpIdx, titles[helpIdx])
 	}
-	if menu.menus[menu.helpIndex].Title != "帮助" {
-		t.Fatalf("help entry = menus[%d] = %q, want 帮助", menu.helpIndex, menu.menus[menu.helpIndex].Title)
-	}
-	// Order-0 插件项（未指定顺序）必须排在所有显式顺序项之后。
-	for i, item := range menu.menus[menu.helpIndex+1:] {
-		if item.Title == "搜索" || item.Title == "有序插件项" || item.Title == "帮助" {
-			t.Fatalf("explicit-order entry %q found after help entry at %d", item.Title, menu.helpIndex+1+i)
-		}
+	if got := titles[helpIdx+1]; got != "有序插件项" {
+		t.Fatalf("item after 帮助 = %q, want 有序插件项 (anchored after help, no renumbering)", got)
 	}
 }
 
 func TestNewMainMenuAppendsPluginItems(t *testing.T) {
-	// A test-double plugin menu + main-menu item must be appended after the
-	// built-ins (the registry is a package global shared with other tests, so
-	// only the presence/position-relative-to-builtins is asserted).
-	// 2 built-ins: 主播电台 moved into the dj plugin, 专辑列表 into the album
-	// plugin, 热门歌手 into the artist plugin, the whole recommend cluster
-	// (每日推荐歌曲 / 每日推荐歌单 / 私人FM / 排行榜 / 最近播放歌曲) into the
-	// recommend plugin and the whole playlist & cloud cluster (我的歌单 /
-	// 我的收藏 / 精选歌单 / 云盘) into the playlist plugin (Phase 3.9.x), 帮助
-	// last.
-	const builtinMenuCount = 2
+	// 便捷注册形式（空 After，RegisterMainMenuItem / With）追加在链尾：
+	// 既有"追加在末尾"行为，注册序保持。链基线由 init() 的锚点 test-double
+	// + 内置搜索/帮助构成，故只断言追加在 帮助 之后。
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -224,9 +214,10 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	if len(menu.menus) != len(menu.menuList) {
 		t.Fatalf("menus=%d menuList=%d, want equal lengths", len(menu.menus), len(menu.menuList))
 	}
+	titles := menu.Titles()
 	pluginIndex := -1
-	for i, item := range menu.menus {
-		if item.Title == "插件菜单项" {
+	for i, title := range titles {
+		if title == "插件菜单项" {
 			pluginIndex = i
 			break
 		}
@@ -234,11 +225,11 @@ func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	if pluginIndex < 0 {
 		t.Fatal("main menu does not contain the plugin item")
 	}
-	if pluginIndex < builtinMenuCount {
-		t.Fatalf("plugin item index = %d, want appended after built-ins (%d+)", pluginIndex, builtinMenuCount)
+	if pluginIndex < menu.helpIndex {
+		t.Fatalf("plugin item index = %d, want appended after 帮助 (index %d+)", pluginIndex, menu.helpIndex)
 	}
-	if menu.menus[menu.helpIndex].Title != "帮助" {
-		t.Fatalf("help entry shifted: menus[%d] = %q", menu.helpIndex, menu.menus[menu.helpIndex].Title)
+	if titles[menu.helpIndex] != "帮助" {
+		t.Fatalf("help entry shifted: menus[%d] = %q", menu.helpIndex, titles[menu.helpIndex])
 	}
 	if submenu := menu.SubMenu(nil, pluginIndex); submenu == nil {
 		t.Fatal("plugin item SubMenu is nil, want the built plugin menu")

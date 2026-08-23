@@ -264,13 +264,13 @@ func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
 	}
 }
 
-// TestMainMenuPreservesOriginalOrder proves the order-based merge in
-// NewMainMenu: built-in entries (搜索=6, 帮助=14) and plugin entries merge by
-// their explicit Order and reproduce the original pre-extraction main-menu
-// sequence exactly (16 items). This is the integration view of the same
-// mechanism the ui package tests at the unit level — here the full plugin set
-// is linked via the aggregator. Titles() is side-effect free, so a zero-base
-// menu (no live services) is enough to read the display order.
+// TestMainMenuPreservesOriginalOrder proves the after-anchor chain merge in
+// NewMainMenu: built-in entries (搜索 after album_menu, 帮助 after last_fm) and
+// plugin entries chain by their After anchors and reproduce the original
+// pre-extraction main-menu sequence exactly (16 items). This is the integration
+// view of the same mechanism the ui package tests at the unit level — here the
+// full plugin set is linked via the aggregator. Titles() is side-effect free,
+// so a zero-base menu (no live services) is enough to read the display order.
 func TestMainMenuPreservesOriginalOrder(t *testing.T) {
 	got := ui.NewMainMenu(ui.NewBaseMenu(nil)).Titles()
 	want := []string{

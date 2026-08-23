@@ -220,83 +220,83 @@ func toastRegistryError(title string, err error) {
 
 // --- Plugin main-menu items (Phase 3.9) ---
 
+// MainMenuStart is the sentinel key of the first main-menu entry: the
+// after-anchor chain is walked from this key, so an entry declaring
+// After = MainMenuStart opens the menu. No real menu may use this key.
+const MainMenuStart = "_main_start"
+
 // MainMenuItem is a plugin-declared main-menu entry. The Key MUST be
 // registered in the menu registry: NewMainMenu asserts it explicitly so an
 // unregistered key surfaces as a startup panic (programmer error / startup
-// integrity signal). Build optionally constructs the entry menu with the
-// plugin's own options (e.g. a parameterized provider); when nil the main menu
-// builds the entry via mustBuildNoArg, so the key must then be a no-arg menu
-// provider.
+// integrity signal). After anchors the entry right after the item with that
+// key (the after-anchor chain): inserting a menu is a single-anchor
+// declaration and no other entry renumbers — unlike a numeric order. Build
+// optionally constructs the entry menu with the plugin's own options (e.g. a
+// parameterized provider); when nil the main menu builds the entry via
+// mustBuildNoArg, so the key must then be a no-arg menu provider.
 type MainMenuItem struct {
 	Key   string
 	Title string
-	// Order positions this entry in the main menu relative to the built-in
-	// entries and other plugin entries, reproducing the original
-	// pre-extraction order (每日推荐歌曲0 … 搜索6 … 帮助14 … 检查更新15 — see
-	// NewMainMenu). 0 is a valid explicit position (the first entry). Entries
-	// registered through the plain RegisterMainMenuItem / RegisterMainMenuItemWith
-	// forms carry mainMenuUnsetOrder instead, so they sort after every
-	// explicitly ordered entry (registration order preserved) — matching the
-	// pre-ordering "append after built-ins" behavior.
-	Order int
+	// After is the key of the item this entry follows in the main menu
+	// (MainMenuStart opens the menu; empty appends at the end of the chain in
+	// registration order). NewMainMenu asserts every After target exists and
+	// that the chain reaches every item exactly once.
+	After string
 	// Build optionally constructs the entry menu from the menu base. nil means
 	// the main menu builds the entry via mustBuildNoArg(Key, base).
 	Build func(base BaseMenu) Menu
 }
 
-// mainMenuUnsetOrder is the effective order carried by entries registered
-// through the plain RegisterMainMenuItem / RegisterMainMenuItemWith forms: they
-// sort after every explicitly ordered entry (registration order preserved),
-// matching the pre-ordering "append after built-ins" behavior.
-const mainMenuUnsetOrder = 1 << 30
-
 // mainMenuPluginItems holds the plugin-declared main-menu items in
 // registration order (compile-time registration via init()).
 var mainMenuPluginItems []MainMenuItem
 
-// RegisterMainMenuItem appends a plugin main-menu entry with no explicit order
-// (carries mainMenuUnsetOrder, so it sorts after every explicitly ordered
-// entry) and a nil builder (the entry menu is built via mustBuildNoArg, so the
-// key must be a registered no-arg menu provider). Panics on empty key/title or
-// a duplicate key (programmer error).
+// RegisterMainMenuItem appends a plugin main-menu entry at the end of the
+// main-menu chain (empty After) with a nil builder (the entry menu is built via
+// mustBuildNoArg, so the key must be a registered no-arg menu provider). Panics
+// on empty key/title or a duplicate key (programmer error).
 func RegisterMainMenuItem(key, title string) {
-	RegisterMainMenuItemWithOrder(key, title, mainMenuUnsetOrder, nil)
+	registerMainMenuItem(key, title, "", nil)
 }
 
-// RegisterMainMenuItemWith appends a plugin main-menu entry with no explicit
-// order (carries mainMenuUnsetOrder, so it sorts after every explicitly ordered
-// entry) and an optional builder. When build is nil the main menu builds the
-// entry via mustBuildNoArg (the key must be a registered no-arg menu provider);
-// when non-nil the builder constructs the entry menu with its own options,
-// letting a parameterized provider serve as a main-menu entry. Panics on empty
-// key/title or a duplicate key (programmer error).
+// RegisterMainMenuItemWith appends a plugin main-menu entry at the end of the
+// main-menu chain (empty After) with an optional builder. When build is nil the
+// main menu builds the entry via mustBuildNoArg (the key must be a registered
+// no-arg menu provider); when non-nil the builder constructs the entry menu
+// with its own options, letting a parameterized provider serve as a main-menu
+// entry. Panics on empty key/title or a duplicate key (programmer error).
 func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu) {
-	RegisterMainMenuItemWithOrder(key, title, mainMenuUnsetOrder, build)
+	registerMainMenuItem(key, title, "", build)
 }
 
-// RegisterMainMenuItemWithOrder appends a plugin main-menu entry with an
-// explicit position. order reproduces the original pre-extraction main-menu
-// index (see NewMainMenu): NewMainMenu merges built-in and plugin entries and
-// sorts them stably by order, so a plugin entry with order 5 lands between the
-// order-4 and order-6 entries regardless of registration time. 0 is a valid
-// explicit position (the first entry). When build is nil the main menu builds
-// the entry via mustBuildNoArg (the key must be a registered no-arg menu
-// provider); when non-nil the builder constructs the entry menu with its own
-// options. Panics on empty key/title, a negative order or a duplicate key
+// RegisterMainMenuItemAfter appends a plugin main-menu entry anchored right
+// after the item whose key equals after (the after-anchor chain): the entry
+// lands at that exact position in the main menu regardless of registration
+// time — inserting a menu is a single-anchor declaration and no other entry
+// renumbers. after must be a non-empty key; the anchor's existence is asserted
+// by NewMainMenu when the chain is built (the full anchor set is only known
+// then, since plugins register in any init() order). When build is nil the main
+// menu builds the entry via mustBuildNoArg (the key must be a registered no-arg
+// menu provider); when non-nil the builder constructs the entry menu with its
+// own options. Panics on empty key/title or after, or a duplicate key
 // (programmer error).
-func RegisterMainMenuItemWithOrder(key, title string, order int, build func(base BaseMenu) Menu) {
+func RegisterMainMenuItemAfter(key, title, after string, build func(base BaseMenu) Menu) {
+	if after == "" {
+		panic("RegisterMainMenuItemAfter: empty after anchor for key " + key)
+	}
+	registerMainMenuItem(key, title, after, build)
+}
+
+func registerMainMenuItem(key, title, after string, build func(base BaseMenu) Menu) {
 	if key == "" || title == "" {
 		panic("RegisterMainMenuItem: empty key or title")
-	}
-	if order < 0 {
-		panic("RegisterMainMenuItem: negative order for key " + key)
 	}
 	for _, item := range mainMenuPluginItems {
 		if item.Key == key {
 			panic("RegisterMainMenuItem: duplicate key " + key)
 		}
 	}
-	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title, Order: order, Build: build})
+	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title, After: after, Build: build})
 }
 
 // MainMenuPluginItems returns a snapshot of the registered plugin main-menu
