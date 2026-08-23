@@ -46,7 +46,11 @@ func (e *EventEmitter) Middleware(name string, fn func(ctx *Context, payload any
 	e.middleware[name] = append(e.middleware[name], fn)
 }
 
-// Parallel registers a concurrently-invoked handler under name.
+// Parallel registers a concurrently-invoked handler under name. Parallel
+// handlers run in their own goroutines and share the emitting Context
+// read-only: resolving services (Context.Service / ServiceOf) is safe
+// concurrently, but mutating the Context (Provide / Override) from a parallel
+// handler races against the other handlers and is unsupported.
 func (e *EventEmitter) Parallel(name string, fn func(ctx *Context, payload any) error) {
 	if e.parallel == nil {
 		e.parallel = make(map[string][]parallelFunc)
@@ -88,6 +92,11 @@ func (e *EventEmitter) Emit(ctx *Context, name string, payload any) error {
 	}
 
 	if fns := e.parallel[name]; len(fns) > 0 {
+		// Concurrency contract: each handler runs in its own goroutine and they
+		// all share the same ctx read-only. Resolution (Service/ServiceOf) is
+		// safe; Provide/Override from a parallel handler is a race and
+		// unsupported. Errors are best-effort collected (the first one read
+		// back is returned); all handlers still run to completion.
 		var wg sync.WaitGroup
 		errCh := make(chan error, len(fns))
 		for _, fn := range fns {

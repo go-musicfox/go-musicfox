@@ -201,6 +201,33 @@ func TestParallelCollectsFirstError(t *testing.T) {
 	}
 }
 
+// TestParallelReadOnlyServiceResolutionIsRaceSafe exercises the documented
+// parallel concurrency contract: handlers share the Context read-only and only
+// resolve services concurrently. Run with -race; a write from any handler
+// would be reported as a data race.
+func TestParallelReadOnlyServiceResolutionIsRaceSafe(t *testing.T) {
+	ctx := &Context{}
+	ctx.Provide("greeting", "hello")
+	ctx.Provide("answer", 42)
+
+	emitter := NewEventEmitter()
+	const handlers = 32
+	for i := 0; i < handlers; i++ {
+		emitter.Parallel("evt", func(ctx *Context, _ any) error {
+			if got := ctx.Service("greeting"); got != "hello" {
+				t.Errorf("Service(greeting) = %v, want %q", got, "hello")
+			}
+			if got, ok := ServiceOf[int](ctx, "answer"); !ok || got != 42 {
+				t.Errorf("ServiceOf(answer) = %v (ok=%v), want 42", got, ok)
+			}
+			return nil
+		})
+	}
+	if err := emitter.Emit(ctx, "evt", nil); err != nil {
+		t.Fatalf("Emit() error = %v", err)
+	}
+}
+
 func TestSerialForwardOrder(t *testing.T) {
 	emitter := NewEventEmitter()
 	r := &eventRecorder{}

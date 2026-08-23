@@ -3,6 +3,13 @@
 // and overriding on a Context, scoped plugin lifecycle management with
 // recursive child-scope cleanup, and an event chain dispatching through
 // listener, middleware, parallel and serial handlers.
+//
+// Concurrency contract: only the parallel emit branch runs handlers in
+// concurrent goroutines. Its handlers share the emitting Context read-only —
+// resolving services (Context.Service / ServiceOf) is safe concurrently, but
+// mutating the Context (Provide / Override) from a parallel handler races
+// against the other handlers and is unsupported; do such mutation in a
+// listener, middleware or serial handler instead.
 package framework
 
 import "sort"
