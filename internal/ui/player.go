@@ -1,3 +1,5 @@
+// Package ui provides the TUI views, menus and player coordinator for
+// go-musicfox.
 package ui
 
 import (
@@ -315,7 +317,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	}
 
 	errorx.Go(func() {
-		p.lyricService.SetSong(context.Background(), song)
+		_ = p.lyricService.SetSong(context.Background(), song)
 	}, true)
 
 	p.Play(*urlMusic)
@@ -391,7 +393,7 @@ func (p *Player) NextSong(manual bool) {
 	// 尝试获取下一首歌曲
 	song, err := p.playlistManager.NextSong(manual)
 	if err != nil {
-		slog.Error("Get next song error", slog.Any("err", err), slog.String("play_mode", p.playlistManager.GetPlayModeName()))
+		slog.Error("Get next song error", slog.Any("err", err), slog.String("play_mode", p.playlistManager.GetPlayMode().Name()))
 		return
 	}
 
