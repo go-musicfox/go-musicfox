@@ -76,6 +76,13 @@ func newBaseMenu(netease *Netease) baseMenu {
 	}
 }
 
+// NewBaseMenu builds a BaseMenu rooted at the given Netease shell. Exported for
+// the app bootstrap (internal/commands), whose call sites predate the baseMenu
+// signature and only hold the shell.
+func NewBaseMenu(n *Netease) BaseMenu {
+	return newBaseMenu(n)
+}
+
 // newBaseMenuFromSvc builds a baseMenu from an existing accessor, avoiding a
 // round trip through the *Netease shell (Phase 3.3.3 menu constructions).
 func newBaseMenuFromSvc(svc *menuServices) baseMenu {

@@ -172,16 +172,15 @@ func init() {
 		return NewSearchTypeMenu(base), nil
 	})
 
-	// Bootstrap menus whose constructors predate the baseMenu signature
-	// (they take *Netease). The app-bootstrap call sites keep the plain
-	// constructors; these providers exist for registration completeness so
-	// the startup assertion covers every menu.
+	// Bootstrap menus (main_menu / local_search) are registered for startup
+	// assertion completeness; the app-bootstrap call sites (internal/commands)
+	// construct them directly from a BaseMenu.
 	RegisterMenu("local_search", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewLocalSearchMenu(neteaseFromBase(base)), nil
+		return NewLocalSearchMenu(base), nil
 	})
 
 	RegisterMenu("main_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-		return NewMainMenu(neteaseFromBase(base)), nil
+		return NewMainMenu(base), nil
 	})
 
 	// --- Phase 3.3.3: last hardcoded menu constructions ---
@@ -218,14 +217,4 @@ func init() {
 	RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
 		return NewLastfmCustomAPIPage(opts.svc), nil
 	})
-}
-
-// neteaseFromBase extracts the *Netease shell from a baseMenu for bootstrap
-// menus whose constructors predate the baseMenu signature (local_search /
-// main_menu take *Netease). Nil-safe for zero-value bases used in tests.
-func neteaseFromBase(base baseMenu) *Netease {
-	if base.svc == nil {
-		return nil
-	}
-	return base.svc.Netease()
 }

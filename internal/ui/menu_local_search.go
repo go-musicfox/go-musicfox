@@ -11,9 +11,9 @@ type LocalSearchMenu struct {
 	base baseMenu
 }
 
-func NewLocalSearchMenu(netease *Netease) *LocalSearchMenu {
+func NewLocalSearchMenu(base baseMenu) *LocalSearchMenu {
 	return &LocalSearchMenu{
-		base:                newBaseMenu(netease),
+		base:                base,
 		LocalSearchMenuImpl: *model.DefaultSearchMenu(),
 	}
 }

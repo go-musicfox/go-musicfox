@@ -16,8 +16,7 @@ type MainMenu struct {
 	menuList []Menu
 }
 
-func NewMainMenu(netease *Netease) *MainMenu {
-	base := newBaseMenu(netease)
+func NewMainMenu(base baseMenu) *MainMenu {
 	mainMenu := &MainMenu{
 		baseMenu: base,
 		menus: []model.MenuItem{

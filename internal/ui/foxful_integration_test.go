@@ -82,7 +82,7 @@ func TestBuildHelpMarkdown(t *testing.T) {
 func TestMainMenuHelpActionShowsMarkdownPopup(t *testing.T) {
 	keybindings.InitDefaults(true)
 	app, netease := newFormPageTestApp(t)
-	menu := NewMainMenu(netease)
+	menu := NewMainMenu(newBaseMenu(netease))
 	helpIndex := -1
 	for i, item := range menu.menus {
 		if item.Title == "帮助" {
@@ -116,7 +116,7 @@ func TestMainMenuCheckUpdateActionReturnsNotificationCommand(t *testing.T) {
 	})
 
 	app, netease := newFormPageTestApp(t)
-	menu := NewMainMenu(netease)
+	menu := NewMainMenu(newBaseMenu(netease))
 	updateIndex := -1
 	for i, item := range menu.menus {
 		if item.Title == "检查更新" {
