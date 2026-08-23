@@ -132,6 +132,17 @@ operate 辅助函数 / 操作执行器 / 事件处理器全面去 `*Netease`（�
 
 验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净。验证：`make lint` 0 issues · `make test` 绿 · `make build` 绿 · 改动文件 `gofmt -l` 干净（`foxful_integration_test.go`/`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。
 
+### Phase 3.6 player playlist API（解耦调查 work package 3）
+
+Player 播放列表变更 API（最深耦合：外部代码直接变更 Player 内部播放列表状态）。仅访问路径变更，行为保持：
+
+- [x] 3.6.7 播放列表状态封装 — 44ed2603（新增 Player 方法：`ReinitializePlaylist(index, playlist)`（void 包装 `playlistManager.Initialize`，不引入 cancelGaplessPreload 行为差异）、`RemoveSong(index)`、`LoadPlaylistState()`、`SetPlayingMenu(key, menu model.Menu)`（内部断言为 ui.Menu，非 ui.Menu 时清空 playingMenu 保留 key，与原逻辑等价）、`MarkPlaylistModified()`（playingMenu=nil + key += "modified"）、`MarkPlaylistUpdated()`（playlistUpdateAt=now）、读取 getter `PlayingMenuKey()`/`PlayingMenu()`/`PlaylistUpdateAt()`。`InitSongManager` 委托 `ReinitializePlaylist`。调用点全量迁移：event_handler.go playOrToggle + cur_playlist 副标题读取、operate.go appendSongsToCurPlaylist/delSongFromPlaylist（含 RemoveSong 路径）、cur_playlist.go BottomOutHook、menu_personal_fm.go、menu_similar_songs.go、netease.go 启动加载 LoadState。顺带修复 whole-file lint 暴露的既有 ST1003：menu_similar_songs.go 的 relateSongId/songId → relateSongID/songID（含 operate.go:378 引用点））
+- [x] 3.6.8 Player 播放列表 API 测试 — 7613ca49（新增 `TestPlayerPlaylistStateAPI`：ReinitializePlaylist/SetPlayingMenu/MarkPlaylistModified/MarkPlaylistUpdated/RemoveSong 状态转移断言；player_gapless_test 的 Initialize 迁移到 `ReinitializePlaylist` seam；RemoveSong 返回值为下一曲语义与 playlist manager 一致）
+
+**最终耦合盘点**：`.Netease()` 逃生口 4 处（不变，均有依据：menu.go BaseMenu.Netease() 方法体 / registry_registrations.go neteaseFromBase / lastfm_profile.go ×2）；`playlistManager`/`playingMenuKey`/`playingMenu`/`playlistUpdateAt` 在 player.go 之外的直接变更 **0**（`rg '\.playingMenuKey|\.playingMenu\b|\.playlistUpdateAt|\.playlistManager' internal/ui --glob '!player*.go' --glob '!*_test.go'` 为空；白盒 gapless 测试仍直接访问 playlistManager.SetPlayMode，无 Player 包装且 SetMode 含存储副作用，不适用单测隔离，属测试内部细节）。
+
+验证：`make lint` 0 issues · `make test` 绿（21 包 ok，无 FAIL）· `make build` 绿 · 改动文件 `gofmt -l` 干净（`song_info_renderer.go` 为 HEAD 既有的非 gofmt 债务，非本阶段引入，未触碰）。
+
 ### 3.3.2/3.3.3 决策与合理残留（`.netease.` 引用清单）
 
 - **页面导航形态（3.3.2）**：login 页在 ToLoginPage 每次经 `buildPageOrToast("login")` 构建新实例（登录页无跨组件状态；webviewAvailable 检测缓存在 NewLoginPage 实例内，回调/返回语义不变），shell 移除 `n.login` 字段；search 页保留 shell 单例（`n.search`），其 wordsInput/result/searchType 被 SearchResultMenu.BeforeEnterMenuHook 与 operate.searchSong 共享，必须保持同一实例。
