@@ -51,11 +51,13 @@ type ArtistsMenu interface {
 type baseMenu struct {
 	model.DefaultMenu
 	netease *Netease
+	svc     *menuServices
 }
 
 func newBaseMenu(netease *Netease) baseMenu {
 	return baseMenu{
 		netease: netease,
+		svc:     newMenuServices(netease),
 	}
 }
 
@@ -75,7 +77,7 @@ func (e *baseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
 		return nil, nil
 	}
 
-	playOrToggle(e.netease, selectedIndex)
+	playOrToggle(e.svc.Netease(), selectedIndex)
 	return nil, a.RerenderCmd(true)
 }
 
@@ -89,22 +91,22 @@ func (e *baseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenu
 	var items []model.ContextMenuItem
 
 	if index >= 0 && index < len(menu.MenuViews()) {
-		selActions := actionItemsForMenu(e.netease, menu.GetMenuKey(), false, index)
+		selActions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), false, index)
 		if len(selActions) > 0 {
 			title := selectedContextTitle(menu, index)
 			items = append(items, buildGroupItems("sel", title, selActions, false)...)
 		}
 	}
 
-	if song, ok := getTargetSong(e.netease, false); ok {
-		playActions := actionItemsForMenu(e.netease, menu.GetMenuKey(), true, -1)
+	if song, ok := getTargetSong(e.svc.Netease(), false); ok {
+		playActions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), true, -1)
 		if len(playActions) > 0 {
 			title := iconMusicNote + "当前播放：" + songTitleBrief(song.Name)
 			items = append(items, buildGroupItems("play", title, playActions, len(items) > 0)...)
 		}
 	}
 
-	return appendContextMenuGlobalItems(items, len(e.netease.Player().Playlist()) > 0)
+	return appendContextMenuGlobalItems(items, len(e.svc.Player().Playlist()) > 0)
 }
 
 func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.ContextMenuItem) (model.Page, tea.Cmd) {
@@ -114,7 +116,7 @@ func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		return nil, nil
 	}
 	if strings.HasPrefix(item.ID, "generic:") {
-		return handleGenericContextAction(e.netease, a, item.ID)
+		return handleGenericContextAction(e.svc, a, item.ID)
 	}
 
 	if rest, ok := strings.CutPrefix(item.ID, "sel:"); ok {
@@ -122,7 +124,7 @@ func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		if err != nil {
 			return nil, nil
 		}
-		actions := actionItemsForMenu(e.netease, menu.GetMenuKey(), false, index)
+		actions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), false, index)
 		return runContextAction(actions, i, a)
 	}
 	if rest, ok := strings.CutPrefix(item.ID, "play:"); ok {
@@ -130,7 +132,7 @@ func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		if err != nil {
 			return nil, nil
 		}
-		actions := actionItemsForMenu(e.netease, menu.GetMenuKey(), true, -1)
+		actions := actionItemsForMenu(e.svc.Netease(), menu.GetMenuKey(), true, -1)
 		return runContextAction(actions, i, a)
 	}
 	return nil, nil
@@ -151,20 +153,20 @@ func runContextAction(actions []ActionItem, i int, a *model.App) (model.Page, te
 	return nil, nil
 }
 
-func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page, tea.Cmd) {
+func handleGenericContextAction(svc *menuServices, a *model.App, id string) (model.Page, tea.Cmd) {
 	main := a.MustMain()
 	switch id {
 	case "generic:refresh":
 		main.RefreshMenuWithLoading()
 		return nil, nil
 	case "generic:toggle":
-		n.player.Toggle()
+		svc.Player().Toggle()
 		return nil, a.RerenderCmd(true)
 	case "generic:prev":
-		n.player.PreviousSong(true)
+		svc.Player().PreviousSong(true)
 		return nil, a.RerenderCmd(true)
 	case "generic:next":
-		n.player.NextSong(true)
+		svc.Player().NextSong(true)
 		return nil, a.RerenderCmd(true)
 	case "generic:switchTheme":
 		registry := configs.CurrentThemeRegistry()
@@ -174,8 +176,8 @@ func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page
 			style.SetStyleSet(*newSS)
 			a.SetStyleSet(*newSS)
 			themeName := registry.CurrentName(style.HasDarkBackground())
-			n.saveActiveTheme(themeName)
-			n.notifyThemeSwitch(a, "切换主题", themeName)
+			svc.Netease().saveActiveTheme(themeName)
+			svc.Netease().notifyThemeSwitch(a, "切换主题", themeName)
 		}
 		return nil, a.RerenderCmd(true)
 	}
