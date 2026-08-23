@@ -122,14 +122,14 @@ func (m *ActionMenu) FormatMenuItem(item *model.MenuItem) {
 func (m *ActionMenu) buildActionItems() {
 	if m.playing {
 		var ok bool
-		if m.playingSong, ok = getTargetSong(m.netease, false); !ok {
+		if m.playingSong, ok = getTargetSong(m.svc.Netease(), false); !ok {
 			slog.Debug("无法获取到当前播放歌曲")
 			m.items = nil
 			return
 		}
 	}
 
-	m.items = actionItemsForMenu(m.netease, m.from, m.playing, m.netease.MustMain().SelectedIndex())
+	m.items = actionItemsForMenu(m.svc.Netease(), m.from, m.playing, m.svc.Netease().MustMain().SelectedIndex())
 }
 
 func actionItemsForMenu(n *Netease, from string, playing bool, selectedIndex int) []ActionItem {

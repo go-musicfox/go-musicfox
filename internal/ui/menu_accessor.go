@@ -3,8 +3,10 @@ package ui
 import (
 	"log/slog"
 
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/track"
@@ -86,6 +88,24 @@ func (s *menuServices) CoverRenderer() *CoverRenderer {
 		return svc
 	}
 	s.missing(ServiceCoverRenderer)
+	return nil
+}
+
+// ShareSvc resolves the share service.
+func (s *menuServices) ShareSvc() *composer.ShareService {
+	if svc, ok := framework.ServiceOf[*composer.ShareService](s.ctx, ServiceShareSvc); ok {
+		return svc
+	}
+	s.missing(ServiceShareSvc)
+	return nil
+}
+
+// Lastfm resolves the Last.fm client.
+func (s *menuServices) Lastfm() *lastfm.Client {
+	if svc, ok := framework.ServiceOf[*lastfm.Client](s.ctx, ServiceLastfm); ok {
+		return svc
+	}
+	s.missing(ServiceLastfm)
 	return nil
 }
 

@@ -65,7 +65,7 @@ func (m *ArtistsSubscribeListMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := artistService.ArtistSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -98,7 +98,7 @@ func (m *ArtistsSubscribeListMenu) BottomOutHook() model.Hook {
 		code, response := artistService.ArtistSublist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

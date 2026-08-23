@@ -58,15 +58,15 @@ func (m *AddToUserPlaylistMenu) SubMenu(_ *model.App, _ int) model.Menu {
 func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userId == CurUser && _struct.CheckUserInfo(m.netease.user) == _struct.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+		if m.userId == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
+			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		}
 
 		userId := m.userId
 		if m.userId == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = m.netease.user.UserId
+			userId = m.svc.User().UserId
 		}
 
 		userPlaylists := service.UserPlaylistService{
@@ -77,7 +77,7 @@ func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -107,7 +107,7 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() model.Hook {
 		userId := m.userId
 		if m.userId == CurUser {
 			// 等于0，获取当前用户歌单
-			userId = m.netease.user.UserId
+			userId = m.svc.User().UserId
 		}
 
 		m.offset = m.offset + len(m.menus)
@@ -119,7 +119,7 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() model.Hook {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.netease.ToLoginPage(nil)
+			page, _ := m.svc.Netease().ToLoginPage(nil)
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

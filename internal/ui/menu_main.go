@@ -62,8 +62,8 @@ func NewMainMenu(netease *Netease) *MainMenu {
 
 func (m *MainMenu) FormatMenuItem(item *model.MenuItem) {
 	subtitle := "[未登录]"
-	if m.netease.user != nil {
-		subtitle = "[" + m.netease.user.Nickname + "]"
+	if m.svc.User() != nil {
+		subtitle = "[" + m.svc.User().Nickname + "]"
 	}
 	item.Subtitle = subtitle
 }

@@ -50,7 +50,7 @@ func (m *AlbumDetailMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := albumService.Album()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.svc.Netease().ToLoginPage(EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

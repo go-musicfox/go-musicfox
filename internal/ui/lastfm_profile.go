@@ -27,7 +27,7 @@ func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 	}
 
 	getAuthTitle := func() string {
-		if m.netease.lastfm.NeedAuth() {
+		if m.svc.Lastfm().NeedAuth() {
 			return "去授权"
 		}
 		return "取消授权"
@@ -38,21 +38,21 @@ func (m *LastfmProfile) MenuViews() (menu []model.MenuItem) {
 func (m *LastfmProfile) SubMenu(app *model.App, index int) model.Menu {
 	switch index {
 	case 0:
-		page := NewLastfmCustomApiPage(m.netease)
+		page := NewLastfmCustomApiPage(m.svc.Netease())
 		page.AfterAction = func() {
 			app.MustMain().RefreshMenuList()
 		}
-		return NewMenuToPage(m.baseMenu, page, m.netease.coverRenderer.ClearDisplayed)
+		return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)
 	case 1:
-		if m.netease.lastfm.NeedAuth() {
-			page := NewLastfmAuthPage(m.netease)
+		if m.svc.Lastfm().NeedAuth() {
+			page := NewLastfmAuthPage(m.svc.Netease())
 			page.AfterAction = func() {
 				app.MustMain().RefreshMenuList()
 			}
-		return NewMenuToPage(m.baseMenu, page, m.netease.coverRenderer.ClearDisplayed)
+			return NewMenuToPage(m.baseMenu, page, m.svc.CoverRenderer().ClearDisplayed)
 		}
 		showConfirmPopup(app, "清除 Last.fm 授权", "确定清除 Last.fm 授权信息吗？", func() {
-			m.netease.lastfm.ClearUserInfo()
+			m.svc.Lastfm().ClearUserInfo()
 			notify.Notify(notify.NotifyContent{
 				Title:   "清除授权成功",
 				Text:    "Last.fm 授权已清除",
