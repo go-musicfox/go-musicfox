@@ -36,11 +36,11 @@
 ### Phase 3.3: 全量迁移
 
 - [x] 3.3.1 菜单迁移（分批 8-10 个）：硬编码跳转 → BuildMenu — 验证: 每批后冒烟 + lint/test 绿 — 21fbb303 / fd38c384 / ad9b3ea4 / 7b45fc6a
-- [ ] 3.3.2 页面迁移：ToXxxPage → BuildPage — 验证: 页面跳转冒烟
-- [ ] 3.3.3 深耦合点手术：event_handler/operate + player_controller/player_gapless/cur_playlist/status_bar/lastfm*/qr_login_client/toast/theme_persistence — 验证: 全部导航测试绿
-- [ ] 3.3.4 旧路径清理：旧构造函数移除 — 验证: lint/test/build 绿 + 手动回归清单全过
-- [ ] 3.3.5 薄壳收尾：Netease 字段收敛 — 验证: 全量门禁 + 手动回归
-- [ ] 3.3.6 文档维护：AGENTS.md（UI 协调器/开发指南/路径表）+ 本 runs 文档进度 — 验证: 文档与代码同步
+- [x] 3.3.2 页面迁移：ToXxxPage → BuildPage — 验证: 页面跳转冒烟
+- [x] 3.3.3 深耦合点手术：event_handler/operate + player_controller/player_gapless/cur_playlist/status_bar/lastfm*/qr_login_client/toast/theme_persistence — 验证: 全部导航测试绿
+- [x] 3.3.4 旧路径清理：旧构造函数移除 — 验证: lint/test/build 绿 + 手动回归清单全过
+- [x] 3.3.5 薄壳收尾：Netease 字段收敛 — 验证: 全量门禁 + 手动回归
+- [x] 3.3.6 文档维护：AGENTS.md（UI 协调器/开发指南/路径表）+ 本 runs 文档进度 — 验证: 文档与代码同步
 
 ### Phase 3.4: 接口层预留（可选）
 
@@ -93,9 +93,9 @@
 - [x] 3.3.1 菜单迁移（分批 8-10 个）：硬编码跳转 → BuildMenu — 验证: 每批后冒烟 + lint/test 绿 — 21fbb303 / fd38c384 / ad9b3ea4 / 7b45fc6a（32 菜单注册 + 全部内部导航调用点迁移；main_menu/local_search 因构造器签名保留 bootstrap 直构，注册仅为完整性断言覆盖）
 - [x] 3.3.2 页面迁移：ToXxxPage → BuildPage — 验证: 页面跳转冒烟 — 5f18d89a（注册 search / lastfm_custom_api 页面 provider；ToLoginPage 经 buildPageOrToast 每次构建新实例并接线 AfterLogin（登录页无跨组件状态，shell 不再持有 login 单例）；search 页保持 shell 单例（wordsInput/result/searchType 与 SearchResultMenu/operate.searchSong 共享），在 NewNetease 经 BuildPage 构建；lastfm_profile 自定义 API 页入口走注册表；新增页面构建/导航冒烟测试）
 - [x] 3.3.3 深耦合点手术：event_handler/operate + player_controller/player_gapless/cur_playlist/status_bar/lastfm*/qr_login_client/toast/theme_persistence — 验证: 全部导航测试绿 — b72871f1 / efb0aefc（menuServices 增加薄壳访问器 App/Main/MustMain/Rerender/Search/SaveActiveTheme/NotifyThemeSwitch/PlaybarHoveredElement + newBaseMenuFromSvc；event_handler 全部 h.netease.* 走 h.svc，cur_playlist 菜单经注册表构建；operate 全部 helper 经 svc 解析、n.* 裸访问清零，action_menu 菜单经注册表构建；last_fm 注册为无参 provider，MainMenu 用 mustBuildNoArg；Player 增 svc 访问器字段，player_gapless/player_controller 经 p.svc；lastfm 菜单 RefreshMenuList 走 m.svc.MustMain；status_bar/qr_login_client 已无 *Netease 耦合无需改动）
-- [ ] 3.3.4 旧路径清理
-- [ ] 3.3.5 薄壳收尾
-- [ ] 3.3.6 文档维护
+- [x] 3.3.4 旧路径清理 — 2455bbba（删除原型文件 registry_proto_a.go/registry_proto_b.go（证据文档 .ai/runs/proto-3.0-evidence.md 保留）；构造函数清点：所有 menu/page 构造函数均被 registry 工厂包裹或由 bootstrap（NewMainMenu/NewLocalSearchMenu 直构）或测试引用，唯一死构造函数 NewCompositeRenderer 删除——composite_renderer.go 其余类型/方法为迁移前已存在的死代码，按「只删构造函数」保留并标记）
+- [x] 3.3.5 薄壳收尾 — 0dc7de18（见下方「3.3.5 薄壳最终形态」）
+- [x] 3.3.6 文档维护 — 见提交（AGENTS.md UI 协调器/开发指南（添加新菜单/新页面）/核心文件路径表 + 本 runs 进度）
 
 ### Phase 3.4: 接口层预留（可选）
 
@@ -112,6 +112,34 @@
 - **status_bar.go / qr_login_client.go**：已无 `*Netease` 耦合（纯访问器/包内工具），无需改动。
 - **toast.go / theme_persistence.go**：`registerToastHook`/`saveActiveTheme`/`notifyThemeSwitch` 为 shell 自有薄壳方法，消费方（event_handler/menu.go）已改经访问器 `svc.SaveActiveTheme`/`svc.NotifyThemeSwitch` 调用。
 
+### 3.3.5 薄壳最终形态（0dc7de18）
+
+- **Netease 字段清单**（全部保留，职责已收敛）：
+  - model.App 集成：`*model.App`
+  - 导航状态：`search *SearchPage`（单例，wordsInput/result/searchType 跨组件共享）
+  - renderer 组合：`lyricRenderer`/`songInfoRenderer`/`progressRenderer`/`coverRenderer`/`spectrumRenderer`/`spectrogramRenderer`
+  - 服务实例持有（registerServices 的来源）：`player`/`lyricService`/`trackManager`/`desktopLyrics`/`coverRenderer`/`shareSvc`/`lastfm`/`user`
+  - framework：`ctx *framework.Context`/`scope *framework.Scope`
+  - 小 UI 状态：`playbarHoveredElement`、`themeNotifID`/`themeNotifTimer`
+- **`.netease.` 引用收敛**：全部 102 处剩余引用均为 shell 方法调用（`MustMain`/`RerenderCmd`/`Tick`/`WindowWidth`/`EffectiveWindowHeight`/`SpectrumLines`/`GetCoverWidth`/`GetCoverEndColumn`/`GetLyricPosition`/`Player()`/`DesktopLyrics()`/`GetDesktopLyricsLines()`/`ToLoginPage`/`ToSearchPage`/`playbarHoveredElement`/`Ctx()`），来自 renderer 组合（5 文件）与 shell 构建的页面（7 文件）及 player.go 的导航/桌面歌词方法；**不再有任何 `X.netease.<服务实例字段>` 直连**（服务实例仅经访问器/Context 解析）。player.go 的 `p.netease.player.Mode()`/`trackManager`/`user` 与 lastfm 三个授权页的 `svc.Lastfm()` 迁移为本阶段重点。
+- **lint 债务**：仓库 lint 配置为 `issues.new: true` + `whole-files: true`（改动文件全量检查），本阶段触碰 lastfm 页面文件导致其历史债务暴露——已一并修复：ST1003 初始ism 重命名（`LastfmCustomAPIPage` 族/`reloadAPIAccount`/`getAuthURLWithToken`）、`util.SetFgStyle` → `style.FG`、ui 包文档注释（随 3.3.4 原型文件删除而丢失，ST1000）、composite_renderer.go gci import 排序、registry.go ST1021 组注释；`registry_test.go` 的 TestRegisterAndBuildLastfmCustomAPIPage 因 lastfm 改经访问器解析而需注册服务到 Context。
+- **bootstrap 直构保留**：`NewMainMenu`/`NewLocalSearchMenu`（internal/commands 入口，经 `neteaseFromBase` 兼容注册完整性断言）不变。
+- **composite_renderer.go**：整个文件为迁移前已存在的死代码（无任何引用），仅删除死构造函数 `NewCompositeRenderer`，其余按 AGENTS.md「不删除预存在死代码」保留（建议后续单独清理）。
+
+### 手动回归清单（3.3.4/3.3.5 门禁后必须重检）
+
+服务访问路径已全部收敛到注册表/访问器，以下用户可见行为必须手动回归确认行为不变：
+
+- **播放控制**：播放/暂停、上一首/下一首、进度 seek、音量（滚轮/快捷键）
+- **右键菜单**：任意菜单右键 → 播放控制分组 / 选中项分组（收藏/下载/喜欢/相似/网页打开/分享）
+- **主题切换**：快捷键与右键切换、toast 通知、`theme.activeTheme` 持久化（重启后生效）
+- **桌面歌词**：开关切换、拖动窗口
+- **搜索**：进入搜索、搜索结果加载更多（BottomOut）
+- **登录/Last.fm**：登录流程、Last.fm 授权/主页/队列、Last.fm API account 页（key/secret 保存/重载/清空）
+- **喜欢/收藏**：点赞/取消、收藏歌单/专辑/歌手、添加至歌单
+- **远程控制**：macOS Now Playing（含喜欢/取消喜欢）、Linux MPRIS
+- **鼠标事件**：单击/双击/滚轮/hover 状态栏元素
+
 ## Phase 3.0 裁决（决策点，2026-08-23）
 
 **结论：候选形态 B（泛型注册 `RegisterMenuB[T](key, factory)`）胜出**，原型证据见 `.ai/runs/proto-3.0-evidence.md`（commit 1b32ef71）：
@@ -120,4 +148,4 @@
 - B 优势：参数契约进类型系统（`ArtistDetailOpts{ArtistID, Name}` 消除 `(int64, string)` 歧义）；注册闭包零变参断言（唯一断言藏在 registry 内部，`.(menuFactory[T])`）；opts 结构体成为显式插件契约（未来第三方插件边界，与 kopia 研究结论一致）
 - B 代价（可缓解）：无参菜单需 `NoArgMenuOpts{}`（20+/43 菜单无参，用 `mustBuildNoArg` 紧凑辅助形式解决）；单字段 struct 轻微噪音
 
-**3.2 按形态 B 实现**；原型文件 `registry_proto_a.go` / `registry_proto_b.go` 保留为证据（标记 PROTO），3.2 正式实现时由 B 演进，3.3.4 清理旧路径时移除。
+**3.2 按形态 B 实现**；原型文件 `registry_proto_a.go` / `registry_proto_b.go` 于 3.3.4 移除（证据文档 `.ai/runs/proto-3.0-evidence.md` 保留）。

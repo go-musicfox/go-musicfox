@@ -122,7 +122,28 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 
 **文件**：`internal/ui/netease.go`
 
-核心结构包含：login、search、player、lyricService、trackManager 等组件。
+`Netease` 是薄壳协调器，只承担四类职责：
+
+- **model.App 集成**：嵌入 `*model.App`，实现 foxful-cli 的 `InitHook`/`Update`/`CloseHook` 事件分派；
+- **导航状态**：持有 search 页单例（`wordsInput`/`result`/`searchType` 被 SearchResultMenu 与 operate 共享）、页面跳转入口（`ToLoginPage`/`ToSearchPage`）；
+- **renderer 组合**：歌词/歌曲信息/进度/封面/频谱 renderer 的创建与 `Components()` 组合排序；
+- **服务实例持有**：player、lyricService、trackManager、desktopLyrics、coverRenderer、shareSvc、lastfm、user 等业务实例作为服务注册来源，由 `registerServices`（`internal/ui/services.go`）注册进 `internal/framework` 容器；业务组件按名经 `framework.Context` 解析，不再直连 `n.*` 字段。
+
+菜单与页面统一走 provider 注册表（`internal/ui/registry.go`）：key → 参数化工厂，各文件 `init()` 注册（`internal/ui/registry_registrations.go`），跳转经 `BuildMenu`/`BuildPage` 等 API。`baseMenu` 经 `menuServices` 类型安全访问器（`internal/ui/menu_accessor.go`）解析服务与薄壳方法（`MustMain`/`Rerender`/`SaveActiveTheme` 等）。
+
+### 核心文件路径
+
+| 文件 | 说明 |
+|------|------|
+| `internal/ui/netease.go` | 薄壳协调器（App 集成/导航/事件分派/renderer 组合/服务实例持有） |
+| `internal/ui/services.go` | 服务名常量（`ServicePlayer` 等）+ `registerServices` 注册点 |
+| `internal/ui/services_scope.go` | framework Scope/Plugin 生命周期接线（shareSvc、lastfm 小切片） |
+| `internal/ui/registry.go` | provider 注册表：`RegisterMenu[T]`/`BuildMenu`/`mustBuildNoArg`/`buildMenuOrToast`、`RegisterPage[T]`/`BuildPage`、opts 契约类型 |
+| `internal/ui/registry_registrations.go` | 内置菜单/页面 provider 的 `init()` 注册 |
+| `internal/ui/menu_accessor.go` | `menuServices` 类型安全访问器（服务解析 + 薄壳方法转发） |
+| `internal/ui/menu.go` | `Menu` 接口与 `baseMenu`（经访问器接线） |
+| `internal/ui/event_handler.go` | 键盘/鼠标事件处理 |
+| `internal/ui/operate.go` | 右键操作表 |
 
 ### 核心接口
 
@@ -188,9 +209,15 @@ type Player interface {
 
 ### 添加新菜单
 
-1. 创建 `internal/ui/menu_new_feature.go`，嵌入 `baseMenu`
-2. 实现 `Menu` 接口
-3. 注册到导航系统
+1. 创建 `internal/ui/menu_new_feature.go`，嵌入 `baseMenu`，实现 `Menu` 接口
+2. 在该文件 `init()` 注册 `MenuProvider`：`RegisterMenu[T](key, factory)`（参数契约用结构体 `T` 表达，如 `PlaylistDetailOpts`；无参菜单用共享的 `NoArgMenuOpts`）
+3. 跳转点改走注册表：`BuildMenu`/`mustBuildNoArg`/`buildMenuOrToast`（`registry.go`），key 为菜单 `GetMenuKey()`；父菜单与 operate 不再硬编码构造函数
+
+### 添加新页面
+
+1. 创建页面类型（实现 `model.Page`），在 `init()` 注册 `RegisterPage[T](key, factory)`（如 `login`、`search`、`lastfm_custom_api`）
+2. 导航经 `BuildPage`/`buildPageOrToast`（`registry.go`）；shell 持有引用的单例页（search）在 `NewNetease` 经 `BuildPage` 构建
+3. 页面持有 shell 引用用于导航（`MustMain`/`RerenderCmd`），业务能力经 `menuServices` 访问器解析（如 `svc.Lastfm()`），不直连 shell 服务字段
 
 ### 添加新播放器引擎
 
