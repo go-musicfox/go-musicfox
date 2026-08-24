@@ -205,6 +205,11 @@ func prepareGapless(ctx context.Context, fromID int64, music URLMusic, outputRat
 		_ = os.Remove(file.Name())
 		return nil
 	}
+	// 与主播放路径一致：按内容嗅探修正类型，确保 gapless 切换后
+	// Seek 门控等逻辑基于真实格式判断。
+	if t, sniffed := sniffFormat(file); sniffed {
+		music.Type = t
+	}
 	raw, format, err := decodeSong(music.Type, file, music.Duration, true)
 	if err != nil {
 		slog.Warn("gapless preload decode error", "song_id", music.Id, "bytes", bytes, "error", err)

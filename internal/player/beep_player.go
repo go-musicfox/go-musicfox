@@ -213,6 +213,12 @@ func (p *beepPlayer) listen() {
 				}
 			}
 
+			// 音源声明（扩展名/API）可能与实际内容不符（如云盘 FLAC 声明为 mp3），
+			// 解码前按内容嗅探修正类型，避免 gapless 重载分支与 Seek 门控误判。
+			if t, sniffed := sniffFormat(p.cacheReader); sniffed {
+				p.curMusic.Type = t
+			}
+
 			if p.curStreamer, p.curFormat, err = decodeSong(p.curMusic.Type, p.cacheReader, p.curMusic.Duration, p.cacheDownloaded); err != nil {
 				p.stopNoLock()
 				goto nextLoop
