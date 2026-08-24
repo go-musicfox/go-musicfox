@@ -86,6 +86,25 @@ func (s *SearchPage) IgnoreQuitKeyMsg(_ tea.KeyMsg) bool {
 	return true
 }
 
+// WordsInput returns the shared search input model. The search plugin's
+// SearchResultMenu reads and clears it through this accessor — the page's
+// wordsInput/result/searchType state stays in ui (shell-owned singleton), and
+// package ui must not import plugin packages.
+func (s *SearchPage) WordsInput() *textinput.Model {
+	return &s.wordsInput
+}
+
+// Result returns the current search result payload (the typed slice decoded
+// from the last search response, read back by SearchResultMenu).
+func (s *SearchPage) Result() any {
+	return s.result
+}
+
+// SearchType returns the current search type of the page.
+func (s *SearchPage) SearchType() SearchType {
+	return s.searchType
+}
+
 func (s *SearchPage) Type() model.PageType {
 	return PageTypeSearch
 }

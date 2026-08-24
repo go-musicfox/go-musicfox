@@ -6,6 +6,9 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 
+	// playlist_detail is now provided by the playlist plugin; the SubMenu jump
+	// assertions below type-assert its concrete menu.
+	playlistplugin "github.com/go-musicfox/go-musicfox/internal/plugins/playlist"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
@@ -39,16 +42,16 @@ func TestAllMenusBuildViaRegistryFactory(t *testing.T) {
 // TestCrossMenuJumpsToPlaylistDetail proves the cluster's internal cross-menu
 // jumps still resolve through the registry with the same keys as before:
 // stubbing the network-fed data and calling SubMenu returns a
-// *ui.PlaylistDetailMenu with the matching dynamic key (playlist_detail stays
-// in ui).
+// *playlistplugin.PlaylistDetailMenu with the matching dynamic key
+// (playlist_detail is plugin-supplied now).
 func TestCrossMenuJumpsToPlaylistDetail(t *testing.T) {
 	base := ui.BaseMenu{}
 
 	check := func(t *testing.T, name string, sub model.Menu, wantID int64) {
 		t.Helper()
-		pd, ok := sub.(*ui.PlaylistDetailMenu)
+		pd, ok := sub.(*playlistplugin.PlaylistDetailMenu)
 		if !ok {
-			t.Fatalf("%s.SubMenu(0) = %T, want *ui.PlaylistDetailMenu", name, sub)
+			t.Fatalf("%s.SubMenu(0) = %T, want *playlistplugin.PlaylistDetailMenu", name, sub)
 		}
 		wantKey := fmt.Sprintf("playlist_detail_%d", wantID)
 		if key := pd.GetMenuKey(); key != wantKey {

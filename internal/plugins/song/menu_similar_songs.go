@@ -1,4 +1,4 @@
-package ui
+package song
 
 import (
 	"fmt"
@@ -8,24 +8,25 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type SimilarSongsMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus        []model.MenuItem
 	songs        []structs.Song
 	existSongIds map[int64]struct{}
 	relateSongID int64
 }
 
-var _ SongsMenu = (*SimilarSongsMenu)(nil)
+var _ ui.SongsMenu = (*SimilarSongsMenu)(nil)
 
-func NewSimilarSongsMenu(base baseMenu, song structs.Song) *SimilarSongsMenu {
+func NewSimilarSongsMenu(base ui.BaseMenu, song structs.Song) *SimilarSongsMenu {
 	songs := []structs.Song{song}
 	return &SimilarSongsMenu{
-		baseMenu:     base,
+		BaseMenu:     base,
 		menus:        menux.GetViewFromSongs(songs),
 		songs:        songs,
 		existSongIds: map[int64]struct{}{song.Id: {}},
@@ -57,6 +58,13 @@ func (m *SimilarSongsMenu) BeforeEnterMenuHook() model.Hook {
 
 func (m *SimilarSongsMenu) Songs() []structs.Song {
 	return m.songs
+}
+
+// RelateSongID returns the source song ID the similar-songs list was built
+// from. ui's operate.go uses it (via the SimilarSongsRelateSongIDGetter
+// interface) to avoid re-entering the same list.
+func (m *SimilarSongsMenu) RelateSongID() int64 {
+	return m.relateSongID
 }
 
 func (m *SimilarSongsMenu) BottomOutHook() model.Hook {
@@ -92,7 +100,7 @@ func (m *SimilarSongsMenu) fetchSimilarSongs(songID int64, maxTry int) bool {
 
 	m.songs = append(m.songs, songs...)
 	m.menus = menux.GetViewFromSongs(m.songs)
-	m.svc.Player().ReinitializePlaylist(m.svc.Player().CurSongIndex(), m.songs)
-	m.svc.Player().MarkPlaylistUpdated()
+	m.Player().ReinitializePlaylist(m.Player().CurSongIndex(), m.songs)
+	m.Player().MarkPlaylistUpdated()
 	return true
 }

@@ -375,7 +375,7 @@ func findSimilarSongs(svc *menuServices, isSelected bool) {
 		}
 		main := svc.MustMain()
 		menu := main.CurMenu()
-		if detail, ok := menu.(*SimilarSongsMenu); ok && detail.relateSongID == song.Id {
+		if detail, ok := menu.(SimilarSongsRelateSongIDGetter); ok && detail.RelateSongID() == song.Id {
 			return nil // 避免重复进入
 		}
 		newTitle := &model.MenuItem{Title: model.T(MsgMenuSimilarSongs), Subtitle: "与「" + song.Name + "」相似的歌曲"}
@@ -733,7 +733,7 @@ func openAddSongToUserPlaylistMenu(svc *menuServices, isSelected, isAdd bool) mo
 		}
 
 		main := svc.MustMain()
-		if _, ok := main.CurMenu().(*AddToUserPlaylistMenu); ok {
+		if _, ok := main.CurMenu().(AddToUserPlaylistGetter); ok {
 			return nil // 避免重复进入
 		}
 
@@ -753,21 +753,21 @@ func openAddSongToUserPlaylistMenu(svc *menuServices, isSelected, isAdd bool) mo
 	return NewOperation(svc, coreLogic).ShowLoading().NeedsAuth().Execute()
 }
 
-// addSongToUserPlaylist 添加或从歌单删除歌曲（仅在 AddToUserPlaylistMenu 中调用）
+// addSongToUserPlaylist 添加或从歌单删除歌曲（仅在 AddToUserPlaylistGetter 菜单中调用）
 func addSongToUserPlaylist(svc *menuServices, isAdd bool) model.Page {
 	coreLogic := func(svc *menuServices) model.Page {
 		main := svc.MustMain()
-		menu, ok := main.CurMenu().(*AddToUserPlaylistMenu)
+		menu, ok := main.CurMenu().(AddToUserPlaylistGetter)
 		if !ok {
 			return nil
 		}
-		playlist := menu.playlists[menu.RealDataIndex(main.SelectedIndex())]
+		playlist := menu.Playlists()[menu.RealDataIndex(main.SelectedIndex())]
 		op := "add"
 		if !isAdd {
 			op = "del"
 		}
 		likeService := service.PlaylistTracksService{
-			TrackIds: []string{strconv.FormatInt(menu.song.Id, 10)},
+			TrackIds: []string{strconv.FormatInt(menu.Song().Id, 10)},
 			Op:       op,
 			Pid:      strconv.FormatInt(playlist.Id, 10),
 		}
@@ -783,7 +783,7 @@ func addSongToUserPlaylist(svc *menuServices, isAdd bool) model.Page {
 			}
 			notify.Notify(notify.NotifyContent{
 				Title:   msg,
-				Text:    menu.song.Name,
+				Text:    menu.Song().Name,
 				Url:     types.AppGithubUrl,
 				GroupId: types.GroupID,
 			})
@@ -796,7 +796,7 @@ func addSongToUserPlaylist(svc *menuServices, isAdd bool) model.Page {
 		}
 		notify.Notify(notify.NotifyContent{
 			Title:   title,
-			Text:    menu.song.Name,
+			Text:    menu.Song().Name,
 			Url:     netease.WebUrlOfPlaylist(playlist.Id),
 			GroupId: types.GroupID,
 		})
@@ -804,8 +804,8 @@ func addSongToUserPlaylist(svc *menuServices, isAdd bool) model.Page {
 
 		// 刷新原歌单详情页
 		if !isAdd {
-			originalMenu, ok := main.CurMenu().(*PlaylistDetailMenu)
-			if ok && originalMenu.playlistID == playlist.Id {
+			originalMenu, ok := main.CurMenu().(PlaylistDetailGetter)
+			if ok && originalMenu.PlaylistID() == playlist.Id {
 				t := main.MenuTitle()
 				main.BackMenu()
 				_, page := originalMenu.BeforeEnterMenuHook()(main)

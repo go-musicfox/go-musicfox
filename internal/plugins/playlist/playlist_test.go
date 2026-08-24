@@ -57,16 +57,16 @@ func TestAllMenusBuildViaRegistryFactory(t *testing.T) {
 // TestCrossMenuJumpsToPlaylistDetail proves the cluster's internal cross-menu
 // jumps still resolve through the registry with the same keys as before:
 // stubbing the network-fed data and calling SubMenu returns a
-// *ui.PlaylistDetailMenu with the matching dynamic key (playlist_detail stays
-// in ui).
+// *PlaylistDetailMenu (now provided by this plugin) with the matching dynamic
+// key.
 func TestCrossMenuJumpsToPlaylistDetail(t *testing.T) {
 	base := ui.BaseMenu{}
 
 	check := func(t *testing.T, name string, sub model.Menu, wantID int64) {
 		t.Helper()
-		pd, ok := sub.(*ui.PlaylistDetailMenu)
+		pd, ok := sub.(*PlaylistDetailMenu)
 		if !ok {
-			t.Fatalf("%s.SubMenu(0) = %T, want *ui.PlaylistDetailMenu", name, sub)
+			t.Fatalf("%s.SubMenu(0) = %T, want *PlaylistDetailMenu", name, sub)
 		}
 		wantKey := fmt.Sprintf("playlist_detail_%d", wantID)
 		if key := pd.GetMenuKey(); key != wantKey {
@@ -117,6 +117,24 @@ func TestUserCollectionBuildsCrossPluginSubMenus(t *testing.T) {
 		if key := sub.GetMenuKey(); key != wantKey {
 			t.Fatalf("user_collect.SubMenu(%d) key = %q, want %q", i, key, wantKey)
 		}
+	}
+}
+
+// TestPlaylistDetailBuildsViaRegistryFactory proves playlist_detail is now
+// provided by this plugin (its registration moved out of ui together with the
+// menu, Phase 3.9.x): it builds through the real registry factory with the
+// shared ui.PlaylistDetailOpts and keeps its dynamic GetMenuKey.
+func TestPlaylistDetailBuildsViaRegistryFactory(t *testing.T) {
+	menu, err := ui.BuildMenu("playlist_detail", ui.BaseMenu{}, ui.PlaylistDetailOpts{PlaylistID: 42})
+	if err != nil {
+		t.Fatalf("BuildMenu(playlist_detail) error = %v", err)
+	}
+	pd, ok := menu.(*PlaylistDetailMenu)
+	if !ok {
+		t.Fatalf("BuildMenu(playlist_detail) = %T, want *PlaylistDetailMenu", menu)
+	}
+	if key := pd.GetMenuKey(); key != "playlist_detail_42" {
+		t.Fatalf("GetMenuKey() = %q, want %q", key, "playlist_detail_42")
 	}
 }
 

@@ -6,14 +6,16 @@ import (
 )
 
 // init registers the after-anchor test-doubles every NewMainMenu construction
-// in this binary needs. The built-in entries anchor on plugin keys (搜索 after
-// album_menu, 帮助 after last_fm) that the ui test binary cannot link (ui must
-// not import plugins), so the binary registers behavior-equivalent items to
-// keep the chain complete. The chain here mirrors the production 16-item order
-// minus 检查更新: _main_start → daily_songs → daily_playlists → user_playlist →
-// user_collect → personal_fm → album_menu → search_type → ranks →
-// high_quality_playlists → hot_artists → recent_songs → could → radio_dj_type
-// → last_fm → help.
+// in this binary needs. The built-in entries anchor on plugin keys (帮助 after
+// last_fm) that the ui test binary cannot link (ui must not import plugins),
+// so the binary registers behavior-equivalent items to keep the chain complete.
+// 搜索 (search_type) was a built-in entry of menu_main.go until it moved to the
+// search plugin; the test binary registers it as a test-double here so the
+// chain keeps its 搜索 @ album_menu position. The chain mirrors the production
+// 16-item order minus 检查更新 (15 items = 14 test-doubles + builtin 帮助):
+// _main_start → daily_songs → daily_playlists → user_playlist → user_collect →
+// personal_fm → album_menu → search_type → ranks → high_quality_playlists →
+// hot_artists → recent_songs → could → radio_dj_type → last_fm → help.
 func init() {
 	chain := []struct{ key, title, after string }{
 		{"daily_songs", "每日推荐歌曲", MainMenuStart},
@@ -22,6 +24,7 @@ func init() {
 		{"user_collect", "我的收藏", "user_playlist"},
 		{"personal_fm", "私人FM", "user_collect"},
 		{"album_menu", "专辑列表", "personal_fm"},
+		{"search_type", "搜索", "album_menu"},
 		{"ranks", "排行榜", "search_type"},
 		{"high_quality_playlists", "精选歌单", "ranks"},
 		{"hot_artists", "热门歌手", "high_quality_playlists"},
@@ -60,7 +63,7 @@ func TestOrderMainMenuEntriesChain(t *testing.T) {
 		{key: "user_collect", after: "user_playlist", title: "我的收藏"},
 		{key: "personal_fm", after: "user_collect", title: "私人FM"},
 		{key: "album_menu", after: "personal_fm", title: "专辑列表"},
-		{key: "search_type", after: "album_menu", title: "搜索", builtin: true},
+		{key: "search_type", after: "album_menu", title: "搜索"},
 		{key: "ranks", after: "search_type", title: "排行榜"},
 		{key: "high_quality_playlists", after: "ranks", title: "精选歌单"},
 		{key: "hot_artists", after: "high_quality_playlists", title: "热门歌手"},
@@ -92,7 +95,7 @@ func TestOrderMainMenuEntriesChain(t *testing.T) {
 // nothing renumbers.
 func TestOrderMainMenuEntriesInsertion(t *testing.T) {
 	base := []mainMenuEntry{
-		{key: "search_type", after: MainMenuStart, title: "搜索", builtin: true},
+		{key: "search_type", after: MainMenuStart, title: "搜索"},
 		{key: "help", after: "search_type", title: "帮助", builtin: true},
 	}
 	got := orderMainMenuEntries(append(base, mainMenuEntry{key: "new_item", after: "help", title: "新项"}))

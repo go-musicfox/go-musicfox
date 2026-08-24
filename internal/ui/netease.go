@@ -104,6 +104,13 @@ func NewNetease(app *model.App) *Netease {
 	// Initialize desktop lyrics
 	n.desktopLyrics = desktop_lyrics.NewController(configs.AppConfig.Main.Lyric.DesktopLyrics)
 
+	// The framework context must exist before any newMenuServices call: the
+	// accessor snapshots n.ctx at construction time (Player and renderers below
+	// build their svc through it), so a nil ctx would make every service lookup
+	// degrade to nil at play time. Services themselves are registered later,
+	// once shareSvc/lastfm are ready.
+	n.ctx = &framework.Context{}
+
 	n.player = NewPlayer(n, n.lyricService)
 
 	n.lyricRenderer = NewLyricRenderer(newMenuServices(n), n.lyricService, showLyric)
@@ -131,7 +138,6 @@ func NewNetease(app *model.App) *Netease {
 	// Wire the framework scope: shareSvc/lastfm are registered into the
 	// app-wide context via their scope plugins (Phase 3.1.1 slice), then the
 	// remaining startup services are registered (Phase 3.1.2).
-	n.ctx = &framework.Context{}
 	n.scope = newAppScope(n)
 	if err := n.scope.Start(n.ctx); err != nil {
 		slog.Error("framework scope start failed", slogx.Error(err))

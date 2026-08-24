@@ -619,13 +619,16 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 		main    = p.netease.MustMain()
 		curMenu = main.CurMenu()
 	)
-	playlist, ok := curMenu.(*PlaylistDetailMenu)
+	// The concrete *PlaylistDetailMenu now lives in the playlist plugin; reach
+	// the open playlist's songs and ID through the shared interface instead.
+	playlist, ok := curMenu.(PlaylistDetailGetter)
 	if !ok {
 		return nil
 	}
+	playlistSongs := playlist.Songs()
 
 	selectedIndex := curMenu.RealDataIndex(main.SelectedIndex())
-	if selectedIndex >= len(playlist.songs) {
+	if selectedIndex >= len(playlistSongs) {
 		return nil
 	}
 
@@ -636,9 +639,9 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 
 	// 获取智能推荐歌曲
 	intelligenceService := service.PlaymodeIntelligenceListService{
-		SongId:       strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
-		PlaylistId:   strconv.FormatInt(playlist.playlistID, 10),
-		StartMusicId: strconv.FormatInt(playlist.songs[selectedIndex].Id, 10),
+		SongId:       strconv.FormatInt(playlistSongs[selectedIndex].Id, 10),
+		PlaylistId:   strconv.FormatInt(playlist.PlaylistID(), 10),
+		StartMusicId: strconv.FormatInt(playlistSongs[selectedIndex].Id, 10),
 	}
 	code, response := intelligenceService.PlaymodeIntelligenceList()
 	codeType := _struct.CheckCode(code)
@@ -665,7 +668,7 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	} else {
 		p.SetMode(types.PmIntelligent)
 		p.playingMenuKey = "Intelligent"
-		_ = p.playlistManager.Initialize(0, append([]structs.Song{playlist.songs[selectedIndex]}, songs...))
+		_ = p.playlistManager.Initialize(0, append([]structs.Song{playlistSongs[selectedIndex]}, songs...))
 		p.playlistUpdateAt = time.Now()
 		song = p.Playlist()[0]
 	}

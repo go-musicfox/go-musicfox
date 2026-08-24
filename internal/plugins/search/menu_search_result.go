@@ -1,4 +1,4 @@
-package ui
+package search
 
 import (
 	"fmt"
@@ -9,32 +9,33 @@ import (
 
 	ds2 "github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type SearchResultMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus      []model.MenuItem
 	offset     int
-	searchType SearchType
+	searchType ui.SearchType
 	keyword    string
 	result     any
 }
 
-var playableTypes = map[SearchType]bool{
-	StSingleSong: true,
-	StAlbum:      false,
-	StSinger:     false,
-	StPlaylist:   false,
-	StUser:       false,
-	StLyric:      true,
-	StRadio:      false,
+var playableTypes = map[ui.SearchType]bool{
+	ui.StSingleSong: true,
+	ui.StAlbum:      false,
+	ui.StSinger:     false,
+	ui.StPlaylist:   false,
+	ui.StUser:       false,
+	ui.StLyric:      true,
+	ui.StRadio:      false,
 }
 
-func NewSearchResultMenu(base baseMenu, searchType SearchType) *SearchResultMenu {
+func NewSearchResultMenu(base ui.BaseMenu, searchType ui.SearchType) *SearchResultMenu {
 	return &SearchResultMenu{
-		baseMenu:   base,
+		BaseMenu:   base,
 		offset:     0,
 		searchType: searchType,
 	}
@@ -46,8 +47,8 @@ func (m *SearchResultMenu) IsSearchable() bool {
 
 func (m *SearchResultMenu) BeforeBackMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if m.svc.Search().wordsInput.Value() != "" {
-			m.svc.Search().wordsInput.SetValue("")
+		if m.Search().WordsInput().Value() != "" {
+			m.Search().WordsInput().SetValue("")
 		}
 
 		return true, nil
@@ -74,27 +75,27 @@ func (m *SearchResultMenu) SubMenu(_ *model.App, index int) model.Menu {
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return buildMenuOrToast("album_detail", m.baseMenu, AlbumDetailOpts{AlbumID: resultWithType[index].Id})
+		return ui.BuildMenuOrToast("album_detail", m.BaseMenu, ui.AlbumDetailOpts{AlbumID: resultWithType[index].Id})
 	case []ds2.Playlist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return buildMenuOrToast("playlist_detail", m.baseMenu, PlaylistDetailOpts{PlaylistID: resultWithType[index].Id})
+		return ui.BuildMenuOrToast("playlist_detail", m.BaseMenu, ui.PlaylistDetailOpts{PlaylistID: resultWithType[index].Id})
 	case []ds2.Artist:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return buildMenuOrToast("artist_detail", m.baseMenu, ArtistDetailOpts{ArtistID: resultWithType[index].Id, Name: resultWithType[index].Name})
+		return ui.BuildMenuOrToast("artist_detail", m.BaseMenu, ui.ArtistDetailOpts{ArtistID: resultWithType[index].Id, Name: resultWithType[index].Name})
 	case []ds2.User:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return buildMenuOrToast("user_playlist", m.baseMenu, UserPlaylistOpts{UserID: resultWithType[index].UserId})
+		return ui.BuildMenuOrToast("user_playlist", m.BaseMenu, ui.UserPlaylistOpts{UserID: resultWithType[index].UserId})
 	case []ds2.DjRadio:
 		if index >= len(resultWithType) {
 			return nil
 		}
-		return buildMenuOrToast("dj_radio_detail", m.baseMenu, DjRadioDetailOpts{DjRadioID: resultWithType[index].Id})
+		return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: resultWithType[index].Id})
 	}
 
 	return nil
@@ -129,15 +130,15 @@ func (m *SearchResultMenu) BottomOutHook() model.Hook {
 
 func (m *SearchResultMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if m.svc.Search().wordsInput.Value() == "" {
+		if m.Search().WordsInput().Value() == "" {
 			// 显示搜索页面
-			page, _ := m.svc.ToSearchPage(m.searchType)
+			page, _ := m.ToSearchPage(m.searchType)
 			return false, page
 		}
 
-		m.result = m.svc.Search().result
-		m.searchType = m.svc.Search().searchType
-		m.keyword = m.svc.Search().wordsInput.Value()
+		m.result = m.Search().Result()
+		m.searchType = m.Search().SearchType()
+		m.keyword = m.Search().WordsInput().Value()
 		m.convertMenus()
 		return true, nil
 	}
@@ -145,32 +146,32 @@ func (m *SearchResultMenu) BeforeEnterMenuHook() model.Hook {
 
 func (m *SearchResultMenu) appendResult(response []byte) {
 	switch m.searchType {
-	case StSingleSong, StLyric:
+	case ui.StSingleSong, ui.StLyric:
 		appendSongs := _struct.GetSongsOfSearchResult(response)
 		songs, _ := m.result.([]ds2.Song)
 		songs = append(songs, appendSongs...)
 		m.result = songs
-	case StAlbum:
+	case ui.StAlbum:
 		appendAlbums := _struct.GetAlbumsOfSearchResult(response)
 		albums, _ := m.result.([]ds2.Album)
 		albums = append(albums, appendAlbums...)
 		m.result = albums
-	case StSinger:
+	case ui.StSinger:
 		appendArtists := _struct.GetArtistsOfSearchResult(response)
 		artists, _ := m.result.([]ds2.Artist)
 		artists = append(artists, appendArtists...)
 		m.result = artists
-	case StPlaylist:
+	case ui.StPlaylist:
 		appendPlaylists := _struct.GetPlaylistsOfSearchResult(response)
 		playlists, _ := m.result.([]ds2.Playlist)
 		playlists = append(playlists, appendPlaylists...)
 		m.result = playlists
-	case StUser:
+	case ui.StUser:
 		appendUsers := _struct.GetUsersOfSearchResult(response)
 		users, _ := m.result.([]ds2.User)
 		users = append(users, appendUsers...)
 		m.result = users
-	case StRadio:
+	case ui.StRadio:
 		appendDjRadios := _struct.GetDjRadiosOfSearchResult(response)
 		djRadios, _ := m.result.([]ds2.DjRadio)
 		djRadios = append(djRadios, appendDjRadios...)

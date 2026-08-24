@@ -37,22 +37,9 @@ func withDummyConfig(t *testing.T) {
 
 // --- registry unit tests (3.2.3.a) ---
 
-func TestRegisterAndBuildMenu(t *testing.T) {
-	menu, err := BuildMenu("playlist_detail", testBase, PlaylistDetailOpts{PlaylistID: 42})
-	if err != nil {
-		t.Fatalf("BuildMenu(playlist_detail) error = %v", err)
-	}
-	pd, ok := menu.(*PlaylistDetailMenu)
-	if !ok {
-		t.Fatalf("BuildMenu(playlist_detail) = %T, want *PlaylistDetailMenu", menu)
-	}
-	if pd.playlistID != 42 {
-		t.Fatalf("playlistId = %d, want 42", pd.playlistID)
-	}
-	if pd.GetMenuKey() != "playlist_detail_42" {
-		t.Fatalf("GetMenuKey() = %q, want %q", pd.GetMenuKey(), "playlist_detail_42")
-	}
-}
+// TestRegisterAndBuildMenu (playlist_detail → *PlaylistDetailMenu) moved with
+// the playlist plugin (Phase 3.9.x): its provider assertion is covered by the
+// internal/plugins/playlist test package.
 
 func TestBuildMenuMissingKey(t *testing.T) {
 	if _, err := BuildMenu("no_such_menu", testBase, NoArgMenuOpts{}); err == nil {
@@ -61,10 +48,11 @@ func TestBuildMenuMissingKey(t *testing.T) {
 }
 
 func TestBuildMenuOptsTypeMismatch(t *testing.T) {
-	// "search_type" is registered with NoArgMenuOpts; building it with a
+	// "local_search" is registered with NoArgMenuOpts; building it with a
 	// different opts type must fail at the single runtime type assertion.
-	if _, err := BuildMenu("search_type", testBase, PlaylistDetailOpts{PlaylistID: 1}); err == nil {
-		t.Fatal("BuildMenu(search_type, PlaylistDetailOpts) error = nil, want opts type mismatch")
+	// (The former "search_type" mismatch case moved with the search plugin.)
+	if _, err := BuildMenu("local_search", testBase, PlaylistDetailOpts{PlaylistID: 1}); err == nil {
+		t.Fatal("BuildMenu(local_search, PlaylistDetailOpts) error = nil, want opts type mismatch")
 	}
 }
 
@@ -88,11 +76,11 @@ func TestRegisterMenuEmptyKeyOrNilFactory(t *testing.T) {
 }
 
 func TestMustBuildNoArg(t *testing.T) {
-	// user_collect moved into the playlist plugin (Phase 3.9.x); exercise the
+	// search_type moved into the search plugin (Phase 3.9.x); exercise the
 	// helper on a remaining built-in no-arg menu.
-	st := mustBuildNoArg("search_type", testBase)
-	if _, ok := st.(*SearchTypeMenu); !ok {
-		t.Fatalf("mustBuildNoArg(search_type) = %T, want *SearchTypeMenu", st)
+	st := mustBuildNoArg("local_search", testBase)
+	if _, ok := st.(*LocalSearchMenu); !ok {
+		t.Fatalf("mustBuildNoArg(local_search) = %T, want *LocalSearchMenu", st)
 	}
 	assertPanics(t, func() {
 		mustBuildNoArg("no_such_menu", testBase)
@@ -143,13 +131,13 @@ func TestRegisterMainMenuItemWithBuilder(t *testing.T) {
 	// own options (parameterized provider) instead of mustBuildNoArg. The entry
 	// key must stay registered (startup integrity assertion in NewMainMenu).
 	// user_playlist (the first parameterized main-menu entry) moved into the
-	// playlist plugin, so exercise the mechanism on the parameterized
-	// playlist_detail menu that stays in ui.
+	// playlist plugin and playlist_detail followed it (Phase 3.9.x); exercise
+	// the mechanism on the parameterized cur_playlist menu that stays in ui.
 	RegisterMenu("registry_test_builder_item", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
 	RegisterMainMenuItemWith("registry_test_builder_item", "带参数入口", func(base BaseMenu) Menu {
-		return mustBuild("playlist_detail", base, PlaylistDetailOpts{PlaylistID: 99})
+		return mustBuild("cur_playlist", base, CurPlaylistOpts{Songs: []structs.Song{{Id: 1}}})
 	})
 
 	menu := NewMainMenu(testBase)
@@ -164,12 +152,12 @@ func TestRegisterMainMenuItemWithBuilder(t *testing.T) {
 		t.Fatal("main menu does not contain the builder item")
 	}
 	submenu := menu.SubMenu(nil, builderIndex)
-	pd, ok := submenu.(*PlaylistDetailMenu)
+	cp, ok := submenu.(*CurPlaylist)
 	if !ok {
-		t.Fatalf("builder item SubMenu = %T, want *PlaylistDetailMenu", submenu)
+		t.Fatalf("builder item SubMenu = %T, want *CurPlaylist", submenu)
 	}
-	if pd.playlistID != 99 {
-		t.Fatalf("playlistID = %d, want 99 (builder options must reach the menu)", pd.playlistID)
+	if songs := cp.Songs(); len(songs) != 1 || songs[0].Id != 1 {
+		t.Fatalf("builder options must reach the menu: Songs() = %v, want [song id 1]", songs)
 	}
 }
 
@@ -177,7 +165,8 @@ func TestNewMainMenuChainOrdersPluginItems(t *testing.T) {
 	// 链式顺序 + 插入场景（after-anchor）：注册一个 After 指向 help 的插件项
 	// （本二进制链中 help 是叶子锚点），它必须落在 帮助 之后、且既有项位置
 	// 不漂移（无需重排编号）。测试二进制的链基线由 init() 的锚点 test-double
-	// 构成（main_menu_chain_test.go）——搜索@6 / LastFM@13 / 帮助@14。
+	// 构成（main_menu_chain_test.go）——搜索@6（test-double，原内置项已随
+	// search 插件迁移）/ LastFM@13 / 帮助@14。
 	RegisterMenu("registry_test_ordered_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -204,7 +193,8 @@ func TestNewMainMenuChainOrdersPluginItems(t *testing.T) {
 func TestNewMainMenuAppendsPluginItems(t *testing.T) {
 	// 便捷注册形式（空 After，RegisterMainMenuItem / With）追加在链尾：
 	// 既有"追加在末尾"行为，注册序保持。链基线由 init() 的锚点 test-double
-	// + 内置搜索/帮助构成，故只断言追加在 帮助 之后。
+	// （含 test-double 的搜索项，原内置项已随 search 插件迁移）+ 内置帮助
+	// 构成，故只断言追加在 帮助 之后。
 	RegisterMenu("registry_test_plugin_menu", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
 		return &testCheckUpdateMenu{baseMenu: base}, nil
 	})
@@ -291,15 +281,9 @@ func TestBuildPageOrToastMissingKeyReturnsNil(t *testing.T) {
 
 // --- page build + navigation smoke (3.3.2) ---
 
-func TestRegisterAndBuildSearchPage(t *testing.T) {
-	page, err := BuildPage("search", SearchPageOpts{Netease: nil})
-	if err != nil {
-		t.Fatalf("BuildPage(search) error = %v", err)
-	}
-	if _, ok := page.(*SearchPage); !ok {
-		t.Fatalf("BuildPage(search) = %T, want *SearchPage", page)
-	}
-}
+// TestRegisterAndBuildSearchPage (BuildPage("search") → *SearchPage) moved with
+// the search plugin (Phase 3.9.x): its provider assertion is covered by the
+// internal/plugins/search test package.
 
 // TestPageNavigationSmoke exercises the thin-shell navigation methods through
 // the page provider registry: ToLoginPage builds a fresh login page with the
@@ -344,45 +328,13 @@ func TestPageNavigationSmoke(t *testing.T) {
 
 // --- menu -> menu navigation smoke (3.2.3.b) ---
 
-// TestMenuNavigationSmoke builds navigation chains through the production
-// registry (SearchType -> SearchResult -> demo menus) and asserts each
-// constructed menu has the expected concrete type, key and non-nil views.
-// Network-fed menu data is stubbed directly; the edges exercised are the real
-// SubMenu implementations. The HighQualityPlaylists -> PlaylistDetail and
-// SearchResult -> user_playlist edges moved with the playlist plugin (Phase
-// 3.9.x) and are covered by that plugin's tests.
-func TestMenuNavigationSmoke(t *testing.T) {
-	// SearchType -> SearchResult -> demo sub-menus (all provider-built).
-	st := NewSearchTypeMenu(testBase)
-	if st.MenuViews() == nil || len(st.MenuViews()) != 7 {
-		t.Fatalf("search type MenuViews() = %v, want 7 static items", st.MenuViews())
-	}
-	srSub := st.SubMenu(nil, 0)
-	sr, ok := srSub.(*SearchResultMenu)
-	if !ok {
-		t.Fatalf("searchType.SubMenu(0) = %T, want *SearchResultMenu", srSub)
-	}
-	if !sr.IsSearchable() {
-		t.Fatal("search result menu not marked searchable")
-	}
-
-	// The SearchResult -> user_playlist edge moved with the playlist plugin
-	// (Phase 3.9.x): the concrete *UserPlaylistMenu now lives in
-	// internal/plugins/playlist, covered by that plugin's tests.
-
-	// add_to_user_playlist builds through the registry with its song payload.
-	addMenu, err := BuildMenu("add_to_user_playlist", testBase, AddToUserPlaylistOpts{
-		UserID: 7,
-		Song:   structs.Song{Id: 9},
-		IsAdd:  true,
-	})
-	if err != nil {
-		t.Fatalf("BuildMenu(add_to_user_playlist) error = %v", err)
-	}
-	if _, ok := addMenu.(*AddToUserPlaylistMenu); !ok {
-		t.Fatalf("BuildMenu(add_to_user_playlist) = %T, want *AddToUserPlaylistMenu", addMenu)
-	}
-}
+// TestMenuNavigationSmoke (SearchType -> SearchResult -> add_to_user_playlist
+// chains through the production registry) moved with the search/song plugins
+// (Phase 3.9.x): the concrete *SearchTypeMenu / *SearchResultMenu /
+// IsSearchable and add_to_user_playlist provider assertions are covered by the
+// internal/plugins/search and internal/plugins/song test packages. The
+// remaining ui-side built menus (cur_playlist / action_menu) are asserted by
+// TestBuildLastHardcodedMenus below.
 
 // --- last hardcoded menu constructions (3.3.3) ---
 
@@ -462,8 +414,8 @@ func TestRegistryServicesResolvable(t *testing.T) {
 		t.Fatalf("registerServices() error = %v", err)
 	}
 
-	if svc, ok := framework.ServiceOf[MenuRegistry](ctx, ServiceMenuRegistry); !ok || !svc.Registered("playlist_detail") {
-		t.Errorf("ServiceOf(menuRegistry) not resolvable or missing playlist_detail")
+	if svc, ok := framework.ServiceOf[MenuRegistry](ctx, ServiceMenuRegistry); !ok || !svc.Registered("cur_playlist") {
+		t.Errorf("ServiceOf(menuRegistry) not resolvable or missing cur_playlist")
 	}
 	if svc, ok := framework.ServiceOf[PageRegistry](ctx, ServicePageRegistry); !ok || !svc.Registered("login") {
 		t.Errorf("ServiceOf(pageRegistry) not resolvable or missing login")

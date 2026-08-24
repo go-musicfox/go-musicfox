@@ -67,6 +67,35 @@ type ArtistsOfSongSongIDGetter interface {
 	SongID() int64
 }
 
+// PlaylistDetailGetter is implemented by the playlist detail menu (the
+// concrete type now lives in the internal/plugins/playlist plugin). player.go's
+// Intelligence smart-play flow reads the open playlist's songs and ID through
+// this interface instead of a concrete ui type.
+type PlaylistDetailGetter interface {
+	SongsMenu
+	PlaylistID() int64
+}
+
+// AddToUserPlaylistGetter is implemented by the add-to-playlist menu (the
+// concrete type now lives in the internal/plugins/song plugin). event_handler.go
+// and operate.go run the add/remove flow with the open menu's song payload and
+// add-or-del flag through this interface instead of a concrete ui type. IsAdd
+// reports the menu's add-vs-del mode (true = add, false = del); it is named
+// IsAdd (not Action) because model.Menu already owns an Action method.
+type AddToUserPlaylistGetter interface {
+	PlaylistsMenu
+	Song() structs.Song
+	IsAdd() bool
+}
+
+// SimilarSongsRelateSongIDGetter is implemented by the similar-songs menu (the
+// concrete type now lives in the internal/plugins/song plugin). operate.go's
+// findSimilarSongs avoids re-entering the same similar-songs list through this
+// interface instead of a concrete ui type.
+type SimilarSongsRelateSongIDGetter interface {
+	RelateSongID() int64
+}
+
 type SongsMenu interface {
 	Menu
 	Songs() []structs.Song

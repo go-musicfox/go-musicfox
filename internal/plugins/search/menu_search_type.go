@@ -1,15 +1,19 @@
-package ui
+package search
 
-import "github.com/anhoder/foxful-cli/model"
+import (
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
 
 type SearchTypeMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus []model.MenuItem
 }
 
-func NewSearchTypeMenu(base baseMenu) *SearchTypeMenu {
+func NewSearchTypeMenu(base ui.BaseMenu) *SearchTypeMenu {
 	typeMenu := &SearchTypeMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		menus: []model.MenuItem{
 			{Title: "按单曲"},
 			{Title: "按专辑"},
@@ -33,21 +37,21 @@ func (m *SearchTypeMenu) MenuViews() []model.MenuItem {
 }
 
 func (m *SearchTypeMenu) SubMenu(_ *model.App, index int) model.Menu {
-	typeArr := []SearchType{
-		StSingleSong,
-		StAlbum,
-		StSinger,
-		StPlaylist,
-		StUser,
-		StLyric,
-		StRadio,
+	typeArr := []ui.SearchType{
+		ui.StSingleSong,
+		ui.StAlbum,
+		ui.StSinger,
+		ui.StPlaylist,
+		ui.StUser,
+		ui.StLyric,
+		ui.StRadio,
 	}
 
 	if index >= len(typeArr) {
 		return nil
 	}
 
-	searchResultMenu, err := BuildMenu("search_result", m.baseMenu, SearchResultOpts{SearchType: typeArr[index]})
+	searchResultMenu, err := ui.BuildMenu("search_result", m.BaseMenu, ui.SearchResultOpts{SearchType: typeArr[index]})
 	if err != nil {
 		return nil
 	}

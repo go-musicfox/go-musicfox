@@ -3,6 +3,7 @@ package plugins
 import (
 	"testing"
 
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
@@ -264,13 +265,81 @@ func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
 	}
 }
 
+// TestBlankImportRegistersSearchPlugin proves the eighth real plugin
+// (internal/plugins/search — the whole search cluster) links through the same
+// aggregator: its menu providers (search_type / search_result) and the search
+// page registration are visible, and it declares the 搜索 main-menu item
+// (after album_menu, the pre-extraction position).
+func TestBlankImportRegistersSearchPlugin(t *testing.T) {
+	for _, key := range []string{"search_type", "search_result"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("search menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+	if !(ui.PageRegistry{}).Registered("search") {
+		t.Fatal("search page provider not registered via aggregator blank import")
+	}
+
+	// search_type is the no-arg main-menu entry; search_result is
+	// parameterized (SearchResultOpts carries the search type).
+	st, err := ui.BuildMenu("search_type", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(search_type) error = %v", err)
+	}
+	if key := st.GetMenuKey(); key != "search_type" {
+		t.Fatalf("GetMenuKey() = %q, want search_type", key)
+	}
+
+	found := false
+	for _, item := range ui.MainMenuPluginItems() {
+		if item.Key == "search_type" && item.Title == "搜索" && item.After == "album_menu" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("search_type main-menu item (搜索, after album_menu) not registered via aggregator blank import")
+	}
+}
+
+// TestBlankImportRegistersSongPlugin proves the ninth real plugin
+// (internal/plugins/song — the single-song cluster) links through the same
+// aggregator: both parameterized jump-target providers (simi_songs /
+// add_to_user_playlist) are registered with their original keys.
+func TestBlankImportRegistersSongPlugin(t *testing.T) {
+	for _, key := range []string{"simi_songs", "add_to_user_playlist"} {
+		if !(ui.MenuRegistry{}).Registered(key) {
+			t.Fatalf("song menu provider %q not registered via aggregator blank import", key)
+		}
+	}
+
+	ss, err := ui.BuildMenu("simi_songs", ui.BaseMenu{}, ui.SimiSongsOpts{Song: structs.Song{Id: 1}})
+	if err != nil {
+		t.Fatalf("BuildMenu(simi_songs) error = %v", err)
+	}
+	if key := ss.GetMenuKey(); key != "simi_songs_1" {
+		t.Fatalf("GetMenuKey() = %q, want simi_songs_1", key)
+	}
+
+	am, err := ui.BuildMenu("add_to_user_playlist", ui.BaseMenu{}, ui.AddToUserPlaylistOpts{
+		UserID: 7, Song: structs.Song{Id: 9}, IsAdd: true,
+	})
+	if err != nil {
+		t.Fatalf("BuildMenu(add_to_user_playlist) error = %v", err)
+	}
+	if key := am.GetMenuKey(); key != "add_to_user_playlist_7" {
+		t.Fatalf("GetMenuKey() = %q, want add_to_user_playlist_7", key)
+	}
+}
+
 // TestMainMenuPreservesOriginalOrder proves the after-anchor chain merge in
-// NewMainMenu: built-in entries (搜索 after album_menu, 帮助 after last_fm) and
-// plugin entries chain by their After anchors and reproduce the original
-// pre-extraction main-menu sequence exactly (16 items). This is the integration
-// view of the same mechanism the ui package tests at the unit level — here the
-// full plugin set is linked via the aggregator. Titles() is side-effect free,
-// so a zero-base menu (no live services) is enough to read the display order.
+// NewMainMenu: plugin entries (搜索 after album_menu included — it moved into
+// the search plugin with the same anchor) and the built-in 帮助 entry chain by
+// their After anchors and reproduce the original pre-extraction main-menu
+// sequence exactly (16 items). This is the integration view of the same
+// mechanism the ui package tests at the unit level — here the full plugin set
+// is linked via the aggregator. Titles() is side-effect free, so a zero-base
+// menu (no live services) is enough to read the display order.
 func TestMainMenuPreservesOriginalOrder(t *testing.T) {
 	got := ui.NewMainMenu(ui.NewBaseMenu(nil)).Titles()
 	want := []string{

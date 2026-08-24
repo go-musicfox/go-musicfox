@@ -1,4 +1,4 @@
-package ui
+package song
 
 import (
 	"fmt"
@@ -9,18 +9,17 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
-// CurUser is the sentinel user ID meaning "the current logged-in user"
-// (userID == 0). The user_playlist menu (now in the internal/plugins/playlist
-// plugin) and this menu resolve it to svc.User().UserId at runtime; the
-// plugin's parameterized main-menu entry builds user_playlist with CurUser,
-// exactly like the built-in entry used to.
-const CurUser int64 = 0
+// ui.CurUser is the sentinel user ID meaning "the current logged-in user"
+// (userID == 0). It stays defined in ui (menu_add_to_user_playlist.go, the
+// user_playlist plugin entry and operate.go use it); this menu references
+// ui.CurUser and resolves it to User().UserId at runtime.
 
 type AddToUserPlaylistMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus     []model.MenuItem
 	playlists []structs.Playlist
 	song      structs.Song
@@ -31,9 +30,9 @@ type AddToUserPlaylistMenu struct {
 	action    bool // true for add, false for del
 }
 
-func NewAddToUserPlaylistMenu(base baseMenu, userID int64, song structs.Song, action bool) *AddToUserPlaylistMenu {
+func NewAddToUserPlaylistMenu(base ui.BaseMenu, userID int64, song structs.Song, action bool) *AddToUserPlaylistMenu {
 	return &AddToUserPlaylistMenu{
-		baseMenu: base,
+		BaseMenu: base,
 		userID:   userID,
 		offset:   0,
 		limit:    100,
@@ -58,6 +57,20 @@ func (m *AddToUserPlaylistMenu) Playlists() []structs.Playlist {
 	return m.playlists
 }
 
+// Song returns the song payload of the add/remove operation. ui's
+// event_handler.go / operate.go reach it through the
+// AddToUserPlaylistGetter interface.
+func (m *AddToUserPlaylistMenu) Song() structs.Song {
+	return m.song
+}
+
+// IsAdd reports whether the menu runs an add (true) or remove (false). The
+// name avoids colliding with model.Menu.Action(app, index), which every menu
+// must also implement.
+func (m *AddToUserPlaylistMenu) IsAdd() bool {
+	return m.action
+}
+
 func (m *AddToUserPlaylistMenu) SubMenu(_ *model.App, _ int) model.Menu {
 	return nil
 }
@@ -65,15 +78,15 @@ func (m *AddToUserPlaylistMenu) SubMenu(_ *model.App, _ int) model.Menu {
 func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		// 等于0，获取当前用户歌单
-		if m.userID == CurUser && _struct.CheckUserInfo(m.svc.User()) == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+		if m.userID == ui.CurUser && _struct.CheckUserInfo(m.User()) == _struct.NeedLogin {
+			page, _ := m.ToLoginPage(ui.EnterMenuCallback(main))
 			return false, page
 		}
 
 		userID := m.userID
-		if m.userID == CurUser {
+		if m.userID == ui.CurUser {
 			// 等于0，获取当前用户歌单
-			userID = m.svc.User().UserId
+			userID = m.User().UserId
 		}
 
 		userPlaylists := service.UserPlaylistService{
@@ -84,7 +97,7 @@ func (m *AddToUserPlaylistMenu) BeforeEnterMenuHook() model.Hook {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(ui.EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil
@@ -112,9 +125,9 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() model.Hook {
 	}
 	return func(main *model.Main) (bool, model.Page) {
 		userID := m.userID
-		if m.userID == CurUser {
+		if m.userID == ui.CurUser {
 			// 等于0，获取当前用户歌单
-			userID = m.svc.User().UserId
+			userID = m.User().UserId
 		}
 
 		m.offset = m.offset + len(m.menus)
@@ -126,7 +139,7 @@ func (m *AddToUserPlaylistMenu) BottomOutHook() model.Hook {
 		code, response := userPlaylists.UserPlaylist()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(nil)
+			page, _ := m.ToLoginPage(nil)
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

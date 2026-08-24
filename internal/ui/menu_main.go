@@ -37,18 +37,19 @@ func NewMainMenu(base baseMenu) *MainMenu {
 	// 内置项与插件项经 After 锚点链归并，复现插件化前的主菜单原始顺序：
 	// 每日推荐歌曲 / 每日推荐歌单 / 我的歌单 / 我的收藏 / 私人FM / 专辑列表 /
 	// 搜索 / 排行榜 / 精选歌单 / 热门歌手 / 最近播放歌曲 / 云盘 / 主播电台 /
-	// LastFM / 帮助 / 检查更新。每个入口声明其前驱项 key（After），插入一个
-	// 菜单只需声明一个锚点，其余项不漂移。链从 MainMenuStart 走到无处可去，
-	// 空 After 的项（RegisterMainMenuItem / RegisterMainMenuItemWith 便捷
-	// 形式）追加在链尾（注册序保持，既有"追加在末尾"行为）。无 Build 的插件
-	// 主菜单项 MUST 是无参菜单：经 mustBuildNoArg 构建，key 未注册或为参数化
-	// 菜单会在启动时 panic（程序错误，作为启动完整性信号；先显式断言以给出
-	// 清晰错误）。带 Build 的项由插件以自身 options 构造菜单（参数化 provider
-	// 入口）。触发由插件菜单自身的 Action / BeforeEnterMenuHook 承担——主菜单
-	// 不再对插件索引做特判。
+	// LastFM / 帮助 / 检查更新。「搜索」主菜单项不再内置——现由 search 插件经
+	// RegisterMainMenuItemAfter("search_type", "搜索", "album_menu", nil) 声明
+	// （After 锚点 album_menu，位置与内置时一致）。每个入口声明其前驱项 key
+	// （After），插入一个菜单只需声明一个锚点，其余项不漂移。链从 MainMenuStart
+	// 走到无处可去，空 After 的项（RegisterMainMenuItem /
+	// RegisterMainMenuItemWith 便捷形式）追加在链尾（注册序保持，既有"追加在
+	// 末尾"行为）。无 Build 的插件主菜单项 MUST 是无参菜单：经 mustBuildNoArg
+	// 构建，key 未注册或为参数化菜单会在启动时 panic（程序错误，作为启动完整
+	// 性信号；先显式断言以给出清晰错误）。带 Build 的项由插件以自身 options
+	// 构造菜单（参数化 provider 入口）。触发由插件菜单自身的 Action /
+	// BeforeEnterMenuHook 承担——主菜单不再对插件索引做特判。
 	entries := []mainMenuEntry{
-		// 内置项也参与锚点链：搜索跟在专辑列表后，帮助跟在 LastFM 后。
-		{key: "search_type", after: "album_menu", builtin: true, title: "搜索", menu: mustBuildNoArg("search_type", base)},
+		// 内置项也参与锚点链：帮助跟在 LastFM 后（搜索项已由 search 插件提供）。
 		{key: "help", after: "last_fm", builtin: true, title: "帮助", menu: nil}, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
 	}
 	for _, item := range MainMenuPluginItems() {

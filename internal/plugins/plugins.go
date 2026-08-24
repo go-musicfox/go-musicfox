@@ -11,4 +11,6 @@ import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/lastfm"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/playlist"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/recommend"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/search"
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins/song"
 )

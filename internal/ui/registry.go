@@ -65,6 +65,14 @@ type (
 	NoArgMenuOpts struct{}
 )
 
+// CurUser is the sentinel user ID meaning "the current logged-in user"
+// (userID == 0). The add-to-playlist menu (now in the internal/plugins/song
+// plugin) and the user_playlist menu (now in the internal/plugins/playlist
+// plugin) resolve it to User().UserId at runtime; the playlist plugin's
+// parameterized main-menu entry builds user_playlist with CurUser, exactly
+// like the built-in entry used to.
+const CurUser int64 = 0
+
 // menuFactory[T] is a typed menu provider stored behind `any` in the registry.
 type menuFactory[T any] struct {
 	Key   string
@@ -390,16 +398,11 @@ func (PageRegistry) Keys() []string {
 // sync with the init() registrations in registry_registrations.go. Keys moved
 // into plugins (check_update / last_fm / the DJ radio cluster / the album
 // cluster / the artist cluster / the recommend cluster / the playlist & cloud
-// cluster) are plugin-supplied and intentionally absent — the assertion only
-// locks the built-in set.
+// cluster / playlist_detail / the search cluster / the song cluster) are
+// plugin-supplied and intentionally absent — the assertion only locks the
+// built-in set.
 var expectedMenuKeys = []string{
-	// Phase 3.2 base set + demo migrations.
-	"playlist_detail",
-	"search_result",
-	"add_to_user_playlist",
-	"simi_songs",
 	// Phase 3.3.1 batch 4: main menu cluster + misc.
-	"search_type",
 	"local_search",
 	"main_menu",
 	// Phase 3.3.3: last hardcoded constructions.
@@ -407,10 +410,12 @@ var expectedMenuKeys = []string{
 	"action_menu",
 }
 
-// expectedPageKeys is the canonical page provider key set.
+// expectedPageKeys is the canonical page provider key set. The search page
+// moved into the internal/plugins/search plugin with the search cluster
+// (Phase 3.9.x) and is plugin-supplied — the assertion only locks the
+// built-in set.
 var expectedPageKeys = []string{
 	"login",
-	"search",
 }
 
 // AssertMenuRegistryComplete panics listing the missing keys when any expected

@@ -1,4 +1,4 @@
-package ui
+package playlist
 
 import (
 	"fmt"
@@ -8,20 +8,21 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/netease"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/menux"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 type PlaylistDetailMenu struct {
-	baseMenu
+	ui.BaseMenu
 	menus      []model.MenuItem
 	songs      []structs.Song
 	playlistID int64
 }
 
-func NewPlaylistDetailMenu(base baseMenu, playlistID int64) *PlaylistDetailMenu {
+func NewPlaylistDetailMenu(base ui.BaseMenu, playlistID int64) *PlaylistDetailMenu {
 	return &PlaylistDetailMenu{
-		baseMenu:   base,
+		BaseMenu:   base,
 		playlistID: playlistID,
 	}
 }
@@ -50,7 +51,7 @@ func (m *PlaylistDetailMenu) BeforeEnterMenuHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
 		codeType, songs := netease.FetchSongsOfPlaylist(m.playlistID, configs.AppConfig.Player.ShowAllSongsOfPlaylist)
 		if codeType == _struct.NeedLogin {
-			page, _ := m.svc.ToLoginPage(EnterMenuCallback(main))
+			page, _ := m.ToLoginPage(ui.EnterMenuCallback(main))
 			return false, page
 		} else if codeType != _struct.Success {
 			return false, nil

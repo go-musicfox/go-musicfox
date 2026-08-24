@@ -15,6 +15,7 @@ __debug*
 .slim/
 .planning/
 .rules/
+.tmp/
 
 # Agent pipeline: per-run QA state (generated, not source)
 .ai/qa/artifacts_*/

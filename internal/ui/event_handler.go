@@ -105,6 +105,21 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 		player.SwitchMode()
 	case keybindings.OpIntelligence:
 		newPage := player.Intelligence(false)
+		// 开启心动模式成功后自动进入当前播放列表页。每次成功进入 PmIntelligent
+		// 都跳转（即使之前已处于该模式，播放列表也会被刷新重建）。
+		if newPage == nil && player.Mode() == types.PmIntelligent {
+			if _, ok := menu.(*CurPlaylist); !ok {
+				var subTitle string
+				if updatedAt := player.PlaylistUpdateAt(); !updatedAt.IsZero() {
+					subTitle = updatedAt.Format("[更新于2006-01-02 15:04:05]")
+				}
+				curPlaylist := buildMenuOrToast("cur_playlist", newBaseMenuFromSvc(h.svc), CurPlaylistOpts{Songs: player.Playlist()})
+				if curPlaylist != nil {
+					main.EnterMenu(curPlaylist, &model.MenuItem{Title: model.T(MsgMenuCurrentPlaylist), Subtitle: subTitle})
+					player.LocatePlayingSong()
+				}
+			}
+		}
 		return true, newPage, app.Tick(time.Nanosecond)
 	case keybindings.OpLikePlayingSong:
 		newPage := likeSong(h.svc, true, false)
@@ -310,13 +325,14 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 	defer loading.Complete()
 
 	menu := h.svc.MustMain().CurMenu()
-	if m, ok := menu.(*AddToUserPlaylistMenu); ok {
-		if !m.action {
+	if m, ok := menu.(AddToUserPlaylistGetter); ok {
+		playlists := m.Playlists()
+		if !m.IsAdd() {
 			// Removing a song from a cloud playlist: confirm AFTER the user
 			// picked the target playlist (late guard), with full context.
 			content := "确定从歌单移除这首歌曲吗？"
-			if idx := m.RealDataIndex(h.svc.MustMain().SelectedIndex()); idx >= 0 && idx < len(m.playlists) {
-				content = fmt.Sprintf("确定从歌单「%s」移除「%s」吗？", m.playlists[idx].Name, m.song.Name)
+			if idx := m.RealDataIndex(h.svc.MustMain().SelectedIndex()); idx >= 0 && idx < len(playlists) {
+				content = fmt.Sprintf("确定从歌单「%s」移除「%s」吗？", playlists[idx].Name, m.Song().Name)
 			}
 			showConfirmPopup(h.svc.App(), "从歌单移除", content, func() {
 				addSongToUserPlaylist(h.svc, false)
@@ -324,7 +340,7 @@ func (h *EventHandler) enterKeyHandle() (stopPropagation bool, newPage model.Pag
 			})
 			return true, h.svc.MustMain(), nil
 		}
-		addSongToUserPlaylist(h.svc, m.action)
+		addSongToUserPlaylist(h.svc, m.IsAdd())
 		return true, h.svc.MustMain(), h.svc.App().Tick(time.Nanosecond)
 	}
 	return false, nil, nil
