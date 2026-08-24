@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	"github.com/go-musicfox/netease-music/service"
@@ -20,7 +21,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 )
 
-var supportedFileExtensions = []string{"mp3", "flac"}
+var supportedFileExtensions = []string{"mp3", "flac", "wav", "ogg"}
 
 type persistJob struct {
 	ctx           context.Context
@@ -163,6 +164,7 @@ func (m *Manager) DownloadSong(ctx context.Context, song structs.Song) (string, 
 
 		switch source.Type {
 		case SourceDownloaded:
+			source.Path = m.correctDownloadedFile(source)
 			return source.Path, os.ErrExist
 		case SourceCached:
 			slog.Debug("Persisting song from cache to downloads", "songId", song.Id)
@@ -378,7 +380,8 @@ func (m *Manager) persistCachedSource(ctx context.Context, source PlayableSource
 		source:        source,
 		isFromCache:   true,
 	}
-	if err := m.persistStream(job); err != nil {
+	finalFilePath, err = m.persistStream(job)
+	if err != nil {
 		return "", err
 	}
 	if err := m.tagger.SetSongTag(finalFilePath, source.Song); err != nil {
@@ -406,7 +409,8 @@ func (m *Manager) persistRemoteSource(ctx context.Context, source PlayableSource
 		source:        source,
 		isFromCache:   false,
 	}
-	if err := m.persistStream(job); err != nil {
+	filePath, err = m.persistStream(job)
+	if err != nil {
 		return "", err
 	}
 	if err := m.tagger.SetSongTag(filePath, source.Song); err != nil {
@@ -415,12 +419,12 @@ func (m *Manager) persistRemoteSource(ctx context.Context, source PlayableSource
 	return filePath, nil
 }
 
-func (m *Manager) persistStream(job persistJob) error {
+func (m *Manager) persistStream(job persistJob) (string, error) {
 	defer job.stream.Close()
 
 	tempFile, err := os.CreateTemp(filepath.Dir(job.finalFilePath), "download-*.tmp")
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer os.Remove(tempFile.Name())
 
@@ -456,10 +460,71 @@ func (m *Manager) persistStream(job persistJob) error {
 	closeErr := tempFile.Close()
 
 	if finalErr := errors.Join(copyErr, waitErr, closeErr); finalErr != nil {
-		return finalErr
+		return "", finalErr
 	}
 
-	return os.Rename(tempFile.Name(), job.finalFilePath)
+	// 网易云接口声明的类型可能与实际内容不一致（如云盘歌曲报 mp3 实为 FLAC），
+	// 下载完成后按内容魔数嗅探真实格式，并据此决定最终文件后缀。
+	finalPath := job.finalFilePath
+	if detectedExt, ok := sniffFileFormatFromPath(tempFile.Name()); ok {
+		finalPath = m.correctedDownloadPath(job.source.Song, job.source.Info.MusicType, job.finalFilePath, detectedExt)
+	}
+
+	if err := os.Rename(tempFile.Name(), finalPath); err != nil {
+		return "", err
+	}
+
+	// 若目录中已存在声明后缀的旧文件（此前错误命名的下载），清理之，
+	// 避免后续源解析优先命中错误文件。
+	if finalPath != job.finalFilePath {
+		if _, err := os.Stat(job.finalFilePath); err == nil {
+			if err := os.Remove(job.finalFilePath); err != nil {
+				slog.Warn("Failed to remove stale download file with wrong extension", "path", job.finalFilePath, "error", err)
+			} else {
+				slog.Debug("Removed stale download file with wrong extension", "path", job.finalFilePath)
+			}
+		}
+	}
+
+	return finalPath, nil
+}
+
+// correctedDownloadPath 根据嗅探到的真实格式生成修正后的下载路径。
+// 无法确定真实格式或格式与声明一致时返回原路径。
+func (m *Manager) correctedDownloadPath(song structs.Song, declaredExt, filePath, detectedExt string) string {
+	if detectedExt == "" || detectedExt == declaredExt {
+		return filePath
+	}
+	fileName, err := m.nameGen.Song(song, detectedExt)
+	if err != nil {
+		slog.Warn("Failed to generate corrected download filename", "songId", song.Id, "error", err)
+		return filePath
+	}
+	candidate := filepath.Join(filepath.Dir(filePath), fileName)
+	if candidate == filePath {
+		return filePath
+	}
+	return candidate
+}
+
+// correctDownloadedFile 检查已下载文件后缀与真实内容是否一致，不一致则重命名修正。
+// 返回最终文件路径。
+func (m *Manager) correctDownloadedFile(source PlayableSource) string {
+	detectedExt, ok := sniffFileFormatFromPath(source.Path)
+	if !ok {
+		return source.Path
+	}
+	declaredExt := strings.TrimPrefix(filepath.Ext(source.Path), ".")
+	corrected := m.correctedDownloadPath(source.Song, declaredExt, source.Path, detectedExt)
+	if corrected == source.Path {
+		return source.Path
+	}
+	if err := os.Rename(source.Path, corrected); err != nil {
+		slog.Warn("Failed to rename downloaded file to match detected format", "from", source.Path, "to", corrected, "error", err)
+		return source.Path
+	}
+	slog.Debug("Renamed downloaded file to match detected format", "from", source.Path, "to", corrected)
+	return corrected
 }
 
 func (m *Manager) ensureDirExists(dir string) error {
