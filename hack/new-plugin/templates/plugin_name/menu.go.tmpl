@@ -1,0 +1,42 @@
+package {{plugin_name}}
+
+import (
+	"github.com/anhoder/foxful-cli/model"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
+
+// {{MenuType}}Menu {{menu_title}}（hack/new-plugin 生成骨架）：嵌入
+// ui.BaseMenu 获得 ui.Menu 的默认实现（IsPlayable/IsLocatable/Action/
+// ContextMenuItems 等），仅覆写 GetMenuKey/MenuViews/SubMenu 与可播放/可
+// 定位标记。IsSearchable 默认 false（model.DefaultMenu 经 BaseMenu 提供），
+// 需要时可覆写。
+type {{MenuType}}Menu struct {
+	ui.BaseMenu
+}
+
+// GetMenuKey 返回菜单注册 key。
+func (m *{{MenuType}}Menu) GetMenuKey() string {
+	return "{{menu_key}}"
+}
+
+// IsPlayable 该菜单不是歌曲菜单，不可播放。
+func (m *{{MenuType}}Menu) IsPlayable() bool {
+	return false
+}
+
+// IsLocatable 该菜单不参与播放自动定位。
+func (m *{{MenuType}}Menu) IsLocatable() bool {
+	return false
+}
+
+// MenuViews 返回静态菜单项；需要子菜单跳转时改为返回真实数据项，并在
+// SubMenu 中经 ui.BuildMenuOrToast 按 key 解析目标菜单。
+func (m *{{MenuType}}Menu) MenuViews() []model.MenuItem {
+	return []model.MenuItem{{Title: "{{menu_title}} 示例项"}}
+}
+
+// SubMenu 该菜单骨架不产生子菜单。
+func (m *{{MenuType}}Menu) SubMenu(_ *model.App, _ int) model.Menu {
+	return nil
+}

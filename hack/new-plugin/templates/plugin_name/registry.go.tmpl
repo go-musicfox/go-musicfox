@@ -1,0 +1,60 @@
+// Package {{plugin_name}} implements the "{{menu_title}}" menu as a generated
+// plugin skeleton. This package is produced by hack/new-plugin (see
+// docs/plugin_development.md「插件脚手架」): replace the placeholder logic with
+// your own, then wire the package into the aggregator (internal/plugins
+// blank import, which cmd/musicfox.go pulls in).
+package {{plugin_name}}
+
+import (
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
+
+// init is the compile-time registration entry: it runs when the plugin package
+// is linked into the binary (via the internal/plugins aggregator blank import,
+// which cmd/musicfox.go pulls in). The factory's base parameter is written as
+// ui.BaseMenu — the registry signature uses its alias baseMenu, and the two are
+// interchangeable (BaseMenu is exported exactly for external factories).
+func init() {
+	ui.RegisterMenu("{{menu_key}}", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+		return &{{MenuType}}Menu{BaseMenu: base}, nil
+	})
+
+	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并（每个入口声明前驱项
+	// key）。默认锚点 {{menu_after}} 把该菜单放在主菜单链首；改为其它已注册
+	// 入口的 key（如 "check_update"）可插到对应项之后（见
+	// docs/plugin_development.md「插入一个主菜单项」）。纯跳转目标（如 song
+	// 插件的 simi_songs）不需要主菜单入口时删除这一行即可。
+	ui.RegisterMainMenuItemAfter("{{menu_key}}", "{{menu_title}}", {{menu_after_expr}}, nil)
+
+	// --- 可选扩展：按需取消注释并补全（API 见 docs/plugin_development.md） ---
+
+	// 启动钩子：InitHook 中用户/登录就绪后按注册序调用，每个 hook 带 panic
+	// 隔离（panic 仅记日志，不阻断启动）。
+	// ui.RegisterStartupHook(func() {
+	// 	// TODO: 启动任务；不得 panic、不得改变核心行为
+	// })
+
+	// 右键菜单项：在右键菜单末尾的「插件」分组贡献一个操作项。
+	// ui.RegisterContextMenuContrib(ui.ContextMenuContrib{
+	// 	Title: "{{menu_title}}操作",
+	// 	Show: func(ctx ui.ContextMenuContext) bool {
+	// 		return ctx.SelectedIndex >= 0 // 仅在存在选中行时显示；nil 表示恒显示
+	// 	},
+	// 	Action: func(svc ui.MenuServices, ctx ui.ContextMenuContext) (model.Page, tea.Cmd) {
+	// 		// ctx.Menu 为当前菜单、ctx.SelectedIndex 为选中行索引（-1 无选中）、
+	// 		// ctx.Playing 表示是否针对当前播放。返回页面与命令，导航自行处理。
+	// 		return nil, nil
+	// 	},
+	// })
+
+	// 状态栏组件：追加到状态栏居中区域（内置队列/音质组件之后，按注册序）。
+	// 类型实现 model.StatusBarComponent 的 View(a *model.App, m *model.Main) string。
+	// ui.RegisterStatusBarComponent({{MenuType}}StatusBarComponent{})
+
+	// 快捷键操作（两步）：keybindings 包注册操作 + ui 包注册处理函数。
+	// op := keybindings.RegisterOperate("{{plugin_name}}_action", "{{menu_title}}动作", []string{"ctrl+m"})
+	// ui.RegisterOperateHandler(op, func(svc ui.MenuServices, app *model.App) (model.Page, tea.Cmd) {
+	// 	// 经 svc 访问服务与导航；返回 nil, nil 表示无跳转与命令
+	// 	return nil, nil
+	// })
+}
