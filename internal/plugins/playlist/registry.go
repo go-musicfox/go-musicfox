@@ -44,30 +44,32 @@ func enterMenuCallback(main *model.Main) ui.LoginCallback {
 // 云盘 entries were removed from menu_main.go (plugin items are appended after
 // all built-ins).
 func init() {
-	ui.RegisterMenu("user_playlist", func(base ui.BaseMenu, opts ui.UserPlaylistOpts) (ui.Menu, error) {
-		return NewUserPlaylistMenu(base, opts.UserID), nil
+	ui.WithPlugin("playlist", "歌单云盘", func() {
+		ui.RegisterMenu("user_playlist", func(base ui.BaseMenu, opts ui.UserPlaylistOpts) (ui.Menu, error) {
+			return NewUserPlaylistMenu(base, opts.UserID), nil
+		})
+		ui.RegisterMenu("user_collect", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewUserCollectionMenu(base), nil
+		})
+		ui.RegisterMenu("high_quality_playlists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewHighQualityPlaylistsMenu(base), nil
+		})
+		ui.RegisterMenu("could", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewCloudMenu(base), nil
+		})
+		ui.RegisterMenu("playlist_detail", func(base ui.BaseMenu, opts ui.PlaylistDetailOpts) (ui.Menu, error) {
+			return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序。每个入口声明其前驱项 key：我的歌单跟在每日推荐歌单（recommend
+		// 插件）后，我的收藏跟在我的歌单后，精选歌单跟在排行榜（recommend 插件）后，
+		// 云盘跟在最近播放歌曲（recommend 插件）后。user_playlist 经参数化 builder
+		// 构造（UserID = ui.CurUser，与内置入口行为一致）。
+		ui.RegisterMainMenuItemAfter("user_playlist", "我的歌单", "daily_playlists", func(base ui.BaseMenu) ui.Menu {
+			return ui.MustBuild("user_playlist", base, ui.UserPlaylistOpts{UserID: ui.CurUser})
+		})
+		ui.RegisterMainMenuItemAfter("user_collect", "我的收藏", "user_playlist", nil)
+		ui.RegisterMainMenuItemAfter("high_quality_playlists", "精选歌单", "ranks", nil)
+		ui.RegisterMainMenuItemAfter("could", "云盘", "recent_songs", nil)
 	})
-	ui.RegisterMenu("user_collect", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewUserCollectionMenu(base), nil
-	})
-	ui.RegisterMenu("high_quality_playlists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewHighQualityPlaylistsMenu(base), nil
-	})
-	ui.RegisterMenu("could", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewCloudMenu(base), nil
-	})
-	ui.RegisterMenu("playlist_detail", func(base ui.BaseMenu, opts ui.PlaylistDetailOpts) (ui.Menu, error) {
-		return NewPlaylistDetailMenu(base, opts.PlaylistID), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序。每个入口声明其前驱项 key：我的歌单跟在每日推荐歌单（recommend
-	// 插件）后，我的收藏跟在我的歌单后，精选歌单跟在排行榜（recommend 插件）后，
-	// 云盘跟在最近播放歌曲（recommend 插件）后。user_playlist 经参数化 builder
-	// 构造（UserID = ui.CurUser，与内置入口行为一致）。
-	ui.RegisterMainMenuItemAfter("user_playlist", "我的歌单", "daily_playlists", func(base ui.BaseMenu) ui.Menu {
-		return ui.MustBuild("user_playlist", base, ui.UserPlaylistOpts{UserID: ui.CurUser})
-	})
-	ui.RegisterMainMenuItemAfter("user_collect", "我的收藏", "user_playlist", nil)
-	ui.RegisterMainMenuItemAfter("high_quality_playlists", "精选歌单", "ranks", nil)
-	ui.RegisterMainMenuItemAfter("could", "云盘", "recent_songs", nil)
 }

@@ -37,37 +37,39 @@ type DjHotOpts struct {
 // built-in entry was removed from menu_main.go (plugin items are appended after
 // all built-ins).
 func init() {
-	ui.RegisterMenu("dj_radio_detail", func(base ui.BaseMenu, opts ui.DjRadioDetailOpts) (ui.Menu, error) {
-		return NewDjRadioDetailMenu(base, opts.DjRadioID), nil
+	ui.WithPlugin("dj", "主播电台", func() {
+		ui.RegisterMenu("dj_radio_detail", func(base ui.BaseMenu, opts ui.DjRadioDetailOpts) (ui.Menu, error) {
+			return NewDjRadioDetailMenu(base, opts.DjRadioID), nil
+		})
+		ui.RegisterMenu("dj_category_detail", func(base ui.BaseMenu, opts DjCategoryDetailOpts) (ui.Menu, error) {
+			return NewDjCategoryDetailMenu(base, opts.CategoryID), nil
+		})
+		ui.RegisterMenu("dj_category", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDjCategoryMenu(base), nil
+		})
+		ui.RegisterMenu("dj_program_rank", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDjProgramRankMenu(base), nil
+		})
+		ui.RegisterMenu("dj_program_hour_rank", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDjProgramHoursRankMenu(base), nil
+		})
+		ui.RegisterMenu("dj_hot", func(base ui.BaseMenu, opts DjHotOpts) (ui.Menu, error) {
+			return NewDjHotMenu(base, opts.HotType), nil
+		})
+		ui.RegisterMenu("dj_sub", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDjSubListMenu(base), nil
+		})
+		ui.RegisterMenu("dj_recommend", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDjRecommendMenu(base), nil
+		})
+		ui.RegisterMenu("dj_today_recommend", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDjTodayRecommendMenu(base), nil
+		})
+		ui.RegisterMenu("radio_dj_type", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewRadioDjTypeMenu(base), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序（主播电台跟在云盘（playlist 插件）后、LastFM（lastfm 插件）前）。
+		ui.RegisterMainMenuItemAfter("radio_dj_type", "主播电台", "could", nil)
 	})
-	ui.RegisterMenu("dj_category_detail", func(base ui.BaseMenu, opts DjCategoryDetailOpts) (ui.Menu, error) {
-		return NewDjCategoryDetailMenu(base, opts.CategoryID), nil
-	})
-	ui.RegisterMenu("dj_category", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDjCategoryMenu(base), nil
-	})
-	ui.RegisterMenu("dj_program_rank", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDjProgramRankMenu(base), nil
-	})
-	ui.RegisterMenu("dj_program_hour_rank", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDjProgramHoursRankMenu(base), nil
-	})
-	ui.RegisterMenu("dj_hot", func(base ui.BaseMenu, opts DjHotOpts) (ui.Menu, error) {
-		return NewDjHotMenu(base, opts.HotType), nil
-	})
-	ui.RegisterMenu("dj_sub", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDjSubListMenu(base), nil
-	})
-	ui.RegisterMenu("dj_recommend", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDjRecommendMenu(base), nil
-	})
-	ui.RegisterMenu("dj_today_recommend", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDjTodayRecommendMenu(base), nil
-	})
-	ui.RegisterMenu("radio_dj_type", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewRadioDjTypeMenu(base), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序（主播电台跟在云盘（playlist 插件）后、LastFM（lastfm 插件）前）。
-	ui.RegisterMainMenuItemAfter("radio_dj_type", "主播电台", "could", nil)
 }

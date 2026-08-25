@@ -48,31 +48,33 @@ type AlbumNewOpts struct {
 // entry was removed from menu_main.go (plugin items are appended after all
 // built-ins).
 func init() {
-	ui.RegisterMenu("album_menu", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewAlbumListMenu(base), nil
+	ui.WithPlugin("album", "专辑列表", func() {
+		ui.RegisterMenu("album_menu", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewAlbumListMenu(base), nil
+		})
+		ui.RegisterMenu("album_new_area", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewAlbumNewAreaMenu(base), nil
+		})
+		ui.RegisterMenu("album_top_area", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewAlbumTopAreaMenu(base), nil
+		})
+		ui.RegisterMenu("album_new_hot", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewAlbumNewestMenu(base), nil
+		})
+		ui.RegisterMenu("album_new", func(base ui.BaseMenu, opts AlbumNewOpts) (ui.Menu, error) {
+			return NewAlbumNewMenu(base, opts.Area), nil
+		})
+		ui.RegisterMenu("album_top", func(base ui.BaseMenu, opts AlbumTopOpts) (ui.Menu, error) {
+			return NewAlbumTopMenu(base, opts.Area), nil
+		})
+		ui.RegisterMenu("album_sub_list", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewAlbumSubscribeListMenu(base), nil
+		})
+		ui.RegisterMenu("album_detail", func(base ui.BaseMenu, opts ui.AlbumDetailOpts) (ui.Menu, error) {
+			return NewAlbumDetailMenu(base, opts.AlbumID), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序（专辑列表跟在私人FM（recommend 插件）后、搜索（内置）前）。
+		ui.RegisterMainMenuItemAfter("album_menu", "专辑列表", "personal_fm", nil)
 	})
-	ui.RegisterMenu("album_new_area", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewAlbumNewAreaMenu(base), nil
-	})
-	ui.RegisterMenu("album_top_area", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewAlbumTopAreaMenu(base), nil
-	})
-	ui.RegisterMenu("album_new_hot", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewAlbumNewestMenu(base), nil
-	})
-	ui.RegisterMenu("album_new", func(base ui.BaseMenu, opts AlbumNewOpts) (ui.Menu, error) {
-		return NewAlbumNewMenu(base, opts.Area), nil
-	})
-	ui.RegisterMenu("album_top", func(base ui.BaseMenu, opts AlbumTopOpts) (ui.Menu, error) {
-		return NewAlbumTopMenu(base, opts.Area), nil
-	})
-	ui.RegisterMenu("album_sub_list", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewAlbumSubscribeListMenu(base), nil
-	})
-	ui.RegisterMenu("album_detail", func(base ui.BaseMenu, opts ui.AlbumDetailOpts) (ui.Menu, error) {
-		return NewAlbumDetailMenu(base, opts.AlbumID), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序（专辑列表跟在私人FM（recommend 插件）后、搜索（内置）前）。
-	ui.RegisterMainMenuItemAfter("album_menu", "专辑列表", "personal_fm", nil)
 }

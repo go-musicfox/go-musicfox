@@ -33,28 +33,30 @@ func enterMenuCallback(main *model.Main) ui.LoginCallback {
 // entries were removed from menu_main.go (plugin items are appended after all
 // built-ins).
 func init() {
-	ui.RegisterMenu("daily_songs", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDailyRecommendSongsMenu(base), nil
+	ui.WithPlugin("recommend", "每日推荐", func() {
+		ui.RegisterMenu("daily_songs", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDailyRecommendSongsMenu(base), nil
+		})
+		ui.RegisterMenu("daily_playlists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewDailyRecommendPlaylistMenu(base), nil
+		})
+		ui.RegisterMenu("personal_fm", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewPersonalFmMenu(base), nil
+		})
+		ui.RegisterMenu("recent_songs", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewRecentSongsMenu(base), nil
+		})
+		ui.RegisterMenu("ranks", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewRanksMenu(base), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序。每个入口声明其前驱项 key：每日推荐歌曲跟在链首（MainMenuStart）
+		// 之后，每日推荐歌单跟在每日推荐歌曲后，私人FM 跟在我的收藏（playlist 插件）
+		// 后，排行榜跟在搜索（内置）后，最近播放歌曲跟在热门歌手（artist 插件）后。
+		ui.RegisterMainMenuItemAfter("daily_songs", "每日推荐歌曲", ui.MainMenuStart, nil)
+		ui.RegisterMainMenuItemAfter("daily_playlists", "每日推荐歌单", "daily_songs", nil)
+		ui.RegisterMainMenuItemAfter("personal_fm", "私人FM", "user_collect", nil)
+		ui.RegisterMainMenuItemAfter("recent_songs", "最近播放歌曲", "hot_artists", nil)
+		ui.RegisterMainMenuItemAfter("ranks", "排行榜", "search_type", nil)
 	})
-	ui.RegisterMenu("daily_playlists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewDailyRecommendPlaylistMenu(base), nil
-	})
-	ui.RegisterMenu("personal_fm", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewPersonalFmMenu(base), nil
-	})
-	ui.RegisterMenu("recent_songs", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewRecentSongsMenu(base), nil
-	})
-	ui.RegisterMenu("ranks", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewRanksMenu(base), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序。每个入口声明其前驱项 key：每日推荐歌曲跟在链首（MainMenuStart）
-	// 之后，每日推荐歌单跟在每日推荐歌曲后，私人FM 跟在我的收藏（playlist 插件）
-	// 后，排行榜跟在搜索（内置）后，最近播放歌曲跟在热门歌手（artist 插件）后。
-	ui.RegisterMainMenuItemAfter("daily_songs", "每日推荐歌曲", ui.MainMenuStart, nil)
-	ui.RegisterMainMenuItemAfter("daily_playlists", "每日推荐歌单", "daily_songs", nil)
-	ui.RegisterMainMenuItemAfter("personal_fm", "私人FM", "user_collect", nil)
-	ui.RegisterMainMenuItemAfter("recent_songs", "最近播放歌曲", "hot_artists", nil)
-	ui.RegisterMainMenuItemAfter("ranks", "排行榜", "search_type", nil)
 }

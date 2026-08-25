@@ -22,13 +22,16 @@ type MainMenu struct {
 
 // mainMenuEntry is one row of the merged built-in + plugin main menu before
 // the after-anchor chain walk. builtin marks built-in entries so the help
-// entry (menu == nil) is recognized for the helpIndex computation.
+// entry (menu == nil) is recognized for the helpIndex computation. pluginID is
+// the plugin scope the entry was declared in (empty for built-ins); NewMainMenu
+// hides entries whose plugin is disabled after the chain walk.
 type mainMenuEntry struct {
-	key     string
-	after   string
-	title   string
-	menu    Menu
-	builtin bool
+	key      string
+	after    string
+	title    string
+	menu     Menu
+	builtin  bool
+	pluginID string
 }
 
 func NewMainMenu(base baseMenu) *MainMenu {
@@ -52,19 +55,28 @@ func NewMainMenu(base baseMenu) *MainMenu {
 		// 内置项也参与锚点链：帮助跟在 LastFM 后（搜索项已由 search 插件提供）。
 		{key: "help", after: "last_fm", builtin: true, title: "帮助", menu: nil}, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
 	}
+	// 被禁用插件的项保留在 entries 中参与锚点链（其 key 仍是其它项的合法
+	// After 锚点，链完整性校验基于全部注册项）；但不构建菜单，且链归并后的
+	// 显示阶段会跳过它——被禁用插件的主菜单入口因此隐藏，后继项锚点指向它
+	// 仍成立，位置被自然省略。
 	for _, item := range MainMenuPluginItems() {
 		if _, ok := menuRegistry[item.Key]; !ok {
 			panic(fmt.Sprintf("main menu plugin item %q: menu provider not registered", item.Key))
 		}
-		entry := mainMenuEntry{key: item.Key, after: item.After, title: item.Title}
-		if item.Build != nil {
-			entry.menu = item.Build(base)
-		} else {
-			entry.menu = mustBuildNoArg(item.Key, base)
+		entry := mainMenuEntry{key: item.Key, after: item.After, title: item.Title, pluginID: item.PluginID}
+		if IsPluginEnabled(item.PluginID) {
+			if item.Build != nil {
+				entry.menu = item.Build(base)
+			} else {
+				entry.menu = mustBuildNoArg(item.Key, base)
+			}
 		}
 		entries = append(entries, entry)
 	}
 	for _, e := range orderMainMenuEntries(entries) {
+		if !IsPluginEnabled(e.pluginID) {
+			continue
+		}
 		mainMenu.menus = append(mainMenu.menus, model.MenuItem{Title: e.title})
 		mainMenu.menuList = append(mainMenu.menuList, e.menu)
 		if e.builtin && e.menu == nil {

@@ -3,6 +3,7 @@ package plugins
 import (
 	"testing"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
@@ -349,6 +350,34 @@ func TestMainMenuPreservesOriginalOrder(t *testing.T) {
 	}
 	if len(got) != len(want) {
 		t.Fatalf("main menu has %d items, want %d: %v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("main menu item %d = %q, want %q (full sequence: %v)", i, got[i], want[i], got)
+		}
+	}
+}
+
+// TestMainMenuHidesDisabledPluginItems proves the plugin configurable
+// enable/disable consumption point at the aggregator level: with the search
+// plugin disabled in [plugins], its 搜索 main-menu item disappears while the
+// after-anchor chain still builds without panicking. The disabled item's key
+// (search_type) is a live After anchor of the recommend plugin's 排行榜 — this
+// proves anchor integrity is computed over all registered entries (including
+// disabled ones) and the chain skips the hidden entry at display.
+func TestMainMenuHidesDisabledPluginItems(t *testing.T) {
+	previous := configs.AppConfig
+	configs.AppConfig = &configs.Config{Plugins: configs.PluginsConfig{Disabled: []string{"search"}}}
+	t.Cleanup(func() { configs.AppConfig = previous })
+
+	got := ui.NewMainMenu(ui.NewBaseMenu(nil)).Titles()
+	want := []string{
+		"每日推荐歌曲", "每日推荐歌单", "我的歌单", "我的收藏", "私人FM",
+		"专辑列表", "排行榜", "精选歌单", "热门歌手", "最近播放歌曲",
+		"云盘", "主播电台", "LastFM", "帮助", "检查更新",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("main menu with search disabled has %d items, want %d: %v", len(got), len(want), got)
 	}
 	for i := range want {
 		if got[i] != want[i] {

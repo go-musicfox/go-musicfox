@@ -21,10 +21,12 @@ import (
 // target user / song / add-or-del flag) and are pure jump targets, not
 // main-menu entries.
 func init() {
-	ui.RegisterMenu("simi_songs", func(base ui.BaseMenu, opts ui.SimiSongsOpts) (ui.Menu, error) {
-		return NewSimilarSongsMenu(base, opts.Song), nil
-	})
-	ui.RegisterMenu("add_to_user_playlist", func(base ui.BaseMenu, opts ui.AddToUserPlaylistOpts) (ui.Menu, error) {
-		return NewAddToUserPlaylistMenu(base, opts.UserID, opts.Song, opts.IsAdd), nil
+	ui.WithPlugin("song", "单曲", func() {
+		ui.RegisterMenu("simi_songs", func(base ui.BaseMenu, opts ui.SimiSongsOpts) (ui.Menu, error) {
+			return NewSimilarSongsMenu(base, opts.Song), nil
+		})
+		ui.RegisterMenu("add_to_user_playlist", func(base ui.BaseMenu, opts ui.AddToUserPlaylistOpts) (ui.Menu, error) {
+			return NewAddToUserPlaylistMenu(base, opts.UserID, opts.Song, opts.IsAdd), nil
+		})
 	})
 }

@@ -31,16 +31,18 @@ type LastfmCustomAPIPageOpts struct {
 // after all built-ins). The QR page is not registered — it is reached only from
 // the auth page (authByQRCode) inside this plugin.
 func init() {
-	ui.RegisterMenu("last_fm", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewLastfm(base), nil
+	ui.WithPlugin("lastfm", "LastFM", func() {
+		ui.RegisterMenu("last_fm", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewLastfm(base), nil
+		})
+		ui.RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
+			return NewLastfmAuthPage(opts.Svc), nil
+		})
+		ui.RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
+			return NewLastfmCustomAPIPage(opts.Svc), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序（LastFM 跟在主播电台（dj 插件）后、帮助（内置）前）。
+		ui.RegisterMainMenuItemAfter("last_fm", "LastFM", "radio_dj_type", nil)
 	})
-	ui.RegisterPage("lastfm_auth", func(opts LastfmAuthPageOpts) (model.Page, error) {
-		return NewLastfmAuthPage(opts.Svc), nil
-	})
-	ui.RegisterPage("lastfm_custom_api", func(opts LastfmCustomAPIPageOpts) (model.Page, error) {
-		return NewLastfmCustomAPIPage(opts.Svc), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序（LastFM 跟在主播电台（dj 插件）后、帮助（内置）前）。
-	ui.RegisterMainMenuItemAfter("last_fm", "LastFM", "radio_dj_type", nil)
 }

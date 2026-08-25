@@ -31,16 +31,18 @@ import (
 // the search type). The search page is registered by forwarding to
 // ui.NewSearchPage; the shell keeps the built page as a singleton.
 func init() {
-	ui.RegisterMenu("search_type", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewSearchTypeMenu(base), nil
+	ui.WithPlugin("search", "搜索", func() {
+		ui.RegisterMenu("search_type", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewSearchTypeMenu(base), nil
+		})
+		ui.RegisterMenu("search_result", func(base ui.BaseMenu, opts ui.SearchResultOpts) (ui.Menu, error) {
+			return NewSearchResultMenu(base, opts.SearchType), nil
+		})
+		ui.RegisterPage("search", func(opts ui.SearchPageOpts) (model.Page, error) {
+			return ui.NewSearchPage(opts.Netease), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序（搜索跟在专辑列表（album 插件）后）。
+		ui.RegisterMainMenuItemAfter("search_type", "搜索", "album_menu", nil)
 	})
-	ui.RegisterMenu("search_result", func(base ui.BaseMenu, opts ui.SearchResultOpts) (ui.Menu, error) {
-		return NewSearchResultMenu(base, opts.SearchType), nil
-	})
-	ui.RegisterPage("search", func(opts ui.SearchPageOpts) (model.Page, error) {
-		return ui.NewSearchPage(opts.Netease), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序（搜索跟在专辑列表（album 插件）后）。
-	ui.RegisterMainMenuItemAfter("search_type", "搜索", "album_menu", nil)
 }

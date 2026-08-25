@@ -92,6 +92,7 @@ func RegisterMenu[T any](key string, f func(base baseMenu, opts T) (Menu, error)
 		panic("RegisterMenu: duplicate key " + key)
 	}
 	menuRegistry[key] = menuFactory[T]{Key: key, Build: f}
+	recordPluginMenuKey(key)
 }
 
 // BuildMenu resolves the typed factory for key and invokes it with opts.
@@ -188,6 +189,7 @@ func RegisterPage[T any](key string, f func(opts T) (model.Page, error)) {
 		panic("RegisterPage: duplicate key " + key)
 	}
 	pageRegistry[key] = pageFactory[T]{Key: key, Build: f}
+	recordPluginPageKey(key)
 }
 
 // BuildPage resolves the typed page factory for key and invokes it with opts.
@@ -253,6 +255,10 @@ type MainMenuItem struct {
 	// Build optionally constructs the entry menu from the menu base. nil means
 	// the main menu builds the entry via mustBuildNoArg(Key, base).
 	Build func(base BaseMenu) Menu
+	// PluginID is the plugin scope the entry was declared in (set by
+	// WithPlugin); empty for built-ins / registrations outside a plugin scope.
+	// NewMainMenu hides entries whose plugin is disabled via IsPluginEnabled.
+	PluginID string
 }
 
 // mainMenuPluginItems holds the plugin-declared main-menu items in
@@ -304,7 +310,11 @@ func registerMainMenuItem(key, title, after string, build func(base BaseMenu) Me
 			panic("RegisterMainMenuItem: duplicate key " + key)
 		}
 	}
-	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title, After: after, Build: build})
+	pluginMu.Lock()
+	pluginID := currentPluginID
+	pluginMu.Unlock()
+	mainMenuPluginItems = append(mainMenuPluginItems, MainMenuItem{Key: key, Title: title, After: after, Build: build, PluginID: pluginID})
+	recordPluginMainMenuItemKey(key)
 }
 
 // MainMenuPluginItems returns a snapshot of the registered plugin main-menu
@@ -317,35 +327,54 @@ func MainMenuPluginItems() []MainMenuItem {
 
 // --- Plugin startup hooks (Phase 3.9) ---
 
+// startupHook is one plugin-registered startup task. PluginID is the plugin
+// scope the hook was registered in (set by WithPlugin); empty means no plugin
+// attribution (e.g. a test binary hook), which is never filtered.
+type startupHook struct {
+	PluginID string
+	Fn       func()
+}
+
 // startupHooks are the plugin-registered startup tasks, invoked by the shell's
 // InitHook after user/login init (services registered, toast hook wired) at
 // the position where the old shell-level startup auto-check ran. Registration
 // order is preserved.
-var startupHooks []func()
+var startupHooks []startupHook
 
 // RegisterStartupHook registers a startup task. The shell calls hooks with the
 // app running (services registered); each hook runs with panic isolation (a
-// panicking hook is logged and does not crash startup). Panics on a nil hook
-// (programmer error).
+// panicking hook is logged and does not crash startup). Hooks registered inside
+// a ui.WithPlugin scope are attributed to that plugin and skipped by
+// runStartupHooks when the plugin is disabled. Panics on a nil hook (programmer
+// error).
 func RegisterStartupHook(fn func()) {
 	if fn == nil {
 		panic("RegisterStartupHook: nil hook")
 	}
-	startupHooks = append(startupHooks, fn)
+	pluginMu.Lock()
+	pluginID := currentPluginID
+	pluginMu.Unlock()
+	startupHooks = append(startupHooks, startupHook{PluginID: pluginID, Fn: fn})
+	recordPluginStartupHook(pluginID)
 }
 
 // runStartupHooks invokes the registered startup hooks in order, each wrapped
 // in a recover so a panicking hook is logged and skipped without crashing
-// startup (framework-hardening house style).
+// startup (framework-hardening house style). Hooks of a disabled plugin
+// (non-empty PluginID + IsPluginEnabled false) are skipped; the rest run in
+// registration order.
 func runStartupHooks() {
 	for _, hook := range startupHooks {
+		if hook.PluginID != "" && !IsPluginEnabled(hook.PluginID) {
+			continue
+		}
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("startup hook panicked", slogx.Error(r))
 				}
 			}()
-			hook()
+			hook.Fn()
 		}()
 	}
 }

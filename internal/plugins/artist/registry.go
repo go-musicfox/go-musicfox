@@ -51,26 +51,28 @@ type ArtistSongOpts struct {
 // main-menu item 热门歌手: the built-in entry was removed from menu_main.go
 // (plugin items are appended after all built-ins).
 func init() {
-	ui.RegisterMenu("hot_artists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewHotArtistsMenu(base), nil
+	ui.WithPlugin("artist", "歌手", func() {
+		ui.RegisterMenu("hot_artists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewHotArtistsMenu(base), nil
+		})
+		ui.RegisterMenu("artist_detail", func(base ui.BaseMenu, opts ui.ArtistDetailOpts) (ui.Menu, error) {
+			return NewArtistDetailMenu(base, opts.ArtistID, opts.Name), nil
+		})
+		ui.RegisterMenu("artist_song", func(base ui.BaseMenu, opts ArtistSongOpts) (ui.Menu, error) {
+			return NewArtistSongMenu(base, opts.ArtistID), nil
+		})
+		ui.RegisterMenu("artist_album", func(base ui.BaseMenu, opts ArtistAlbumOpts) (ui.Menu, error) {
+			return NewArtistAlbumMenu(base, opts.ArtistID), nil
+		})
+		ui.RegisterMenu("artist_of_song", func(base ui.BaseMenu, opts ui.ArtistsOfSongOpts) (ui.Menu, error) {
+			return NewArtistsOfSongMenu(base, opts.Song), nil
+		})
+		ui.RegisterMenu("artists_sub_list", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewArtistsSubscribeListMenu(base), nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
+		// 原始顺序（热门歌手跟在精选歌单（playlist 插件）后、最近播放歌曲
+		// （recommend 插件）前）。
+		ui.RegisterMainMenuItemAfter("hot_artists", "热门歌手", "high_quality_playlists", nil)
 	})
-	ui.RegisterMenu("artist_detail", func(base ui.BaseMenu, opts ui.ArtistDetailOpts) (ui.Menu, error) {
-		return NewArtistDetailMenu(base, opts.ArtistID, opts.Name), nil
-	})
-	ui.RegisterMenu("artist_song", func(base ui.BaseMenu, opts ArtistSongOpts) (ui.Menu, error) {
-		return NewArtistSongMenu(base, opts.ArtistID), nil
-	})
-	ui.RegisterMenu("artist_album", func(base ui.BaseMenu, opts ArtistAlbumOpts) (ui.Menu, error) {
-		return NewArtistAlbumMenu(base, opts.ArtistID), nil
-	})
-	ui.RegisterMenu("artist_of_song", func(base ui.BaseMenu, opts ui.ArtistsOfSongOpts) (ui.Menu, error) {
-		return NewArtistsOfSongMenu(base, opts.Song), nil
-	})
-	ui.RegisterMenu("artists_sub_list", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return NewArtistsSubscribeListMenu(base), nil
-	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-	// 原始顺序（热门歌手跟在精选歌单（playlist 插件）后、最近播放歌曲
-	// （recommend 插件）前）。
-	ui.RegisterMainMenuItemAfter("hot_artists", "热门歌手", "high_quality_playlists", nil)
 }
