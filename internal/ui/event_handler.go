@@ -313,7 +313,7 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			return true, main, app.RerenderCmd(true)
 		}
 	default:
-		return false, nil, nil
+		return h.handlePluginOperate(op)
 	}
 
 	return true, nil, nil
