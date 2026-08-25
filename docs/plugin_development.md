@@ -264,7 +264,7 @@ ui.RegisterStatusBarComponent(myStatusBarComponent{})
 
 **明确不支持（spec Non-goals）**：
 
-- **运行时动态加载**（Go `plugin` 包 / 共享库热加载）当前不支持；外部边界只在接口层预留，机制落地需要独立设计。
+- **运行时动态加载**已部分落地：**WASM 插件**（`internal/wasm` + `examples/wasm/hello`，见「WASM 插件（实验性）」）支持用户**不重编译**地安装/启用/禁用插件（MVP：菜单动作 + 文本结果）。Go `plugin` 包 / 共享库热加载仍不支持。
 - 不改造 tea 消息循环、不引入外部 DI 框架、不修改 vendored SDK。
 
 **当前边界注意**：
@@ -791,6 +791,85 @@ go run ./hack/new-plugin -name example -menu Example -key example -title 示例 
 
 > 注：脚手架生成的插件包落在 `internal/plugins/<name>`（或 `-dir` 指定位置），key 必须全局唯一（不得与内置 `expectedMenuKeys` 或其它插件冲突）；生成后仍需手动完成聚合器空导入——脚手架不修改任何 `internal/` 文件。
 
+## WASM 插件（实验性，运行时动态加载）
+
+> 从该功能落地起，go-musicfox 支持**不重新编译主程序**的插件形态：用户把插件目录放入配置目录（默认 `<配置目录>/wasm-plugins`，即 `~/.config/go-musicfox/wasm-plugins/`），启动时宿主（`internal/wasm`）经 **wazero** 沙箱加载 `.wasm` 插件并注册其菜单——这是「运行时动态加载」的首个落地形态（MVP：**菜单动作 + 文本结果**）。Go `plugin` 包 / 共享库热加载仍不支持。示例插件见 `examples/wasm/hello/`。
+
+### 插件形态
+
+每个子目录是一个插件，含 `manifest.toml` + 一个 wasm reactor 文件：
+
+```text
+~/.config/go-musicfox/wasm-plugins/
+  hello/
+    manifest.toml
+    main.wasm
+```
+
+```toml
+# manifest.toml
+id = "hello"            # 插件 id（唯一；用于 [plugins] disabled 启停）
+name = "Hello WASM"     # 显示名
+version = "0.1.0"
+author = "you"
+description = "示例 WASM 插件"
+sha256 = ""             # 可选：main.wasm 的 64 位十六进制 SHA-256；非空时启动校验，不匹配拒绝加载
+wasm = "main.wasm"      # 可选，默认 "main.wasm"
+
+[[menus]]
+key = "wasm_hello"      # 全局唯一菜单注册 key（不得与内置/其它插件 key 冲突）
+title = "你好 WASM"      # 主菜单项标题
+after = ""              # 可选：主菜单 after-anchor 前驱项 key；空 = 追加在链尾
+export = "run"          # 可选：调用的 wasm 导出函数，默认 "run"
+args = {}               # 可选：静态参数，随请求 JSON 传给插件
+```
+
+### 契约（host ↔ guest 的 JSON）
+
+请求（宿主 → 插件 `export` 函数）：
+
+```json
+{ "version": 1,
+  "action": "wasm_hello",
+  "args": { "name": "musicfox" },
+  "context": { "userId": 0, "userName": "", "playing": true,
+               "song": { "id": 1, "name": "...", "artist": "...", "album": "..." } } }
+```
+
+响应（插件 → 宿主），`action` 决定宿主行为：
+
+| action | 字段 | 宿主行为 |
+|--------|------|----------|
+| `toast` | Title / Message / Level（`info`/`success`/`warning`/`error`） | TUI 内通知 |
+| `view` | Title / Message | 文本结果；MVP 以多行 toast 呈现（无独立页面/popup） |
+| `open_url` | URL | 系统浏览器打开链接（`open.Start`） |
+| `exec` | Command / Args | 执行命令（**无 shell 包装**，`exec.Command(command, args...)`） |
+
+未知/空 action 忽略；插件调用失败、响应解析失败均以「WASM 插件执行失败」错误 toast 暴露。
+
+### 开发插件（Go wasmexport）
+
+示例插件是标准 Go wasip1 reactor，编译命令：
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o main.wasm .
+```
+
+必须满足：
+
+- **导出 `alloc(size uint32) uint32` 与 `dealloc(ptr uint32, size uint32)`**：宿主经 alloc 写入请求、经 dealloc 释放缓冲区。guest 侧需自行持有分配引用防 GC 回收（Go GC 非移动，`uintptr` 在持有引用期间稳定，见 `examples/wasm/hello/main.go` 的 `allocs` map 模式）。
+- **每个菜单的 `export` 函数**（默认 `run`），签名 `(reqPtr, reqLen uint32) uint64`：读请求（`unsafe.Slice((*byte)(unsafe.Pointer(uintptr(reqPtr))), reqLen)`），返回**打包的单 uint64 结果** `(uint64(outPtr) << 32) | uint64(outLen)`——Go 的 wasmexport ABI 只允许一个结果值（多值提案未落地）。
+- **无需 `main` 逻辑**：reactor 构建忽略 `main`（占位空 `func main(){}` 即可）；宿主经 `_initialize` 初始化运行时（wazero 不会自动调用，宿主显式 `WithStartFunctions("_initialize")`）。
+- 语言不限于 Go：宿主只用 wazero 加载 wasm，遵守上述 ABI 的任何语言（Rust `wasm32-wasip1`、TinyGo 等）均可。
+
+### 行为与安全
+
+- **注册与启停**：插件菜单经 `ui.WithPlugin(manifest.id, ...)` 注册——用户可用既有 `[plugins] disabled = ["hello"]` 配置禁用 WASM 插件（主菜单入口隐藏；key 注册仍保留）。
+- **失败隔离**：单个插件加载失败（manifest 非法、sha256 不匹配、wasm 缺导出、目录不存在）只记日志并跳过，**不阻断启动**；注册冲突/坏锚点经 recover 隔离。
+- **沙箱加固**：wazero 运行时，线性内存上限 128 页（8 MiB）、无文件系统、stdin EOF / stdout-stderr 丢弃、关闭即随 context 取消；单次调用默认超时 5s，超时由 watchdog 关闭实例并报「插件调用超时」（实例随后不可复用）。
+- **已知限制**：纯计算死循环由超时 watchdog 尽力中断（Go wasm 在无限 CPU 循环中不响应 context 取消，关闭实例是兜底手段）；wasm 单线程；`exec` 执行用户自装插件声明的命令——**安装即运行其代码**，仅安装可信来源插件，并建议在 manifest 填写 `sha256` 校验文件完整性。
+- 契约版本：请求带 `version`（当前 1），插件可据此拒绝不支持的版本。
+
 ## 行为保持契约
 
 - 插件**不得改变核心行为**：播放控制、导航、启动序、渲染、主题、桌面歌词、登录链路等用户可见行为必须保持现状；插件的菜单/页面是「新增贡献点」，不得覆写或替换内置菜单的行为。
@@ -802,6 +881,6 @@ go run ./hack/new-plugin -name example -menu Example -key example -title 示例 
 
 ## 未来演进（预留边界，未实现）
 
-- 运行时动态加载（Go `plugin` / 共享库热加载）与插件清单/配置化启停。
+- WASM 插件深化：`view` 渲染为独立页面/popup；插件哈希强制校验与签名分发；插件 API 版本协商；热重载命令（不重启应用即刷新插件）。Go `plugin` 共享库 / 子进程（go-plugin）形态仍不规划。
 - 突破 `internal` 导入规则的外部仓库形态（独立插件仓库直接导入边界包）；`Netease` 薄壳的导出适配层（当前仅经 `BaseMenu.Netease()` 逃生口）。
-- 插件元数据（名称/版本/作者）与贡献点声明。
+- 插件元数据（名称/版本/作者）与贡献点声明的进一步扩展（WASM 插件 manifest 已含基本信息）。

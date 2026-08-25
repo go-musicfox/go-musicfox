@@ -424,6 +424,9 @@ skipDjRadio = false
 # 禁用的插件 id 列表（插件 id 即插件目录名，如 "search"、"checkupdate"）
 # 被禁用插件的"主菜单入口"隐藏、"启动钩子"不执行；其菜单仍可按 key 跳转
 disabled = []
+# WASM 插件目录（可选）。为空时使用默认目录 <配置目录>/wasm-plugins。
+# 每个子目录为一个插件：manifest.toml + main.wasm（详见 docs/plugin_development.md）
+wasmDir = ""
 
 
 # 快捷键绑定配置

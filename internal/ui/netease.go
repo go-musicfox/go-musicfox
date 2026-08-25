@@ -5,6 +5,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -34,6 +35,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/internal/wasm"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
@@ -64,6 +66,10 @@ type Netease struct {
 	player       *Player
 	shareSvc     *composer.ShareService
 	trackManager *track.Manager
+
+	// wasmManager owns the loaded WASM plugin instances (created lazily in
+	// NewNetease; nil when the runtime failed to initialize).
+	wasmManager *wasm.Manager
 
 	// framework context + scope own the app-wide service registry and its
 	// lifecycle (see services_scope.go / services.go).
@@ -152,6 +158,18 @@ func NewNetease(app *model.App) *Netease {
 	// programmer error; fail loudly instead of surfacing it at navigation time.
 	AssertMenuRegistryComplete(expectedMenuKeys...)
 	AssertPageRegistryComplete(expectedPageKeys...)
+
+	// WASM plugins must register here (inside NewNetease, before the main menu
+	// is constructed in internal/commands) so their menu providers and
+	// main-menu items participate in the after-anchor chain from the start.
+	if mgr, err := wasm.NewManager(); err != nil {
+		slog.Error("wasm plugin manager init failed", slogx.Error(err))
+	} else {
+		n.wasmManager = mgr
+	}
+	if n.wasmManager != nil {
+		n.loadWasmPlugins()
+	}
 
 	return n
 }
@@ -450,6 +468,10 @@ func (n *Netease) CloseHook(_ *model.App) {
 
 	if n.coverRenderer != nil {
 		n.coverRenderer.Close()
+	}
+
+	if n.wasmManager != nil {
+		n.wasmManager.Close(context.Background())
 	}
 
 	if n.scope != nil {
