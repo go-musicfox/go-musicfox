@@ -48,6 +48,9 @@ type MainConfig struct {
 	Account      AccountConfig      `koanf:"account"`
 	// 界面语言（如 "zh"、"zh-CN"、"en"），影响 foxful-cli 内置文案。留空跟随默认（中文）
 	Locale string `koanf:"locale"`
+	// Headless runs the core engine without the TUI (no bubbletea/foxful).
+	// CLI flag --headless overrides this value.
+	Headless bool `koanf:"headless"`
 }
 
 // NotificationConfig 桌面通知相关设置

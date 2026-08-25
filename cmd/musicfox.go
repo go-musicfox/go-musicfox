@@ -43,6 +43,8 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")
 		gf.BoolOpt(&commands.GlobalOptions.DebugMode, "debug", "", false, "enable debug log level")
 		gf.BoolOpt(&commands.GlobalOptions.PureMode, "pure", "", false, "start with default config in a temporary directory")
+		gf.BoolOpt(&commands.GlobalOptions.Headless, "headless", "", false, "run without the TUI (headless mode)")
+		gf.StrOpt(&commands.GlobalOptions.Once, "once", "", "", "run a single headless command and exit (e.g. \"status\" or \"play 周杰伦\")")
 	}
 
 	// --pure flag: start with a temporary directory as MUSICFOX_ROOT
@@ -95,6 +97,7 @@ func musicfox() {
 	app.Add(commands.NewConfigCommand())
 	app.Add(commands.NewUpgradeConfigCommand())
 	app.Add(commands.NewResetCommand())
+	app.Add(commands.NewCtrlCommand())
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()

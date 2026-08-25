@@ -4,4 +4,6 @@ var GlobalOptions struct {
 	PProfMode bool
 	DebugMode bool
 	PureMode  bool
+	Headless  bool
+	Once      string
 }

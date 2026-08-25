@@ -37,6 +37,8 @@ frameRate = 5
 # 界面语言（影响 foxful-cli 内置文案，如帮助提示、弹窗按钮）
 # 可选："zh"（中文，默认）、"en"（英文）等；留空跟随中文
 locale = "zh"
+# 是否以 headless（无界面）模式运行核心引擎（不启动 TUI；--headless 命令行参数优先于该配置）
+headless = false
 
 # 实时频谱显示（目前仅支持 osx, beep 播放引擎）
 # 调高 main.frameRate 更丝滑

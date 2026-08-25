@@ -15,6 +15,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/headless"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
@@ -32,26 +33,12 @@ func NewPlayerCommand() *gcli.Command {
 }
 
 func runPlayer(_ *gcli.Command, _ []string) error {
-	if GlobalOptions.PProfMode {
-		errorx.Go(func() {
-			panic(http.ListenAndServe(":"+strconv.Itoa(configs.AppConfig.Main.Pprof.Port), nil))
-		}, true)
+	if err := bootstrap(); err != nil {
+		return err
 	}
-
-	// Sync CLI --debug flag to AppConfig so it's visible to all packages.
-	// Must be done here (inside runPlayer) because gcli parses flags during
-	// app.Run(), which happens after cmd/musicfox.go's init-time sync attempt.
-	if GlobalOptions.DebugMode {
-		configs.AppConfig.Main.Debug = true
+	if headlessEnabled() {
+		return headless.Run(GlobalOptions.Once)
 	}
-
-	if GlobalOptions.DebugMode || configs.AppConfig.Main.Debug {
-		slogx.LevelVar().Set(slog.LevelDebug)
-	}
-
-	http.DefaultClient.Timeout = types.AppHttpTimeout
-	neteaseutil.HTTPClientTimeout = types.AppHttpTimeout
-	runewidth.DefaultCondition.EastAsianWidth = false
 
 	opts := model.DefaultOptions()
 	configs.AppConfig.FillToModelOpts(opts)
@@ -60,9 +47,6 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	model.SearchPlaceholder = types.SearchPlaceholder
 	model.SearchResult = types.SearchResult
 	ui.SetupI18n(configs.AppConfig.Main.Locale)
-
-	// DBManager 初始化
-	storage.DBManager = new(storage.LocalDBManager)
 
 	var (
 		netease      = ui.NewNetease(model.NewApp(opts))
@@ -105,4 +89,41 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	)
 
 	return netease.Run()
+}
+
+// bootstrap runs the frontend-independent setup shared by the TUI and the
+// headless frontend: pprof, debug log level sync, HTTP timeouts / runewidth
+// and the storage DB manager. Order is preserved from the former inline setup.
+func bootstrap() error {
+	if GlobalOptions.PProfMode {
+		errorx.Go(func() {
+			panic(http.ListenAndServe(":"+strconv.Itoa(configs.AppConfig.Main.Pprof.Port), nil))
+		}, true)
+	}
+
+	// Sync CLI --debug flag to AppConfig so it's visible to all packages.
+	// Must be done here (inside runPlayer) because gcli parses flags during
+	// app.Run(), which happens after cmd/musicfox.go's init-time sync attempt.
+	if GlobalOptions.DebugMode {
+		configs.AppConfig.Main.Debug = true
+	}
+
+	if GlobalOptions.DebugMode || configs.AppConfig.Main.Debug {
+		slogx.LevelVar().Set(slog.LevelDebug)
+	}
+
+	http.DefaultClient.Timeout = types.AppHttpTimeout
+	neteaseutil.HTTPClientTimeout = types.AppHttpTimeout
+	runewidth.DefaultCondition.EastAsianWidth = false
+
+	// DBManager 初始化
+	storage.DBManager = new(storage.LocalDBManager)
+
+	return nil
+}
+
+// headlessEnabled reports whether the headless (no-TUI) mode is active: the
+// CLI flag wins over the [main] headless config value.
+func headlessEnabled() bool {
+	return GlobalOptions.Headless || configs.AppConfig.Main.Headless
 }
