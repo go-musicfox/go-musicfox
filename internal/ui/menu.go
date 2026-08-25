@@ -338,7 +338,20 @@ func (e *BaseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenu
 		}
 	}
 
-	return appendContextMenuGlobalItems(items, len(e.svc.Player().Playlist()) > 0)
+	ctx := ContextMenuContext{SelectedIndex: index}
+	if m, ok := menu.(Menu); ok {
+		ctx.Menu = m
+	}
+	pluginItems := buildPluginContextMenuItems(ctx)
+	items = appendContextMenuGlobalItems(items, len(e.svc.Player().Playlist()) > 0)
+	if len(pluginItems) > 0 {
+		// 插件组追加在 generic 全局组之后；非空时先插入分隔线。
+		if len(items) > 0 {
+			items = append(items, model.ContextMenuItem{Separator: true})
+		}
+		items = append(items, pluginItems...)
+	}
+	return items
 }
 
 func (e *BaseMenu) ContextMenuAction(a *model.App, index int, item model.ContextMenuItem) (model.Page, tea.Cmd) {
@@ -366,6 +379,13 @@ func (e *BaseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		}
 		actions := actionItemsForMenu(e.svc, menu.GetMenuKey(), true, -1)
 		return runContextAction(actions, i, a)
+	}
+	if strings.HasPrefix(item.ID, "plugin:") {
+		ctx := ContextMenuContext{SelectedIndex: index}
+		if m, ok := menu.(Menu); ok {
+			ctx.Menu = m
+		}
+		return handlePluginContextAction(e.svc, ctx, item.ID)
 	}
 	return nil, nil
 }
