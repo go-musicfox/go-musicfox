@@ -20,6 +20,9 @@
 | 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
 | 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `RegisterMainMenuItemAfter(key, title, after, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
 | 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
+| 快捷键操作 | `keybindings.RegisterOperate(name, desc, keys)` → `ui.RegisterOperateHandler(op, fn)` | `internal/keybindings/keybindings.go` / `internal/ui/event_handler_operate.go` |
+| 右键菜单项 | `RegisterContextMenuContrib(contrib)` / `ContextMenuContribs()` | `internal/ui/context_menu.go` |
+| 状态栏组件 | `RegisterStatusBarComponent(comp)` / `StatusBarComponents()` | `internal/ui/status_bar.go` |
 | 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法 + `Services()`） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
 | 类型安全访问器 | `menuServices`（`svc.Player()` 等；导出别名 `MenuServices` + `NewMenuServices(ctx)`） | `internal/ui/menu_accessor.go` |
@@ -191,6 +194,66 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 
 当前生产接入小切片：shareSvc、lastfm 经 `servicePlugin` 适配器在 `newAppScope`（`internal/ui/services_scope.go`）接入生命周期，`Start` 把既有实例注册进共享 Context。第三方插件的资源清理应实现 `Dispose`。
 
+### 快捷键操作：RegisterOperate / RegisterOperateHandler
+
+```go
+// 第一步（keybindings 包）：注册唯一操作名、用户可见描述与默认按键
+// （可为空）。返回动态分配的 OperateType（固定高位 1000 起递增，与内置
+// iota 序列永不冲突）。name 冲突时 panic。默认按键并入 defaultOtherOperateToKeys，
+// InitDefaults(true) 自然包含；操作名同步进 opNameToOperateMap，用户配置
+// 解析（ProcessUserBindings）无需任何改动即可覆盖插件操作。
+op := keybindings.RegisterOperate("my_plugin_action", "我的插件动作", []string{"ctrl+m"})
+
+// 第二步（ui 包）：注册该操作的处理函数，快捷键触发时经 svc 执行，返回
+// 页面与命令。nil handler 或重复 op 时 panic。
+ui.RegisterOperateHandler(op, func(svc ui.MenuServices, app *model.App) (model.Page, tea.Cmd) {
+    // 经 svc 访问服务与导航；返回 nil, nil 表示无页面跳转与命令
+    return nil, nil
+})
+```
+
+- 注册时机：编译期 `init()`（先于 configs 加载与事件循环，默认键在 `InitDefaults(true)` 合并进生效绑定）。用户可在配置 `[keybindings]` 中以操作名自定义或解绑按键，与内置操作行为一致。
+- 分发：`EventHandler.handle` 的内置 switch 未命中时，`default` 分支按 op 查注册表，命中则调用 handler（未命中保持原 `(false, nil, nil)` 语义）。handler 收到与 EventHandler 相同的 `svc` 与 `app`。
+- 行为保持契约：插件操作是「新增贡献点」，不得覆写内置操作（内置操作的 handler 永不触发——内置 switch 分支优先）；handler 内同样禁止 panic 破坏主循环。
+
+### 右键菜单项：RegisterContextMenuContrib
+
+```go
+// 插件在右键菜单末尾贡献一个操作项。全部注册项归入一个 "插件" 分组
+// （Header: "插件"），追加在 generic 全局组之后，按注册序显示。空 Title
+// 或 nil Action 时 panic 拒绝（编程错误）。
+ui.RegisterContextMenuContrib(ui.ContextMenuContrib{
+    Title: "我的插件动作", // 菜单项文案（不含图标）
+    // Show 决定该项在当前右键上下文是否显示（nil 表示恒显示）。
+    Show: func(ctx ui.ContextMenuContext) bool {
+        return ctx.SelectedIndex >= 0 // 仅在存在选中行时显示
+    },
+    // Action 在用户点击时执行，返回页面与命令（导航自行处理）。
+    Action: func(svc ui.MenuServices, ctx ui.ContextMenuContext) (model.Page, tea.Cmd) {
+        // ctx.Menu 为当前菜单（ui.Menu）、ctx.SelectedIndex 为选中行索引
+        // （-1 表示无选中）、ctx.Playing 表示是否针对当前播放。
+        return nil, nil
+    },
+})
+```
+
+- 分发：右键菜单项 ID 为 `plugin:<注册序号>`，`BaseMenu.ContextMenuAction` 在 generic/sel/play 分支之后按此 ID 查注册表调用对应 `Action`；序号越界/未注册时返回 `nil, nil`。
+- 行为保持契约：插件项是「新增贡献点」，只能追加在菜单末尾，不参与内置 sel/play/generic 组的排序；`Show`/`Action` 内同样禁止 panic 破坏主循环。
+
+### 状态栏组件：RegisterStatusBarComponent
+
+```go
+// 插件注册一个状态栏组件，追加到 DefaultStatusBar 居中区域的内置队列/音质
+// 组件之后（按注册序）。nil 组件 panic 拒绝（编程错误）。组件只需实现
+// model.StatusBarComponent 的 View(a *model.App, m *model.Main) string；
+// 可点击组件额外实现 model.InteractiveStatusBarComponent（HandleMouse /
+// IsMouseOver，坐标为组件自身渲染文本的局部坐标）。
+ui.RegisterStatusBarComponent(myStatusBarComponent{})
+```
+
+- 分发：状态栏构造（`NewQueueQualityStatusBar`）读取 `StatusBarComponents()` 快照，按注册序追加在队列/音质组件后；组件只负责渲染（与可选鼠标处理），不持有业务回调。
+- 行为保持契约：插件组件是「新增贡献点」，追加在居中区域末尾，不参与内置组件排序；`View`/`HandleMouse` 内同样禁止 panic 破坏主循环。
+
 ## 当前形态：编译期注册（import + init()）
 
 第三方插件**今天**的接入方式：
@@ -210,6 +273,30 @@ func (s *Scope) Dispose() error            // 递归清理，幂等
 - 插件经聚合器接入：`internal/plugins/plugins.go` 空导入各插件包，`cmd/musicfox.go` 空导入聚合器。插件 key 不得与内置 key 冲突；`expectedMenuKeys` / `expectedPageKeys` 不包含插件 key（完整性断言只校验内置清单，`check_update` / `last_fm` / `lastfm_auth` / `lastfm_custom_api`、整个 DJ/电台集群的 `dj_*` / `radio_dj_type`、整个专辑集群的 `album_menu` / `album_*` / `album_detail`、整个歌手集群的 `artist_detail` / `artist_*` / `hot_artists` / `artists_sub_list`、整个推荐集群的 `daily_songs` / `daily_playlists` / `personal_fm` / `recent_songs` / `ranks`、整个歌单/云盘集群的 `user_playlist` / `user_collect` / `high_quality_playlists` / `could` / `playlist_detail`、整个搜索集群的 `search_type` / `search_result` / `search` 页以及整个单曲集群的 `simi_songs` / `add_to_user_playlist` 由插件注册即可通过）。
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
+
+### 插件配置化启停：WithPlugin / `[plugins] disabled`
+
+每个插件把自己的全部注册包进 **`ui.WithPlugin(id, name, register)`**（`internal/ui/plugin_registry.go`；id 为插件目录名，同 id 可多文件多次声明幂等合并），使作用域内的 `RegisterMenu` / `RegisterPage` / `RegisterMainMenuItem*` / `RegisterStartupHook` 归属到该插件：
+
+```go
+// 文件：internal/plugins/example/registry.go（骨架模板即此形态）
+func init() {
+	ui.WithPlugin("example", "示例", func() {
+		ui.RegisterMenu("example", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return NewExampleMenu(base), nil
+		})
+		ui.RegisterMainMenuItemAfter("example", "示例", ui.MainMenuStart, nil)
+	})
+}
+```
+
+用户经配置 `[plugins] disabled = ["search", "checkupdate"]` 禁用插件后（`configs.PluginsConfig.Disabled`，空配置视为全部启用）：
+
+- **主菜单入口隐藏、启动钩子不执行**；
+- 菜单 key 注册与 `BuildMenu` 跳转**不受影响**（禁用插件菜单仍可被其它插件/内置按 key 跳入，保证跳转完整性）；
+- **锚点完整性**：被禁用插件的主菜单项仍保留在 `NewMainMenu` 的 After 锚点链 entries 中（其 key 仍是其它项的合法锚点——例如禁用 search 后 recommend 插件的「排行榜」After `search_type` 仍成立），仅在显示阶段被跳过——不 panic、后继项位置自然前移。
+
+查询 API：`ui.PluginInfos()`（已声明插件快照，含归属的菜单/页面/主菜单项 key 与启动钩子数）、`ui.IsPluginEnabled(id)`（读 `configs.AppConfig.Plugins`，nil 配置返回 true）。不在任何 `WithPlugin` 作用域内的注册（内置 bootstrap、测试二进制）为空归属，不受启停过滤。
 
 ## 工作示例
 
@@ -660,6 +747,49 @@ ui.RegisterMainMenuItemAfter("radio_dj_type", "主播电台", "my_radio", nil) /
 ```
 
 追加在链尾的简单场景则完全是**单锚点零改动**：新插件只声明 `RegisterMainMenuItemAfter("new_menu", "标题", "check_update", nil)`（跟在检查更新后）或便捷形式 `RegisterMainMenuItem("new_menu", "标题")`（末尾追加）。链完整性由 `NewMainMenu` 启动断言（After 目标存在 / 每项恰好可达 / 无孤儿环），插错锚点在启动时即 panic 报错。
+
+## 插件脚手架（hack/new-plugin）
+
+`hack/new-plugin` 是一个 Go 生成器（标准库，跨平台），帮助开发者快速生成新插件骨架——直接从上面的工作示例形态起步，替换占位符后即可编译。
+
+**位置**：
+
+- 生成器：`hack/new-plugin/main.go`
+- 模板：`hack/new-plugin/templates/plugin_name/`（`registry.go.tmpl` / `menu.go.tmpl` / `plugin_name_test.go.tmpl` / `README.md.tmpl`，占位符 `{{plugin_name}}` / `{{MenuType}}` / `{{menu_key}}` / `{{menu_title}}` / `{{menu_after}}`）
+
+**生成命令**（在仓库根执行）：
+
+```bash
+go run ./hack/new-plugin -name example -menu Example -key example -title 示例 -after MainMenuStart
+```
+
+| Flag | 说明 | 默认 |
+|------|------|------|
+| `-name` | 插件名：包名与目录名（小写 snake_case，**必填**） | — |
+| `-menu` | 菜单类型名前缀（CamelCase，如 `Example` → `ExampleMenu`，**必填**） | — |
+| `-key` | 菜单注册 key（全局唯一） | = `-name` |
+| `-title` | 主菜单显示标题 | = `-menu` |
+| `-after` | 主菜单 after 锚点（`MainMenuStart` = 主菜单链首） | `MainMenuStart` |
+| `-dir` | 输出插件目录（相对当前工作目录） | `internal/plugins` |
+| `-templates` | 模板目录（相对当前工作目录） | `hack/new-plugin/templates` |
+| `-force` | 目标目录已存在时强制覆盖 | 关闭（已存在即拒绝） |
+| `-skip-fmt` | 跳过 `gofmt -w`（默认自动格式化生成的 `.go` 文件） | 关闭 |
+
+**生成结果**：`<dir>/<name>/{registry.go, menu.go, <name>_test.go, README.md}`。其中：
+
+- `registry.go`——编译期注册入口（`ui.RegisterMenu` 无参菜单 + `ui.RegisterMainMenuItemAfter` 主菜单入口），并附**可选扩展的注释示例**（按需取消注释）：启动钩子（`ui.RegisterStartupHook`）、右键菜单项（`ui.RegisterContextMenuContrib`，见「右键菜单项」）、状态栏组件（`ui.RegisterStatusBarComponent`，见「状态栏组件」）、快捷键操作（`keybindings.RegisterOperate` + `ui.RegisterOperateHandler`，见「快捷键操作」）。
+- `menu.go`——`<MenuType>Menu` 最小菜单实现（嵌入 `ui.BaseMenu`，覆写 `GetMenuKey` / `MenuViews` / `SubMenu` / `IsPlayable` / `IsLocatable`）。
+- `<name>_test.go`——注册表构建 + 菜单接口断言骨架（模式同 `internal/plugins/checkupdate/checkupdate_test.go`）。
+- `README.md`——生成参数记录与接入步骤速查。
+
+**接入步骤**：
+
+1. 在 `internal/plugins/plugins.go` 添加一行空导入（生成器会提示），使本包 `init()` 注册在链接时生效。
+2. 按需调整 `registry.go` 的主菜单锚点/标题与可选扩展（右键菜单 / 状态栏 / 快捷键操作等）。
+3. `go build ./...` 与 `go test ./internal/plugins/<name>/...`（生成器已默认 `gofmt -w`）。
+4. 用真实业务逻辑替换 `menu.go` 的静态项。
+
+> 注：脚手架生成的插件包落在 `internal/plugins/<name>`（或 `-dir` 指定位置），key 必须全局唯一（不得与内置 `expectedMenuKeys` 或其它插件冲突）；生成后仍需手动完成聚合器空导入——脚手架不修改任何 `internal/` 文件。
 
 ## 行为保持契约
 
