@@ -2,13 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/notify"
-	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 // Production menu/page provider registry — the adjudicated Candidate B shape
@@ -327,26 +326,13 @@ func MainMenuPluginItems() []MainMenuItem {
 
 // --- Plugin startup hooks (Phase 3.9) ---
 
-// startupHook is one plugin-registered startup task. PluginID is the plugin
-// scope the hook was registered in (set by WithPlugin); empty means no plugin
-// attribution (e.g. a test binary hook), which is never filtered.
-type startupHook struct {
-	PluginID string
-	Fn       func()
-}
-
-// startupHooks are the plugin-registered startup tasks, invoked by the shell's
-// InitHook after user/login init (services registered, toast hook wired) at
-// the position where the old shell-level startup auto-check ran. Registration
-// order is preserved.
-var startupHooks []startupHook
-
-// RegisterStartupHook registers a startup task. The shell calls hooks with the
-// app running (services registered); each hook runs with panic isolation (a
-// panicking hook is logged and does not crash startup). Hooks registered inside
-// a ui.WithPlugin scope are attributed to that plugin and skipped by
-// runStartupHooks when the plugin is disabled. Panics on a nil hook (programmer
-// error).
+// RegisterStartupHook registers a startup task with the framework hook
+// registry. The engine runs hooks after user/login init (services registered),
+// at the position where the old shell-level startup auto-check ran; each hook
+// runs with panic isolation (a panicking hook is logged and does not crash
+// startup). Hooks registered inside a ui.WithPlugin scope are attributed to
+// that plugin and skipped when the plugin is disabled. Panics on a nil hook
+// (programmer error).
 func RegisterStartupHook(fn func()) {
 	if fn == nil {
 		panic("RegisterStartupHook: nil hook")
@@ -354,29 +340,8 @@ func RegisterStartupHook(fn func()) {
 	pluginMu.Lock()
 	pluginID := currentPluginID
 	pluginMu.Unlock()
-	startupHooks = append(startupHooks, startupHook{PluginID: pluginID, Fn: fn})
+	framework.RegisterStartupHook(pluginID, fn)
 	recordPluginStartupHook(pluginID)
-}
-
-// runStartupHooks invokes the registered startup hooks in order, each wrapped
-// in a recover so a panicking hook is logged and skipped without crashing
-// startup (framework-hardening house style). Hooks of a disabled plugin
-// (non-empty PluginID + IsPluginEnabled false) are skipped; the rest run in
-// registration order.
-func runStartupHooks() {
-	for _, hook := range startupHooks {
-		if hook.PluginID != "" && !IsPluginEnabled(hook.PluginID) {
-			continue
-		}
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("startup hook panicked", slogx.Error(r))
-				}
-			}()
-			hook.Fn()
-		}()
-	}
 }
 
 // --- Framework service handles ---

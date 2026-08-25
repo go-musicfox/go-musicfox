@@ -251,7 +251,7 @@ func TestRunStartupHooksPanicIsolation(t *testing.T) {
 	RegisterStartupHook(func() { panic("boom") })
 	RegisterStartupHook(func() { order = append(order, "third") })
 
-	runStartupHooks()
+	framework.RunStartupHooks(nil)
 
 	// Registration order preserved, panicking hook skipped without aborting.
 	if len(order) != 2 || order[0] != "first" || order[1] != "third" {
@@ -410,8 +410,8 @@ func TestAssertPageRegistryComplete(t *testing.T) {
 
 func TestRegistryServicesResolvable(t *testing.T) {
 	ctx := &framework.Context{}
-	if err := registerServices(ctx, testNetease()); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
+	if err := registerUIExtraServices(ctx, testNetease()); err != nil {
+		t.Fatalf("registerUIExtraServices() error = %v", err)
 	}
 
 	if svc, ok := framework.ServiceOf[MenuRegistry](ctx, ServiceMenuRegistry); !ok || !svc.Registered("cur_playlist") {

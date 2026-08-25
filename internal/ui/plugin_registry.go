@@ -139,11 +139,8 @@ func PluginInfos() []PluginInfo {
 // IsPluginEnabled reports whether the plugin id is enabled under the current
 // [plugins] config. An id that was never declared (or has no plugin scope) is
 // treated as enabled; a nil configs.AppConfig (e.g. tests without a config) is
-// also treated as enabled.
+// also treated as enabled. It delegates to the configs-layer helper so the
+// engine (which must not import ui) can gate startup hooks with the same rule.
 func IsPluginEnabled(id string) bool {
-	cfg := configs.AppConfig
-	if cfg == nil {
-		return true
-	}
-	return !cfg.Plugins.IsPluginDisabled(id)
+	return configs.IsPluginEnabled(id)
 }

@@ -46,7 +46,7 @@ type SpectrogramRenderer struct {
 }
 
 func NewSpectrogramRenderer(state *Player) *SpectrogramRenderer {
-	provider, _ := state.Player.(player.SpectrumProvider)
+	provider, _ := state.Engine().(player.SpectrumProvider)
 	return &SpectrogramRenderer{provider: provider, nowFn: time.Now}
 }
 

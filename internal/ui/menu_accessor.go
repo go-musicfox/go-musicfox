@@ -7,6 +7,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/composer"
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
@@ -56,10 +57,17 @@ func (s *menuServices) missing(name string) {
 	slog.Warn("menuServices: service not resolvable, returning nil", "service", name)
 }
 
-// Player resolves the player service.
+// Player resolves the TUI player wrapper. The engine registers the core
+// player under ServicePlayer (headless consumers resolve *core.Player); the
+// TUI wrapper is a shell-owned instance carrying the render ticker and
+// playing-menu state, so the accessor prefers the shell's wrapper and falls
+// back to a context-registered wrapper.
 func (s *menuServices) Player() *Player {
 	if svc, ok := framework.ServiceOf[*Player](s.ctx, ServicePlayer); ok {
 		return svc
+	}
+	if s.n != nil && s.n.player != nil {
+		return s.n.player
 	}
 	s.missing(ServicePlayer)
 	return nil
@@ -67,7 +75,7 @@ func (s *menuServices) Player() *Player {
 
 // User resolves the current user from the userService slot (nil until login).
 func (s *menuServices) User() *structs.User {
-	if svc, ok := framework.ServiceOf[*UserService](s.ctx, ServiceUserService); ok && svc.User != nil {
+	if svc, ok := framework.ServiceOf[*core.UserService](s.ctx, ServiceUserService); ok && svc.User != nil {
 		return *svc.User
 	}
 	s.missing(ServiceUserService)
@@ -99,15 +107,6 @@ func (s *menuServices) DesktopLyrics() desktop_lyrics.Controller {
 	}
 	s.missing(ServiceDesktopLyrics)
 	return nil
-}
-
-// GetDesktopLyricsLines returns the current lyrics lines for desktop display
-// (current line, next line, and current index; forwarded from the shell).
-func (s *menuServices) GetDesktopLyricsLines() (curLine, nextLine desktop_lyrics.LyricLine, currentIndex int) {
-	if s.n == nil {
-		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
-	}
-	return s.n.GetDesktopLyricsLines()
 }
 
 // CoverRenderer resolves the cover renderer.

@@ -6,8 +6,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
-	"github.com/go-musicfox/go-musicfox/internal/playlist"
 )
 
 // withFreshContextMenuContribs 保存并清空包级右键菜单贡献注册表，测试结束
@@ -173,9 +173,9 @@ func contextMenuTestApp(t *testing.T) (*model.App, *Netease) {
 	n := testNetease()
 	n.App = app
 	n.ctx = &framework.Context{}
-	n.player = &Player{playlistManager: playlist.NewPlaylistManager()}
-	if err := registerServices(n.ctx, n); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
+	n.player = &Player{Player: core.NewEmptyPlayer()}
+	if err := registerUIExtraServices(n.ctx, n); err != nil {
+		t.Fatalf("registerUIExtraServices() error = %v", err)
 	}
 	return app, n
 }

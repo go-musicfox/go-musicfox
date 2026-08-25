@@ -10,7 +10,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/playlist"
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
@@ -21,7 +21,7 @@ func TestFormatQueueAndQualityIncludesMusicfox(t *testing.T) {
 	configs.AppConfig.Player.SongLevel = service.Lossless
 	t.Cleanup(func() { configs.AppConfig = previousConfig })
 
-	player := &Player{playlistManager: playlist.NewPlaylistManager()}
+	player := &Player{Player: core.NewEmptyPlayer()}
 	player.InitSongManager(0, []structs.Song{{Id: 1}, {Id: 2}})
 
 	statusTextStyle := style.CurrentStyleSet().StatusBarText

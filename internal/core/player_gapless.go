@@ -1,4 +1,4 @@
-package ui
+package core
 
 import (
 	"context"
@@ -104,10 +104,14 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	p.reporter.ReportEnd(transition.PlayedTime)
 	p.reporter.ReportStart(song)
 	errorx.Go(func() { _ = p.lyricService.SetSong(context.Background(), song) }, true)
-	p.LocatePlayingSong()
+	if p.locator != nil {
+		p.locator.LocatePlayingSong()
+	}
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	p.updateDesktopLyrics()
-	p.svc.Rerender(false)
+	if p.observer != nil {
+		p.observer.OnRerender()
+	}
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),

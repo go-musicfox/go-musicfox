@@ -26,3 +26,13 @@ func (p PluginsConfig) IsPluginDisabled(id string) bool {
 	}
 	return false
 }
+
+// IsPluginEnabled reports whether the plugin id is enabled under the current
+// [plugins] config. An id never declared and a nil AppConfig (tests) are treated as enabled.
+func IsPluginEnabled(id string) bool {
+	cfg := AppConfig
+	if cfg == nil {
+		return true
+	}
+	return !cfg.Plugins.IsPluginDisabled(id)
+}

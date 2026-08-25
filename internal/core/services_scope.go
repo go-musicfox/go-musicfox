@@ -1,4 +1,4 @@
-package ui
+package core
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 )
 
 // servicePlugin adapts a simple provide-function into a framework.PluginWithDeps.
-// It is the minimal adapter used to bring existing Netease-owned service
+// It is the minimal adapter used to bring existing engine-owned service
 // instances into the framework scope lifecycle: Deps resolves prerequisites,
 // Start registers the instance into the context, Stop/Dispose are no-ops until
 // the owned instances gain real cleanup (Phase 3.1.5 migration).
@@ -42,18 +42,18 @@ func (p *servicePlugin) Dispose() error {
 
 // newAppScope builds the app-wide framework scope and wires the first
 // production slice of framework-managed services into it. The instances stay
-// owned by Netease; each plugin's Start registers the existing instance into
+// owned by the engine; each plugin's Start registers the existing instance into
 // the shared context. Ownership migration happens in Phase 3.1.5.
-func newAppScope(n *Netease) *framework.Scope {
+func newAppScope(e *Engine) *framework.Scope {
 	scope := framework.NewScope()
 
 	if err := scope.Add(&servicePlugin{
 		name: ServiceShareSvc,
 		provide: func(ctx *framework.Context) error {
-			if n.shareSvc == nil {
+			if e.shareSvc == nil {
 				return errors.New("shareSvc not initialized before scope start")
 			}
-			provideIfAbsent(ctx, ServiceShareSvc, n.shareSvc)
+			provideIfAbsent(ctx, ServiceShareSvc, e.shareSvc)
 			return nil
 		},
 	}); err != nil {
@@ -63,10 +63,10 @@ func newAppScope(n *Netease) *framework.Scope {
 	if err := scope.Add(&servicePlugin{
 		name: ServiceLastfm,
 		provide: func(ctx *framework.Context) error {
-			if n.lastfm == nil {
+			if e.lastfm == nil {
 				return errors.New("lastfm not initialized before scope start")
 			}
-			provideIfAbsent(ctx, ServiceLastfm, n.lastfm)
+			provideIfAbsent(ctx, ServiceLastfm, e.lastfm)
 			return nil
 		},
 	}); err != nil {

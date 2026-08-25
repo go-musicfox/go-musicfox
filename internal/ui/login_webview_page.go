@@ -14,6 +14,7 @@ import (
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -231,12 +232,12 @@ func (p *WebviewLoginPage) View(a *model.App) string {
 // continues polling instead of closing it.
 func webviewCheckCookieCmd(cookieStr string) tea.Cmd {
 	return func() tea.Msg {
-		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+		err := apputils.ParseCookieFromStr(cookieStr, core.AppCookieJar())
 		if err != nil {
 			return webviewLoginResultMsg{err: fmt.Errorf(model.T(MsgLoginCookieInvalid), err)}
 		}
 
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		neteaseutil.SetGlobalCookieJar(core.AppCookieJar())
 		jar, err := apputils.RefreshCookieJar()
 		if err != nil {
 			slog.Error("WebView Cookie 登录失败", slogx.Error(err))
@@ -244,9 +245,9 @@ func webviewCheckCookieCmd(cookieStr string) tea.Cmd {
 		}
 
 		slog.Info("使用 WebView Cookie 登录成功")
-		appCookieJar = jar
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
-		if err = appCookieJar.Save(); err != nil {
+		core.SetAppCookieJar(jar)
+		neteaseutil.SetGlobalCookieJar(core.AppCookieJar())
+		if err = core.AppCookieJar().Save(); err != nil {
 			slog.Warn("刷新token成功但保存 Cookie 失败", slogx.Error(err))
 		}
 
@@ -257,11 +258,11 @@ func webviewCheckCookieCmd(cookieStr string) tea.Cmd {
 // loginSuccessHandle runs the shared post-login chain: persist the cookie jar
 // and fire the LoginCallback.
 func (p *WebviewLoginPage) loginSuccessHandle(n *Netease) model.Page {
-	if err := appCookieJar.Save(); err != nil {
+	if err := core.AppCookieJar().Save(); err != nil {
 		slog.Warn("持久化 Cookie 失败", slogx.Error(err))
 	}
 
-	if err := n.LoginCallback(); err != nil {
+	if err := n.engine.LoginCallback(); err != nil {
 		slog.Error("login callback error", slogx.Error(err))
 	}
 

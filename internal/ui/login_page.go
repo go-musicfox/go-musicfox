@@ -16,6 +16,7 @@ import (
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
@@ -771,11 +772,11 @@ func (l *LoginPage) loginByWebview() (model.Page, tea.Cmd) {
 func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
 	// 先保存 cookie，确保登录成功后 cookie 被持久化
 	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
-	if err := appCookieJar.Save(); err != nil {
+	if err := core.AppCookieJar().Save(); err != nil {
 		slog.Warn("持久化 Cookie 失败", slogx.Error(err))
 	}
 
-	if err := n.LoginCallback(); err != nil {
+	if err := n.engine.LoginCallback(); err != nil {
 		slog.Error("login callback error", slogx.Error(err))
 	}
 
@@ -870,13 +871,13 @@ func (l *LoginPage) updateCookieInput(msg tea.Msg) (model.Page, tea.Cmd) {
 
 func checkCookieCmd(cookieStr string) tea.Cmd {
 	return func() tea.Msg {
-		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+		err := apputils.ParseCookieFromStr(cookieStr, core.AppCookieJar())
 		if err != nil {
 			return LoginMsg{err: fmt.Errorf(model.T(MsgLoginCookieInvalid), err)}
 		}
 
 		// 正确的写法应该是立即用反序列化的cookie去刷新token
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		neteaseutil.SetGlobalCookieJar(core.AppCookieJar())
 		jar, err := apputils.RefreshCookieJar()
 		if err != nil {
 			slog.Error("Cookie 登录失败", slogx.Error(err))
@@ -884,9 +885,9 @@ func checkCookieCmd(cookieStr string) tea.Cmd {
 		}
 
 		slog.Info("使用 Cookie 登录成功")
-		appCookieJar = jar
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
-		err = appCookieJar.Save()
+		core.SetAppCookieJar(jar)
+		neteaseutil.SetGlobalCookieJar(core.AppCookieJar())
+		err = core.AppCookieJar().Save()
 		if err != nil {
 			slog.Warn("刷新token成功但保存 Cookie 失败", slogx.Error(err))
 		}

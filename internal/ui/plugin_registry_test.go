@@ -6,6 +6,7 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 )
 
 // withPluginConfig sets configs.AppConfig to a config with the given disabled
@@ -214,8 +215,8 @@ func TestNewMainMenuHidesDisabledPluginItem(t *testing.T) {
 
 // TestRunStartupHooksSkipsDisabledPlugin proves the startup-hook consumption
 // point filtering: hooks registered inside a WithPlugin scope of a disabled
-// plugin are skipped by runStartupHooks; hooks with empty attribution always
-// run. Registration order is preserved for the rest.
+// plugin are skipped by the framework hook runner; hooks with empty attribution
+// always run. Registration order is preserved for the rest.
 func TestRunStartupHooksSkipsDisabledPlugin(t *testing.T) {
 	const pluginID = "plugin_registry_test_hooks"
 	withPluginConfig(t, []string{pluginID})
@@ -230,7 +231,7 @@ func TestRunStartupHooksSkipsDisabledPlugin(t *testing.T) {
 		RegisterStartupHook(func() { ran = append(ran, "enabled-scope") })
 	})
 
-	runStartupHooks()
+	framework.RunStartupHooks(configs.IsPluginEnabled)
 
 	want := []string{"unattributed", "enabled-scope"}
 	if len(ran) != len(want) || ran[0] != want[0] || ran[1] != want[1] {

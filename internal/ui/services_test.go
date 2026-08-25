@@ -5,130 +5,71 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/go-musicfox/go-musicfox/internal/composer"
-	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
-	"github.com/go-musicfox/go-musicfox/internal/lyric"
-	"github.com/go-musicfox/go-musicfox/internal/player"
-	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/internal/track"
 )
 
-// fakeDesktopLyrics is a minimal desktop_lyrics.Controller used only to make
-// the service registration deterministic in unit tests.
-type fakeDesktopLyrics struct{}
-
-func (fakeDesktopLyrics) Show()                                                        {}
-func (fakeDesktopLyrics) Hide()                                                        {}
-func (fakeDesktopLyrics) IsVisible() bool                                              { return false }
-func (fakeDesktopLyrics) Update(_, _ desktop_lyrics.LyricLine, _ int, _ int64, _ bool) {}
-func (fakeDesktopLyrics) UpdateSpectrum(_ player.SpectrumFrame)                        {}
-func (fakeDesktopLyrics) UpdateRawSamples(_ player.RawSampleFrame)                     {}
-func (fakeDesktopLyrics) SetSpectrumAvailable(_ bool)                                  {}
-func (fakeDesktopLyrics) Close()                                                       {}
-
-// testNetease builds a Netease whose fields are all non-nil so registerServices
-// registers every startup service with the right concrete type.
+// testNetease builds a Netease whose TUI-only fields are non-nil so
+// registerUIExtraServices registers every ui service with the right concrete
+// type. The engine-owned services are not registered here — the engine owns
+// them at runtime; the core registration is asserted by the core test package.
 func testNetease() *Netease {
 	return &Netease{
-		player:        &Player{},
-		lyricService:  &lyric.Service{},
-		trackManager:  &track.Manager{},
-		desktopLyrics: fakeDesktopLyrics{},
 		coverRenderer: &CoverRenderer{},
-		shareSvc:      &composer.ShareService{},
-		lastfm:        &lastfm.Client{},
 	}
 }
 
-func TestRegisterServicesRegistersExactSet(t *testing.T) {
+func TestRegisterUIExtraServicesRegistersExactSet(t *testing.T) {
 	ctx := &framework.Context{}
-	if err := registerServices(ctx, testNetease()); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
+	if err := registerUIExtraServices(ctx, testNetease()); err != nil {
+		t.Fatalf("registerUIExtraServices() error = %v", err)
 	}
 
+	// The ui layer registers exactly the three TUI-only extras.
 	got := ctx.Names()
 	sort.Strings(got)
-	want := append([]string(nil), registeredServiceNames...)
+	wantUI := []string{ServiceCoverRenderer, ServiceMenuRegistry, ServicePageRegistry}
+	sort.Strings(wantUI)
+	if !reflect.DeepEqual(got, wantUI) {
+		t.Fatalf("ui registered services = %v, want %v", got, wantUI)
+	}
+
+	// The combined canonical set is core's 8 + ui's 3 — no missing, no extras
+	// and no overlap. The alias consts (ServicePlayer etc.) must resolve to the
+	// core values so the shared name space cannot drift.
+	want := []string{
+		ServicePlayer, ServiceLyricService, ServiceTrackManager, ServiceDesktopLyrics,
+		ServiceUserService, ServiceLoginService, ServiceShareSvc, ServiceLastfm,
+		ServiceCoverRenderer, ServiceMenuRegistry, ServicePageRegistry,
+	}
 	sort.Strings(want)
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("registered services = %v, want %v", got, want)
+	if got := len(want); got != 11 {
+		t.Fatalf("combined canonical service set = %d names, want 11 (core 8 + ui 3)", got)
+	}
+	// The core aliases must equal the core constants (name-space integrity).
+	for i, name := range []string{ServicePlayer, ServiceLyricService, ServiceTrackManager, ServiceDesktopLyrics,
+		ServiceUserService, ServiceLoginService, ServiceShareSvc, ServiceLastfm} {
+		if name != []string{core.ServicePlayer, core.ServiceLyricService, core.ServiceTrackManager, core.ServiceDesktopLyrics,
+			core.ServiceUserService, core.ServiceLoginService, core.ServiceShareSvc, core.ServiceLastfm}[i] {
+			t.Fatalf("ui service alias %q diverged from core constant", name)
+		}
 	}
 }
 
-func TestRegisterServicesRegistersRightConcreteTypes(t *testing.T) {
+func TestRegisterUIExtraServicesRegistersRightConcreteTypes(t *testing.T) {
 	ctx := &framework.Context{}
 	n := testNetease()
-	if err := registerServices(ctx, n); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
+	if err := registerUIExtraServices(ctx, n); err != nil {
+		t.Fatalf("registerUIExtraServices() error = %v", err)
 	}
 
-	if svc, ok := framework.ServiceOf[*Player](ctx, ServicePlayer); !ok || svc != n.player {
-		t.Errorf("ServiceOf(player) = %v, %v; want %T, true", svc, ok, n.player)
-	}
-	if svc, ok := framework.ServiceOf[*lyric.Service](ctx, ServiceLyricService); !ok || svc != n.lyricService {
-		t.Errorf("ServiceOf(lyricService) = %v, %v; want %T, true", svc, ok, n.lyricService)
-	}
-	if svc, ok := framework.ServiceOf[*track.Manager](ctx, ServiceTrackManager); !ok || svc != n.trackManager {
-		t.Errorf("ServiceOf(trackManager) = %v, %v; want %T, true", svc, ok, n.trackManager)
-	}
-	if _, ok := framework.ServiceOf[desktop_lyrics.Controller](ctx, ServiceDesktopLyrics); !ok {
-		t.Error("ServiceOf(desktopLyrics) not resolvable as desktop_lyrics.Controller")
-	}
 	if svc, ok := framework.ServiceOf[*CoverRenderer](ctx, ServiceCoverRenderer); !ok || svc != n.coverRenderer {
 		t.Errorf("ServiceOf(coverRenderer) = %v, %v; want %T, true", svc, ok, n.coverRenderer)
 	}
-	if svc, ok := framework.ServiceOf[*UserService](ctx, ServiceUserService); !ok || svc == nil {
-		t.Errorf("ServiceOf(userService) = %v, %v; want *UserService, true", svc, ok)
+	if svc, ok := framework.ServiceOf[MenuRegistry](ctx, ServiceMenuRegistry); !ok {
+		t.Errorf("ServiceOf(menuRegistry) not resolvable: %v, %v", svc, ok)
 	}
-	if svc, ok := framework.ServiceOf[*LoginService](ctx, ServiceLoginService); !ok || svc == nil {
-		t.Errorf("ServiceOf(loginService) = %v, %v; want *LoginService, true", svc, ok)
-	}
-	if svc, ok := framework.ServiceOf[*composer.ShareService](ctx, ServiceShareSvc); !ok || svc != n.shareSvc {
-		t.Errorf("ServiceOf(shareSvc) = %v, %v; want %T, true", svc, ok, n.shareSvc)
-	}
-	if svc, ok := framework.ServiceOf[*lastfm.Client](ctx, ServiceLastfm); !ok || svc != n.lastfm {
-		t.Errorf("ServiceOf(lastfm) = %v, %v; want %T, true", svc, ok, n.lastfm)
-	}
-}
-
-func TestUserServiceReflectsLiveUserSlot(t *testing.T) {
-	ctx := &framework.Context{}
-	n := testNetease()
-	if err := registerServices(ctx, n); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
-
-	svc, ok := framework.ServiceOf[*UserService](ctx, ServiceUserService)
-	if !ok {
-		t.Fatal("userService not resolvable")
-	}
-	if svc.User != &n.user {
-		t.Fatal("userService.User does not point at the Netease user slot")
-	}
-	if *svc.User != nil {
-		t.Fatal("initial user should be nil")
-	}
-
-	n.user = &structs.User{Nickname: "tester"}
-	if got := *svc.User; got != n.user {
-		t.Fatalf("live user = %v, want %v", got, n.user)
-	}
-}
-
-func TestLoginServiceReflectsLiveCookieJar(t *testing.T) {
-	ctx := &framework.Context{}
-	n := testNetease()
-	if err := registerServices(ctx, n); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
-
-	svc, ok := framework.ServiceOf[*LoginService](ctx, ServiceLoginService)
-	if !ok {
-		t.Fatal("loginService not resolvable")
-	}
-	if svc.CookieJar != &appCookieJar {
-		t.Fatal("loginService.CookieJar does not point at the appCookieJar slot")
+	if svc, ok := framework.ServiceOf[PageRegistry](ctx, ServicePageRegistry); !ok {
+		t.Errorf("ServiceOf(pageRegistry) not resolvable: %v, %v", svc, ok)
 	}
 }
