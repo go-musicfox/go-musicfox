@@ -116,34 +116,37 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 
 ### 应用入口与初始化
 
-**入口**：`cmd/musicfox.go` → `runtime.Run()` → 加载配置 → 数据迁移 → 启动 TUI
+**入口**：`cmd/musicfox.go` → `runtime.Run()` → 加载配置 → 数据迁移 → 启动前端（TUI 或 headless，由 `--headless`/`[main] headless` 选择；headless 为无界面模式，可经 `musicfox ctrl` 控制）
 
 ### UI 协调器
 
 **文件**：`internal/ui/netease.go`
 
-`Netease` 是薄壳协调器，只承担四类职责：
+`Netease` 是薄壳协调器（TUI 前端适配），只承担四类职责：
 
 - **model.App 集成**：嵌入 `*model.App`，实现 foxful-cli 的 `InitHook`/`Update`/`CloseHook` 事件分派；
 - **导航状态**：持有 search 页单例（`wordsInput`/`result`/`searchType` 被 SearchResultMenu 与 operate 共享）、页面跳转入口（`ToLoginPage`/`ToSearchPage`）；
 - **renderer 组合**：歌词/歌曲信息/进度/封面/频谱 renderer 的创建与 `Components()` 组合排序；
-- **服务实例持有**：player、lyricService、trackManager、desktopLyrics、coverRenderer、shareSvc、lastfm、user 等业务实例作为服务注册来源，由 `registerServices`（`internal/ui/services.go`）注册进 `internal/framework` 容器；业务组件按名经 `framework.Context` 解析，不再直连 `n.*` 字段。
+- **TUI 专属服务注册**：业务实例由 `core.Engine` 持有（见下），shell 只把 TUI 专属服务（`coverRenderer`/菜单注册表/页面注册表）经 `registerUIExtraServices` 注册进 `engine.Ctx()` 的 framework 容器；启动序列经 `InitHook` 委托 `engine.Startup(ctx, observer)`（observer 为 `ui.Player` 包装，处理 TUI 重绘/定位/登录页等回调），changelog 弹窗留在 TUI 侧。
 
 菜单与页面统一走 provider 注册表（`internal/ui/registry.go`）：key → 参数化工厂，各文件 `init()` 注册（`internal/ui/registry_registrations.go`），跳转经 `BuildMenu`/`BuildPage` 等 API。`baseMenu` 经 `menuServices` 类型安全访问器（`internal/ui/menu_accessor.go`）解析服务与薄壳方法（`MustMain`/`Rerender`/`SaveActiveTheme` 等）。
+
+**前端插件化架构**：核心引擎（`internal/core`，UI-free）与前端解耦。`core.Engine` 组装全部业务服务（lastfm/trackManager/lyricService/desktopLyrics/shareSvc/core.Player/user 槽）与 framework ctx/scope，`Startup(ctx, observer)` 跑完整启动序列，`Close()` 统一清理。前端经 `core.Observer`（`OnSongChanged`/`OnStateChanged`/`OnPosition`/`RequestLogin`/`OnPlaylistExhausted`/`OnRerender`/`OnStartupPhase`）消费引擎事件：TUI 前端（`internal/ui`）实现为重绘/定位/登录页，headless 前端（`internal/headless`）全 no-op。`ui.Player` 内嵌 `*core.Player` 方法提升转发，插件/commands 调用点不变。前端选择在 `commands.runPlayer`：`headlessEnabled()`（CLI `--headless` 优先于 `[main] headless`）为真则进 `headless.Run(once)`，否则进 TUI。
 
 ### 核心文件路径
 
 | 文件 | 说明 |
 |------|------|
-| `internal/ui/netease.go` | 薄壳协调器（App 集成/导航/事件分派/renderer 组合/服务实例持有） |
-| `internal/ui/services.go` | 服务名常量（`ServicePlayer` 等）+ `registerServices` 注册点 |
-| `internal/ui/services_scope.go` | framework Scope/Plugin 生命周期接线（shareSvc、lastfm 小切片） |
-| `internal/ui/registry.go` | provider 注册表：`RegisterMenu[T]`/`BuildMenu`/`mustBuildNoArg`/`buildMenuOrToast`、`RegisterPage[T]`/`BuildPage`、opts 契约类型；插件主菜单入口（`RegisterMainMenuItem`/`RegisterMainMenuItemWith`（带 Build 参数化入口）/`RegisterMainMenuItemAfter`（After 锚点链）/`MainMenuPluginItems`）与启动钩子（`RegisterStartupHook`/`runStartupHooks`） |
+| `internal/ui/netease.go` | 薄壳协调器（App 集成/导航/事件分派/renderer 组合/TUI 专属服务注册，业务实例由 core.Engine 持有） |
+| `internal/ui/services.go` | TUI 专属服务常量（`ServiceCoverRenderer`/`ServiceMenuRegistry`/`ServicePageRegistry`）+ 8 个 core 服务名的别名常量（core 定义在 `internal/core/services.go`）+ `registerUIExtraServices` |
+| `internal/ui/registry.go` | provider 注册表：`RegisterMenu[T]`/`BuildMenu`/`mustBuildNoArg`/`buildMenuOrToast`、`RegisterPage[T]`/`BuildPage`、opts 契约类型；插件主菜单入口（`RegisterMainMenuItem`/`RegisterMainMenuItemWith`（带 Build 参数化入口）/`RegisterMainMenuItemAfter`（After 锚点链）/`MainMenuPluginItems`）与启动钩子（`RegisterStartupHook` 捕获插件 id 后委托 `internal/framework` 注册表，执行在 `core.Engine.Startup` 启动序第 10 步经 `framework.RunStartupHooks(configs.IsPluginEnabled)`，`runStartupHooks` 已随迁出 ui） |
 | `internal/ui/context_menu.go` | 插件右键菜单扩展点：`RegisterContextMenuContrib`/`ContextMenuContribs` 注册表 + `ContextMenuContrib`/`ContextMenuContext` 契约 + `buildPluginContextMenuItems`/`handlePluginContextAction`（ID `plugin:<注册序号>` 分发） |
-| `internal/ui/plugin_registry.go` | 插件归属声明与启停过滤：`WithPlugin(id, name, register)` 把作用域内的 `RegisterMenu`/`RegisterPage`/`RegisterMainMenuItem*`/`RegisterStartupHook` 记入该插件（`PluginInfo`/`PluginInfos` 快照，同 id 多次声明幂等合并）；`IsPluginEnabled(id)` 读 `configs.AppConfig.Plugins`（nil 配置按启用）；被禁用插件的**主菜单入口隐藏、启动钩子不执行**，菜单 key 注册与 `BuildMenu` 跳转不受影响 |
+| `internal/ui/plugin_registry.go` | 插件归属声明与启停过滤：`WithPlugin(id, name, register)` 把作用域内的 `RegisterMenu`/`RegisterPage`/`RegisterMainMenuItem*`/`RegisterStartupHook` 记入该插件（`PluginInfo`/`PluginInfos` 快照，同 id 多次声明幂等合并）；`IsPluginEnabled(id)` 委托 `configs.IsPluginEnabled`（读 `[plugins] disabled`，nil 配置按启用）；被禁用插件的**主菜单入口隐藏、启动钩子不执行**，菜单 key 注册与 `BuildMenu` 跳转不受影响 |
 | `internal/ui/registry_registrations.go` | 内置菜单/页面 provider 的 `init()` 注册 |
 | `internal/ui/menu_accessor.go` | `menuServices` 类型安全访问器（服务解析 + 薄壳方法转发） |
 | `internal/ui/menu.go` | `Menu` 接口与 `baseMenu`（经访问器接线） |
+| `internal/core/` | UI-free 播放协调器（核心引擎层）：`player.go`（`Player` 结构 + `NewPlayer`/`NewEmptyPlayer` + 播放列表/播放模式/音量/歌词/遥控 API）、`player_gapless.go`（无缝播放预载/提交/取消）、`player_controller.go`（`remote_control.Controller` 实现）、`ctrl.go`（`PlayDirection`/`CtrlType`/`CtrlSignal`）、`observer.go`（前端观察者接缝：`Observer`/`LoadingIndicator`/`SongLocator`）、`mpris_throttle.go`（MPRIS Position 限流）、`engine.go`（`Engine`/`EngineOptions`：服务组装 + 用户槽 + `Startup(ctx, observer)`/`Close()`/`LoginCallback`）、`services.go`（8 个业务服务名常量 + `UserService`/`LoginService`/`appCookieJar`/`registerServices`/`ProvideIfAbsent`）、`services_scope.go`（framework Scope 生命周期接线，shareSvc/lastfm 小切片）、`startup.go`（完整启动序列：jar→用户恢复→cookie 登录→播放模式/音量/播放列表恢复→like list→签到→插件启动钩子→自动播放，经 `OnStartupPhase` 通知前端）。源级禁止导入 `internal/ui`/bubbletea/foxful-cli；TUI 的 `ui.Player` 经内嵌 `*core.Player` 方法提升转发，插件/commands 调用点不变 |
+| `internal/headless/` | 无 TUI 前端（headless 模式）：`frontend.go`（`HeadlessObserver` 实现 `core.Observer` 全 no-op，`RequestLogin` 降级为日志）、`run.go`（`Run(once string)`：`core.NewEngine` → `Startup` → 常驻模式启动控制通道 server 并阻塞等待 SIGINT/SIGTERM 或 `quit` 命令；`--once "<cmd> [args]"` 单次模式执行一条控制命令并以紧凑 JSON 输出后退出，不启动 server）、`ipc.go`（JSONL 协议 `Request`/`Response`（`V=1`/`ID` 关联）+ `Dispatcher`（`Dispatch(ctx, cmd, args)`，经 `core.Player` 的 Ctrl* 通道方法下发控制信号、直读方法取状态；命令集：`status`/`play <query>`/`pause`/`resume`/`toggle`/`stop`/`next`/`prev`/`seek`/`volume`/`repeat`/`shuffle`/`like`/`dislike`/`quit`(返回哨兵 `ErrQuit`)/未知命令报错）、`server.go`（控制通道 server：非 Windows 用 unix socket（`DataDir/musicfox.sock`，监听前探测 stale socket 并移除，chmod 0600），Windows 用 TCP `127.0.0.1:0` 并把端口持久化到 `DataDir/musicfox.port`；`Serve(ctx)`/`Close()`/`ShutdownCh()`，每连接一请求一响应后关闭，连接内 panic 不杀 accept loop）、`client.go`（`CtrlClient`：`Dial()`/`Call(ctx, cmd, args)`（每次调用新建连接），包级原子计数器生成 ID）。源级禁止导入 `internal/ui`/bubbletea/foxful-cli（仅经 `internal/configs` 传递依赖可接受）、`internal/commands`（`--once` 值由 `commands` 作为参数传入 `headless.Run`）；`commands.runPlayer` 经 `headlessEnabled()`（CLI `--headless` 优先于 `[main] headless` 配置）分支进入，`commands.NewCtrlCommand()` 注册 `musicfox ctrl <cmd> [args...]` 子命令 |
 | `internal/plugins/plugins.go` | 编译期插件聚合器（空导入各插件子包；`cmd/musicfox.go` 空导入触发注册） |
 | `internal/plugins/checkupdate/` | 首个真实插件：`CheckUpdateMenu`（嵌入 `ui.BaseMenu`，`init()` 注册 `check_update`，声明主菜单入口 + 启动钩子） |
 | `internal/plugins/lastfm/` | 第二个真实插件：Last.fm 菜单/页面整体提取（`last_fm` 菜单 + `lastfm_auth`/`lastfm_custom_api` 页面，opts 携带 `ui.MenuServices`；`RegisterMainMenuItem("last_fm", "LastFM")` 主菜单入口） |

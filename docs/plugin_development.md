@@ -19,7 +19,7 @@
 | 菜单跳转 | `BuildMenu[T]` / `MustBuildNoArg` / `MustBuild` / `BuildMenuOrToast`（导出形式，供插件使用） | `internal/ui/registry.go` |
 | 页面跳转 | `BuildPage[T]` / `BuildPageOrToast[T]` | `internal/ui/registry.go` |
 | 主菜单入口 | `RegisterMainMenuItem(key, title)` / `RegisterMainMenuItemWith(key, title, build)` / `RegisterMainMenuItemAfter(key, title, after, build)` / `MainMenuPluginItems()` | `internal/ui/registry.go` |
-| 启动钩子 | `RegisterStartupHook(fn)` | `internal/ui/registry.go` |
+| 启动钩子 | `RegisterStartupHook(fn)`（捕获插件 id 后委托 `internal/framework` 注册表，执行在 `core.Engine.Startup` 启动序第 10 步） | `internal/ui/registry.go` |
 | 快捷键操作 | `keybindings.RegisterOperate(name, desc, keys)` → `ui.RegisterOperateHandler(op, fn)` | `internal/keybindings/keybindings.go` / `internal/ui/event_handler_operate.go` |
 | 右键菜单项 | `RegisterContextMenuContrib(contrib)` / `ContextMenuContribs()` | `internal/ui/context_menu.go` |
 | 状态栏组件 | `RegisterStatusBarComponent(comp)` / `StatusBarComponents()` | `internal/ui/status_bar.go` |
@@ -76,8 +76,9 @@ func RegisterMainMenuItemWith(key, title string, build func(base BaseMenu) Menu)
 func RegisterMainMenuItemAfter(key, title string, after string, build func(base BaseMenu) Menu) // 声明前驱项 key（after 非空；锚点存在性由 NewMainMenu 断言）
 func MainMenuPluginItems() []MainMenuItem                                                // 快照，供 NewMainMenu 构造
 
-// 启动钩子（Phase 3.9）：注册启动任务。shell 在 InitHook 中用户/登录就绪后
-// 按注册序调用，每个 hook 带 panic 隔离（recover + 日志，不阻断启动）。
+// 启动钩子（Phase 3.9）：注册启动任务。核心引擎在启动序列第 10 步
+// （用户/登录就绪后、自动播放前）经 framework.RunStartupHooks 按注册序调用，
+// 每个 hook 带 panic 隔离（recover + 日志，不阻断启动）。
 func RegisterStartupHook(fn func()) // nil 会 panic
 ```
 
@@ -419,7 +420,7 @@ import (
 
 主菜单不再对「检查更新」做索引特判（`mainMenuCheckUpdateIndex` 已随插件化移除）：`NewMainMenu` 读取 `MainMenuPluginItems()`，按 After 锚点链归并插件与内置入口并按 key 构建菜单；选中后进入插件菜单，由插件自身的 `BeforeEnterMenuHook` / `Action` 承担检查与通知。
 
-**启动钩子调用点**：shell 的 `InitHook`（`internal/ui/netease.go`）在用户/登录恢复之后、自动播放之前的位置调用 `runStartupHooks()`（即原 shell 级启动自动检查所在位置，启动序第 10 步）。此时 services 已注册、toast 已接线；每个 hook 带 recover 隔离，panic 仅记日志不阻断启动。
+**启动钩子调用点**：核心引擎 `core.Engine.Startup`（`internal/core/startup.go`，前端无关）在用户/登录恢复之后、自动播放之前的位置调用 `framework.RunStartupHooks(configs.IsPluginEnabled)`（启动序第 10 步；即原 shell 级启动自动检查所在位置）。此时 services 已注册、用户/登录已就绪；每个 hook 带 recover 隔离，panic 仅记日志不阻断启动，被禁用插件的 hook 被 `configs.IsPluginEnabled` 过滤。TUI 与 headless 两种前端都执行同一序列。
 
 ### 示例二：hello 菜单插件（静态菜单项）
 
@@ -876,7 +877,7 @@ GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o main.wasm .
 - **错误经 `(Menu, error)` + toast 暴露**：构建失败返回 error，跳转处经 `buildMenuOrToast` / `buildPageOrToast` toast 报错并降级（返回 nil），**不 panic**。`mustBuildNoArg` 的 panic 语义只适用于静态代码中的注册表编程错误。
 - **服务解析不得丢弃 bool**：`framework.ServiceOf[T]` 的第二个返回值必须处理（记录错误 + 降级路径），禁止裸断言。
 - 插件 key 全局唯一：不得与内置 key（`expectedMenuKeys` / `expectedPageKeys`）或其它插件冲突。
-- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在 `InitHook` 中执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须已在菜单注册表中注册（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）；无 `Build` 的入口 key 必须是无参菜单 provider（经 `mustBuildNoArg` 构建），参数化菜单入口需用 `RegisterMainMenuItemWith` / `RegisterMainMenuItemAfter` 提供 `Build`。
+- **启动钩子不得 panic**：`RegisterStartupHook` 注册的任务在核心引擎启动序列（`core.Engine.Startup`）第 10 步执行，每个 hook 带 recover 隔离——panic 仅记日志、跳过该 hook，不得阻断启动。主菜单入口 key 必须已在菜单注册表中注册（`RegisterMainMenuItem` 的 key 在 `NewMainMenu` 构建，未注册 key 会 panic——属启动完整性信号，而非运行时错误）；无 `Build` 的入口 key 必须是无参菜单 provider（经 `mustBuildNoArg` 构建），参数化菜单入口需用 `RegisterMainMenuItemWith` / `RegisterMainMenuItemAfter` 提供 `Build`。
 - **主菜单顺序保持**：插件项经 **after-anchor 链**（每个入口声明其前驱项 key）复现插件化前的原始顺序（用户可见行为）。`After` 目标必须存在（`MainMenuStart` 或已注册入口 key），同一锚点只能被一个入口声明（重复锚点使另一入口成为孤儿，NewMainMenu 链完整性断言 panic 报错）；声明顺序不依赖注册时序——链在 `NewMainMenu` 构建时统一走序并断言完整性。
 
 ## 未来演进（预留边界，未实现）

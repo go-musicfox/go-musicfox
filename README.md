@@ -331,6 +331,56 @@ $ musicfox
 <details>
 <summary>
 
+### 无界面模式（headless）
+</summary>
+
+无界面模式运行核心引擎（播放、歌词、桌面通知、远程控制等）而不启动 TUI，适合后台常驻播放，也可配合脚本使用。启用方式（CLI 标志优先于配置）：
+
+```sh
+$ musicfox --headless   # 后台常驻播放，并开启本地控制通道
+```
+
+或在 `config.toml` 中设置：
+
+```toml
+[main]
+headless = true
+```
+
+无界面模式下桌面歌词窗口、MPRIS / Now Playing 等远程控制与系统通知仍正常工作。
+
+#### 单次执行
+
+`--headless --once` 执行一条控制命令后退出，结果以紧凑 JSON 输出到 stdout（不启动控制通道）：
+
+```sh
+$ musicfox --headless --once "status"
+$ musicfox --headless --once "play 周杰伦"
+```
+
+#### 控制正在运行的后台实例
+
+```sh
+$ musicfox ctrl <cmd> [args...]
+```
+
+| 命令 | 说明 |
+| :--- | :--- |
+| `status` | 查看当前播放状态 |
+| `play <query>` | 搜索并播放歌曲 |
+| `pause` / `resume` / `toggle` | 暂停 / 继续 / 切换播放状态 |
+| `stop` / `next` / `prev` | 停止 / 下一首 / 上一首 |
+| `seek <seconds>` | 跳转到指定秒数 |
+| `volume [value]` | 查看或设置音量 |
+| `repeat <off\|one\|all>` | 设置播放模式：顺序播放 / 单曲循环 / 列表循环 |
+| `shuffle <on\|off>` | 开启或关闭随机播放 |
+| `like` / `dislike` | 喜欢 / 取消喜欢当前播放歌曲 |
+| `quit` | 停止后台实例并退出 |
+
+</details>
+<details>
+<summary>
+
 ### 注意事项
 </summary>
 
