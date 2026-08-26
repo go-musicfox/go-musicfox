@@ -373,6 +373,45 @@ input[type="range"]::-moz-range-thumb {
   border: none;
 }
 
+/* plugin commands */
+
+#commands {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#commands[hidden] {
+  display: none;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.command-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.command-view {
+  margin: 12px 0 0;
+  max-height: 50vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 13px;
+  text-align: left;
+}
+
 /* lyrics */
 
 #lyrics-panel {

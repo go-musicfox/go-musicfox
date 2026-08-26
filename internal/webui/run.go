@@ -6,11 +6,15 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/wasm"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
@@ -27,6 +31,24 @@ func Run(ctx context.Context) error {
 	// to the engine player), so the server must be built before Startup can
 	// broadcast the startup phases.
 	server := NewServer(engine)
+
+	// Load WASM plugin commands into the frontend registry (same pipeline as
+	// the TUI frontend; headless does not load them — its control protocol has
+	// no command consumer). A missing dir is not an error; per-plugin load or
+	// registration failures are collected and only logged, so a bad plugin
+	// never blocks startup. The manager lives for the whole frontend run so
+	// command executions can reach the loaded instances.
+	wasmDir := configs.AppConfig.Plugins.WasmDir
+	if wasmDir == "" {
+		wasmDir = filepath.Join(app.ConfigDir(), "wasm-plugins")
+	}
+	mgr, errs := wasm.LoadAndRegister(ctx, wasmDir, webuiWasmSink{})
+	for _, err := range errs {
+		slog.Warn("webui: wasm plugin load issue", slogx.Error(err))
+	}
+	if mgr != nil {
+		defer mgr.Close(ctx)
+	}
 
 	if err := engine.Startup(ctx, server.observer); err != nil {
 		// Defensive: Startup currently only returns non-nil on a truly fatal

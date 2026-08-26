@@ -89,6 +89,9 @@ func NewServer(engine *core.Engine) *Server {
 	mux.HandleFunc("GET /api/login/qr/key", s.authMiddleware(s.handleLoginQRKey))
 	mux.HandleFunc("GET /api/login/qr/image", s.authMiddleware(s.handleLoginQRImage))
 	mux.HandleFunc("GET /api/login/qr/status", s.authMiddleware(s.handleLoginQRStatus))
+	// T6 Track-B command endpoints (GET list + POST exec by key).
+	mux.HandleFunc("GET /api/commands", s.authMiddleware(s.handleCommandsList))
+	mux.HandleFunc("POST /api/commands/{key}", s.authMiddleware(s.handleCommandExec))
 	return s
 }
 

@@ -78,6 +78,7 @@ const el = {
   modalClose: $("login-modal-close"),
   qrImg: $("login-qr"),
   qrStatus: $("login-qr-status"),
+  commands: $("commands"),
 };
 
 /* ============================== toast ============================== */
@@ -444,6 +445,102 @@ el.modal.addEventListener("click", (e) => {
   if (e.target === el.modal) closeLoginModal();
 });
 
+/* ============================== plugin commands ============================== */
+
+// refreshCommands loads the command list once and renders one button per
+// command. An empty list (or a failed fetch) hides the section entirely.
+async function refreshCommands() {
+  try {
+    const body = await fetchJSON("/api/commands");
+    const items = Array.isArray(body.data) ? body.data : [];
+    if (!items.length) {
+      el.commands.hidden = true;
+      return;
+    }
+    const title = document.createElement("h2");
+    title.className = "section-title";
+    title.textContent = "插件命令";
+    const group = document.createElement("div");
+    group.className = "command-buttons";
+    for (const item of items) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-sm";
+      btn.textContent = item.title || item.key;
+      btn.title = item.key;
+      btn.addEventListener("click", () => runCommand(item.key));
+      group.appendChild(btn);
+    }
+    el.commands.replaceChildren(title, group);
+    el.commands.hidden = false;
+  } catch (e) {
+    el.commands.hidden = true;
+  }
+}
+
+// runCommand POSTs the command key and presents the result by action: toast
+// for the default/toast action, a multi-line view overlay for "view", an
+// "已打开链接" toast for "open_url", and an error toast for any failure (the
+// backend rejects "exec" outright).
+async function runCommand(key) {
+  try {
+    const resp = await fetch("/api/commands/" + encodeURIComponent(key), {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    let body = {};
+    try {
+      body = await resp.json();
+    } catch (e) {
+      /* non-JSON error body */
+    }
+    if (!resp.ok) {
+      toast(body.error || "命令执行失败: HTTP " + resp.status);
+      return;
+    }
+    const action = body.action || "";
+    if (action === "open_url") {
+      toast("已打开链接");
+    } else if (action === "view" && body.message) {
+      showCommandView(body.title || key, body.message);
+    } else {
+      toast(body.message || body.title || "命令已执行");
+    }
+  } catch (e) {
+    toast("命令执行失败");
+  }
+}
+
+// showCommandView renders a command's multi-line result in a dismissible
+// modal overlay (reuses the .modal/.modal-card styles).
+function showCommandView(title, message) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal";
+  const card = document.createElement("div");
+  card.className = "modal-card";
+  card.style.textAlign = "left";
+  const head = document.createElement("div");
+  head.className = "modal-head";
+  const h = document.createElement("h2");
+  h.textContent = title;
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "btn btn-sm";
+  closeBtn.textContent = "关闭";
+  head.append(h, closeBtn);
+  const pre = document.createElement("pre");
+  pre.className = "command-view";
+  pre.textContent = message;
+  card.append(head, pre);
+  overlay.append(card);
+  const close = () => overlay.remove();
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  document.body.appendChild(overlay);
+}
+
 /* ============================== init ============================== */
 
 async function refreshStatusHTTP() {
@@ -465,4 +562,5 @@ function init() {
   renderUser();
   connectWS();
   refreshStatusHTTP();
+  refreshCommands();
 }
