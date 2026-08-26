@@ -23,6 +23,7 @@
 | 快捷键操作 | `keybindings.RegisterOperate(name, desc, keys)` → `ui.RegisterOperateHandler(op, fn)` | `internal/keybindings/keybindings.go` / `internal/ui/event_handler_operate.go` |
 | 右键菜单项 | `RegisterContextMenuContrib(contrib)` / `ContextMenuContribs()` | `internal/ui/context_menu.go` |
 | 状态栏组件 | `RegisterStatusBarComponent(comp)` / `StatusBarComponents()` | `internal/ui/status_bar.go` |
+| 轨 B 命令（UI-agnostic，跨前端） | `ui.RegisterCommand(cmd)`（插件归属注入）→ `frontend.RegisterCommand` / `Commands()` / `CommandByKey` | `internal/ui/register_command.go` / `internal/frontend/command.go` |
 | 菜单基座（可嵌入） | `BaseMenu`（含导出转发方法 + `Services()`） | `internal/ui/menu.go` |
 | 服务解析 | `framework.Context` / `framework.ServiceOf[T]` | `internal/framework/context.go` |
 | 类型安全访问器 | `menuServices`（`svc.Player()` 等；导出别名 `MenuServices` + `NewMenuServices(ctx)`） | `internal/ui/menu_accessor.go` |
@@ -794,7 +795,7 @@ go run ./hack/new-plugin -name example -menu Example -key example -title 示例 
 
 ## WASM 插件（实验性，运行时动态加载）
 
-> 从该功能落地起，go-musicfox 支持**不重新编译主程序**的插件形态：用户把插件目录放入配置目录（默认 `<配置目录>/wasm-plugins`，即 `~/.config/go-musicfox/wasm-plugins/`），启动时宿主（`internal/wasm`）经 **wazero** 沙箱加载 `.wasm` 插件并注册其菜单——这是「运行时动态加载」的首个落地形态（MVP：**菜单动作 + 文本结果**）。Go `plugin` 包 / 共享库热加载仍不支持。示例插件见 `examples/wasm/hello/`。
+> 从该功能落地起，go-musicfox 支持**不重新编译主程序**的插件形态：用户把插件目录放入配置目录（默认 `<配置目录>/wasm-plugins`，即 `~/.config/go-musicfox/wasm-plugins/`），启动时宿主（`internal/wasm`）经 **wazero** 沙箱加载 `.wasm` 插件并注册其命令（**轨 B UI-agnostic 命令**，见「轨 B 命令」章节）——这是「运行时动态加载」的首个落地形态（MVP：**命令动作 + 文本结果**）。WASM 命令经 `wasm.RegistrySink` 管线注册进 `frontend` 命令注册表：TUI 前端经 `tuiWasmSink` + `WithPlugin` 归属加载、命令在 `registerCommandMenus()` 适配为 `CommandMenu`（主菜单项，禁用插件的入口隐藏 + 执行被拒）；WebUI 前端经 `webuiWasmSink` 加载、命令出现在 `/api/commands`（`exec` action 被策略拒绝）。Go `plugin` 包 / 共享库热加载仍不支持。示例插件见 `examples/wasm/hello/`。
 
 ### 插件形态
 
@@ -865,7 +866,7 @@ GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o main.wasm .
 
 ### 行为与安全
 
-- **注册与启停**：插件菜单经 `ui.WithPlugin(manifest.id, ...)` 注册——用户可用既有 `[plugins] disabled = ["hello"]` 配置禁用 WASM 插件（主菜单入口隐藏；key 注册仍保留）。
+- **注册与启停**：插件命令经 `wasm.RegistrySink` 管线注册（TUI 侧 `ui.WithPlugin(manifest.id, ...)` 归属盖章）——用户可用既有 `[plugins] disabled = ["hello"]` 配置禁用 WASM 插件（主菜单入口隐藏、命令执行被拒；key 注册仍保留）。
 - **失败隔离**：单个插件加载失败（manifest 非法、sha256 不匹配、wasm 缺导出、目录不存在）只记日志并跳过，**不阻断启动**；注册冲突/坏锚点经 recover 隔离。
 - **沙箱加固**：wazero 运行时，线性内存上限 128 页（8 MiB）、无文件系统、stdin EOF / stdout-stderr 丢弃、关闭即随 context 取消；单次调用默认超时 5s，超时由 watchdog 关闭实例并报「插件调用超时」（实例随后不可复用）。
 - **已知限制**：纯计算死循环由超时 watchdog 尽力中断（Go wasm 在无限 CPU 循环中不响应 context 取消，关闭实例是兜底手段）；wasm 单线程；`exec` 执行用户自装插件声明的命令——**安装即运行其代码**，仅安装可信来源插件，并建议在 manifest 填写 `sha256` 校验文件完整性。

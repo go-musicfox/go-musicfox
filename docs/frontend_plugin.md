@@ -65,6 +65,8 @@ func Registered() []string
 
 ### C3 双轨贡献点
 
+> ✅ P2 已实施：轨 B 命令契约（`internal/frontend/command.go`）+ `ui.RegisterCommand` 归属 + TUI `CommandMenu` 适配器 + WASM 迁轨 B（`wasm/sink.go`）+ WebUI `/api/commands` 端点（exec 禁用）+ parity 测试。
+
 **轨 A（现状，TUI 专属）**：`ui.RegisterMenu` 等现有注册表。冻结不再新增（TUI 专属 widget 菜单例外）。
 
 **轨 B（新增，UI-agnostic 命令贡献）**：
@@ -91,7 +93,7 @@ type Command struct {
 }
 ```
 
-**一个抽象三个消费方**：TUI 适配器 = 泛化 `WasmPluginMenu`（`ui/wasm_plugin.go:113-144`）；WebUI = HTTP 端点 / WS 方法；headless = Dispatcher 扩展。
+**一个抽象三个消费方**（P2 已落地）：TUI 适配器 = `CommandMenu`（`internal/ui/command_menu.go`，泛化原 `WasmPluginMenu`）；WebUI = `GET/POST /api/commands` 端点（`internal/webui/commands.go`，exec 禁用）；headless = 无命令消费方，不加载 WASM（文档化非目标）。
 
 **双轨收敛纪律**：① WASM 插件注册立即迁轨 B；② 新插件/新贡献默认走轨 B；③ parity 测试断言「每个轨 B 命令在 TUI 有对应菜单入口」。三条不能同时落实则砍掉轨 B，WebUI 直接消费 core 命令面。
 
