@@ -115,16 +115,14 @@ func NewNetease(app *model.App) *Netease {
 	AssertPageRegistryComplete(expectedPageKeys...)
 
 	// WASM plugins must register here (inside NewNetease, before the main menu
-	// is constructed in internal/commands) so their menu providers and
+	// is constructed in internal/commands) so their command providers and
 	// main-menu items participate in the after-anchor chain from the start.
-	if mgr, err := wasm.NewManager(); err != nil {
-		slog.Error("wasm plugin manager init failed", slogx.Error(err))
-	} else {
-		n.wasmManager = mgr
-	}
-	if n.wasmManager != nil {
-		n.loadWasmPlugins()
-	}
+	n.loadWasmPlugins(context.Background())
+
+	// Track-B commands become TUI CommandMenu entries after WASM plugins load
+	// (and before the main menu is constructed in internal/commands), so their
+	// providers and main-menu items join the after-anchor chain from the start.
+	registerCommandMenus()
 
 	return n
 }

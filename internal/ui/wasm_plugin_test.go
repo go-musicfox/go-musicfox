@@ -12,6 +12,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/frontend"
 	"github.com/go-musicfox/go-musicfox/internal/wasm"
 )
 
@@ -40,126 +41,24 @@ func buildWasmExample(t *testing.T, dir string) {
 	}
 }
 
-// --- Menu surface ---
-
-// TestWasmPluginMenuSurface checks the pure menu surface of WasmPluginMenu: it
-// is an action menu (not playable / not locatable), renders its declared title,
-// produces no submenu and reports its declared key. Run is not exercised here —
-// the plugin stub has no backing instance, which is fine for surface checks.
-func TestWasmPluginMenuSurface(t *testing.T) {
-	menu := &WasmPluginMenu{
-		BaseMenu: BaseMenu{},
-		plugin:   &wasm.Plugin{ID: "x", Name: "y"},
-		decl:     wasm.MenuDecl{Key: "wasm_x", Title: "X"},
-	}
-
-	if got := menu.GetMenuKey(); got != "wasm_x" {
-		t.Fatalf("GetMenuKey() = %q, want %q", got, "wasm_x")
-	}
-	if menu.IsPlayable() {
-		t.Fatal("IsPlayable() = true, want false")
-	}
-	if menu.IsLocatable() {
-		t.Fatal("IsLocatable() = true, want false")
-	}
-
-	views := menu.MenuViews()
-	if len(views) != 1 {
-		t.Fatalf("MenuViews() returned %d items, want 1", len(views))
-	}
-	if views[0].Title != "X" {
-		t.Fatalf("MenuViews()[0].Title = %q, want %q", views[0].Title, "X")
-	}
-
-	if sub := menu.SubMenu(nil, 0); sub != nil {
-		t.Fatalf("SubMenu() = %v, want nil", sub)
-	}
-}
-
-// --- Response helpers ---
-
-// TestWasmLevelToModel proves the wasm.Response Level string maps to the model
-// notification levels; unknown and empty levels default to info.
-func TestWasmLevelToModel(t *testing.T) {
-	cases := []struct {
-		level string
-		want  model.NotificationLevel
-	}{
-		{"", model.NotificationInfo},
-		{"info", model.NotificationInfo},
-		{"success", model.NotificationSuccess},
-		{"warning", model.NotificationWarning},
-		{"error", model.NotificationError},
-		{"bogus", model.NotificationInfo},
-	}
-	for _, tc := range cases {
-		if got := wasmLevelToModel(tc.level); got != tc.want {
-			t.Fatalf("wasmLevelToModel(%q) = %v, want %v", tc.level, got, tc.want)
-		}
-	}
-}
-
-// TestWasmResponseSpec proves toast/view responses map to a multi-line in-app
-// notification spec with the declared title, message and mapped level.
-func TestWasmResponseSpec(t *testing.T) {
-	spec := wasmResponseSpec(wasm.Response{Action: "toast", Title: "T", Message: "M", Level: "warning"})
-	if spec.Title != "T" || spec.Message != "M" || spec.Level != model.NotificationWarning {
-		t.Fatalf("toast spec = %+v, want title T message M level warning", spec)
-	}
-
-	// view renders the same shape (MVP: content through the toast message).
-	spec = wasmResponseSpec(wasm.Response{Action: "view", Title: "V", Message: "body", Level: ""})
-	if spec.Title != "V" || spec.Message != "body" || spec.Level != model.NotificationInfo {
-		t.Fatalf("view spec = %+v, want title V message body level info", spec)
-	}
-}
-
-// TestRunWasmSideEffects proves the exec side effect reports success on a clean
-// run and an error spec (with the error message) on failure. open_url is
-// intentionally not unit-tested: open.Start would launch a real browser.
-func TestRunWasmSideEffects(t *testing.T) {
-	// exec success
-	spec := runWasmSideEffects(wasm.Response{Action: "exec", Command: "true"})
-	if spec.Level != model.NotificationSuccess {
-		t.Fatalf("exec success spec = %+v, want level success", spec)
-	}
-	if spec.Message != "true" {
-		t.Fatalf("exec success spec.Message = %q, want %q", spec.Message, "true")
-	}
-
-	// exec failure (the binary does not exist)
-	spec = runWasmSideEffects(wasm.Response{Action: "exec", Command: "definitely-not-a-real-binary-xyz"})
-	if spec.Level != model.NotificationError {
-		t.Fatalf("exec failure spec = %+v, want level error", spec)
-	}
-	if spec.Message == "" {
-		t.Fatal("exec failure spec.Message is empty, want the exec error")
-	}
-
-	// Unknown/empty action: ignored (empty spec; the caller skips Notify).
-	spec = runWasmSideEffects(wasm.Response{Action: "bogus"})
-	if spec.Level != model.NotificationInfo || spec.Title != "" || spec.Message != "" {
-		t.Fatalf("unknown action spec = %+v, want zero spec", spec)
-	}
-}
-
-// --- Registration wiring (the valuable one) ---
-
-// TestRegisterWasmPlugin builds a real WASM plugin, loads it through a real
-// wasm.Manager and runs registerWasmPlugin. It asserts the menu provider is
-// buildable through the registry, the main-menu item is present and the plugin
-// attribution records both keys. The registry is package-global and accumulates
-// across a single test run, so the menu key is derived from the test name to
-// stay unique.
-func TestRegisterWasmPlugin(t *testing.T) {
-	key := "wasm_test_" + strings.Map(func(r rune) rune {
+// wasmTestKey derives a unique menu/command key from the test name so the
+// package-global registries stay pollution-free across a single test run.
+func wasmTestKey(t *testing.T) string {
+	t.Helper()
+	return "wasm_test_" + strings.Map(func(r rune) rune {
 		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
 			return r
 		}
 		return '_'
 	}, t.Name())
+}
 
-	root := t.TempDir()
+// writeWasmTestPlugin builds a real WASM plugin tree (examples/wasm/hello +
+// a manifest whose menu key is derived from the test name) under root and
+// returns the plugin directory.
+func writeWasmTestPlugin(t *testing.T, root string) string {
+	t.Helper()
+	key := wasmTestKey(t)
 	pluginDir := filepath.Join(root, "hello")
 	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -171,7 +70,7 @@ id = "hello"
 name = "Hello WASM"
 version = "0.1.0"
 author = "test"
-description = "ui registration integration test"
+description = "sink integration test"
 
 [[menus]]
 key = %q
@@ -182,34 +81,156 @@ export = "run"
 	if err := os.WriteFile(filepath.Join(pluginDir, "manifest.toml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	return pluginDir
+}
 
-	m, err := wasm.NewManager()
-	if err != nil {
-		t.Fatalf("wasm.NewManager: %v", err)
+// loadWasmTestPlugin loads a freshly built test plugin through wasm.LoadAndRegister
+// with the given sink and returns the manager plus the loaded plugin.
+func loadWasmTestPlugin(t *testing.T, sink wasm.RegistrySink) (*wasm.Manager, *wasm.Plugin) {
+	t.Helper()
+	root := t.TempDir()
+	writeWasmTestPlugin(t, root)
+	mgr, errs := wasm.LoadAndRegister(context.Background(), root, sink)
+	if len(errs) != 0 {
+		t.Fatalf("LoadAndRegister returned errors: %v", errs)
 	}
-	defer m.Close(context.Background())
-
-	if errs := m.LoadDir(context.Background(), root); len(errs) != 0 {
-		t.Fatalf("unexpected load errors: %v", errs)
-	}
-	plugins := m.Plugins()
+	plugins := mgr.Plugins()
 	if len(plugins) != 1 {
 		t.Fatalf("Plugins() returned %d plugins, want 1", len(plugins))
 	}
-	p := plugins[0]
+	return mgr, plugins[0]
+}
 
-	registerWasmPlugin(p)
+// --- CommandsOf mapping ---
 
-	// The menu provider is buildable through the registry.
+// TestWasmSinkCommandsOf proves CommandsOf maps each MenuDecl into a
+// frontend.Command with the plugin id stamped, the manifest key/title/after
+// preserved and a nil Show plus a non-nil Run closure. Run is exercised in
+// TestWasmSinkCallWasm.
+func TestWasmSinkCommandsOf(t *testing.T) {
+	key := wasmTestKey(t)
+	p := &wasm.Plugin{
+		ID:   "hello",
+		Name: "Hello WASM",
+		Menus: []wasm.MenuDecl{
+			{Key: key, Title: "Hello", After: "help", Export: "run", Args: map[string]any{"name": "musicfox"}},
+			{Key: key + "_b", Title: "Hello B", After: ""},
+		},
+	}
+
+	cmds := wasm.CommandsOf(p)
+	if len(cmds) != 2 {
+		t.Fatalf("CommandsOf() returned %d commands, want 2", len(cmds))
+	}
+
+	cmd := cmds[0]
+	if cmd.Key != key || cmd.Title != "Hello" || cmd.After != "help" {
+		t.Fatalf("command = %+v, want key %q title Hello after help", cmd, key)
+	}
+	if cmd.PluginID != p.ID {
+		t.Fatalf("PluginID = %q, want %q", cmd.PluginID, p.ID)
+	}
+	if cmd.Show != nil {
+		t.Fatal("Show must be nil (always available)")
+	}
+	if cmd.Run == nil {
+		t.Fatal("Run must be non-nil")
+	}
+
+	// A MenuDecl with an empty After stays empty (end-append chain tail).
+	if cmds[1].After != "" {
+		t.Fatalf("second command After = %q, want empty", cmds[1].After)
+	}
+}
+
+// --- callWasm end-to-end ---
+
+// TestWasmSinkCallWasm builds the example plugin, maps it through CommandsOf
+// and invokes the command's Run closure with a full context snapshot, proving
+// callWasm copies the frontend context into the guest request and maps the
+// response back into a CommandResult.
+func TestWasmSinkCallWasm(t *testing.T) {
+	root := t.TempDir()
+	pluginDir := writeWasmTestPlugin(t, root)
+
+	// args action=toast switches the example plugin's response to a toast.
+	manifest, err := os.ReadFile(filepath.Join(pluginDir, "manifest.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest = []byte(strings.Replace(string(manifest), "export = \"run\"", "export = \"run\"\nargs = { name = \"musicfox\", action = \"toast\" }", 1))
+	if err := os.WriteFile(filepath.Join(pluginDir, "manifest.toml"), manifest, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	mgr, errs := wasm.LoadAndRegister(context.Background(), root, &noopSink{})
+	if len(errs) != 0 {
+		t.Fatalf("LoadAndRegister returned errors: %v", errs)
+	}
+	defer mgr.Close(context.Background())
+
+	p := mgr.Plugins()[0]
+	cmd := wasm.CommandsOf(p)[0]
+
+	res := cmd.Run(frontend.CommandContext{
+		UserID:   123,
+		UserName: "musicfox",
+		Playing:  true,
+		Song:     &frontend.SongInfo{ID: 1, Name: "Song", Artist: "Artist", Album: "Album"},
+	})
+	if res.Action != "toast" {
+		t.Fatalf("Action = %q, want toast", res.Action)
+	}
+	if res.Title != "WASM Hello" {
+		t.Fatalf("Title = %q, want %q", res.Title, "WASM Hello")
+	}
+	if !strings.Contains(res.Message, "musicfox") || !strings.Contains(res.Message, "Song") || !strings.Contains(res.Message, "Artist") {
+		t.Fatalf("Message %q does not echo the args/context song", res.Message)
+	}
+	if res.Level != "info" {
+		t.Fatalf("Level = %q, want info", res.Level)
+	}
+
+	// A second call works: the instance survives between runs.
+	if res := cmd.Run(frontend.CommandContext{}); res.Action != "toast" {
+		t.Fatalf("second Run Action = %q, want toast", res.Action)
+	}
+}
+
+// --- Sink registration wiring (the valuable one) ---
+
+// TestWasmSinkRegisterAndMenus loads a real WASM plugin through
+// wasm.LoadAndRegister with the TUI sink and proves the command lands in the
+// frontend registry with the plugin id stamped, registerCommandMenus adapts it
+// into a *CommandMenu provider plus main-menu item, and the WithPlugin
+// attribution records the command key. The registries are package-global, so
+// the menu key is derived from the test name to stay unique.
+func TestWasmSinkRegisterAndMenus(t *testing.T) {
+	key := wasmTestKey(t)
+
+	mgr, p := loadWasmTestPlugin(t, tuiWasmSink{})
+	defer mgr.Close(context.Background())
+
+	// The command is registered in the frontend registry with plugin attribution.
+	cmd, ok := frontend.CommandByKey(key)
+	if !ok {
+		t.Fatalf("command %q not registered", key)
+	}
+	if cmd.PluginID != p.ID {
+		t.Fatalf("PluginID = %q, want %q (stamped via the WithPlugin scope)", cmd.PluginID, p.ID)
+	}
+
+	// registerCommandMenus adapts it into a *CommandMenu provider.
+	registerCommandMenus()
 	menu, err := BuildMenu(key, baseMenu{}, NoArgMenuOpts{})
 	if err != nil {
 		t.Fatalf("BuildMenu(%q): %v", key, err)
 	}
-	wm, ok := menu.(*WasmPluginMenu)
+	cm, ok := menu.(*CommandMenu)
 	if !ok {
-		t.Fatalf("BuildMenu(%q) = %T, want *WasmPluginMenu", key, menu)
+		t.Fatalf("BuildMenu(%q) = %T, want *CommandMenu", key, menu)
 	}
-	if got := wm.GetMenuKey(); got != key {
+	if got := cm.GetMenuKey(); got != key {
 		t.Fatalf("GetMenuKey() = %q, want %q", got, key)
 	}
 
@@ -227,12 +248,69 @@ export = "run"
 		t.Fatalf("main-menu item %q not registered", key)
 	}
 
-	// The WithPlugin attribution records the menu + main-menu keys.
-	info := pluginInfoSnapshot(t, "hello")
+	// The WithPlugin attribution records the command key.
+	info := pluginInfoSnapshot(t, p.ID)
 	if info == nil {
-		t.Fatalf("plugin %q not declared", "hello")
+		t.Fatalf("plugin %q not declared", p.ID)
 	}
-	if !containsString(info.MenuKeys, key) || !containsString(info.MainMenuItems, key) {
-		t.Fatalf("plugin info = %+v, want MenuKeys+MainMenuItems to contain %q", info, key)
+	if !containsString(info.CommandKeys, key) {
+		t.Fatalf("CommandKeys = %v, want to contain %q", info.CommandKeys, key)
 	}
 }
+
+// --- [plugins] disabled gate ---
+
+// TestWasmCommandDisabledGate proves the wasm-derived command carries its
+// plugin id so the [plugins] disabled config gates it: commandActionCmd rejects
+// before Run when the plugin id is disabled (T4's gate pattern).
+func TestWasmCommandDisabledGate(t *testing.T) {
+	key := wasmTestKey(t)
+
+	mgr, p := loadWasmTestPlugin(t, tuiWasmSink{})
+	defer mgr.Close(context.Background())
+
+	cmd, ok := frontend.CommandByKey(key)
+	if !ok {
+		t.Fatalf("command %q not registered", key)
+	}
+	if cmd.PluginID != p.ID {
+		t.Fatalf("PluginID = %q, want %q (the gate keys off this id)", cmd.PluginID, p.ID)
+	}
+
+	withPluginConfig(t, []string{p.ID})
+	if IsPluginEnabled(p.ID) {
+		t.Fatalf("IsPluginEnabled(%q) = true after disabling", p.ID)
+	}
+
+	cm := &CommandMenu{BaseMenu: BaseMenu{}, cmd: cmd}
+	a := &model.App{} // zero app: Notify is a no-op without a program
+	if msg := commandActionCmd(a, cm)(); msg != nil {
+		t.Fatalf("commandActionCmd() msg = %v, want nil (rejected by the disabled gate)", msg)
+	}
+}
+
+// --- Sink panic isolation ---
+
+// TestWasmSinkRegisterPanicIsolation proves tuiWasmSink.RegisterCommands recovers
+// a registration panic (here: a duplicate command key) into a returned error
+// instead of crashing the caller.
+func TestWasmSinkRegisterPanicIsolation(t *testing.T) {
+	key := wasmTestKey(t)
+	RegisterCommand(testCommand(key)) // pre-register so the sink's registration panics
+
+	err := tuiWasmSink{}.RegisterCommands(&wasm.Plugin{ID: "wasm_sink_panic", Name: "Panic"}, []frontend.Command{
+		{Key: key, Title: "Dup", Run: func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} }},
+	})
+	if err == nil {
+		t.Fatal("RegisterCommands returned nil error, want the recovered duplicate-key panic")
+	}
+	if !strings.Contains(err.Error(), "wasm_sink_panic") {
+		t.Fatalf("error %q does not mention the plugin id", err)
+	}
+}
+
+// noopSink is a test RegistrySink that drops commands (used to exercise the
+// wasm-side CommandsOf/callWasm paths without touching the TUI registries).
+type noopSink struct{}
+
+func (noopSink) RegisterCommands(_ *wasm.Plugin, _ []frontend.Command) error { return nil }
