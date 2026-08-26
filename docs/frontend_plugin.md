@@ -119,6 +119,8 @@ QR 登录客户端（`internal/ui/qr_login_client.go`）提升到 core 侧包，
 
 ### C9 WebUI 形态
 
+> ✅ P3 已实施：`internal/webui` 前端已落地（HTTP/WS server + 安全四层 + 事件推送 + QR 登录 + 辅助端点 + vanilla JS 页面），`--frontend=webui` 可用。
+
 **本地 HTTP/WebSocket server（127.0.0.1 随机端口）+ 自动打开浏览器**，作为 headless 的一等公民演进：
 
 - **传输**：`net/http`（Go 1.22+ ServeMux）+ `github.com/coder/websocket`（gorilla 停更、x/net 废弃；并发安全、context 贯穿）。
@@ -142,7 +144,7 @@ QR 登录客户端（`internal/ui/qr_login_client.go`）提升到 core 侧包，
 |------|------|----------|
 | **P0**（纯移动） | Dispatcher 提升 core（C6）；QR login client 提升 core 侧包 + Engine 级登录流程（C7） | 零行为变化；`go build/test` 全绿；`musicfox ctrl` 冒烟 |
 | **P1**（纯重构） | `internal/frontend` 包 + `Run(ctx, LaunchOptions)` 契约 + 注册表 + runPlayer 改造（C1/C2）+ Observer 拆分（C4）+ menuServices 最小接口化（C5） | `go build/vet/test ./...` 全绿；行为测试全过；TUI/headless/`musicfox ctrl` 手工冒烟 |
-| **P3**（WebUI 核心路径，**先于 P2**） | HTTP/WS server + Dispatcher 复用 + 快照/事件扇出 + 登录 + 安全四层 | httptest 测控制命令与快照；并发测试；curl/浏览器冒烟 |
+| **P3**（WebUI 核心路径，**先于 P2**） | HTTP/WS server + Dispatcher 复用 + 快照/事件扇出 + 登录 + 安全四层 | httptest 测控制命令与快照；并发测试；curl/浏览器冒烟 ✅ 已实施 |
 | **P2**（可与 P3 并行） | 轨 B 命令贡献 + TUI 适配器 + WASM 迁轨 B（C3/C8）+ `[plugins] disabled` gating | parity 测试；WASM 插件 TUI 行为不变 |
 
 **价值排序**：P1 最高（解锁一切）＞ P3（第一个真实受益者 + 验证 Frontend 契约）＞ P2。
