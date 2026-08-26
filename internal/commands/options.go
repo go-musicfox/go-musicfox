@@ -5,5 +5,6 @@ var GlobalOptions struct {
 	DebugMode bool
 	PureMode  bool
 	Headless  bool
+	Frontend  string
 	Once      string
 }

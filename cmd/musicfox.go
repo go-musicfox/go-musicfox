@@ -44,7 +44,8 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")
 		gf.BoolOpt(&commands.GlobalOptions.DebugMode, "debug", "", false, "enable debug log level")
 		gf.BoolOpt(&commands.GlobalOptions.PureMode, "pure", "", false, "start with default config in a temporary directory")
-		gf.BoolOpt(&commands.GlobalOptions.Headless, "headless", "", false, "run without the TUI (headless mode)")
+		gf.BoolOpt(&commands.GlobalOptions.Headless, "headless", "", false, "run without the TUI (legacy alias for --frontend=headless)")
+		gf.StrOpt(&commands.GlobalOptions.Frontend, "frontend", "", "", "select frontend: tui|headless (default tui)")
 		gf.StrOpt(&commands.GlobalOptions.Once, "once", "", "", "run a single headless command and exit (e.g. \"status\" or \"play 周杰伦\")")
 	}
 

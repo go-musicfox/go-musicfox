@@ -39,6 +39,9 @@ frameRate = 5
 locale = "zh"
 # 是否以 headless（无界面）模式运行核心引擎（不启动 TUI；--headless 命令行参数优先于该配置）
 headless = false
+# 前端形态："tui"（默认）或 "headless"（无界面）
+# CLI --frontend 优先于该配置；--headless 为 --frontend=headless 的 legacy 别名
+frontend = "tui"
 
 # 实时频谱显示（目前仅支持 osx, beep 播放引擎）
 # 调高 main.frameRate 更丝滑
