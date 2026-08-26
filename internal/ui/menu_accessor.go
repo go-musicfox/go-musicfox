@@ -27,13 +27,53 @@ type menuServices struct {
 	n   *Netease
 }
 
-// MenuServices is the exported alias of the menuServices accessor type
-// (Phase 3.9 plugin boundary). External packages (plugins) reference it in
-// their signatures, opts fields and page constructors — e.g.
-// `NewLastfmAuthPage(svc ui.MenuServices)`. Internal code keeps using
-// menuServices unchanged; aliases are interchangeable. The alias is to the
-// pointer form (as the accessor is always used via *menuServices).
-type MenuServices = *menuServices
+// MenuServices is the exported interface mirroring the public surface of the
+// menuServices accessor (Phase 3.9 plugin boundary, P1-4 ticket). External
+// packages (plugins) reference it in their signatures, opts fields and page
+// constructors — e.g. `NewLastfmAuthPage(svc ui.MenuServices)`. Internal code
+// keeps using menuServices unchanged; *menuServices implements the interface
+// implicitly, so the type name change from alias to interface keeps all plugin
+// call sites compiling untouched.
+//
+// WARNING: unlike the former type alias (type MenuServices = *menuServices),
+// this interface carries typed-nil semantics — a nil *menuServices stored in a
+// MenuServices value is a non-nil interface. Do NOT compare MenuServices
+// values against nil or perform `.(*menuServices)` type assertions; callers
+// that need nil checks must hold the concrete *menuServices. Exception:
+// BaseMenu.Services() deliberately returns a true nil interface for a zero
+// base, so its return value may be nil-compared (same as the old alias).
+type MenuServices interface {
+	Player() *Player
+	User() *structs.User
+	TrackManager() *track.Manager
+	LyricService() *lyric.Service
+	DesktopLyrics() desktop_lyrics.Controller
+	CoverRenderer() *CoverRenderer
+	ShareSvc() *composer.ShareService
+	Lastfm() *lastfm.Client
+	Ctx() *framework.Context
+	Netease() *Netease
+	ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd)
+	ToSearchPage(searchType SearchType) (model.Page, tea.Cmd)
+	App() *model.App
+	Main() *model.Main
+	MustMain() *model.Main
+	Rerender(force bool)
+	Search() *SearchPage
+	SaveActiveTheme(name string)
+	NotifyThemeSwitch(app *model.App, title, name string)
+	PlaybarHoveredElement() PlaybarElement
+	SetPlaybarHoveredElement(e PlaybarElement)
+	EffectiveWindowHeight() int
+	SpectrumLines(main *model.Main) int
+	GetCoverWidth() int
+	GetCoverEndColumn() int
+	GetLyricPosition() (startRow int, lineCount int)
+}
+
+// Compile-time assertion: *menuServices satisfies the exported MenuServices
+// interface.
+var _ MenuServices = (*menuServices)(nil)
 
 // NewMenuServices builds an accessor rooted at the framework context, without
 // attaching to a Netease shell (shell-dependent forwards — MustMain/App/

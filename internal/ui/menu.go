@@ -276,10 +276,15 @@ func (e *BaseMenu) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 	return e.svc.ToSearchPage(searchType)
 }
 
-// Services returns the underlying menuServices accessor (exported alias).
+// Services returns the underlying menuServices accessor (exported interface).
 // Plugins pass it into page-opts fields and constructors that require the
 // accessor type — the unexported svc field itself is unreachable outside ui.
+// A zero base (nil svc) returns a true nil MenuServices, preserving the
+// pre-interface alias semantics: callers may compare this return value to nil.
 func (e *BaseMenu) Services() MenuServices {
+	if e.svc == nil {
+		return nil
+	}
 	return e.svc
 }
 
