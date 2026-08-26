@@ -12,7 +12,8 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/commands"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	_ "github.com/go-musicfox/go-musicfox/internal/plugins" // 编译期插件聚合器：触发各插件 init() 注册
+	_ "github.com/go-musicfox/go-musicfox/internal/frontend/registration" // 前端聚合器：触发 ui/headless 注册
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins"               // 编译期插件聚合器：触发各插件 init() 注册
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	mfoxapp "github.com/go-musicfox/go-musicfox/utils/app"
