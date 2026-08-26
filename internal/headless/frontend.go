@@ -4,7 +4,6 @@
 package headless
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
@@ -13,9 +12,16 @@ import (
 )
 
 // HeadlessObserver implements core.Observer with no-ops. The headless frontend
-// has no rendering: playback events, position ticks and playlist-exhausted
-// callbacks are ignored (playback simply stops at the playlist end), and
-// login gating degrades to a log line instead of a login page.
+// has no rendering: playback events and position ticks are ignored (playback
+// simply stops at the playlist end), and login gating cannot reach a login
+// page.
+//
+// It intentionally implements only the three playback-required Observer
+// events and does NOT implement the optional extension interfaces
+// (core.LoginRequester, core.PlaylistExhaustedObserver, core.RerenderObserver,
+// core.StartupPhaseObserver): headless has no UI to rerender, flip pages, or
+// refresh titles, and login gating cannot reach a login page. The engine's
+// assertion + dispatch skips these events for headless observers.
 type HeadlessObserver struct{}
 
 // Compile-time assertion that HeadlessObserver satisfies core.Observer.
@@ -29,19 +35,3 @@ func (HeadlessObserver) OnStateChanged(types.State) {}
 
 // OnPosition ignores the throttled position ticks (no render ticker).
 func (HeadlessObserver) OnPosition(time.Duration) {}
-
-// RequestLogin degrades login gating to a log line: there is no login page in
-// headless mode, so the afterLogin callback is never invoked.
-func (HeadlessObserver) RequestLogin(_ func()) {
-	slog.Info("headless: login required but no frontend available")
-}
-
-// OnPlaylistExhausted ignores bottom/top-of-playlist events: playback simply
-// stops at the playlist end in headless mode.
-func (HeadlessObserver) OnPlaylistExhausted(core.PlayDirection) {}
-
-// OnRerender ignores the rerender request (nothing to render).
-func (HeadlessObserver) OnRerender() {}
-
-// OnStartupPhase ignores startup phase milestones (no UI to refresh).
-func (HeadlessObserver) OnStartupPhase(core.StartupPhase) {}

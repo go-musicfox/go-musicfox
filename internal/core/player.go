@@ -382,8 +382,8 @@ func (p *Player) NextSong(manual bool) {
 
 	// 到达底部，则触发翻页或加载更多
 	if playlistLen == 0 || index >= playlistLen-1 {
-		if p.observer != nil {
-			p.observer.OnPlaylistExhausted(DurationNext)
+		if o, ok := p.observer.(PlaylistExhaustedObserver); ok {
+			o.OnPlaylistExhausted(DurationNext)
 		}
 	}
 
@@ -402,8 +402,8 @@ func (p *Player) PreviousSong(manual bool) {
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
 	if playlistLen == 0 || index >= playlistLen-1 {
-		if p.observer != nil {
-			p.observer.OnPlaylistExhausted(DurationPrev)
+		if o, ok := p.observer.(PlaylistExhaustedObserver); ok {
+			o.OnPlaylistExhausted(DurationPrev)
 		}
 	}
 
@@ -595,8 +595,8 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlSeek:
 		p.Seek(signal.Duration)
 	case CtrlRerender:
-		if p.observer != nil {
-			p.observer.OnRerender()
+		if o, ok := p.observer.(RerenderObserver); ok {
+			o.OnRerender()
 		}
 	case CtrlShuffle:
 		if signal.ShuffleType != 0 {

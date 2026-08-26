@@ -109,8 +109,8 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	}
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	p.updateDesktopLyrics()
-	if p.observer != nil {
-		p.observer.OnRerender()
+	if o, ok := p.observer.(RerenderObserver); ok {
+		o.OnRerender()
 	}
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,

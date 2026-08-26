@@ -10,6 +10,12 @@ import (
 // Observer is the frontend-facing callback seam. The engine emits playback
 // events; each frontend implements the methods it cares about (TUI rerenders,
 // headless no-ops). Nil-safe: the engine checks for nil observers.
+//
+// Only the three playback-required methods below are mandatory; frontends that
+// need the optional extension events implement the corresponding optional
+// interfaces defined next to this type (LoginRequester,
+// PlaylistExhaustedObserver, RerenderObserver, StartupPhaseObserver). The
+// engine dispatches the optional events via assertion + dispatch.
 type Observer interface {
 	// OnSongChanged reports a song that started playing.
 	OnSongChanged(song structs.Song)
@@ -18,16 +24,29 @@ type Observer interface {
 	// OnPosition is the already-throttled per-tick position (feeds the TUI
 	// render ticker).
 	OnPosition(d time.Duration)
-	// RequestLogin is reserved for login gating.
+}
+
+// LoginRequester is the optional login-gating observer: frontends with a login
+// page implement it to gate playback on authentication.
+type LoginRequester interface {
 	RequestLogin(afterLogin func())
-	// OnPlaylistExhausted is called when the playlist bottom/top is reached:
-	// the TUI flips the page / runs menu hooks; headless stops.
+}
+
+// PlaylistExhaustedObserver is the optional bottom/top-of-playlist observer:
+// the TUI flips the page / runs menu hooks when the playlist end is reached;
+// headless simply stops and does not implement it.
+type PlaylistExhaustedObserver interface {
 	OnPlaylistExhausted(dir PlayDirection)
-	// OnRerender handles CtrlRerender.
+}
+
+// RerenderObserver is the optional CtrlRerender handler.
+type RerenderObserver interface {
 	OnRerender()
-	// OnStartupPhase reports the engine startup sequence reaching a phase
-	// milestone (user restored / playlist state loaded / right before
-	// autoplay). The TUI refreshes titles and rerenders at these points.
+}
+
+// StartupPhaseObserver is the optional startup-sequence milestone observer.
+// The TUI refreshes titles and rerenders at these points.
+type StartupPhaseObserver interface {
 	OnStartupPhase(phase StartupPhase)
 }
 

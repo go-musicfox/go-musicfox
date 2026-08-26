@@ -41,8 +41,8 @@ const (
 
 // emitStartupPhase forwards a phase milestone to the observer (nil-safe).
 func emitStartupPhase(observer Observer, phase StartupPhase) {
-	if observer != nil {
-		observer.OnStartupPhase(phase)
+	if o, ok := observer.(StartupPhaseObserver); ok {
+		o.OnStartupPhase(phase)
 	}
 }
 
