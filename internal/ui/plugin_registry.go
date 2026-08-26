@@ -31,6 +31,9 @@ type PluginInfo struct {
 	// MainMenuItems are the plugin-declared main-menu entry keys, in
 	// registration order.
 	MainMenuItems []string
+	// CommandKeys are the track-B command keys registered inside the scope(s),
+	// in registration order.
+	CommandKeys []string
 	// StartupHooks is the number of startup hooks registered inside the
 	// scope(s).
 	StartupHooks int
@@ -103,6 +106,17 @@ func recordPluginMainMenuItemKey(key string) {
 	}
 }
 
+// recordPluginCommandKey attributes a registered track-B command key to the
+// current plugin scope. Registrations outside any scope (empty current id) are
+// not attributed to any plugin. It mirrors recordPluginMenuKey.
+func recordPluginCommandKey(key string) {
+	pluginMu.Lock()
+	defer pluginMu.Unlock()
+	if info := pluginInfoByID[currentPluginID]; info != nil {
+		info.CommandKeys = append(info.CommandKeys, key)
+	}
+}
+
 // recordPluginStartupHook attributes a registered startup hook to the plugin
 // id that was current at registration time (the id is captured by
 // RegisterStartupHook before the record call).
@@ -130,6 +144,7 @@ func PluginInfos() []PluginInfo {
 			MenuKeys:      append([]string(nil), info.MenuKeys...),
 			PageKeys:      append([]string(nil), info.PageKeys...),
 			MainMenuItems: append([]string(nil), info.MainMenuItems...),
+			CommandKeys:   append([]string(nil), info.CommandKeys...),
 			StartupHooks:  info.StartupHooks,
 		})
 	}
