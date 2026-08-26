@@ -17,6 +17,7 @@ require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/cnsilvan/UnblockNeteaseMusic v0.0.0-20230310083816-92b59c95a366
+	github.com/coder/websocket v1.8.12
 	github.com/ebitengine/purego v0.10.1
 	github.com/fhs/gompd/v2 v2.3.0
 	github.com/frolovo22/tag v0.0.2

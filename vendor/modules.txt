@@ -119,6 +119,15 @@ github.com/cnsilvan/UnblockNeteaseMusic/version
 # github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 ## explicit
 github.com/cocoonlife/goflac
+# github.com/coder/websocket v1.8.12
+## explicit; go 1.19
+github.com/coder/websocket
+github.com/coder/websocket/internal/bpool
+github.com/coder/websocket/internal/errd
+github.com/coder/websocket/internal/util
+github.com/coder/websocket/internal/wsjs
+github.com/coder/websocket/internal/xsync
+github.com/coder/websocket/wsjson
 # github.com/dlclark/regexp2 v1.11.0
 ## explicit; go 1.13
 github.com/dlclark/regexp2
