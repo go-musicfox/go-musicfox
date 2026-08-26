@@ -11,4 +11,5 @@ package registration
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/headless"
 	_ "github.com/go-musicfox/go-musicfox/internal/ui"
+	_ "github.com/go-musicfox/go-musicfox/internal/webui"
 )
