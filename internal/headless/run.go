@@ -92,7 +92,16 @@ func runOnce(engine *core.Engine, once string) error {
 		args = map[string]any{"query": query}
 	}
 
-	data, err := NewDispatcher(engine).Dispatch(context.Background(), cmd, args)
+	if cmd == "quit" {
+		// Transport-layer shutdown semantics: the transport decides the quit
+		// behavior. In --once mode "quit" mirrors the historical dispatcher
+		// ErrQuit result: print {ok:false,"error":"quit"} and return an error.
+		_ = json.NewEncoder(os.Stdout).Encode(map[string]any{"ok": false, "error": "quit"})
+		_ = engine.Close()
+		return errors.New("quit")
+	}
+
+	data, err := core.NewDispatcher(engine).Dispatch(context.Background(), cmd, args)
 	if err != nil {
 		_ = json.NewEncoder(os.Stdout).Encode(map[string]any{"ok": false, "error": err.Error()})
 		_ = engine.Close()

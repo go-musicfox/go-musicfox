@@ -1,4 +1,4 @@
-package headless
+package core
 
 import (
 	"context"
@@ -11,47 +11,20 @@ import (
 
 	"github.com/go-musicfox/netease-music/service"
 
-	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
-// Protocol version for the headless control channel. Bump it whenever the
-// wire format (Request/Response) changes incompatibly.
-const ProtocolVersion = 1
-
-// Request is a single control request on the headless control channel.
-type Request struct {
-	V    int            `json:"v"` // protocol version, must be ProtocolVersion
-	ID   int64          `json:"id"`
-	Cmd  string         `json:"cmd"`
-	Args map[string]any `json:"args,omitempty"`
-}
-
-// Response is the single reply correlated with a Request by ID.
-type Response struct {
-	V     int    `json:"v"` // protocol version
-	ID    int64  `json:"id"`
-	Ok    bool   `json:"ok"`
-	Data  any    `json:"data,omitempty"`
-	Error string `json:"error,omitempty"`
-}
-
-// ErrQuit is returned by Dispatcher.Dispatch for the "quit" command so the
-// server can distinguish a graceful shutdown request from a failure. The
-// dispatcher never shuts anything down itself.
-var ErrQuit = errors.New("quit")
-
 // Dispatcher executes control commands against the core player. The embedded
-// mutex serializes concurrent dispatch (the server shares one dispatcher across
-// all connections, and playback control must stay single-threaded).
+// mutex serializes concurrent dispatch (the transport shares one dispatcher
+// across all connections, and playback control must stay single-threaded).
 type Dispatcher struct {
-	engine *core.Engine
+	engine *Engine
 	mu     sync.Mutex
 }
 
 // NewDispatcher builds a dispatcher bound to the given engine.
-func NewDispatcher(engine *core.Engine) *Dispatcher {
+func NewDispatcher(engine *Engine) *Dispatcher {
 	return &Dispatcher{engine: engine}
 }
 
@@ -93,8 +66,6 @@ func (d *Dispatcher) Dispatch(ctx context.Context, cmd string, args map[string]a
 		player.CtrlLikeNowPlaying()
 	case "dislike":
 		player.CtrlDislikeNowPlaying()
-	case "quit":
-		return nil, ErrQuit
 	default:
 		return nil, fmt.Errorf("未知命令: %s", cmd)
 	}
@@ -102,7 +73,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, cmd string, args map[string]a
 }
 
 // cmdStatus builds the status snapshot for the "status" command.
-func (d *Dispatcher) cmdStatus(player *core.Player) (any, error) {
+func (d *Dispatcher) cmdStatus(player *Player) (any, error) {
 	info := player.PlayingInfo()
 
 	var userName string

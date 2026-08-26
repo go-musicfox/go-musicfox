@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-musicfox/go-musicfox/internal/core"
 )
 
 // ctrlID is a package-level atomic counter that supplies fresh Request IDs to
@@ -47,14 +49,14 @@ func (c *CtrlClient) Close() error {
 // Call writes a Request with a fresh id on a new connection, then reads the
 // correlated Response. The read is bounded by a 3s deadline (or an earlier ctx
 // deadline).
-func (c *CtrlClient) Call(ctx context.Context, cmd string, args map[string]any) (*Response, error) {
+func (c *CtrlClient) Call(ctx context.Context, cmd string, args map[string]any) (*core.Response, error) {
 	conn, err := net.DialTimeout(c.network, c.addr, time.Second)
 	if err != nil {
 		return nil, errors.New("headless daemon is not running")
 	}
 	defer func() { _ = conn.Close() }()
 
-	req := Request{V: ProtocolVersion, ID: ctrlID.Add(1), Cmd: cmd, Args: args}
+	req := core.Request{V: core.ProtocolVersion, ID: ctrlID.Add(1), Cmd: cmd, Args: args}
 	if err := json.NewEncoder(conn).Encode(req); err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ func (c *CtrlClient) Call(ctx context.Context, cmd string, args map[string]any) 
 	}
 	_ = conn.SetReadDeadline(deadline)
 
-	var resp Response
+	var resp core.Response
 	if err := json.NewDecoder(conn).Decode(&resp); err != nil {
 		return nil, err
 	}

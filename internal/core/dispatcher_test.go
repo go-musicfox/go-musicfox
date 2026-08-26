@@ -1,36 +1,33 @@
-package headless
+package core
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
-	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 // The beep speaker can only be initialized once per process, and the engine's
 // ctrl goroutine processes playback signals asynchronously (reading configs and
-// storage while doing so). The package therefore runs all tests against ONE
-// shared engine with process-lifetime config/storage setup, set up here in
-// TestMain so no test ever tears the state out from under the engine's
+// storage while doing so). The package therefore runs all Dispatcher tests
+// against ONE shared engine with process-lifetime config/storage setup, set up
+// here in TestMain so no test ever tears the state out from under the engine's
 // background goroutines.
 var (
 	sharedEngineOnce sync.Once
-	sharedEngineVal  *core.Engine
+	sharedEngineVal  *Engine
 
 	testRoot string
 )
 
 func TestMain(m *testing.M) {
 	var err error
-	testRoot, err = os.MkdirTemp("", "musicfox-headless-test-*")
+	testRoot, err = os.MkdirTemp("", "musicfox-core-test-*")
 	if err != nil {
 		panic(err)
 	}
@@ -60,17 +57,17 @@ func TestMain(m *testing.M) {
 
 // newTestEngine returns the shared real core engine (no Startup). Its
 // engine.Player() is usable immediately after construction.
-func newTestEngine(t *testing.T) *core.Engine {
+func newTestEngine(t *testing.T) *Engine {
 	t.Helper()
 	sharedEngineOnce.Do(func() {
-		sharedEngineVal = core.NewEngine(core.EngineOptions{})
+		sharedEngineVal = NewEngine(EngineOptions{})
 	})
 	return sharedEngineVal
 }
 
 // waitForMode polls until the player reaches the wanted play mode (control
 // signals are processed asynchronously by the engine's ctrl goroutine).
-func waitForMode(t *testing.T, engine *core.Engine, want types.Mode) {
+func waitForMode(t *testing.T, engine *Engine, want types.Mode) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
@@ -97,40 +94,6 @@ func numOf(v any) (float64, bool) {
 		return float64(n), true
 	}
 	return 0, false
-}
-
-func TestRequestResponseJSONRoundTrip(t *testing.T) {
-	req := Request{V: ProtocolVersion, ID: 42, Cmd: "seek", Args: map[string]any{"seconds": float64(30)}}
-	data, err := json.Marshal(req)
-	if err != nil {
-		t.Fatalf("marshal Request: %v", err)
-	}
-	var got Request
-	if err := json.Unmarshal(data, &got); err != nil {
-		t.Fatalf("unmarshal Request: %v", err)
-	}
-	if got.V != ProtocolVersion || got.ID != 42 || got.Cmd != "seek" {
-		t.Fatalf("Request round-trip mismatch: %+v", got)
-	}
-	if got.Args["seconds"] != float64(30) {
-		t.Fatalf("Request args lost: %+v", got.Args)
-	}
-
-	resp := Response{V: ProtocolVersion, ID: 42, Ok: true, Data: map[string]any{"volume": float64(60)}}
-	data, err = json.Marshal(resp)
-	if err != nil {
-		t.Fatalf("marshal Response: %v", err)
-	}
-	var gotResp Response
-	if err := json.Unmarshal(data, &gotResp); err != nil {
-		t.Fatalf("unmarshal Response: %v", err)
-	}
-	if !gotResp.Ok || gotResp.ID != 42 || gotResp.Error != "" {
-		t.Fatalf("Response round-trip mismatch: %+v", gotResp)
-	}
-	if gotResp.Data.(map[string]any)["volume"] != float64(60) {
-		t.Fatalf("Response data lost: %+v", gotResp.Data)
-	}
 }
 
 func TestDispatcherUnknownCommand(t *testing.T) {
@@ -232,14 +195,6 @@ func TestDispatcherRepeatShuffleMapping(t *testing.T) {
 	}
 	if _, err := d.Dispatch(context.Background(), "shuffle", map[string]any{}); err == nil {
 		t.Fatal("Dispatch(shuffle without on) expected an error")
-	}
-}
-
-func TestDispatcherQuitReturnsErrQuit(t *testing.T) {
-	d := NewDispatcher(newTestEngine(t))
-	_, err := d.Dispatch(context.Background(), "quit", nil)
-	if !errors.Is(err, ErrQuit) {
-		t.Fatalf("Dispatch(quit) error = %v, want ErrQuit", err)
 	}
 }
 

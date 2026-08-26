@@ -23,6 +23,12 @@ import (
 // request. A stuck/half-open client must never hold a server goroutine forever.
 const ipcReadTimeout = 5 * time.Second
 
+// ErrQuit is the transport-layer shutdown sentinel: it marks the "quit"
+// command as a graceful shutdown request rather than a failure. The transport
+// layer decides the quit behavior (the core Dispatcher never shuts anything
+// down itself).
+var ErrQuit = errors.New("quit")
+
 // ListenAddr returns the control-channel socket path used by the headless
 // daemon on non-Windows platforms. On Windows the channel is a TCP listener on
 // an ephemeral port persisted to a port file, so the empty string is returned
@@ -66,7 +72,7 @@ type Server struct {
 	network    string
 	addr       string
 	listener   net.Listener
-	dispatcher *Dispatcher
+	dispatcher *core.Dispatcher
 	quit       chan struct{}
 	quitOnce   sync.Once
 }
@@ -85,7 +91,7 @@ func NewServerWithAddr(engine *core.Engine, network, addr string) *Server {
 		engine:     engine,
 		network:    network,
 		addr:       addr,
-		dispatcher: NewDispatcher(engine),
+		dispatcher: core.NewDispatcher(engine),
 		quit:       make(chan struct{}),
 	}
 }
@@ -173,27 +179,32 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 
 	_ = conn.SetReadDeadline(time.Now().Add(ipcReadTimeout))
-	var req Request
+	var req core.Request
 	if err := json.NewDecoder(conn).Decode(&req); err != nil {
 		slog.Debug("headless IPC: read request failed", slog.Any("err", err))
 		return
 	}
 
-	data, err := s.dispatcher.Dispatch(ctx, req.Cmd, req.Args)
-	isQuit := errors.Is(err, ErrQuit)
+	if req.Cmd == "quit" {
+		// Transport-layer shutdown semantics: the transport decides whether
+		// "quit" shuts it down. The command is answered with {ok:true} first,
+		// then the server shuts down (listener + socket/port file) so
+		// headless.Run can exit.
+		if err := json.NewEncoder(conn).Encode(core.Response{V: core.ProtocolVersion, ID: req.ID, Ok: true}); err != nil {
+			slog.Debug("headless IPC: write response failed", slog.Any("err", err))
+		}
+		s.Close()
+		return
+	}
 
-	resp := Response{V: ProtocolVersion, ID: req.ID, Ok: err == nil || isQuit, Data: data}
-	if err != nil && !isQuit {
+	data, err := s.dispatcher.Dispatch(ctx, req.Cmd, req.Args)
+
+	resp := core.Response{V: core.ProtocolVersion, ID: req.ID, Ok: err == nil, Data: data}
+	if err != nil {
 		resp.Error = err.Error()
 	}
 	if err := json.NewEncoder(conn).Encode(resp); err != nil {
 		slog.Debug("headless IPC: write response failed", slog.Any("err", err))
-	}
-
-	if isQuit {
-		// The quit command is answered with {ok:true} first, then the server
-		// shuts down (listener + socket/port file) so headless.Run can exit.
-		s.Close()
 	}
 }
 
