@@ -56,7 +56,10 @@ func Run(ctx context.Context) error {
 		return engine.Close()
 	}
 
-	url := "http://" + server.Addr() + "/?token=" + server.Token()
+	// Point the browser at the token exchange endpoint first: it validates the
+	// URL token, sets the session cookie, and redirects to "/" so the page and
+	// its /ws + /api requests carry the authenticated cookie.
+	url := "http://" + server.Addr() + "/token?token=" + server.Token()
 	if err := open.Start(url); err != nil {
 		slog.Warn("webui: failed to open browser, open the URL manually", slogx.Error(err))
 	}
