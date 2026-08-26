@@ -1,4 +1,6 @@
-package ui
+// Package qrlogin provides the UI-free QR login client for Netease Cloud
+// Music, reusable by the TUI / WebUI / headless frontends.
+package qrlogin
 
 import (
 	"encoding/json"
@@ -34,13 +36,13 @@ func newQRLoginClient(cookieJar http.CookieJar) *req.Client {
 		SetTLSFingerprintChrome()
 }
 
-// qrGetKey 使用 Chrome TLS 指纹请求二维码登录的 unikey 和 qrcodeUrl。
+// GetKey 使用 Chrome TLS 指纹请求二维码登录的 unikey 和 qrcodeUrl。
 //
 // 替代 service.LoginQRService.GetKey()，底层逻辑保持一致：
 // 1. 对请求参数进行 weapi 加密
 // 2. POST 到 /weapi/login/qrcode/unikey
 // 3. 解析响应获取 unikey，拼接 qrcodeUrl
-func qrGetKey(cookieJar http.CookieJar) (uniKey string, qrcodeUrl string, err error) {
+func GetKey(cookieJar http.CookieJar) (uniKey string, qrcodeUrl string, err error) {
 	data := map[string]interface{}{
 		"type":         1,
 		"noCheckToken": true,
@@ -94,14 +96,14 @@ func qrGetKey(cookieJar http.CookieJar) (uniKey string, qrcodeUrl string, err er
 	return result.UniKey, qrcodeUrl, nil
 }
 
-// qrCheckStatus 使用 Chrome TLS 指纹轮询二维码扫码状态。
+// CheckStatus 使用 Chrome TLS 指纹轮询二维码扫码状态。
 //
 // 替代 service.LoginQRService.CheckQR()，底层逻辑保持一致：
 // 1. 注入反风控 cookie
 // 2. 对请求参数进行 weapi 加密
 // 3. POST 到 /weapi/login/qrcode/client/login
 // 4. 解析响应中的 code 字段
-func qrCheckStatus(uniKey string, cookieJar http.CookieJar) (code float64, respBytes []byte, err error) {
+func CheckStatus(uniKey string, cookieJar http.CookieJar) (code float64, respBytes []byte, err error) {
 	if uniKey == "" {
 		return 0, nil, nil
 	}

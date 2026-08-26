@@ -17,6 +17,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/core/qrlogin"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -294,7 +295,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 // generateQRCodeCmd 异步获取和生成二维码
 func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
 	cookieJar := neteaseutil.GetGlobalCookieJar()
-	uniKey, url, err := qrGetKey(cookieJar)
+	uniKey, url, err := qrlogin.GetKey(cookieJar)
 	if err != nil {
 		return qrErrorMsg{err}
 	}
@@ -315,7 +316,7 @@ func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
 // pollQRStatusCmd 轮询二维码状态
 func (p *QRLoginPage) pollQRStatusCmd() tea.Msg {
 	cookieJar := neteaseutil.GetGlobalCookieJar()
-	code, resp, err := qrCheckStatus(p.uniKey, cookieJar)
+	code, resp, err := qrlogin.CheckStatus(p.uniKey, cookieJar)
 	if err != nil {
 		return qrErrorMsg{err}
 	}
@@ -326,11 +327,7 @@ func (p *QRLoginPage) pollQRStatusCmd() tea.Msg {
 func (p *QRLoginPage) loginSuccessHandle(n *Netease) model.Page {
 	// 先保存 cookie，确保登录成功后 cookie 被持久化
 	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
-	if err := core.AppCookieJar().Save(); err != nil {
-		slog.Warn("持久化 Cookie 失败", slogx.Error(err))
-	}
-
-	if err := n.engine.LoginCallback(); err != nil {
+	if err := n.engine.CompleteQRLogin(core.AppCookieJar()); err != nil {
 		slog.Error("login callback error", slogx.Error(err))
 	}
 
