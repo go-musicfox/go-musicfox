@@ -75,5 +75,8 @@ func ArtistNames(artists []structs.Artist) []string {
 }
 
 func (s *Scrobble) FilterArtist() {
+	if len(s.Artist) == 0 {
+		return // 歌曲无艺人信息时直接保留空列表，避免越界 panic
+	}
 	s.Artist = s.Artist[:1]
 }
