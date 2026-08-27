@@ -72,6 +72,47 @@ func RegisterCommand(cmd Command) {
 	cmdOrder = append(cmdOrder, cmd.Key)
 }
 
+// UnregisterCommand deletes the command registered under key. It is a no-op
+// when key is not registered.
+func UnregisterCommand(key string) {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, ok := cmdRegistry[key]; !ok {
+		return
+	}
+	delete(cmdRegistry, key)
+	for i, k := range cmdOrder {
+		if k == key {
+			cmdOrder = append(cmdOrder[:i], cmdOrder[i+1:]...)
+			break
+		}
+	}
+}
+
+// ReplaceCommand replaces the definition of the command registered under
+// cmd.Key while keeping its registration-order position. When key is not
+// registered it behaves like RegisterCommand (appends at the tail). Unlike
+// RegisterCommand it is allowed to overwrite an existing key, so it is the
+// only overwrite entry point. It shares RegisterCommand's panic semantics
+// (empty Key / nil Run). The new cmd's PluginID replaces the old one — the
+// caller is responsible for stamping it correctly.
+func ReplaceCommand(cmd Command) {
+	if cmd.Key == "" {
+		panic("frontend: ReplaceCommand with empty Key")
+	}
+	if cmd.Run == nil {
+		panic("frontend: ReplaceCommand with nil Run for key " + cmd.Key)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if _, ok := cmdRegistry[cmd.Key]; ok {
+		cmdRegistry[cmd.Key] = cmd
+		return
+	}
+	cmdRegistry[cmd.Key] = cmd
+	cmdOrder = append(cmdOrder, cmd.Key)
+}
+
 // Commands returns a snapshot of all registered commands in registration
 // order. The returned slice is a copy; mutating it does not affect the
 // registry.

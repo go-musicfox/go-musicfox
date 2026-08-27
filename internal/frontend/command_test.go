@@ -134,6 +134,154 @@ func TestRegisterCommandDuplicatePanics(t *testing.T) {
 	RegisterCommand(validCommand("dup-cmd"))
 }
 
+func TestUnregisterCommand(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	RegisterCommand(validCommand("unreg-a"))
+	RegisterCommand(validCommand("unreg-b"))
+
+	UnregisterCommand("unreg-a")
+
+	got := Commands()
+	if len(got) != 1 {
+		t.Fatalf("Commands() len = %d, want 1", len(got))
+	}
+	if got[0].Key != "unreg-b" {
+		t.Fatalf("Commands()[0].Key = %q, want %q", got[0].Key, "unreg-b")
+	}
+	if _, ok := CommandByKey("unreg-a"); ok {
+		t.Fatal("CommandByKey hit for unregistered key")
+	}
+}
+
+func TestUnregisterCommandMissingNoOp(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	RegisterCommand(validCommand("keep-a"))
+
+	// Must not panic and must not disturb existing entries.
+	UnregisterCommand("never-registered")
+
+	got := Commands()
+	if len(got) != 1 || got[0].Key != "keep-a" {
+		t.Fatalf("Commands() = %+v, want [keep-a]", got)
+	}
+}
+
+func TestReplaceCommandExistingKeepsPosition(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	RegisterCommand(validCommand("rep-a"))
+	RegisterCommand(validCommand("rep-b"))
+	RegisterCommand(validCommand("rep-c"))
+
+	ReplaceCommand(Command{
+		Key:   "rep-b",
+		Title: "Replaced",
+		Run: func(CommandContext) CommandResult {
+			return CommandResult{Action: "data", Message: "replaced"}
+		},
+	})
+
+	got, ok := CommandByKey("rep-b")
+	if !ok {
+		t.Fatal("CommandByKey miss after ReplaceCommand")
+	}
+	if got.Title != "Replaced" {
+		t.Fatalf("CommandByKey().Title = %q, want %q", got.Title, "Replaced")
+	}
+	if res := got.Run(CommandContext{}); res.Message != "replaced" {
+		t.Fatalf("replaced Run() = %+v, want Message %q", res, "replaced")
+	}
+
+	// Registration-order position must be preserved: rep-b stays at index 1.
+	cmds := Commands()
+	if len(cmds) != 3 {
+		t.Fatalf("Commands() len = %d, want 3", len(cmds))
+	}
+	for i, key := range []string{"rep-a", "rep-b", "rep-c"} {
+		if cmds[i].Key != key {
+			t.Fatalf("Commands()[%d].Key = %q, want %q", i, cmds[i].Key, key)
+		}
+	}
+}
+
+func TestReplaceCommandMissingEquivalentToRegister(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	ReplaceCommand(validCommand("brand-new"))
+
+	if _, ok := CommandByKey("brand-new"); !ok {
+		t.Fatal("CommandByKey miss after ReplaceCommand on missing key")
+	}
+	cmds := Commands()
+	if len(cmds) != 1 || cmds[0].Key != "brand-new" {
+		t.Fatalf("Commands() = %+v, want [brand-new]", cmds)
+	}
+	if cmds[0].Run == nil {
+		t.Fatal("replaced/registered command has nil Run")
+	}
+}
+
+func TestReplaceCommandOrderStability(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	RegisterCommand(validCommand("stab-a"))
+	RegisterCommand(validCommand("stab-b"))
+	RegisterCommand(validCommand("stab-c"))
+
+	ReplaceCommand(Command{
+		Key:   "stab-b",
+		Title: "B'",
+		Run:   validCommand("stab-b").Run,
+	})
+
+	got := Commands()
+	if len(got) != 3 {
+		t.Fatalf("Commands() len = %d, want 3", len(got))
+	}
+	for i, key := range []string{"stab-a", "stab-b", "stab-c"} {
+		if got[i].Key != key {
+			t.Fatalf("Commands()[%d].Key = %q, want %q", i, got[i].Key, key)
+		}
+	}
+	if got[1].Title != "B'" {
+		t.Fatalf("Commands()[1].Title = %q, want %q", got[1].Title, "B'")
+	}
+}
+
+func TestReplaceCommandEmptyKeyPanics(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic on empty Key")
+		}
+	}()
+	ReplaceCommand(Command{
+		Title: "no key",
+		Run:   func(CommandContext) CommandResult { return CommandResult{} },
+	})
+}
+
+func TestReplaceCommandNilRunPanics(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic on nil Run")
+		}
+	}()
+	ReplaceCommand(Command{Key: "no-run"})
+}
+
 // jsonKeys marshals v and returns the set of top-level JSON object keys.
 func jsonKeys(t *testing.T, v any) map[string]bool {
 	t.Helper()
