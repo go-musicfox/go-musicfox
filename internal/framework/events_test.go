@@ -297,6 +297,48 @@ func TestEmitUnregisteredEventIsNoop(t *testing.T) {
 	}
 }
 
+// --- Unregister ---
+
+func TestUnregisterRemovesAllHandlerKinds(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Listener("evt", func(ctx *Context, payload any) error { r.add("l"); return nil })
+	emitter.Middleware("evt", func(ctx *Context, payload any, next func() error) error { r.add("mw"); return next() })
+	emitter.Parallel("evt", func(ctx *Context, payload any) error { r.add("par"); return nil })
+	emitter.Serial("evt", func(ctx *Context, payload any) error { r.add("ser"); return nil })
+
+	emitter.Unregister("evt")
+	if err := emitter.Emit(&Context{}, "evt", nil); err != nil {
+		t.Fatalf("Emit() after Unregister error = %v, want nil", err)
+	}
+	if got := r.list(); len(got) != 0 {
+		t.Fatalf("recorded %v after Unregister, want no handler to run", got)
+	}
+}
+
+func TestUnregisterUnknownNameIsNoop(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Listener("evt", func(ctx *Context, payload any) error { r.add("l"); return nil })
+	emitter.Unregister("never-registered")
+	if err := emitter.Emit(&Context{}, "evt", nil); err != nil {
+		t.Fatalf("Emit() error = %v, want nil", err)
+	}
+	assertRecorder(t, r, []string{"l"})
+}
+
+func TestUnregisterOnlyRemovesTargetName(t *testing.T) {
+	emitter := NewEventEmitter()
+	r := &eventRecorder{}
+	emitter.Listener("a", func(ctx *Context, payload any) error { r.add("a"); return nil })
+	emitter.Listener("b", func(ctx *Context, payload any) error { r.add("b"); return nil })
+	emitter.Unregister("a")
+	if err := emitter.Emit(&Context{}, "b", nil); err != nil {
+		t.Fatalf("Emit(b) error = %v", err)
+	}
+	assertRecorder(t, r, []string{"b"})
+}
+
 // --- panic isolation ---
 
 // assertPanicError asserts err is non-nil and reports the panicking handler

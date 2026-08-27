@@ -99,6 +99,18 @@ func (e *EventEmitter) Serial(name string, fn func(ctx *Context, payload any) er
 	e.serial[name] = append(e.serial[name], fn)
 }
 
+// Unregister removes every handler registered under name across all four kinds
+// (listener, middleware, parallel and serial). It is intentionally
+// coarse-grained — it cannot target an individual registration — and is meant
+// for teardown paths such as daemon/WebUI plugins unsubscribing on Dispose.
+// Unregistering an unknown name is a no-op.
+func (e *EventEmitter) Unregister(name string) {
+	delete(e.listeners, name)
+	delete(e.middleware, name)
+	delete(e.parallel, name)
+	delete(e.serial, name)
+}
+
 // Emit dispatches the event named name to all four kinds of registered
 // handlers in order: listeners (forward), middlewares (onion), parallel
 // (concurrent) and serial (forward). The first error returned by any kind

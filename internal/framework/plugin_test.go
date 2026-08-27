@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -566,5 +568,268 @@ func TestScopeDisposeStartedScopeAggregatesStopAndDisposeErrors(t *testing.T) {
 	assertHistory(t, history, []string{"start:p", "stop:p", "dispose:p"})
 	if len(scope.plugins) != 0 {
 		t.Fatalf("scope holds %d plugins after Dispose", len(scope.plugins))
+	}
+}
+
+// --- enabled registration (AddWithEnabled / AddAndStart / Plugins) ---
+
+// basePlugin embeds NoopPlugin (lifecycle) and PluginBase (enabled state).
+type basePlugin struct {
+	NoopPlugin
+	PluginBase
+}
+
+func TestScopeAddWithEnabledDisabledSkipsStartButDisposes(t *testing.T) {
+	var history []string
+	scope := &Scope{}
+	_ = scope.AddWithEnabled(&trackingPlugin{name: "p1", history: &history}, true)
+	_ = scope.AddWithEnabled(&trackingPlugin{name: "disabled", history: &history}, false)
+	_ = scope.AddWithEnabled(&trackingPlugin{name: "p2", history: &history}, true)
+
+	if err := scope.Start(&Context{}); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	// The disabled plugin is skipped by Start but stays in the slice.
+	assertHistory(t, history, []string{"start:p1", "start:p2"})
+
+	if err := scope.Dispose(); err != nil {
+		t.Fatalf("Dispose() error = %v", err)
+	}
+	// The disabled plugin never started, yet its Stop and Dispose still run in
+	// order (registered plugins are finalized regardless of enabled state).
+	assertHistory(t, history, []string{
+		"start:p1", "start:p2",
+		"stop:p2", "stop:disabled", "stop:p1",
+		"dispose:p2", "dispose:disabled", "dispose:p1",
+	})
+	// Dispose stays idempotent with a disabled plugin present.
+	if err := scope.Dispose(); err != nil {
+		t.Fatalf("second Dispose() error = %v, want nil", err)
+	}
+}
+
+func TestScopeAddWithEnabledAfterDisposeReturnsError(t *testing.T) {
+	scope := &Scope{}
+	if err := scope.Dispose(); err != nil {
+		t.Fatalf("Dispose() error = %v", err)
+	}
+	if err := scope.AddWithEnabled(&trackingPlugin{name: "p", history: &[]string{}}, true); err == nil {
+		t.Fatal("AddWithEnabled() after Dispose error = nil, want explicit error (disposed scope is final)")
+	}
+}
+
+func TestScopeStartRollbackSkipsDisabledPlugins(t *testing.T) {
+	var history []string
+	scope := &Scope{}
+	_ = scope.AddWithEnabled(&trackingPlugin{name: "p1", history: &history}, true)
+	_ = scope.AddWithEnabled(&trackingPlugin{name: "disabled", history: &history}, false)
+	_ = scope.AddWithEnabled(&failingPlugin{name: "bad", history: &history, errOn: "start"}, true)
+
+	err := scope.Start(&Context{})
+	if err == nil {
+		t.Fatal("Start() error = nil, want non-nil")
+	}
+	// p1 started, the disabled plugin was skipped, then bad failed: rollback
+	// stops only the plugins that were actually started (p1), never the
+	// disabled one.
+	assertHistory(t, history, []string{"start:p1", "deps:bad", "start:bad", "stop:p1"})
+}
+
+func TestScopeAddWithEnabledWritesPluginBaseEnabled(t *testing.T) {
+	scope := &Scope{}
+	enabled := &basePlugin{}
+	disabled := &basePlugin{}
+	_ = scope.AddWithEnabled(enabled, true)
+	_ = scope.AddWithEnabled(disabled, false)
+	if !enabled.Enabled {
+		t.Fatal("enabled plugin's PluginBase.Enabled = false, want true")
+	}
+	if disabled.Enabled {
+		t.Fatal("disabled plugin's PluginBase.Enabled = true, want false")
+	}
+}
+
+func TestScopeAddAndStartOnStartedScope(t *testing.T) {
+	var history []string
+	scope := &Scope{}
+	_ = scope.Add(&trackingPlugin{name: "p1", history: &history})
+	if err := scope.Start(&Context{}); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if err := scope.AddAndStart(&Context{}, &trackingPlugin{name: "dyn", history: &history}); err != nil {
+		t.Fatalf("AddAndStart() error = %v", err)
+	}
+	// The dynamic plugin started immediately after registration.
+	assertHistory(t, history, []string{"start:p1", "start:dyn"})
+	if got := len(scope.Plugins()); got != 2 {
+		t.Fatalf("Plugins() len = %d, want 2", got)
+	}
+	// A later scope Stop finalizes both plugins in reverse order.
+	if err := scope.Stop(); err != nil {
+		t.Fatalf("Stop() error = %v", err)
+	}
+	assertHistory(t, history, []string{"start:p1", "start:dyn", "stop:dyn", "stop:p1"})
+}
+
+func TestScopeAddAndStartBeforeStartDegradesToAdd(t *testing.T) {
+	var history []string
+	scope := &Scope{}
+	if err := scope.AddAndStart(&Context{}, &trackingPlugin{name: "dyn", history: &history}); err != nil {
+		t.Fatalf("AddAndStart() error = %v", err)
+	}
+	// The scope was not started: nothing ran yet (degraded to plain Add).
+	if len(history) != 0 {
+		t.Fatalf("history = %v, want empty (degraded to Add)", history)
+	}
+	if err := scope.Start(&Context{}); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	assertHistory(t, history, []string{"start:dyn"})
+}
+
+func TestScopeAddAndStartAfterDisposeReturnsError(t *testing.T) {
+	scope := &Scope{}
+	if err := scope.Dispose(); err != nil {
+		t.Fatalf("Dispose() error = %v", err)
+	}
+	if err := scope.AddAndStart(&Context{}, &trackingPlugin{name: "p", history: &[]string{}}); err == nil {
+		t.Fatal("AddAndStart() after Dispose error = nil, want explicit error (disposed scope is final)")
+	}
+}
+
+// failMountPlugin fails a dynamic mount at a configurable phase and records
+// Stop/Dispose, for asserting the AddAndStart rollback (Stop + remove).
+type failMountPlugin struct {
+	name    string
+	history *[]string
+	errOn   string // "deps" or "start"
+}
+
+func (p *failMountPlugin) Deps(*Context) error {
+	*p.history = append(*p.history, "deps:"+p.name)
+	if p.errOn == "deps" {
+		return errors.New(p.name + " deps failed")
+	}
+	return nil
+}
+
+func (p *failMountPlugin) Start(*Context) error {
+	*p.history = append(*p.history, "start:"+p.name)
+	if p.errOn == "start" {
+		return errors.New(p.name + " start failed")
+	}
+	return nil
+}
+
+func (p *failMountPlugin) Stop() error {
+	*p.history = append(*p.history, "stop:"+p.name)
+	return nil
+}
+
+func (p *failMountPlugin) Dispose() error {
+	*p.history = append(*p.history, "dispose:"+p.name)
+	return nil
+}
+
+func TestScopeAddAndStartFailureRollsBack(t *testing.T) {
+	for _, phase := range []string{"deps", "start"} {
+		t.Run(phase, func(t *testing.T) {
+			var history []string
+			scope := &Scope{}
+			_ = scope.Add(&trackingPlugin{name: "p1", history: &history})
+			if err := scope.Start(&Context{}); err != nil {
+				t.Fatalf("Start() error = %v", err)
+			}
+			bad := &failMountPlugin{name: "bad", history: &history, errOn: phase}
+			err := scope.AddAndStart(&Context{}, bad)
+			if err == nil {
+				t.Fatal("AddAndStart() error = nil, want non-nil")
+			}
+			// The failed plugin was rolled back (Stop) and removed from the
+			// slice; the previously started p1 is untouched.
+			var want []string
+			if phase == "deps" {
+				want = []string{"start:p1", "deps:bad", "stop:bad"}
+			} else {
+				want = []string{"start:p1", "deps:bad", "start:bad", "stop:bad"}
+			}
+			assertHistory(t, history, want)
+			if got := len(scope.Plugins()); got != 1 {
+				t.Fatalf("Plugins() len = %d, want 1 (failed plugin removed)", got)
+			}
+		})
+	}
+}
+
+// countStartPlugin increments an atomic counter in Start; used by the
+// concurrent AddAndStart test.
+type countStartPlugin struct {
+	started *atomic.Int32
+}
+
+func (p *countStartPlugin) Start(*Context) error {
+	p.started.Add(1)
+	return nil
+}
+
+func (p *countStartPlugin) Stop() error { return nil }
+
+func (p *countStartPlugin) Dispose() error { return nil }
+
+func TestScopeAddAndStartConcurrent(t *testing.T) {
+	scope := &Scope{}
+	if err := scope.Start(&Context{}); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	var started atomic.Int32
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := scope.AddAndStart(&Context{}, &countStartPlugin{started: &started}); err != nil {
+				t.Errorf("AddAndStart() error = %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	if got := started.Load(); got != 8 {
+		t.Fatalf("started = %d, want 8", got)
+	}
+	if got := len(scope.Plugins()); got != 8 {
+		t.Fatalf("Plugins() len = %d, want 8", got)
+	}
+}
+
+func TestScopePluginsReturnsSnapshot(t *testing.T) {
+	scope := &Scope{}
+	p1 := &trackingPlugin{name: "p1", history: &[]string{}}
+	_ = scope.Add(p1)
+	_ = scope.AddWithEnabled(&trackingPlugin{name: "p2", history: &[]string{}}, false)
+	snapshot := scope.Plugins()
+	if len(snapshot) != 2 {
+		t.Fatalf("Plugins() len = %d, want 2", len(snapshot))
+	}
+	if snapshot[0] != p1 {
+		t.Fatalf("Plugins()[0] = %v, want p1", snapshot[0])
+	}
+	// The snapshot must not alias the live registry.
+	snapshot[0] = nil
+	if got := scope.Plugins()[0]; got != p1 {
+		t.Fatal("Plugins() snapshot aliases the live slice")
+	}
+}
+
+func TestNoopPluginLifecycleIsNoop(t *testing.T) {
+	var p NoopPlugin
+	var _ Plugin = p // compile-time assertion: NoopPlugin satisfies Plugin
+	if err := p.Start(&Context{}); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if err := p.Stop(); err != nil {
+		t.Fatalf("Stop() error = %v", err)
+	}
+	if err := p.Dispose(); err != nil {
+		t.Fatalf("Dispose() error = %v", err)
 	}
 }
