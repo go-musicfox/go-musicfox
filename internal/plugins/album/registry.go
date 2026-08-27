@@ -13,6 +13,7 @@ package album
 import (
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
@@ -37,17 +38,23 @@ type AlbumNewOpts struct {
 	Area string
 }
 
-// init is the compile-time registration entry (linked via the internal/plugins
-// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
-// identical to the one the menu registered under in internal/ui before the
-// extraction: album_menu / album_new_area / album_top_area / album_new_hot /
+// Plugin is the album business plugin (P5 cordis shape): its Start registers
+// the eight album menu providers and the 专辑列表 main-menu entry — the
+// registration window moves from package init() to the frontend scope Start.
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+// Start registers the plugin's contributions inside a ui.WithPlugin scope so
+// the attribution stamp records them under "album". Every key is identical to
+// the one the menu registered under in internal/ui before the extraction:
+// album_menu / album_new_area / album_top_area / album_new_hot /
 // album_new / album_top / album_sub_list / album_detail. Note "album_detail"
 // keeps its shared opts type in ui (ui.AlbumDetailOpts — ui's search-result
 // menu, artist-album menu and operate.go goToAlbumOfSong also jump into it).
 // The album_menu entry menu declares the main-menu item 专辑列表: the built-in
-// entry was removed from menu_main.go (plugin items are appended after all
-// built-ins).
-func init() {
+// entry was removed from menu_main.go.
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("album", "专辑列表", func() {
 		ui.RegisterMenu("album_menu", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 			return NewAlbumListMenu(base), nil
@@ -74,7 +81,16 @@ func init() {
 			return NewAlbumDetailMenu(base, opts.AlbumID), nil
 		})
 		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并复现插件化前的主菜单
-		// 原始顺序（专辑列表跟在私人FM（recommend 插件）后、搜索（内置）前）。
+		// 原始顺序（专辑列表跟在私人FM（recommend 插件）后、搜索（search 插件）前）。
 		ui.RegisterMainMenuItemAfter("album_menu", "专辑列表", "personal_fm", nil)
 	})
+	return nil
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in) and only declares
+// the plugin constructor — actual registrations happen in Start (frontend
+// scope).
+func init() {
+	framework.RegisterPlugin("album", func() framework.Plugin { return &Plugin{} })
 }

@@ -14,6 +14,7 @@ package artist
 import (
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
@@ -39,18 +40,24 @@ type ArtistSongOpts struct {
 	ArtistID int64
 }
 
-// init is the compile-time registration entry (linked via the internal/plugins
-// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
-// identical to the one the menu registered under in internal/ui before the
-// extraction: hot_artists / artist_detail / artist_song / artist_album /
+// Plugin is the artist business plugin (P5 cordis shape): its Start registers
+// the six artist menu providers and the 热门歌手 main-menu entry — the
+// registration window moves from package init() to the frontend scope Start.
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+// Start registers the plugin's contributions inside a ui.WithPlugin scope so
+// the attribution stamp records them under "artist". Every key is identical to
+// the one the menu registered under in internal/ui before the extraction:
+// hot_artists / artist_detail / artist_song / artist_album /
 // artist_of_song / artists_sub_list. Note "artist_detail" and "artist_of_song"
 // keep their shared opts types in ui (ui.ArtistDetailOpts — ui's search-result
 // menu, artists-of-song and subscribed-artists lists and operate.go
 // goToArtistOfSong also jump into it; ui.ArtistsOfSongOpts — operate.go's
 // multi-artist jump carries it). The hot_artists entry menu declares the
-// main-menu item 热门歌手: the built-in entry was removed from menu_main.go
-// (plugin items are appended after all built-ins).
-func init() {
+// main-menu item 热门歌手: the built-in entry was removed from menu_main.go.
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("artist", "歌手", func() {
 		ui.RegisterMenu("hot_artists", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 			return NewHotArtistsMenu(base), nil
@@ -75,4 +82,13 @@ func init() {
 		// （recommend 插件）前）。
 		ui.RegisterMainMenuItemAfter("hot_artists", "热门歌手", "high_quality_playlists", nil)
 	})
+	return nil
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in) and only declares
+// the plugin constructor — actual registrations happen in Start (frontend
+// scope).
+func init() {
+	framework.RegisterPlugin("artist", func() framework.Plugin { return &Plugin{} })
 }

@@ -8,7 +8,8 @@ import (
 
 	// user_collect 的构造器经 ui.MustBuildNoArg 构建 album_sub_list /
 	// artists_sub_list 子菜单，其 provider 由 album / artist 插件注册；本测试
-	// 二进制经空导入链接这两个插件（它们的 init() 注册先于测试运行）。
+	// 二进制经空导入链接这两个插件（init() 只声明构造器），TestMain 在测试
+	// 运行前启动它们（P5：注册窗口从 init() 后移到插件 Start）。
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/album"
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/artist"
 	"github.com/go-musicfox/go-musicfox/internal/structs"

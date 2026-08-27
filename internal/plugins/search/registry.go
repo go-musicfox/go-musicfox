@@ -18,19 +18,27 @@ package search
 import (
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
-// init is the compile-time registration entry (linked via the internal/plugins
-// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
-// identical to the one registered under in internal/ui before the extraction:
-// search_type / search_result / search (page). search_type is a no-arg menu and
-// declares its own main-menu item — the built-in 搜索 entry was removed from
-// menu_main.go; the plugin item anchors after album_menu (专辑列表) to keep the
-// original position. search_result is parameterized (SearchResultOpts carries
-// the search type). The search page is registered by forwarding to
-// ui.NewSearchPage; the shell keeps the built page as a singleton.
-func init() {
+// Plugin is the search business plugin (P5 cordis shape): its Start registers
+// the search menu providers and the 搜索 main-menu entry — the registration
+// window moves from package init() to the frontend scope Start.
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+// Start registers the plugin's contributions inside a ui.WithPlugin scope so
+// the attribution stamp records them under "search". Every key is identical to
+// the one registered under in internal/ui before the extraction: search_type /
+// search_result / search (page). search_type is a no-arg menu and declares its
+// own main-menu item — the built-in 搜索 entry was removed from menu_main.go;
+// the plugin item anchors after album_menu (专辑列表) to keep the original
+// position. search_result is parameterized (SearchResultOpts carries the
+// search type). The search page is registered by forwarding to ui.NewSearchPage;
+// the shell keeps the built page as a singleton.
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("search", "搜索", func() {
 		ui.RegisterMenu("search_type", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 			return NewSearchTypeMenu(base), nil
@@ -45,4 +53,13 @@ func init() {
 		// 原始顺序（搜索跟在专辑列表（album 插件）后）。
 		ui.RegisterMainMenuItemAfter("search_type", "搜索", "album_menu", nil)
 	})
+	return nil
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in) and only declares
+// the plugin constructor — actual registrations happen in Start (frontend
+// scope).
+func init() {
+	framework.RegisterPlugin("search", func() framework.Plugin { return &Plugin{} })
 }

@@ -10,17 +10,24 @@
 package song
 
 import (
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
-// init is the compile-time registration entry (linked via the internal/plugins
-// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
-// identical to the one the menu registered under in internal/ui before the
-// extraction: simi_songs / add_to_user_playlist. Both are parameterized
-// (SimiSongsOpts carries the source song; AddToUserPlaylistOpts carries the
-// target user / song / add-or-del flag) and are pure jump targets, not
-// main-menu entries.
-func init() {
+// Plugin is the song business plugin (P5 cordis shape): its Start registers
+// the two song menu providers — the registration window moves from package
+// init() to the frontend scope Start.
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+// Start registers the plugin's contributions inside a ui.WithPlugin scope so
+// the attribution stamp records them under "song". Every key is identical to
+// the one the menu registered under in internal/ui before the extraction:
+// simi_songs / add_to_user_playlist. Both are parameterized (SimiSongsOpts
+// carries the source song; AddToUserPlaylistOpts carries the target user /
+// song / add-or-del flag) and are pure jump targets, not main-menu entries.
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("song", "单曲", func() {
 		ui.RegisterMenu("simi_songs", func(base ui.BaseMenu, opts ui.SimiSongsOpts) (ui.Menu, error) {
 			return NewSimilarSongsMenu(base, opts.Song), nil
@@ -29,4 +36,13 @@ func init() {
 			return NewAddToUserPlaylistMenu(base, opts.UserID, opts.Song, opts.IsAdd), nil
 		})
 	})
+	return nil
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in) and only declares
+// the plugin constructor — actual registrations happen in Start (frontend
+// scope).
+func init() {
+	framework.RegisterPlugin("song", func() framework.Plugin { return &Plugin{} })
 }

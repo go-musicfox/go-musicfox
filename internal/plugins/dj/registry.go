@@ -10,6 +10,7 @@
 package dj
 
 import (
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
@@ -26,17 +27,23 @@ type DjHotOpts struct {
 	HotType DjHotType
 }
 
-// init is the compile-time registration entry (linked via the internal/plugins
-// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
-// identical to the one the menu registered under in internal/ui before the
-// extraction: dj_radio_detail / dj_category_detail / dj_category /
+// Plugin is the dj business plugin (P5 cordis shape): its Start registers the
+// ten DJ/radio menu providers and the 主播电台 main-menu entry — the
+// registration window moves from package init() to the frontend scope Start.
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+// Start registers the plugin's contributions inside a ui.WithPlugin scope so
+// the attribution stamp records them under "dj". Every key is identical to the
+// one the menu registered under in internal/ui before the extraction:
+// dj_radio_detail / dj_category_detail / dj_category /
 // dj_program_rank / dj_program_hour_rank / dj_hot / dj_sub / dj_recommend /
 // dj_today_recommend / radio_dj_type. Note "dj_radio_detail" keeps its shared
 // opts type in ui (DjRadioDetailOpts — ui's search-result menu also jumps into
 // it). The radio_dj_type entry menu declares the main-menu item 主播电台: the
-// built-in entry was removed from menu_main.go (plugin items are appended after
-// all built-ins).
-func init() {
+// built-in entry was removed from menu_main.go.
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("dj", "主播电台", func() {
 		ui.RegisterMenu("dj_radio_detail", func(base ui.BaseMenu, opts ui.DjRadioDetailOpts) (ui.Menu, error) {
 			return NewDjRadioDetailMenu(base, opts.DjRadioID), nil
@@ -72,4 +79,13 @@ func init() {
 		// 原始顺序（主播电台跟在云盘（playlist 插件）后、LastFM（lastfm 插件）前）。
 		ui.RegisterMainMenuItemAfter("radio_dj_type", "主播电台", "could", nil)
 	})
+	return nil
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in) and only declares
+// the plugin constructor — actual registrations happen in Start (frontend
+// scope).
+func init() {
+	framework.RegisterPlugin("dj", func() framework.Plugin { return &Plugin{} })
 }

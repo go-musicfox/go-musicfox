@@ -261,7 +261,8 @@ type MainMenuItem struct {
 }
 
 // mainMenuPluginItems holds the plugin-declared main-menu items in
-// registration order (compile-time registration via init()).
+// registration order (registered by the 9 business plugins' Start inside the
+// frontend scope, plus test-doubles and command-menu adapters).
 var mainMenuPluginItems []MainMenuItem
 
 // RegisterMainMenuItem appends a plugin main-menu entry at the end of the

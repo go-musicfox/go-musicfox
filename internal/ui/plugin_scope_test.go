@@ -118,3 +118,58 @@ func TestNewFrontendScopeValidation(t *testing.T) {
 	assertPanics(t, func() { NewFrontendScope(nil, testNetease()) })
 	assertPanics(t, func() { NewFrontendScope(&core.Engine{}, nil) })
 }
+
+// TestDisabledPluginNotStartedRegistersNothing proves the P5 "disabled =
+// nonexistent" semantics at the scope boundary: a plugin registered with
+// AddWithEnabled(..., false) never starts, so its menu/page contributions are
+// NOT registered and BuildMenu fails with the missing-key error — the former
+// "disabled plugin key still jumpable" contract is intentionally gone. The
+// enabled path starts the same plugin shape and registers the contributions.
+func TestDisabledPluginNotStartedRegistersNothing(t *testing.T) {
+	const (
+		disabledID = "disabled_semantics_plugin"
+		menuKey    = "disabled_semantics_menu"
+		pageKey    = "disabled_semantics_page"
+	)
+
+	// Disabled: Start is skipped → nothing registered, BuildMenu errors.
+	scope := framework.NewScope()
+	if err := scope.AddWithEnabled(&startWithPluginPlugin{
+		pluginID: disabledID,
+		name:     "禁用语义",
+		menuKey:  menuKey,
+		pageKey:  pageKey,
+	}, false); err != nil {
+		t.Fatalf("AddWithEnabled() error = %v", err)
+	}
+	if err := scope.Start(&framework.Context{}); err != nil {
+		t.Fatalf("scope Start() error = %v", err)
+	}
+	if (MenuRegistry{}).Registered(menuKey) {
+		t.Fatalf("disabled plugin menu %q is registered (Start must have been skipped)", menuKey)
+	}
+	if (PageRegistry{}).Registered(pageKey) {
+		t.Fatalf("disabled plugin page %q is registered (Start must have been skipped)", pageKey)
+	}
+	if _, err := BuildMenu(menuKey, baseMenu{}, NoArgMenuOpts{}); err == nil {
+		t.Fatalf("BuildMenu(%q) succeeded for a disabled plugin, want missing-key error", menuKey)
+	}
+
+	// Enabled: Start runs → the contributions are registered.
+	const enabledKey = "disabled_semantics_enabled_menu"
+	scope2 := framework.NewScope()
+	if err := scope2.AddWithEnabled(&startWithPluginPlugin{
+		pluginID: disabledID + "_enabled",
+		name:     "禁用语义启用",
+		menuKey:  enabledKey,
+		pageKey:  pageKey + "_enabled",
+	}, true); err != nil {
+		t.Fatalf("AddWithEnabled() error = %v", err)
+	}
+	if err := scope2.Start(&framework.Context{}); err != nil {
+		t.Fatalf("scope Start() error = %v", err)
+	}
+	if !(MenuRegistry{}).Registered(enabledKey) {
+		t.Fatalf("enabled plugin menu %q not registered after Start", enabledKey)
+	}
+}

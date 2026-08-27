@@ -1,6 +1,10 @@
 // Package plugins is the compile-time plugin aggregator. Each shipped plugin
-// package is blank-imported here so its init() registration runs whenever the
-// binary links this package; cmd/musicfox.go blank-imports the aggregator.
+// package is blank-imported here so its init() runs whenever the binary links
+// this package; cmd/musicfox.go blank-imports the aggregator. Since P5 the
+// init() only declares the plugin constructor in the framework registry
+// (framework.RegisterPlugin) — the actual menu/page/main-menu registrations
+// happen in each plugin's Start, which the frontend scope (internal/ui)
+// drives for the enabled subset.
 package plugins
 
 import (

@@ -2,11 +2,14 @@ package ui
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
 type MainMenu struct {
@@ -23,8 +26,12 @@ type MainMenu struct {
 // mainMenuEntry is one row of the merged built-in + plugin main menu before
 // the after-anchor chain walk. builtin marks built-in entries so the help
 // entry (menu == nil) is recognized for the helpIndex computation. pluginID is
-// the plugin scope the entry was declared in (empty for built-ins); NewMainMenu
-// hides entries whose plugin is disabled after the chain walk.
+// the plugin scope the entry was declared in (empty for built-ins). Since P5
+// the 9 business plugins register their items only when enabled (disabled =
+// not started = not registered), so the pluginID-based filtering below is a
+// defense-in-depth for residual registrations that register unconditionally
+// (WASM command-menu items adapted by registerCommandMenus); NewMainMenu hides
+// entries whose plugin is disabled after the chain walk.
 type mainMenuEntry struct {
 	key      string
 	after    string
@@ -55,10 +62,12 @@ func NewMainMenu(base baseMenu) *MainMenu {
 		// 内置项也参与锚点链：帮助跟在 LastFM 后（搜索项已由 search 插件提供）。
 		{key: "help", after: "last_fm", builtin: true, title: "帮助", menu: nil}, // 帮助由 Action 直接打开 Markdown 弹窗，不再进入子菜单。
 	}
-	// 被禁用插件的项保留在 entries 中参与锚点链（其 key 仍是其它项的合法
-	// After 锚点，链完整性校验基于全部注册项）；但不构建菜单，且链归并后的
-	// 显示阶段会跳过它——被禁用插件的主菜单入口因此隐藏，后继项锚点指向它
-	// 仍成立，位置被自然省略。
+	// Since P5 the 9 business plugins register their main-menu items only when
+	// enabled (a disabled plugin never starts, so its item is absent from this
+	// list); the IsPluginEnabled gates below are defense-in-depth for items
+	// registered unconditionally (WASM command-menu items), and
+	// orderMainMenuEntries tolerates a disabled plugin's missing anchor by
+	// re-anchoring the dependent entries to the chain tail (relaxed mode).
 	for _, item := range MainMenuPluginItems() {
 		if _, ok := menuRegistry[item.Key]; !ok {
 			panic(fmt.Sprintf("main menu plugin item %q: menu provider not registered", item.Key))
@@ -90,11 +99,19 @@ func NewMainMenu(base baseMenu) *MainMenu {
 // asserts the chain's integrity with explicit panics (programmer errors):
 //
 //   - every After target exists — each anchor must be MainMenuStart or another
-//     entry's key;
+//     entry's key. With all plugins enabled a missing anchor is a programmer
+//     error and panics; under the P5 "disabled = nonexistent" semantics (any
+//     plugin disabled in [plugins]) a missing anchor is a config outcome — the
+//     anchored-after plugin's item was never registered — so the entry is
+//     re-anchored to the chain tail (with its followers) and the build
+//     continues;
 //   - every entry is reachable exactly once — the chain length must equal the
 //     total entry count, which catches orphaned entries (their After anchor
 //     was duplicated by an earlier entry or they close an unreachable cycle)
-//     and cycles (an entry re-visited while walking from MainMenuStart);
+//     and cycles (an entry re-visited while walking from MainMenuStart). In
+//     relaxed mode (a plugin disabled) orphan detection is skipped: a broken
+//     chain makes exact positioning impossible, so the remaining entries are
+//     appended in declaration order to keep the menu buildable;
 //   - entries with an empty After (the end-append convenience forms) follow
 //     the chain in registration order.
 func orderMainMenuEntries(entries []mainMenuEntry) []mainMenuEntry {
@@ -104,24 +121,36 @@ func orderMainMenuEntries(entries []mainMenuEntry) []mainMenuEntry {
 	for _, e := range entries {
 		known[e.key] = true
 	}
+
+	// relaxed is on when any plugin is disabled in [plugins]: the disabled
+	// plugin's items are not registered at all (P5 disabled = nonexistent), so
+	// dependent After anchors can legitimately go missing.
+	relaxed := configs.AppConfig != nil && len(configs.AppConfig.Plugins.Disabled) > 0
+
+	// Index entries by their After anchor; entries with a missing anchor are
+	// deferred (relaxed mode re-anchors them at the tail). Duplicate anchors
+	// collapse to one entry (the other becomes orphaned — caught by the length
+	// assertion below). End-append entries (empty After) are excluded from the
+	// walk.
+	byAfter := make(map[string]mainMenuEntry, len(entries))
+	var deferred []mainMenuEntry
 	var missing []string
 	for _, e := range entries {
-		if e.after != "" && !known[e.after] {
-			missing = append(missing, fmt.Sprintf("%q (after %q)", e.key, e.after))
+		if e.after == "" {
+			continue
 		}
+		if !known[e.after] {
+			missing = append(missing, fmt.Sprintf("%q (after %q)", e.key, e.after))
+			deferred = append(deferred, e)
+			continue
+		}
+		byAfter[e.after] = e
 	}
 	if len(missing) > 0 {
-		panic("main menu chain: After anchor not registered: " + strings.Join(missing, ", "))
-	}
-
-	// Index entries by their After anchor; duplicate anchors collapse to one
-	// entry (the other becomes orphaned — caught by the length assertion
-	// below). End-append entries (empty After) are excluded from the walk.
-	byAfter := make(map[string]mainMenuEntry, len(entries))
-	for _, e := range entries {
-		if e.after != "" {
-			byAfter[e.after] = e
+		if !relaxed {
+			panic("main menu chain: After anchor not registered: " + strings.Join(missing, ", "))
 		}
+		slog.Warn("main menu chain: After anchor not registered (plugin disabled?), re-anchoring entries to the chain tail", "missing", strings.Join(missing, ", "))
 	}
 
 	ordered := make([]mainMenuEntry, 0, len(entries))
@@ -146,18 +175,56 @@ func orderMainMenuEntries(entries []mainMenuEntry) []mainMenuEntry {
 			ordered = append(ordered, e)
 		}
 	}
+	// Relaxed mode: re-anchor the deferred entries (missing anchor) and their
+	// followers at the chain tail. Followers are the entries whose After names
+	// the just-appended key (the byAfter links), so the tail keeps the original
+	// chain order.
+	for _, e := range deferred {
+		appendChainTail(e, &ordered, visited, byAfter)
+	}
 	if len(ordered) != len(entries) {
-		var orphans []string
-		for _, e := range entries {
-			if !visited[e.key] {
-				orphans = append(orphans, e.key)
+		if relaxed {
+			// Last resort: a broken chain makes exact positioning impossible;
+			// append the still-unvisited entries in declaration order so the
+			// menu stays buildable (no startup panic from config).
+			for _, e := range entries {
+				appendChainTail(e, &ordered, visited, byAfter)
 			}
+		} else {
+			var orphans []string
+			for _, e := range entries {
+				if !visited[e.key] {
+					orphans = append(orphans, e.key)
+				}
+			}
+			sort.Strings(orphans)
+			panic(fmt.Sprintf("main menu chain: %d of %d entries reachable from %q (orphaned entries — missing or duplicate After anchor): %v",
+				len(ordered), len(entries), MainMenuStart, orphans))
 		}
-		sort.Strings(orphans)
-		panic(fmt.Sprintf("main menu chain: %d of %d entries reachable from %q (orphaned entries — missing or duplicate After anchor): %v",
-			len(ordered), len(entries), MainMenuStart, orphans))
 	}
 	return ordered
+}
+
+// appendChainTail appends head and its followers (entries whose After names the
+// head's key, transitively via byAfter) to ordered, marking them visited. It is
+// the tail-append used by the relaxed (a plugin disabled) chain re-anchoring
+// and the declaration-order last resort.
+func appendChainTail(head mainMenuEntry, ordered *[]mainMenuEntry, visited map[string]bool, byAfter map[string]mainMenuEntry) {
+	if visited[head.key] {
+		return
+	}
+	visited[head.key] = true
+	*ordered = append(*ordered, head)
+	cur := head.key
+	for {
+		next, ok := byAfter[cur]
+		if !ok || visited[next.key] {
+			break
+		}
+		visited[next.key] = true
+		*ordered = append(*ordered, next)
+		cur = next.key
+	}
 }
 
 func (m *MainMenu) FormatMenuItem(item *model.MenuItem) {

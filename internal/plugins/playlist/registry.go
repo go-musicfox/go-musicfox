@@ -19,6 +19,7 @@ package playlist
 import (
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
@@ -30,10 +31,17 @@ func enterMenuCallback(main *model.Main) ui.LoginCallback {
 	}
 }
 
-// init is the compile-time registration entry (linked via the internal/plugins
-// aggregator blank import, which cmd/musicfox.go pulls in). Every key is
-// identical to the one the menu registered under in internal/ui before the
-// extraction: user_playlist / user_collect / high_quality_playlists / could /
+// Plugin is the playlist & cloud business plugin (P5 cordis shape): its Start
+// registers the five menu providers and the four main-menu entries — the
+// registration window moves from package init() to the frontend scope Start.
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+// Start registers the plugin's contributions inside a ui.WithPlugin scope so
+// the attribution stamp records them under "playlist". Every key is identical
+// to the one the menu registered under in internal/ui before the extraction:
+// user_playlist / user_collect / high_quality_playlists / could /
 // playlist_detail. The user_playlist menu is parameterized (UserPlaylistOpts
 // carries the user ID); its main-menu entry uses the RegisterMainMenuItemWith
 // builder form so it is constructed with UserID = ui.CurUser (当前用户歌单)
@@ -41,9 +49,8 @@ func enterMenuCallback(main *model.Main) ui.LoginCallback {
 // parameterized too (PlaylistDetailOpts carries the playlist ID) and is a pure
 // jump target, not a main-menu entry. The other three are no-arg menus and
 // declare their own main-menu items — the built-in 我的歌单 / 我的收藏 / 精选歌单 /
-// 云盘 entries were removed from menu_main.go (plugin items are appended after
-// all built-ins).
-func init() {
+// 云盘 entries were removed from menu_main.go.
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("playlist", "歌单云盘", func() {
 		ui.RegisterMenu("user_playlist", func(base ui.BaseMenu, opts ui.UserPlaylistOpts) (ui.Menu, error) {
 			return NewUserPlaylistMenu(base, opts.UserID), nil
@@ -72,4 +79,13 @@ func init() {
 		ui.RegisterMainMenuItemAfter("high_quality_playlists", "精选歌单", "ranks", nil)
 		ui.RegisterMainMenuItemAfter("could", "云盘", "recent_songs", nil)
 	})
+	return nil
+}
+
+// init is the compile-time registration entry (linked via the internal/plugins
+// aggregator blank import, which cmd/musicfox.go pulls in) and only declares
+// the plugin constructor — actual registrations happen in Start (frontend
+// scope).
+func init() {
+	framework.RegisterPlugin("playlist", func() framework.Plugin { return &Plugin{} })
 }

@@ -10,20 +10,22 @@ import (
 //
 // Plugins declare their identity and wrap all their registrations in
 // ui.WithPlugin(id, name, func() { ... }) so the shell can attribute the
-// registrations made inside the scope to that plugin. The shell then filters
-// per-plugin *entry visibility* and *startup side effects* against the
-// [plugins] disabled config: a disabled plugin's main-menu items are hidden and
-// its startup hooks are skipped. The menu/page provider registries and
-// BuildMenu jumps are NOT filtered — a disabled plugin's menus stay fully
-// buildable by key, preserving cross-plugin jump integrity.
+// registrations made inside the scope to that plugin.
 //
-// Registration window (P5 transition): today the 9 business plugins call
-// WithPlugin from their package init() (compile-time registration). From P5-2
-// they call it from their plugin Start inside the frontend scope instead — the
-// attribution stamp (currentPluginID) is a plain set/unset guard that works
-// identically in both windows, and the record* helpers below are lock-guarded
-// against a snapshot, so a runtime (Start-time) call has no side effects on
-// PluginInfos(). The init() path stays supported until every plugin migrates.
+// Since P5-2 the 9 business plugins register from their plugin Start inside
+// the frontend scope: a plugin disabled in [plugins] never starts
+// (AddWithEnabled(..., false)), so its menus/pages/main-menu items/startup
+// hooks are never registered — "disabled = nonexistent". The attribution
+// stamp (currentPluginID) is a plain set/unset guard that works identically
+// in both the former init() window and the current Start window, and the
+// record* helpers below are lock-guarded against a snapshot, so a runtime
+// (Start-time) call has no side effects on PluginInfos().
+//
+// Residual consumption-point filtering stays for registrations that happen
+// unconditionally even when their plugin is disabled: WASM command-menu items
+// (adapted by registerCommandMenus) are registered for every loaded manifest
+// and filtered by IsPluginEnabled in NewMainMenu / commandActionCmd, and
+// framework.RunStartupHooks still gates package-registered hooks by plugin id.
 
 // PluginInfo describes a declared plugin: its id/name and the registrations
 // attributed to it (registration order preserved).
@@ -63,12 +65,13 @@ var (
 // first declaration's name is kept. Panics on an empty id or a nil register
 // func.
 //
-// Callable both at compile-time init() (the 9 business plugins, P5-2 before)
-// and at runtime inside a plugin's Start (P5-2 after — the frontend scope
-// starts plugins in registration order, each Start re-enters WithPlugin with
-// its own id; the previous id is restored on exit). Package init() is
-// single-threaded, but the guard lock keeps the state sound even when a scope
-// body spawns goroutines or Start calls run interleaved with WASM loading.
+// Callable at compile-time init() (e.g. a not-yet-migrated plugin or the ui
+// test binary's test-doubles) and at runtime inside a plugin's Start (the 9
+// business plugins, P5-2 — the frontend scope starts plugins in registration
+// order, each Start re-enters WithPlugin with its own id; the previous id is
+// restored on exit). Package init() is single-threaded, but the guard lock
+// keeps the state sound even when a scope body spawns goroutines or Start
+// calls run interleaved with WASM loading.
 func WithPlugin(id, name string, register func()) {
 	if id == "" || register == nil {
 		panic("WithPlugin: empty id or nil register func")

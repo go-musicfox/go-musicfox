@@ -3,9 +3,10 @@
 // helpers that keep user config files intact.
 package configs
 
-// PluginsConfig 是插件启停与 WASM 插件目录配置。启停只控制插件主菜单入口的
-// 可见性与启动钩子的执行——被禁用插件的菜单 key 注册与 BuildMenu 跳转不受
-// 影响（其它插件 / 内置代码仍可按 key 跳入其菜单）。
+// PluginsConfig 是插件启停与 WASM 插件目录配置。启停控制插件是否在 frontend
+// Scope 中 Start：**禁用 = 不 Start = 不注册贡献**（菜单 key 不在注册表、主菜单
+// 入口不出现、启动钩子不执行、BuildMenu 跳转失败降级 toast）——用户可见行为
+// 变更（P5 cordis 化后语义自洽：禁用插件即不存在）。
 type PluginsConfig struct {
 	// Disabled 是禁用的插件 id 列表（插件 id 即插件目录名，如 "search"、
 	// "checkupdate"）。空配置表示全部插件启用。

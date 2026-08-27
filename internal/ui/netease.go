@@ -108,20 +108,16 @@ func NewNetease(app *model.App) *Netease {
 
 	// The engine registers its 8 core services into the app-wide context; the
 	// TUI-only services (coverRenderer/menuRegistry/pageRegistry) are provided
-	// by the frontend scope's uiServicesPlugin (P5-1 mount; the 9 business
-	// plugins follow in P5-2). The scope Start is synchronous and replaces the
-	// former direct registerUIExtraServices call with identical effect — the
-	// assertions below still run after every contribution is registered.
+	// by the frontend scope's uiServicesPlugin, and the 9 business plugins
+	// (mounted by NewFrontendScope, filtered by [plugins] disabled) register
+	// their menus/pages/main-menu items inside their own Start. The scope Start
+	// is synchronous and replaces the former direct registerUIExtraServices +
+	// init()-time plugin registration with identical effect.
 	n.frontendScope = NewFrontendScope(n.engine, n)
 	if err := n.frontendScope.Start(n.ctx); err != nil {
 		slog.Error("framework frontend scope start failed", slogx.Error(err))
 		return nil
 	}
-
-	// Startup completeness: a provider set missing any canonical key is a
-	// programmer error; fail loudly instead of surfacing it at navigation time.
-	AssertMenuRegistryComplete(expectedMenuKeys...)
-	AssertPageRegistryComplete(expectedPageKeys...)
 
 	// WASM plugins must register here (inside NewNetease, before the main menu
 	// is constructed in internal/commands) so their command providers and
@@ -132,6 +128,16 @@ func NewNetease(app *model.App) *Netease {
 	// (and before the main menu is constructed in internal/commands), so their
 	// providers and main-menu items join the after-anchor chain from the start.
 	registerCommandMenus()
+
+	// Startup completeness: a provider set missing any canonical key is a
+	// programmer error; fail loudly instead of surfacing it at navigation time.
+	// The assertions run after every contribution is registered (frontend scope
+	// business-plugin Start → WASM → registerCommandMenus) and before the main
+	// menu is constructed downstream (internal/ui/frontend.go NewMainMenu).
+	// `expectedMenuKeys`/`expectedPageKeys` only lock the built-in set — keys
+	// supplied by enabled plugins are intentionally absent.
+	AssertMenuRegistryComplete(expectedMenuKeys...)
+	AssertPageRegistryComplete(expectedPageKeys...)
 
 	return n
 }

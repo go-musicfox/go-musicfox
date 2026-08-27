@@ -1,21 +1,88 @@
 package plugins
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
+	lastfmclient "github.com/go-musicfox/go-musicfox/internal/lastfm"
+	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	ui "github.com/go-musicfox/go-musicfox/internal/ui"
 )
 
+// businessPluginIDs mirrors internal/ui/plugin_scope.go (unexported there): the
+// ordered id list of the 9 compile-time business plugins.
+var businessPluginIDs = []string{
+	"checkupdate",
+	"lastfm",
+	"dj",
+	"album",
+	"artist",
+	"recommend",
+	"playlist",
+	"search",
+	"song",
+}
+
+var (
+	startOnce    sync.Once
+	startPlugins error
+)
+
+// startPluginsForTest starts the full 9-plugin set once per test binary via
+// the framework registry — the P5 replacement for the former init()-time
+// registration: each plugin's Start re-enters ui.WithPlugin and registers its
+// contributions (menus / pages / main-menu items / startup hooks) into the
+// package-global registries. The global registries reject duplicates, so the
+// sync.Once guard is mandatory.
+func startPluginsForTest(t *testing.T) {
+	t.Helper()
+	startOnce.Do(func() {
+		ctx := &framework.Context{}
+		provideLastfmService(ctx)
+		constructors := framework.PluginConstructors()
+		for _, id := range businessPluginIDs {
+			ctor, ok := constructors[id]
+			if !ok {
+				startPlugins = fmt.Errorf("plugin %q constructor not registered via aggregator blank import", id)
+				return
+			}
+			if err := ctor().Start(ctx); err != nil {
+				startPlugins = fmt.Errorf("plugin %q Start error: %w", id, err)
+				return
+			}
+		}
+	})
+	if startPlugins != nil {
+		t.Fatalf("start plugins: %v", startPlugins)
+	}
+}
+
+// provideLastfmService wires the ServiceLastfm dependency the lastfm plugin's
+// Deps resolves. Constructing the client reads storage.DBManager and
+// configs.AppConfig, so tests provide a minimal bootstrap (mirrors the lastfm
+// plugin's withTestLastfmDB helper).
+func provideLastfmService(ctx *framework.Context) {
+	if storage.DBManager == nil {
+		storage.DBManager = &storage.LocalDBManager{}
+	}
+	if configs.AppConfig == nil {
+		configs.AppConfig = &configs.Config{}
+	}
+	ctx.Provide(ui.ServiceLastfm, lastfmclient.NewClient())
+}
+
 // TestBlankImportRegistersCheckUpdateMenu proves the aggregator's blank-import
 // chain (cmd/musicfox.go → internal/plugins → internal/plugins/checkupdate)
-// links the plugin and triggers its init() registration: the "check_update"
-// provider is visible on the registry, BuildMenu resolves it through the
-// exported base, and the plugin-declared main-menu entry is appended.
+// links the plugin and declares its constructor in the framework registry; the
+// plugin Start registers the "check_update" provider and the main-menu entry.
 func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
+	startPluginsForTest(t)
 	if !(ui.MenuRegistry{}).Registered("check_update") {
-		t.Fatal("check_update menu provider not registered via aggregator blank import")
+		t.Fatal("check_update menu provider not registered after plugin Start")
 	}
 	menu, err := ui.BuildMenu("check_update", ui.BaseMenu{}, ui.NoArgMenuOpts{})
 	if err != nil {
@@ -25,7 +92,7 @@ func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
 		t.Fatalf("GetMenuKey() = %q, want check_update", key)
 	}
 
-	// The plugin also declares its main-menu entry (Phase 3.9).
+	// The plugin also declares its main-menu entry.
 	found := false
 	for _, item := range ui.MainMenuPluginItems() {
 		if item.Key == "check_update" && item.Title == "检查更新" {
@@ -34,7 +101,7 @@ func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("check_update main-menu item not registered via aggregator blank import")
+		t.Fatal("check_update main-menu item not registered after plugin Start")
 	}
 }
 
@@ -43,9 +110,10 @@ func TestBlankImportRegistersCheckUpdateMenu(t *testing.T) {
 // aggregator: its menu providers are registered with their original keys and
 // its entry menu declares the 专辑列表 main-menu item.
 func TestBlankImportRegistersAlbumPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"album_menu", "album_new_area", "album_top_area", "album_new_hot", "album_new", "album_top", "album_sub_list", "album_detail"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("album menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("album menu provider %q not registered after plugin Start", key)
 		}
 	}
 	entry, err := ui.BuildMenu("album_menu", ui.BaseMenu{}, ui.NoArgMenuOpts{})
@@ -63,7 +131,7 @@ func TestBlankImportRegistersAlbumPlugin(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("album_menu main-menu item not registered via aggregator blank import")
+		t.Fatal("album_menu main-menu item not registered after plugin Start")
 	}
 }
 
@@ -72,9 +140,10 @@ func TestBlankImportRegistersAlbumPlugin(t *testing.T) {
 // aggregator: its menu providers are registered with their original keys and
 // its entry menu declares the 主播电台 main-menu item.
 func TestBlankImportRegistersDjPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"dj_radio_detail", "dj_category_detail", "dj_category", "dj_program_rank", "dj_program_hour_rank", "dj_hot", "dj_sub", "dj_recommend", "dj_today_recommend", "radio_dj_type"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("dj menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("dj menu provider %q not registered after plugin Start", key)
 		}
 	}
 	entry, err := ui.BuildMenu("radio_dj_type", ui.BaseMenu{}, ui.NoArgMenuOpts{})
@@ -92,7 +161,7 @@ func TestBlankImportRegistersDjPlugin(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("radio_dj_type main-menu item not registered via aggregator blank import")
+		t.Fatal("radio_dj_type main-menu item not registered after plugin Start")
 	}
 }
 
@@ -101,9 +170,10 @@ func TestBlankImportRegistersDjPlugin(t *testing.T) {
 // aggregator: its menu providers are registered with their original keys and
 // its entry menu declares the 热门歌手 main-menu item.
 func TestBlankImportRegistersArtistPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"hot_artists", "artist_detail", "artist_song", "artist_album", "artist_of_song", "artists_sub_list"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("artist menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("artist menu provider %q not registered after plugin Start", key)
 		}
 	}
 	entry, err := ui.BuildMenu("hot_artists", ui.BaseMenu{}, ui.NoArgMenuOpts{})
@@ -121,7 +191,7 @@ func TestBlankImportRegistersArtistPlugin(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("hot_artists main-menu item not registered via aggregator blank import")
+		t.Fatal("hot_artists main-menu item not registered after plugin Start")
 	}
 }
 
@@ -130,14 +200,15 @@ func TestBlankImportRegistersArtistPlugin(t *testing.T) {
 // page providers are registered and its main-menu item is appended after the
 // built-ins.
 func TestBlankImportRegistersLastfmPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	if !(ui.MenuRegistry{}).Registered("last_fm") {
-		t.Fatal("last_fm menu provider not registered via aggregator blank import")
+		t.Fatal("last_fm menu provider not registered after plugin Start")
 	}
 	if !(ui.PageRegistry{}).Registered("lastfm_auth") {
-		t.Fatal("lastfm_auth page provider not registered via aggregator blank import")
+		t.Fatal("lastfm_auth page provider not registered after plugin Start")
 	}
 	if !(ui.PageRegistry{}).Registered("lastfm_custom_api") {
-		t.Fatal("lastfm_custom_api page provider not registered via aggregator blank import")
+		t.Fatal("lastfm_custom_api page provider not registered after plugin Start")
 	}
 	menu, err := ui.BuildMenu("last_fm", ui.BaseMenu{}, ui.NoArgMenuOpts{})
 	if err != nil {
@@ -155,7 +226,7 @@ func TestBlankImportRegistersLastfmPlugin(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("last_fm main-menu item not registered via aggregator blank import")
+		t.Fatal("last_fm main-menu item not registered after plugin Start")
 	}
 }
 
@@ -164,9 +235,10 @@ func TestBlankImportRegistersLastfmPlugin(t *testing.T) {
 // same aggregator: its menu providers are registered with their original keys
 // and every entry menu declares its own main-menu item.
 func TestBlankImportRegistersRecommendPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"daily_songs", "daily_playlists", "personal_fm", "recent_songs", "ranks"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("recommend menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("recommend menu provider %q not registered after plugin Start", key)
 		}
 	}
 	for _, tc := range []struct{ key, title string }{
@@ -191,7 +263,7 @@ func TestBlankImportRegistersRecommendPlugin(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Fatalf("%s main-menu item (%s) not registered via aggregator blank import", tc.key, tc.title)
+			t.Fatalf("%s main-menu item (%s) not registered after plugin Start", tc.key, tc.title)
 		}
 	}
 }
@@ -203,9 +275,10 @@ func TestBlankImportRegistersRecommendPlugin(t *testing.T) {
 // user_playlist is the parameterized entry — it must carry a Build (the
 // RegisterMainMenuItemWith form) that constructs the menu with ui.CurUser.
 func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"user_playlist", "user_collect", "high_quality_playlists", "could"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("playlist menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("playlist menu provider %q not registered after plugin Start", key)
 		}
 	}
 
@@ -250,7 +323,7 @@ func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
 	}
 	for key, title := range wantItems {
 		if foundItems[key] != title {
-			t.Fatalf("%s main-menu item (%s) not registered via aggregator blank import", key, title)
+			t.Fatalf("%s main-menu item (%s) not registered after plugin Start", key, title)
 		}
 	}
 
@@ -272,13 +345,14 @@ func TestBlankImportRegistersPlaylistPlugin(t *testing.T) {
 // page registration are visible, and it declares the 搜索 main-menu item
 // (after album_menu, the pre-extraction position).
 func TestBlankImportRegistersSearchPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"search_type", "search_result"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("search menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("search menu provider %q not registered after plugin Start", key)
 		}
 	}
 	if !(ui.PageRegistry{}).Registered("search") {
-		t.Fatal("search page provider not registered via aggregator blank import")
+		t.Fatal("search page provider not registered after plugin Start")
 	}
 
 	// search_type is the no-arg main-menu entry; search_result is
@@ -299,7 +373,7 @@ func TestBlankImportRegistersSearchPlugin(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("search_type main-menu item (搜索, after album_menu) not registered via aggregator blank import")
+		t.Fatal("search_type main-menu item (搜索, after album_menu) not registered after plugin Start")
 	}
 }
 
@@ -308,9 +382,10 @@ func TestBlankImportRegistersSearchPlugin(t *testing.T) {
 // aggregator: both parameterized jump-target providers (simi_songs /
 // add_to_user_playlist) are registered with their original keys.
 func TestBlankImportRegistersSongPlugin(t *testing.T) {
+	startPluginsForTest(t)
 	for _, key := range []string{"simi_songs", "add_to_user_playlist"} {
 		if !(ui.MenuRegistry{}).Registered(key) {
-			t.Fatalf("song menu provider %q not registered via aggregator blank import", key)
+			t.Fatalf("song menu provider %q not registered after plugin Start", key)
 		}
 	}
 
@@ -339,9 +414,11 @@ func TestBlankImportRegistersSongPlugin(t *testing.T) {
 // their After anchors and reproduce the original pre-extraction main-menu
 // sequence exactly (16 items). This is the integration view of the same
 // mechanism the ui package tests at the unit level — here the full plugin set
-// is linked via the aggregator. Titles() is side-effect free, so a zero-base
-// menu (no live services) is enough to read the display order.
+// is started (P5: each plugin's Start registers its contributions) via the
+// aggregator. Titles() is side-effect free, so a zero-base menu (no live
+// services) is enough to read the display order.
 func TestMainMenuPreservesOriginalOrder(t *testing.T) {
+	startPluginsForTest(t)
 	got := ui.NewMainMenu(ui.NewBaseMenu(nil)).Titles()
 	want := []string{
 		"每日推荐歌曲", "每日推荐歌单", "我的歌单", "我的收藏", "私人FM",
@@ -358,14 +435,17 @@ func TestMainMenuPreservesOriginalOrder(t *testing.T) {
 	}
 }
 
-// TestMainMenuHidesDisabledPluginItems proves the plugin configurable
-// enable/disable consumption point at the aggregator level: with the search
-// plugin disabled in [plugins], its 搜索 main-menu item disappears while the
-// after-anchor chain still builds without panicking. The disabled item's key
-// (search_type) is a live After anchor of the recommend plugin's 排行榜 — this
-// proves anchor integrity is computed over all registered entries (including
-// disabled ones) and the chain skips the hidden entry at display.
+// TestMainMenuHidesDisabledPluginItems proves the [plugins] disabled
+// consumption point at the aggregator level: with the search plugin disabled in
+// config, its 搜索 main-menu item disappears while the after-anchor chain still
+// builds without panicking and keeps its order. All plugins (search included)
+// are started here — this exercises the NewMainMenu display filter that also
+// serves unconditionally-registered items (WASM command menus); the
+// registration-time exclusion semantics (disabled = not started = key absent)
+// is asserted at the ui layer (NewFrontendScope AddWithEnabled) and by the
+// scope lifecycle tests.
 func TestMainMenuHidesDisabledPluginItems(t *testing.T) {
+	startPluginsForTest(t)
 	previous := configs.AppConfig
 	configs.AppConfig = &configs.Config{Plugins: configs.PluginsConfig{Disabled: []string{"search"}}}
 	t.Cleanup(func() { configs.AppConfig = previous })

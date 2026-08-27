@@ -3,6 +3,7 @@ package ui
 import (
 	"log/slog"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
@@ -14,35 +15,16 @@ import (
 // Netease shell — CloseHook disposes it after the engine's root scope cleanup
 // ordering is done (see netease.go CloseHook).
 //
-// P5-1 mounts only uiServicesPlugin; the 9 business plugins migrate in P5-2
-// (their Add list below is the only thing that changes). Until then the
-// business plugins keep registering through init() + ui.WithPlugin, so the
-// frontend scope Start has the same observable effect as the former direct
-// registerUIExtraServices call.
+// P5-1 mounted only uiServicesPlugin; P5-2 mounts the 9 business plugins right
+// after it. Each business plugin's Start registers its contributions (menus /
+// pages / main-menu items / startup hooks) into the package-level registries
+// inside a ui.WithPlugin scope, so the frontend scope Start has exactly the
+// same observable effect as the former init()-time registration.
 
 // businessPluginIDs is the ordered id list of the 9 compile-time business
 // plugins, mirroring the blank-import declaration order in
 // internal/plugins/plugins.go (registration order = Start order = menu
 // registration order).
-//
-// TODO(P5-2): when each plugin migrates from init() + ui.WithPlugin to
-// framework.RegisterPlugin + Start-time registration, NewFrontendScope mounts
-// the enabled subset right after uiServicesPlugin:
-//
-//	constructors := framework.PluginConstructors()
-//	for _, id := range businessPluginIDs {
-//		ctor, ok := constructors[id]
-//		if !ok {
-//			continue // not yet migrated: keep its init() registration path
-//		}
-//		if err := scope.AddWithEnabled(ctor(), configs.IsPluginEnabled(id)); err != nil {
-//			slog.Error("framework business plugin registration failed", "plugin", id, slogx.Error(err))
-//		}
-//	}
-//
-// Disabled semantics at that point move from consumption-point filtering to
-// registration-time exclusion: a disabled plugin never starts, so its
-// registrations (menus/pages/main-menu items/commands) never happen.
 var businessPluginIDs = []string{
 	"checkupdate",
 	"lastfm",
@@ -76,8 +58,25 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 		return scope
 	}
 
-	// TODO(P5-2): mount the 9 business plugins here (businessPluginIDs order),
-	// filtered by configs.IsPluginEnabled — see the list comment above.
+	// Mount the 9 business plugins (businessPluginIDs order), filtered by
+	// configs.IsPluginEnabled. A constructor missing from the framework
+	// registry is skipped with a warning: in a binary where the plugin package
+	// is not linked (e.g. the ui test binary) there is nothing to mount, and
+	// during a partial migration the unmigrated plugin keeps its init()-time
+	// registration path. AddWithEnabled gives the P5 "disabled = nonexistent"
+	// semantics: a disabled plugin never starts, so its registrations (menus /
+	// pages / main-menu items / startup hooks) never happen.
+	constructors := framework.PluginConstructors()
+	for _, id := range businessPluginIDs {
+		ctor, ok := constructors[id]
+		if !ok {
+			slog.Warn("framework business plugin constructor not registered, skipping mount", "plugin", id)
+			continue
+		}
+		if err := scope.AddWithEnabled(ctor(), configs.IsPluginEnabled(id)); err != nil {
+			slog.Error("framework business plugin registration failed", "plugin", id, slogx.Error(err))
+		}
+	}
 
 	return scope
 }

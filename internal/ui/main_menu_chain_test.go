@@ -126,6 +126,9 @@ func TestOrderMainMenuEntriesEndAppend(t *testing.T) {
 	}
 }
 
+// TestOrderMainMenuEntriesMissingAnchorPanics proves a missing After anchor is
+// still a programmer error (panic listing the offender) when no plugin is
+// disabled in config — the all-enabled strict path.
 func TestOrderMainMenuEntriesMissingAnchorPanics(t *testing.T) {
 	defer func() {
 		r := recover()
@@ -141,6 +144,35 @@ func TestOrderMainMenuEntriesMissingAnchorPanics(t *testing.T) {
 		{key: "first", after: MainMenuStart, title: "第一项"},
 		{key: "new_item", after: "no_such_anchor", title: "新项"},
 	})
+}
+
+// TestOrderMainMenuEntriesMissingAnchorRelaxes proves the P5 "disabled =
+// nonexistent" chain behavior: when a plugin is disabled in config, its
+// main-menu item is not registered at all (the plugin never started), so a
+// dependent entry's After anchor can legitimately go missing. Instead of
+// panicking (the all-enabled programmer-error signal) the chain relaxes: the
+// deferred entry and its followers are re-anchored at the chain tail, keeping
+// their relative order and keeping the menu buildable.
+func TestOrderMainMenuEntriesMissingAnchorRelaxes(t *testing.T) {
+	withPluginConfig(t, []string{"search"})
+
+	entries := []mainMenuEntry{
+		{key: "first", after: MainMenuStart, title: "第一项"},
+		{key: "second", after: "first", title: "第二项"},
+		{key: "ranks", after: "missing_disabled", title: "排行榜"}, // anchor's plugin disabled
+		{key: "tail", after: "ranks", title: "尾部"},
+		{key: "last", after: "tail", title: "末尾"},
+	}
+	got := orderMainMenuEntries(entries)
+	want := []string{"first", "second", "ranks", "tail", "last"}
+	if len(got) != len(want) {
+		t.Fatalf("chain length = %d, want %d: %v", len(got), len(want), chainKeysOf(got))
+	}
+	for i, key := range want {
+		if got[i].key != key {
+			t.Fatalf("chain[%d] = %q, want %q (full: %v)", i, got[i].key, key, chainKeysOf(got))
+		}
+	}
 }
 
 // TestOrderMainMenuEntriesCyclePanics proves a cycle reached while walking from
