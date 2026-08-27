@@ -8,14 +8,22 @@ import (
 
 // --- Plugin attribution registry (plugin configurable enable/disable) ---
 //
-// Plugins declare their identity and wrap all their compile-time registrations
-// in ui.WithPlugin(id, name, func() { ... }) so the shell can attribute the
+// Plugins declare their identity and wrap all their registrations in
+// ui.WithPlugin(id, name, func() { ... }) so the shell can attribute the
 // registrations made inside the scope to that plugin. The shell then filters
 // per-plugin *entry visibility* and *startup side effects* against the
 // [plugins] disabled config: a disabled plugin's main-menu items are hidden and
 // its startup hooks are skipped. The menu/page provider registries and
 // BuildMenu jumps are NOT filtered — a disabled plugin's menus stay fully
 // buildable by key, preserving cross-plugin jump integrity.
+//
+// Registration window (P5 transition): today the 9 business plugins call
+// WithPlugin from their package init() (compile-time registration). From P5-2
+// they call it from their plugin Start inside the frontend scope instead — the
+// attribution stamp (currentPluginID) is a plain set/unset guard that works
+// identically in both windows, and the record* helpers below are lock-guarded
+// against a snapshot, so a runtime (Start-time) call has no side effects on
+// PluginInfos(). The init() path stays supported until every plugin migrates.
 
 // PluginInfo describes a declared plugin: its id/name and the registrations
 // attributed to it (registration order preserved).
@@ -50,10 +58,17 @@ var (
 // register: RegisterMenu / RegisterPage / RegisterMainMenuItem* /
 // RegisterStartupHook calls in the scope are recorded under that plugin. The
 // same id may be declared multiple times (e.g. a plugin split across several
-// init() files); declarations merge idempotently onto the first PluginInfo —
-// only the first declaration's name is kept. Panics on an empty id or a nil
-// register func. Package init() is single-threaded, but the guard lock keeps
-// the state sound even if a scope body spawns goroutines.
+// init() files, or the command-menu adapter re-declaring a command's plugin
+// id); declarations merge idempotently onto the first PluginInfo — only the
+// first declaration's name is kept. Panics on an empty id or a nil register
+// func.
+//
+// Callable both at compile-time init() (the 9 business plugins, P5-2 before)
+// and at runtime inside a plugin's Start (P5-2 after — the frontend scope
+// starts plugins in registration order, each Start re-enters WithPlugin with
+// its own id; the previous id is restored on exit). Package init() is
+// single-threaded, but the guard lock keeps the state sound even when a scope
+// body spawns goroutines or Start calls run interleaved with WASM loading.
 func WithPlugin(id, name string, register func()) {
 	if id == "" || register == nil {
 		panic("WithPlugin: empty id or nil register func")

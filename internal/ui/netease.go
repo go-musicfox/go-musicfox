@@ -49,6 +49,11 @@ type Netease struct {
 
 	player *Player
 
+	// frontendScope is the TUI frontend scope (P5): it mounts uiServicesPlugin
+	// now and the 9 business plugins in P5-2. Owned by the shell — CloseHook
+	// disposes it after the engine root scope cleanup.
+	frontendScope *framework.Scope
+
 	// wasmManager owns the loaded WASM plugin instances (created lazily in
 	// NewNetease; nil when the runtime failed to initialize).
 	wasmManager *wasm.Manager
@@ -101,11 +106,15 @@ func NewNetease(app *model.App) *Netease {
 	n.search = searchPage.(*SearchPage) // BuildPage returns model.Page; concrete type asserted back
 	n.App = app
 
-	// The engine registers its 8 core services into the app-wide context;
-	// register the TUI-only services (coverRenderer/menuRegistry/pageRegistry)
-	// into the same context.
-	if err := registerUIExtraServices(n.engine.Ctx(), n); err != nil {
-		slog.Error("framework ui service registration failed", slogx.Error(err))
+	// The engine registers its 8 core services into the app-wide context; the
+	// TUI-only services (coverRenderer/menuRegistry/pageRegistry) are provided
+	// by the frontend scope's uiServicesPlugin (P5-1 mount; the 9 business
+	// plugins follow in P5-2). The scope Start is synchronous and replaces the
+	// former direct registerUIExtraServices call with identical effect — the
+	// assertions below still run after every contribution is registered.
+	n.frontendScope = NewFrontendScope(n.engine, n)
+	if err := n.frontendScope.Start(n.ctx); err != nil {
+		slog.Error("framework frontend scope start failed", slogx.Error(err))
 		return nil
 	}
 
@@ -241,6 +250,14 @@ func (n *Netease) maybeShowChangelog() {
 }
 
 func (n *Netease) CloseHook(_ *model.App) {
+	// The frontend scope owns the TUI-only plugins (uiServicesPlugin now, the
+	// 9 business plugins in P5-2). Dispose it before the engine's root scope so
+	// frontend plugins are finalized ahead of the service constructors
+	// (docs/plugin_ecosystem.md §五 step 8).
+	if n.frontendScope != nil {
+		_ = n.frontendScope.Dispose()
+	}
+
 	// The engine owns the player/lastfm/desktopLyrics/scope cleanup.
 	if n.engine != nil {
 		_ = n.engine.Close()
