@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -30,6 +29,13 @@ const (
 	ServiceLoginService  = "loginService"
 	ServiceShareSvc      = "shareSvc"
 	ServiceLastfm        = "lastfm"
+	// ServiceEventBus is the app-wide framework event emitter (P4 mount point;
+	// this ticket only registers the service).
+	ServiceEventBus = "eventBus"
+	// ServiceDispatcher is the core control dispatcher (lifted from the
+	// headless/webui transport-created instances as a framework-resolvable
+	// mount point; the transports still construct their own dispatchers).
+	ServiceDispatcher = "dispatcher"
 )
 
 // appCookieJar is the app-wide persistent cookie jar slot. LoginService.InitJar
@@ -52,7 +58,8 @@ func SetAppCookieJar(jar *cookiejar.Jar) {
 
 // registeredServiceNames is the exact engine startup service set (no missing,
 // no extras). The registration-completeness test compares it against the
-// context populated by registerServices.
+// context populated by the service constructor plugins after the root scope
+// starts.
 var registeredServiceNames = []string{
 	ServicePlayer,
 	ServiceLyricService,
@@ -62,6 +69,8 @@ var registeredServiceNames = []string{
 	ServiceLoginService,
 	ServiceShareSvc,
 	ServiceLastfm,
+	ServiceEventBus,
+	ServiceDispatcher,
 }
 
 // UserService carries the current login state (user 状态迁移).
@@ -261,29 +270,4 @@ func provideIfAbsent(ctx *framework.Context, name string, svc any) {
 // register its TUI-only services into the same engine context.
 func ProvideIfAbsent(ctx *framework.Context, name string, svc any) {
 	provideIfAbsent(ctx, name, svc)
-}
-
-// registerServices registers the eight engine startup services into ctx. It is
-// a plain callable so tests can run it against a fresh context without a full
-// app boot.
-func registerServices(ctx *framework.Context, e *Engine) error {
-	if ctx == nil || e == nil {
-		return errors.New("registerServices: nil ctx or Engine")
-	}
-
-	provideIfAbsent(ctx, ServicePlayer, e.player)
-	provideIfAbsent(ctx, ServiceLyricService, e.lyricService)
-	provideIfAbsent(ctx, ServiceTrackManager, e.trackManager)
-	provideIfAbsent(ctx, ServiceDesktopLyrics, e.desktopLyrics)
-	provideIfAbsent(ctx, ServiceUserService, &UserService{
-		User:           e.UserSlot(),
-		Login:          e.LoginCallback,
-		Jar:            &appCookieJar,
-		loadStoredUser: loadStoredUserFromStorage,
-		refreshJar:     apputils.RefreshCookieJar,
-	})
-	provideIfAbsent(ctx, ServiceLoginService, &LoginService{CookieJar: &appCookieJar, User: e.UserSlot()})
-	provideIfAbsent(ctx, ServiceShareSvc, e.shareSvc)
-	provideIfAbsent(ctx, ServiceLastfm, e.lastfm)
-	return nil
 }

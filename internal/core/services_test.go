@@ -35,27 +35,56 @@ func (fakeDesktopLyrics) UpdateRawSamples(_ player.RawSampleFrame)              
 func (fakeDesktopLyrics) SetSpectrumAvailable(_ bool)                                  {}
 func (fakeDesktopLyrics) Close()                                                       {}
 
-// testEngine builds an Engine whose fields are all non-nil so registerServices
-// registers every startup service with the right concrete type. It does not run
-// NewEngine (which starts a real audio player and reads configs).
-func testEngine() *Engine {
-	e := &Engine{
-		player:        NewEmptyPlayer(),
-		lyricService:  &lyric.Service{},
-		trackManager:  &track.Manager{},
-		desktopLyrics: fakeDesktopLyrics{},
-		shareSvc:      &composer.ShareService{},
-		lastfm:        &lastfm.Client{},
+// testServicePlugins builds the service constructor plugin set with
+// config-free fake builders so unit tests can exercise the scope assembly
+// without reading configs or starting a real audio player (the production
+// builders read configs.AppConfig / storage and NewPlayer starts an engine).
+// The plugin Start methods populate the engine service fields.
+func testServicePlugins(e *Engine) []framework.Plugin {
+	return []framework.Plugin{
+		&lastfmPlugin{e: e, build: func() *lastfm.Client { return &lastfm.Client{} }},
+		&trackManagerPlugin{e: e, build: func() *track.Manager { return &track.Manager{} }},
+		&lyricServicePlugin{e: e, build: func(*track.Manager) *lyric.Service { return &lyric.Service{} }},
+		&desktopLyricsPlugin{e: e, build: func() desktop_lyrics.Controller { return fakeDesktopLyrics{} }},
+		newLoginServicePlugin(e),
+		newUserServicePlugin(e),
+		&shareSvcPlugin{e: e, build: func() *composer.ShareService { return &composer.ShareService{} }},
+		&playerPlugin{e: e, build: func(PlayerOptions) *Player { return NewEmptyPlayer() }},
+		newDispatcherPlugin(e),
+		newEventBusPlugin(e),
 	}
+}
+
+// startTestScope registers the test service plugins on a fresh scope and starts
+// it against a fresh context. Callers must not dispose the returned scope (the
+// test player is a NewEmptyPlayer whose Close would panic on the nil
+// reporter/cancel); registration-order tests only need the started scope.
+func startTestScope(e *Engine) (*framework.Scope, *framework.Context) {
+	ctx := &framework.Context{}
+	scope := framework.NewScope()
+	for _, p := range testServicePlugins(e) {
+		if err := scope.AddWithEnabled(p, true); err != nil {
+			panic(err) // unreachable for a fresh scope
+		}
+	}
+	if err := scope.Start(ctx); err != nil {
+		panic(err) // unreachable for the static plugin set with correct ordering
+	}
+	return scope, ctx
+}
+
+// testEngine builds an Engine whose user slot is self-owned so the service
+// plugins can capture it. It does not run NewEngine (which starts a real audio
+// player and reads configs); the plugin Start methods populate the service
+// fields.
+func testEngine() *Engine {
+	e := &Engine{}
 	e.userSlot = &e.user
 	return e
 }
 
-func TestRegisterServicesRegistersExactSet(t *testing.T) {
-	ctx := &framework.Context{}
-	if err := registerServices(ctx, testEngine()); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
+func TestServicePluginsRegisterExactSet(t *testing.T) {
+	_, ctx := startTestScope(testEngine())
 
 	got := ctx.Names()
 	sort.Strings(got)
@@ -66,12 +95,9 @@ func TestRegisterServicesRegistersExactSet(t *testing.T) {
 	}
 }
 
-func TestRegisterServicesRegistersRightConcreteTypes(t *testing.T) {
-	ctx := &framework.Context{}
+func TestServicePluginsRegisterRightConcreteTypes(t *testing.T) {
 	e := testEngine()
-	if err := registerServices(ctx, e); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
+	_, ctx := startTestScope(e)
 
 	if svc, ok := framework.ServiceOf[*Player](ctx, ServicePlayer); !ok || svc != e.player {
 		t.Errorf("ServiceOf(player) = %v, %v; want %T, true", svc, ok, e.player)
@@ -100,11 +126,8 @@ func TestRegisterServicesRegistersRightConcreteTypes(t *testing.T) {
 }
 
 func TestUserServiceReflectsLiveUserSlot(t *testing.T) {
-	ctx := &framework.Context{}
 	e := testEngine()
-	if err := registerServices(ctx, e); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
+	_, ctx := startTestScope(e)
 
 	svc, ok := framework.ServiceOf[*UserService](ctx, ServiceUserService)
 	if !ok {
@@ -124,11 +147,8 @@ func TestUserServiceReflectsLiveUserSlot(t *testing.T) {
 }
 
 func TestLoginServiceReflectsLiveCookieJar(t *testing.T) {
-	ctx := &framework.Context{}
 	e := testEngine()
-	if err := registerServices(ctx, e); err != nil {
-		t.Fatalf("registerServices() error = %v", err)
-	}
+	_, ctx := startTestScope(e)
 
 	svc, ok := framework.ServiceOf[*LoginService](ctx, ServiceLoginService)
 	if !ok {

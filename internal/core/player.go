@@ -583,11 +583,11 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	case CtrlPaused:
 		p.Pause()
 	case CtrlResume:
-		p.Resume()
+		p.resumeOrStart()
 	case CtrlStop:
 		p.Stop()
 	case CtrlToggle:
-		p.Toggle()
+		p.toggleOrStart()
 	case CtrlPrevious:
 		p.PreviousSong(true)
 	case CtrlNext:
@@ -610,6 +610,36 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 		} else {
 			p.cycleRepeat()
 		}
+	}
+}
+
+// resumeOrStart resumes playback when the engine has a song loaded; when the
+// engine has nothing loaded yet (e.g. headless start without autoplay) it
+// starts the current playlist song instead, mirroring the TUI space-key
+// behavior for the Stopped state.
+func (p *Player) resumeOrStart() {
+	if p.State() == types.Stopped && p.CurMusic().Song.Id == 0 {
+		p.startIfHasCurrentSong()
+		return
+	}
+	p.Resume()
+}
+
+// toggleOrStart mirrors the TUI toggle semantics: Playing/Paused toggle the
+// engine, Stopped starts playing the current playlist song.
+func (p *Player) toggleOrStart() {
+	if p.State() == types.Stopped {
+		p.startIfHasCurrentSong()
+		return
+	}
+	p.Toggle()
+}
+
+// startIfHasCurrentSong starts playback of the current playlist song when one
+// exists; it is a no-op for an empty playlist.
+func (p *Player) startIfHasCurrentSong() {
+	if p.CurSong().Id != 0 {
+		p.StartPlay()
 	}
 }
 

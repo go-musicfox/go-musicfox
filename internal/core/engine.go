@@ -4,14 +4,12 @@ import (
 	"errors"
 	"log/slog"
 	"strconv"
-	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/go-musicfox/netease-music/service"
 	pkgerrors "github.com/pkg/errors"
 
 	"github.com/go-musicfox/go-musicfox/internal/composer"
-	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
@@ -53,71 +51,43 @@ type Engine struct {
 	shareSvc      *composer.ShareService
 }
 
-// NewEngine assembles the engine services, scope and player. Assembly order is
-// preserved from the former TUI shell: context → lastfm → trackManager →
-// lyricService → desktopLyrics → shareSvc → user slot → player → scope start →
-// service registration.
+// NewEngine assembles the engine as a pure plugin assembler: it creates the
+// service context and the root scope, registers the service constructor
+// plugins in dependency order and starts the scope (each plugin's Deps
+// resolves its prerequisites, its Start constructs + registers the instance
+// and records it on the engine, keeping the accessors intact). Assembly order
+// is preserved from the former TUI shell (lastfm → trackManager → lyricService
+// → desktopLyrics → loginService → userService → shareSvc → player →
+// dispatcher → eventBus), now enforced by the plugins' Deps instead of a
+// comment.
 func NewEngine(opts EngineOptions) *Engine {
 	e := &Engine{ctx: &framework.Context{}}
 
-	e.lastfm = lastfm.NewClient()
-
-	quality := configs.AppConfig.Player.SongLevel
-	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
-	nameGen := composer.NewFileNameGenerator()
-	_ = nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
-	_ = nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
-	e.trackManager = track.NewManager(
-		track.WithNameGenerator(nameGen),
-		track.WithCacher(track.NewCacher(maxSizeMB)),
-		track.WithSongQuality(quality))
-
-	showTranslation := configs.AppConfig.Main.Lyric.ShowTranslation
-	offset := time.Duration(configs.AppConfig.Main.Lyric.Offset) * time.Millisecond
-	skipParseErr := configs.AppConfig.Main.Lyric.SkipParseErr
-
-	e.lyricService = lyric.NewService(e.trackManager, showTranslation, offset, skipParseErr)
-	e.lyricService.EnableYRC(true) // Enable word-by-word lyrics
-
-	// Initialize desktop lyrics (only when the frontend requests it: the TUI
-	// shows the desktop-lyrics window, headless has no window at all).
-	if opts.DesktopLyrics {
-		e.desktopLyrics = desktop_lyrics.NewController(configs.AppConfig.Main.Lyric.DesktopLyrics)
-	}
-
-	e.shareSvc = composer.NewShareService()
-	_ = e.shareSvc.RegisterTemplates(configs.AppConfig.Share)
-
 	// The user slot is shared with the shell when supplied (the TUI passes
 	// &n.user so the shell sees live login state); headless frontends let the
-	// engine own the slot.
+	// engine own the slot. It must exist before the service plugins start:
+	// userService/player capture the slot (double pointer).
 	if opts.User != nil {
 		e.userSlot = opts.User
 	} else {
 		e.userSlot = &e.user
 	}
 
-	e.player = NewPlayer(PlayerOptions{
-		LyricService:  e.lyricService,
-		TrackManager:  e.trackManager,
-		DesktopLyrics: e.desktopLyrics,
-		User:          e.userSlot,
-		LastfmTracker: e.lastfm.Tracker,
-	})
-
-	// Wire the framework scope: shareSvc/lastfm are registered into the
-	// app-wide context via their scope plugins, then the remaining startup
-	// services are registered.
-	e.scope = newAppScope(e)
-	if err := e.scope.Start(e.ctx); err != nil {
-		// Unreachable for a fresh scope; log and continue so the shell keeps
-		// a non-nil engine (a nil engine would panic at the first accessor).
-		slog.Error("framework scope start failed", slogx.Error(err))
-		return e
+	// Pure assembly: root scope + service constructor plugins, then start.
+	e.scope = framework.NewScope()
+	for _, p := range newServicePlugins(e, opts) {
+		if err := e.scope.AddWithEnabled(p, true); err != nil {
+			// Unreachable for a fresh scope; log and continue so the shell
+			// keeps a non-nil engine (a nil engine would panic at the first
+			// accessor).
+			slog.Error("framework service plugin registration failed", slogx.Error(err))
+			return e
+		}
 	}
-	if err := registerServices(e.ctx, e); err != nil {
-		// Unreachable with non-nil ctx/engine; log and continue.
-		slog.Error("framework service registration failed", slogx.Error(err))
+	if err := e.scope.Start(e.ctx); err != nil {
+		// Unreachable for the static plugin set with correct ordering; log and
+		// continue so the shell keeps a non-nil engine.
+		slog.Error("framework scope start failed", slogx.Error(err))
 		return e
 	}
 
@@ -218,19 +188,13 @@ func (e *Engine) LoginCallback() error {
 	return nil
 }
 
-// Close shuts down the engine-owned services: player, lastfm, desktop lyrics
-// and the framework scope (stop + dispose).
+// Close shuts down the engine-owned services. The root scope's Dispose runs
+// every service constructor plugin's Dispose in reverse registration order
+// (eventBus → dispatcher → player → shareSvc → userService → loginService →
+// desktopLyrics → lyricService → trackManager → lastfm), which owns the real
+// per-service cleanup (player/lastfm/desktopLyrics) formerly inlined here.
 func (e *Engine) Close() error {
 	var errs []error
-	if e.player != nil {
-		errs = append(errs, e.player.Close())
-	}
-	if e.lastfm != nil {
-		e.lastfm.Close()
-	}
-	if e.desktopLyrics != nil {
-		e.desktopLyrics.Close()
-	}
 	if e.scope != nil {
 		errs = append(errs, e.scope.Stop())
 		errs = append(errs, e.scope.Dispose())
