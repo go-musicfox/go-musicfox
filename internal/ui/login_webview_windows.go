@@ -315,12 +315,20 @@ func (c *webviewLoginController) messageLoop() {
 	if err := c.setupWebView2(hwnd); err != nil {
 		c.mu.Lock()
 		closed = c.closed
+		userDataDir := c.userDataDir
+		c.userDataDir = ""
 		c.mu.Unlock()
 		if !closed {
 			slog.Error("初始化 WebView2 登录窗口失败", slogx.Error(err))
 			c.sendEvent(WebviewLoginEvent{WindowClosed: true, ErrMsg: fmt.Sprintf("初始化 WebView2 登录窗口失败: %v", err)})
 		}
 		user32DestroyWindow.Call(hwnd)
+		// 失败路径不经过 cleanup()：补删临时目录（最常见场景：未安装
+		// WebView2 Runtime），否则每次失败的登录尝试都在 %TEMP% 遗留一个
+		// go-musicfox-webview2-* 目录，无上限累积
+		if userDataDir != "" {
+			_ = os.RemoveAll(userDataDir)
+		}
 		return
 	}
 
@@ -756,8 +764,12 @@ func (h *webview2ControllerHandler) CreateCoreWebView2ControllerCompleted(errorC
 	_ = core.Navigate(loginURL)
 
 	// Arm the cookie polling timer. The wParam of the resulting WM_TIMER
-	// messages carries cookiePollTimerID.
-	user32SetTimer.Call(h.hwnd, cookiePollTimerID, uintptr(webviewLoginPollInterval/time.Millisecond), 0)
+	// messages carries cookiePollTimerID. SetTimer 失败（返回 0）时窗口照常
+	// 打开但永远无轮询——用户面对白屏无任何提示，必须告警。
+	ret, _, _ := user32SetTimer.Call(h.hwnd, cookiePollTimerID, uintptr(webviewLoginPollInterval/time.Millisecond), 0)
+	if ret == 0 {
+		slog.Error("webview login: SetTimer 失败，cookie 轮询不会启动")
+	}
 	return 0
 }
 
