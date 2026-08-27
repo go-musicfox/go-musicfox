@@ -57,9 +57,9 @@ type Engine struct {
 // resolves its prerequisites, its Start constructs + registers the instance
 // and records it on the engine, keeping the accessors intact). Assembly order
 // is preserved from the former TUI shell (lastfm → trackManager → lyricService
-// → desktopLyrics → loginService → userService → shareSvc → player →
-// dispatcher → eventBus), now enforced by the plugins' Deps instead of a
-// comment.
+// → desktopLyrics → loginService → userService → shareSvc → eventBus → player
+// → dispatcher), now enforced by the plugins' Deps instead of a comment; the
+// event bus moved ahead of the player so the player can resolve it in Deps.
 func NewEngine(opts EngineOptions) *Engine {
 	e := &Engine{ctx: &framework.Context{}}
 
@@ -184,6 +184,9 @@ func (e *Engine) LoginCallback() error {
 
 	// 更新like list
 	go likelist.RefreshLikeList(user.UserId)
+
+	// P4: 登录成功事件（二维码登录经 CompleteQRLogin → LoginCallback 同路径）
+	e.emit(EvLogin, loginEventPayload(e.User()))
 
 	return nil
 }

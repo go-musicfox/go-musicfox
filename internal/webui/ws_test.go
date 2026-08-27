@@ -73,12 +73,14 @@ func newTestEngine(t *testing.T) *core.Engine {
 }
 
 // newWSServer builds a Server bound to the shared engine and serves its real
-// mux over httptest.
+// mux over httptest. The server is closed on cleanup so its core event-bus
+// listeners are unsubscribed (the emitter is shared across tests).
 func newWSServer(t *testing.T) (*Server, *httptest.Server) {
 	t.Helper()
 	s := NewServer(newTestEngine(t))
 	ts := httptest.NewServer(s.mux)
 	t.Cleanup(ts.Close)
+	t.Cleanup(func() { _ = s.Close() })
 	return s, ts
 }
 

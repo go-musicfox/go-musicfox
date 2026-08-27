@@ -75,7 +75,7 @@ func TestObserverOptionalDispatchSkippedForCoreOnly(t *testing.T) {
 	p.NextSong(false)
 
 	// emitStartupPhase takes a core.Observer; the core-only observer is one.
-	emitStartupPhase(coreOnlyObserver{}, StartupPhaseUserRestored)
+	testEngine().emitStartupPhase(coreOnlyObserver{}, StartupPhaseUserRestored)
 }
 
 // TestObserverOptionalDispatchReachesFullObserver verifies that an observer
@@ -107,7 +107,7 @@ func TestObserverOptionalDispatchReachesFullObserver(t *testing.T) {
 	}
 
 	// emitStartupPhase dispatches OnStartupPhase.
-	emitStartupPhase(o, StartupPhasePlaylistLoaded)
+	testEngine().emitStartupPhase(o, StartupPhasePlaylistLoaded)
 	if phase, ok := recvCh(o.startupPhases); !ok || phase != StartupPhasePlaylistLoaded {
 		t.Fatalf("OnStartupPhase phase = %v, ok=%v; want StartupPhasePlaylistLoaded", phase, ok)
 	}

@@ -49,9 +49,9 @@ func testServicePlugins(e *Engine) []framework.Plugin {
 		newLoginServicePlugin(e),
 		newUserServicePlugin(e),
 		&shareSvcPlugin{e: e, build: func() *composer.ShareService { return &composer.ShareService{} }},
+		newEventBusPlugin(e),
 		&playerPlugin{e: e, build: func(PlayerOptions) *Player { return NewEmptyPlayer() }},
 		newDispatcherPlugin(e),
-		newEventBusPlugin(e),
 	}
 }
 

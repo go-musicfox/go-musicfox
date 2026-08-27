@@ -15,6 +15,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 )
 
 // Server serves the WebUI frontend over HTTP on a loopback listener. It
@@ -37,10 +38,10 @@ type Server struct {
 	connsMu    sync.Mutex
 	nextConnID int64
 
-	// broadcaster fans engine events out to every live connection; observer is
-	// the core.Observer attached to the engine (player + Startup).
+	// broadcaster fans engine events out to every live connection; unsubscribe
+	// removes the core event-bus listeners registered at construction (Close).
 	broadcaster *broadcaster
-	observer    *WebUIObserver
+	unsubscribe func()
 
 	// readyErr reports listener readiness to Run: nil once the loopback
 	// listener is bound, or the listen error when binding fails.
@@ -53,7 +54,6 @@ type Server struct {
 func NewServer(engine *core.Engine) *Server {
 	mux := http.NewServeMux()
 	b := &broadcaster{conns: make(map[int64]*wsConn)}
-	obs := &WebUIObserver{b: b}
 	s := &Server{
 		engine:      engine,
 		dispatcher:  core.NewDispatcher(engine),
@@ -63,14 +63,16 @@ func NewServer(engine *core.Engine) *Server {
 		httpSrv:     &http.Server{Handler: mux},
 		conns:       make(map[int64]*wsConn),
 		broadcaster: b,
-		observer:    obs,
 		readyErr:    make(chan error, 1),
 	}
 	if engine != nil {
-		// Attach the WebUI observer to the player so playback events
-		// (song/state/position) reach the broadcaster. The same observer is
-		// passed to engine.Startup for the startup-phase events.
-		engine.Player().SetObserver(obs)
+		// The WebUI frontend consumes playback/startup events through the core
+		// event bus: register the forwarding listeners at construction so the
+		// startup phases (emitted by engine.Startup, which Run calls after
+		// NewServer) reach the broadcaster. Close unregisters them.
+		if emitter, ok := framework.ServiceOf[*framework.EventEmitter](engine.Ctx(), core.ServiceEventBus); ok {
+			s.unsubscribe = subscribeEmitter(emitter, b)
+		}
 	}
 	// go1.22+ method-pattern routing: "GET /" matches every GET path (prefix
 	// semantics, HEAD included); non-GET requests get 405. The token exchange,
@@ -192,6 +194,11 @@ func (s *Server) Close() error {
 	var closeErr error
 	s.quitOnce.Do(func() {
 		close(s.quit)
+		// Unsubscribe the core event-bus listeners so no further engine event
+		// targets this server's broadcaster after teardown.
+		if s.unsubscribe != nil {
+			s.unsubscribe()
+		}
 		// Terminate every live WebSocket connection first so their read loops
 		// unblock and the connection goroutines wind down (they remove
 		// themselves from conns as they exit).

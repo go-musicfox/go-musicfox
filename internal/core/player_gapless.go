@@ -112,6 +112,7 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	if o, ok := p.observer.(RerenderObserver); ok {
 		o.OnRerender()
 	}
+	p.emit(EvRerender, nil)
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),

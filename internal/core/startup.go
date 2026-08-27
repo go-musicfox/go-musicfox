@@ -39,11 +39,13 @@ const (
 	StartupPhaseBeforeAutoplay = StartupPhase("before_autoplay")
 )
 
-// emitStartupPhase forwards a phase milestone to the observer (nil-safe).
-func emitStartupPhase(observer Observer, phase StartupPhase) {
+// emitStartupPhase forwards a phase milestone to the observer (nil-safe) and
+// to the event bus (P4 double-write).
+func (e *Engine) emitStartupPhase(observer Observer, phase StartupPhase) {
 	if o, ok := observer.(StartupPhaseObserver); ok {
 		o.OnStartupPhase(phase)
 	}
+	e.emit(EvStartupPhase, map[string]any{"phase": string(phase)})
 }
 
 // Startup runs the full startup sequence synchronously. It must be called
@@ -110,7 +112,7 @@ func (e *Engine) Startup(ctx context.Context, observer Observer) error {
 	e.trackManager.SetCloudUserID(cloudUserID)
 
 	// 刷新界面用户名（前端在 OnStartupPhase 处理）
-	emitStartupPhase(observer, StartupPhaseUserRestored)
+	e.emitStartupPhase(observer, StartupPhaseUserRestored)
 
 	// 获取播放模式
 	if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
@@ -136,7 +138,7 @@ func (e *Engine) Startup(ctx context.Context, observer Observer) error {
 		// 如果加载失败，记录错误但不影响启动
 		slog.Warn("Failed to load playlist state", slogx.Error(err))
 	}
-	emitStartupPhase(observer, StartupPhasePlaylistLoaded)
+	e.emitStartupPhase(observer, StartupPhasePlaylistLoaded)
 
 	// 获取扩展信息
 	{
@@ -225,7 +227,7 @@ func (e *Engine) Startup(ctx context.Context, observer Observer) error {
 	framework.RunStartupHooks(configs.IsPluginEnabled)
 
 	// 自动播放
-	emitStartupPhase(observer, StartupPhaseBeforeAutoplay)
+	e.emitStartupPhase(observer, StartupPhaseBeforeAutoplay)
 	if config.Autoplay.Enable {
 		autoPlayer := automator.NewAutoPlayer(e.User(), e.player, config.Autoplay)
 		if err := autoPlayer.Start(); err != nil {

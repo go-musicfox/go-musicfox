@@ -27,9 +27,11 @@ func Run(ctx context.Context) error {
 	// the player), same as the headless frontend.
 	engine := core.NewEngine(core.EngineOptions{})
 
-	// The WebUI observer is created with the server (NewServer also attaches it
-	// to the engine player), so the server must be built before Startup can
-	// broadcast the startup phases.
+	// The event-bus subscription is registered when the server is built
+	// (NewServer wires the core emitter to the broadcaster), so the server must
+	// be built before Startup can broadcast the startup phases. Startup takes a
+	// no-op observer — the WebUI consumes events through the emitter, not the
+	// observer seam.
 	server := NewServer(engine)
 
 	// Load WASM plugin commands into the frontend registry (same pipeline as
@@ -50,7 +52,7 @@ func Run(ctx context.Context) error {
 		defer mgr.Close(ctx)
 	}
 
-	if err := engine.Startup(ctx, server.observer); err != nil {
+	if err := engine.Startup(ctx, webuiNoopObserver{}); err != nil {
 		// Defensive: Startup currently only returns non-nil on a truly fatal
 		// failure (every degraded startup path logs and continues).
 		slog.Error("webui startup failed", slogx.Error(err))

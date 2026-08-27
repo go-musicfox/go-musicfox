@@ -10,6 +10,7 @@ import (
 	cookiejar "github.com/juju/persistent-cookiejar"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 )
 
 // TestLoginQRKey mocks qrGetKey and verifies the unikey/qrcodeUrl response.
@@ -124,7 +125,9 @@ func TestLoginQRStatusError(t *testing.T) {
 }
 
 // TestLoginQRStatus803 verifies the confirmed-scan path: the login completion
-// (stubbed) runs and a login event is broadcast over the WS connection.
+// (stubbed) runs and a login event is broadcast over the WS connection. The
+// login frame now comes from the core event bus — the real completion emits
+// EvLogin inside LoginCallback — so the stub reproduces that emit.
 func TestLoginQRStatus803(t *testing.T) {
 	prevStatus := qrCheckStatus
 	qrCheckStatus = func(_ string, _ http.CookieJar) (float64, []byte, error) {
@@ -133,7 +136,15 @@ func TestLoginQRStatus803(t *testing.T) {
 	t.Cleanup(func() { qrCheckStatus = prevStatus })
 
 	prevComplete := completeQRLogin
-	completeQRLogin = func(_ *core.Engine, _ *cookiejar.Jar) error { return nil }
+	completeQRLogin = func(e *core.Engine, _ *cookiejar.Jar) error {
+		emitter, ok := framework.ServiceOf[*framework.EventEmitter](e.Ctx(), core.ServiceEventBus)
+		if !ok {
+			return errors.New("eventBus not resolved")
+		}
+		return emitter.Emit(e.Ctx(), core.EvLogin, map[string]any{"user": map[string]any{
+			"userId": int64(7), "nickname": "tester", "avatarUrl": "",
+		}})
+	}
 	t.Cleanup(func() { completeQRLogin = prevComplete })
 
 	s, ts := newWSServer(t)

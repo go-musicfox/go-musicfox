@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/lastfm"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
@@ -34,13 +35,17 @@ type PlayerOptions struct {
 	LyricService  *lyric.Service
 	TrackManager  *track.Manager
 	DesktopLyrics desktop_lyrics.Controller
-	User          **structs.User   // shared user slot owned by the shell (like n.user)
-	LastfmTracker *lastfm.Tracker  // used to build the Last.fm reporter, if enabled
+	User          **structs.User  // shared user slot owned by the shell (like n.user)
+	LastfmTracker *lastfm.Tracker // used to build the Last.fm reporter, if enabled
+	// EventEmitter is the app-wide event bus (P4): playback events are emitted
+	// twice — the observer first (existing calls unchanged), then the emitter.
+	// Optional: a nil emitter skips the bus entirely.
+	EventEmitter *framework.EventEmitter
 }
 
 // Player 网易云音乐播放器
 type Player struct {
-	player.Player             // embedded engine (verbatim)
+	player.Player    // embedded engine (verbatim)
 	playlistManager  playlist.PlaylistManager
 	lastMode         types.Mode
 	playingMenuKey   string
@@ -48,9 +53,10 @@ type Player struct {
 	trackManager     *track.Manager
 	desktopLyrics    desktop_lyrics.Controller
 	user             **structs.User
-	observer         Observer          // set later via SetObserver
-	loading          LoadingIndicator  // set later via SetLoading
-	locator          SongLocator       // set later via SetLocator
+	observer         Observer                // set later via SetObserver
+	loading          LoadingIndicator        // set later via SetLoading
+	locator          SongLocator             // set later via SetLocator
+	emitter          *framework.EventEmitter // app-wide event bus (P4), optional
 	stateHandler     *control.RemoteControl
 	ctrl             chan CtrlSignal
 	reporter         reporter.Service
@@ -84,6 +90,7 @@ func NewPlayer(opts PlayerOptions) *Player {
 		trackManager:    opts.TrackManager,
 		desktopLyrics:   opts.DesktopLyrics,
 		user:            opts.User,
+		emitter:         opts.EventEmitter,
 		playlistManager: playlist.NewPlaylistManager(),
 		ctrl:            make(chan CtrlSignal, 10),
 		reporter:        reporter.NewService(reporterOptions...),
@@ -124,6 +131,7 @@ func NewPlayer(opts PlayerOptions) *Player {
 					if p.observer != nil {
 						p.observer.OnStateChanged(s)
 					}
+					p.emit(EvStateChanged, map[string]any{"state": stateName(s)})
 					break
 				}
 				p.NextSong(false)
@@ -156,6 +164,7 @@ func NewPlayer(opts PlayerOptions) *Player {
 				if p.observer != nil {
 					p.observer.OnPosition(duration)
 				}
+				p.emit(EvPosition, map[string]any{"positionSeconds": duration.Seconds()})
 			}
 		}
 	})
@@ -309,6 +318,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	if p.observer != nil {
 		p.observer.OnSongChanged(song)
 	}
+	p.emit(EvSongChanged, songEventPayload(song))
 
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
@@ -385,6 +395,7 @@ func (p *Player) NextSong(manual bool) {
 		if o, ok := p.observer.(PlaylistExhaustedObserver); ok {
 			o.OnPlaylistExhausted(DurationNext)
 		}
+		p.emit(EvPlaylistEnd, map[string]any{"direction": "next"})
 	}
 
 	// 尝试获取下一首歌曲
@@ -405,6 +416,7 @@ func (p *Player) PreviousSong(manual bool) {
 		if o, ok := p.observer.(PlaylistExhaustedObserver); ok {
 			o.OnPlaylistExhausted(DurationPrev)
 		}
+		p.emit(EvPlaylistEnd, map[string]any{"direction": "prev"})
 	}
 
 	if song, err := p.playlistManager.PreviousSong(manual); err == nil {
@@ -598,6 +610,7 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 		if o, ok := p.observer.(RerenderObserver); ok {
 			o.OnRerender()
 		}
+		p.emit(EvRerender, nil)
 	case CtrlShuffle:
 		if signal.ShuffleType != 0 {
 			p.setShuffle(signal.ShuffleType)

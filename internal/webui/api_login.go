@@ -102,16 +102,9 @@ func (s *Server) handleLoginQRStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := s.engine.User()
-	userData := map[string]any{}
-	if user != nil {
-		userData = map[string]any{
-			"userId":    user.UserId,
-			"nickname":  user.Nickname,
-			"avatarUrl": user.AvatarUrl,
-		}
-	}
-	s.broadcaster.broadcast(eventFrame("login", map[string]any{"user": userData}))
+	// The login event is now broadcast through the core event bus: the engine
+	// emits EvLogin (auth.login_succeeded) inside LoginCallback, and the WebUI
+	// event-bus listener forwards it as the "login" frame (see events.go).
 	writeJSON(w, http.StatusOK, map[string]any{"code": 803, "message": "登录成功"})
 }
 

@@ -8,8 +8,8 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/internal/types"
 )
 
 // TestPositionThrottle exercises the 250ms (4Hz) position throttle: the first
@@ -18,17 +18,37 @@ import (
 func TestPositionThrottle(t *testing.T) {
 	var th positionThrottle
 	now := time.Now()
-	if !th.shouldEmit(0, now) {
+	if !th.shouldEmit(now) {
 		t.Fatal("first emit should pass")
 	}
-	if th.shouldEmit(time.Second, now.Add(100*time.Millisecond)) {
+	if th.shouldEmit(now.Add(100 * time.Millisecond)) {
 		t.Fatal("emit 100ms after the last must be dropped (< 250ms)")
 	}
-	if th.shouldEmit(time.Second, now.Add(200*time.Millisecond)) {
+	if th.shouldEmit(now.Add(200 * time.Millisecond)) {
 		t.Fatal("emit 200ms after the last must be dropped (< 250ms)")
 	}
-	if !th.shouldEmit(time.Second, now.Add(300*time.Millisecond)) {
+	if !th.shouldEmit(now.Add(300 * time.Millisecond)) {
 		t.Fatal("emit 300ms after the last must pass")
+	}
+}
+
+// testEventBus resolves the shared engine's event bus (the same bus the WebUI
+// server subscribed to at construction).
+func testEventBus(t *testing.T, s *Server) *framework.EventEmitter {
+	t.Helper()
+	emitter, ok := framework.ServiceOf[*framework.EventEmitter](s.engine.Ctx(), core.ServiceEventBus)
+	if !ok {
+		t.Fatal("eventBus not resolved from engine ctx")
+	}
+	return emitter
+}
+
+// emitCoreEvent emits an event the way core does (payload already carries the
+// frame data shape); the payload maps mirror the core event payload builders.
+func emitCoreEvent(t *testing.T, s *Server, name string, payload any) {
+	t.Helper()
+	if err := testEventBus(t, s).Emit(s.engine.Ctx(), name, payload); err != nil {
+		t.Fatalf("emit %s: %v", name, err)
 	}
 }
 
@@ -48,9 +68,9 @@ func readEventFrame(t *testing.T, c *websocket.Conn) (string, map[string]any) {
 	return event, data
 }
 
-// TestWSObserverSnapshot verifies a fresh connection first receives the
+// TestWSEmitterSnapshot verifies a fresh connection first receives the
 // snapshot frame carrying the status fields and the trimmed playlist.
-func TestWSObserverSnapshot(t *testing.T) {
+func TestWSEmitterSnapshot(t *testing.T) {
 	s, ts := newWSServer(t)
 	c, snapshot := wsDialAuthed(t, s, ts)
 
@@ -75,11 +95,12 @@ func TestWSObserverSnapshot(t *testing.T) {
 	_ = c
 }
 
-// TestWSObserverEvents drives the observer directly (the same instance NewServer
-// attaches to the engine player) and verifies each event reaches a connected
-// WS client. Frames are collected until all expected events arrive because
-// broadcasts write each connection from its own goroutine (order not strict).
-func TestWSObserverEvents(t *testing.T) {
+// TestWSEmitterEvents emits events through the core event bus (the same path
+// the engine player/startup now use) and verifies each event reaches a
+// connected WS client as the browser protocol frame. Frames are collected until
+// all expected events arrive because broadcasts write each connection from its
+// own goroutine (order not strict).
+func TestWSEmitterEvents(t *testing.T) {
 	s, ts := newWSServer(t)
 	c, _ := wsDialAuthed(t, s, ts)
 
@@ -90,13 +111,25 @@ func TestWSObserverEvents(t *testing.T) {
 		Album:    structs.Album{Id: 2, Name: "专辑X", PicUrl: "https://p1.music.126.net/cover.jpg"},
 		Duration: 3 * time.Minute,
 	}
-	s.observer.OnSongChanged(song)
-	s.observer.OnStateChanged(types.Paused)
-	s.observer.OnPosition(0)
-	s.observer.OnStartupPhase(core.StartupPhasePlaylistLoaded)
+	// Payload shapes mirror the core event payload builders (songEventPayload
+	// etc. in internal/core/events.go).
+	emitCoreEvent(t, s, core.EvSongChanged, map[string]any{
+		"id":              song.Id,
+		"name":            song.Name,
+		"artist":          song.ArtistName(),
+		"album":           song.Album.Name,
+		"picUrl":          song.PicUrl,
+		"durationSeconds": song.Duration.Seconds(),
+	})
+	emitCoreEvent(t, s, core.EvStateChanged, map[string]any{"state": "paused"})
+	emitCoreEvent(t, s, core.EvPosition, map[string]any{"positionSeconds": 0.0})
+	emitCoreEvent(t, s, core.EvStartupPhase, map[string]any{"phase": string(core.StartupPhasePlaylistLoaded)})
+	emitCoreEvent(t, s, core.EvLogin, map[string]any{"user": map[string]any{
+		"userId": int64(7), "nickname": "tester", "avatarUrl": "https://p1.music.126.net/u.png",
+	}})
 
 	seen := map[string]map[string]any{}
-	for len(seen) < 4 {
+	for len(seen) < 5 {
 		event, data := readEventFrame(t, c)
 		seen[event] = data
 	}
@@ -147,22 +180,43 @@ func TestWSObserverEvents(t *testing.T) {
 	if phaseData["phase"] != string(core.StartupPhasePlaylistLoaded) {
 		t.Fatalf("phase = %v, want %q", phaseData["phase"], core.StartupPhasePlaylistLoaded)
 	}
+
+	loginData, ok := seen["login"]
+	if !ok {
+		t.Fatalf("missing login event; saw %v", seen)
+	}
+	if _, ok := loginData["user"].(map[string]any); !ok {
+		t.Fatalf("login event missing user: %v", loginData)
+	}
 }
 
-// TestWSObserverPositionThrottledOverWS verifies the second throttle also drops
-// consecutive position events on the wire.
-func TestWSObserverPositionThrottledOverWS(t *testing.T) {
+// TestWSEmitterPositionThrottledOverWS verifies the WebUI-side throttle also
+// drops consecutive position events on the wire.
+func TestWSEmitterPositionThrottledOverWS(t *testing.T) {
 	s, ts := newWSServer(t)
 	c, _ := wsDialAuthed(t, s, ts)
 
-	s.observer.OnPosition(0)
+	emitCoreEvent(t, s, core.EvPosition, map[string]any{"positionSeconds": 0.0})
 	if event, data := readEventFrame(t, c); event != "position" {
 		t.Fatalf("event = %q, want position (data=%v)", event, data)
 	}
 
 	// An immediate second position must be dropped by the 250ms throttle.
-	s.observer.OnPosition(5 * time.Second)
+	emitCoreEvent(t, s, core.EvPosition, map[string]any{"positionSeconds": 5.0})
 	if raw, ok := wsTryReadRaw(t, c, 300*time.Millisecond); ok {
 		t.Fatalf("expected throttled position, got frame: %s", raw)
 	}
+}
+
+// TestEmitterUnsubscribeOnServerClose verifies the server removes its event-bus
+// listeners on Close: after Close no further emit reaches the (dead) server's
+// broadcaster, and a subsequent server still receives events.
+func TestEmitterUnsubscribeOnServerClose(t *testing.T) {
+	s, ts := newWSServer(t)
+	_ = ts
+	_ = s.Close()
+
+	// The listeners are gone: emitting must not panic and the recorder-style
+	// dead broadcaster gets nothing (the emit simply returns nil).
+	emitCoreEvent(t, s, core.EvStateChanged, map[string]any{"state": "playing"})
 }

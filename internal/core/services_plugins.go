@@ -39,9 +39,9 @@ func newServicePlugins(e *Engine, opts EngineOptions) []framework.Plugin {
 		newLoginServicePlugin(e),
 		newUserServicePlugin(e),
 		newShareSvcPlugin(e),
+		newEventBusPlugin(e),
 		newPlayerPlugin(e),
 		newDispatcherPlugin(e),
-		newEventBusPlugin(e),
 	}
 }
 
@@ -272,7 +272,8 @@ func (p *shareSvcPlugin) Dispose() error { return nil }
 
 // playerPlugin constructs and owns the playback coordinator (cleanup:
 // Player.Close). It depends on lyricService, trackManager, desktopLyrics
-// (optional: nil in headless mode, the player is nil-safe) and lastfm.
+// (optional: nil in headless mode, the player is nil-safe), lastfm and the
+// event bus (P4: the player double-writes playback events to it).
 type playerPlugin struct {
 	framework.NoopPlugin
 	e      *Engine
@@ -298,6 +299,10 @@ func (p *playerPlugin) Deps(ctx *framework.Context) error {
 	if !ok {
 		return errors.New("playerPlugin: lastfm not resolved")
 	}
+	eb, ok := framework.ServiceOf[*framework.EventEmitter](ctx, ServiceEventBus)
+	if !ok {
+		return errors.New("playerPlugin: eventBus not resolved")
+	}
 	// desktopLyrics is optional: headless provides a nil controller, so a
 	// missing/nil resolution must not fail Deps (the player tolerates nil).
 	dl, _ := framework.ServiceOf[desktop_lyrics.Controller](ctx, ServiceDesktopLyrics)
@@ -307,6 +312,7 @@ func (p *playerPlugin) Deps(ctx *framework.Context) error {
 		DesktopLyrics: dl,
 		User:          p.e.UserSlot(),
 		LastfmTracker: lf.Tracker,
+		EventEmitter:  eb,
 	}
 	return nil
 }
@@ -354,8 +360,9 @@ func (p *dispatcherPlugin) Start(ctx *framework.Context) error {
 
 func (p *dispatcherPlugin) Dispose() error { return nil }
 
-// eventBusPlugin registers the app-wide event emitter as a service (P4 mount
-// point; this ticket only registers the service). No cleanup.
+// eventBusPlugin registers the app-wide event emitter as a service (P4: the
+// player double-writes playback events and the engine startup/login flows emit
+// through it). No cleanup.
 type eventBusPlugin struct {
 	framework.NoopPlugin
 	e       *Engine

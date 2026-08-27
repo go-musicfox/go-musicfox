@@ -29,8 +29,8 @@ const (
 	ServiceLoginService  = "loginService"
 	ServiceShareSvc      = "shareSvc"
 	ServiceLastfm        = "lastfm"
-	// ServiceEventBus is the app-wide framework event emitter (P4 mount point;
-	// this ticket only registers the service).
+	// ServiceEventBus is the app-wide framework event emitter (P4: playback
+	// events are double-written to it; startup/login events emit through it).
 	ServiceEventBus = "eventBus"
 	// ServiceDispatcher is the core control dispatcher (lifted from the
 	// headless/webui transport-created instances as a framework-resolvable
