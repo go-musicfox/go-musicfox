@@ -22,7 +22,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/internal/wasm"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
@@ -54,9 +53,12 @@ type Netease struct {
 	// disposes it after the engine root scope cleanup.
 	frontendScope *framework.Scope
 
-	// wasmManager owns the loaded WASM plugin instances (created lazily in
-	// NewNetease; nil when the runtime failed to initialize).
-	wasmManager *wasm.Manager
+	// wasmScope is the frontend-scope child (P6) that owns the app-wide WASM
+	// manager (wasm.ManagerPlugin) and the dynamically loaded per-directory
+	// wasmPlugin adapters (added by loadWasmPlugins via wasm.LoadIntoScope). Its
+	// lifecycle rides the frontend scope's Dispose in CloseHook, so the shell
+	// keeps no separate manager reference/cleanup.
+	wasmScope *framework.Scope
 
 	// ctx is the app-wide service registry context owned by the engine.
 	ctx *framework.Context
@@ -122,6 +124,9 @@ func NewNetease(app *model.App) *Netease {
 	// WASM plugins must register here (inside NewNetease, before the main menu
 	// is constructed in internal/commands) so their command providers and
 	// main-menu items participate in the after-anchor chain from the start.
+	// loadWasmPlugins mounts one wasmPlugin adapter per loaded plugin directory
+	// into the wasm sub-scope (which the frontend scope Start already brought
+	// up); the commands land in the frontend registry via the tui sink.
 	n.loadWasmPlugins(context.Background())
 
 	// Track-B commands become TUI CommandMenu entries after WASM plugins load
@@ -256,10 +261,11 @@ func (n *Netease) maybeShowChangelog() {
 }
 
 func (n *Netease) CloseHook(_ *model.App) {
-	// The frontend scope owns the TUI-only plugins (uiServicesPlugin now, the
-	// 9 business plugins in P5-2). Dispose it before the engine's root scope so
-	// frontend plugins are finalized ahead of the service constructors
-	// (docs/plugin_ecosystem.md §五 step 8).
+	// The frontend scope owns the TUI-only plugins (uiServicesPlugin, the 9
+	// business plugins and the WASM sub-scope — the manager + plugin instances
+	// are closed by the recursive child-scope Dispose). Dispose it before the
+	// engine's root scope so frontend plugins are finalized ahead of the
+	// service constructors (docs/plugin_ecosystem.md §五 step 8).
 	if n.frontendScope != nil {
 		_ = n.frontendScope.Dispose()
 	}
@@ -271,10 +277,6 @@ func (n *Netease) CloseHook(_ *model.App) {
 
 	if n.coverRenderer != nil {
 		n.coverRenderer.Close()
-	}
-
-	if n.wasmManager != nil {
-		n.wasmManager.Close(context.Background())
 	}
 
 	CloseGohookLogger()

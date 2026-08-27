@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/wasm"
 )
 
 // startWithPluginPlugin is a P5-2-shaped test plugin: its Start re-enters
@@ -40,7 +41,9 @@ func (p *startWithPluginPlugin) Start(*framework.Context) error {
 // TestFrontendScopeStartRegistersUIExtraServices proves the frontend scope's
 // uiServicesPlugin registers exactly the three TUI-only services when the
 // scope starts — the scoped replacement of the former direct
-// registerUIExtraServices call in NewNetease.
+// registerUIExtraServices call in NewNetease — plus the WASM sub-scope's
+// manager service (P6: NewFrontendScope builds the wasm child scope holding
+// wasm.ManagerPlugin, whose Start provides ServiceWasmManager).
 func TestFrontendScopeStartRegistersUIExtraServices(t *testing.T) {
 	ctx := &framework.Context{}
 	scope := NewFrontendScope(&core.Engine{}, testNetease())
@@ -50,7 +53,7 @@ func TestFrontendScopeStartRegistersUIExtraServices(t *testing.T) {
 
 	got := ctx.Names()
 	sort.Strings(got)
-	want := []string{ServiceCoverRenderer, ServiceMenuRegistry, ServicePageRegistry}
+	want := []string{ServiceCoverRenderer, ServiceMenuRegistry, ServicePageRegistry, wasm.ServiceWasmManager}
 	sort.Strings(want)
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("frontend scope registered services = %v, want %v", got, want)

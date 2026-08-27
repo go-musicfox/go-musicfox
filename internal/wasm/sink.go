@@ -11,6 +11,11 @@ import (
 // RegistrySink is the registration target of WASM plugin commands. TUI and
 // WebUI each implement it (TUI: tuiWasmSink in internal/ui); the sink decides
 // how a frontend.Command becomes visible/actionable in its frontend.
+//
+// Implementations must use Replace semantics (frontend.ReplaceCommand) rather
+// than RegisterCommand: a reloaded plugin re-registers its keys and a key
+// conflict must replace the previous definition instead of panicking. The
+// wasmPlugin Stop path unregisters the same keys via frontend.UnregisterCommand.
 type RegistrySink interface {
 	RegisterCommands(p *Plugin, cmds []frontend.Command) error
 }
@@ -102,10 +107,14 @@ func callError(err error) frontend.CommandResult {
 	}
 }
 
-// LoadAndRegister is the one-stop loader: NewManager → LoadDir(dir) → per
-// plugin sink.RegisterCommands(p, CommandsOf(p)). It returns the manager (nil
-// only when the runtime failed to initialize) and the collected errors — a
-// single failing plugin or registration does not stop the others.
+// LoadAndRegister is the non-scope convenience loader: NewManager → LoadDir(dir)
+// → per plugin sink.RegisterCommands(p, CommandsOf(p)). It returns the manager
+// (nil only when the runtime failed to initialize) and the collected errors — a
+// single failing plugin or registration does not stop the others. It remains as
+// the one-stop entry for callers that do not want the scope lifecycle
+// (e.g. direct wasm-package tests); frontend wiring should prefer the P6
+// LoadIntoScope pipeline (internal/wasm/cordis.go), which owns the manager and
+// plugin instances through a framework.Scope.
 func LoadAndRegister(ctx context.Context, dir string, sink RegistrySink) (*Manager, []error) {
 	mgr, err := NewManager()
 	if err != nil {

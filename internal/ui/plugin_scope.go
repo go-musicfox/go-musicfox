@@ -6,6 +6,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/wasm"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
@@ -77,6 +78,21 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 			slog.Error("framework business plugin registration failed", "plugin", id, slogx.Error(err))
 		}
 	}
+
+	// WASM sub-scope (P6): a frontend-scope child that owns the app-wide WASM
+	// manager (wasm.ManagerPlugin) and, from loadWasmPlugins onwards, one
+	// wasmPlugin adapter per loaded plugin directory. Being a child of the
+	// frontend scope makes its cleanup (Stop unregisters commands, Dispose
+	// closes plugin instances + manager) ride the frontend scope's Dispose in
+	// CloseHook. The ManagerPlugin must be registered before any dynamic
+	// wasmPlugin adapter so its Start (which provides ServiceWasmManager into
+	// the app context) runs first; loadWasmPlugins AddAndStarts the adapters on
+	// this already-started child scope via wasm.LoadIntoScope.
+	wasmScope := scope.NewScope()
+	if err := wasmScope.Add(&wasm.ManagerPlugin{}); err != nil {
+		slog.Error("framework frontend wasmManagerPlugin registration failed", slogx.Error(err))
+	}
+	n.wasmScope = wasmScope
 
 	return scope
 }

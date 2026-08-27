@@ -12,6 +12,7 @@ import (
 
 	"github.com/anhoder/foxful-cli/model"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/frontend"
 	"github.com/go-musicfox/go-musicfox/internal/wasm"
 )
@@ -84,16 +85,31 @@ export = "run"
 	return pluginDir
 }
 
-// loadWasmTestPlugin loads a freshly built test plugin through wasm.LoadAndRegister
-// with the given sink and returns the manager plus the loaded plugin.
+// loadWasmTestPlugin loads a freshly built test plugin through the P6 scope
+// pipeline (wasm.LoadIntoScope) with the given sink and returns the manager
+// plus the loaded plugin. The scope — which owns the manager and plugin
+// instances — is disposed on test cleanup. The load order mirrors the TUI: the
+// wasm sub-scope (ManagerPlugin) is started first, then LoadIntoScope
+// AddAndStarts the adapter on the already-started scope.
 func loadWasmTestPlugin(t *testing.T, sink wasm.RegistrySink) (*wasm.Manager, *wasm.Plugin) {
 	t.Helper()
 	root := t.TempDir()
 	writeWasmTestPlugin(t, root)
-	mgr, errs := wasm.LoadAndRegister(context.Background(), root, sink)
-	if len(errs) != 0 {
-		t.Fatalf("LoadAndRegister returned errors: %v", errs)
+
+	scope := framework.NewScope()
+	fctx := &framework.Context{}
+	if err := scope.Add(&wasm.ManagerPlugin{}); err != nil {
+		t.Fatalf("Add(wasm.ManagerPlugin): %v", err)
 	}
+	if err := scope.Start(fctx); err != nil {
+		t.Fatalf("scope Start: %v", err)
+	}
+	mgr, errs := wasm.LoadIntoScope(context.Background(), fctx, scope, root, sink)
+	if len(errs) != 0 {
+		t.Fatalf("LoadIntoScope returned errors: %v", errs)
+	}
+	t.Cleanup(func() { _ = scope.Dispose() })
+
 	plugins := mgr.Plugins()
 	if len(plugins) != 1 {
 		t.Fatalf("Plugins() returned %d plugins, want 1", len(plugins))
@@ -199,17 +215,16 @@ func TestWasmSinkCallWasm(t *testing.T) {
 
 // --- Sink registration wiring (the valuable one) ---
 
-// TestWasmSinkRegisterAndMenus loads a real WASM plugin through
-// wasm.LoadAndRegister with the TUI sink and proves the command lands in the
-// frontend registry with the plugin id stamped, registerCommandMenus adapts it
-// into a *CommandMenu provider plus main-menu item, and the WithPlugin
-// attribution records the command key. The registries are package-global, so
-// the menu key is derived from the test name to stay unique.
+// TestWasmSinkRegisterAndMenus loads a real WASM plugin through the P6 scope
+// pipeline with the TUI sink and proves the command lands in the frontend
+// registry with the plugin id stamped, registerCommandMenus adapts it into a
+// *CommandMenu provider plus main-menu item, and the WithPlugin attribution
+// records the command key. The registries are package-global, so the menu key
+// is derived from the test name to stay unique.
 func TestWasmSinkRegisterAndMenus(t *testing.T) {
 	key := wasmTestKey(t)
 
-	mgr, p := loadWasmTestPlugin(t, tuiWasmSink{})
-	defer mgr.Close(context.Background())
+	_, p := loadWasmTestPlugin(t, tuiWasmSink{})
 
 	// The command is registered in the frontend registry with plugin attribution.
 	cmd, ok := frontend.CommandByKey(key)
@@ -266,8 +281,7 @@ func TestWasmSinkRegisterAndMenus(t *testing.T) {
 func TestWasmCommandDisabledGate(t *testing.T) {
 	key := wasmTestKey(t)
 
-	mgr, p := loadWasmTestPlugin(t, tuiWasmSink{})
-	defer mgr.Close(context.Background())
+	_, p := loadWasmTestPlugin(t, tuiWasmSink{})
 
 	cmd, ok := frontend.CommandByKey(key)
 	if !ok {
@@ -289,23 +303,37 @@ func TestWasmCommandDisabledGate(t *testing.T) {
 	}
 }
 
-// --- Sink panic isolation ---
+// --- Sink Replace semantics (P6) ---
 
-// TestWasmSinkRegisterPanicIsolation proves tuiWasmSink.RegisterCommands recovers
-// a registration panic (here: a duplicate command key) into a returned error
-// instead of crashing the caller.
-func TestWasmSinkRegisterPanicIsolation(t *testing.T) {
+// TestWasmSinkRegisterReplaceSemantics proves tuiWasmSink.RegisterCommands uses
+// Replace semantics: a command key already registered is overwritten (no
+// duplicate-key panic — the P6 sink 归并), the replacement carries the new
+// definition, and the WithPlugin scope still records the key under the
+// plugin's CommandKeys.
+func TestWasmSinkRegisterReplaceSemantics(t *testing.T) {
 	key := wasmTestKey(t)
-	RegisterCommand(testCommand(key)) // pre-register so the sink's registration panics
+	RegisterCommand(testCommand(key)) // pre-register so the sink's Replace overwrites it
 
-	err := tuiWasmSink{}.RegisterCommands(&wasm.Plugin{ID: "wasm_sink_panic", Name: "Panic"}, []frontend.Command{
-		{Key: key, Title: "Dup", Run: func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} }},
+	err := tuiWasmSink{}.RegisterCommands(&wasm.Plugin{ID: "wasm_sink_replace", Name: "Replace"}, []frontend.Command{
+		{Key: key, Title: "Replaced", PluginID: "wasm_sink_replace", Run: func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} }},
 	})
-	if err == nil {
-		t.Fatal("RegisterCommands returned nil error, want the recovered duplicate-key panic")
+	if err != nil {
+		t.Fatalf("RegisterCommands returned error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "wasm_sink_panic") {
-		t.Fatalf("error %q does not mention the plugin id", err)
+	cmd, ok := frontend.CommandByKey(key)
+	if !ok {
+		t.Fatalf("command %q not registered", key)
+	}
+	if cmd.Title != "Replaced" {
+		t.Fatalf("Title = %q, want %q (replaced, not panicked)", cmd.Title, "Replaced")
+	}
+
+	info := pluginInfoSnapshot(t, "wasm_sink_replace")
+	if info == nil {
+		t.Fatalf("plugin %q not declared", "wasm_sink_replace")
+	}
+	if !containsString(info.CommandKeys, key) {
+		t.Fatalf("CommandKeys = %v, want to contain %q", info.CommandKeys, key)
 	}
 }
 

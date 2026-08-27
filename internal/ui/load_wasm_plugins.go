@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"path/filepath"
 
@@ -14,49 +13,48 @@ import (
 )
 
 // tuiWasmSink registers WASM plugin commands into the TUI: every command is
-// registered inside a WithPlugin(p.ID, p.Name, ...) scope so ui.RegisterCommand
-// stamps the manifest plugin id and [plugins] disabled can gate the command.
-// Panics (duplicate command key, ...) are recovered and surfaced as an error so
-// one bad plugin does not crash startup.
+// registered inside a WithPlugin(p.ID, p.Name, ...) scope so the manifest
+// plugin id is attributed (CommandKeys recording) and [plugins] disabled can
+// gate the command (CommandsOf already stamps PluginID, so the stamp is
+// idempotent). Commands are REPLACED (frontend.ReplaceCommand) rather than
+// registered: a reloaded plugin re-registers its keys without a duplicate-key
+// panic and keeps its registration-order position. The WithPlugin scope records
+// the key under the plugin's CommandKeys (the mirror of ui.RegisterCommand).
 type tuiWasmSink struct{}
 
-func (tuiWasmSink) RegisterCommands(p *wasm.Plugin, cmds []frontend.Command) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("wasm: register commands for plugin %q panicked: %v", p.ID, r)
-		}
-	}()
+func (tuiWasmSink) RegisterCommands(p *wasm.Plugin, cmds []frontend.Command) error {
 	WithPlugin(p.ID, p.Name, func() {
 		for _, cmd := range cmds {
-			RegisterCommand(cmd)
+			frontend.ReplaceCommand(cmd)
+			recordPluginCommandKey(cmd.Key)
 		}
 	})
 	return nil
 }
 
-// loadWasmPlugins discovers, loads and registers WASM plugins at startup. The
-// registration is attributed to each plugin via tuiWasmSink / WithPlugin so the
-// [plugins] disabled config works for WASM plugins by manifest id. The Manager
-// is kept on the shell so CloseHook can release the instances. Recover-isolated:
-// an unexpected panic (loader bug, ...) is logged, never fatal.
+// loadWasmPlugins discovers, loads and mounts WASM plugins into the wasm
+// sub-scope (P6). NewFrontendScope registers the sub-scope's ManagerPlugin and
+// the frontend scope Start provides the manager into the app context; this
+// mounts one wasmPlugin adapter per loaded plugin directory via
+// wasm.LoadIntoScope, which AddAndStarts them on the already-started child
+// scope. The wasm sub-scope is a child of the frontend scope, so the manager
+// and plugin instances are closed by the frontend scope's Dispose in CloseHook
+// — no separate manager cleanup is kept on the shell. Recover-isolated: an
+// unexpected panic (loader bug, ...) is logged, never fatal.
 func (n *Netease) loadWasmPlugins(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("wasm plugin load panicked", slogx.Error(r))
 		}
 	}()
-	if n.wasmManager != nil {
+	if n.wasmScope == nil || n.ctx == nil {
 		return
 	}
 	dir := configs.AppConfig.Plugins.WasmDir
 	if dir == "" {
 		dir = filepath.Join(app.ConfigDir(), "wasm-plugins")
 	}
-	mgr, errs := wasm.LoadAndRegister(ctx, dir, tuiWasmSink{})
-	if mgr == nil {
-		return
-	}
-	n.wasmManager = mgr
+	_, errs := wasm.LoadIntoScope(ctx, n.ctx, n.wasmScope, dir, tuiWasmSink{})
 	for _, err := range errs {
 		slog.Error("wasm plugin load failed", slogx.Error(err))
 	}

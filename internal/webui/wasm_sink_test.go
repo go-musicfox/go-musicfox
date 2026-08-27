@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/internal/frontend"
 	"github.com/go-musicfox/go-musicfox/internal/wasm"
 )
@@ -118,41 +119,55 @@ func TestWebuiWasmSinkRegistersCommands(t *testing.T) {
 	}
 }
 
-// TestWebuiWasmSinkPanicIsolation proves webuiWasmSink.RegisterCommands recovers
-// a registration panic (here: a duplicate command key) into a returned error
-// instead of crashing the caller.
-func TestWebuiWasmSinkPanicIsolation(t *testing.T) {
+// TestWebuiWasmSinkReplaceSemantics proves webuiWasmSink.RegisterCommands uses
+// Replace semantics (the P6 sink 归并): a command key already registered is
+// overwritten without a duplicate-key panic, and the replacement carries the
+// new definition.
+func TestWebuiWasmSinkReplaceSemantics(t *testing.T) {
 	key := wasmTestKey(t)
 	frontend.RegisterCommand(frontend.Command{
-		Key: key,
-		Run: func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} },
+		Key:   key,
+		Title: "old",
+		Run:   func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} },
 	})
 
-	err := (webuiWasmSink{}).RegisterCommands(&wasm.Plugin{ID: "wasm_sink_panic", Name: "Panic"}, []frontend.Command{
-		{Key: key, Title: "Dup", Run: func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} }},
+	err := (webuiWasmSink{}).RegisterCommands(&wasm.Plugin{ID: "wasm_sink_replace", Name: "Replace"}, []frontend.Command{
+		{Key: key, Title: "Replaced", PluginID: "wasm_sink_replace", Run: func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} }},
 	})
-	if err == nil {
-		t.Fatal("RegisterCommands returned nil error, want the recovered duplicate-key panic")
+	if err != nil {
+		t.Fatalf("RegisterCommands returned error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "wasm_sink_panic") {
-		t.Fatalf("error %q does not mention the plugin id", err)
+	cmd, ok := frontend.CommandByKey(key)
+	if !ok {
+		t.Fatalf("command %q not registered", key)
+	}
+	if cmd.Title != "Replaced" {
+		t.Fatalf("Title = %q, want %q (replaced, not panicked)", cmd.Title, "Replaced")
 	}
 }
 
-// TestWebuiWasmSinkEndToEnd loads a real WASM plugin through the same
-// LoadAndRegister -> webuiWasmSink pipeline Run uses and proves the command
-// lands in the registry, surfaces on GET /api/commands and executes through
-// POST /api/commands/{key} with a toast result.
+// TestWebuiWasmSinkEndToEnd loads a real WASM plugin through the P6 scope
+// pipeline (wasm.ManagerPlugin + wasm.LoadIntoScope, the same pipeline Run
+// uses) and proves the command lands in the registry, surfaces on GET
+// /api/commands and executes through POST /api/commands/{key} with a toast
+// result.
 func TestWebuiWasmSinkEndToEnd(t *testing.T) {
 	key := wasmTestKey(t)
 	root := t.TempDir()
 	writeWasmTestPlugin(t, root)
 
-	mgr, errs := wasm.LoadAndRegister(context.Background(), root, webuiWasmSink{})
-	if len(errs) != 0 {
-		t.Fatalf("LoadAndRegister returned errors: %v", errs)
+	scope := framework.NewScope()
+	fctx := &framework.Context{}
+	if err := scope.Add(&wasm.ManagerPlugin{}); err != nil {
+		t.Fatalf("Add(wasm.ManagerPlugin): %v", err)
 	}
-	defer mgr.Close(context.Background())
+	if err := scope.Start(fctx); err != nil {
+		t.Fatalf("scope Start: %v", err)
+	}
+	if _, errs := wasm.LoadIntoScope(context.Background(), fctx, scope, root, webuiWasmSink{}); len(errs) != 0 {
+		t.Fatalf("LoadIntoScope returned errors: %v", errs)
+	}
+	t.Cleanup(func() { _ = scope.Dispose() })
 
 	// Registered in the frontend registry with the manifest id stamped.
 	cmd, ok := frontend.CommandByKey(key)
