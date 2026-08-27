@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 )
 
 // --- Plugin attribution registry (plugin configurable enable/disable) ---
@@ -54,6 +55,13 @@ var (
 	currentPluginID string
 	pluginInfos     []*PluginInfo
 	pluginInfoByID  = map[string]*PluginInfo{}
+
+	// activeFrontendScope is the TUI frontend scope, set by NewFrontendScope.
+	// PluginInfos() collects the plugin set from it (the single source of truth
+	// for "which plugins are actually mounted and enabled"); when nil (test
+	// binaries, standalone WithPlugin usage) the WithPlugin declaration records
+	// are used directly.
+	activeFrontendScope *framework.Scope
 )
 
 // WithPlugin declares the plugin id/name owning the registrations made inside
@@ -126,13 +134,28 @@ func recordPluginMainMenuItemKey(key string) {
 
 // recordPluginCommandKey attributes a registered track-B command key to the
 // current plugin scope. Registrations outside any scope (empty current id) are
-// not attributed to any plugin. It mirrors recordPluginMenuKey.
+// not attributed to any plugin. It mirrors recordPluginMenuKey, and additionally
+// dedupes: a hot reload (P8) re-registers the same keys through the wasm sink's
+// Replace path, which would otherwise append the key once per generation.
 func recordPluginCommandKey(key string) {
 	pluginMu.Lock()
 	defer pluginMu.Unlock()
 	if info := pluginInfoByID[currentPluginID]; info != nil {
+		if containsKey(info.CommandKeys, key) {
+			return
+		}
 		info.CommandKeys = append(info.CommandKeys, key)
 	}
+}
+
+// containsKey reports whether ss contains s (linear scan; command keys are few).
+func containsKey(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // recordPluginStartupHook attributes a registered startup hook to the plugin
@@ -149,14 +172,42 @@ func recordPluginStartupHook(pluginID string) {
 	}
 }
 
-// PluginInfos returns a snapshot copy of the declared plugins in declaration
-// order (callers may mutate the returned slices freely).
+// PluginInfos returns a snapshot copy of the active plugins in declaration
+// order (callers may mutate the returned slices freely). Since P8 the source is
+// the frontend scope when one is active: the plugin set is collected from
+// framework.Scope.Plugins() (recursively through child scopes, so WASM plugin
+// adapters are included) — plugins must expose their identity (framework.
+// PluginIdentity; the 9 business plugins are wrapped with an id-carrying
+// decorator, wasmPlugin implements it) and a plugin that never started
+// (AddWithEnabled disabled) is excluded. The per-plugin attribution (keys,
+// name) comes from the WithPlugin record populated during Start, or from the
+// plugin's contributor interfaces when no record exists. WithPlugin records
+// not represented in the scope (test doubles, standalone declarations) are
+// merged in afterwards so the API stays total without a scope.
 func PluginInfos() []PluginInfo {
 	pluginMu.Lock()
 	defer pluginMu.Unlock()
-	infos := make([]PluginInfo, 0, len(pluginInfos))
+
+	var (
+		infos   []*PluginInfo
+		covered = map[string]bool{}
+	)
+	if activeFrontendScope != nil {
+		for _, info := range collectScopePluginInfos(activeFrontendScope) {
+			infos = append(infos, info)
+			covered[info.ID] = true
+		}
+	}
 	for _, info := range pluginInfos {
-		infos = append(infos, PluginInfo{
+		if covered[info.ID] {
+			continue
+		}
+		infos = append(infos, info)
+	}
+
+	snapshot := make([]PluginInfo, 0, len(infos))
+	for _, info := range infos {
+		snapshot = append(snapshot, PluginInfo{
 			ID:            info.ID,
 			Name:          info.Name,
 			MenuKeys:      append([]string(nil), info.MenuKeys...),
@@ -166,7 +217,88 @@ func PluginInfos() []PluginInfo {
 			StartupHooks:  info.StartupHooks,
 		})
 	}
+	return snapshot
+}
+
+// collectScopePluginInfos walks scope (and its child scopes) for plugins
+// implementing framework.PluginIdentity and returns their *PluginInfo in scope
+// registration order. A plugin with a WithPlugin record (its Start ran and
+// recorded) contributes that record. A plugin without a record (no
+// WithPlugin-based attribution) contributes an info derived from its
+// contributor interfaces, but only when it is actually enabled: plugins
+// registered with AddWithEnabled(..., false) never start and are excluded even
+// though they sit in the scope's plugin slice. Plugins without identity
+// (service plugins such as uiServicesPlugin / ManagerPlugin) are excluded.
+func collectScopePluginInfos(scope *framework.Scope) []*PluginInfo {
+	var infos []*PluginInfo
+	collect := func(p framework.Plugin) {
+		idn, ok := p.(framework.PluginIdentity)
+		if !ok {
+			return
+		}
+		id := idn.PluginID()
+		if id == "" {
+			return
+		}
+		if rec := pluginInfoByID[id]; rec != nil {
+			// Started: its Start (or the wasm sink) ran WithPlugin and recorded
+			// the attribution — the record is the precise registration source.
+			infos = append(infos, rec)
+			return
+		}
+		// No record: include only when the plugin is actually enabled. The
+		// scope's enabled flag (written by AddWithEnabled/AddAndStart through
+		// the EnabledSetter mechanism) is authoritative when the plugin exposes
+		// it; configs.IsPluginEnabled is the production fallback.
+		if eg, ok := p.(pluginEnabledGetter); ok && !eg.IsEnabled() {
+			return
+		}
+		if !configs.IsPluginEnabled(id) {
+			return
+		}
+		infos = append(infos, pluginInfoFromContributors(id, idn.PluginName(), p))
+	}
+	for _, p := range scope.Plugins() {
+		collect(p)
+	}
+	for _, child := range scope.Children() {
+		for _, p := range child.Plugins() {
+			collect(p)
+		}
+	}
 	return infos
+}
+
+// pluginEnabledGetter is implemented by plugins that expose their scope-enabled
+// state (the flag AddWithEnabled/AddAndStart wrote via the EnabledSetter
+// mechanism). The ui business-plugin decorator (identifiedPlugin) and the wasm
+// adapter (wasm.Plugin... via wasmPlugin) implement it so PluginInfos can
+// exclude plugins that never started.
+type pluginEnabledGetter interface {
+	IsEnabled() bool
+}
+
+// pluginInfoFromContributors builds a PluginInfo from a plugin's contributor
+// interfaces (framework.MenuContributor etc.) — the fallback for plugins that
+// implement identity but register without a WithPlugin scope.
+func pluginInfoFromContributors(id, name string, p framework.Plugin) *PluginInfo {
+	info := &PluginInfo{ID: id, Name: name}
+	if m, ok := p.(framework.MenuContributor); ok {
+		info.MenuKeys = append([]string(nil), m.MenuKeys()...)
+	}
+	if pg, ok := p.(framework.PageContributor); ok {
+		info.PageKeys = append([]string(nil), pg.PageKeys()...)
+	}
+	if mm, ok := p.(framework.MainMenuContributor); ok {
+		info.MainMenuItems = append([]string(nil), mm.MainMenuKeys()...)
+	}
+	if c, ok := p.(framework.CommandContributor); ok {
+		info.CommandKeys = append([]string(nil), c.CommandKeys()...)
+	}
+	if sh, ok := p.(framework.StartupHookContributor); ok && sh.StartupHook() != nil {
+		info.StartupHooks = 1
+	}
+	return info
 }
 
 // IsPluginEnabled reports whether the plugin id is enabled under the current

@@ -99,6 +99,88 @@ func TestCommandMenuRegistration(t *testing.T) {
 
 // --- Action gating ---
 
+// TestCommandMenuActionResolvesCurrentCommand proves the P8 hot-reload refresh
+// at the action point: commandActionCmd resolves the command from the frontend
+// registry by key at action time, so a menu instance built from a pre-reload
+// snapshot executes the CURRENT (replaced) definition — never the stale one.
+func TestCommandMenuActionResolvesCurrentCommand(t *testing.T) {
+	key := cmdMenuTestKey(t) + "_reload"
+	v1Ran, v2Ran := false, false
+
+	RegisterCommand(frontend.Command{
+		Key:   key,
+		Title: "v1",
+		Run: func(frontend.CommandContext) frontend.CommandResult {
+			v1Ran = true
+			return frontend.CommandResult{}
+		},
+	})
+
+	// The menu instance is a pre-reload snapshot (v1).
+	oldCmd, ok := frontend.CommandByKey(key)
+	if !ok {
+		t.Fatalf("command %q not registered", key)
+	}
+	m := &CommandMenu{BaseMenu: BaseMenu{}, cmd: oldCmd}
+	a := &model.App{} // zero app: Notify is a no-op without a program
+
+	// Hot reload replaces the definition (v2).
+	frontend.ReplaceCommand(frontend.Command{
+		Key:   key,
+		Title: "v2",
+		Run: func(frontend.CommandContext) frontend.CommandResult {
+			v2Ran = true
+			return frontend.CommandResult{}
+		},
+	})
+
+	if msg := commandActionCmd(a, m)(); msg != nil {
+		t.Fatalf("commandActionCmd() msg = %v, want nil", msg)
+	}
+	if v1Ran {
+		t.Fatal("v1 closure ran: the menu executed the stale pre-reload command")
+	}
+	if !v2Ran {
+		t.Fatal("v2 closure did not run: commandActionCmd must resolve the current command by key")
+	}
+}
+
+// TestCommandMenuProviderResolvesCurrentCommand proves the P8 hot-reload refresh
+// at the build point: the menu provider registered by registerCommandMenus
+// resolves the command from the registry by key, so a menu built after a reload
+// carries the new definition (title) without re-adapting the provider.
+func TestCommandMenuProviderResolvesCurrentCommand(t *testing.T) {
+	key := cmdMenuTestKey(t) + "_provider"
+	RegisterCommand(frontend.Command{
+		Key:   key,
+		Title: "v1",
+		Run:   func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} },
+	})
+	registerCommandMenus()
+
+	menu, err := BuildMenu(key, baseMenu{}, NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(%q): %v", key, err)
+	}
+	if cm := menu.(*CommandMenu); cm.cmd.Title != "v1" {
+		t.Fatalf("pre-reload Title = %q, want %q", cm.cmd.Title, "v1")
+	}
+
+	// Reload replaces the definition; the SAME provider key must serve it.
+	frontend.ReplaceCommand(frontend.Command{
+		Key:   key,
+		Title: "v2",
+		Run:   func(frontend.CommandContext) frontend.CommandResult { return frontend.CommandResult{} },
+	})
+	menu, err = BuildMenu(key, baseMenu{}, NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(%q) after reload: %v", key, err)
+	}
+	if cm := menu.(*CommandMenu); cm.cmd.Title != "v2" {
+		t.Fatalf("post-reload Title = %q, want %q (provider must resolve the current command)", cm.cmd.Title, "v2")
+	}
+}
+
 // TestCommandMenuActionShowGate proves a command whose Show gate returns false
 // is rejected before Run: commandActionCmd notifies (no-op on a zero App whose
 // program is nil) and Run never executes.

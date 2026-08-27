@@ -168,3 +168,38 @@ func TestPluginInfosCommandKeysSnapshot(t *testing.T) {
 		t.Fatal("PluginInfos() snapshot aliases the live CommandKeys registry")
 	}
 }
+
+// TestRecordPluginCommandKeyDedupesOnReload proves the P8 R1 fix: re-recording
+// the same command key (a hot reload re-registers a wasm plugin's commands
+// through the sink's Replace path) must not append a duplicate CommandKeys
+// entry.
+func TestRecordPluginCommandKeyDedupesOnReload(t *testing.T) {
+	const (
+		pluginID = "register_cmd_reload_owner"
+		key      = "register_cmd_reload"
+	)
+	WithPlugin(pluginID, "重载去重", func() {
+		RegisterCommand(testCommand(key))
+	})
+	// Simulate a reload: the same key re-registered through the wasm sink
+	// (frontend.ReplaceCommand + recordPluginCommandKey — no duplicate-key
+	// panic on the Replace path).
+	WithPlugin(pluginID, "重载去重", func() {
+		frontend.ReplaceCommand(testCommand(key))
+		recordPluginCommandKey(key)
+	})
+
+	info := pluginInfoSnapshot(t, pluginID)
+	if info == nil {
+		t.Fatalf("plugin %q not declared", pluginID)
+	}
+	count := 0
+	for _, k := range info.CommandKeys {
+		if k == key {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("CommandKeys contains %q %d times, want 1 (reload must dedupe)", key, count)
+	}
+}

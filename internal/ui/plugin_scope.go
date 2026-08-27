@@ -66,7 +66,9 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 	// during a partial migration the unmigrated plugin keeps its init()-time
 	// registration path. AddWithEnabled gives the P5 "disabled = nonexistent"
 	// semantics: a disabled plugin never starts, so its registrations (menus /
-	// pages / main-menu items / startup hooks) never happen.
+	// pages / main-menu items / startup hooks) never happen. Each mounted
+	// plugin is wrapped in identifiedPlugin so PluginInfos() (P8, scope-driven
+	// collection) can attribute it; the underlying lifecycle is forwarded.
 	constructors := framework.PluginConstructors()
 	for _, id := range businessPluginIDs {
 		ctor, ok := constructors[id]
@@ -74,7 +76,7 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 			slog.Warn("framework business plugin constructor not registered, skipping mount", "plugin", id)
 			continue
 		}
-		if err := scope.AddWithEnabled(ctor(), configs.IsPluginEnabled(id)); err != nil {
+		if err := scope.AddWithEnabled(&identifiedPlugin{Plugin: ctor(), id: id}, configs.IsPluginEnabled(id)); err != nil {
 			slog.Error("framework business plugin registration failed", "plugin", id, slogx.Error(err))
 		}
 	}
@@ -94,7 +96,46 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 	}
 	n.wasmScope = wasmScope
 
+	// Record the scope so PluginInfos() can collect the active plugin set from
+	// it (P8): the frontend scope is the single source of truth for which
+	// plugins are mounted (the wasm sub-scope contributes the WASM adapters).
+	activeFrontendScope = scope
+
 	return scope
+}
+
+// identifiedPlugin decorates a mounted business plugin with its plugin id so
+// PluginInfos() (scope-driven collection) can attribute the scope entry to the
+// plugin's WithPlugin record. It forwards the whole lifecycle through the
+// embedded framework.Plugin, and carries an embedded PluginBase whose Enabled
+// flag is written by AddWithEnabled — PluginInfos reads it back to exclude
+// plugins that never started. PluginName stays empty — the display name comes
+// from the WithPlugin record the plugin's Start creates (all 9 business
+// plugins record inside Start).
+type identifiedPlugin struct {
+	framework.Plugin
+	framework.PluginBase
+	id string
+}
+
+// PluginID reports the plugin id the scope mounted it under.
+func (p *identifiedPlugin) PluginID() string { return p.id }
+
+// PluginName is not carried by the decorator (the WithPlugin record supplies
+// it); returns empty so PluginInfos() falls back to the record's name.
+func (p *identifiedPlugin) PluginName() string { return "" }
+
+// IsEnabled reports the enabled flag AddWithEnabled wrote onto the embedded
+// PluginBase (PluginInfos exclusion filter for never-started plugins).
+func (p *identifiedPlugin) IsEnabled() bool { return p.Enabled }
+
+// Deps forwards to the underlying plugin when it implements PluginWithDeps
+// (the decorator embeds the base Plugin interface, which has no Deps slot).
+func (p *identifiedPlugin) Deps(ctx *framework.Context) error {
+	if withDeps, ok := p.Plugin.(framework.PluginWithDeps); ok {
+		return withDeps.Deps(ctx)
+	}
+	return nil
 }
 
 // uiServicesPlugin registers the TUI-only services (coverRenderer /

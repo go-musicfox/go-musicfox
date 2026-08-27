@@ -122,6 +122,80 @@ func TestNewFrontendScopeValidation(t *testing.T) {
 	assertPanics(t, func() { NewFrontendScope(&core.Engine{}, nil) })
 }
 
+// scopeIdentityPlugin is a P8-shaped plugin: it implements framework.
+// PluginIdentity AND re-enters ui.WithPlugin in Start (exactly like the 9
+// business plugins, which NewFrontendScope additionally wraps in
+// identifiedPlugin). It embeds PluginBase so AddWithEnabled records the
+// enabled flag, and exposes it via IsEnabled (the same contract
+// identifiedPlugin and wasmPlugin satisfy).
+type scopeIdentityPlugin struct {
+	framework.NoopPlugin
+	framework.PluginBase
+	id   string
+	name string
+	key  string
+}
+
+func (p *scopeIdentityPlugin) PluginID() string   { return p.id }
+func (p *scopeIdentityPlugin) PluginName() string { return p.name }
+func (p *scopeIdentityPlugin) IsEnabled() bool    { return p.Enabled }
+
+func (p *scopeIdentityPlugin) Start(*framework.Context) error {
+	WithPlugin(p.id, p.name, func() {
+		RegisterMenu(p.key, func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+			return &testCheckUpdateMenu{baseMenu: base}, nil
+		})
+	})
+	return nil
+}
+
+// TestPluginInfosCollectedFromScope proves the P8 scope-driven PluginInfos():
+// with an active frontend scope the plugin set is collected from the scope's
+// plugins (identity + WithPlugin record); a plugin registered with
+// AddWithEnabled(..., false) — present in the scope slice but never started —
+// is excluded.
+func TestPluginInfosCollectedFromScope(t *testing.T) {
+	const (
+		enabledID  = "scope_collect_enabled"
+		disabledID = "scope_collect_disabled"
+		menuKey    = "scope_collect_menu"
+	)
+	prevScope := activeFrontendScope
+	t.Cleanup(func() { activeFrontendScope = prevScope })
+
+	scope := framework.NewScope()
+	if err := scope.AddWithEnabled(&scopeIdentityPlugin{id: enabledID, name: "Scope 启用", key: menuKey}, true); err != nil {
+		t.Fatalf("AddWithEnabled(enabled) error = %v", err)
+	}
+	if err := scope.AddWithEnabled(&scopeIdentityPlugin{id: disabledID, name: "Scope 禁用", key: menuKey + "_disabled"}, false); err != nil {
+		t.Fatalf("AddWithEnabled(disabled) error = %v", err)
+	}
+	if err := scope.Start(&framework.Context{}); err != nil {
+		t.Fatalf("scope Start() error = %v", err)
+	}
+	activeFrontendScope = scope
+
+	infos := PluginInfos()
+	var enabledInfo, disabledInfo *PluginInfo
+	for i := range infos {
+		switch infos[i].ID {
+		case enabledID:
+			enabledInfo = &infos[i]
+		case disabledID:
+			disabledInfo = &infos[i]
+		}
+	}
+	if enabledInfo == nil {
+		t.Fatalf("enabled plugin %q missing from scope-collected PluginInfos: %+v", enabledID, infos)
+	}
+	if !containsString(enabledInfo.MenuKeys, menuKey) {
+		t.Fatalf("enabled plugin MenuKeys = %v, want to contain %q", enabledInfo.MenuKeys, menuKey)
+	}
+	if disabledInfo != nil {
+		t.Fatalf("disabled plugin %q appeared in PluginInfos (AddWithEnabled false = never started = excluded)", disabledID)
+	}
+}
+
 // TestDisabledPluginNotStartedRegistersNothing proves the P5 "disabled =
 // nonexistent" semantics at the scope boundary: a plugin registered with
 // AddWithEnabled(..., false) never starts, so its menu/page contributions are

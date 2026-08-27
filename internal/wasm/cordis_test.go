@@ -311,13 +311,15 @@ title = "Bad"
 	}
 }
 
-// TestLoadIntoScopeReloadRefreshesCommands proves the P6 hot-reload capability:
-// "目录替换 → 重新 LoadIntoScope → 命令集刷新". Generation 1 loads a plugin
-// whose command title is "Hello"; the directory is replaced with a new
+// TestLoadIntoScopeReloadRefreshesCommands proves the P6/P8 hot-reload
+// capability: "目录替换 → 重新 LoadIntoScope → 命令集刷新". Generation 1 loads a
+// plugin whose command title is "Hello"; the directory is replaced with a new
 // generation whose manifest changes the title to "Hello v2"; a fresh scope
 // (new manager generation) loads the new directory and the registry now serves
 // the refreshed definition, while disposing generation 1 unregistered its
-// commands.
+// commands. Both generations share ONE framework context (the production shape):
+// provideManager's generation-aware override (R2) makes the second generation's
+// wasmPlugin Deps resolve the NEW manager — never the disposed gen-1 one.
 func TestLoadIntoScopeReloadRefreshesCommands(t *testing.T) {
 	key := cordisTestKey(t)
 	root := t.TempDir()
@@ -325,13 +327,16 @@ func TestLoadIntoScopeReloadRefreshesCommands(t *testing.T) {
 	writeCordisPlugin(t, root, "hello")
 	manifestPath := filepath.Join(root, "hello", "manifest.toml")
 
+	// Shared app-wide context across both generations (the production wiring:
+	// every frontend scope starts against the engine's one context).
+	sharedCtx := &framework.Context{}
+
 	// Generation 1.
 	scope1 := framework.NewScope()
-	fctx1 := &framework.Context{}
-	if _, errs := LoadIntoScope(context.Background(), fctx1, scope1, root, &cordisSink{}); len(errs) != 0 {
+	if _, errs := LoadIntoScope(context.Background(), sharedCtx, scope1, root, &cordisSink{}); len(errs) != 0 {
 		t.Fatalf("gen1 LoadIntoScope errors: %v", errs)
 	}
-	if err := scope1.Start(fctx1); err != nil {
+	if err := scope1.Start(sharedCtx); err != nil {
 		t.Fatalf("gen1 scope Start: %v", err)
 	}
 	cmd, ok := frontend.CommandByKey(key)
@@ -343,7 +348,7 @@ func TestLoadIntoScopeReloadRefreshesCommands(t *testing.T) {
 	}
 
 	// 目录替换: swap the manifest title, then dispose the old generation
-	// (Stop unregisters the old command definition).
+	// (Stop unregisters the old command definition, Dispose closes manager1).
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatal(err)
@@ -358,13 +363,14 @@ func TestLoadIntoScopeReloadRefreshesCommands(t *testing.T) {
 		t.Fatal("gen1 command still registered after scope1 Dispose")
 	}
 
-	// Generation 2: 重新 LoadIntoScope → 命令集刷新.
+	// Generation 2: 重新 LoadIntoScope → 命令集刷新. The shared context still
+	// holds the (now disposed) gen1 manager; provideManager must override it
+	// with the gen2 manager so the new adapters resolve the live one.
 	scope2 := framework.NewScope()
-	fctx2 := &framework.Context{}
-	if _, errs := LoadIntoScope(context.Background(), fctx2, scope2, root, &cordisSink{}); len(errs) != 0 {
+	if _, errs := LoadIntoScope(context.Background(), sharedCtx, scope2, root, &cordisSink{}); len(errs) != 0 {
 		t.Fatalf("gen2 LoadIntoScope errors: %v", errs)
 	}
-	if err := scope2.Start(fctx2); err != nil {
+	if err := scope2.Start(sharedCtx); err != nil {
 		t.Fatalf("gen2 scope Start: %v", err)
 	}
 	cmd, ok = frontend.CommandByKey(key)
@@ -373,6 +379,32 @@ func TestLoadIntoScopeReloadRefreshesCommands(t *testing.T) {
 	}
 	if cmd.Title != "Hello v2" {
 		t.Fatalf("gen2 Title = %q, want %q (command set must be refreshed)", cmd.Title, "Hello v2")
+	}
+
+	// R2: every gen2 wasmPlugin adapter's Deps must resolve the gen2 scope's
+	// OWN manager (the ManagerPlugin's instance — never the disposed gen1 one
+	// that a plain provideIfAbsent would leave in the shared context).
+	var gen2Mgr *Manager
+	for _, p := range scope2.Plugins() {
+		if mp, ok := p.(*ManagerPlugin); ok {
+			gen2Mgr = mp.mgr
+			break
+		}
+	}
+	if gen2Mgr == nil {
+		t.Fatal("gen2 scope has no ManagerPlugin")
+	}
+	if ctxMgr, ok := framework.ServiceOf[*Manager](sharedCtx, ServiceWasmManager); !ok || ctxMgr != gen2Mgr {
+		t.Fatal("shared context ServiceWasmManager is not the gen2 manager (generation override failed)")
+	}
+	for _, p := range scope2.Plugins() {
+		wp, isWasm := p.(*wasmPlugin)
+		if !isWasm {
+			continue
+		}
+		if wp.mgr != gen2Mgr {
+			t.Fatalf("gen2 wasmPlugin resolved a stale manager (want the gen2 scope manager, R2 generation override failed)")
+		}
 	}
 
 	if err := scope2.Dispose(); err != nil {

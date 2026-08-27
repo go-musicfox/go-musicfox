@@ -18,7 +18,8 @@ const ServiceWasmManager = "wasmManager"
 
 // ManagerPlugin is the frontend wasm sub-scope plugin that creates and owns the
 // app-wide WASM Manager (docs/plugin_ecosystem.md §3.3): Start = NewManager +
-// provideIfAbsent(ServiceWasmManager); Dispose = Manager.Close. Exactly one
+// provideManager(ServiceWasmManager) (generation-aware override); Dispose =
+// Manager.Close. Exactly one
 // instance per frontend (TUI / WebUI). Stop is a no-op so the manager — and the
 // loaded plugin instances — survive a scope restart (Stop → re-Start) and are
 // only released by Dispose.
@@ -28,7 +29,10 @@ type ManagerPlugin struct {
 
 // Start creates the manager when not yet created (LoadIntoScope may hand one
 // over before the scope starts) and registers it into the shared app context so
-// wasmPlugin Deps can resolve it.
+// wasmPlugin Deps can resolve it. provideManager uses generation-aware override
+// semantics: when a hot reload (P8) mounts a fresh scope generation, the shared
+// context's ServiceWasmManager is replaced with the new generation's manager so
+// wasmPlugin Deps always resolve the live manager, never a disposed one.
 func (p *ManagerPlugin) Start(ctx *framework.Context) error {
 	if p.mgr == nil {
 		mgr, err := NewManager()
@@ -37,7 +41,7 @@ func (p *ManagerPlugin) Start(ctx *framework.Context) error {
 		}
 		p.mgr = mgr
 	}
-	provideIfAbsent(ctx, ServiceWasmManager, p.mgr)
+	provideManager(ctx, p.mgr)
 	return nil
 }
 
@@ -71,7 +75,9 @@ type wasmPlugin struct {
 }
 
 // Deps resolves the app-wide manager from the shared context (the dependency
-// that links the adapter to the scope's ManagerPlugin).
+// that links the adapter to the scope's ManagerPlugin). The context holds the
+// CURRENT generation's manager (provideManager overrides it per generation), so
+// a hot reloaded adapter never resolves a disposed previous-generation manager.
 func (w *wasmPlugin) Deps(ctx *framework.Context) error {
 	mgr, ok := framework.ServiceOf[*Manager](ctx, ServiceWasmManager)
 	if !ok {
@@ -80,6 +86,17 @@ func (w *wasmPlugin) Deps(ctx *framework.Context) error {
 	w.mgr = mgr
 	return nil
 }
+
+// PluginID and PluginName expose the loaded manifest's identity so
+// PluginInfos() (scope-driven collection) can attribute the adapter's commands
+// to its plugin (the command keys are recorded under the same id by the
+// frontend sink's WithPlugin scope).
+func (w *wasmPlugin) PluginID() string   { return w.p.ID }
+func (w *wasmPlugin) PluginName() string { return w.p.Name }
+
+// IsEnabled reports the scope-enabled flag (AddAndStart always enables, so
+// this is true in practice) — the PluginInfos enabled-exclusion hook.
+func (w *wasmPlugin) IsEnabled() bool { return w.Enabled }
 
 // Start maps the plugin menus into commands and registers them through the
 // sink. The command set is kept so Stop can unregister exactly what Start
@@ -134,9 +151,12 @@ func LoadIntoScope(ctx context.Context, fctx *framework.Context, scope *framewor
 		mp.mgr = mgr
 	}
 	// Make the manager resolvable from the shared context whether or not the
-	// scope has started yet (the ManagerPlugin Start provideIfAbsent is the
-	// idempotent twin of this).
-	provideIfAbsent(fctx, ServiceWasmManager, mp.mgr)
+	// scope has started yet (the ManagerPlugin Start provideManager is the
+	// idempotent twin of this). provideManager overrides a previous
+	// generation's manager (R2, P8): on a hot reload the new scope's adapter
+	// Deps must resolve this generation's live manager — never a disposed
+	// previous one.
+	provideManager(fctx, mp.mgr)
 
 	mgr := mp.mgr
 	errs := mgr.LoadDir(ctx, dir)
@@ -165,11 +185,15 @@ func ensureManagerPlugin(scope *framework.Scope) (*ManagerPlugin, error) {
 	return mp, nil
 }
 
-// provideIfAbsent registers svc under name unless it is already present, so the
-// scope-provided service and the ManagerPlugin Start can coexist without a
-// duplicate-Provide panic.
-func provideIfAbsent(ctx *framework.Context, name string, svc any) {
-	if ctx.Service(name) == nil {
-		ctx.Provide(name, svc)
+// provideManager registers mgr under ServiceWasmManager, replacing any
+// previous generation's manager (generation-aware: a hot reload's fresh scope
+// overrides the old entry so wasmPlugin Deps resolve the current generation's
+// manager instead of a disposed one). Registering on an empty context is a
+// plain Provide; an existing entry is Overridden.
+func provideManager(ctx *framework.Context, mgr *Manager) {
+	if ctx.Service(ServiceWasmManager) == nil {
+		ctx.Provide(ServiceWasmManager, mgr)
+		return
 	}
+	ctx.Override(ServiceWasmManager, mgr)
 }

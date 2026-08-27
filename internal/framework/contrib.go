@@ -55,3 +55,13 @@ type CommandContributor interface {
 type ContextMenuContributor interface {
 	ContextMenuKeys() []string
 }
+
+// PluginIdentity reports a plugin's stable id and display name for
+// introspection (PluginInfos collection — the scope is the source of truth for
+// the active plugin set, and this interface lets a scope plugin identify
+// itself). It is optional: plugins may expose identity directly, or a
+// frontend layer may wrap them with a decorator that provides it.
+type PluginIdentity interface {
+	PluginID() string
+	PluginName() string
+}

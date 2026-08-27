@@ -52,6 +52,14 @@ type Command struct {
 var (
 	cmdRegistry = map[string]Command{}
 	cmdOrder    []string
+	// cmdPos tracks each registered key's index in cmdOrder so ReplaceCommand
+	// can re-insert a hot-reloaded key at its original position.
+	cmdPos = map[string]int{}
+	// tombPos remembers the last known cmdOrder index of a key removed by
+	// UnregisterCommand. A later ReplaceCommand of that key (the WASM hot-reload
+	// Stop→Unregister→re-Start→Replace sequence) restores the position instead
+	// of drifting to the tail. Entries are cleared once the key is re-registered.
+	tombPos = map[string]int{}
 )
 
 // RegisterCommand registers a command. It panics on an empty Key, a nil Run,
@@ -68,12 +76,15 @@ func RegisterCommand(cmd Command) {
 	if _, ok := cmdRegistry[cmd.Key]; ok {
 		panic("frontend: duplicate command registration for key " + cmd.Key)
 	}
+	delete(tombPos, cmd.Key)
 	cmdRegistry[cmd.Key] = cmd
+	cmdPos[cmd.Key] = len(cmdOrder)
 	cmdOrder = append(cmdOrder, cmd.Key)
 }
 
 // UnregisterCommand deletes the command registered under key. It is a no-op
-// when key is not registered.
+// when key is not registered. The key's last order position is remembered so a
+// later ReplaceCommand (hot reload) can restore it.
 func UnregisterCommand(key string) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -81,6 +92,10 @@ func UnregisterCommand(key string) {
 		return
 	}
 	delete(cmdRegistry, key)
+	if pos, ok := cmdPos[key]; ok {
+		tombPos[key] = pos
+		delete(cmdPos, key)
+	}
 	for i, k := range cmdOrder {
 		if k == key {
 			cmdOrder = append(cmdOrder[:i], cmdOrder[i+1:]...)
@@ -91,11 +106,15 @@ func UnregisterCommand(key string) {
 
 // ReplaceCommand replaces the definition of the command registered under
 // cmd.Key while keeping its registration-order position. When key is not
-// registered it behaves like RegisterCommand (appends at the tail). Unlike
-// RegisterCommand it is allowed to overwrite an existing key, so it is the
-// only overwrite entry point. It shares RegisterCommand's panic semantics
-// (empty Key / nil Run). The new cmd's PluginID replaces the old one — the
-// caller is responsible for stamping it correctly.
+// registered it behaves like RegisterCommand (appends at the tail) — EXCEPT
+// when the key was previously unregistered: the last known position (recorded
+// by UnregisterCommand) is restored, so the WASM hot-reload sequence
+// (Stop unregisters → new generation Start replaces) keeps the command at its
+// original order slot instead of drifting to the tail. Unlike RegisterCommand
+// it is allowed to overwrite an existing key, so it is the only overwrite entry
+// point. It shares RegisterCommand's panic semantics (empty Key / nil Run). The
+// new cmd's PluginID replaces the old one — the caller is responsible for
+// stamping it correctly.
 func ReplaceCommand(cmd Command) {
 	if cmd.Key == "" {
 		panic("frontend: ReplaceCommand with empty Key")
@@ -109,7 +128,26 @@ func ReplaceCommand(cmd Command) {
 		cmdRegistry[cmd.Key] = cmd
 		return
 	}
+	// Not registered: restore the original order slot when the key was
+	// unregistered earlier (hot reload), else append at the tail.
+	if pos, ok := tombPos[cmd.Key]; ok {
+		delete(tombPos, cmd.Key)
+		if pos > len(cmdOrder) {
+			pos = len(cmdOrder) // clamp: other keys may have been removed too
+		}
+		newOrder := make([]string, 0, len(cmdOrder)+1)
+		newOrder = append(newOrder, cmdOrder[:pos]...)
+		newOrder = append(newOrder, cmd.Key)
+		newOrder = append(newOrder, cmdOrder[pos:]...)
+		cmdOrder = newOrder
+		for i := pos; i < len(cmdOrder); i++ {
+			cmdPos[cmdOrder[i]] = i
+		}
+		cmdRegistry[cmd.Key] = cmd
+		return
+	}
 	cmdRegistry[cmd.Key] = cmd
+	cmdPos[cmd.Key] = len(cmdOrder)
 	cmdOrder = append(cmdOrder, cmd.Key)
 }
 

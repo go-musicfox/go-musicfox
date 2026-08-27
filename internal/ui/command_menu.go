@@ -108,15 +108,24 @@ func runCommandSideEffects(res frontend.CommandResult) model.NotificationSpec {
 }
 
 // commandActionCmd builds the tea.Cmd that runs a track-B command menu action.
-// Gating runs first: ① [plugins] disabled — a disabled plugin's command is
-// rejected with a toast; ② the command's own Show gate — a command that is not
-// currently available is rejected with a toast. Then Run executes with the
-// current player snapshot and the result is presented by action (toast/view →
-// commandResultSpec, open_url/exec → runCommandSideEffects). Every path returns
-// nil tea.Msg; notifications are delivered via app.Notify (thread-safe).
+// The command is resolved from the frontend registry by key at action time, so
+// a hot reload that replaces the registered definition (P8) executes the
+// CURRENT command even when the menu instance was built from a pre-reload
+// snapshot. Gating runs first: ① [plugins] disabled — a disabled plugin's
+// command is rejected with a toast; ② the command's own Show gate — a command
+// that is not currently available is rejected with a toast. Then Run executes
+// with the current player snapshot and the result is presented by action
+// (toast/view → commandResultSpec, open_url/exec → runCommandSideEffects).
+// Every path returns nil tea.Msg; notifications are delivered via app.Notify
+// (thread-safe).
 func commandActionCmd(a *model.App, m *CommandMenu) tea.Cmd {
 	return func() tea.Msg {
-		cmd := m.cmd
+		// Resolve the current definition by key; fall back to the captured one
+		// (defensive — directly-constructed menus in tests).
+		cmd, ok := frontend.CommandByKey(m.cmd.Key)
+		if !ok {
+			cmd = m.cmd
+		}
 
 		// ① [plugins] disabled gate.
 		if !IsPluginEnabled(cmd.PluginID) {
@@ -161,17 +170,30 @@ func commandActionCmd(a *model.App, m *CommandMenu) tea.Cmd {
 // CommandMenu provider and main-menu entry. Called from NewNetease after WASM
 // plugins load so command menus and their main-menu items join the after-anchor
 // chain from the start (before the main menu is constructed in internal/commands).
+//
+// The provider resolves the command from the frontend registry BY KEY at build
+// time (and commandActionCmd re-resolves at action time), so a hot reload that
+// replaces a command definition needs no re-adaptation: the existing menu key's
+// provider keeps serving the current command. The dup-guard therefore only skips
+// re-registering an already-adapted key (RegisterMenu would panic on a duplicate
+// key); it is not a "freeze the first closure" guard. Main-menu item titles are
+// captured at adaptation time and are only refreshed by a restart — the TUI hot
+// reload boundary (docs/plugin_ecosystem.md §八 P8).
 func registerCommandMenus() {
 	for _, cmd := range frontend.Commands() {
 		if _, dup := menuRegistry[cmd.Key]; dup {
-			// Already adapted by an earlier call (tests register commands in
-			// several steps; production calls this exactly once). Re-registering
-			// would panic on the duplicate menu key, so skip — a command's menu
-			// provider and main-menu item are only ever registered once.
+			// Already adapted: the provider resolves the current command by
+			// key, so nothing to refresh here.
 			continue
 		}
 		RegisterMenu(cmd.Key, func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
-			return &CommandMenu{BaseMenu: base, cmd: cmd}, nil
+			cur, ok := frontend.CommandByKey(cmd.Key)
+			if !ok {
+				// Defensive: the key was unregistered after adaptation
+				// (plugin removed); fall back to the adaptation-time snapshot.
+				cur = cmd
+			}
+			return &CommandMenu{BaseMenu: base, cmd: cur}, nil
 		})
 		registerItem := func() {
 			if cmd.After == "" {

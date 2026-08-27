@@ -2,7 +2,7 @@
 
 > 本文档描述 go-musicfox 的插件生态统一架构方案：**三层全量 cordis 化**——① 内部业务插件、② WASM 插件、③ headless daemon server，全部以 `internal/framework` 的 cordis 语义（`Scope`/`Plugin` 生命周期 + `Context` DI + `EventEmitter`）为统一底座。目标分支：`feat/plugin-framework-playback` 及其后续。
 >
-> 本文档是设计文档（Phase 6 预留边界），当前处于「待实施」状态，分阶段迁移路线见文末。
+> 本文档是设计文档（Phase 6 预留边界），分阶段迁移路线见文末。**P1-P8 已全部实施**（✅ 逐行标注于 §六）；本节起的设计描述以当前实现为准，与代码的偏差以代码与 `AGENTS.md` 为准。
 
 ## 概述
 
@@ -313,16 +313,18 @@ EvStartupPhase  = "startup.phase"
 
 ## 六、分阶段迁移路线
 
+> 状态：**P1-P8 已全部实施**。P8 收尾要点：热加载四残余（R1 CommandKeys 去重 / R2 代际 manager Override / R3 命令序墓碑恢复 / R4 TUI 命令集动态解析）已修复；`PluginInfos()` 换源为前端 scope 收集（`framework.PluginIdentity` + 贡献接口，禁用插件不出现）。
+
 | 阶段 | 内容 | 依赖 | 风险 |
 |------|------|------|------|
-| **P1** | framework 增强（AddWithEnabled/AddAndStart/Plugins/NoopPlugin/PluginBase/贡献接口/EventEmitter.Unregister/startup hooks 收编） | 起点 | 低 |
-| **P2** | command 注册表 Unregister/Replace | 可与 P1 并行，须先于 P4 | 低 |
-| **P3** | core 8 服务构造器插件化（NewEngine 纯装配、Engine.Close 委托 scope、新增 ServiceDispatcher/ServiceEventBus） | 可与 P1 并行，P5 依赖 | 中 |
-| **P4** | 播放事件双写 EventEmitter；WebUI 从 observer 迁 emitter | P3 后 | 中 |
-| **P5** | 9 个业务插件 init→Start 迁移 + disabled 语义切换 | P1+P3 后 | **高** |
-| **P6** | WASM cordis 化（ManagerPlugin + wasmPlugin + 动态挂载 + sink 归并） | P2+P4 后 | 中 |
-| **P7** | daemon 插件化 + 协议订阅升级（subscribe/unsubscribe，兼容旧帧） | P3+P4 后，与 P5/P6 可并行 | 中 |
-| **P8** | 热加载收尾 + PluginInfo 换源 + 文档同步 | P6+P7 后 | 低 |
+| ✅ **P1** | framework 增强（AddWithEnabled/AddAndStart/Plugins/NoopPlugin/PluginBase/贡献接口/EventEmitter.Unregister/startup hooks 收编；P8 追加 `PluginIdentity` 与 `Scope.Children`） | 起点 | 低 |
+| ✅ **P2** | command 注册表 Unregister/Replace（P8 追加热重载位置恢复：Unregister 记墓碑、Replace 对已删 key 回原位） | 可与 P1 并行，须先于 P4 | 低 |
+| ✅ **P3** | core 8 服务构造器插件化（NewEngine 纯装配、Engine.Close 委托 scope、新增 ServiceDispatcher/ServiceEventBus） | 可与 P1 并行，P5 依赖 | 中 |
+| ✅ **P4** | 播放事件双写 EventEmitter；WebUI 从 observer 迁 emitter | P3 后 | 中 |
+| ✅ **P5** | 9 个业务插件 init→Start 迁移 + disabled 语义切换（禁用 = 不存在；TUI 前端 scope 经 `AddWithEnabled` 过滤） | P1+P3 后 | **高** |
+| ✅ **P6** | WASM cordis 化（ManagerPlugin + wasmPlugin + 动态挂载 + sink 归并；TUI/WebUI 各自 wasm scope） | P2+P4 后 | 中 |
+| ✅ **P7** | daemon 插件化 + 协议订阅升级（subscribe/unsubscribe，兼容旧帧） | P3+P4 后，与 P5/P6 可并行 | 中 |
+| ✅ **P8** | 热加载收尾 + PluginInfo 换源 + 文档同步（R1 去重 / R2 代际 ctx Override / R3 命令序墓碑 / R4 TUI 动态解析；PluginInfos 从 scope 收集） | P6+P7 后 | 低 |
 
 **可并行**：P1/P2/P3 起始；P5/P6/P7 在 P3+P4 后并行。
 

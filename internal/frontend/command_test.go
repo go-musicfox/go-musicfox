@@ -22,6 +22,8 @@ func resetCommandRegistry() {
 	defer mu.Unlock()
 	cmdRegistry = map[string]Command{}
 	cmdOrder = nil
+	cmdPos = map[string]int{}
+	tombPos = map[string]int{}
 }
 
 func TestRegisterCommandAndLookup(t *testing.T) {
@@ -268,6 +270,84 @@ func TestReplaceCommandEmptyKeyPanics(t *testing.T) {
 		Title: "no key",
 		Run:   func(CommandContext) CommandResult { return CommandResult{} },
 	})
+}
+
+// TestReplaceCommandRestoresOrderAfterUnregister proves the P8 hot-reload order
+// guarantee: after Stop unregisters a command (removing it from cmdOrder), a
+// reloaded ReplaceCommand of the same key restores it at its ORIGINAL position
+// instead of appending at the tail — the WASM reload sequence
+// (Stop→Unregister→re-Start→Replace) keeps the registration-order sequence
+// stable.
+func TestReplaceCommandRestoresOrderAfterUnregister(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	RegisterCommand(validCommand("hot-a"))
+	RegisterCommand(validCommand("hot-b"))
+	RegisterCommand(validCommand("hot-c"))
+
+	// Reload simulation: the plugin generation is disposed (Stop unregisters
+	// hot-b), then the new generation re-registers it via Replace.
+	UnregisterCommand("hot-b")
+	if _, ok := CommandByKey("hot-b"); ok {
+		t.Fatal("hot-b still registered after Unregister")
+	}
+
+	ReplaceCommand(Command{
+		Key:   "hot-b",
+		Title: "Hot B v2",
+		Run:   func(CommandContext) CommandResult { return CommandResult{Action: "toast", Message: "v2"} },
+	})
+
+	// hot-b must be back at index 1 (its original slot), not at the tail.
+	got := Commands()
+	if len(got) != 3 {
+		t.Fatalf("Commands() len = %d, want 3", len(got))
+	}
+	for i, key := range []string{"hot-a", "hot-b", "hot-c"} {
+		if got[i].Key != key {
+			t.Fatalf("Commands()[%d].Key = %q, want %q (reloaded command must restore its original slot)", i, got[i].Key, key)
+		}
+	}
+	if got[1].Title != "Hot B v2" {
+		t.Fatalf("Commands()[1].Title = %q, want %q", got[1].Title, "Hot B v2")
+	}
+
+	// A second reload keeps the position stable.
+	UnregisterCommand("hot-b")
+	ReplaceCommand(validCommand("hot-b"))
+	got = Commands()
+	for i, key := range []string{"hot-a", "hot-b", "hot-c"} {
+		if got[i].Key != key {
+			t.Fatalf("second reload Commands()[%d].Key = %q, want %q", i, got[i].Key, key)
+		}
+	}
+}
+
+// TestReplaceCommandRestoreClampsToOrderBounds proves the tombstone position is
+// clamped when other keys were removed after the unregister (the original slot
+// may exceed the current order length); the reloaded key lands at the tail
+// rather than panicking or corrupting the order.
+func TestReplaceCommandRestoreClampsToOrderBounds(t *testing.T) {
+	resetCommandRegistry()
+	defer resetCommandRegistry()
+
+	RegisterCommand(validCommand("clamp-a"))
+	RegisterCommand(validCommand("clamp-b"))
+	RegisterCommand(validCommand("clamp-c"))
+
+	UnregisterCommand("clamp-b") // tombstone at index 1
+	UnregisterCommand("clamp-a") // order is now [clamp-c]; index 1 is out of bounds
+
+	ReplaceCommand(validCommand("clamp-b"))
+
+	got := Commands()
+	if len(got) != 2 {
+		t.Fatalf("Commands() len = %d, want 2", len(got))
+	}
+	if got[0].Key != "clamp-c" || got[1].Key != "clamp-b" {
+		t.Fatalf("Commands() = %v, want [clamp-c clamp-b] (clamped restore)", got)
+	}
 }
 
 func TestReplaceCommandNilRunPanics(t *testing.T) {

@@ -165,6 +165,16 @@ func (s *Scope) Plugins() []Plugin {
 	return plugins
 }
 
+// Children returns a snapshot of the receiver's child scopes (PluginInfo
+// collection traverses them: e.g. the TUI frontend scope's wasm sub-scope).
+// The returned slice does not alias the scope's live state.
+func (s *Scope) Children() []*Scope {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	children := append([]*Scope(nil), s.children...)
+	return children
+}
+
 // NewScope creates a child scope and attaches it to the receiver. Child scopes
 // follow the receiver's lifecycle: they are started with it, stopped with it
 // and disposed before it.

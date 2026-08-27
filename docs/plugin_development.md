@@ -7,7 +7,7 @@
 从 Phase 3.2 起，go-musicfox 的全部菜单与页面统一走 **provider 注册表**（key → 参数化工厂），跳转不再硬编码构造函数；从 Phase 3.1 起，全部业务能力注册为 framework 命名服务，组件按名解析。这套机制为未来的第三方插件生态预留了边界：**opts 结构体（参数契约）即插件契约**。
 
 - 本文档适用对象：想为 go-musicfox 贡献/接入一个「菜单」或「页面」的开发者。
-- 当前形态：**编译期注册**（import + `init()` 注册）。**运行时动态加载不在本期支持范围**（spec Non-goals，见「当前形态」一节）。
+- 当前形态：**编译期注册构造器 + 运行时激活**（P5 cordis 化：包 `init()` 只做 `framework.RegisterPlugin(id, 构造器)`，实际注册移入插件 `Start`，由前端 scope 挂载启动；见「当前形态」一节）。**运行时动态加载**的落地形态是 **WASM 插件**（不重编译即启用，见「WASM 插件（实验性）」）；Go `plugin` 共享库 / 子进程形态不在支持范围（spec Non-goals）。
 - 行为约束：插件不得改变核心行为，错误经 `(Menu, error)` + toast 暴露（见「行为保持契约」）。
 
 ## 插件边界表面
@@ -85,7 +85,7 @@ func RegisterStartupHook(fn func()) // nil 会 panic
 
 规则：
 
-- 注册时机：编译期 `init()`。key 为空、factory 为 nil 或 key 重复注册都会 panic（程序员错误，启动即暴露）。
+- 注册时机：**P5 cordis 化后**为「`init()` 只注册构造器 + `Start` 内实际注册」（前端 scope 挂载时执行；`init()` 时序早于一切 ctx 的旧形态仅存于测试与迁移窗口）。key 为空、factory 为 nil 或 key 重复注册都会 panic（程序员错误，启动即暴露）。
 - 参数契约进类型系统：如 `PlaylistDetailOpts{PlaylistID int64}`、`ArtistDetailOpts{ArtistID, Name}`；与注册类型不匹配的构建在 registry 内部报错。
 - 注册表本身是 framework 服务（`ServiceMenuRegistry` / `ServicePageRegistry`），提供 `Registered(key)` / `Keys()` 供完整性断言与测试使用。
 
@@ -256,13 +256,14 @@ ui.RegisterStatusBarComponent(myStatusBarComponent{})
 - 分发：状态栏构造（`NewQueueQualityStatusBar`）读取 `StatusBarComponents()` 快照，按注册序追加在队列/音质组件后；组件只负责渲染（与可选鼠标处理），不持有业务回调。
 - 行为保持契约：插件组件是「新增贡献点」，追加在居中区域末尾，不参与内置组件排序；`View`/`HandleMouse` 内同样禁止 panic 破坏主循环。
 
-## 当前形态：编译期注册（import + init()）
+## 当前形态：编译期注册构造器 + 运行时激活（P5 cordis 化）
 
-第三方插件**今天**的接入方式：
+第三方插件**今天**的接入方式（9 个内置业务插件即此形态）：
 
-1. 插件包实现菜单/页面类型与注册函数，在包 `init()` 中调用 `RegisterMenu` / `RegisterPage`。
-2. 插件包被聚合器（`internal/plugins/plugins.go`）空导入，入口（`cmd/musicfox.go`）空导入聚合器，`init()` 在启动完整性断言（`AssertMenuRegistryComplete` / `AssertPageRegistryComplete`）之前完成。
-3. 启动断言锁定内置注册清单；插件 key 不得与内置 key 冲突（`expectedMenuKeys` 不含插件 key）。
+1. 插件包实现一个 `framework.Plugin` 类型（生命周期三件套 `Start`/`Stop`/`Dispose`，零样板可嵌入 `framework.NoopPlugin`；需要观察自身启用状态时嵌入 `framework.PluginBase`）。**声明期只做一件事**：包 `init()` 中 `framework.RegisterPlugin(id, func() framework.Plugin { return &Plugin{} })`。
+2. 实际注册（`RegisterMenu` / `RegisterPage` / `RegisterMainMenuItem*` / `RegisterStartupHook` / `RegisterCommand`）移入插件 `Start`，并包在 `ui.WithPlugin(id, name, func(){...})` 作用域内完成归属盖章（`PluginInfo` 记录）。
+3. 插件包被聚合器（`internal/plugins/plugins.go`）空导入，入口（`cmd/musicfox.go`）空导入聚合器。TUI 前端 scope 构建时（`ui.NewFrontendScope`）按 `configs.IsPluginEnabled(id)` 过滤、以 `AddWithEnabled` 挂载插件；`Start` 在启动完整性断言（`AssertMenuRegistryComplete` / `AssertPageRegistryComplete`）之前完成。
+4. 启动断言锁定内置注册清单；插件 key 不得与内置 key 冲突（`expectedMenuKeys` 不含插件 key）。
 
 **明确不支持（spec Non-goals）**：
 
@@ -276,33 +277,46 @@ ui.RegisterStatusBarComponent(myStatusBarComponent{})
 - `internal/ui` 仍是 internal 包：按 Go internal 规则，插件代码必须位于 go-musicfox 模块树内（如 `internal/plugins/checkupdate`）才能导入；独立仓库插件需 `replace` 到模块树内或以子包形式落地，纯外部模块直接导入 `internal/ui` 仍被 Go 拒绝（属预留边界）。
 - `Netease` 薄壳仍未导出：外部插件经 `base.BaseMenu.Netease()` 逃生口访问，不应直接构造。
 
-### 插件配置化启停：WithPlugin / `[plugins] disabled`
+### 插件配置化启停：WithPlugin + `framework.RegisterPlugin` / `[plugins] disabled`
 
-每个插件把自己的全部注册包进 **`ui.WithPlugin(id, name, register)`**（`internal/ui/plugin_registry.go`；id 为插件目录名，同 id 可多文件多次声明幂等合并），使作用域内的 `RegisterMenu` / `RegisterPage` / `RegisterMainMenuItem*` / `RegisterStartupHook` 归属到该插件：
+每个插件以 cordis 形态接入：包 `init()` 只注册构造器，`Start` 把全部注册包进 **`ui.WithPlugin(id, name, register)`**（`internal/ui/plugin_registry.go`；id 为插件目录名，同 id 可多文件多次声明幂等合并），使作用域内的 `RegisterMenu` / `RegisterPage` / `RegisterMainMenuItem*` / `RegisterStartupHook` / `RegisterCommand` 归属到该插件：
 
 ```go
-// 文件：internal/plugins/example/registry.go（骨架模板即此形态）
-func init() {
+// 文件：internal/plugins/example/registry.go（P5 cordis 形态）
+// Plugin 嵌入 NoopPlugin（生命周期零样板）；Start 内完成全部注册。
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+func (p *Plugin) Start(_ *framework.Context) error {
 	ui.WithPlugin("example", "示例", func() {
 		ui.RegisterMenu("example", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
 			return NewExampleMenu(base), nil
 		})
 		ui.RegisterMainMenuItemAfter("example", "示例", ui.MainMenuStart, nil)
 	})
+	return nil
+}
+
+// 声明期只注册构造器；实际注册在 Start（前端 scope 挂载时执行）。
+func init() {
+	framework.RegisterPlugin("example", func() framework.Plugin { return &Plugin{} })
 }
 ```
 
 用户经配置 `[plugins] disabled = ["search", "checkupdate"]` 禁用插件后（`configs.PluginsConfig.Disabled`，空配置视为全部启用）：
 
-- **主菜单入口隐藏、启动钩子不执行**；
-- 菜单 key 注册与 `BuildMenu` 跳转**不受影响**（禁用插件菜单仍可被其它插件/内置按 key 跳入，保证跳转完整性）；
-- **锚点完整性**：被禁用插件的主菜单项仍保留在 `NewMainMenu` 的 After 锚点链 entries 中（其 key 仍是其它项的合法锚点——例如禁用 search 后 recommend 插件的「排行榜」After `search_type` 仍成立），仅在显示阶段被跳过——不 panic、后继项位置自然前移。
+- **禁用 = 不存在**（P5 契约切换）：禁用插件**不 Start**，其菜单/页面/主菜单项/启动钩子/命令**全部不注册**——"按 key 跳入禁用插件菜单"不再可能（`BuildMenu` 报缺失 key，跳转点经 `buildMenuOrToast` 降级 toast）。这是全量 cordis 化后生命周期自洽的形态。
+- **锚点完整性**：被禁用插件的主菜单项从不进入 `NewMainMenu` 的 After 锚点链（因为不注册），但其它项仍可声明以它为锚点——锚点存在性断言基于**注册序**校验，禁用插件的项不在注册集中，后继项自然前移、不 panic。
+- **残余消费点过滤**（非禁用=不存在的注册）：WASM 命令菜单项由 `registerCommandMenus` 对**每个已加载 manifest** 无条件适配，经 `IsPluginEnabled` 在 `NewMainMenu` 显示与 `commandActionCmd` 执行两层过滤；`framework.RunStartupHooks` 同样按插件 id 过滤包级钩子。
 
-查询 API：`ui.PluginInfos()`（已声明插件快照，含归属的菜单/页面/主菜单项 key 与启动钩子数）、`ui.IsPluginEnabled(id)`（读 `configs.AppConfig.Plugins`，nil 配置返回 true）。不在任何 `WithPlugin` 作用域内的注册（内置 bootstrap、测试二进制）为空归属，不受启停过滤。
+查询 API：`ui.PluginInfos()`（自 P8 从**前端 scope**收集实际启用插件集——插件须暴露 `framework.PluginIdentity`，9 个业务插件经 ui 的 `identifiedPlugin` 装饰器携带 id，WASM 适配器自身实现；含归属的菜单/页面/主菜单项 key 与启动钩子数）、`ui.IsPluginEnabled(id)`（读 `configs.AppConfig.Plugins`，nil 配置返回 true）。不在任何 `WithPlugin` 作用域内的注册（内置 bootstrap、测试二进制）为空归属，不受启停过滤。
 
 ## 工作示例
 
 > 以下代码与 `internal/ui/plugin_boundary_external_test.go`（包外编译校验）对应；示例一/四/五/六/七/八/九/十/十一为已合入仓库的真实插件（`internal/plugins/checkupdate` / `internal/plugins/lastfm` / `internal/plugins/dj` / `internal/plugins/album` / `internal/plugins/artist` / `internal/plugins/recommend` / `internal/plugins/playlist` / `internal/plugins/search` / `internal/plugins/song`），示例二/三为最小演示形态。
+>
+> 注（P5 cordis 化）：示例中的 `func init() { ui.RegisterMenu(...) }` 为**注册调用演示**（各 `RegisterXxx` 签名与行为不变）；真实插件的实际接线是「`init()` 只 `framework.RegisterPlugin` + `Start` 内 `ui.WithPlugin` 包裹这些注册」（见示例一与「插件配置化启停」），禁用语义相应变为「禁用 = 不存在」。
 
 ### 示例一：检查更新插件（首个真实提取示例）
 
@@ -362,19 +376,34 @@ func (m *CheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) {
 // ui.BuildToastNotificationSpec 构建（ui 导出的 toast-spec 助手）。
 ```
 
-`registry.go`（编译期注册入口，`init()` 触发）：
+`registry.go`（P5 cordis 形态：`init()` 只注册构造器，`Start` 完成全部注册）：
 
 ```go
 // 文件：internal/plugins/checkupdate/registry.go
-func init() {
-	ui.RegisterMenu("check_update", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
-		return &CheckUpdateMenu{BaseMenu: base}, nil
+// Plugin 嵌入 NoopPlugin（Start/Stop/Dispose 零样板）；Start 经 WithPlugin
+// 作用域归属盖章后注册全部贡献。
+type Plugin struct {
+	framework.NoopPlugin
+}
+
+func (p *Plugin) Start(_ *framework.Context) error {
+	ui.WithPlugin("checkupdate", "检查更新", func() {
+		ui.RegisterMenu("check_update", func(base ui.BaseMenu, _ ui.NoArgMenuOpts) (ui.Menu, error) {
+			return &CheckUpdateMenu{BaseMenu: base}, nil
+		})
+		// 声明主菜单入口：NewMainMenu 经 After 锚点链归并——检查更新跟在帮助
+		// （内置项）之后，位于主菜单链尾（复现插件化前顺序）。
+		ui.RegisterMainMenuItemAfter("check_update", "检查更新", "help", nil)
+		// 注册启动自动检查（原 shell 级硬编码启动检查，见 startup.go）。
+		ui.RegisterStartupHook(startupCheck)
 	})
-	// 声明主菜单入口：NewMainMenu 经 After 锚点链归并——检查更新跟在帮助
-	// （内置项）之后，位于主菜单链尾（复现插件化前顺序）。
-	ui.RegisterMainMenuItemAfter("check_update", "检查更新", "help", nil)
-	// 注册启动自动检查（原 shell 级硬编码启动检查，见 startup.go）。
-	ui.RegisterStartupHook(startupCheck)
+	return nil
+}
+
+// init() 是编译期注册入口：只声明插件构造器（实际注册在 Start，前端 scope
+// 挂载时执行）。
+func init() {
+	framework.RegisterPlugin("checkupdate", func() framework.Plugin { return &Plugin{} })
 }
 ```
 
@@ -719,7 +748,7 @@ import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins/song"
 )
 
-// cmd/musicfox.go 或入口处空导入聚合器，触发全部插件 init() 注册：
+// cmd/musicfox.go 或入口处空导入聚合器，触发全部插件 init() 注册构造器：
 import (
 	_ "github.com/go-musicfox/go-musicfox/internal/plugins"
 )
@@ -883,6 +912,7 @@ GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o main.wasm .
 
 ## 未来演进（预留边界，未实现）
 
-- WASM 插件深化：`view` 渲染为独立页面/popup；插件哈希强制校验与签名分发；插件 API 版本协商；热重载命令（不重启应用即刷新插件）。Go `plugin` 共享库 / 子进程（go-plugin）形态仍不规划。
+- WASM 插件深化：`view` 渲染为独立页面/popup；插件哈希强制校验与签名分发；插件 API 版本协商。
+- **热重载**（P8 已落地基础）：命令集可按代际刷新——WebUI 完整支持（`/api/commands` 每次现查注册表），TUI 命令**执行**按 key 现查刷新（`CommandMenu` 构建/动作时解析当前命令），但主菜单项标题/位置在启动时定格，完整 TUI 热重载（含主菜单重建）仍不规划。Go `plugin` 共享库 / 子进程（go-plugin）形态仍不规划。
 - 突破 `internal` 导入规则的外部仓库形态（独立插件仓库直接导入边界包）；`Netease` 薄壳的导出适配层（当前仅经 `BaseMenu.Netease()` 逃生口）。
 - 插件元数据（名称/版本/作者）与贡献点声明的进一步扩展（WASM 插件 manifest 已含基本信息）。
