@@ -160,7 +160,9 @@ func (p *osxPlayer) Pause() {
 		return
 	}
 	p.player.Pause()
-	p.timer.Pause()
+	if p.timer != nil {
+		p.timer.Pause()
+	}
 	p.setState(types.Paused)
 }
 
@@ -168,6 +170,11 @@ func (p *osxPlayer) Resume() {
 	p.l.Lock()
 	defer p.l.Unlock()
 	if p.state == types.Playing {
+		return
+	}
+	// timer is only created once a song is loaded; without it there is
+	// nothing to resume and flipping the state would corrupt the player.
+	if p.timer == nil {
 		return
 	}
 
@@ -184,7 +191,9 @@ func (p *osxPlayer) Stop() {
 		return
 	}
 	p.player.Pause()
-	p.timer.Pause()
+	if p.timer != nil {
+		p.timer.Pause()
+	}
 	p.setState(types.Stopped)
 }
 
@@ -211,7 +220,9 @@ func (p *osxPlayer) Seek(duration time.Duration) {
 		Timescale: scale,
 		Flags:     1,
 	})
-	p.timer.SetPassed(duration)
+	if p.timer != nil {
+		p.timer.SetPassed(duration)
+	}
 }
 
 func (p *osxPlayer) PassedTime() time.Duration {
