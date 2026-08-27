@@ -53,7 +53,7 @@ type Server struct {
 // ephemeral port.
 func NewServer(engine *core.Engine) *Server {
 	mux := http.NewServeMux()
-	b := &broadcaster{conns: make(map[int64]*wsConn)}
+	b := newBroadcaster()
 	s := &Server{
 		engine:      engine,
 		dispatcher:  core.NewDispatcher(engine),

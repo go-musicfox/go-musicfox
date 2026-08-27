@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
@@ -20,9 +21,14 @@ import (
 //     space-separated token = cmd, the rest = query used as args.query for
 //     "play", empty args otherwise), prints the result as a compact JSON object
 //     on stdout and exits. No control server is started in once mode.
-//   - Otherwise it stays resident: it serves the control channel (Server) and
+//   - Otherwise it stays resident: the daemon is a cordis plugin (DaemonPlugin)
+//     hosted by a dedicated frontend scope — its Deps resolves
+//     ServiceDispatcher + ServiceEventBus from the engine context, its Start
+//     serves the control channel (legacy one-shot commands + the P7
+//     subscribe/unsubscribe event stream) and subscribes the event bus. Run
 //     blocks until SIGINT/SIGTERM or a server-triggered shutdown (a "quit"
-//     control command), then shuts the engine down cleanly.
+//     control command), then stops the daemon scope and shuts the engine down
+//     cleanly.
 func Run(once string) error {
 	// No user slot and no desktop-lyrics controller: the engine owns its user
 	// slot and leaves desktop lyrics nil (nil-safe in the player).
@@ -40,20 +46,25 @@ func Run(once string) error {
 		return runOnce(engine, once)
 	}
 
-	// Stay resident until SIGINT/SIGTERM or a "quit" control command, then shut
-	// down cleanly (scrobble report + cookie jar save happen inside
-	// engine.Close).
+	// Stay resident until SIGINT/SIGTERM or a "quit" control command, then
+	// stop the daemon scope and shut the engine down cleanly (scrobble report
+	// + cookie jar save happen inside engine.Close).
 	server := NewServer(engine)
-	serverCtx, cancelServer := context.WithCancel(context.Background())
-	defer cancelServer()
-	go func() {
-		if err := server.Serve(serverCtx); err != nil {
-			// A listen/accept failure is fatal for the resident daemon: log it
-			// and trigger shutdown so Run can exit.
-			slog.Error("headless control server failed", slogx.Error(err))
-			server.Close()
-		}
-	}()
+	scope := framework.NewScope()
+	if err := scope.Add(NewDaemonPlugin(server)); err != nil {
+		// Unreachable for a fresh scope; close so Run exits.
+		server.Close()
+		_ = engine.Close()
+		return err
+	}
+	if err := scope.Start(engine.Ctx()); err != nil {
+		// Unreachable for the static plugin set (the engine always registers
+		// ServiceDispatcher + ServiceEventBus); close so Run exits.
+		slog.Error("headless daemon scope start failed", slogx.Error(err))
+		server.Close()
+		_ = engine.Close()
+		return err
+	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
@@ -65,7 +76,10 @@ func Run(once string) error {
 	}
 
 	server.Close()
-	return engine.Close()
+	var errs []error
+	errs = append(errs, scope.Dispose())
+	errs = append(errs, engine.Close())
+	return errors.Join(errs...)
 }
 
 // parseOnce splits a "--once" string into its command and query parts: the
