@@ -7,130 +7,102 @@ on:
 jobs:
   check-duplicates:
     if: github.event.action == 'opened'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
+    uses: ./.github/workflows/opencode.yml
+    with:
+      prompt: |
+        一个新的 Issue 已创建：
 
-      - name: Check duplicates and compliance
-        uses: anomalyco/opencode/github@latest
-        env:
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: minimax-cn/MiniMax-M2.7
-          prompt: |
-            一个新的 Issue 已创建：
+        Issue 编号：${{ github.event.issue.number }}
 
-            Issue 编号：${{ github.event.issue.number }}
+        使用 gh issue view ${{ github.event.issue.number }} 查看此 Issue。
 
-            使用 gh issue view ${{ github.event.issue.number }} 查看此 Issue。
+        你需要完成两项任务。两项都完成后，发布一条评论（如需要）。
 
-            你需要完成两项任务。两项都完成后，发布一条评论（如需要）。
+        ---
 
-            ---
+        任务一：贡献指南合规检查
 
-            任务一：贡献指南合规检查
+        检查此 Issue 是否符合我们的贡献指南和 Issue 模板。
 
-            检查此 Issue 是否符合我们的贡献指南和 Issue 模板。
+        本项目有 Issue 模板，每个 Issue 都必须使用。额外检查：
+        - 没有 AI 生成的大段文本（大段明显由 AI 生成的描述不可接受）
+        - Issue 有实际内容，而非未修改的模板占位文本
+        - Bug 报告应包含复现步骤
+        - 功能请求应说明问题或需求
 
-            本项目有 Issue 模板，每个 Issue 都必须使用。额外检查：
-            - 没有 AI 生成的大段文本（大段明显由 AI 生成的描述不可接受）
-            - Issue 有实际内容，而非未修改的模板占位文本
-            - Bug 报告应包含复现步骤
-            - 功能请求应说明问题或需求
+        不要对可选的字段吹毛求疵。仅标记真正的问题，如：未使用模板、必填字段为空或仅含占位文本、明显的 AI 生成大段文本、完全空白的无意义内容。
 
-            不要对可选的字段吹毛求疵。仅标记真正的问题，如：未使用模板、必填字段为空或仅含占位文本、明显的 AI 生成大段文本、完全空白的无意义内容。
+        ---
 
-            ---
+        任务二：重复检查
 
-            任务二：重复检查
+        搜索已有 Issue（不包括 #${{ github.event.issue.number }}）来发现可能的重复。
+        考虑：
+        1. 标题或描述相似
+        2. 相同的错误信息或症状
+        3. 相关的功能或组件
+        4. 类似的功能请求
 
-            搜索已有 Issue（不包括 #${{ github.event.issue.number }}）来发现可能的重复。
-            考虑：
-            1. 标题或描述相似
-            2. 相同的错误信息或症状
-            3. 相关的功能或组件
-            4. 类似的功能请求
+        ---
 
-            ---
+        发布评论：
 
-            发布评论：
+        根据你的发现，在 Issue #${{ github.event.issue.number }} 发布一条评论。按以下方式构建评论：
 
-            根据你的发现，在 Issue #${{ github.event.issue.number }} 发布一条评论。按以下方式构建评论：
+        If the issue is NOT compliant, start the comment with:
+        <!-- issue-compliance -->
+        然后说明需要修复的内容，以及他们需要在 2 小时内修改 Issue 否则将被自动关闭。同时使用以下命令添加 needs:compliance 标签：gh issue edit ${{ github.event.issue.number }} --add-label needs:compliance
 
-            If the issue is NOT compliant, start the comment with:
-            <!-- issue-compliance -->
-            然后说明需要修复的内容，以及他们需要在 2 小时内修改 Issue 否则将被自动关闭。同时使用以下命令添加 needs:compliance 标签：gh issue edit ${{ github.event.issue.number }} --add-label needs:compliance
+        If duplicates were found, include a section about potential duplicates with links.
 
-            If duplicates were found, include a section about potential duplicates with links.
+        If the issue IS compliant AND no duplicates were found, do NOT comment at all.
 
-            If the issue IS compliant AND no duplicates were found, do NOT comment at all.
+        Use this format for the comment:
 
-            Use this format for the comment:
+        [If not compliant:]
+        <!-- issue-compliance -->
+         此 Issue 不完全符合我们的贡献指南。
 
-            [If not compliant:]
-            <!-- issue-compliance -->
-             此 Issue 不完全符合我们的贡献指南。
+        **需要修复的问题：**
+        - [specific reasons]
 
-            **需要修复的问题：**
-            - [specific reasons]
+        请在 **2 小时**内修改此 Issue 以解决以上问题，否则将被自动关闭。
 
-            请在 **2 小时**内修改此 Issue 以解决以上问题，否则将被自动关闭。
+        [If duplicates found, add:]
+        ---
+        此 Issue 可能与已有 Issue 重复，请检查：
+        - #[issue_number]: [brief description of similarity]
 
-            [If duplicates found, add:]
-            ---
-            此 Issue 可能与已有 Issue 重复，请检查：
-            - #[issue_number]: [brief description of similarity]
+        [End with if not compliant:]
+        如果你认为此标记有误，请联系维护者。
 
-            [End with if not compliant:]
-            如果你认为此标记有误，请联系维护者。
-
-            Remember: post at most ONE comment combining all findings. If everything is fine, post nothing."
+        Remember: post at most ONE comment combining all findings. If everything is fine, post nothing."
+    secrets: inherit
 
   recheck-compliance:
     if: github.event.action == 'edited' && contains(github.event.issue.labels.*.name, 'needs:compliance')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
+    uses: ./.github/workflows/opencode.yml
+    with:
+      prompt: |
+        Issue #${{ github.event.issue.number }} 之前被标记为不合规，现已编辑。
 
-      - name: Recheck compliance
-        uses: anomalyco/opencode/github@latest
-        env:
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: minimax-cn/MiniMax-M2.7
-          prompt: |
-            Issue #${{ github.event.issue.number }} 之前被标记为不合规，现已编辑。
+        使用 gh issue view ${{ github.event.issue.number }} 查看此 Issue。
 
-            使用 gh issue view ${{ github.event.issue.number }} 查看此 Issue。
+        重新检查此 Issue 是否符合我们的贡献指南和 Issue 模板。
 
-            重新检查此 Issue 是否符合我们的贡献指南和 Issue 模板。
+        检查：
+        - 没有 AI 生成的大段文本（大段明显由 AI 生成的描述不可接受）
+        - Issue 有实际内容，而非未修改的模板占位文本
+        - Bug 报告应包含复现步骤
+        - 功能请求应说明问题或需求
 
-            检查：
-            - 没有 AI 生成的大段文本（大段明显由 AI 生成的描述不可接受）
-            - Issue 有实际内容，而非未修改的模板占位文本
-            - Bug 报告应包含复现步骤
-            - 功能请求应说明问题或需求
+        不要对可选的字段吹毛求疵。仅标记真正的问题。
 
-            不要对可选的字段吹毛求疵。仅标记真正的问题。
+        If the issue is NOW compliant:
+        1. Remove the needs:compliance label: gh issue edit ${{ github.event.issue.number }} --remove-label needs:compliance
+        2. Find and delete the previous compliance comment (the one containing <!-- issue-compliance -->) using: gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments --jq '.[] | select(.body | contains(\"<!-- issue-compliance -->\") | .id' then delete it with: gh api -X DELETE repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments/{id}
+        3. 发布一条简短评论，感谢他们更新了 Issue。
 
-            If the issue is NOW compliant:
-            1. Remove the needs:compliance label: gh issue edit ${{ github.event.issue.number }} --remove-label needs:compliance
-            2. Find and delete the previous compliance comment (the one containing <!-- issue-compliance -->) using: gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments --jq '.[] | select(.body | contains(\"<!-- issue-compliance -->\") | .id' then delete it with: gh api -X DELETE repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments/{id}
-            3. 发布一条简短评论，感谢他们更新了 Issue。
-
-            If the issue is STILL not compliant:
-            发布一条评论说明仍需修复的内容。保留 needs:compliance 标签。
+        If the issue is STILL not compliant:
+        发布一条评论说明仍需修复的内容。保留 needs:compliance 标签。
+    secrets: inherit

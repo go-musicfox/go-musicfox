@@ -6,26 +6,13 @@ on:
 
 jobs:
   triage:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
+    uses: ./.github/workflows/opencode.yml
+    with:
+      agent: triage
+      prompt: |
+        以下 Issue 刚刚创建，请进行分诊：
 
-      - name: Triage issue
-        uses: anomalyco/opencode/github@latest
-        env:
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          agent: triage
-          prompt: |
-            以下 Issue 刚刚创建，请进行分诊：
+        标题：${{ github.event.issue.title }}
 
-            标题：${{ github.event.issue.title }}
-
-            ${{ github.event.issue.body }}
+        ${{ github.event.issue.body }}
+    secrets: inherit
