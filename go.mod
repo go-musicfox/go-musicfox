@@ -9,7 +9,7 @@ require (
 	github.com/13thgoutham/go-webview2 v1.0.25
 	github.com/BurntSushi/toml v1.6.0
 	github.com/adrg/xdg v0.5.3
-	github.com/anhoder/foxful-cli v1.1.4
+	github.com/anhoder/foxful-cli v1.1.5
 	github.com/atotto/clipboard v0.1.4
 	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/buger/jsonparser v1.1.2
