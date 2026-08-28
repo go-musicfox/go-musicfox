@@ -133,6 +133,27 @@ QR 登录客户端（`internal/ui/qr_login_client.go`）提升到 core 侧包，
 - **安全四层**（缺一不可）：仅 `127.0.0.1:0` 绑定；每次启动 256-bit token（URL→HttpOnly/SameSite=Strict cookie 交换，`subtle.ConstantTimeCompare`）；Host 白名单（防 DNS rebinding）；Origin/CORS 白名单（拒绝 `Origin: null`，不反射 ACAO，命令强制非 GET）。
 - **与 headless 关系**：并存、共享 Dispatcher——unix socket 保留给脚本/`musicfox ctrl`，WebUI 走 HTTP/WS，同一 daemon 两通道互不干扰。
 
+### C10 WebUI connect 客户端模式
+
+> ✅ S5 已实施：`--frontend=webui --mode=connect` 让 WebUI 作为**客户端**连接本地 headless daemon（`musicfox --headless` 常驻），**不建 engine、不加载 WASM scope**——「headless 常驻播放 + 浏览器富控制面板」的单实例形态（本机单实例定位：unix socket 0600 / Windows 127.0.0.1 均不可跨机器访问，远程访问不在本阶段范围）。
+
+**形态**：`connectRun`（`internal/webui/connect.go`）经 `headless.DialSubscribe(eventWireNames())` 连接 daemon 订阅通道 → `newRemoteBackend` 包成 `Backend` 的远程实现（`internal/webui/remote_backend.go`）→ `NewServerWithOptions(remoteBackend, ServerOptions{Auth: true})` 起常规 WebUI HTTP/WS 面 → 复用 `runServer`（自 S5-3 从 `run.go` 抽出，standalone/connect 共用「Serve + 打开浏览器 + 等待」）。页面/JS 零改动，后端换源；standalone 流程 = 现 `runStandalone`（engine + wasm scope + Startup）。
+
+**功能边界**（S5-4，与 `connect.go` 头注释一致，`go test ./internal/webui/...` 锁定）：
+
+| 能力 | standalone | connect |
+|------|-----------|---------|
+| 播放控制（play/next/seek/volume/...） | 本地 Dispatcher | daemon 转发（`SubscribeClient.Call`）✅ |
+| 状态/快照 | 本地 engine | daemon status + playlist 快照缓存 ✅ |
+| 事件推送（song/state/position/startup/login） | 本地 EventEmitter | daemon 订阅映射（wire→帧名）✅ |
+| 命令面 `/api/commands` | 本地命令注册表 | 空（不加载 WASM，无命令贡献） |
+| 登录（QR） | 本地 engine | 503（无本地 engine，扫码完成 803 路径拒） |
+| `/api/albumart` | 本地 engine | 404（daemon 快照无 PicUrl） |
+| `/api/lyrics` | 本地 engine | 空结构 |
+| WS `quit` | 关自身 | 不转发（防误关 daemon） |
+
+**与 `musicfox ctrl` 的关系**：二者都是 headless daemon 的客户端，形态不同——`musicfox ctrl` 每次调用新建连接、一请求一响应（窄命令面，脚本友好，`CtrlClient` 零改动保持兼容）；`--mode=connect` 持长连接订阅会话（快照 + 事件流 + 同连接 `Call`），面向浏览器富控制面板，`SubscribeClient` 即 `CtrlClient` 的长连接升级。断线语义：daemon 重启后 connect 长连接关闭，`Ready()=false` 使辅助端点降级、事件静止；**重连不做**（MVP，文档注明；`ctrl` 每次新建连接天然容错）。
+
 ## TUI 作为前端插件的打包形态
 
 - 注册：`internal/ui` 内 `init()` 调 `frontend.Register(tuiFrontend{})`，构造器 `Run` 内部搬入当前 runPlayer TUI 分支的全部装配（`commands/netease.go:51-89`）。CLI 旗标经 `LaunchOptions` 传入，**ui 保持不 import commands**。

@@ -377,6 +377,17 @@ $ musicfox ctrl <cmd> [args...]
 | `like` / `dislike` | 喜欢 / 取消喜欢当前播放歌曲 |
 | `quit` | 停止后台实例并退出 |
 
+#### WebUI 浏览器控制（connect 模式）
+
+`--frontend=webui --mode=connect` 让 WebUI 以**客户端模式**连接正在运行的后台实例（headless daemon），在浏览器中提供富控制面板（播放控制 / 状态快照 / 事件实时刷新），**不新建播放引擎**：
+
+```sh
+$ musicfox --headless &                    # 先启动常驻 daemon
+$ musicfox --frontend=webui --mode=connect # 浏览器打开控制面板
+```
+
+`--mode` 目前仅 `webui` 前端消费（其余前端忽略）：`standalone`（缺省）= 自建引擎独立运行；`connect` = 连接本地 headless daemon。connect 模式下播放控制 / 状态 / 事件均来自 daemon；命令面为空、QR 登录不可用、封面图 404、歌词为空结构（前端降级不崩）。脚本 / 单条命令控制仍走 `musicfox ctrl`。
+
 </details>
 <details>
 <summary>
