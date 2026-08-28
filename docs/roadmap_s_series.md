@@ -25,18 +25,22 @@ P8 之后的现状：
 | **S1** | `CommandResult{Action:"view"}` 的 TUI 消费端升级为独立可滚动文本页（`CommandViewPage`） | WASM / 轨 B 命令的长文本输出从「一次性 toast」变为「可滚动持久页面」，并为 S8「view 交互协议」预留接口 |
 | **S5** | WebUI 客户端模式：`LaunchOptions.Mode=connect`，WebUI 作为客户端 Dial 本地 headless daemon，**不建 engine** | 「headless 常驻播放 + 浏览器富控制面板」的单实例形态，页面/JS 零改动、后端换源 |
 | **GUI** | Wails v2 原生窗口前端（`frontend.Register` 加 `"wails"`），复用 WebUI 资产 | 无浏览器依赖的原生客户端形态，macOS/Windows 优先，Linux 无桌面环境自动回退浏览器 |
+| **S6（TUI-connect）** | TUI 遥控壳：`--frontend=tui --mode=connect` 连接本地 headless daemon，控制经 Call 转发、状态经订阅驱动，浏览/搜索留本地 | 无浏览器依赖的终端遥控形态；与 webui-connect 共享 SubscribeClient 数据面，对齐「本机单实例」边界哲学（D-TC-1 方案 B：轻量遥控壳，非整体换源） |
 
 ### 0.3 实施优先级与依赖图
 
-**优先级：S1 → S5 → GUI**（价值排序也成立：S1 独立且小；S5 是 GUI 的前置地基；GUI 最后落地坐收 S5 的 Backend 抽象红利）。
+**优先级：S1 → S5 → S6（TUI-connect）→ GUI**（S6 依赖 S5 已落地资产、由用户需求直接驱动，先于 GUI；GUI 仍依赖 S5-2，不受 S6 影响）。
 
 ```
 S1（view 独立页面）────────── 独立，无前置
     │
 S5（connect 客户端模式）────── 独立（S5-2 的 Server 后端抽象 + 认证可配置是 GUI 的前置）
+    │                          │
+    │                          └────────────┐
+    │                                     GUI（Wails v2）── 依赖 S5-2
     │
-    └─────────────┐
-GUI（Wails v2）────── 依赖 S5-2（Backend 抽象 + ServerOptions.Auth 可配置）
+S6（TUI-connect）────────── 依赖 S5-3（SubscribeClient）/ P7 订阅协议 / Dispatcher 命令集
+                              （不依赖 webui.Backend，D-TC-2；先于 GUI，D-TC-5）
 ```
 
 - **S1 / S5 完全并行**（文件集不重叠：S1 在 `internal/ui` + foxful-cli，S5 在 `internal/frontend`/`internal/webui`/`internal/headless`）。
@@ -55,6 +59,12 @@ GUI（Wails v2）────── 依赖 S5-2（Backend 抽象 + ServerOptions
 | D-GUI-1 | 采用**方式 B**（同 module 共存 + manual build，跳过 wails CLI 直接 `go build -tags desktop,production`）；`internal/frontend/gui/` 实现 Frontend 接口 | ✅ | 独立嵌套 module（隔离干净但双 go.mod、依赖重复、需 go.work） |
 | D-GUI-2 | 窗口加载路径**优先 GUI-B（Navigate 外部 http URL，认证链路零改动）**，spike 验证；失败回退 GUI-A（AssetServer + `ServerOptions.Auth=false`） | ✅ | — |
 | D-GUI-3 | Linux 无桌面环境检测 → 回退「系统浏览器打开 WebUI」；GUI 优先 macOS/Windows 交付 | ✅ | — |
+| D-TC-1 | TUI-connect 采用**轻量遥控壳**（方案 B：新增 `RemotePlayer` + `ui.Player` 遮蔽转发 + 降级分支），**不做整体换源**（方案 A） | ✅ | 方案 A（core.Player 全接口远程化 + daemon 快照传输完整 structs.Song）：15–25 人日、TUI 全菜单行为回归面大，且与 S5「精简快照」设计矛盾；方案 B 6–10 人日、复用 SubscribeClient 零协议改动 |
+| D-TC-2 | TUI **直接消费 `headless.SubscribeClient`**，**不复用 `webui.Backend`/`remoteBackend`** | ✅ | TUI import webui（兄弟前端包反向耦合，语义混乱）；把 Backend 提升到中立包（S5 刚定稿的包边界重构，风险与收益不成比例） |
+| D-TC-3 | TUI-connect 功能边界：控制/状态/事件全可用；播放队列只读精简；选歌播放、登录、歌词、封面、频谱、智能模式、命令面全部降级（对齐 D-S5-2 哲学） | ✅ | daemon 端扩展 play_song/歌词/封面协议（体验完整，但需 daemon 协议大扩展，记入 S6-P2 扩展清单） |
+| D-TC-4 | 断线**不自动重连**（MVP），事件通道关闭 → ready=false + toast 降级 | ✅ | 自动重连 + 状态重同步（对齐 webui-connect，记入 S6-P2 扩展清单） |
+| D-TC-5 | **TUI-connect 先于 GUI**（用户需求驱动 + 依赖已就绪 + 工作量 6–10 人日 vs 15–25 人日） | ✅ | GUI 先行（GUI 无前置依赖 S6，但交付节奏上用户价值 S6 更直接） |
+| D-TC-6 | 歌词/封面/选歌播放 = **S6-P2 扩展**（需 daemon 快照/命令扩展），MVP 明确降级隐藏 | ✅ | MVP 即做（歌词拉取 + daemon 快照加 PicUrl + play_song 命令：拉大票面 3–4 人日，挤占 MVP 收敛目标） |
 
 ---
 
@@ -962,6 +972,383 @@ M3（GUI）    Wails 原生窗口前端          GUI-1 → GUI-2/3 → GUI-4   �
 - `run_command <key>`：`frontend.CommandByKey` → Show 门控 → Run；**exec 拒绝在 daemon 端执行**（Web 面永远禁 exec，与 WebUI standalone 的 `commandExecAllowed=false` 策略一致）；open_url 原样返回（由 WebUI 端 `open.Start`）。
 
 本扩展将把 D-S5-2 的功能边界从「命令面为空」升级为「命令面可用」，并需在 connect 文档中同步安全边界说明。仅在用户对 connect 命令面有明确需求时立项。
+
+---
+
+## 8. TUI-connect（S6）：TUI 遥控 headless daemon
+
+### 8.1 背景与用户需求
+
+用户提出：「单独的 `--mode=connect` 不能使用 TUI 进行连接吗」。当前 `--mode=connect` 只有 webui 前端消费（D-S5-3：TUI 忽略 `opts.Mode`）。用户诉求明确：**用 TUI 界面遥控一个 headless daemon（常驻播放器）**，而不是每次起一个本地 TUI engine——与 webui-connect 的动机同构，但形态是终端（无浏览器依赖、无 HTTP 层，纯 socket + 订阅协议）。
+
+### 8.2 现状约束分析（TUI 对本地 engine 的绑定点，逐条核实）
+
+TUI-connect ≠ 简单把 `Mode` 传给 `tuiFrontend`。TUI 的渲染面、播放列表面、菜单面都假设本地 engine 存在。以下为逐条绑定点与裁决：
+
+| # | 绑定点 | 位置（已核实） | 性质 | 裁决 |
+|---|--------|--------------|------|------|
+| B1 | **渲染事件面**：`ui.Player` 经 `core.Observer` 接缝（OnSongChanged/OnStateChanged/OnPosition）驱动重绘 + `renderTicker` | `internal/ui/player.go:212-230`（`NewPlayer` 里 `corePlayer.SetObserver(p)`，player.go:56） | 事件驱动 | **必须换源**：订阅 daemon 事件（快照 + `song_changed`/`state_changed`/`position`）替代本地 Observer 回调；渲染回调从事件消费 goroutine 触发（与 core 播放 goroutine 调 `Rerender` 的既有模式同构，线程安全前提一致） |
+| B2 | **播放器状态面**：renderer 组（Lyric/SongInfo/Progress/Cover/Spectrum）读 `core.Player` 的 CurSong/PassedTime/State/Volume/Mode/Playlist | `internal/ui/player.go:28-36`（`playerRendererState` 接口） | 状态查询 | **必须换源**：从 `SubscribeClient.Snapshot()` 缓存 + 事件增量维护「遥控状态缓存」 |
+| B3 | **播放控制面**：菜单/操作/快捷键调 `m.Player().Ctrl*`/`PlaySong`/`ReinitializePlaylist`/`SetMode` 等 | 全菜单体系 + `operate.go` + `event_handler.go` | 控制命令 | **必须换源（转发）**：Ctrl* 经 `Call` 转发 daemon（`core.Dispatcher` 命令集已覆盖）；`PlaySong`/`ReinitializePlaylist`/智能模式等**本地建列表类操作**无 daemon 对应命令 → **降级**（见 8.4） |
+| B4 | **播放列表面**：CurPlaylist 菜单、正在播放菜单、`LocatePlayingSong` 深度依赖本地 `core.Player.Playlist()` | `internal/ui/player.go:81-138` | 数据面 | **降级**：daemon 快照 playlist 只有精简字段（id/name/artist/album，`headless/server.go:510-518`），无完整 `structs.Song`（PicUrl/Duration/Album 图）——TUI 播放队列 UI 只能显示精简只读列表，**不可用本地完整列表** |
+| B5 | **歌词**：LyricRenderer 读 `lyric.Service`（engine 经 `core.ServiceLyric` 注册） | `menu_accessor.go` `LyricService()`；`netease.go` Components | 数据面 | **降级（P2 扩展）**：daemon 事件总线无歌词事件、快照无歌词；TUI-connect 无 engine 即无 lyric 服务。MVP 隐藏歌词区；P2 由 TUI 本地拉取当前歌歌词 + position 事件驱动推进（`lyric.Service` 可脱离 engine 独立构造，需新适配器） |
+| B6 | **封面**：CoverRenderer 读 PlayingInfo().PicUrl | `webui/localBackend.PlayingInfo` 同源逻辑；TUI `coverRenderer` | 数据面 | **降级（P2 扩展）**：daemon 快照无 PicUrl（webui-connect 的 albumart 即 404，D-S5-2 同哲学）。P2 可给 daemon 快照加 PicUrl 字段（低成本 daemon 改动） |
+| B7 | **频谱**：`MTAudioProcessingTap` PCM 在本地播放引擎 | `spectrum_renderer.go`（仅本地 osx 引擎有 PCM） | 本地能力 | **降级**：connect 模式无本地 PCM → 隐藏频谱组件（renderer 装配层跳过） |
+| B8 | **登录态**：`menuServices.User()` 从 engine 的 UserService 解析；菜单登录门控（`CheckUserInfo(User())` → ToLoginPage） | `menu_accessor.go:117-120`；`player.go:159` 等 | 状态查询 | **换源 + 降级**：显示 daemon 用户昵称（`status.user`）；**TUI 侧登录门控禁用**（TUI 无法登录 daemon，webui-connect 同为 503 哲学）；需登录的菜单（我的歌单/收藏）在 connect 模式 toast 降级 |
+| B9 | **启动序列**：`InitHook` 跑 `engine.Startup`（jar→用户→播放列表→登录→hooks→自动播放） | `internal/ui/netease.go:205-218` | 生命周期 | **不执行**：connect 不建 engine 不跑 Startup；InitHook 改为「连接 daemon + 建立订阅」 |
+| B10 | **命令面（轨 B/WASM）**：TUI 前端 scope 加载 WASM，`CommandContext` 取 `Player().CommandContext()` | `frontend.go`/`command_menu.go:142-145` | 命令面 | **降级（MVP 禁用）**：`CommandContext.UserID` 无法从 daemon 获得（`status.user` 仅昵称）；与 webui-connect「命令面为空」哲学对齐。WASM 不加载、命令菜单不注册；P2 扩展 |
+
+**关键架构裁决（D-TC-1）**：TUI-connect **不做「TUI 整体换源为 remote 数据面」**（方案 A），而是 **「轻量遥控壳」**（方案 B）：
+
+| 维度 | 方案 A：整体换源（TUI 播放层远程化） | 方案 B：轻量遥控壳（MVP，推荐） |
+|------|-----------------------------------|-------------------------------|
+| 改造面 | `core.Player` 全接口远程化（约 30+ 方法逐一转发或缓存）+ renderer 全量换源 + 全部菜单行为回归验证 | 新增 `ui/remote_player.go`（遥控状态缓存 + Call 转发 + 事件消费）+ `ui.Player` 显式遮蔽 connect 方法 + renderer/访问器降级分支 |
+| daemon 协议 | **必须大扩展**：快照需传输完整 `structs.Song`（PicUrl/Duration/Album…），与 webui-connect 的「精简快照」设计矛盾 | **零改动**：复用现快照（status + 精简 playlist）+ 现 Dispatcher 命令集 |
+| 工作量 | 15–25 人日 | 6–10 人日 |
+| 风险 | 高（TUI 全部菜单/操作行为回归面；缓存一致性难） | 中（降级体验 + 遮蔽方法漏网风险，由测试守护） |
+| 用户体验 | 完整（接近本地） | MVP 有明确降级（歌词/封面/选歌播放/频谱），核心遥控能力完整 |
+
+**推荐方案 B 的理由**：① 用户需求是「遥控常驻播放器」——控制 + 状态是核心，浏览/搜索是网易云 API 网络层（与引擎无关），本就该留在本地；② 方案 A 的 daemon 协议大扩展是高投入且与 S5 已定稿的「精简快照」设计方向矛盾；③ 方案 B 与 webui-connect 共享 `SubscribeClient` 数据面（复用最大化）；④ 方案 B 遵循项目「简单性优先」准则——不动既有 TUI 菜单/播放器主路径，改动收敛到新增适配 + 显式降级。
+
+### 8.3 目标与定位
+
+**一句话价值**：`--frontend=tui --mode=connect` 时，TUI 以「遥控壳」形态连接本地 headless daemon——播放控制经 `Call` 转发、播放状态经订阅驱动，浏览/搜索留在本地，无浏览器依赖的终端遥控形态。
+
+**与 webui-connect 的关系**：同是 daemon 客户端（共享 `SubscribeClient` 数据面、共享「本机单实例」定位，对齐 D-S5-2 边界哲学）；差异在消费端——webui 是浏览器富页面（HTTP/WS 层），TUI 是终端（纯 socket + 订阅协议，无 HTTP 层）。
+
+### 8.4 功能边界表（standalone TUI vs TUI-connect MVP）
+
+| 能力 | TUI standalone | TUI-connect（S6 MVP） |
+|------|---------------|----------------------|
+| 播放控制（next/prev/pause/resume/toggle/stop/seek/volume/repeat/shuffle/like/dislike） | 本地 engine | **`Call` 转发 daemon** ✅ |
+| 播放状态 / 当前歌曲 / 进度 | 本地 | **订阅事件 + 快照缓存** ✅ |
+| 搜索 / 歌单浏览 / 排行榜 / 收藏 | 本地网易云 API | **本地照常** ✅（播放动作除外） |
+| 播放队列显示 | 本地完整列表 | 快照**精简只读**列表（id/name/artist/album）△ |
+| 选歌播放（菜单选中 → PlaySong） | 本地 | **降级**：toast「遥控模式不支持」或 `play <搜索词>` 近似（P2：daemon `play_song` 命令扩展） |
+| 播放模式/音量显示 | 本地 | 快照字段 ✅ |
+| 登录 | 本地 | **daemon 登录态**（status.user 昵称）；TUI 侧登录禁用、需登录菜单 toast 降级 |
+| 歌词 | 本地 LyricService | **降级**：隐藏（P2：本地拉取 + position 推进） |
+| 封面 | 本地 | **降级**：无（P2：daemon 快照加 PicUrl） |
+| 频谱 | 本地 PCM | **不可用**（组件隐藏） |
+| 智能模式 / 心动 / 桌面歌词 | 本地 | **禁用**（P2 扩展） |
+| 命令面（轨 B / WASM） | 本地执行 | **禁用**（`CommandContext.UserID` 不可得，对齐 webui-connect 空命令面；P2 扩展） |
+| 断线语义 | — | daemon 断开 → 订阅 Events 关闭 → toast 提示 + 状态降级；**不自动重连**（MVP，对齐 webui-connect） |
+
+### 8.5 Ticket 拆分
+
+```
+TC-1（Mode 接入 tuiFrontend + connect 装配骨架）───── 无前置
+TC-2（RemotePlayer 数据面：订阅+缓存+转发+事件投递）──┐ 独立可并行（被 TC-3 装配调用）
+TC-3（装配 + 降级：renderer/访问器/遮蔽方法）────────┘ 依赖 TC-1 + TC-2
+TC-4（测试 + 文档 + P2 扩展清单）───────────────────── 依赖 TC-2 + TC-3
+```
+
+---
+
+### TC-1｜`--mode=connect` 接入 `tuiFrontend` + connect 装配骨架
+
+**目标**：D-S5-3 修订——TUI 不再忽略 `opts.Mode`；`--frontend=tui --mode=connect` 进入遥控壳装配（先探测 daemon，失败 fail-fast 提示）；standalone 路径逐字节不变。
+
+**涉及文件**：
+
+| 文件 | 动作 |
+|---|---|
+| `internal/ui/frontend.go` | `tuiFrontend.Run` 读 `opts.Mode`，分发 connect 装配 |
+| 新增 `internal/ui/connect.go` | `RunConnect` 骨架（daemon 探测 + 装配入口占位） |
+| `internal/ui/netease.go` | `NewNetease` 增加 connect 变体构造（TC-3 完成前为占位） |
+| `internal/commands/netease.go` | `--mode` 校验文案扩展（tui 消费 mode） |
+
+**改动内容（签名级）**：
+
+```go
+// frontend.go
+func (tuiFrontend) Run(ctx context.Context, opts frontend.LaunchOptions) error {
+    if opts.Mode == frontend.ModeConnect {
+        return RunConnect(ctx) // D-TC-1：遥控壳，不建 engine
+    }
+    // 以下为现状装配，逐字节不动
+    ...
+}
+
+// connect.go（骨架）
+// RunConnect 以遥控壳形态运行 TUI：连接本地 headless daemon（DialSubscribe
+// 探测），不建 engine、不跑 Startup（D-TC-1/B9）。装配细节由 TC-2/TC-3 落地。
+func RunConnect(ctx context.Context) error {
+    client, err := headless.DialSubscribe(remoteEventWireNames()) // core.Ev* 常量集合
+    if err != nil {
+        return fmt.Errorf("connect 模式需要 headless daemon 正在运行: %w", err)
+    }
+    defer client.Close()
+    // TC-3 起：NewNeteaseRemote → 事件消费 → 主循环装配（镜像 tuiFrontend.Run）
+    return errors.New("tui connect not wired yet") // TC-3 替换
+}
+```
+
+- `internal/commands/netease.go`：`--mode` 校验保持（standalone|connect 枚举不变），文案补「tui 前端自 S6 起消费 connect」。
+- **无 daemon 行为**：`DialSubscribe` 报「headless daemon is not running」→ `RunConnect` 返回错误 → 退出码非 0（对齐 webui-connect 冒烟 7）。
+
+**依赖**：S5-3（`headless.DialSubscribe`，已落地）。
+
+**验证**：
+- `go build/vet ./...`；`go test ./internal/ui/... ./internal/commands/...`。
+- 冒烟：`--frontend=tui`（standalone）逐字节不变；`--frontend=tui --mode=connect`（无 daemon）报错退出非 0；有 daemon 时进入骨架（TC-3 前显示占位 toast 或错误）。
+
+**风险**：低。纯分发 + 探测；standalone 路径由现有测试守护。
+
+**写权限**：fixer。
+
+---
+
+### TC-2｜`RemotePlayer` 数据面：订阅消费 + 状态缓存 + 控制转发 + 渲染事件投递
+
+**目标**：TUI-connect 的播放器数据面——复用 `headless.SubscribeClient`（D-TC-2），状态经快照 + 事件流缓存、控制经 `Call` 转发、渲染事件镜像 `ui.Player` 的 Observer 回调模式投递。
+
+**涉及文件**：
+
+| 文件 | 动作 |
+|---|---|
+| 新增 `internal/ui/remote_player.go` | `RemotePlayer` 类型（状态缓存 + 控制转发 + 事件消费） |
+| 新增 `internal/ui/remote_player_test.go` | 缓存/事件映射/转发语义单测 |
+
+**改动内容（签名级）**：
+
+```go
+// remote_player.go
+package ui
+
+// RemotePlayer 是 TUI-connect 的播放器数据面（D-TC-1 方案 B）：
+// 状态 = SubscribeClient 快照 + 事件流增量缓存；控制 = Call 转发 daemon；
+// 渲染事件经 renderTicker/Rerender 投递（与 ui.Player 的 Observer 回调
+// 同构——core 播放 goroutine 调 Rerender 是既有线程安全前提，事件消费
+// goroutine 沿用同一模式，B1）。
+type RemotePlayer struct {
+    client *headless.SubscribeClient
+    netease *Netease
+    renderTicker *tickerByPlayer
+
+    mu sync.Mutex // 状态缓存锁
+    // 以下字段从快照（Dispatcher status + 精简 playlist）与事件帧增量维护。
+    ready    bool
+    song     structs.Song // 快照 song 精简映射（Id/Name/Artist/Album）
+    state    types.State
+    passed   time.Duration
+    volume   int
+    mode     types.Mode
+    playlist []structs.Song // 快照 playlist 精简映射
+    user     *structs.User  // status.user 昵称（仅昵称，B8）
+}
+
+// NewRemotePlayer 构造遥控播放器并启动事件消费 goroutine。
+func NewRemotePlayer(n *Netease, client *headless.SubscribeClient) *RemotePlayer
+
+// --- playerRendererState 接口（B2）：renderer 组读取面 ---
+func (p *RemotePlayer) CurSong() structs.Song
+func (p *RemotePlayer) CurSongIndex() int
+func (p *RemotePlayer) PassedTime() time.Duration
+func (p *RemotePlayer) State() types.State
+func (p *RemotePlayer) Volume() int
+func (p *RemotePlayer) Mode() types.Mode
+func (p *RemotePlayer) Playlist() []structs.Song
+
+// --- 控制面（B3）：Call 转发；daemon 无对应命令的降级见 TC-3 ---
+func (p *RemotePlayer) CtrlPlay/CtrlPause/CtrlResume/CtrlToggle()          // Call("play"|"pause"|"resume"|"toggle")
+func (p *RemotePlayer) CtrlNext/CtrlPrevious/CtrlStop()                    // Call("next"|"prev"|"stop")
+func (p *RemotePlayer) CtrlSeek(d time.Duration)                           // Call("seek", {seconds})
+func (p *RemotePlayer) CtrlSetVolume(v int) / Volume()                     // Call("volume", {value}) / 缓存
+func (p *RemotePlayer) CtrlSetRepeat(m int) / CtrlSetShuffle(on int)       // Call("repeat"|"shuffle")
+func (p *RemotePlayer) CtrlLikeNowPlaying() / CtrlDislikeNowPlaying()      // Call("like"|"dislike")
+
+// --- 查询面 ---
+func (p *RemotePlayer) User() *structs.User                    // 快照 user 昵称（B8）
+func (p *RemotePlayer) CommandContext() frontend.CommandContext // 快照映射（B10：MVP 命令面禁用，本方法保留供 P2）
+func (p *RemotePlayer) RenderTicker() model.Ticker              // 复用 tickerByPlayer
+func (p *RemotePlayer) Ready() bool
+
+// consumeEvents 是事件消费 goroutine（TC-2 核心）：
+// 逐帧读取 client.Events()：
+//   - {"type":"snapshot"} → 全量刷新缓存（song/state/volume/mode/playlist/user）
+//   - {"type":"event","event":"song_changed"|"state_changed"|"position"|"startup_phase"|"login"}
+//     → 增量更新缓存（position 更新 passed + 喂 renderTicker；song/state 更新后 Rerender）
+// 通道关闭（断线）→ ready=false → Rerender + 状态降级（D-TC-4）。
+func (p *RemotePlayer) consumeEvents()
+```
+
+**事件名映射**：订阅 `core.Ev*` wire 名（`player.song_changed` 等），帧 `event` 字段即 wire 名（daemon 广播原样透传，无 webui 的帧名重映射层——TUI 直接消费 wire 名，比 webui 少一层映射）。
+
+**实现要点**：
+- 位置事件节流：镜像 `webui/events.go` 的 `positionThrottle`（250ms）——订阅流已是 daemon 限频后的，TUI 侧再按渲染 ticker 消化。
+- 渲染投递：`song_changed`/`state_changed` → `netease.Rerender(false)`（镜像 `ui.Player.OnSongChanged/OnStateChanged`，B1）；`position` → 喂 `renderTicker.c`（非阻塞 select，镜像 `OnPosition`）。
+- 控制转发失败（断线/超时）：`Call` 返回错误 → toast（`app.Notify`，线程安全）。
+
+**依赖**：S5-3（`SubscribeClient`）。与 TC-1 并行编写。
+
+**验证**：
+- `go build/vet ./...`；`go test ./internal/ui/... -run RemotePlayer`。
+- 单测：快照 → 缓存映射（song/state/volume/mode/playlist/user）；事件增量（song_changed 换歌、position 推进 passed + ticker）；`Call` 转发参数映射（seek 秒、repeat off/one/all）；断线（client.Close → ready=false + 通道关闭语义）。
+- 集成测试（TC-4 合并或本票附带）：临时 socket daemon（`headless.NewServerWithAddr`）+ `DialSubscribe` + 事件断言。
+
+**风险（TC 最高风险票）**：
+- **渲染线程投递**：`Rerender` 从事件消费 goroutine 调用——与 core 播放 goroutine 调 `Rerender` 是同一既有前提（`ui.Player` 各 Observer 方法即此模式），风险低；但 `renderTicker` 的 channel 语义必须镜像 `OnPosition` 的非阻塞 select（防事件消费 goroutine 阻塞）。
+- **遮蔽方法漏网**（TC-3 处理）：`RemotePlayer` 被 `ui.Player` 遮蔽引用，TUI 实际调用点集合必须 grep 锁定并以测试守护（见 TC-3 风险）。
+
+**写权限**：fixer。
+
+---
+
+### TC-3｜装配 + 降级：`ui.Player` 遮蔽方法、renderer/访问器换源、登录门控禁用
+
+**目标**：遥控壳完整装配。connect 模式不建 engine、不跑 Startup；`ui.Player` 在 connect 模式下遮蔽转发到 `RemotePlayer`（菜单代码零改动）；renderer 降级（歌词/封面/频谱隐藏）；`menuServices` 换源（Player/User）；登录门控与需登录菜单降级。
+
+**涉及文件**：
+
+| 文件 | 动作 |
+|---|---|
+| `internal/ui/connect.go` | `RunConnect` 完整装配（TC-1 骨架替换） |
+| `internal/ui/netease.go` | `NewNeteaseRemote`（共享装配、跳过 engine/Startup）；`InitHook` connect 分支 |
+| `internal/ui/player.go` | `Player` 加 `remote *RemotePlayer` 字段 + **显式遮蔽方法**（Go 遮蔽内嵌提升） |
+| `internal/ui/menu_accessor.go` | `Player()`/`User()` connect 分支 |
+| `internal/ui/netease.go`（Components） | renderer 组 connect 分支（Lyric/Spectrum 跳过，Cover 降级） |
+| `internal/ui/frontend.go` | Ticker/StatusBar 装配 connect 分支 |
+
+**改动内容（签名级）**：
+
+```go
+// connect.go（完整装配，镜像 tuiFrontend.Run 的装配序）
+func RunConnect(ctx context.Context) error {
+    client, err := headless.DialSubscribe(remoteEventWireNames())
+    if err != nil { return ... } // TC-1 同文案
+
+    opts := model.DefaultOptions()
+    configs.AppConfig.FillToModelOpts(opts)
+    model.Submit = types.SubmitText // 全局赋值保持（对齐 standalone 装配序）
+    SetupI18n(configs.AppConfig.Main.Locale)
+
+    netease := NewNeteaseRemote(model.NewApp(opts), client)
+    // WithHook(InitHook=connect 装配+订阅, CloseHook)、WithMainMenu、Components、
+    // Ticker=remote.RenderTicker()、KBControllers/MouseControllers=EventHandler ——
+    // 与 standalone 同构，仅 Player/User/renderer 换源。
+    return netease.Run()
+}
+
+// netease.go
+// NewNeteaseRemote 是 connect 变体：不建 engine、不注册业务服务、不跑
+// Startup（B9）；ctx 为 nil（menuServices 服务解析走 connect 分支）。
+func NewNeteaseRemote(app *model.App, client *headless.SubscribeClient) *Netease
+
+// player.go —— ui.Player 遮蔽方法（connect 分支，Go 显式方法遮蔽内嵌提升）：
+// 遮蔽清单 = TUI 实际调用点集合（grep m.Player()/p.Player() 锁定，约 20 个：
+// PlaySong/Playlist/CurSong/CurSongIndex/PassedTime/State/Volume/Mode/User/
+// Ctrl*/ReinitializePlaylist/SetMode/CompareWithCurPlaylist/CommandContext/
+// RenderTicker/PlayingInfo...）。connect 模式（p.remote != nil）转发
+// RemotePlayer；standalone 走内嵌 *core.Player（现状零改动）。
+func (p *Player) PlaySong(song structs.Song, dir PlayDirection) // connect：toast「遥控模式不支持」或 play<搜索>（D-TC-3）
+func (p *Player) ReinitializePlaylist(index int, songs []structs.Song) // connect：no-op + toast（本地建列表不可达 daemon）
+func (p *Player) CtrlSeek(d time.Duration)   // 转发 p.remote.CtrlSeek
+func (p *Player) CtrlSetRepeat(m int)        // 转发
+... // 其余遮蔽方法同模式
+
+// menu_accessor.go
+func (s *menuServices) Player() *Player {
+    // connect：s.n.player.remote != nil → 返回带 remote 的 *Player（现状签名不变）
+}
+func (s *menuServices) User() *structs.User {
+    // connect：s.n.player.remote.User()（快照昵称）；否则现状 engine 服务解析
+}
+
+// netease.go Components()（connect 分支）：
+// LyricRenderer/SpectrumRenderer 不加入 Components；CoverRenderer 加入但
+// 无数据源（内部降级为空渲染）；SongInfoRenderer/ProgressRenderer 保留
+// （读 RemotePlayer 状态）。
+```
+
+**降级细则（D-TC-3，落 `connect.go` 头注释）**：
+- **登录门控**：`RequestLogin`/`ToLoginPage` 在 connect 模式被菜单触发时 toast「遥控模式：登录由 daemon 管理」；需登录菜单（user_playlist/user_collect/云盘等）入口 toast 降级。
+- **播放动作**：菜单选中歌曲 → `PlaySong` 遮蔽 → toast（MVP）或 `play <搜索词>`（近似，ticket 内二选一并注释）。
+- **命令面**：connect 模式不加载 WASM（`loadWasmPlugins` 跳过）、`registerCommandMenus` 不执行（命令菜单不注册，B10）。
+
+**依赖**：TC-1 + TC-2。
+
+**验证**：
+- `go build/vet ./...`；`go test ./internal/ui/...`。
+- **遮蔽完整性测试**（关键守护）：断言 connect 模式下所有遮蔽方法**不落入内嵌占位 core.Player**（占位 core.Player 的方法若被意外调用即 panic/记录——用测试枚举遮蔽清单 + `remote != nil` 时占位方法 panic 的哨兵设计）。
+- 冒烟清单（TC-4 合并执行）。
+
+**风险**：
+- **遮蔽清单漏网**：漏遮蔽的方法静默走占位 `core.Player`（nil/零值行为错）。对策：① grep 锁定调用点集合；② 占位 core.Player 用「connect 模式方法调用即 panic」的哨兵包装（`panic("tui-connect: unimplemented player method ...")`），测试与运行期双保险。
+- **装配序回归**：`model.Submit`/`SetupI18n` 必须在 `NewNeteaseRemote` 之前（对齐 standalone 装配序注释，frontend.go:27-30）。
+- renderer 降级分支漏改导致 nil 解引用（LyricRenderer 无服务）——Components connect 分支集中处理，单测覆盖空渲染不 panic。
+
+**写权限**：fixer（遮蔽清单建议 reviewer 用 grep 复核）。
+
+---
+
+### TC-4｜测试 + 文档 + P2 扩展清单
+
+**目标**：S6 收尾——遥控壳端到端测试、文档同步、P2 扩展清单落档（含「选歌播放/歌词/封面」的 daemon 侧改动点）。
+
+**涉及文件**：
+
+| 文件 | 动作 |
+|---|---|
+| 新增 `internal/ui/connect_integration_test.go` | daemon（临时 socket）+ TUI-connect 全链路（状态/事件/控制转发） |
+| `docs/frontend_plugin.md` | 新增 C12「TUI-connect」段 |
+| `AGENTS.md` | TUI 前端段、headless 段、frontend 段补 connect 消费方 |
+| `README.md` | `--frontend=tui --mode=connect` 用法 |
+| `docs/roadmap_s_series.md`（本文件） | §8 标注已实施状态 + P2 清单 |
+
+**改动内容**：
+- 集成测试：`headless.NewServerWithAddr(engine, "unix", tmpSocket)` 起 daemon → `DialSubscribe` → 构造 `NewNeteaseRemote` 装配（不跑完整 TUI 主循环，用 `model.App` 消息循环驱动）→ 断言：快照状态映射；`ctrl next` 事件到达并触发重绘；`Call("volume")` 在 daemon 生效；断线（server.Close）→ ready=false + 降级路径。
+- **P2 扩展清单（落文档，不进 MVP）**：
+  1. **选歌播放**：daemon `Dispatcher` 新增 `play_song` 命令（wire 形状：id/name/artist/album 或歌曲 URL）→ TUI 菜单选中歌曲可精确投递（需 daemon 协议小扩展 + TUI `PlaySong` 遮蔽升级）。
+  2. **歌词**：TUI 本地按 CurSong 拉取 + position 事件驱动推进（`lyric.Service` 脱离 engine 独立构造，需新适配器注入 renderer）。
+  3. **封面**：daemon 快照 `status` 加 `picUrl` 字段（低成本）→ TUI CoverRenderer 恢复。
+  4. **命令面**：daemon 命令面下沉（`CommandContext.UserID` 可得后）或 TUI 侧本地执行（UserID 降级）。
+  5. **重连**：断线后自动重连（`DialSubscribe` 重试 + 状态重同步）。
+
+**依赖**：TC-2 + TC-3。
+
+**验证**：
+```
+冒烟清单（S6）：
+1. musicfox --headless &（daemon 常驻）
+2. musicfox --frontend=tui --mode=connect
+3. TUI 启动显示 daemon 当前歌曲/状态/进度（快照）
+4. 快捷键 next/prev/pause/seek/volume/repeat/shuffle → daemon 实际变化
+5. musicfox ctrl next 切歌 → TUI 实时刷新（song_changed 事件）
+6. 歌词/封面/频谱区域降级（隐藏或占位，不崩）
+7. 需登录菜单（我的歌单）→ toast 降级；登录页不可达
+8. 无 daemon 时 --mode=connect 报错退出（非 0）
+9. daemon 断开 → TUI toast 提示 + 状态降级，TUI 不崩（Ctrl+C 正常退出）
+10. --frontend=tui（standalone）全功能回归
+```
+
+**风险**：低。集成测试的 daemon 生命周期管理（临时 socket 清理，镜像 `headless/server_client_test.go` 基建）。
+
+**写权限**：fixer。
+
+### 8.6 风险与对策总表
+
+| # | 风险 | 影响 | 对策 |
+|---|------|------|------|
+| 1 | **TUI 数据面改造面广**（renderer 5 组件 + 访问器 + Player 遮蔽） | 高 | 只改「数据源注入点」：renderer 读 `playerRendererState` 接口不动，换源集中在 `RemotePlayer` + `ui.Player` 遮蔽 + 访问器 connect 分支（D-TC-1 方案 B 的收敛设计） |
+| 2 | **订阅事件 → TUI 渲染线程投递** | 中 | 与 core 播放 goroutine 调 `Rerender` 的既有模式同构（`ui.Player` Observer 方法先例）；`renderTicker` 沿用 `OnPosition` 的非阻塞 select（B1） |
+| 3 | **遮蔽方法漏网**（静默走占位 core.Player） | 高 | grep 锁定调用点集合 + 占位 core.Player 的「connect 模式调用即 panic」哨兵 + 测试守护（TC-3 风险） |
+| 4 | **断线语义**（daemon 重启 → TUI 状态静止） | 中 | 事件通道关闭 → ready=false + toast + 降级（D-TC-4）；不自动重连（MVP），P2 扩展 |
+| 5 | **登录态错位**（daemon 已登录 vs TUI 显示） | 中 | 仅显示昵称（status.user）；登录门控禁用 + 需登录菜单降级；不实现 TUI 侧登录（对齐 webui-connect 503 哲学） |
+| 6 | **与 webui-connect 功能一致性** | 中 | 共享 `SubscribeClient` 数据面与边界哲学（D-S5-2/D-TC-3）；集成测试共用 daemon 基建，行为差异以文档边界表锁定 |
+| 7 | **播放列表撕裂**（本地浏览歌单 ≠ daemon 队列） | 中 | 操作语义明确：浏览/搜索本地；播放动作降级（toast / play<搜索>）；播放队列 UI 只读精简（8.4 边界表） |
+
+### 8.7 与 S5 / GUI 的关系与优先级
+
+- **是否依赖 S5 的 Backend 抽象（裁决 D-TC-2）**：**不依赖、不复用** `webui.Backend`/`remoteBackend`。理由：① `webui.Backend` 是 webui 包内为 HTTP Server 设计的查询接口（`Playlist` 返回 `[]map[string]any`、`LyricState` 是 wire 形状），TUI 需要 `structs.Song` 级状态缓存，形状不匹配；② TUI（`internal/ui`）import webui 语义混乱（兄弟前端包反向耦合），且会给 S5 已定稿的包边界引入新依赖方向；③ **TUI 直接消费 `headless.SubscribeClient`**（与 webui 同源，D-S5-1 的依赖方向先例：ui → headless 无环、headless UI-free）。
+- **依赖 S5 的哪些产物**：`headless.SubscribeClient`（S5-3）、daemon subscribe 协议（P7）、`core.Dispatcher` 命令集——均为已落地资产，**零新协议**。
+- **相对 GUI 的优先级（裁决 D-TC-5）**：**TUI-connect 先于 GUI**。理由：① 用户需求直接驱动（用户主动询问）；② 依赖已全部就绪（S5 落地），工作量小（6–10 人日 vs GUI 15–25 人日）；③ GUI 无前置依赖 TUI-connect，但 TUI-connect 的「遥控壳」模式（数据面复用、降级哲学）为 GUI 的 connect 变体提供先例；④ 交付节奏上，S6 可与 GUI-1（spike）并行。
+
+### 8.8 文档同步义务
+
+| 阶段 | 必须更新的文档 | 内容 |
+|------|--------------|------|
+| S6 收尾 | `AGENTS.md`；`docs/frontend_plugin.md`（C12）；`README.md`；`docs/roadmap_s_series.md`（§8 状态标记） | TUI 前端段补 connect 遥控壳；headless 段补 SubscribeClient 的 TUI 消费方；`--frontend=tui --mode=connect` 用法；P2 扩展清单 |
 
 ---
 
