@@ -193,6 +193,7 @@ func (p *wasmPlugin) Dispose() error { return p.p.Close(ctx) }
 
 - **动态加载 + 生命周期**：前端 scope 构建时扫描 `wasmDir` → 每目录 `LoadDir` → 建 `wasmPlugin` → **`AddAndStart` 挂入已 Start 的 scope**。Scope 运行时 Add 是硬需求。
 - **热加载（S8）自然化**：目录变更 → 新目录经 `AddAndStart` 挂入、旧插件 `Stop`（Unregister）+ `Dispose`（Close）。生命周期由 scope 自动管理。
+- **S8「view 交互协议」留口已就位（未接线）**：TUI `command_view` 页面已定义 `ViewPageContent`/`ViewPageHooks` 接口形状（`internal/ui/command_view_page.go`），供 S8 页面向插件回传交互（行选择/按键事件上报）时扩展；当前页面内容仍为命令结果构造时快照。
 - **sink 归并**：TUI/WebUI 两个 sink 统一为 `RegisterCommands` 内部用 `ReplaceCommand`，不再需要 recover-dedup 防御（key 冲突变替换而非 panic）。
 - headless 仍不加载（无命令消费方，维持文档化非目标）。
 

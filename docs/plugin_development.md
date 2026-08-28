@@ -872,7 +872,7 @@ args = {}               # 可选：静态参数，随请求 JSON 传给插件
 | action | 字段 | 宿主行为 |
 |--------|------|----------|
 | `toast` | Title / Message / Level（`info`/`success`/`warning`/`error`） | TUI 内通知 |
-| `view` | Title / Message | 文本结果；MVP 以多行 toast 呈现（无独立页面/popup） |
+| `view` | Title / Message | TUI 以独立可滚动文本页呈现（`command_view` 页面，toast 同步提示）；S8 交互协议预留 `ViewPageContent`/`ViewPageHooks` 接口 |
 | `open_url` | URL | 系统浏览器打开链接（`open.Start`） |
 | `exec` | Command / Args | 执行命令（**无 shell 包装**，`exec.Command(command, args...)`） |
 

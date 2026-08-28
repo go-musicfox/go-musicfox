@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -287,7 +288,8 @@ func TestCommandMenuResultSpec(t *testing.T) {
 		t.Fatalf("toast spec = %+v, want title T message M level warning", spec)
 	}
 
-	// view renders the same shape (MVP: content through the toast message).
+	// view keeps the same toast shape (the notification fires alongside the
+	// command_view page navigation — see TestCommandMenuActionViewReturnsCommandViewMsg).
 	spec = commandResultSpec(frontend.CommandResult{Action: "view", Title: "V", Message: "body", Level: ""})
 	if spec.Title != "V" || spec.Message != "body" || spec.Level != model.NotificationInfo {
 		t.Fatalf("view spec = %+v, want title V message body level info", spec)
@@ -320,5 +322,106 @@ func TestCommandMenuSideEffects(t *testing.T) {
 	spec = runCommandSideEffects(frontend.CommandResult{Action: "bogus"})
 	if spec.Level != model.NotificationInfo || spec.Title != "" || spec.Message != "" {
 		t.Fatalf("unknown action spec = %+v, want zero spec", spec)
+	}
+}
+
+// --- S1 view navigation ---
+
+// TestCommandMenuActionViewReturnsCommandViewMsg proves the S1 upgrade: a
+// "view" result keeps firing the in-app notification (toast 照发) and the
+// command's tea.Cmd returns a commandViewMsg carrying the title and the message
+// split into lines (\r\n normalized, empty lines preserved). Main.Update routes
+// that msg to the command_view page via the foxful UnknownMsgHandler (wired in
+// frontend.go).
+func TestCommandMenuActionViewReturnsCommandViewMsg(t *testing.T) {
+	ran := false
+	cmd := frontend.Command{
+		Key:   "cmdmenu_view",
+		Title: "View",
+		Run: func(frontend.CommandContext) frontend.CommandResult {
+			ran = true
+			return frontend.CommandResult{Action: "view", Title: "ViewTitle", Message: "line1\r\nline2\n\nline3"}
+		},
+	}
+	m := &CommandMenu{BaseMenu: BaseMenu{}, cmd: cmd}
+	a := &model.App{} // zero app: Notify is a no-op without a program
+
+	msg := commandActionCmd(a, m)()
+	if !ran {
+		t.Fatal("Run not executed")
+	}
+	vm, ok := msg.(commandViewMsg)
+	if !ok {
+		t.Fatalf("commandActionCmd() msg = %T (%v), want commandViewMsg", msg, msg)
+	}
+	if vm.Title != "ViewTitle" {
+		t.Fatalf("commandViewMsg.Title = %q, want %q", vm.Title, "ViewTitle")
+	}
+	want := []string{"line1", "line2", "", "line3"}
+	if !slices.Equal(vm.Lines, want) {
+		t.Fatalf("commandViewMsg.Lines = %q, want %q", vm.Lines, want)
+	}
+}
+
+// TestCommandMenuActionToastReturnsNilAndNotifies proves a "toast" result
+// keeps the command's tea.Cmd returning nil (no page navigation) and delivers
+// the result as an in-app notification (a.Notify(commandResultSpec(res))). The
+// zero-app run pins the no-navigation contract; the real-app run pins that the
+// toast spec renders through the app's notification path (mirrors
+// TestCheckUpdateResultRendersDirectlyInTUI; the async a.Notify call itself is
+// exercised in the zero-app run — it is a no-op without a program).
+func TestCommandMenuActionToastReturnsNilAndNotifies(t *testing.T) {
+	ran := false
+	cmd := frontend.Command{
+		Key:   "cmdmenu_toast",
+		Title: "Toast",
+		Run: func(frontend.CommandContext) frontend.CommandResult {
+			ran = true
+			return frontend.CommandResult{Action: "toast", Title: "ToastTitle", Message: "ToastBody"}
+		},
+	}
+	m := &CommandMenu{BaseMenu: BaseMenu{}, cmd: cmd}
+
+	a := &model.App{} // zero app: Notify is a no-op without a program
+	if msg := commandActionCmd(a, m)(); msg != nil {
+		t.Fatalf("toast commandActionCmd() msg = %v, want nil (no page navigation)", msg)
+	}
+	if !ran {
+		t.Fatal("Run not executed")
+	}
+
+	// The toast result is delivered through app.Notify: process the equivalent
+	// ShowNotificationMsg the app would receive and assert it renders.
+	app, _ := newFormPageTestApp(t)
+	_, _ = app.Update(model.ShowNotificationMsg{Spec: commandResultSpec(frontend.CommandResult{
+		Action: "toast", Title: "ToastTitle", Message: "ToastBody",
+	})})
+	if view := app.View().Content; !strings.Contains(view, "ToastTitle") {
+		t.Fatalf("toast not rendered through the app notification path:\n%s", view)
+	}
+}
+
+// TestSplitLinesNormalizesAndPreservesEmptyLines proves splitLines normalizes
+// \r\n to \n and keeps intentional blank lines (including a trailing one).
+func TestSplitLinesNormalizesAndPreservesEmptyLines(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{"empty message", "", []string{""}},
+		{"single line", "hello", []string{"hello"}},
+		{"crlf", "a\r\nb", []string{"a", "b"}},
+		{"crlf blank line", "a\r\n\r\nb", []string{"a", "", "b"}},
+		{"blank line", "a\n\nb", []string{"a", "", "b"}},
+		{"trailing newline", "a\n", []string{"a", ""}},
+		{"mixed", "a\r\nb\n\nc\r\n", []string{"a", "b", "", "c", ""}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := splitLines(tc.input); !slices.Equal(got, tc.want) {
+				t.Fatalf("splitLines(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
 	}
 }

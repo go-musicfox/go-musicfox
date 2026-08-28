@@ -235,7 +235,7 @@ type Player interface {
 
 ### 添加新页面
 
-1. 创建页面类型（实现 `model.Page`），在 `init()` 注册 `RegisterPage[T](key, factory)`（如 `login`、`search`、`lastfm_custom_api`）
+1. 创建页面类型（实现 `model.Page`），在 `init()` 注册 `RegisterPage[T](key, factory)`（如 `login`、`search`、`lastfm_custom_api`；`command_view`——轨 B `view` 结果的可滚动文本页，见 `internal/ui/command_view_page.go`）
 2. 导航经 `BuildPage`/`buildPageOrToast`（`registry.go`）；shell 持有引用的单例页（search）在 `NewNetease` 经 `BuildPage` 构建
 3. 页面持有 shell 引用用于导航（`MustMain`/`RerenderCmd`），业务能力经 `menuServices` 访问器解析（如 `svc.Lastfm()`），不直连 shell 服务字段
 
@@ -243,7 +243,7 @@ type Player interface {
 
 对外插件边界（注册表 API、`framework.Context`/`ServiceOf` 服务解析、`Scope`/`Plugin` 生命周期、快捷键/操作扩展点（`keybindings.RegisterOperate` + `ui.RegisterOperateHandler`）、右键菜单扩展点（`ui.RegisterContextMenuContrib`）、编译期注册示例与行为保持契约、**WASM 插件（实验性）**）见 `docs/plugin_development.md`。当前插件形态：编译期注册（import + `init()`）+ 运行时动态加载的 WASM 插件（MVP：菜单动作 + 文本结果，宿主 `internal/wasm` 经 wazero 沙箱执行，不重编译即启用）。Go `plugin` 共享库 / 子进程形态不支持。
 
-**WASM 插件（实验性）**：用户把插件目录（`manifest.toml` + `.wasm` reactor）放入 `[plugins] wasmDir`（默认 `<配置目录>/wasm-plugins`），启动时 `NewNetease` 经 `wasm.NewManager().LoadDir` 扫描、SHA-256 校验（manifest `sha256` 非空时）并用 wazero 加载（`WithStartFunctions("_initialize")`、内存上限 128 页、无文件系统、单调用 5s 超时 watchdog 关闭实例），随后 `ui.WithPlugin(manifest.id, ...)` 归属注册其菜单（`WasmPluginMenu` 嵌入 `ui.BaseMenu`，Action 调 wasm 导出并解析 `wasm.Response`：`toast`/`view`（MVP 以多行 toast 呈现）/`open_url`（`open.Start`）/`exec`（无 shell），经 `app.Notify` 线程安全投递）与主菜单项（`after` 锚点），`[plugins] disabled` 按 manifest id 生效。调用协议：guest 导出 `alloc`/`dealloc`/`export`（默认 `run`），`export(reqPtr, reqLen) uint64` 返回打包 `(outPtr<<32)|outLen`（Go wasmexport 仅单结果）。单个插件加载/注册失败仅记日志不阻断启动（recover 隔离）。示例见 `examples/wasm/hello/`（编译 `GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared`）。**加载发生在 TUI 前端（`NewNetease`）**——headless 模式无菜单，不加载 WASM 插件。
+**WASM 插件（实验性）**：用户把插件目录（`manifest.toml` + `.wasm` reactor）放入 `[plugins] wasmDir`（默认 `<配置目录>/wasm-plugins`），启动时 `NewNetease` 经 `wasm.NewManager().LoadDir` 扫描、SHA-256 校验（manifest `sha256` 非空时）并用 wazero 加载（`WithStartFunctions("_initialize")`、内存上限 128 页、无文件系统、单调用 5s 超时 watchdog 关闭实例），随后 `ui.WithPlugin(manifest.id, ...)` 归属注册其菜单（`WasmPluginMenu` 嵌入 `ui.BaseMenu`，Action 调 wasm 导出并解析 `wasm.Response`：`toast`/`view`（TUI 以独立可滚动文本页 `command_view` 呈现，toast 同步提示）/`open_url`（`open.Start`）/`exec`（无 shell），经 `app.Notify` 线程安全投递）与主菜单项（`after` 锚点），`[plugins] disabled` 按 manifest id 生效。调用协议：guest 导出 `alloc`/`dealloc`/`export`（默认 `run`），`export(reqPtr, reqLen) uint64` 返回打包 `(outPtr<<32)|outLen`（Go wasmexport 仅单结果）。单个插件加载/注册失败仅记日志不阻断启动（recover 隔离）。示例见 `examples/wasm/hello/`（编译 `GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared`）。**加载发生在 TUI 前端（`NewNetease`）**——headless 模式无菜单，不加载 WASM 插件。
 
 **插件配置化启停**：每个插件把所有注册包进 `ui.WithPlugin(id, name, func(){ ... })`（id 为插件目录名，同 id 可多文件多次声明幂等合并），使作用域内的 `RegisterMenu`/`RegisterPage`/`RegisterMainMenuItem*`/`RegisterStartupHook`/`RegisterCommand` 归属到该插件。用户经配置 `[plugins] disabled = ["search", "checkupdate"]` 禁用插件后（P5 契约切换，禁用 = 不存在）：**禁用插件不 Start，其菜单/页面/主菜单项/启动钩子/命令全部不注册**，"按 key 跳入禁用插件菜单"不再可能（`BuildMenu` 报缺失 key，跳转点经 `buildMenuOrToast` 降级 toast）；被禁用插件的主菜单项从不进入 After 锚点链（锚点存在性断言基于注册序校验，后继项自然前移不 panic）。残余消费点过滤仅对**无条件注册**的项生效：WASM 命令菜单项由 `registerCommandMenus` 对每个已加载 manifest 无条件适配，经 `IsPluginEnabled` 在 `NewMainMenu` 显示与 `commandActionCmd` 执行两层过滤。
 

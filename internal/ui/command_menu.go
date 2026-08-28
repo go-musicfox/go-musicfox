@@ -2,11 +2,13 @@
 // (the generalized action-menu pattern that WASM plugin menus and track-B
 // commands now share). Entering/activating it runs the command's Run with the
 // current player snapshot and presents the result (toast/view/open_url/exec)
-// via the app's thread-safe notification channel.
+// via the app's thread-safe notification channel; a "view" result additionally
+// returns a commandViewMsg that opens the independent command_view page.
 package ui
 
 import (
 	"os/exec"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
@@ -74,14 +76,30 @@ func commandLevelToModel(level string) model.NotificationLevel {
 }
 
 // commandResultSpec builds the notification spec for a result whose action is
-// toast/view (rendered as a multi-line in-app notification; MVP: no separate
-// page/popup — view content is delivered through the toast message).
+// toast/view (rendered as a multi-line in-app notification; a "view" result
+// additionally opens the command_view page — see commandActionCmd).
 func commandResultSpec(res frontend.CommandResult) model.NotificationSpec {
 	return model.NotificationSpec{
 		Level:   commandLevelToModel(res.Level),
 		Title:   res.Title,
 		Message: res.Message,
 	}
+}
+
+// commandViewMsg is delivered by commandActionCmd for Action=="view" results
+// (the only non-nil tea.Msg the command produces). Main.Update dispatches it
+// to the TUI assembly point via the foxful Options.UnknownMsgHandler, which
+// builds the command_view page.
+type commandViewMsg struct {
+	Title string
+	Lines []string
+}
+
+// splitLines splits a command result message into display lines: \r\n is
+// normalized to \n and empty lines are preserved (the message body may carry
+// intentional blank lines).
+func splitLines(message string) []string {
+	return strings.Split(strings.ReplaceAll(message, "\r\n", "\n"), "\n")
 }
 
 // runCommandSideEffects executes the side effects of open_url/exec results and
@@ -115,9 +133,10 @@ func runCommandSideEffects(res frontend.CommandResult) model.NotificationSpec {
 // command is rejected with a toast; ② the command's own Show gate — a command
 // that is not currently available is rejected with a toast. Then Run executes
 // with the current player snapshot and the result is presented by action
-// (toast/view → commandResultSpec, open_url/exec → runCommandSideEffects).
-// Every path returns nil tea.Msg; notifications are delivered via app.Notify
-// (thread-safe).
+// (toast → commandResultSpec notification; view → the same notification plus
+// a commandViewMsg opening the command_view page; open_url/exec →
+// runCommandSideEffects). Notifications are delivered via app.Notify
+// (thread-safe); the view branch is the only path returning a non-nil tea.Msg.
 func commandActionCmd(a *model.App, m *CommandMenu) tea.Cmd {
 	return func() tea.Msg {
 		// Resolve the current definition by key; fall back to the captured one
@@ -157,8 +176,14 @@ func commandActionCmd(a *model.App, m *CommandMenu) tea.Cmd {
 
 		// ④ Present the result by action.
 		switch res.Action {
-		case "toast", "view":
+		case "toast":
 			a.Notify(commandResultSpec(res))
+		case "view":
+			// The toast still fires (instant visibility); the view msg drives
+			// the independent command_view page via the foxful
+			// UnknownMsgHandler (wired in frontend.go).
+			a.Notify(commandResultSpec(res))
+			return commandViewMsg{Title: res.Title, Lines: splitLines(res.Message)}
 		case "open_url", "exec":
 			a.Notify(runCommandSideEffects(res))
 		}

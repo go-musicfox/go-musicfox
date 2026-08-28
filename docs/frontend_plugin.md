@@ -93,7 +93,7 @@ type Command struct {
 }
 ```
 
-**一个抽象三个消费方**（P2 已落地）：TUI 适配器 = `CommandMenu`（`internal/ui/command_menu.go`，泛化原 `WasmPluginMenu`）；WebUI = `GET/POST /api/commands` 端点（`internal/webui/commands.go`，exec 禁用）；headless = 无命令消费方，不加载 WASM（文档化非目标）。
+**一个抽象三个消费方**（P2 已落地）：TUI 适配器 = `CommandMenu`（`internal/ui/command_menu.go`，泛化原 `WasmPluginMenu`）；WebUI = `GET/POST /api/commands` 端点（`internal/webui/commands.go`，exec 禁用）；headless = 无命令消费方，不加载 WASM（文档化非目标）。TUI 侧 `view` 结果自 S1 起升级为独立可滚动文本页：`commandActionCmd` 产出 `commandViewMsg`（`internal/ui/command_menu.go`）→ `command_view` 页面（`internal/ui/command_view_page.go`），toast 同步提示。
 
 **双轨收敛纪律**：① WASM 插件注册立即迁轨 B；② 新插件/新贡献默认走轨 B；③ parity 测试断言「每个轨 B 命令在 TUI 有对应菜单入口」。三条不能同时落实则砍掉轨 B，WebUI 直接消费 core 命令面。
 

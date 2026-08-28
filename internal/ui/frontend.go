@@ -37,6 +37,21 @@ func (tuiFrontend) Run(_ context.Context, _ frontend.LaunchOptions) error {
 	netease.With(
 		model.WithHook(netease.InitHook, netease.CloseHook),
 		model.WithMainMenu(NewMainMenu(NewBaseMenu(netease)), &model.MenuItem{Title: "网易云音乐"}),
+		// D-S1-1: a "view" command result is dispatched to the command_view
+		// page. The page transition point must clear the cover image first
+		// (AGENTS.md standalone-page rule); a nil page from buildPageOrToast
+		// degrades to ignoring the message (toast already fired).
+		model.WithUnknownMsgHandler(func(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
+			vm, ok := msg.(commandViewMsg)
+			if !ok {
+				return nil, nil
+			}
+			netease.coverRenderer.ClearDisplayed()
+			if page := buildPageOrToast("command_view", CommandViewOpts{Title: vm.Title, Lines: vm.Lines}); page != nil {
+				return page, nil
+			}
+			return nil, nil
+		}),
 		func(options *model.Options) {
 			options.TeaOptions = []tea.ProgramOption{
 				tea.WithHardTabs(false),
