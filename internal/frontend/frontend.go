@@ -15,12 +15,22 @@ import (
 	"sync"
 )
 
+// Mode is a frontend run mode (only consumed by the webui frontend for now;
+// other frontends ignore it).
+type Mode string
+
+const (
+	ModeStandalone Mode = "standalone" // default: own engine + local server
+	ModeConnect    Mode = "connect"    // connect to the local headless daemon, no engine
+)
+
 // LaunchOptions carries the CLI flags; a frontend builds its own engine inside
 // Run (no Start(engine) shape).
 type LaunchOptions struct {
 	Once  string // only meaningful for headless
 	Debug bool
 	Pprof bool
+	Mode  Mode
 }
 
 // Frontend is a runnable frontend implementation.

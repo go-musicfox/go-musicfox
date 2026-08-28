@@ -45,10 +45,17 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	if GlobalOptions.Once != "" && id != "headless" {
 		return errors.New("--once 仅支持 headless 前端")
 	}
+	mode := frontend.Mode(GlobalOptions.Mode)
+	switch mode {
+	case "", frontend.ModeStandalone, frontend.ModeConnect:
+	default:
+		return fmt.Errorf("未知模式 %q（可用: standalone|connect）", GlobalOptions.Mode)
+	}
 	return fe.Run(context.Background(), frontend.LaunchOptions{
 		Once:  GlobalOptions.Once,
 		Debug: GlobalOptions.DebugMode,
 		Pprof: GlobalOptions.PProfMode,
+		Mode:  mode,
 	})
 }
 

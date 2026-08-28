@@ -14,16 +14,27 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/frontend"
 	"github.com/go-musicfox/go-musicfox/internal/wasm"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
-// Run starts the core engine with the WebUI frontend: it serves the static
-// placeholder page on a loopback HTTP listener, opens the default browser at
-// the page, and stays resident until SIGINT/SIGTERM or a server-triggered
-// shutdown, then shuts the engine down cleanly.
-func Run(ctx context.Context) error {
+// RunWithOptions runs the WebUI frontend, dispatching on the launch mode:
+// standalone builds its own engine (current behavior); connect dials the local
+// headless daemon and serves the same surface against the daemon (connect.go).
+func RunWithOptions(ctx context.Context, opts frontend.LaunchOptions) error {
+	if opts.Mode == frontend.ModeConnect {
+		return connectRun(ctx)
+	}
+	return runStandalone(ctx, opts)
+}
+
+// runStandalone starts the core engine with the WebUI frontend: it serves the
+// static placeholder page on a loopback HTTP listener, opens the default
+// browser at the page, and stays resident until SIGINT/SIGTERM or a
+// server-triggered shutdown, then shuts the engine down cleanly.
+func runStandalone(ctx context.Context, _ frontend.LaunchOptions) error {
 	// The engine owns its user slot and leaves desktop lyrics nil (nil-safe in
 	// the player), same as the headless frontend.
 	engine := core.NewEngine(core.EngineOptions{})
@@ -77,12 +88,26 @@ func Run(ctx context.Context) error {
 		_ = engine.Close()
 		return err
 	}
+
+	if err := runServer(ctx, server); err != nil {
+		_ = engine.Close()
+		return err
+	}
+	return engine.Close()
+}
+
+// runServer serves an already-built WebUI server: it starts Serve, waits for
+// the loopback listener, points the default browser at the token exchange URL
+// and blocks until SIGINT/SIGTERM, a server-triggered shutdown (WS "quit") or
+// ctx cancellation, then closes the server. It is shared by the standalone and
+// connect modes.
+func runServer(ctx context.Context, server *Server) error {
 	serverCtx, cancelServer := context.WithCancel(ctx)
 	defer cancelServer()
 	go func() {
 		if err := server.Serve(serverCtx); err != nil {
 			// A listen/accept failure is fatal for the server: log it and
-			// trigger shutdown so Run can exit.
+			// trigger shutdown so the wait below breaks.
 			slog.Error("webui server failed", slogx.Error(err))
 			server.Close()
 		}
@@ -94,7 +119,7 @@ func Run(ctx context.Context) error {
 	if err := server.waitReady(); err != nil {
 		slog.Error("webui listen failed", slogx.Error(err))
 		server.Close()
-		return engine.Close()
+		return err
 	}
 
 	// Point the browser at the token exchange endpoint first: it validates the
@@ -117,6 +142,5 @@ func Run(ctx context.Context) error {
 	case <-ctx.Done():
 	}
 
-	server.Close()
-	return engine.Close()
+	return server.Close()
 }

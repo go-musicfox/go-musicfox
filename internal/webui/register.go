@@ -7,14 +7,14 @@ import (
 )
 
 // webuiFrontend adapts the WebUI frontend to the frontend.Frontend contract.
-// Its Run delegates to webui.Run(ctx) (internal/webui/run.go).
+// Its Run delegates to webui.RunWithOptions(ctx, opts) (internal/webui/run.go).
 type webuiFrontend struct{}
 
 func (webuiFrontend) ID() string   { return "webui" }
 func (webuiFrontend) Name() string { return "WebUI" }
 
-func (webuiFrontend) Run(ctx context.Context, _ frontend.LaunchOptions) error {
-	return Run(ctx)
+func (webuiFrontend) Run(ctx context.Context, opts frontend.LaunchOptions) error {
+	return RunWithOptions(ctx, opts)
 }
 
 func init() {

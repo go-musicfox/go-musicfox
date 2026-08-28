@@ -47,6 +47,7 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.Headless, "headless", "", false, "run without the TUI (legacy alias for --frontend=headless)")
 		gf.StrOpt(&commands.GlobalOptions.Frontend, "frontend", "", "", "select frontend: tui|headless (default tui)")
 		gf.StrOpt(&commands.GlobalOptions.Once, "once", "", "", "run a single headless command and exit (e.g. \"status\" or \"play 周杰伦\")")
+		gf.StrOpt(&commands.GlobalOptions.Mode, "mode", "", "", "frontend run mode: standalone|connect (default standalone; webui only)")
 	}
 
 	// --pure flag: start with a temporary directory as MUSICFOX_ROOT

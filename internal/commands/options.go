@@ -7,4 +7,5 @@ var GlobalOptions struct {
 	Headless  bool
 	Frontend  string
 	Once      string
+	Mode      string
 }
