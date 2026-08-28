@@ -380,6 +380,48 @@ func TestHasSignal(t *testing.T) {
 	}
 }
 
+// TestBrailleGridCacheRebuildsPerGridOnResize guards against the dual-renderer
+// resize panic (index out of range): the L and R caches must be judged by
+// their own dimensions, not a shared size key, so a width change between the
+// two getBrailleGrid calls can never hand back a stale grid of the old width.
+func TestBrailleGridCacheRebuildsPerGridOnResize(t *testing.T) {
+	r := &SpectrumRenderer{}
+
+	// Prime both L and R at the old width (e.g. before tmux zoom).
+	l0 := r.getBrailleGrid(&r.brailleGridLCache, 79, 8)
+	r0 := r.getBrailleGrid(&r.brailleGridRCache, 79, 8)
+	if len(l0) != 8 || len(l0[0]) != 79 || len(r0[0]) != 79 {
+		t.Fatalf("initial grids have wrong sizes: %d x %d and %d x %d", len(l0), len(l0[0]), len(r0), len(r0[0]))
+	}
+
+	// Resize: request L then R at the new width, exactly like the dual
+	// renderers do. Both must be rebuilt; R must not reuse the 79-wide grid.
+	l1 := r.getBrailleGrid(&r.brailleGridLCache, 176, 8)
+	r1 := r.getBrailleGrid(&r.brailleGridRCache, 176, 8)
+	if len(l1[0]) != 176 || len(r1[0]) != 176 {
+		t.Fatalf("after resize grid widths = %d and %d, want both 176", len(l1[0]), len(r1[0]))
+	}
+}
+
+// TestSpectrumLineDualSurvivesResize renders through the same L/R dual path
+// as oscilloscope/vectorscope braille across a width change without panicking.
+func TestSpectrumLineDualSurvivesResize(t *testing.T) {
+	configs.AppConfig = &configs.Config{}
+	t.Cleanup(func() { configs.AppConfig = &configs.Config{} })
+	renderer := &SpectrumRenderer{}
+
+	frame := player.SpectrumFrame{}
+	frame.Levels[0] = 1
+	if got := renderer.renderLineDual(frame, 79, 8, true); got == "" {
+		t.Fatal("dual render at old width produced empty output")
+	}
+	// Reuse the same renderer at the new width (tmux zoom). This panicked
+	// with "index out of range [79] with length 79" before the fix.
+	if got := renderer.renderLineDual(frame, 176, 8, true); got == "" {
+		t.Fatal("dual render after resize produced empty output")
+	}
+}
+
 // --- Render mirror bar (full integration) ---
 
 func TestSpectrumMirrorBarRender(t *testing.T) {
