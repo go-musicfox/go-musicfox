@@ -3,15 +3,16 @@ package kitty
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseTmuxPaneGeometry(t *testing.T) {
 	tests := []struct {
-		name       string
-		output     string
-		wantTop    int
-		wantLeft   int
-		wantOK     bool
+		name     string
+		output   string
+		wantTop  int
+		wantLeft int
+		wantOK   bool
 	}{
 		{"normal", "3,74", 3, 74, true},
 		{"zeroes", "0,0", 0, 0, true},
@@ -62,5 +63,86 @@ func TestBuildTmuxPositionedPayload(t *testing.T) {
 	wrapped := Wrap(payload)
 	if !strings.HasPrefix(wrapped, "\x1bPtmux;") || !strings.HasSuffix(wrapped, "\x1b\\") {
 		t.Errorf("wrapped payload = %q, want DCS tmux; passthrough", wrapped)
+	}
+}
+
+func TestPaneOffsetCacheValidity(t *testing.T) {
+	now := time.Now()
+	if !successCacheValid(true, now.Add(-time.Second), now) {
+		t.Error("fresh successful cache should be valid")
+	}
+	if successCacheValid(true, now.Add(-2*time.Second), now) {
+		t.Error("expired successful cache should be invalid")
+	}
+	if successCacheValid(false, now, now) {
+		t.Error("uncached result should be invalid")
+	}
+	if !failureCacheValid(now.Add(-500*time.Millisecond), now) {
+		t.Error("recent failure should keep the negative cache valid")
+	}
+	if failureCacheValid(now.Add(-time.Second), now) {
+		t.Error("failure older than the TTL should invalidate the negative cache")
+	}
+	if failureCacheValid(time.Time{}, now) {
+		t.Error("zero failure timestamp should not count as a cached failure")
+	}
+}
+
+func TestInvalidateTmuxPaneOffset(t *testing.T) {
+	// Seed both caches, then verify invalidation clears them.
+	tmuxPaneOffsetMu.Lock()
+	tmuxPaneOffsetCached = true
+	tmuxPaneOffsetAt = time.Now()
+	tmuxPaneOffsetTop, tmuxPaneOffsetLeft = 3, 7
+	tmuxPaneOffsetFailAt = time.Now()
+	tmuxPaneOffsetMu.Unlock()
+	t.Cleanup(InvalidateTmuxPaneOffset)
+
+	InvalidateTmuxPaneOffset()
+
+	tmuxPaneOffsetMu.Lock()
+	defer tmuxPaneOffsetMu.Unlock()
+	if tmuxPaneOffsetCached {
+		t.Error("expected success cache to be reset")
+	}
+	if !tmuxPaneOffsetFailAt.IsZero() {
+		t.Error("expected failure cache to be reset")
+	}
+}
+
+func TestTmuxPaneOffsetSuccessCacheHit(t *testing.T) {
+	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-nonexistent-socket,123,0")
+	t.Setenv("TMUX_PANE", "%5")
+
+	// Seed a fresh successful result: TmuxPaneOffset must return it without
+	// executing tmux (the seeded socket does not exist, so any exec would
+	// fail the test's expectations).
+	tmuxPaneOffsetMu.Lock()
+	tmuxPaneOffsetCached = true
+	tmuxPaneOffsetAt = time.Now()
+	tmuxPaneOffsetTop, tmuxPaneOffsetLeft = 3, 7
+	tmuxPaneOffsetMu.Unlock()
+	t.Cleanup(InvalidateTmuxPaneOffset)
+
+	top, left, ok := TmuxPaneOffset()
+	if !ok || top != 3 || left != 7 {
+		t.Errorf("expected cached offset (3, 7), got (%d, %d, %v)", top, left, ok)
+	}
+}
+
+func TestTmuxPaneOffsetNegativeCache(t *testing.T) {
+	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-nonexistent-socket,123,0")
+	t.Setenv("TMUX_PANE", "%5")
+
+	// Seed a fresh failure: the negative cache must report not-ok without
+	// re-executing tmux (the socket does not exist, so any exec would fail
+	// anyway; the seed only exercises the skip path).
+	tmuxPaneOffsetMu.Lock()
+	tmuxPaneOffsetFailAt = time.Now()
+	tmuxPaneOffsetMu.Unlock()
+	t.Cleanup(InvalidateTmuxPaneOffset)
+
+	if _, _, ok := TmuxPaneOffset(); ok {
+		t.Error("expected negative cache to report failure without re-query")
 	}
 }

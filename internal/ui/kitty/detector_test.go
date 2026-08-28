@@ -143,10 +143,10 @@ func TestParseTmuxShowEnvironment(t *testing.T) {
 	env := parseTmuxShowEnvironment(output)
 
 	want := map[string]string{
-		"TERM":          "xterm-ghostty",
-		"TERM_PROGRAM":  "ghostty",
-		"COLORFGBG":     "15;0",
-		"PATH_WITH_EQ":  "A=B=C",
+		"TERM":         "xterm-ghostty",
+		"TERM_PROGRAM": "ghostty",
+		"COLORFGBG":    "15;0",
+		"PATH_WITH_EQ": "A=B=C",
 	}
 	if len(env) != len(want) {
 		t.Fatalf("parsed %d entries, want %d: %v", len(env), len(want), env)

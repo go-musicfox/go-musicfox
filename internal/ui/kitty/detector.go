@@ -3,10 +3,8 @@ package kitty
 import (
 	"context"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
-	"time"
 )
 
 var (
@@ -132,26 +130,17 @@ func detectDirectTerminalSupport(getenv func(string) string) bool {
 // are not inside tmux or the query fails. tmux 3.4+ sets TERM_PROGRAM=tmux in
 // pane environments, so pane env (os.Getenv) can't identify the outer
 // terminal; the session-level environment tracks the attaching client and
-// does. Never panics.
+// does. Note: when multiple clients are attached to the same session, the
+// session environment reflects the most recently attaching client's outer
+// terminal and may therefore misdetect; the pane environment probe above
+// takes precedence, so this is only a fallback. Never panics.
 func tmuxSessionEnv() map[string]string {
 	tmux := os.Getenv("TMUX")
 	if tmux == "" {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// $TMUX format: socket_path,pid,session_id
-	var cmd *exec.Cmd
-	if idx := strings.Index(tmux, ","); idx > 0 {
-		cmd = exec.CommandContext(ctx, "tmux", "-S", tmux[:idx], "show-environment")
-	} else {
-		// Socket path extraction failed; fall back to the default socket.
-		cmd = exec.CommandContext(ctx, "tmux", "show-environment")
-	}
-
-	output, err := cmd.Output()
+	output, err := tmuxExec(context.Background(), "show-environment")
 	if err != nil {
 		return nil
 	}

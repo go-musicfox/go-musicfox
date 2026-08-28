@@ -13,10 +13,20 @@ import (
 	xansi "github.com/charmbracelet/x/ansi"
 )
 
-// tmuxPaneOffsetTTL is how long a successful pane geometry query is cached.
-// The animation render path queries the geometry once per song change, but a
-// short TTL guards against high-frequency callers without spamming `tmux`.
-const tmuxPaneOffsetTTL = 2 * time.Second
+const (
+	// tmuxPaneOffsetTTL is how long a successful pane geometry query is
+	// cached. The animation render path queries the geometry once per song
+	// change, but a short TTL guards against high-frequency callers without
+	// spamming `tmux`.
+	tmuxPaneOffsetTTL = 2 * time.Second
+	// tmuxPaneOffsetFailTTL is how long a failed pane geometry query is
+	// remembered. Within this window TmuxPaneOffset returns not-ok without
+	// re-executing `tmux`, so render loops skip drawing instead of forking
+	// the subprocess on every frame.
+	tmuxPaneOffsetFailTTL = 1 * time.Second
+	// tmuxExecTimeout bounds every `tmux` subprocess invocation.
+	tmuxExecTimeout = 2 * time.Second
+)
 
 var (
 	tmuxPaneOffsetMu     sync.Mutex
@@ -24,7 +34,39 @@ var (
 	tmuxPaneOffsetLeft   int
 	tmuxPaneOffsetCached bool
 	tmuxPaneOffsetAt     time.Time
+	tmuxPaneOffsetFailAt time.Time
 )
+
+// tmuxExec runs `tmux` against the socket reported by $TMUX (the first
+// comma-separated field of "socket_path,pid,session_id"; the default socket
+// is used when $TMUX is empty or malformed) with a tmuxExecTimeout context
+// and returns its stdout.
+func tmuxExec(ctx context.Context, args ...string) ([]byte, error) {
+	runCtx, cancel := context.WithTimeout(ctx, tmuxExecTimeout)
+	defer cancel()
+
+	tmux := os.Getenv("TMUX")
+	var cmd *exec.Cmd
+	if idx := strings.Index(tmux, ","); idx > 0 {
+		cmd = exec.CommandContext(runCtx, "tmux", append([]string{"-S", tmux[:idx]}, args...)...)
+	} else {
+		// Socket path extraction failed; fall back to the default socket.
+		cmd = exec.CommandContext(runCtx, "tmux", args...)
+	}
+	return cmd.Output()
+}
+
+// successCacheValid reports whether a cached successful pane geometry query
+// is still fresh at time now.
+func successCacheValid(cached bool, at, now time.Time) bool {
+	return cached && now.Sub(at) < tmuxPaneOffsetTTL
+}
+
+// failureCacheValid reports whether a recently failed pane geometry query is
+// still fresh enough to skip re-executing `tmux` (negative caching).
+func failureCacheValid(failAt, now time.Time) bool {
+	return !failAt.IsZero() && now.Sub(failAt) < tmuxPaneOffsetFailTTL
+}
 
 // TmuxPaneOffset returns the origin of the current tmux pane relative to the
 // window top-left (window top = outer terminal row 1), as reported by
@@ -33,7 +75,8 @@ var (
 // (top+1, left+1). Only meaningful in tmux passthrough mode (caller's
 // responsibility), and defensively safe: returns ok=false when not inside
 // tmux or when the query fails. Successful results are cached for
-// tmuxPaneOffsetTTL. Never panics.
+// tmuxPaneOffsetTTL and failures are negatively cached for
+// tmuxPaneOffsetFailTTL. Never panics.
 func TmuxPaneOffset() (top, left int, ok bool) {
 	tmux := os.Getenv("TMUX")
 	tmuxPane := os.Getenv("TMUX_PANE")
@@ -44,35 +87,40 @@ func TmuxPaneOffset() (top, left int, ok bool) {
 	tmuxPaneOffsetMu.Lock()
 	defer tmuxPaneOffsetMu.Unlock()
 
-	if tmuxPaneOffsetCached && time.Since(tmuxPaneOffsetAt) < tmuxPaneOffsetTTL {
+	now := time.Now()
+	if successCacheValid(tmuxPaneOffsetCached, tmuxPaneOffsetAt, now) {
 		return tmuxPaneOffsetTop, tmuxPaneOffsetLeft, true
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	var cmd *exec.Cmd
-	if idx := strings.Index(tmux, ","); idx > 0 {
-		// $TMUX format: socket_path,pid,session_id
-		cmd = exec.CommandContext(ctx, "tmux", "-S", tmux[:idx], "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left}")
-	} else {
-		// Socket path extraction failed; fall back to the default socket.
-		cmd = exec.CommandContext(ctx, "tmux", "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left}")
+	if failureCacheValid(tmuxPaneOffsetFailAt, now) {
+		return 0, 0, false
 	}
 
-	output, err := cmd.Output()
+	output, err := tmuxExec(context.Background(), "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left}")
 	if err != nil {
+		tmuxPaneOffsetFailAt = now
 		return 0, 0, false
 	}
 	top, left, ok = parseTmuxPaneGeometry(string(output))
 	if !ok {
+		tmuxPaneOffsetFailAt = now
 		return 0, 0, false
 	}
 	tmuxPaneOffsetTop = top
 	tmuxPaneOffsetLeft = left
 	tmuxPaneOffsetCached = true
-	tmuxPaneOffsetAt = time.Now()
+	tmuxPaneOffsetAt = now
 	return top, left, true
+}
+
+// InvalidateTmuxPaneOffset resets the pane geometry caches (both the
+// successful result and the failure backoff), forcing the next TmuxPaneOffset
+// call to re-execute `tmux`. Call after terminal size changes: pane_top /
+// pane_left may change when the window is resized or panes are rearranged.
+func InvalidateTmuxPaneOffset() {
+	tmuxPaneOffsetMu.Lock()
+	defer tmuxPaneOffsetMu.Unlock()
+	tmuxPaneOffsetCached = false
+	tmuxPaneOffsetFailAt = time.Time{}
 }
 
 // parseTmuxPaneGeometry parses a "#{pane_top},#{pane_left}" expansion.
