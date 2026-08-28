@@ -260,7 +260,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
 			if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
 				if r.imageRendered {
-					r.writeStdout(kitty.DeleteAllImages())
+					r.writeKitty(kitty.DeleteAllImages())
 					r.imageRendered = false
 					r.cachedSeq = ""
 				}
@@ -316,10 +316,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		if stateChanged && r.imageRendered && r.animImageID != 0 {
 			if playerState == types.Paused {
 				// Pause animation
-				r.writeStdout(kitty.StopAnimation(r.animImageID))
+				r.writeKitty(kitty.StopAnimation(r.animImageID))
 			} else if playerState == types.Playing && r.lastPlayerState == types.Paused {
 				// Resume animation
-				r.writeStdout(kitty.StartAnimation(r.animImageID))
+				r.writeKitty(kitty.StartAnimation(r.animImageID))
 			}
 			r.lastPlayerState = playerState
 		}
@@ -489,10 +489,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 							return
 						default:
 						}
-						if frameData.Len() > 0 {
-							r.writeStdout(frameData.String())
-							frameData.Reset()
-						}
+					if frameData.Len() > 0 {
+						r.writeKitty(frameData.String())
+						frameData.Reset()
+					}
 					}
 					frameData.WriteString(seq)
 				}
@@ -502,26 +502,11 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 						return
 					default:
 					}
-					r.writeStdout(frameData.String())
+					r.writeKitty(frameData.String())
 				}
 
-				// Assemble minimal sequence for animation playback
-				var sb strings.Builder
-
-				// Setup Animation
-				sb.WriteString(kitty.SetFrameGap(bgAnimID, 1, frameDuration))
-				sb.WriteString(kitty.StartAnimation(bgAnimID))
-
-				// Placement
-				sb.WriteString("\x1b[s")
-				fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
-				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0, bgZIndex))
-				sb.WriteString("\x1b[u")
-
-				// Delete OLD ID
-				if oldBgAnimID != 0 && oldBgAnimID != bgAnimID {
-					sb.WriteString(kitty.DeleteImage(oldBgAnimID))
-				}
+				// Assemble sequence for animation playback
+				sequence := buildAnimationSequence(bgAnimID, oldBgAnimID, frameDuration, bgRow, bgCol, bgCols, bgZIndex)
 
 				// Send result (only if not cancelled)
 				select {
@@ -529,7 +514,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 					return
 				case r.renderChan <- renderResult{
 					songID:   bgSong.Id,
-					sequence: sb.String(),
+					sequence: sequence,
 					startRow: bgRow,
 					startCol: bgCol,
 					animID:   bgAnimID,
@@ -606,10 +591,41 @@ func (r *CoverRenderer) writeStdout(s string) {
 	_ = os.Stdout.Sync()
 }
 
-// writeToTerminal writes the kitty graphics sequence directly to stdout,
-// bypassing bubbletea's rendering pipeline.
-// deleteOld controls whether to delete existing images first (only needed when changing images).
-func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int, deleteOld bool) {
+// writeKitty writes a bare kitty APC sequence, wrapping it in tmux DCS
+// passthrough when running in tmux passthrough mode. For positioning writes
+// use writePositioned instead: pane-relative cursor sequences must not be
+// passed through to the outer terminal.
+func (r *CoverRenderer) writeKitty(s string) {
+	if kitty.UseTmuxPassthrough() {
+		s = kitty.Wrap(s)
+	}
+	r.writeStdout(s)
+}
+
+// writePositioned writes the kitty image sequence positioned at the given
+// 1-based in-pane row/column. In non-tmux mode the behavior is unchanged
+// (optional DeleteAllImages + \e[s + CUP + image + \e[u). In tmux passthrough
+// mode, positioning must target the outer terminal's absolute cursor: tmux
+// only restores the real cursor to the focused pane on redraw, so pane-relative
+// CUP sequences would paint the image at whatever pane currently owns the
+// cursor. Instead, the pane offset is queried via `tmux display -p` and the
+// whole payload (save outer cursor + absolute CUP + image + restore outer
+// cursor) is wrapped into a single DCS passthrough packet to avoid races with
+// tmux redrawing. If the pane offset cannot be queried, nothing is written —
+// better to skip the cover than paint it into another pane.
+func (r *CoverRenderer) writePositioned(startRow, startCol int, imageSeq string, deleteOld bool) {
+	if kitty.UseTmuxPassthrough() {
+		top, left, ok := kitty.TmuxPaneOffset()
+		if !ok {
+			slog.Debug("CoverRenderer: failed to query tmux pane offset, skipping cover render")
+			return
+		}
+		payload := kitty.BuildTmuxPositionedPayload(top, left, startRow, startCol, imageSeq, deleteOld)
+		r.writeStdout(kitty.Wrap(payload))
+		return
+	}
+
+	// Non-tmux path: unchanged behavior.
 	// Build the output sequence
 	var output string
 
@@ -626,12 +642,66 @@ func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int,
 	output += fmt.Sprintf("\x1b[%d;%dH", startRow, startCol)
 
 	// Output the kitty image sequence
-	output += kittySeq
+	output += imageSeq
 
 	// Restore cursor position
 	output += "\x1b[u"
 
 	r.writeStdout(output)
+}
+
+// writeToTerminal writes the kitty graphics sequence directly to stdout,
+// bypassing bubbletea's rendering pipeline.
+// deleteOld controls whether to delete existing images first (only needed when changing images).
+func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int, deleteOld bool) {
+	r.writePositioned(startRow, startCol, kittySeq, deleteOld)
+}
+
+// buildAnimationSequence assembles the final animation playback sequence
+// (frame gap setup, animation start, old image delete, new image placement).
+// In non-tmux mode it keeps the original layout: pane-relative cursor save /
+// CUP / restore around PlaceImage, old image delete last. In tmux passthrough
+// mode the placement must target the outer terminal's absolute cursor (see
+// writePositioned): the non-positioning commands are wrapped as one DCS and
+// the placement payload (save outer cursor + absolute CUP + PlaceImage +
+// restore outer cursor) as a single wrapped DCS. If the pane offset cannot be
+// queried the placement is omitted — better to skip than paint into another
+// pane. The sequence must be written with writeStdout (it is already wrapped).
+func buildAnimationSequence(animID, oldAnimID uint32, frameDuration, bgRow, bgCol, bgCols, bgZIndex int) string {
+	// Non-positioning part: animation setup.
+	var sb strings.Builder
+	sb.WriteString(kitty.SetFrameGap(animID, 1, frameDuration))
+	sb.WriteString(kitty.StartAnimation(animID))
+
+	placement := kitty.PlaceImage(animID, bgCols, 0, bgZIndex)
+
+	if kitty.UseTmuxPassthrough() {
+		// Old image delete is non-positioning; wrap it separately.
+		if oldAnimID != 0 && oldAnimID != animID {
+			sb.WriteString(kitty.Wrap(kitty.DeleteImage(oldAnimID)))
+		}
+		top, left, ok := kitty.TmuxPaneOffset()
+		if !ok {
+			return sb.String()
+		}
+		payload := kitty.BuildTmuxPositionedPayload(top, left, bgRow, bgCol, placement, false)
+		sb.WriteString(kitty.Wrap(payload))
+		return sb.String()
+	}
+
+	// Non-tmux path: unchanged layout.
+	// Placement
+	sb.WriteString("\x1b[s")
+	fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
+	sb.WriteString(placement)
+	sb.WriteString("\x1b[u")
+
+	// Delete OLD ID
+	if oldAnimID != 0 && oldAnimID != animID {
+		sb.WriteString(kitty.DeleteImage(oldAnimID))
+	}
+
+	return sb.String()
 }
 
 // renderStaticForAnimation renders a static (non-spinning) version of the cover image
@@ -650,12 +720,7 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 		return
 	}
 
-	output := "\x1b[s"
-	output += fmt.Sprintf("\x1b[%d;%dH", startRow, startCol)
-	output += kittySeq
-	output += "\x1b[u"
-
-	r.writeStdout(output)
+	r.writePositioned(startRow, startCol, kittySeq, false)
 
 	r.mu.Lock()
 	r.currentSongId = song.Id
@@ -747,7 +812,7 @@ func (r *CoverRenderer) ClearDisplayed() {
 		return
 	}
 
-	r.writeStdout(kitty.DeleteAllImages())
+	r.writeKitty(kitty.DeleteAllImages())
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -784,33 +849,50 @@ func (r *CoverRenderer) Close() {
 	}
 
 	// Delete all Kitty graphics images
-	r.writeStdout(kitty.DeleteAllImages())
+	r.writeKitty(kitty.DeleteAllImages())
 
 	// In non-alt-screen mode, we need to be more aggressive with cleanup.
 	// Move cursor to where the image was and clear that area.
 	r.mu.Lock()
 	if r.lastStartRow > 0 && r.lastStartCol > 0 && r.rows > 0 {
-		// Build cleanup sequence
-		var cleanup strings.Builder
-
-		// Save cursor position
-		cleanup.WriteString("\x1b[s")
-
-		// Move to where the image started
-		fmt.Fprintf(&cleanup, "\x1b[%d;%dH", r.lastStartRow, r.lastStartCol)
-
-		// Clear the area where the image was (clear each line)
+		// Build the clear-rows payload (clear each line, moving down).
+		var clearLines strings.Builder
 		for i := 0; i < r.rows; i++ {
-			cleanup.WriteString("\x1b[2K") // Clear entire line
+			clearLines.WriteString("\x1b[2K") // Clear entire line
 			if i < r.rows-1 {
-				cleanup.WriteString("\x1b[B") // Move down one line
+				clearLines.WriteString("\x1b[B") // Move down one line
 			}
 		}
 
-		// Restore cursor position
-		cleanup.WriteString("\x1b[u")
+		if kitty.UseTmuxPassthrough() {
+			// The clear sequence must target the outer terminal's absolute
+			// cursor (see writePositioned): wrap save/absolute CUP/clear/
+			// restore into a single DCS passthrough packet. If the pane
+			// offset cannot be queried, skip this cleanup — DeleteAllImages
+			// above already removed the image.
+			top, left, ok := kitty.TmuxPaneOffset()
+			if ok {
+				payload := kitty.BuildTmuxPositionedPayload(top, left, r.lastStartRow, r.lastStartCol, clearLines.String(), false)
+				r.writeStdout(kitty.Wrap(payload))
+			}
+		} else {
+			// Non-tmux path: unchanged behavior.
+			var cleanup strings.Builder
 
-		r.writeStdout(cleanup.String())
+			// Save cursor position
+			cleanup.WriteString("\x1b[s")
+
+			// Move to where the image started
+			fmt.Fprintf(&cleanup, "\x1b[%d;%dH", r.lastStartRow, r.lastStartCol)
+
+			// Clear the area where the image was
+			cleanup.WriteString(clearLines.String())
+
+			// Restore cursor position
+			cleanup.WriteString("\x1b[u")
+
+			r.writeStdout(cleanup.String())
+		}
 	}
 	r.mu.Unlock()
 

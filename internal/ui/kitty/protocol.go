@@ -77,6 +77,8 @@ func DeleteImage(imageID uint32) string {
 	// a=d: delete action
 	// d=i: delete by image ID
 	// i=<id>: image ID to delete
+	// Returns the bare APC sequence; tmux passthrough wrapping is applied at
+	// the write site (see Wrap in tmux.go).
 	return fmt.Sprintf("%sa=d,d=i,i=%d,q=2%s", apcStart, imageID, st)
 }
 
@@ -84,6 +86,8 @@ func DeleteImage(imageID uint32) string {
 func DeleteAllImages() string {
 	// a=d: delete action
 	// d=a: delete all images
+	// Returns the bare APC sequence; tmux passthrough wrapping is applied at
+	// the write site (see Wrap in tmux.go).
 	return fmt.Sprintf("%sa=d,d=a,q=2%s", apcStart, st)
 }
 
