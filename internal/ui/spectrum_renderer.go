@@ -182,8 +182,6 @@ type SpectrumRenderer struct {
 	brailleGridLCache    [][]byte
 	brailleGridRCache    [][]byte
 	brailleGridMCache    [][]byte
-	brailleCacheW        int
-	brailleCacheH        int
 	phaseMask            []float64 // per-column phase correlation, set per frame when SpectrumPhaseDiff enabled
 
 	// vertBrailleRamps/vertBrailleRampsDim cache: per (width, height, style
@@ -928,9 +926,12 @@ func (r *SpectrumRenderer) rampDim(width int) []color.Color {
 // --- Braille grid construction ---
 
 // getBrailleGrid returns a zeroed [][]byte grid of the given dimensions,
-// reusing a pool entry when width and height match the previous call.
+// reusing the cached grid when its own dimensions already match. Each cache
+// is judged by its own size rather than a shared key, so a resize between two
+// caches (e.g. L/R dual renderers) can never return a stale grid of the old
+// width.
 func (r *SpectrumRenderer) getBrailleGrid(cache *[][]byte, width, height int) [][]byte {
-	if *cache != nil && r.brailleCacheW == width && r.brailleCacheH == height {
+	if *cache != nil && len(*cache) == height && (height == 0 || len((*cache)[0]) == width) {
 		grid := *cache
 		for _, row := range grid {
 			for j := range row {
@@ -944,8 +945,6 @@ func (r *SpectrumRenderer) getBrailleGrid(cache *[][]byte, width, height int) []
 		grid[i] = make([]byte, width)
 	}
 	*cache = grid
-	r.brailleCacheW = width
-	r.brailleCacheH = height
 	return grid
 }
 
