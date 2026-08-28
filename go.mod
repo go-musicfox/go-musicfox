@@ -50,6 +50,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/tetratelabs/wazero v1.12.0
 	github.com/tosone/minimp3 v1.0.2
+	github.com/wailsapp/wails/v2 v2.15.0
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/sync v0.21.0
 	golang.org/x/sys v0.46.0
@@ -57,9 +58,11 @@ require (
 
 require (
 	charm.land/glamour/v2 v2.0.1 // indirect
+	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/bep/debounce v1.2.1 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
@@ -77,9 +80,11 @@ require (
 	github.com/go-flac/go-flac v1.0.0 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/gookit/color v1.5.3 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/gookit/color v1.5.4 // indirect
 	github.com/gookit/goutil v0.6.10 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/icholy/digest v1.1.0 // indirect
 	github.com/icza/bitio v1.1.0 // indirect
@@ -90,6 +95,14 @@ require (
 	github.com/juju/go4 v0.0.0-20160222163258-40d72ab9641a // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
+	github.com/labstack/echo/v4 v4.13.3 // indirect
+	github.com/labstack/gommon v0.4.2 // indirect
+	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
+	github.com/leaanthony/gosod v1.0.4 // indirect
+	github.com/leaanthony/slicer v1.6.0 // indirect
+	github.com/leaanthony/u v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect
 	github.com/mewkiz/pkg v0.0.0-20230226050401-4010bf0fec14 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
@@ -99,23 +112,30 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.60.0 // indirect
 	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
+	github.com/samber/lo v1.49.1 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tkrajina/go-reflector v0.5.8 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/vcaesar/go-wayland v0.40.0 // indirect
 	github.com/vcaesar/keycode v0.20.0 // indirect
+	github.com/wailsapp/go-webview2 v1.0.22 // indirect
+	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
 	github.com/yuin/goldmark-emoji v1.0.5 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/errgo.v1 v1.0.1 // indirect
 	gopkg.in/retry.v1 v1.0.3 // indirect
 	rsc.io/qr v0.2.0 // indirect
