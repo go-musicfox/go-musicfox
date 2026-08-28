@@ -39,11 +39,13 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	if err := s.verifyWSRequest(r); err != nil {
-		// Reject before upgrading; the failed handshake surfaces as a plain
-		// 401 response to the client.
-		http.Error(w, "", http.StatusUnauthorized)
-		return
+	if s.auth {
+		if err := s.verifyWSRequest(r); err != nil {
+			// Reject before upgrading; the failed handshake surfaces as a plain
+			// 401 response to the client.
+			http.Error(w, "", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
@@ -97,14 +99,14 @@ func (s *Server) writeSnapshot(conn *wsConn) {
 	}
 }
 
-// buildSnapshot merges the Dispatcher "status" result with the current
-// playlist (trimmed to id/name/artist/album) into the snapshot frame:
+// buildSnapshot merges the backend "status" result with the trimmed playlist
+// (id/name/artist/album) into the snapshot frame:
 // {"type":"snapshot","data":{...status..., "playlist":[...]}}.
 func (s *Server) buildSnapshot(ctx context.Context) ([]byte, error) {
-	if s.engine == nil {
-		return nil, errors.New("no engine")
+	if !s.backend.Ready() {
+		return nil, errors.New("backend not ready")
 	}
-	status, err := s.dispatcher.Dispatch(ctx, "status", nil)
+	status, err := s.backend.Dispatch(ctx, "status", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -114,16 +116,7 @@ func (s *Server) buildSnapshot(ctx context.Context) ([]byte, error) {
 			data[k] = v
 		}
 	}
-	playlist := make([]map[string]any, 0)
-	for _, song := range s.engine.Player().Playlist() {
-		playlist = append(playlist, map[string]any{
-			"id":     song.Id,
-			"name":   song.Name,
-			"artist": song.ArtistName(),
-			"album":  song.Album.Name,
-		})
-	}
-	data["playlist"] = playlist
+	data["playlist"] = s.backend.Playlist()
 	return json.Marshal(map[string]any{"type": "snapshot", "data": data})
 }
 
@@ -149,7 +142,7 @@ func (s *Server) serveWS(conn *wsConn) {
 			return
 		}
 
-		data, err := s.dispatcher.Dispatch(ctx, req.Cmd, req.Args)
+		data, err := s.backend.Dispatch(ctx, req.Cmd, req.Args)
 		resp := core.Response{V: core.ProtocolVersion, ID: req.ID, Ok: err == nil, Data: data}
 		if err != nil {
 			resp.Error = err.Error()

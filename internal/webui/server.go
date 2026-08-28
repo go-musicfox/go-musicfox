@@ -15,22 +15,23 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
-	"github.com/go-musicfox/go-musicfox/internal/framework"
 )
 
 // Server serves the WebUI frontend over HTTP on a loopback listener. It
 // mounts the static page, the token exchange endpoint and the authenticated
 // /ws control channel; the token is generated up front and shared by the
-// exchange endpoint (session cookie) and the WS/API auth layers.
+// exchange endpoint (session cookie) and the WS/API auth layers. The data
+// source is the Backend abstraction (a local engine or, in connect mode, a
+// remote headless daemon), never a *core.Engine directly.
 type Server struct {
-	engine     *core.Engine
-	listener   net.Listener
-	dispatcher *core.Dispatcher
-	token      string // crypto/rand 32-byte hex, generated in NewServer (session cookie + WS/API auth)
-	mux        *http.ServeMux
-	quit       chan struct{}
-	quitOnce   sync.Once
-	httpSrv    *http.Server
+	backend  Backend
+	auth     bool // opts.Auth: true enables the token/cookie/Origin auth layers
+	listener net.Listener
+	token    string // crypto/rand 32-byte hex, generated in NewServer (session cookie + WS/API auth)
+	mux      *http.ServeMux
+	quit     chan struct{}
+	quitOnce sync.Once
+	httpSrv  *http.Server
 
 	// conns tracks live WebSocket connections so Close can terminate them all
 	// and future event broadcasts can reach connected clients.
@@ -48,15 +49,29 @@ type Server struct {
 	readyErr chan error
 }
 
-// NewServer builds a WebUI server bound to the engine. The loopback listener
-// is bound in Serve (not here), so the browser can be pointed at the actual
-// ephemeral port.
+// NewServer builds a WebUI server bound to the engine (the standalone
+// convenience wrapper). The loopback listener is bound in Serve (not here),
+// so the browser can be pointed at the actual ephemeral port.
 func NewServer(engine *core.Engine) *Server {
+	return NewServerWithOptions(&localBackend{engine: engine}, ServerOptions{Auth: true})
+}
+
+// NewServerWithBackend builds a WebUI server over an arbitrary Backend with
+// the auth layer enabled (current standalone/connect behavior).
+func NewServerWithBackend(backend Backend) *Server {
+	return NewServerWithOptions(backend, ServerOptions{Auth: true})
+}
+
+// NewServerWithOptions builds a WebUI server over an arbitrary Backend with
+// the given options. Auth=true registers the token/cookie/Origin auth layers
+// (current behavior); Auth=false mounts the raw handlers so a GUI AssetServer
+// scheme (no cookie exchange possible) can serve the page directly.
+func NewServerWithOptions(backend Backend, opts ServerOptions) *Server {
 	mux := http.NewServeMux()
 	b := newBroadcaster()
 	s := &Server{
-		engine:      engine,
-		dispatcher:  core.NewDispatcher(engine),
+		backend:     backend,
+		auth:        opts.Auth,
 		token:       randomToken(),
 		mux:         mux,
 		quit:        make(chan struct{}),
@@ -65,35 +80,43 @@ func NewServer(engine *core.Engine) *Server {
 		broadcaster: b,
 		readyErr:    make(chan error, 1),
 	}
-	if engine != nil {
-		// The WebUI frontend consumes playback/startup events through the core
-		// event bus: register the forwarding listeners at construction so the
-		// startup phases (emitted by engine.Startup, which Run calls after
-		// NewServer) reach the broadcaster. Close unregisters them.
-		if emitter, ok := framework.ServiceOf[*framework.EventEmitter](engine.Ctx(), core.ServiceEventBus); ok {
-			s.unsubscribe = subscribeEmitter(emitter, b)
-		}
+	if backend != nil {
+		// The WebUI frontend consumes playback/startup events through the
+		// backend's event subscription: register the forwarding listeners at
+		// construction so the startup phases (emitted by engine.Startup, which
+		// Run calls after NewServer) reach the broadcaster. Close calls the
+		// returned unsubscribe to clean up.
+		s.unsubscribe = backend.SubscribeEvents(func(_ string, payload []byte) {
+			s.broadcaster.broadcast(payload)
+		})
 	}
 	// go1.22+ method-pattern routing: "GET /" matches every GET path (prefix
 	// semantics, HEAD included); non-GET requests get 405. The token exchange,
 	// /ws and the /api/* endpoints are explicit so they win over the "/"
-	// prefix. /ws is gated by verifyWSRequest before the upgrade Accept (T4);
-	// /api/* handlers are wrapped with s.authMiddleware (T6/T7). The static
-	// root stays unauthenticated.
+	// prefix. /ws is gated by verifyWSRequest before the upgrade Accept (T4;
+	// skipped when Auth=false); /api/* handlers are wrapped with
+	// s.authMiddleware (T6/T7, skipped when Auth=false). The static root and
+	// the token exchange stay unauthenticated.
+	wrap := func(h http.HandlerFunc) http.HandlerFunc {
+		if opts.Auth {
+			return s.authMiddleware(h)
+		}
+		return h
+	}
 	mux.HandleFunc("GET /", s.handleStatic)
 	mux.HandleFunc("GET /token", s.handleTokenExchange)
 	mux.HandleFunc("GET /ws", s.handleWS)
 	// T7 auxiliary endpoints.
-	mux.HandleFunc("GET /api/status", s.authMiddleware(s.handleStatus))
-	mux.HandleFunc("GET /api/albumart", s.authMiddleware(s.handleAlbumArt))
-	mux.HandleFunc("GET /api/lyrics", s.authMiddleware(s.handleLyrics))
+	mux.HandleFunc("GET /api/status", wrap(s.handleStatus))
+	mux.HandleFunc("GET /api/albumart", wrap(s.handleAlbumArt))
+	mux.HandleFunc("GET /api/lyrics", wrap(s.handleLyrics))
 	// T6 QR login endpoints.
-	mux.HandleFunc("GET /api/login/qr/key", s.authMiddleware(s.handleLoginQRKey))
-	mux.HandleFunc("GET /api/login/qr/image", s.authMiddleware(s.handleLoginQRImage))
-	mux.HandleFunc("GET /api/login/qr/status", s.authMiddleware(s.handleLoginQRStatus))
+	mux.HandleFunc("GET /api/login/qr/key", wrap(s.handleLoginQRKey))
+	mux.HandleFunc("GET /api/login/qr/image", wrap(s.handleLoginQRImage))
+	mux.HandleFunc("GET /api/login/qr/status", wrap(s.handleLoginQRStatus))
 	// T6 Track-B command endpoints (GET list + POST exec by key).
-	mux.HandleFunc("GET /api/commands", s.authMiddleware(s.handleCommandsList))
-	mux.HandleFunc("POST /api/commands/{key}", s.authMiddleware(s.handleCommandExec))
+	mux.HandleFunc("GET /api/commands", wrap(s.handleCommandsList))
+	mux.HandleFunc("POST /api/commands/{key}", wrap(s.handleCommandExec))
 	return s
 }
 

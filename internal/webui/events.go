@@ -68,13 +68,14 @@ var eventWireToFrame = map[string]string{
 }
 
 // subscribeEmitter registers the core event-bus listeners that forward the
-// frontend-relevant events to the broadcaster (event frame format unchanged).
-// The listeners are enqueue-only: broadcast snapshots the connection set under
-// the lock and writes each socket from its own goroutine, so the emitting
-// player goroutine is never blocked (docs/plugin_ecosystem.md §四 并发契约).
-// The returned func unsubscribes the whole set on teardown (per-wire coarse
-// EventEmitter.Unregister — a server owns its subscription for its lifetime).
-func subscribeEmitter(emitter *framework.EventEmitter, b *broadcaster) func() {
+// frontend-relevant events as (frameName, framePayload) pairs to sink (event
+// frame format unchanged). The sink is forward-only — broadcast snapshots the
+// connection set under the lock and writes each socket from its own goroutine,
+// so the emitting player goroutine is never blocked
+// (docs/plugin_ecosystem.md §四 并发契约). The returned func unsubscribes the
+// whole set on teardown (per-wire coarse EventEmitter.Unregister — a server
+// owns its subscription for its lifetime).
+func subscribeEmitter(emitter *framework.EventEmitter, sink func(name string, payload []byte)) func() {
 	posThrottle := new(positionThrottle)
 	for wire, frame := range eventWireToFrame {
 		wire := wire
@@ -83,7 +84,7 @@ func subscribeEmitter(emitter *framework.EventEmitter, b *broadcaster) func() {
 			if frame == "position" && !posThrottle.shouldEmit(time.Now()) {
 				return nil
 			}
-			b.broadcast(eventFrame(frame, payload))
+			sink(frame, eventFrame(frame, payload))
 			return nil
 		})
 	}

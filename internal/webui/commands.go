@@ -27,11 +27,11 @@ type commandItem struct {
 // disabled plugins and commands whose Show gate reports false are filtered
 // out, so the browser only sees what it could actually run right now.
 func (s *Server) handleCommandsList(w http.ResponseWriter, r *http.Request) {
-	if s.engine == nil {
+	if !s.backend.Ready() {
 		writeJSONError(w, http.StatusInternalServerError, "engine unavailable")
 		return
 	}
-	ctx := s.engine.Player().CommandContext()
+	ctx := s.backend.CommandContext()
 	items := make([]commandItem, 0, 8)
 	for _, cmd := range frontend.Commands() {
 		if !configs.IsPluginEnabled(cmd.PluginID) {
@@ -57,7 +57,7 @@ func (s *Server) handleCommandsList(w http.ResponseWriter, r *http.Request) {
 // commands. The Show gate (if any) is re-checked at execution time against the
 // current context, and "exec" results are rejected by commandExecAllowed.
 func (s *Server) handleCommandExec(w http.ResponseWriter, r *http.Request) {
-	if s.engine == nil {
+	if !s.backend.Ready() {
 		writeJSONError(w, http.StatusInternalServerError, "engine unavailable")
 		return
 	}
@@ -71,7 +71,7 @@ func (s *Server) handleCommandExec(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "命令不存在")
 		return
 	}
-	ctx := s.engine.Player().CommandContext()
+	ctx := s.backend.CommandContext()
 	if cmd.Show != nil && !cmd.Show(ctx) {
 		writeJSONError(w, http.StatusForbidden, "命令当前不可用")
 		return

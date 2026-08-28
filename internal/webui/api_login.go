@@ -89,15 +89,18 @@ func (s *Server) handleLoginQRStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.engine == nil {
-		writeJSONError(w, http.StatusInternalServerError, "engine unavailable")
+	// Login completion requires a local engine (CompleteQRLogin is an Engine
+	// method); connect mode has no engine and answers 503 (D-S5-2).
+	lb, ok := s.backend.(*localBackend)
+	if !ok || !lb.Ready() {
+		writeJSONError(w, http.StatusServiceUnavailable, "connect 模式不支持登录")
 		return
 	}
 	var appJar *cookiejar.Jar
 	if j := core.AppCookieJar(); j != nil {
 		appJar = j
 	}
-	if err := completeQRLogin(s.engine, appJar); err != nil {
+	if err := completeQRLogin(lb.engine, appJar); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

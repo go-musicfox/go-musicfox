@@ -14,7 +14,7 @@ import (
 // handleStatus answers the same "status" snapshot as the WS control channel,
 // wrapped as {"ok":true,"data":{...}} (same shape as the WS snapshot frame).
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	data, err := s.dispatcher.Dispatch(r.Context(), "status", nil)
+	data, err := s.backend.Dispatch(r.Context(), "status", nil)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -30,16 +30,12 @@ var albumArtClient = &http.Client{Timeout: 10 * time.Second}
 // validated against a strict allowlist (http/https + .music.163.com suffix) to
 // prevent SSRF through a tampered song record. No caching (YAGNI).
 func (s *Server) handleAlbumArt(w http.ResponseWriter, r *http.Request) {
-	if s.engine == nil {
+	picURL, ok := s.backend.PlayingInfo()
+	if !ok || picURL == "" {
 		http.NotFound(w, r)
 		return
 	}
-	info := s.engine.Player().PlayingInfo()
-	if info.PicUrl == "" {
-		http.NotFound(w, r)
-		return
-	}
-	u, err := url.Parse(info.PicUrl)
+	u, err := url.Parse(picURL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 		http.NotFound(w, r)
 		return
@@ -49,7 +45,6 @@ func (s *Server) handleAlbumArt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	picURL := info.PicUrl
 	if size := r.URL.Query().Get("size"); size != "" {
 		if n, err := strconv.Atoi(size); err == nil && n > 0 {
 			picURL = apputils.AddResizeParamForPicUrl(picURL, int64(n))
@@ -95,27 +90,14 @@ type lyricsResponse struct {
 }
 
 // handleLyrics answers the current lyric service state. No song / no lyrics
-// yields an empty structure (not 500).
+// / unavailable backend yields an empty structure (not 500).
 func (s *Server) handleLyrics(w http.ResponseWriter, r *http.Request) {
-	if s.engine == nil {
-		http.NotFound(w, r)
-		return
-	}
-	st := s.engine.LyricService().State()
-
-	fragments := make([]lyricFragment, 0, len(st.Fragments))
-	for _, f := range st.Fragments {
-		fragments = append(fragments, lyricFragment{StartTimeMs: f.StartTimeMs, Content: f.Content})
-	}
-	trans := st.TranslatedFragments
-	if trans == nil {
-		trans = map[int64]string{}
-	}
+	fragments, translated, currentIndex, offsetMs := s.backend.LyricState()
 
 	writeJSON(w, http.StatusOK, lyricsResponse{
 		Fragments:           fragments,
-		TranslatedFragments: trans,
-		CurrentIndex:        st.CurrentIndex,
-		OffsetMs:            st.OffsetMs,
+		TranslatedFragments: translated,
+		CurrentIndex:        currentIndex,
+		OffsetMs:            offsetMs,
 	})
 }

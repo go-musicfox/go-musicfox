@@ -33,10 +33,15 @@ func TestPositionThrottle(t *testing.T) {
 }
 
 // testEventBus resolves the shared engine's event bus (the same bus the WebUI
-// server subscribed to at construction).
+// server subscribed to at construction). The engine is reached through the
+// localBackend since the Server no longer holds the engine directly.
 func testEventBus(t *testing.T, s *Server) *framework.EventEmitter {
 	t.Helper()
-	emitter, ok := framework.ServiceOf[*framework.EventEmitter](s.engine.Ctx(), core.ServiceEventBus)
+	lb, ok := s.backend.(*localBackend)
+	if !ok {
+		t.Fatal("server backend is not a localBackend")
+	}
+	emitter, ok := framework.ServiceOf[*framework.EventEmitter](lb.engine.Ctx(), core.ServiceEventBus)
 	if !ok {
 		t.Fatal("eventBus not resolved from engine ctx")
 	}
@@ -47,7 +52,11 @@ func testEventBus(t *testing.T, s *Server) *framework.EventEmitter {
 // frame data shape); the payload maps mirror the core event payload builders.
 func emitCoreEvent(t *testing.T, s *Server, name string, payload any) {
 	t.Helper()
-	if err := testEventBus(t, s).Emit(s.engine.Ctx(), name, payload); err != nil {
+	lb, ok := s.backend.(*localBackend)
+	if !ok {
+		t.Fatal("server backend is not a localBackend")
+	}
+	if err := testEventBus(t, s).Emit(lb.engine.Ctx(), name, payload); err != nil {
 		t.Fatalf("emit %s: %v", name, err)
 	}
 }
