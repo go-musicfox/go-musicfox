@@ -96,18 +96,6 @@ func NewNetease(app *model.App) *Netease {
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
-	// The search page is a shell-owned singleton: its wordsInput/result/
-	// searchType state is shared with the SearchResultMenu flow (and operate.go
-	// searchSong), so the shell keeps one instance built through the registry.
-	// The login page is built per-navigation in ToLoginPage (no cross-component
-	// state to preserve), so the shell holds no login field.
-	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
-	if err != nil {
-		return nil
-	}
-	n.search = searchPage.(*SearchPage) // BuildPage returns model.Page; concrete type asserted back
-	n.App = app
-
 	// The engine registers its 8 core services into the app-wide context; the
 	// TUI-only services (coverRenderer/menuRegistry/pageRegistry) are provided
 	// by the frontend scope's uiServicesPlugin, and the 9 business plugins
@@ -120,6 +108,21 @@ func NewNetease(app *model.App) *Netease {
 		slog.Error("framework frontend scope start failed", slogx.Error(err))
 		return nil
 	}
+
+	// The search page is a shell-owned singleton: its wordsInput/result/
+	// searchType state is shared with the SearchResultMenu flow (and operate.go
+	// searchSong), so the shell keeps one instance built through the registry.
+	// The login page is built per-navigation in ToLoginPage (no cross-component
+	// state to preserve), so the shell holds no login field. Since P5 the
+	// "search" page provider is registered by the search plugin's Start (inside
+	// the frontend scope above), so this build must run after scope.Start.
+	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
+	if err != nil {
+		slog.Error("build search page failed", slogx.Error(err))
+		return nil
+	}
+	n.search = searchPage.(*SearchPage) // BuildPage returns model.Page; concrete type asserted back
+	n.App = app
 
 	// WASM plugins must register here (inside NewNetease, before the main menu
 	// is constructed in internal/commands) so their command providers and
