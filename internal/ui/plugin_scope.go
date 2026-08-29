@@ -59,27 +59,7 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 		return scope
 	}
 
-	// Mount the 9 business plugins (businessPluginIDs order), filtered by
-	// configs.IsPluginEnabled. A constructor missing from the framework
-	// registry is skipped with a warning: in a binary where the plugin package
-	// is not linked (e.g. the ui test binary) there is nothing to mount, and
-	// during a partial migration the unmigrated plugin keeps its init()-time
-	// registration path. AddWithEnabled gives the P5 "disabled = nonexistent"
-	// semantics: a disabled plugin never starts, so its registrations (menus /
-	// pages / main-menu items / startup hooks) never happen. Each mounted
-	// plugin is wrapped in identifiedPlugin so PluginInfos() (P8, scope-driven
-	// collection) can attribute it; the underlying lifecycle is forwarded.
-	constructors := framework.PluginConstructors()
-	for _, id := range businessPluginIDs {
-		ctor, ok := constructors[id]
-		if !ok {
-			slog.Warn("framework business plugin constructor not registered, skipping mount", "plugin", id)
-			continue
-		}
-		if err := scope.AddWithEnabled(&identifiedPlugin{Plugin: ctor(), id: id}, configs.IsPluginEnabled(id)); err != nil {
-			slog.Error("framework business plugin registration failed", "plugin", id, slogx.Error(err))
-		}
-	}
+	addBusinessPlugins(scope)
 
 	// WASM sub-scope (P6): a frontend-scope child that owns the app-wide WASM
 	// manager (wasm.ManagerPlugin) and, from loadWasmPlugins onwards, one
@@ -99,6 +79,72 @@ func NewFrontendScope(e *core.Engine, n *Netease) *framework.Scope {
 	// Record the scope so PluginInfos() can collect the active plugin set from
 	// it (P8): the frontend scope is the single source of truth for which
 	// plugins are mounted (the wasm sub-scope contributes the WASM adapters).
+	activeFrontendScope = scope
+
+	return scope
+}
+
+// addBusinessPlugins mounts the compile-time business plugins into scope in
+// businessPluginIDs order, filtered by configs.IsPluginEnabled, wrapping each
+// in identifiedPlugin so PluginInfos() (P8) can attribute it. skipIDs excludes
+// plugins by id — the TUI-connect shell uses it to skip lastfm (S6-R1), whose
+// Deps requires engine services that a connect scope never has. A constructor
+// missing from the framework registry is skipped with a warning: in a binary
+// where the plugin package is not linked (e.g. the ui test binary) there is
+// nothing to mount, and during a partial migration the unmigrated plugin keeps
+// its init()-time registration path. AddWithEnabled gives the P5 "disabled =
+// nonexistent" semantics: a disabled plugin never starts, so its registrations
+// (menus / pages / main-menu items / startup hooks) never happen.
+func addBusinessPlugins(scope *framework.Scope, skipIDs ...string) {
+	skip := make(map[string]bool, len(skipIDs))
+	for _, id := range skipIDs {
+		skip[id] = true
+	}
+	constructors := framework.PluginConstructors()
+	for _, id := range businessPluginIDs {
+		if skip[id] {
+			slog.Debug("framework business plugin skipped for this scope", "plugin", id)
+			continue
+		}
+		ctor, ok := constructors[id]
+		if !ok {
+			slog.Warn("framework business plugin constructor not registered, skipping mount", "plugin", id)
+			continue
+		}
+		if err := scope.AddWithEnabled(&identifiedPlugin{Plugin: ctor(), id: id}, configs.IsPluginEnabled(id)); err != nil {
+			slog.Error("framework business plugin registration failed", "plugin", id, slogx.Error(err))
+		}
+	}
+}
+
+// NewConnectFrontendScope builds the TUI-connect shell's frontend scope
+// (S6-R1): it mounts the engine-independent business plugins so the remote
+// shell keeps the full local browsing menu tree (search / ranks / playlists /
+// album / artist / DJ / recommend — roadmap §8.4 "搜索/浏览本地照常"), while
+// excluding the parts that cannot work without an engine.
+//
+//   - lastfm is excluded (skipIDs): its Deps resolves core.ServiceLastfm,
+//     which the connect shell never provides (no engine, B9); mounting it
+//     would make Scope.Start roll back the whole scope.
+//   - uiServicesPlugin is NOT mounted: registerUIExtraServices provides the
+//     coverRenderer/menuRegistry/pageRegistry services into the app-wide
+//     framework context, which the connect shell does not have (n.ctx is nil).
+//   - No WASM sub-scope is built: the command surface (B10) stays disabled in
+//     connect mode, so no manager/adapters are needed.
+//
+// The scope is started by the caller (NewNeteaseRemote) with a nil context —
+// the 8 mounted plugins ignore ctx in Start and Deps (only register).
+func NewConnectFrontendScope(n *Netease) *framework.Scope {
+	if n == nil {
+		panic("NewConnectFrontendScope: nil Netease")
+	}
+
+	scope := framework.NewScope()
+	addBusinessPlugins(scope, "lastfm")
+
+	// Record the scope so PluginInfos() can collect the active plugin set from
+	// it (P8): the connect scope is the single source of truth for which
+	// plugins are mounted (lastfm intentionally absent).
 	activeFrontendScope = scope
 
 	return scope

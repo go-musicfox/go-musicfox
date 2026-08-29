@@ -64,6 +64,21 @@ func getTargetSong(svc *menuServices, isSelected bool) (structs.Song, bool) {
 	return songs[selectedIndex], true
 }
 
+// connectServiceToast toasts a TUI-connect degradation for a local-only
+// capability (download / cache / share) whose engine-owned service does not
+// exist in the remote shell (no engine, B9). Uses svc.App().Notify, which is
+// thread-safe (drops when the program is not running). No-op when the app
+// shell is unavailable.
+func connectServiceToast(svc *menuServices, action string) {
+	if app := svc.App(); app != nil {
+		app.Notify(model.NotificationSpec{
+			Level:   model.NotificationWarning,
+			Title:   "遥控模式",
+			Message: action + "：daemon 不支持该操作",
+		})
+	}
+}
+
 // logout 登出
 func logout() {
 
@@ -271,6 +286,12 @@ func handleSongDownload(svc *menuServices, song structs.Song) {
 		slog.Error("指定音乐不存在，跳过下载")
 		return
 	}
+	if svc.TrackManager() == nil {
+		// TUI-connect: the track manager is an engine-owned service that the
+		// remote shell never provides; toast instead of nil-dereferencing.
+		connectServiceToast(svc, "本地下载")
+		return
+	}
 	slog.Info("开始下载歌曲", "song", song.Name, "id", song.Id)
 	notify.Notify(notify.NotifyContent{
 		Title:   model.T(MsgOperationDownloading),
@@ -330,6 +351,12 @@ func downloadSongLrc(svc *menuServices, isSelected bool) {
 func handleLyricDownload(svc *menuServices, song structs.Song) {
 	if song.Id == 0 {
 		slog.Error("指定音乐不存在，跳过下载")
+		return
+	}
+	if svc.TrackManager() == nil {
+		// TUI-connect: the track manager is an engine-owned service that the
+		// remote shell never provides; toast instead of nil-dereferencing.
+		connectServiceToast(svc, "本地下载歌词")
 		return
 	}
 	slog.Info("开始下载歌词", "song", song.Name, "id", song.Id)
@@ -861,6 +888,13 @@ func delSongFromPlaylist(svc *menuServices) model.Page {
 func clearSongCache(svc *menuServices) {
 	showConfirmPopup(svc.App(), model.T(MsgPromptClearCache), "确定清除所有歌曲缓存吗？此操作不可撤销。", func() {
 		op := NewOperation(svc, func(svc *menuServices) model.Page {
+			if svc.TrackManager() == nil {
+				// TUI-connect: the track manager is an engine-owned service
+				// that the remote shell never provides; toast instead of
+				// nil-dereferencing.
+				connectServiceToast(svc, "清除缓存")
+				return nil
+			}
 			err := svc.TrackManager().ClearCache()
 			if err != nil {
 				slog.Error("清除缓存失败", "error", err)
@@ -963,6 +997,12 @@ func shareItem(svc *menuServices, isSelected bool, selectedIndex int) {
 	}
 
 	if itemToShare == nil {
+		return
+	}
+	if svc.ShareSvc() == nil {
+		// TUI-connect: the share service is engine-owned and absent in the
+		// remote shell; toast instead of nil-dereferencing.
+		connectServiceToast(svc, "分享")
 		return
 	}
 

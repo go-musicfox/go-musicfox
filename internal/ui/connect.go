@@ -44,18 +44,24 @@ func remoteEventWireNames() []string {
 // tuiFrontend.Run's order; only the Player/User data surface and the renderer
 // set are swapped.
 //
-// TUI-connect degradation summary (D-TC-3, roadmap §8.4):
+// TUI-connect degradation summary (D-TC-3, roadmap §8.4; S6-R1 restores the
+// local browsing tree by mounting the engine-independent business plugins):
 //
 //	播放控制（next/prev/pause/resume/toggle/stop/seek/volume/repeat/shuffle/
 //	  like/dislike）      Call 转发 daemon ✅（PlaySong/选歌播放除外，见下）
 //	播放状态/进度/模式/音量 订阅事件 + 快照缓存 ✅
 //	播放队列显示           快照精简只读列表 △（本地建列表类操作降级 toast）
-//	浏览/搜索（本地 API）   本地 API 照常；菜单由插件提供（connect 不加载）
-//	                      → 入口 toast 降级（search 页面仍构建以保 shell 单例）
+//	浏览/搜索（本地 API）   本地照常 ✅（S6-R1：8 个 engine 无关业务插件已
+//	                      挂载，lastfm 除外——其 Deps 依赖 engine 服务，
+//	                      connect 无 engine；搜索/排行/精选歌单/专辑/歌手/
+//	                      DJ 免登录浏览可用，菜单完整）
+//	需登录浏览              收藏/我的歌单/云盘/每日推荐/最近播放/私人FM
+//	                      toast 降级（本地 API 无登录 cookie + 登录门控
+//	                      → ToLoginPage → connect toast，B8）
 //	选歌播放               toast「遥控模式：daemon 不支持该操作」（P2:
 //	                      daemon play_song 命令扩展）
 //	登录                   daemon 登录态（status.user 昵称）；TUI 侧登录
-//	                      禁用、需登录菜单 toast 降级（B8）
+//	                      禁用、需登录浏览/下载/分享 toast 降级（B8）
 //	歌词/封面/频谱           隐藏/空渲染（B5/B6/B7，P2 扩展）
 //	智能/心动模式           禁用 toast（P2 扩展）
 //	命令面（轨 B / WASM）    禁用（B10：不加载 WASM、不注册命令菜单）
@@ -130,18 +136,14 @@ func RunConnect(ctx context.Context) error {
 	return netease.Run()
 }
 
-// registerConnectProviders registers the providers the TUI-connect shell needs
-// beyond the built-in set. The frontend scope — which Starts the 9 business
-// plugins and registers their menus/pages — is skipped in connect mode (B10;
-// and the lastfm plugin's Deps requires engine services, so it cannot Start
-// without an engine), so the shell re-provides only the providers whose types
-// live in ui. The "search" page is one of them: the shell-owned singleton must
-// stay non-nil because shared search-flow call sites (ToSearchPage /
-// searchSong / SearchResultMenu hooks) dereference n.search unconditionally.
-// The plugin-owned menus (search_type / search_result / detail jumps) cannot
-// be re-provided from ui (they live in the plugins, and ui must not import
-// them), so the menu-driven search flow degrades to toast — documented in the
-// RunConnect degradation summary.
+// registerConnectProviders is the fallback guard for the "search" page
+// provider in the TUI-connect shell (S6-R1). The provider is normally
+// registered by the search plugin's Start inside the connect frontend scope;
+// this only fires when [plugins] disabled contains "search" — the plugin is
+// not mounted, so the shell re-provides the page to keep the shared
+// search-flow call sites (ToSearchPage / searchSong / SearchResultMenu hooks)
+// holding a non-nil singleton. Idempotent: it skips when the provider already
+// exists.
 func registerConnectProviders() {
 	if _, ok := pageRegistry["search"]; !ok {
 		RegisterPage("search", func(opts SearchPageOpts) (model.Page, error) {

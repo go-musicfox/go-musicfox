@@ -153,7 +153,7 @@ func orderMainMenuEntries(entries []mainMenuEntry) []mainMenuEntry {
 			panic("main menu chain: After anchor not registered: " + strings.Join(missing, ", "))
 		}
 		if connectMode {
-			slog.Warn("main menu chain: plugin anchors absent in connect mode (frontend scope skipped), re-anchoring entries to the chain tail", "missing", strings.Join(missing, ", "))
+			slog.Warn("main menu chain: plugin anchor not mounted in connect mode (lastfm excluded; disabled plugins), re-anchoring entry to the chain tail", "missing", strings.Join(missing, ", "))
 		} else {
 			slog.Warn("main menu chain: After anchor not registered (plugin disabled?), re-anchoring entries to the chain tail", "missing", strings.Join(missing, ", "))
 		}

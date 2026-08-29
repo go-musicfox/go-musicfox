@@ -169,10 +169,15 @@ func NewNetease(app *model.App) *Netease {
 // nil-dereference as the sentinel panic. Renderer degradation: lyric and
 // spectrum renderers are skipped (B5/B7), the cover renderer is built with a
 // PicUrl-stripped state (empty render, B6), and song info + progress renderers
-// read the remote state. The frontend scope (business plugins + WASM +
-// registerCommandMenus) is skipped (B10), so plugin menus/pages are absent and
-// the shell re-provides the search page so the shared search-flow call sites
-// keep a non-nil singleton (see registerConnectProviders).
+// read the remote state.
+//
+// The frontend scope (S6-R1) mounts the 8 engine-independent business plugins
+// (checkupdate/search/dj/album/artist/recommend/playlist/song; lastfm is
+// excluded — its Deps needs engine services), so the local browsing tree
+// (search / ranks / playlists / album / artist / DJ / recommend) is available
+// in the remote shell per roadmap §8.4. The WASM sub-scope, loadWasmPlugins
+// and registerCommandMenus stay skipped (B10: the command surface is disabled
+// in connect mode).
 func NewNeteaseRemote(app *model.App, client *headless.SubscribeClient) *Netease {
 	connectMode = true
 	n := new(Netease)
@@ -196,11 +201,20 @@ func NewNeteaseRemote(app *model.App, client *headless.SubscribeClient) *Netease
 	// degradation connect mode wants.
 	n.ctx = nil
 
-	// The shell needs the local browsing/search providers that the skipped
-	// frontend scope would have registered (B10). Only providers whose types
-	// live in ui can be re-provided here (search page); menu types that live in
-	// the plugins (search_result / detail jumps) stay absent and degrade to
-	// buildMenuOrToast toasts.
+	// The connect frontend scope mounts the 8 engine-independent business
+	// plugins (S6-R1). It must start BEFORE BuildPage("search") below: the
+	// search plugin registers the "search" page provider inside its Start.
+	// Started against a nil context — the mounted plugins ignore ctx.
+	n.frontendScope = NewConnectFrontendScope(n)
+	if err := n.frontendScope.Start(nil); err != nil {
+		slog.Error("framework connect frontend scope start failed", slogx.Error(err))
+		return nil
+	}
+
+	// Fallback guard: the "search" page provider normally comes from the
+	// search plugin's Start above; only when [plugins] disabled contains
+	// "search" does the shell re-provide it so the shared search-flow call
+	// sites keep a non-nil singleton.
 	registerConnectProviders()
 
 	// Renderers: lyric/spectrum skipped (B5/B7), cover empty (B6). The svc is
@@ -209,16 +223,21 @@ func NewNeteaseRemote(app *model.App, client *headless.SubscribeClient) *Netease
 	n.progressRenderer = NewProgressRenderer(newMenuServices(n), n.player)
 	n.coverRenderer = NewCoverRenderer(newMenuServices(n), connectCoverState{p: n.player})
 
-	// Shell-owned search singleton (same as standalone). The provider was
-	// registered by registerConnectProviders; the page renders locally and the
-	// search API call is local — only the menu-driven result flow (plugin
-	// menus) degrades.
+	// Shell-owned search singleton (same as standalone): the provider was
+	// registered by the search plugin's Start (or the fallback above); the
+	// page renders locally and the search API call is local.
 	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
 	if err != nil {
 		slog.Error("build connect search page failed", slogx.Error(err))
 		return nil
 	}
 	n.search = searchPage.(*SearchPage)
+
+	// Startup completeness: the built-in provider set must be complete after
+	// the connect scope Start (the plugin-supplied keys are intentionally not
+	// asserted, mirroring standalone NewNetease).
+	AssertMenuRegistryComplete(expectedMenuKeys...)
+	AssertPageRegistryComplete(expectedPageKeys...)
 
 	return n
 }
@@ -303,21 +322,10 @@ func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) 
 
 // ToSearchPage 搜索
 func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
-	if n.ConnectMode() {
-		// The menu-driven search flow (search_type / search_result menus and
-		// the detail-jump menus) is plugin-provided and absent in connect mode
-		// (B10: frontend scope skipped), so the search page dead-ends. Toast
-		// instead of opening it (roadmap 8.4 keeps the search API local, but
-		// the result menus need the plugin scope).
-		if n.App != nil {
-			n.Notify(model.NotificationSpec{
-				Level:   model.NotificationWarning,
-				Title:   "遥控模式",
-				Message: "搜索功能不可用：搜索结果菜单由本地插件提供，connect 模式未加载",
-			})
-		}
-		return nil, nil
-	}
+	// Search is fully local in connect mode (S6-R1): the search plugin is
+	// mounted in the connect frontend scope, so the search page singleton and
+	// the search_type/search_result/detail-jump menus all exist and the search
+	// API call is local (no login required). Same flow as standalone.
 	n.search.searchType = searchType
 	n.coverRenderer.ClearDisplayed()
 	return n.search, tickSearch(time.Nanosecond)

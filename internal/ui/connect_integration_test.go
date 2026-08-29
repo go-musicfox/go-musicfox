@@ -58,11 +58,20 @@ func startRemoteDaemonWithEvents(t *testing.T) *headless.Server {
 func newConnectShell(t *testing.T, client *headless.SubscribeClient) (*model.App, *Netease) {
 	t.Helper()
 	prevConfig := configs.AppConfig
+	prevLocale := model.DefaultCatalog().Locale()
 	configs.AppConfig = &configs.Config{Player: configs.PlayerConfig{Engine: types.BeepPlayer}}
 	t.Cleanup(func() {
 		configs.AppConfig = prevConfig
+		model.SetLocale(prevLocale)
 		connectMode = false
 	})
+	// Mirror the RunConnect assembly order: global assignments and the zh
+	// catalog must be set before NewNeteaseRemote builds the shell (the search
+	// page renders catalog-localized strings).
+	model.Submit = types.SubmitText
+	model.SearchPlaceholder = types.SearchPlaceholder
+	model.SearchResult = types.SearchResult
+	SetupI18n(configs.AppConfig.Main.Locale)
 
 	opts := model.DefaultOptions()
 	opts.EnableStartup = false
@@ -282,6 +291,94 @@ func TestConnectIntegrationEventRedrawAndControl(t *testing.T) {
 		v, _ := data["volume"].(float64)
 		return v == 33
 	})
+}
+
+// TestConnectIntegrationMenuChain locks the S6-R1 menu outcome through the
+// real integration path: a daemon-connected NewNeteaseRemote plus the main
+// menu the shell actually navigates with (the app's CurMenu) yields the full
+// browsing chain — the test binary's 14 after-anchor test-double items in
+// their production order plus the built-in 帮助 at the tail. The 8 mounted
+// business plugins (lastfm excluded) keep the local browsing tree complete in
+// the remote shell (roadmap §8.4 browsing rows).
+func TestConnectIntegrationMenuChain(t *testing.T) {
+	startRemoteDaemonWithEvents(t)
+	client := dialRemote(t)
+	app, n := newConnectShell(t, client)
+	rp := n.Player().remote
+	waitRemoteReady(t, rp)
+
+	menu, ok := app.MustMain().CurMenu().(*MainMenu)
+	if !ok {
+		t.Fatalf("current menu = %T, want *MainMenu", app.MustMain().CurMenu())
+	}
+	titles := menu.Titles()
+	// The test binary's 14 test-double items keep the production browsing
+	// chain; 帮助 follows LastFM (last_fm is a direct test-double item here —
+	// in production the lastfm plugin is excluded from the connect scope and
+	// the built-in 帮助 re-anchors to the tail the same way).
+	wantHead := []string{
+		"每日推荐歌曲", "每日推荐歌单", "我的歌单", "我的收藏", "私人FM",
+		"专辑列表", "搜索", "排行榜", "精选歌单", "热门歌手",
+		"最近播放歌曲", "云盘", "主播电台", "LastFM",
+	}
+	if len(titles) < len(wantHead)+1 {
+		t.Fatalf("connect main menu has %d items, want >= %d: %v", len(titles), len(wantHead)+1, titles)
+	}
+	for i, want := range wantHead {
+		if titles[i] != want {
+			t.Fatalf("menu[%d] = %q, want %q (full: %v)", i, titles[i], want, titles)
+		}
+	}
+	if titles[len(wantHead)] != "帮助" {
+		t.Fatalf("menu[%d] = %q, want 帮助 (chain tail)", len(wantHead), titles[len(wantHead)])
+	}
+}
+
+// TestConnectIntegrationSearchNavigation locks the S6-R1 search-flow outcome
+// through the real integration path: with a daemon-connected shell whose
+// search plugin is mounted, ToSearchPage runs the standalone flow — it returns
+// the shell search singleton with the type set (search is local, no connect
+// degradation toast), and the returned tick cmd flows through the app message
+// loop without touching the search API (the tick is a keep-page no-op; the API
+// only runs on submit).
+func TestConnectIntegrationSearchNavigation(t *testing.T) {
+	startRemoteDaemonWithEvents(t)
+	client := dialRemote(t)
+	app, n := newConnectShell(t, client)
+	rp := n.Player().remote
+	waitRemoteReady(t, rp)
+
+	page, cmd := n.ToSearchPage(StSingleSong)
+	if page == nil || cmd == nil {
+		t.Fatalf("connect ToSearchPage = (%v, %v), want (search page, tick cmd)", page, cmd)
+	}
+	sp, ok := page.(*SearchPage)
+	if !ok {
+		t.Fatalf("connect ToSearchPage page = %T, want *SearchPage", page)
+	}
+	if sp != n.search {
+		t.Fatal("connect ToSearchPage did not return the shell search singleton")
+	}
+	if got := sp.SearchType(); got != StSingleSong {
+		t.Fatalf("searchType = %v, want StSingleSong", got)
+	}
+
+	// Drive the navigation through the app message loop WITHOUT running the
+	// search API: the returned cmd yields the tickSearchMsg the loop delivers
+	// to the page; the tick keeps the page (no submit → no API), and rendering
+	// the page is shell-local.
+	msg := cmd()
+	if _, ok := msg.(tickSearchMsg); !ok {
+		t.Fatalf("ToSearchPage cmd produced %T, want tickSearchMsg", msg)
+	}
+	_, _ = app.Update(msg)
+	if _, pageCmd := sp.Update(msg, app); pageCmd != nil {
+		t.Fatalf("search page Update(tickSearchMsg) returned %v, want nil (no search API)", pageCmd)
+	}
+	view := ansi.Strip(sp.View(app))
+	if !strings.Contains(view, "输入关键词") {
+		t.Fatalf("search page view does not render the local search input:\n%s", view)
+	}
 }
 
 // TestConnectIntegrationDisconnect locks the disconnect degradation (D-TC-4):
