@@ -977,6 +977,8 @@ M3（GUI）    Wails 原生窗口前端          GUI-1 → GUI-2/3 → GUI-4   �
 
 ## 8. TUI-connect（S6）：TUI 遥控 headless daemon
 
+> ✅ **S6 已实施**（TC-1..TC-4 全部落地，分支 `feat/plugin-framework-playback`）。本节「现状事实/约束分析/裁决」在实施时以代码为准；功能边界表（§8.4）与 `connect.go` 头注释一致，行为由 `go test ./internal/ui/...`（含 TC-4 新增的 `connect_integration_test.go` 全链路集成测试）锁定。MVP 明确降级的扩展项落档见 §8.9 P2 扩展清单。
+
 ### 8.1 背景与用户需求
 
 用户提出：「单独的 `--mode=connect` 不能使用 TUI 进行连接吗」。当前 `--mode=connect` 只有 webui 前端消费（D-S5-3：TUI 忽略 `opts.Mode`）。用户诉求明确：**用 TUI 界面遥控一个 headless daemon（常驻播放器）**，而不是每次起一个本地 TUI engine——与 webui-connect 的动机同构，但形态是终端（无浏览器依赖、无 HTTP 层，纯 socket + 订阅协议）。
@@ -1284,6 +1286,8 @@ func (s *menuServices) User() *structs.User {
 
 ### TC-4｜测试 + 文档 + P2 扩展清单
 
+> ✅ 已实施：新增 `internal/ui/connect_integration_test.go`（daemon 全链路集成测试：快照状态映射 / ctrl next 事件到达 + 触发重绘 / `Call("volume")` 在 daemon 生效 / 断线 `server.Close` → ready=false + 降级路径；测试另暴露并修复了 TC-2/TC-3 的两处渲染数据竞争——`n.App` 赋值晚于消费 goroutine 启动、消费 goroutine 早于 `app.Run()` 触碰 `App.program`）；文档同步（AGENTS.md / `docs/frontend_plugin.md` C12 / README.md）；P2 扩展清单落档 §8.9。
+
 **目标**：S6 收尾——遥控壳端到端测试、文档同步、P2 扩展清单落档（含「选歌播放/歌词/封面」的 daemon 侧改动点）。
 
 **涉及文件**：
@@ -1349,6 +1353,20 @@ func (s *menuServices) User() *structs.User {
 | 阶段 | 必须更新的文档 | 内容 |
 |------|--------------|------|
 | S6 收尾 | `AGENTS.md`；`docs/frontend_plugin.md`（C12）；`README.md`；`docs/roadmap_s_series.md`（§8 状态标记） | TUI 前端段补 connect 遥控壳；headless 段补 SubscribeClient 的 TUI 消费方；`--frontend=tui --mode=connect` 用法；P2 扩展清单 |
+
+### 8.9 P2 扩展清单（MVP 明确降级的扩展项，落档）
+
+以下 5 项为 S6 MVP 明确降级的扩展（D-TC-3 / D-TC-4 / D-TC-6），MVP 不实施。每项含 daemon 侧与 TUI 侧改动点，供后续独立立项：
+
+| # | 扩展 | daemon 侧改动点 | TUI 侧改动点 |
+|---|------|----------------|--------------|
+| 1 | **选歌播放** | `Dispatcher` 新增 `play_song` 命令（wire 形状：id/name/artist/album 或歌曲 URL；`core.Dispatcher` 命令集小扩展） | `ui.Player.PlaySong` 遮蔽升级：从「toast 降级」改为经 `Call("play_song", ...)` 精确投递 daemon 队列 |
+| 2 | **歌词** | 无协议改动（position 事件已在订阅面） | TUI 本地按 `CurSong` 拉取歌词 + position 事件驱动推进（`lyric.Service` 脱离 engine 独立构造，需新适配器注入 renderer；当前 `LyricRenderer` 被跳过） |
+| 3 | **封面** | daemon 快照 `status` 加 `picUrl` 字段（低成本单字段扩展） | TUI `CoverRenderer` 恢复（`connectCoverState` 的剥 PicUrl 降级可移除；当前封面空渲染） |
+| 4 | **命令面（轨 B / WASM）** | daemon 命令面下沉（`CommandContext.UserID` 可得后）或 TUI 本地执行（UserID 降级） | 恢复 WASM 加载与 `registerCommandMenus`（当前 `CommandContext` 已保留供 P2 复用）；对齐 webui-connect「空命令面」哲学 |
+| 5 | **重连** | 无 | 断线后自动重连（`DialSubscribe` 重试 + 状态重同步），替换 D-TC-4 的「事件通道关闭 → `ready=false` + 不自动重连」 |
+
+裁决背景：MVP 收敛优先，daemon 协议保持「精简快照 + 现 Dispatcher 命令集」零扩展（对齐 webui-connect 的 D-S5-2 哲学）；1/3 为低成本 daemon 改动，2/4 为 TUI 侧适配，5 为可靠性增强。
 
 ---
 

@@ -386,7 +386,18 @@ $ musicfox --headless &                    # 先启动常驻 daemon
 $ musicfox --frontend=webui --mode=connect # 浏览器打开控制面板
 ```
 
-`--mode` 目前仅 `webui` 前端消费（其余前端忽略）：`standalone`（缺省）= 自建引擎独立运行；`connect` = 连接本地 headless daemon。connect 模式下播放控制 / 状态 / 事件均来自 daemon；命令面为空、QR 登录不可用、封面图 404、歌词为空结构（前端降级不崩）。脚本 / 单条命令控制仍走 `musicfox ctrl`。
+`--mode` 目前由 `webui` 与 `tui` 前端消费（其余前端忽略）：`standalone`（缺省）= 自建引擎独立运行；`connect` = 连接本地 headless daemon。connect 模式下播放控制 / 状态 / 事件均来自 daemon；命令面为空、QR 登录不可用、封面图 404、歌词为空结构（前端降级不崩）。脚本 / 单条命令控制仍走 `musicfox ctrl`。
+
+#### TUI 遥控（connect 模式）
+
+`--frontend=tui --mode=connect` 让 TUI 以**遥控壳**形态连接正在运行的后台实例（headless daemon）——在终端里遥控常驻播放器，**不新建播放引擎**：播放控制经 daemon 转发、播放状态 / 进度经订阅实时刷新，浏览 / 搜索等本地能力照常：
+
+```sh
+$ musicfox --headless &                    # 先启动常驻 daemon
+$ musicfox --frontend=tui --mode=connect   # 终端遥控（无浏览器依赖）
+```
+
+connect 模式降级面：选歌播放、播放队列编辑、智能模式、登录、命令面（轨 B/WASM）toast 提示不可用；歌词 / 封面 / 频谱隐藏或空渲染；daemon 断开后状态冻结提示（不自动重连）。无 daemon 时 `--mode=connect` 报错退出（非 0）。
 
 </details>
 <details>
