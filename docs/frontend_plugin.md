@@ -156,34 +156,35 @@ QR 登录客户端（`internal/ui/qr_login_client.go`）提升到 core 侧包，
 
 ### C12 TUI-connect 遥控壳
 
-> ✅ S6 已实施：`--frontend=tui --mode=connect` 让 TUI 作为**遥控壳**连接本地 headless daemon（`musicfox --headless` 常驻）——控制经 `SubscribeClient.Call` 转发、状态经订阅驱动，**不建 engine、不跑 Startup（B9）**，与 webui-connect 共享 SubscribeClient 数据面，对齐「本机单实例」边界哲学（D-TC-1 方案 B：轻量遥控壳，非整体换源）。
+> ✅ S6 已实施：`--frontend=tui --mode=connect` 让 TUI 作为**遥控壳**连接本地 headless daemon（`musicfox --headless` 常驻）——控制经 `SubscribeClient.Call` 转发、状态经订阅驱动，**不建 engine、不跑 Startup（B9）**，与 webui-connect 共享 SubscribeClient 数据面，对齐「本机单实例」边界哲学（D-TC-1 方案 B：轻量遥控壳，非整体换源）。**完整能力扩展（TC-5..TC-8，§8.10）已落地**：登录升级为「daemon 侧 QR 登录、TUI 遥控扫码」（`login_qr_key`/`login_qr_status` 命令 + connect LoginPage 只显 QR 入口 + `CallQRKey`/`CallQRStatus` 数据源 + `EvLogin` 驱动用户态刷新）；选歌播放升级为「`play_list` 整列表投递」（`PlaySong`/`ReinitializePlaylist`/`StartPlay` 遮蔽升级，响应 playlist 写回缓存同步队列）。
 
 **形态**：`tuiFrontend.Run` 对 `--mode=connect` 分发到 `RunConnect`（`internal/ui/connect.go`）：`headless.DialSubscribe(remoteEventWireNames())` 遥控 daemon → `NewNeteaseRemote`（`internal/ui/netease.go`）装配遥控壳——`ui.Player` 内嵌的 `*core.Player` 永不构造（B9），约 30 个**遮蔽方法**（`internal/ui/player.go`）在 connect 模式转发 `RemotePlayer`（`internal/ui/remote_player.go`：快照 + 事件流增量缓存、`Call` 转发、渲染 ticker），菜单/操作/快捷键调用点零改动；renderer 降级（歌词/频谱跳过、封面剥 PicUrl）；`menuServices.Player()/User()` 走 connect 分支；**connect 前端 scope**（S6-R1，`NewConnectFrontendScope`）挂载 **8/9 业务插件**（checkupdate/search/dj/album/artist/recommend/playlist/song；lastfm 排除——Deps 依赖 engine 服务），本地浏览菜单树完整；search 页回退注册（`registerConnectProviders`，仅 search 插件被禁用时兜底）。InitHook 只完成壳装配（不跑 Startup），并标记 `RemotePlayer` 运行态以开启渲染 poke（消费 goroutine 在构造时即启动，渲染事件在 App 运行后才投递）。
 
-**功能边界**（S6 TC-4 + R1，与 `connect.go` 头注释一致，`go test ./internal/ui/...` 锁定）：
+**功能边界**（S6 TC-4 + R1 + TC-5..TC-8 完整能力扩展，与 `connect.go` 头注释一致，`go test ./internal/ui/...` 锁定）：
 
-| 能力 | TUI standalone | TUI-connect（S6 MVP） |
+| 能力 | TUI standalone | TUI-connect（完整能力） |
 |------|---------------|----------------------|
 | 播放控制（next/prev/pause/resume/toggle/stop/seek/volume/repeat/shuffle/like/dislike） | 本地 engine | **`Call` 转发 daemon** ✅ |
 | 播放状态 / 当前歌曲 / 进度 | 本地 | **订阅事件 + 快照缓存** ✅ |
 | 搜索 / 排行榜 / 精选歌单 / 专辑 / 歌手 / DJ 浏览（无需登录） | 本地网易云 API | **本地照常** ✅（8 个业务插件挂载，菜单完整） |
-| 收藏 / 我的歌单 / 云盘 / 每日推荐 / 最近播放 / 私人FM（需登录） | 本地网易云 API + 登录 | **toast 降级**（本地 API 无登录 cookie + 登录门控 → `ToLoginPage` → connect toast，对齐 B8） |
+| 需登录浏览（收藏 / 我的歌单 / 云盘 / 每日推荐 / 最近播放 / 私人FM） | 本地网易云 API + 登录 | **无条件 toast 降级**（本地 API 无登录 cookie，跨进程登录态墙；对齐 B8。P2：cookie 回拉） |
 | 业务插件菜单面 | 9 插件全挂载（frontend scope） | **8/9 挂载**（lastfm 除外——Deps 依赖 engine 服务，connect 无 engine） |
-| 浏览菜单的播放动作（选中 → PlaySong） | 本地建列表 + 播放 | **Player 遮蔽 toast**（`ui.Player.PlaySong` connect 分支） |
-| 播放队列显示 | 本地完整列表 | 快照**精简只读**列表（id/name/artist/album）△ |
-| 选歌播放（菜单选中 → PlaySong） | 本地 | **降级**：toast「遥控模式：daemon 不支持该操作」（P2：daemon `play_song` 命令扩展） |
+| 浏览菜单的播放动作（选中 → PlaySong） | 本地建列表 + 播放 | **`play_list` 整列表投递 daemon** ✅（`ui.Player.PlaySong` → `CallPlayList([]Song{song},0,true)`，TC-7） |
+| 播放队列显示 | 本地完整列表 | 快照**精简只读**列表（id/name/artist/album）△ + **投递后响应同步**（`play_list` 响应 playlist 写回缓存，next/prev 正确） |
+| 选歌播放（菜单选中 → PlaySong） | 本地 | **`play_list` 整列表投递 daemon** ✅（PlaySong/ReinitializePlaylist/StartPlay 遮蔽升级，单曲点播为 index=0 特例，D-TC-9） |
 | 播放模式/音量显示 | 本地 | 快照字段 ✅ |
-| 登录 | 本地 | **daemon 登录态**（status.user 昵称）；TUI 侧登录禁用、需登录菜单 toast 降级 |
+| 登录 | 本地 | **daemon 侧 QR 登录、TUI 遥控扫码** ✅（ToLoginPage → connect LoginPage 只显 QR 入口 → CallQRKey/CallQRStatus；EvLogin 驱动用户态刷新，D-TC-7/TC-6） |
+| 用户态展示 | 本地 user | **昵称 + UserId**（`status.userId` 快照幂等 + EvLogin 增量；门控仍剥离 UserId，D-TC-8） |
+| 播放队列编辑 / 智能模式 / 心动 / 桌面歌词 | 本地 | **禁用 toast**（P2 扩展） |
 | 歌词 | 本地 LyricService | **降级**：隐藏（P2：本地拉取 + position 推进） |
 | 封面 | 本地 | **降级**：无（P2：daemon 快照加 PicUrl） |
 | 频谱 | 本地 PCM | **不可用**（组件隐藏） |
-| 智能模式 / 心动 / 桌面歌词 | 本地 | **禁用**（P2 扩展） |
 | 命令面（轨 B / WASM） | 本地执行 | **禁用**（`CommandContext.UserID` 不可得，对齐 webui-connect 空命令面；P2 扩展） |
 | 断线语义 | — | daemon 断开 → 订阅 Events 关闭 → `ready=false` + 状态降级；**不自动重连**（MVP，对齐 webui-connect） |
 
 **与 webui-connect 的关系**：同是 daemon 客户端，**共享 `headless.SubscribeClient` 数据面**（快照缓存 + 事件流 + 同连接 `Call`，D-TC-2 裁决）与「本机单实例」定位；差异在消费端——webui 是浏览器富页面（HTTP/WS 层 + `Backend` 抽象），TUI 是终端（纯 socket + 订阅协议，直接消费 core wire 名，无 webui 的帧名重映射层；`ui.Player` 遮蔽转发使菜单代码零改动）。`musicfox ctrl` 仍是窄命令面一次性客户端，三者并存。
 
-**降级清单**（D-TC-3/B8/B10，`go test ./internal/ui/...` 守护）：选歌播放 / 播放队列编辑（`ReinitializePlaylist` 等本地建列表操作）/ 智能模式 / 登录 / 命令面全部 toast 禁用；需登录浏览（收藏/我的歌单/云盘/每日推荐/最近播放/私人FM）toast 降级；歌词 / 封面 / 频谱渲染隐藏或空渲染；断线（`server.Close`）→ 事件通道关闭 → `ready=false` + 状态冻结渲染，不自动重连。**注意**：「命令面禁用」≠「业务插件不加载」——8/9 业务插件仍挂载以保本地浏览菜单树（lastfm 除外，S6-R1）。
+**降级清单**（D-TC-3/B8/B10 + TC-5..TC-8 升级后，`go test ./internal/ui/...` 守护）：**已升级**——登录（daemon 侧 QR 登录、TUI 遥控扫码）、选歌播放（`play_list` 整列表投递）；**仍降级**——播放队列编辑（`RemoveSong` 等）/ 智能模式 / 命令面（轨 B/WASM）toast 禁用；需登录浏览（收藏/我的歌单/云盘/每日推荐/最近播放/私人FM）**无条件** toast 降级（本地进程无 cookie，跨进程登录态墙；P2 cookie 回拉）；歌词 / 封面 / 频谱渲染隐藏或空渲染；断线（`server.Close`）→ 事件通道关闭 → `ready=false` + 状态冻结渲染，不自动重连。**注意**：「命令面禁用」≠「业务插件不加载」——8/9 业务插件仍挂载以保本地浏览菜单树（lastfm 除外，S6-R1）。
 
 ## TUI 作为前端插件的打包形态
 

@@ -397,7 +397,7 @@ $ musicfox --headless &                    # 先启动常驻 daemon
 $ musicfox --frontend=tui --mode=connect   # 终端遥控（无浏览器依赖）
 ```
 
-connect 模式降级面：选歌播放、播放队列编辑、智能模式、登录、命令面（轨 B/WASM）toast 提示不可用；歌词 / 封面 / 频谱隐藏或空渲染；daemon 断开后状态冻结提示（不自动重连）。无 daemon 时 `--mode=connect` 报错退出（非 0）。
+connect 模式完整能力：**登录**在 daemon 侧完成、TUI 遥控扫码（登录页只显二维码入口，扫码成功后用户态即时刷新，显示昵称与 UserId）；**选歌播放**经 `play_list` 投递 daemon（菜单选中即播放，next/prev 与播放队列同步）。仍降级：播放队列编辑、智能模式、命令面（轨 B/WASM）toast 提示不可用；需登录浏览（收藏 / 我的歌单 / 云盘 / 每日推荐 / 最近播放 / 私人FM）toast 降级；歌词 / 封面 / 频谱隐藏或空渲染；daemon 断开后状态冻结提示（不自动重连）。无 daemon 时 `--mode=connect` 报错退出（非 0）。
 
 </details>
 <details>

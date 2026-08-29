@@ -18,6 +18,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 )
 
 // The beep speaker can only be initialized once per process, so all WS tests
@@ -46,6 +47,12 @@ func TestMain(m *testing.M) {
 	// The first app path access bootstraps the path manager from MUSICFOX_ROOT,
 	// so any db/cache files land in the temp root, never in user dirs.
 	_ = os.Setenv("MUSICFOX_ROOT", testRoot)
+	// MUSICFOX_ROOT alone does not redirect the path manager: bootstrapOnce is
+	// triggered early by the slogx init, so initPaths already cached the XDG
+	// (real user dir) paths. SetupPureRoot forces the temp root — otherwise
+	// headless.DialAddr() resolves to the real daemon socket and the daemon
+	// tests would dial the user's live daemon instead of the test one.
+	apputils.SetupPureRoot(testRoot)
 	configs.AppConfig = &configs.Config{Player: configs.PlayerConfig{Engine: types.BeepPlayer}}
 	storage.DBManager = new(storage.LocalDBManager)
 
