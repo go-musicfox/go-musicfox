@@ -4,13 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-musicfox/netease-music/service"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
+	cookiejar "github.com/juju/persistent-cookiejar"
 
+	"github.com/go-musicfox/go-musicfox/internal/core/qrlogin"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
@@ -26,6 +31,18 @@ type Dispatcher struct {
 // NewDispatcher builds a dispatcher bound to the given engine.
 func NewDispatcher(engine *Engine) *Dispatcher {
 	return &Dispatcher{engine: engine}
+}
+
+// qrGetKey and qrCheckStatus are package-level overridable so tests can stub
+// the netease QR-login network calls (mirrors internal/webui/api_login.go).
+var qrGetKey = qrlogin.GetKey
+var qrCheckStatus = qrlogin.CheckStatus
+
+// completeQRLogin runs the post-scan login completion (app jar replacement +
+// network-bound LoginCallback). Package-level overridable so tests can stub it
+// without hitting the netease account API (mirrors internal/webui/api_login.go).
+var completeQRLogin = func(e *Engine, jar *cookiejar.Jar) error {
+	return e.CompleteQRLogin(jar)
 }
 
 // Dispatch executes cmd with args and returns the command result (or nil). The
@@ -66,6 +83,12 @@ func (d *Dispatcher) Dispatch(ctx context.Context, cmd string, args map[string]a
 		player.CtrlLikeNowPlaying()
 	case "dislike":
 		player.CtrlDislikeNowPlaying()
+	case "login_qr_key":
+		return d.cmdLoginQRKey()
+	case "login_qr_status":
+		return d.cmdLoginQRStatus(args)
+	case "play_list":
+		return d.cmdPlayList(args)
 	default:
 		return nil, fmt.Errorf("未知命令: %s", cmd)
 	}
@@ -77,8 +100,10 @@ func (d *Dispatcher) cmdStatus(player *Player) (any, error) {
 	info := player.PlayingInfo()
 
 	var userName string
+	var userId int64
 	if u := player.User(); u != nil {
 		userName = u.Nickname
+		userId = u.UserId
 	}
 
 	return map[string]any{
@@ -96,6 +121,9 @@ func (d *Dispatcher) cmdStatus(player *Player) (any, error) {
 		"mode":            player.Mode().Name(),
 		"playlistLen":     len(player.Playlist()),
 		"user":            userName,
+		// userId is the snapshot-side login state (D-TC-8): reconnect restores
+		// it via the status snapshot, the EvLogin event covers live updates.
+		"userId": userId,
 	}, nil
 }
 
@@ -129,6 +157,161 @@ func (d *Dispatcher) cmdPlay(ctx context.Context, args map[string]any) (any, err
 
 	first := songs[0]
 	return map[string]any{"id": first.Id, "name": first.Name}, nil
+}
+
+// cmdLoginQRKey requests a fresh QR-login unikey and its scan URL (D-TC-7:
+// the daemon is the sole login-state host, the TUI just renders and polls).
+func (d *Dispatcher) cmdLoginQRKey() (any, error) {
+	uniKey, qrcodeUrl, err := qrGetKey(qrHTTPJar())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"uniKey": uniKey, "qrcodeUrl": qrcodeUrl}, nil
+}
+
+// cmdLoginQRStatus polls the QR scan status (D-TC-7). Code semantics: 800 =
+// expired/invalid, 801 = awaiting scan, 802 = scanned awaiting confirm, 803 =
+// confirmed — on 803 the login is completed synchronously inside the daemon
+// process. CompleteQRLogin is network-bound and holds the Dispatcher mutex for
+// at most a few seconds; the TUI polls with backoff so the low frequency is
+// acceptable. EvLogin is broadcast by LoginCallback through the event bus
+// (engine.go); the response additionally carries the fresh user profile.
+func (d *Dispatcher) cmdLoginQRStatus(args map[string]any) (any, error) {
+	key, _ := args["key"].(string)
+	if key == "" {
+		return nil, errors.New("login_qr_status 缺少 key 参数 (usage: login_qr_status <key>)")
+	}
+
+	code, _, err := qrCheckStatus(key, qrHTTPJar())
+	if err != nil {
+		return nil, err
+	}
+	if code != 803 {
+		return map[string]any{"code": code, "user": map[string]any{}}, nil
+	}
+
+	var appJar *cookiejar.Jar
+	if j := AppCookieJar(); j != nil {
+		appJar = j
+	}
+	if err := completeQRLogin(d.engine, appJar); err != nil {
+		return nil, err
+	}
+
+	user := map[string]any{}
+	if u := d.engine.Player().User(); u != nil {
+		user = map[string]any{"userId": u.UserId, "nickname": u.Nickname}
+	}
+	return map[string]any{"code": 803, "user": user}, nil
+}
+
+// qrHTTPJar returns the app cookie jar when available (the persistent jar the
+// netease login cookies land in), falling back to the global jar otherwise
+// (mirrors internal/webui/api_login.go).
+func qrHTTPJar() http.CookieJar {
+	if jar := AppCookieJar(); jar != nil {
+		return jar
+	}
+	return neteaseutil.GetGlobalCookieJar()
+}
+
+// playListWireLimit caps the number of songs a single play_list request may
+// carry, guarding the daemon against oversized wire payloads (the TUI sends
+// full local lists; the trimmed per-song shape keeps the payload small).
+const playListWireLimit = 5000
+
+// cmdPlayList rebuilds the daemon playlist from wire songs and optionally
+// starts playback at the given index (D-TC-9). It mirrors cmdPlay's
+// ReinitializePlaylist + StartPlay flow; single-song play is the index=0 with
+// play=true special case (the TUI keeps sending the list it has loaded so
+// next/prev navigation stays consistent).
+func (d *Dispatcher) cmdPlayList(args map[string]any) (any, error) {
+	songs := songsFromWire(args["songs"])
+	if len(songs) == 0 {
+		return nil, errors.New("play_list 缺少 songs 参数")
+	}
+	if len(songs) > playListWireLimit {
+		return nil, fmt.Errorf("play_list songs 超过 %d 条上限", playListWireLimit)
+	}
+
+	index := 0
+	if v, ok := args["index"]; ok {
+		i, err := ctrlInt(v)
+		if err != nil {
+			return nil, errors.New("play_list index 必须是整数")
+		}
+		index = i
+	}
+	if index < 0 {
+		index = 0
+	}
+	if index >= len(songs) {
+		index = len(songs) - 1
+	}
+
+	play, _ := args["play"].(bool)
+
+	player := d.engine.Player()
+	player.ReinitializePlaylist(index, songs)
+	if play {
+		player.StartPlay()
+	}
+
+	return map[string]any{
+		"playlist": trimmedPlaylist(player.Playlist()),
+		"index":    index,
+		"started":  play,
+	}, nil
+}
+
+// songsFromWire converts wire-format song entries (the trimmed
+// id/name/artist/album shape shared with the snapshot/playlist frames) into
+// structs.Song. Id is required — the daemon resolves audio sources by song id
+// — so entries without a valid id are dropped.
+func songsFromWire(v any) []structs.Song {
+	arr, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	songs := make([]structs.Song, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		id, err := ctrlInt(m["id"])
+		if err != nil || id <= 0 {
+			continue
+		}
+		song := structs.Song{Id: int64(id)}
+		if name, ok := m["name"].(string); ok {
+			song.Name = name
+		}
+		if artist, ok := m["artist"].(string); ok && artist != "" {
+			song.Artists = []structs.Artist{{Name: artist}}
+		}
+		if album, ok := m["album"].(string); ok {
+			song.Album.Name = album
+		}
+		songs = append(songs, song)
+	}
+	return songs
+}
+
+// trimmedPlaylist maps songs to the wire snapshot shape (id/name/artist/album),
+// matching the headless server's buildSnapshot playlist entries so a play_list
+// response can refresh a client's cached queue in place.
+func trimmedPlaylist(songs []structs.Song) []map[string]any {
+	out := make([]map[string]any, 0, len(songs))
+	for _, song := range songs {
+		out = append(out, map[string]any{
+			"id":     song.Id,
+			"name":   song.Name,
+			"artist": song.ArtistName(),
+			"album":  song.Album.Name,
+		})
+	}
+	return out
 }
 
 // cmdSeek seeks to the given position (args.seconds, float64).
