@@ -977,7 +977,7 @@ M3（GUI）    Wails 原生窗口前端          GUI-1 → GUI-2/3 → GUI-4   �
 
 ## 8. TUI-connect（S6）：TUI 遥控 headless daemon
 
-> ✅ **S6 已实施**（TC-1..TC-4 全部落地，分支 `feat/plugin-framework-playback`）。本节「现状事实/约束分析/裁决」在实施时以代码为准；功能边界表（§8.4）与 `connect.go` 头注释一致，行为由 `go test ./internal/ui/...`（含 TC-4 新增的 `connect_integration_test.go` 全链路集成测试）锁定。MVP 明确降级的扩展项落档见 §8.9 P2 扩展清单。
+> ✅ **S6 已实施**（TC-1..TC-4 + S6-R1 菜单面修复 + S6-R2 收尾全部落地，分支 `feat/plugin-framework-playback`）。本节「现状事实/约束分析/裁决」在实施时以代码为准；功能边界表（§8.4，R1 后已按「本地浏览照常 / 需登录菜单 toast 降级」拆分）与 `connect.go` 头注释、`plugin_scope.go` 挂载集一致，行为由 `go test ./internal/ui/...`（含 `connect_integration_test.go` 全链路集成测试与 `connect_test.go` 链/装配测试）锁定。MVP 明确降级的扩展项落档见 §8.9 P2 扩展清单。
 
 ### 8.1 背景与用户需求
 
@@ -998,7 +998,7 @@ TUI-connect ≠ 简单把 `Mode` 传给 `tuiFrontend`。TUI 的渲染面、播�
 | B7 | **频谱**：`MTAudioProcessingTap` PCM 在本地播放引擎 | `spectrum_renderer.go`（仅本地 osx 引擎有 PCM） | 本地能力 | **降级**：connect 模式无本地 PCM → 隐藏频谱组件（renderer 装配层跳过） |
 | B8 | **登录态**：`menuServices.User()` 从 engine 的 UserService 解析；菜单登录门控（`CheckUserInfo(User())` → ToLoginPage） | `menu_accessor.go:117-120`；`player.go:159` 等 | 状态查询 | **换源 + 降级**：显示 daemon 用户昵称（`status.user`）；**TUI 侧登录门控禁用**（TUI 无法登录 daemon，webui-connect 同为 503 哲学）；需登录的菜单（我的歌单/收藏）在 connect 模式 toast 降级 |
 | B9 | **启动序列**：`InitHook` 跑 `engine.Startup`（jar→用户→播放列表→登录→hooks→自动播放） | `internal/ui/netease.go:205-218` | 生命周期 | **不执行**：connect 不建 engine 不跑 Startup；InitHook 改为「连接 daemon + 建立订阅」 |
-| B10 | **命令面（轨 B/WASM）**：TUI 前端 scope 加载 WASM，`CommandContext` 取 `Player().CommandContext()` | `frontend.go`/`command_menu.go:142-145` | 命令面 | **降级（MVP 禁用）**：`CommandContext.UserID` 无法从 daemon 获得（`status.user` 仅昵称）；与 webui-connect「命令面为空」哲学对齐。WASM 不加载、命令菜单不注册；P2 扩展 |
+| B10 | **命令面（轨 B/WASM）**：TUI 前端 scope 加载 WASM，`CommandContext` 取 `Player().CommandContext()` | `frontend.go`/`command_menu.go:142-145` | 命令面 | **降级（MVP 禁用）**：`CommandContext.UserID` 无法从 daemon 获得（`status.user` 仅昵称）；与 webui-connect「命令面为空」哲学对齐。WASM 不加载、命令菜单不注册；P2 扩展。**S6-R1 收敛语义**：「命令面禁用」≠「业务插件不加载」——connect 壳仍经 `NewConnectFrontendScope` 挂载 8/9 业务插件以保本地浏览菜单树，仅 lastfm 排除（Deps 依赖 engine 服务，connect 无 engine） |
 
 **关键架构裁决（D-TC-1）**：TUI-connect **不做「TUI 整体换源为 remote 数据面」**（方案 A），而是 **「轻量遥控壳」**（方案 B）：
 
@@ -1024,9 +1024,12 @@ TUI-connect ≠ 简单把 `Mode` 传给 `tuiFrontend`。TUI 的渲染面、播�
 |------|---------------|----------------------|
 | 播放控制（next/prev/pause/resume/toggle/stop/seek/volume/repeat/shuffle/like/dislike） | 本地 engine | **`Call` 转发 daemon** ✅ |
 | 播放状态 / 当前歌曲 / 进度 | 本地 | **订阅事件 + 快照缓存** ✅ |
-| 搜索 / 歌单浏览 / 排行榜 / 收藏 | 本地网易云 API | **本地照常** ✅（播放动作除外） |
+| 搜索 / 排行榜 / 精选歌单 / 专辑 / 歌手 / DJ 浏览（无需登录） | 本地网易云 API | **本地照常** ✅（8 个业务插件挂载，菜单完整，S6-R1） |
+| 收藏 / 我的歌单 / 云盘 / 每日推荐 / 最近播放 / 私人FM（需登录） | 本地网易云 API + 登录 | **toast 降级**（本地 API 无登录 cookie + 登录门控 → `ToLoginPage` → connect toast，对齐 B8） |
+| 业务插件菜单面 | 9 插件全挂载（frontend scope） | **8/9 挂载**（lastfm 除外——Deps 依赖 engine 服务，connect 无 engine；S6-R1） |
+| 浏览菜单的播放动作（选中 → PlaySong） | 本地建列表 + 播放 | **Player 遮蔽 toast**（`ui.Player.PlaySong` connect 分支；P2：daemon `play_song` 命令扩展） |
 | 播放队列显示 | 本地完整列表 | 快照**精简只读**列表（id/name/artist/album）△ |
-| 选歌播放（菜单选中 → PlaySong） | 本地 | **降级**：toast「遥控模式不支持」或 `play <搜索词>` 近似（P2：daemon `play_song` 命令扩展） |
+| 选歌播放（菜单选中 → PlaySong） | 本地 | **降级**：toast「遥控模式：daemon 不支持该操作」（`ui.Player.PlaySong` connect 分支；P2：daemon `play_song` 命令扩展） |
 | 播放模式/音量显示 | 本地 | 快照字段 ✅ |
 | 登录 | 本地 | **daemon 登录态**（status.user 昵称）；TUI 侧登录禁用、需登录菜单 toast 降级 |
 | 歌词 | 本地 LyricService | **降级**：隐藏（P2：本地拉取 + position 推进） |
