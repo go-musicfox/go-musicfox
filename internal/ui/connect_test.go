@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
@@ -107,7 +110,9 @@ func TestPlayerShadowCompleteness(t *testing.T) {
 	p.UpVolume()
 	p.DownVolume()
 
-	// Degraded local-playlist actions (toast no-ops with a nil shell).
+	// Local-playlist actions forward to play_list / resume (TC-7, D-TC-9): the
+	// empty song list trips the daemon's play_list validation (toast dropped
+	// with a nil shell), the rest are safe no-ops — nothing may panic.
 	p.PlaySong(structs.Song{}, DurationNext)
 	p.ReinitializePlaylist(0, nil)
 	p.InitSongManager(0, nil)
@@ -211,19 +216,31 @@ func TestNewNeteaseRemoteAssembly(t *testing.T) {
 		t.Fatalf("menuServices.User() = %+v, want nil before snapshot", u)
 	}
 
-	// Login gating degrades to a nil page (B8).
-	if page, cmd := n.ToLoginPage(nil); page != nil || cmd != nil {
-		t.Fatalf("connect ToLoginPage = (%v, %v), want (nil, nil)", page, cmd)
+	// Login is remote-controlled in connect mode (TC-6): ToLoginPage returns
+	// the login page — its connect render branch shows only the QR entry
+	// (D-TC-7: the QR flow sources the daemon via RemotePlayer.CallQRKey/
+	// CallQRStatus), and the engine-dependent local login paths stay guarded
+	// behind ConnectMode() so n.engine == nil cannot be dereferenced.
+	page, cmd := n.ToLoginPage(nil)
+	if cmd == nil {
+		t.Fatalf("connect ToLoginPage cmd is nil, want a tick cmd")
+	}
+	lp, ok := page.(*LoginPage)
+	if !ok || lp == nil {
+		t.Fatalf("connect ToLoginPage page = %T, want *LoginPage", page)
+	}
+	if lp.netease != n {
+		t.Fatal("connect ToLoginPage page is not rooted at the shell")
 	}
 
 	// Search is local (S6-R1): the search plugin is mounted, so ToSearchPage
 	// returns the shell search singleton with the type set (standalone flow).
-	page, cmd := n.ToSearchPage(StSingleSong)
-	if page == nil || cmd == nil {
-		t.Fatalf("connect ToSearchPage = (%v, %v), want (search page, tick cmd)", page, cmd)
+	spage, scmd := n.ToSearchPage(StSingleSong)
+	if spage == nil || scmd == nil {
+		t.Fatalf("connect ToSearchPage = (%v, %v), want (search page, tick cmd)", spage, scmd)
 	}
-	if sp, ok := page.(*SearchPage); !ok || sp.searchType != StSingleSong {
-		t.Fatalf("connect ToSearchPage page = %T with searchType %v, want *SearchPage with StSingleSong", page, sp.searchType)
+	if sp, ok := spage.(*SearchPage); !ok || sp.searchType != StSingleSong {
+		t.Fatalf("connect ToSearchPage page = %T with searchType %v, want *SearchPage with StSingleSong", spage, sp.searchType)
 	}
 
 	// A second shell construction must not panic: the test-double plugins'
@@ -307,6 +324,66 @@ func TestConnectMainMenuFullChain(t *testing.T) {
 	}
 	if titles[len(wantHead)] != "帮助" {
 		t.Fatalf("menu[%d] = %q, want 帮助 (chain tail)", len(wantHead), titles[len(wantHead)])
+	}
+}
+
+// TestConnectLoginPageConnectSurface locks the TC-6 LoginPage connect surface:
+// the connect shell's login page renders only the QR entry (the account/cookie
+// tabs and the webview button are hidden — their local login paths dereference
+// the engine the connect shell never builds, n.engine == nil), stray keys are
+// ignored, esc returns to main, and the QR page is wired to the shell's remote
+// player (daemon-sourced key/status, D-TC-7).
+func TestConnectLoginPageConnectSurface(t *testing.T) {
+	app, n := newConnectShell(t, nil) // nil client: no daemon, no network
+	lp := NewLoginPage(n)
+
+	// Render: only the QR entry; the account/cookie inputs stay hidden.
+	view := ansi.Strip(lp.View(app))
+	if !strings.Contains(view, "扫码登录") {
+		t.Fatalf("connect login view missing the QR entry:\n%s", view)
+	}
+	if strings.Contains(view, "login.account.placeholder") || strings.Contains(view, "login.cookie.placeholder") {
+		t.Fatalf("connect login view leaked the hidden account/cookie inputs:\n%s", view)
+	}
+
+	// Stray keys are ignored (the hidden local paths stay unreachable).
+	if next, cmd := lp.Update(tea.KeyPressMsg{Text: "x"}, app); next != lp || cmd != nil {
+		t.Fatalf("connect login Update(random key) = (%T, %v), want (page, nil)", next, cmd)
+	}
+	// esc returns to main.
+	if next, _ := lp.Update(tea.KeyPressMsg{Code: tea.KeyEsc}, app); next != app.MustMain() {
+		t.Fatalf("connect login esc returned %T, want main", next)
+	}
+
+	// The QR page resolves the shell's remote player (nil client → the remote
+	// still exists on the wrapper; the daemon connection is a runtime concern).
+	qr := NewQRLoginPage(n, lp, nil)
+	if qr.remote != n.Player().remote {
+		t.Fatal("QRLoginPage.remote != shell remote — QR data source not wired")
+	}
+}
+
+// TestQRLoginPageConnectLoginSuccess locks the TC-6 QR-page completion branch:
+// in connect mode loginSuccessHandle must NOT touch the local CompleteQRLogin
+// (the daemon already completed the login inside cmdLoginQRStatus and
+// broadcast EvLogin, D-TC-7) — it only runs the AfterLogin callback and
+// returns, deterministically (no network, no engine).
+func TestQRLoginPageConnectLoginSuccess(t *testing.T) {
+	app, n := newConnectShell(t, nil) // nil client: no daemon, no network
+	from := app.MustMain()
+	called := false
+	qr := NewQRLoginPage(n, from, func() model.Page {
+		called = true
+		return from
+	})
+	if qr.remote == nil {
+		t.Fatal("QRLoginPage.remote is nil, want the shell remote (TC-6)")
+	}
+	if got := qr.loginSuccessHandle(n); got != from {
+		t.Fatalf("connect loginSuccessHandle = %v, want the AfterLogin page", got)
+	}
+	if !called {
+		t.Fatal("AfterLogin callback not invoked in connect mode")
 	}
 }
 

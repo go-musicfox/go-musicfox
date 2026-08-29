@@ -381,6 +381,146 @@ func TestConnectIntegrationSearchNavigation(t *testing.T) {
 	}
 }
 
+// TestConnectIntegrationLoginUserState locks the D-TC-8 user-state sync over
+// the real daemon: the status snapshot carries userId (idempotent restore) and
+// the EvLogin event carries the live in-session update (the daemon's
+// LoginCallback broadcasts it after a QR 803) — both reach the shell cache.
+func TestConnectIntegrationLoginUserState(t *testing.T) {
+	startRemoteDaemonWithEvents(t)
+	// Seed the daemon user slot so the subscribe snapshot carries userId.
+	*remoteEngine.UserSlot() = &structs.User{UserId: 123, Nickname: "tester"}
+	t.Cleanup(func() { *remoteEngine.UserSlot() = nil })
+
+	client := dialRemote(t)
+	_, n := newConnectShell(t, client)
+	rp := n.Player().remote
+	waitRemoteReady(t, rp)
+
+	// Snapshot path (idempotent restore).
+	if got := rp.UserID(); got != 123 {
+		t.Fatalf("UserID() = %d, want 123 (snapshot)", got)
+	}
+	if !rp.UserLoggedIn() {
+		t.Fatal("UserLoggedIn() = false after snapshot")
+	}
+	if u := rp.User(); u == nil || u.Nickname != "tester" || u.UserId != 0 {
+		t.Fatalf("User() = %+v, want nickname tester with stripped UserId", u)
+	}
+
+	// Event path (live update): emit EvLogin the way daemon LoginCallback does.
+	emitter, ok := framework.ServiceOf[*framework.EventEmitter](remoteEngine.Ctx(), core.ServiceEventBus)
+	if !ok {
+		t.Fatal("eventBus not resolved from engine ctx")
+	}
+	if err := emitter.Emit(remoteEngine.Ctx(), core.EvLogin, map[string]any{
+		"user": map[string]any{"userId": int64(456), "nickname": "fox"},
+	}); err != nil {
+		t.Fatalf("emit login: %v", err)
+	}
+	waitFor(t, 3*time.Second, func() bool { return rp.UserID() == 456 })
+	if u := rp.User(); u == nil || u.Nickname != "fox" || u.UserId != 0 {
+		t.Fatalf("User() = %+v, want nickname fox with stripped UserId after EvLogin", u)
+	}
+}
+
+// TestConnectIntegrationCallQRStatusArgs locks the QR-status wire mapping
+// through the real daemon (TC-6): CallQRStatus forwards {"key": uniKey} to the
+// daemon's login_qr_status command. An empty key trips the daemon's argument
+// validation deterministically (no netease network involved), proving the arg
+// mapping and the error path.
+func TestConnectIntegrationCallQRStatusArgs(t *testing.T) {
+	startRemoteDaemonWithEvents(t)
+	client := dialRemote(t)
+	_, n := newConnectShell(t, client)
+	rp := n.Player().remote
+	waitRemoteReady(t, rp)
+
+	if code, err := rp.CallQRStatus(""); err == nil || code != 0 {
+		t.Fatalf("CallQRStatus(\"\") = (%v, %v), want (0, error) — daemon key validation", code, err)
+	}
+}
+
+// TestConnectIntegrationPlayList locks the D-TC-9 queue delivery over the real
+// daemon: CallPlayList (play=false — deterministic, no network playback)
+// rebuilds the daemon queue and the response refreshes the shell's cached
+// playlist in place, keeping the playlist view and next/prev navigation in
+// sync.
+func TestConnectIntegrationPlayList(t *testing.T) {
+	startRemoteDaemonWithEvents(t)
+	client := dialRemote(t)
+	_, n := newConnectShell(t, client)
+	rp := n.Player().remote
+	waitRemoteReady(t, rp)
+
+	songs := []structs.Song{
+		{Id: 1, Name: "第一首", Artists: []structs.Artist{{Name: "歌手A"}}, Album: structs.Album{Name: "专辑X"}},
+		{Id: 2, Name: "第二首", Artists: []structs.Artist{{Name: "歌手B"}}, Album: structs.Album{Name: "专辑Y"}},
+	}
+	if err := rp.CallPlayList(songs, 1, false); err != nil {
+		t.Fatalf("CallPlayList error = %v", err)
+	}
+
+	// Response-synced shell cache.
+	pl := rp.Playlist()
+	if len(pl) != 2 || pl[0].Id != 1 || pl[0].Name != "第一首" || pl[1].Id != 2 {
+		t.Fatalf("Playlist() = %+v, want [1 2] (response-synced cache)", pl)
+	}
+
+	// The daemon queue agrees with the shell cache.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	resp, err := client.Call(ctx, "status", nil)
+	if err != nil || resp == nil || !resp.Ok {
+		t.Fatalf("daemon status = %v err = %v, want ok", resp, err)
+	}
+	data, _ := resp.Data.(map[string]any)
+	if n, ok := data["playlistLen"].(float64); !ok || int(n) != 2 {
+		t.Fatalf("daemon playlistLen = %v, want 2", data["playlistLen"])
+	}
+}
+
+// TestConnectIntegrationPlaybackShadowForwards locks the TC-7 shadow
+// forwarding over the real daemon: ReinitializePlaylist reaches the daemon
+// through play_list (queue rebuild, play=false — deterministic, no network
+// playback), StartPlay forwards as a resume (a no-op on the empty-loaded fresh
+// daemon), and PlaySong with an empty song trips the daemon's play_list
+// validation without panicking. The play=true playback path itself is daemon
+// network-bound and is exercised by the core dispatcher tests with a fake
+// track provider (TC-5) instead of the integration tests.
+func TestConnectIntegrationPlaybackShadowForwards(t *testing.T) {
+	startRemoteDaemonWithEvents(t)
+	client := dialRemote(t)
+	_, n := newConnectShell(t, client)
+	rp := n.Player().remote
+	waitRemoteReady(t, rp)
+
+	p := n.Player() // the shell wrapper (remote != nil)
+
+	// StartPlay → resume: on the fresh daemon nothing is loaded, so the daemon
+	// resumeOrStart is a no-op (deterministic, no network).
+	p.StartPlay()
+	if !rp.Ready() {
+		t.Fatal("shell not ready after StartPlay forward")
+	}
+
+	// ReinitializePlaylist → play_list play=false: queue rebuilt + cache synced.
+	songs := []structs.Song{
+		{Id: 1, Name: "第一首", Artists: []structs.Artist{{Name: "歌手A"}}, Album: structs.Album{Name: "专辑X"}},
+		{Id: 2, Name: "第二首", Artists: []structs.Artist{{Name: "歌手B"}}, Album: structs.Album{Name: "专辑Y"}},
+	}
+	p.ReinitializePlaylist(0, songs)
+	if got := len(p.Playlist()); got != 2 {
+		t.Fatalf("Playlist() len = %d, want 2 after ReinitializePlaylist forward", got)
+	}
+
+	// PlaySong → single-song play_list: an empty song id trips the daemon's
+	// play_list validation (no playback, no panic).
+	p.PlaySong(structs.Song{}, DurationNext)
+	if !rp.Ready() {
+		t.Fatal("shell not ready after PlaySong forward")
+	}
+}
+
 // TestConnectIntegrationDisconnect locks the disconnect degradation (D-TC-4):
 // closing the daemon server terminates the subscription connection, the Events
 // channel closes and consumeEvents marks the shell not ready. Reads keep
@@ -388,6 +528,11 @@ func TestConnectIntegrationSearchNavigation(t *testing.T) {
 // while the shell still renders.
 func TestConnectIntegrationDisconnect(t *testing.T) {
 	server := startRemoteDaemonWithEvents(t)
+	// Reset the shared daemon player state so the subscribe snapshot carries a
+	// zero song regardless of earlier tests' queue/playback leftovers (the
+	// engine is process-wide, tests run sequentially).
+	remoteEngine.Player().ReinitializePlaylist(0, nil)
+	remoteEngine.Player().Stop()
 	client := dialRemote(t)
 	app, n := newConnectShell(t, client)
 	rp := n.Player().remote

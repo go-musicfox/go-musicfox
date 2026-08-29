@@ -298,19 +298,10 @@ func (n *Netease) EffectiveWindowHeight() int {
 
 // ToLoginPage 需要登录的处理
 func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
-	if n.ConnectMode() {
-		// B8: login is owned by the daemon; the TUI shell cannot log the
-		// daemon in (webui-connect's 503 philosophy). Toast and return — the
-		// caller (NeedsAuth operations / menu gating) degrades cleanly.
-		if n.App != nil {
-			n.Notify(model.NotificationSpec{
-				Level:   model.NotificationWarning,
-				Title:   "遥控模式",
-				Message: "登录由 daemon 管理，请在 daemon 所在会话登录",
-			})
-		}
-		return nil, nil
-	}
+	// connect mode runs the same flow (TC-6): the LoginPage renders only the
+	// QR entry and the QR page sources the login from the daemon (D-TC-7), so
+	// no connect-specific branch is needed here — the page itself guards
+	// against the engine-dependent local login paths via n.ConnectMode().
 	page := buildPageOrToast("login", LoginPageOpts{Netease: n})
 	if page == nil {
 		return nil, nil

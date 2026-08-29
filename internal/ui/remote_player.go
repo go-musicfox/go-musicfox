@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -163,6 +164,94 @@ func (p *RemotePlayer) CtrlPlay() {
 	p.call("play", nil)
 }
 
+// callResult executes a control command and parses the daemon's Dispatcher
+// response data. A transport failure or a non-ok response yields an error.
+// Unlike call it does not toast — callers surface their own message (e.g. the
+// QR login page shows the error inline).
+func (p *RemotePlayer) callResult(cmd string, args map[string]any) (map[string]any, error) {
+	resp, err := p.client.Call(context.Background(), cmd, args)
+	if err != nil {
+		return nil, err
+	}
+	if !resp.Ok {
+		return nil, errors.New(resp.Error)
+	}
+	data, _ := resp.Data.(map[string]any)
+	return data, nil
+}
+
+// CallQRKey requests a fresh QR-login unikey and its scan URL from the daemon
+// (D-TC-7: the daemon is the sole login-state host, the TUI only renders and
+// polls). The url feeds the local QR-code renderer.
+func (p *RemotePlayer) CallQRKey() (uniKey, qrcodeUrl string, err error) {
+	data, err := p.callResult("login_qr_key", nil)
+	if err != nil {
+		return "", "", err
+	}
+	return strOf(data["uniKey"]), strOf(data["qrcodeUrl"]), nil
+}
+
+// CallQRStatus polls the QR scan status for uniKey on the daemon (D-TC-7).
+// Code semantics (mirror core/qrlogin): 800 = expired, 801 = awaiting scan,
+// 802 = scanned awaiting confirm, 803 = confirmed — on 803 the daemon has
+// already completed the login and broadcast EvLogin (the TUI observes the
+// user-state change through the subscription, D-TC-8).
+func (p *RemotePlayer) CallQRStatus(uniKey string) (code float64, err error) {
+	data, err := p.callResult("login_qr_status", map[string]any{"key": uniKey})
+	if err != nil {
+		return 0, err
+	}
+	code, ok := numOf(data["code"])
+	if !ok {
+		return 0, errors.New("login_qr_status 响应缺少 code 字段")
+	}
+	return code, nil
+}
+
+// playListArgs maps a local song list to the play_list wire shape (D-TC-9):
+// each song is trimmed to {id,name,artist,album} — artist joined by comma via
+// ArtistName — mirroring the daemon's songsFromWire/trimmedPlaylist round-trip
+// so the response can refresh the local queue cache in place.
+func playListArgs(songs []structs.Song, index int, play bool) map[string]any {
+	w := make([]map[string]any, 0, len(songs))
+	for _, s := range songs {
+		w = append(w, map[string]any{
+			"id":     s.Id,
+			"name":   s.Name,
+			"artist": s.ArtistName(),
+			"album":  s.Album.Name,
+		})
+	}
+	return map[string]any{"songs": w, "index": index, "play": play}
+}
+
+// CallPlayList delivers a whole song list to the daemon queue (D-TC-9): the
+// daemon rebuilds its playlist at index and optionally starts playback. The
+// response carries the rebuilt (trimmed) playlist, which is written back into
+// the local queue cache so the playlist view and next/prev navigation stay in
+// sync (EvPlaylistChanged events are P2). Failures are logged and toasted like
+// the other control forwards.
+func (p *RemotePlayer) CallPlayList(songs []structs.Song, index int, play bool) error {
+	data, err := p.callResult("play_list", playListArgs(songs, index, play))
+	if err != nil {
+		slog.Warn("remote player: play_list forward failed", slog.Int("songs", len(songs)), slog.Any("err", err))
+		if p.netease != nil {
+			p.netease.Notify(model.NotificationSpec{
+				Level:   model.NotificationWarning,
+				Title:   "遥控失败",
+				Message: err.Error(),
+			})
+		}
+		return err
+	}
+	if pl, ok := data["playlist"].([]any); ok {
+		p.mu.Lock()
+		p.playlist = playlistFromWire(pl)
+		p.mu.Unlock()
+	}
+	return nil
+}
+
 func (p *RemotePlayer) CtrlPause()      { p.call("pause", nil) }
 func (p *RemotePlayer) CtrlResume()     { p.call("resume", nil) }
 func (p *RemotePlayer) CtrlToggle()     { p.call("toggle", nil) }
@@ -212,7 +301,10 @@ func remoteShuffleArgs(on int) map[string]any {
 
 // --- 查询面 ---
 
-// User returns the cached user (nickname only, B8); nil before any snapshot.
+// User returns a copy of the cached user with the UserId stripped (D-TC-8:
+// login gating stays nickname-based — CheckUserInfo treats a zero UserId as
+// not logged in, which is what the connect shell wants for the still-degraded
+// local login-gated menus); nil before any snapshot.
 func (p *RemotePlayer) User() *structs.User {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -220,7 +312,26 @@ func (p *RemotePlayer) User() *structs.User {
 		return nil
 	}
 	u := *p.user
+	u.UserId = 0
 	return &u
+}
+
+// UserID returns the cached daemon user id (0 before login). It is written by
+// the status snapshot (idempotent, D-TC-8) and the EvLogin event (live
+// update). Display and the P2 command surface read it here instead of User(),
+// which strips it for gating.
+func (p *RemotePlayer) UserID() int64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.user == nil {
+		return 0
+	}
+	return p.user.UserId
+}
+
+// UserLoggedIn reports whether the daemon has a logged-in user (D-TC-8).
+func (p *RemotePlayer) UserLoggedIn() bool {
+	return p.UserID() != 0
 }
 
 // CommandContext maps the cached state to the UI-agnostic command context
@@ -334,6 +445,14 @@ func (p *RemotePlayer) applySnapshot(data map[string]any) {
 		}
 		p.user.Nickname = nick
 	}
+	// userId is the snapshot-side login state (D-TC-8): reconnect restores it
+	// idempotently; the EvLogin event covers live in-session updates.
+	if id, ok := numOf(data["userId"]); ok {
+		if p.user == nil {
+			p.user = &structs.User{}
+		}
+		p.user.UserId = int64(id)
+	}
 }
 
 // applyEvent applies one event frame incrementally.
@@ -383,21 +502,27 @@ func (p *RemotePlayer) applyEvent(event string, data map[string]any) {
 	}
 }
 
-// applyLogin updates the cached user nickname from the auth.login_succeeded
-// event (B8: nickname only; UserId stays 0 — the event carries it but the TUI
-// shell keeps the snapshot semantics).
+// applyLogin updates the cached user from the auth.login_succeeded event
+// (D-TC-8: EvLogin carries the fresh nickname AND userId — the live
+// in-session update; the snapshot covers reconnect).
 func (p *RemotePlayer) applyLogin(data map[string]any) {
 	user := mapOf(data["user"])
 	nick := strOf(user["nickname"])
+	userId, _ := numOf(user["userId"])
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if nick == "" {
+	if nick == "" && userId == 0 {
 		return
 	}
 	if p.user == nil {
 		p.user = &structs.User{}
 	}
-	p.user.Nickname = nick
+	if nick != "" {
+		p.user.Nickname = nick
+	}
+	if userId != 0 {
+		p.user.UserId = int64(userId)
+	}
 }
 
 // --- wire helpers：daemon 帧 JSON key → 缓存字段 ---

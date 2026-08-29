@@ -328,41 +328,47 @@ func (p *Player) DownVolume() {
 	p.Player.DownVolume()
 }
 
-// PlaySong degrades in connect mode: 选歌播放 needs a daemon play_song command
-// (S6-P2); the MVP toasts instead (D-TC-3).
+// PlaySong forwards a single-song play to the daemon in connect mode (D-TC-9):
+// a one-song play_list (index 0, play=true) is the daemon-side equivalent of
+// the local PlaySong — the daemon rebuilds its queue with just this song and
+// starts playback, keeping next/prev consistent.
 func (p *Player) PlaySong(song structs.Song, dir PlayDirection) {
 	if p.remote != nil {
-		p.remoteUnsupported("选歌播放")
+		p.remote.CallPlayList([]structs.Song{song}, 0, true)
 		return
 	}
 	p.Player.PlaySong(song, dir)
 }
 
-// ReinitializePlaylist degrades in connect mode: a local playlist build cannot
-// reach the daemon queue (D-TC-3).
+// ReinitializePlaylist forwards to the daemon in connect mode (D-TC-9): the
+// daemon rebuilds its queue with the given songs at index WITHOUT starting
+// playback — the caller (playOrToggle) follows with StartPlay, exactly like
+// the standalone path.
 func (p *Player) ReinitializePlaylist(index int, songs []structs.Song) {
 	if p.remote != nil {
-		p.remoteUnsupported("播放队列编辑")
+		p.remote.CallPlayList(songs, index, false)
 		return
 	}
 	p.Player.ReinitializePlaylist(index, songs)
 }
 
-// InitSongManager degrades in connect mode (forwards to ReinitializePlaylist
-// standalone; toasts remotely).
+// InitSongManager forwards to the daemon in connect mode (wraps
+// ReinitializePlaylist; only reachable from the standalone automator, kept for
+// shadow completeness).
 func (p *Player) InitSongManager(index int, songs []structs.Song) {
 	if p.remote != nil {
-		p.remoteUnsupported("播放队列初始化")
+		p.remote.CallPlayList(songs, index, false)
 		return
 	}
 	p.Player.InitSongManager(index, songs)
 }
 
-// StartPlay degrades in connect mode: the daemon owns playback start (resume
-// on a Stopped daemon already starts it via CtrlResume).
+// StartPlay forwards as a resume in connect mode (D-TC-9): the daemon's
+// resumeOrStart starts the current queue song when Stopped with nothing
+// loaded — the exact post-ReinitializePlaylist flow playOrToggle relies on.
 func (p *Player) StartPlay() {
 	if p.remote != nil {
-		p.remoteUnsupported("播放本地队列")
+		p.remote.CtrlResume()
 		return
 	}
 	p.Player.StartPlay()

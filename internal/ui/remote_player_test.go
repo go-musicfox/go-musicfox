@@ -15,6 +15,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/headless"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 )
@@ -311,5 +312,94 @@ func TestRemotePlayerDisconnect(t *testing.T) {
 			t.Fatal("Ready() still true after client.Close")
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// TestRemotePlayerUserIDFromSnapshot locks the D-TC-8 snapshot path: the
+// status snapshot's userId field restores the login state idempotently
+// (reconnect), while User() keeps stripping the id for the local gating
+// semantics.
+func TestRemotePlayerUserIDFromSnapshot(t *testing.T) {
+	p := newRemotePlayerForTest()
+	p.handleFrame([]byte(`{
+		"type":"snapshot",
+		"data":{
+			"playing": false,
+			"state": "stopped",
+			"song": {"id": 0, "name": "", "artist": "", "album": ""},
+			"positionSeconds": 0,
+			"durationSeconds": 0,
+			"volume": 50,
+			"mode": "列表循环",
+			"playlistLen": 0,
+			"user": "tester",
+			"userId": 123,
+			"playlist": []
+		}
+	}`))
+	if got := p.UserID(); got != 123 {
+		t.Fatalf("UserID() = %d, want 123", got)
+	}
+	if !p.UserLoggedIn() {
+		t.Fatal("UserLoggedIn() = false, want true")
+	}
+	u := p.User()
+	if u == nil || u.Nickname != "tester" {
+		t.Fatalf("User() = %+v, want nickname tester", u)
+	}
+	if u.UserId != 0 {
+		t.Fatalf("User().UserId = %d, want 0 (stripped for local gating, D-TC-8)", u.UserId)
+	}
+}
+
+// TestRemotePlayerUserIDFromLoginEvent locks the D-TC-8 event path: the
+// auth.login_succeeded event carries the live user update (in-session login
+// completion inside the daemon), and an empty EvLogin frame is a no-op.
+func TestRemotePlayerUserIDFromLoginEvent(t *testing.T) {
+	p := newRemotePlayerForTest()
+	p.handleFrame([]byte(`{"type":"event","event":"auth.login_succeeded","data":{"user":{"userId":456,"nickname":"fox"}}}`))
+	if got := p.UserID(); got != 456 {
+		t.Fatalf("UserID() = %d, want 456", got)
+	}
+	if !p.UserLoggedIn() {
+		t.Fatal("UserLoggedIn() = false, want true")
+	}
+	u := p.User()
+	if u == nil || u.Nickname != "fox" || u.UserId != 0 {
+		t.Fatalf("User() = %+v, want nickname fox with stripped UserId", u)
+	}
+
+	// An EvLogin without user data must not clear the cached state.
+	p.handleFrame([]byte(`{"type":"event","event":"auth.login_succeeded","data":{}}`))
+	if got := p.UserID(); got != 456 {
+		t.Fatalf("UserID() = %d after empty EvLogin, want unchanged 456", got)
+	}
+}
+
+// TestRemotePlayerPlayListArgs locks the play_list wire shape (D-TC-9): songs
+// are trimmed to {id,name,artist,album} with artist joined by comma, matching
+// the daemon's songsFromWire/trimmedPlaylist round-trip so the response can
+// refresh the local queue cache in place.
+func TestRemotePlayerPlayListArgs(t *testing.T) {
+	songs := []structs.Song{
+		{Id: 1, Name: "A", Artists: []structs.Artist{{Name: "X"}, {Name: "Y"}}, Album: structs.Album{Name: "AL"}},
+		{Id: 2, Name: "B", Artists: []structs.Artist{{Name: "Z"}}, Album: structs.Album{Name: "BL"}},
+	}
+	args := playListArgs(songs, 1, false)
+	if args["index"] != 1 || args["play"] != false {
+		t.Fatalf("args index/play = %v/%v, want 1/false", args["index"], args["play"])
+	}
+	w, ok := args["songs"].([]map[string]any)
+	if !ok {
+		t.Fatalf("args songs = %T, want []map[string]any", args["songs"])
+	}
+	if len(w) != 2 {
+		t.Fatalf("songs len = %d, want 2", len(w))
+	}
+	if w[0]["id"] != int64(1) || w[0]["name"] != "A" || w[0]["artist"] != "X,Y" || w[0]["album"] != "AL" {
+		t.Fatalf("song0 = %v, want {id 1, A, X,Y, AL}", w[0])
+	}
+	if w[1]["artist"] != "Z" {
+		t.Fatalf("song1 artist = %v, want Z", w[1]["artist"])
 	}
 }

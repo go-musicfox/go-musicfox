@@ -151,6 +151,12 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	}
 
 	if loginMsg, ok := msg.(LoginMsg); ok {
+		if l.netease.ConnectMode() {
+			// TC-6: the daemon owns login completion in connect mode; a stray
+			// LoginMsg (unreachable — the local paths that produce it are
+			// hidden) must not reach the engine-dependent loginSuccessHandle.
+			return l.netease.MustMain(), model.TickMain(time.Nanosecond)
+		}
 		if loginMsg.err != nil {
 			l.tips = style.FG(loginMsg.err.Error(), lipgloss.BrightRed)
 			return l, nil
@@ -290,6 +296,21 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	if !ok {
 		return l.updateActiveInput(msg)
 	}
+	if l.netease.ConnectMode() {
+		// TC-6: in connect mode the only interactive entry is the QR button
+		// (renderConnectQRView); Enter fires it, b/esc returns, everything
+		// else is ignored — the account/cookie/webview paths are hidden
+		// because they dereference the engine the connect shell never builds.
+		switch key.String() {
+		case "enter":
+			l.index = qrLoginIndex
+			return l.enterHandler()
+		case "b", "esc":
+			l.tips = ""
+			return l.netease.MustMain(), l.netease.RerenderCmd(true)
+		}
+		return l, nil
+	}
 	if l.index < 0 && l.updateTabs(msg, key.String()) {
 		return l, nil
 	}
@@ -416,6 +437,17 @@ func (l *LoginPage) View(a *model.App) string {
 	write("\n")
 	top++
 
+	if l.netease.ConnectMode() {
+		// TC-6: the remote shell's login is a daemon-side QR flow (D-TC-7), so
+		// only the QR entry is rendered — the account/password/cookie tabs and
+		// the webview button are hidden because their local login paths
+		// dereference the engine the connect shell never builds (n.engine,
+		// B9). The QR page sources its data from the daemon through
+		// RemotePlayer.CallQRKey/CallQRStatus.
+		l.renderConnectQRView(a, mainPage, &builder, &top, write, curRow)
+		return finishCustomPageView(&builder, a)
+	}
+
 	write("\n")
 	l.tabStartX = max(0, mainPage.MenuStartColumn())
 	l.tabsStartRowY = curRow()
@@ -438,6 +470,45 @@ func (l *LoginPage) View(a *model.App) string {
 	}
 
 	return finishCustomPageView(&builder, a)
+}
+
+// renderConnectQRView renders the connect-mode login surface (TC-6): only the
+// QR entry button plus a hint are shown; the account/cookie tabs and the
+// webview button are hidden because their local login paths dereference the
+// engine the connect shell never builds (n.engine == nil, B9). The QR page
+// sources its data from the daemon (D-TC-7).
+func (l *LoginPage) renderConnectQRView(a *model.App, mainPage *model.Main, builder *strings.Builder, top *int, write func(string), curRow func() int) {
+	write("\n")
+	(*top)++
+	if mainPage.MenuStartColumn() > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	}
+	// 扫码登录按钮（connect 唯一入口），坐标记录对齐其它按钮的命中约定。
+	l.buttonsRowY = curRow()
+	l.index = qrLoginIndex
+	qrButtonView := l.qrLoginButton
+	if l.hoveredButton == 1 {
+		qrButtonView = pageButtonHoverView(l.qrButtonTextByStep())
+	}
+	qrX := max(0, mainPage.MenuStartColumn())
+	l.qrStartX = qrX
+	l.qrEndX = qrX + lipgloss.Width(qrButtonView) - 1
+	write(qrButtonView)
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(qrButtonView)
+	if spaceLen > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
+	}
+	write("\n\n")
+	(*top)++
+	if mainPage.MenuStartColumn() > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	}
+	if l.tips != "" {
+		write(l.tips)
+	} else {
+		write(style.FG(model.T(MsgLoginConnectQRHint), lipgloss.BrightBlack))
+	}
+	write("\n")
 }
 
 func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builder, top *int, mainPage *model.Main, write func(string), curRow func() int) {
@@ -629,6 +700,10 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 
 	switch l.index {
 	case submitIndex:
+		if l.netease.ConnectMode() {
+			// TC-6: connect mode hides the account/cookie login (n.engine nil).
+			return l, nil
+		}
 		if l.activeTab() == tabCookie {
 			return l.loginByCookie()
 		}
@@ -642,6 +717,10 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 		// 扫码登录
 		return l.loginByQRCode()
 	case webviewLoginIndex:
+		if l.netease.ConnectMode() {
+			// TC-6: connect mode hides the webview login (n.engine nil).
+			return l, nil
+		}
 		// 网页登录
 		return l.loginByWebview()
 	}

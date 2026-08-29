@@ -44,26 +44,31 @@ func remoteEventWireNames() []string {
 // tuiFrontend.Run's order; only the Player/User data surface and the renderer
 // set are swapped.
 //
-// TUI-connect degradation summary (D-TC-3, roadmap §8.4; S6-R1 restores the
-// local browsing tree by mounting the engine-independent business plugins):
+// TUI-connect capability summary (roadmap §8.4/§8.10; TC-5..TC-8 land the
+// full login + playback extension — S6-R1 restores the local browsing tree by
+// mounting the engine-independent business plugins):
 //
-//	播放控制（next/prev/pause/resume/toggle/stop/seek/volume/repeat/shuffle/
-//	  like/dislike）      Call 转发 daemon ✅（PlaySong/选歌播放除外，见下）
-//	播放状态/进度/模式/音量 订阅事件 + 快照缓存 ✅
-//	播放队列显示           快照精简只读列表 △（本地建列表类操作降级 toast）
+//	播放控制/状态/进度/模式/音量  Call 转发 + 订阅快照 ✅
 //	浏览/搜索（本地 API）   本地照常 ✅（S6-R1：8 个 engine 无关业务插件已
 //	                      挂载，lastfm 除外——其 Deps 依赖 engine 服务，
 //	                      connect 无 engine；搜索/排行/精选歌单/专辑/歌手/
 //	                      DJ 免登录浏览可用，菜单完整）
-//	需登录浏览              收藏/我的歌单/云盘/每日推荐/最近播放/私人FM
-//	                      toast 降级（本地 API 无登录 cookie + 登录门控
-//	                      → ToLoginPage → connect toast，B8）
-//	选歌播放               toast「遥控模式：daemon 不支持该操作」（P2:
-//	                      daemon play_song 命令扩展）
-//	登录                   daemon 登录态（status.user 昵称）；TUI 侧登录
-//	                      禁用、需登录浏览/下载/分享 toast 降级（B8）
+//	登录                   daemon 侧 QR 登录、TUI 遥控扫码 ✅（ToLoginPage
+//	                      → connect LoginPage 只显 QR 入口 → CallQRKey/
+//	                      CallQRStatus 数据源；EvLogin 驱动用户态刷新，
+//	                      D-TC-7/TC-6）
+//	用户态展示               昵称 + UserId（status.userId 快照幂等 + EvLogin
+//	                      增量；门控仍剥离 UserId，D-TC-8）
+//	选歌播放                 play_list 整列表投递 daemon ✅（PlaySong/
+//	                      ReinitializePlaylist/StartPlay 遮蔽升级，响应
+//	                      playlist 写回缓存同步队列，D-TC-9/TC-7）
+//	播放队列显示             快照精简只读列表 △ + 投递后响应同步（next/prev
+//	                      正确）
+//	需登录浏览               收藏/我的歌单/云盘/每日推荐/最近播放/私人FM
+//	                      无条件 toast 降级（本地进程无 cookie，D-TC-7
+//	                      边界；P2：cookie 回拉）
+//	播放队列编辑/智能/心动     toast 降级（P2：daemon 队列编辑命令）
 //	歌词/封面/频谱           隐藏/空渲染（B5/B6/B7，P2 扩展）
-//	智能/心动模式           禁用 toast（P2 扩展）
 //	命令面（轨 B / WASM）    禁用（B10：不加载 WASM、不注册命令菜单）
 //	断线                   事件通道关闭 → ready=false + toast；不自动重连
 //	                      （D-TC-4）
