@@ -45,6 +45,10 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	if GlobalOptions.Once != "" && id != "headless" {
 		return errors.New("--once 仅支持 headless 前端")
 	}
+	// --mode is validated here (standalone|connect; the enumeration is
+	// unchanged). Since S6 the tui frontend also consumes connect — opts.Mode
+	// is dispatched in ui.RunConnect (remote shell over the headless daemon) —
+	// while other frontends keep ignoring the flag.
 	mode := frontend.Mode(GlobalOptions.Mode)
 	switch mode {
 	case "", frontend.ModeStandalone, frontend.ModeConnect:

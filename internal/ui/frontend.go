@@ -20,7 +20,10 @@ func (tuiFrontend) Name() string { return "TUI" }
 // Run assembles and runs the TUI frontend. The assembly was moved here
 // verbatim from commands/netease.go (P1-2); order is preserved — global
 // assignments like model.Submit / ui.SetupI18n must stay before NewNetease.
-func (tuiFrontend) Run(_ context.Context, _ frontend.LaunchOptions) error {
+func (tuiFrontend) Run(ctx context.Context, launchOpts frontend.LaunchOptions) error {
+	if launchOpts.Mode == frontend.ModeConnect {
+		return RunConnect(ctx) // D-TC-1: remote shell, no engine is built
+	}
 	opts := model.DefaultOptions()
 	configs.AppConfig.FillToModelOpts(opts)
 
