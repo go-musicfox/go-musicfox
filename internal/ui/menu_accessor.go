@@ -103,6 +103,11 @@ func (s *menuServices) missing(name string) {
 // playing-menu state, so the accessor prefers the shell's wrapper and falls
 // back to a context-registered wrapper.
 func (s *menuServices) Player() *Player {
+	// TUI-connect remote shell: the shell-owned wrapper carries the remote
+	// data surface; the framework player service never exists (no engine, B9).
+	if s.n != nil && s.n.player != nil && s.n.player.remote != nil {
+		return s.n.player
+	}
 	if svc, ok := framework.ServiceOf[*Player](s.ctx, ServicePlayer); ok {
 		return svc
 	}
@@ -113,8 +118,13 @@ func (s *menuServices) Player() *Player {
 	return nil
 }
 
-// User resolves the current user from the userService slot (nil until login).
+// User resolves the current user. In connect mode it returns the daemon
+// snapshot's user (nickname only, B8) — the engine's user service never
+// exists and TUI-side login is disabled.
 func (s *menuServices) User() *structs.User {
+	if s.n != nil && s.n.player != nil && s.n.player.remote != nil {
+		return s.n.player.remote.User()
+	}
 	if svc, ok := framework.ServiceOf[*core.UserService](s.ctx, ServiceUserService); ok && svc.User != nil {
 		return *svc.User
 	}

@@ -3,6 +3,7 @@
 package ui
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/frontend"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
@@ -46,6 +48,351 @@ type Player struct {
 	svc          *menuServices
 	renderTicker *tickerByPlayer
 	playingMenu  Menu
+
+	// remote is the TUI-connect data surface (D-TC-1 方案 B): when non-nil the
+	// shell runs in connect mode and the shadowing methods below forward to it
+	// instead of the embedded *core.Player (which is never constructed in
+	// connect mode — B9). The embedded field stays nil in connect mode, so any
+	// method the shadows miss would nil-dereference as a sentinel panic
+	// (roadmap TC-3 risk 3).
+	remote *RemotePlayer
+}
+
+// remoteVolumeStep mirrors the native playback engines' volume step for the
+// remote shell's UpVolume/DownVolume (the dispatcher "volume" command sets an
+// absolute value; native engines step by 5).
+const remoteVolumeStep = 5
+
+// remoteUnsupported toasts a TUI-connect degradation (D-TC-3): the daemon
+// command set has no equivalent for this local-player action.
+func (p *Player) remoteUnsupported(action string) {
+	if p.netease == nil || p.netease.App == nil {
+		return
+	}
+	p.netease.Notify(model.NotificationSpec{
+		Level:   model.NotificationWarning,
+		Title:   "遥控模式",
+		Message: action + "：daemon 不支持该操作",
+	})
+}
+
+// --- TUI-connect shadowing methods (S6 TC-3) ---
+//
+// Each method below explicitly shadows the promoted *core.Player method so
+// menu/operate/hotkey call sites compile and run unchanged in connect mode:
+// with p.remote != nil they forward to the RemotePlayer data surface (state
+// cache + Call forwarding + render ticker); the standalone path keeps calling
+// the embedded *core.Player with zero behavior change. Local-playlist-only
+// actions (选歌播放/播放队列编辑/智能模式) have no daemon command and degrade
+// to a toast (D-TC-3).
+
+// CurSong returns the current song (remote cache in connect mode).
+func (p *Player) CurSong() structs.Song {
+	if p.remote != nil {
+		return p.remote.CurSong()
+	}
+	return p.Player.CurSong()
+}
+
+// CurSongIndex returns the current song index.
+func (p *Player) CurSongIndex() int {
+	if p.remote != nil {
+		return p.remote.CurSongIndex()
+	}
+	return p.Player.CurSongIndex()
+}
+
+// PassedTime returns the current playback position.
+func (p *Player) PassedTime() time.Duration {
+	if p.remote != nil {
+		return p.remote.PassedTime()
+	}
+	return p.Player.PassedTime()
+}
+
+// State returns the current playback state.
+func (p *Player) State() types.State {
+	if p.remote != nil {
+		return p.remote.State()
+	}
+	return p.Player.State()
+}
+
+// Volume returns the current volume.
+func (p *Player) Volume() int {
+	if p.remote != nil {
+		return p.remote.Volume()
+	}
+	return p.Player.Volume()
+}
+
+// Mode returns the current play mode.
+func (p *Player) Mode() types.Mode {
+	if p.remote != nil {
+		return p.remote.Mode()
+	}
+	return p.Player.Mode()
+}
+
+// Playlist returns the current playlist (trimmed snapshot in connect mode).
+func (p *Player) Playlist() []structs.Song {
+	if p.remote != nil {
+		return p.remote.Playlist()
+	}
+	return p.Player.Playlist()
+}
+
+// User returns the current user (daemon nickname only in connect mode, B8).
+func (p *Player) User() *structs.User {
+	if p.remote != nil {
+		return p.remote.User()
+	}
+	return p.Player.User()
+}
+
+// PlaylistUpdateAt returns the playlist update timestamp. Connect mode has no
+// local playlist bookkeeping: a zero value hides the "更新于" subtitle.
+func (p *Player) PlaylistUpdateAt() time.Time {
+	if p.remote != nil {
+		return time.Time{}
+	}
+	return p.Player.PlaylistUpdateAt()
+}
+
+// PlayingMenuKey returns the key of the menu that owns the playing playlist.
+// Connect mode keeps no local record (the daemon owns the queue), so it always
+// reports empty — InPlayingMenu then only matches the current-playlist menu.
+func (p *Player) PlayingMenuKey() string {
+	if p.remote != nil {
+		return ""
+	}
+	return p.Player.PlayingMenuKey()
+}
+
+// CompareWithCurPlaylist reports whether the given songs match the current
+// playlist (compared by id against the remote trimmed playlist in connect mode,
+// mirroring core.Player's first-20-ids semantics).
+func (p *Player) CompareWithCurPlaylist(playlist []structs.Song) bool {
+	if p.remote != nil {
+		cur := p.remote.Playlist()
+		if len(playlist) != len(cur) {
+			return false
+		}
+		for i := 0; i < 20 && i < len(playlist); i++ {
+			if playlist[i].Id != cur[i].Id {
+				return false
+			}
+		}
+		return true
+	}
+	return p.Player.CompareWithCurPlaylist(playlist)
+}
+
+// CommandContext returns the UI-agnostic command context snapshot.
+func (p *Player) CommandContext() frontend.CommandContext {
+	if p.remote != nil {
+		return p.remote.CommandContext()
+	}
+	return p.Player.CommandContext()
+}
+
+// Seek forwards to the daemon seek command.
+func (p *Player) Seek(d time.Duration) {
+	if p.remote != nil {
+		p.remote.CtrlSeek(d)
+		return
+	}
+	p.Player.Seek(d)
+}
+
+// Toggle forwards to the daemon toggle command.
+func (p *Player) Toggle() {
+	if p.remote != nil {
+		p.remote.CtrlToggle()
+		return
+	}
+	p.Player.Toggle()
+}
+
+// Pause forwards to the daemon pause command.
+func (p *Player) Pause() {
+	if p.remote != nil {
+		p.remote.CtrlPause()
+		return
+	}
+	p.Player.Pause()
+}
+
+// Resume forwards to the daemon resume command (a Stopped daemon with a
+// current song starts playback on the daemon side).
+func (p *Player) Resume() {
+	if p.remote != nil {
+		p.remote.CtrlResume()
+		return
+	}
+	p.Player.Resume()
+}
+
+// Stop forwards to the daemon stop command.
+func (p *Player) Stop() {
+	if p.remote != nil {
+		p.remote.CtrlStop()
+		return
+	}
+	p.Player.Stop()
+}
+
+// NextSong forwards to the daemon next command.
+func (p *Player) NextSong(manual bool) {
+	if p.remote != nil {
+		p.remote.CtrlNext()
+		return
+	}
+	p.Player.NextSong(manual)
+}
+
+// PreviousSong forwards to the daemon previous command.
+func (p *Player) PreviousSong(manual bool) {
+	if p.remote != nil {
+		p.remote.CtrlPrevious()
+		return
+	}
+	p.Player.PreviousSong(manual)
+}
+
+// SwitchMode cycles the play mode on the daemon (repeat cycle mirroring
+// core.Player.cycleRepeat; intelligent is skipped, D-TC-3).
+func (p *Player) SwitchMode() {
+	if p.remote != nil {
+		switch p.remote.Mode() {
+		case types.PmOrdered:
+			p.remote.CtrlSetRepeat(2) // list loop
+		case types.PmListLoop:
+			p.remote.CtrlSetRepeat(1) // single loop
+		case types.PmSingleLoop:
+			p.remote.CtrlSetRepeat(0) // ordered
+		default:
+			p.remote.CtrlSetRepeat(2) // random/intelligent → list loop
+		}
+		return
+	}
+	p.Player.SwitchMode()
+}
+
+// SetMode maps the local mode API onto the daemon repeat/shuffle commands.
+// Intelligent mode has no daemon command and is disabled in connect mode.
+func (p *Player) SetMode(playMode types.Mode) {
+	if p.remote != nil {
+		switch playMode {
+		case types.PmOrdered:
+			p.remote.CtrlSetRepeat(0)
+		case types.PmSingleLoop:
+			p.remote.CtrlSetRepeat(1)
+		case types.PmListLoop, types.PmInfRandom:
+			p.remote.CtrlSetRepeat(2)
+		case types.PmListRandom:
+			p.remote.CtrlSetShuffle(1)
+		case types.PmIntelligent:
+			p.remoteUnsupported("心动/智能模式")
+		}
+		return
+	}
+	p.Player.SetMode(playMode)
+}
+
+// SetVolume forwards to the daemon volume command.
+func (p *Player) SetVolume(v int) {
+	if p.remote != nil {
+		p.remote.CtrlSetVolume(v)
+		return
+	}
+	p.Player.SetVolume(v)
+}
+
+// UpVolume steps the volume up on the daemon (absolute value re-read from the
+// remote cache, mirroring the native engines' step).
+func (p *Player) UpVolume() {
+	if p.remote != nil {
+		p.remote.CtrlSetVolume(min(p.remote.Volume()+remoteVolumeStep, 100))
+		return
+	}
+	p.Player.UpVolume()
+}
+
+// DownVolume steps the volume down on the daemon.
+func (p *Player) DownVolume() {
+	if p.remote != nil {
+		p.remote.CtrlSetVolume(max(p.remote.Volume()-remoteVolumeStep, 0))
+		return
+	}
+	p.Player.DownVolume()
+}
+
+// PlaySong degrades in connect mode: 选歌播放 needs a daemon play_song command
+// (S6-P2); the MVP toasts instead (D-TC-3).
+func (p *Player) PlaySong(song structs.Song, dir PlayDirection) {
+	if p.remote != nil {
+		p.remoteUnsupported("选歌播放")
+		return
+	}
+	p.Player.PlaySong(song, dir)
+}
+
+// ReinitializePlaylist degrades in connect mode: a local playlist build cannot
+// reach the daemon queue (D-TC-3).
+func (p *Player) ReinitializePlaylist(index int, songs []structs.Song) {
+	if p.remote != nil {
+		p.remoteUnsupported("播放队列编辑")
+		return
+	}
+	p.Player.ReinitializePlaylist(index, songs)
+}
+
+// InitSongManager degrades in connect mode (forwards to ReinitializePlaylist
+// standalone; toasts remotely).
+func (p *Player) InitSongManager(index int, songs []structs.Song) {
+	if p.remote != nil {
+		p.remoteUnsupported("播放队列初始化")
+		return
+	}
+	p.Player.InitSongManager(index, songs)
+}
+
+// StartPlay degrades in connect mode: the daemon owns playback start (resume
+// on a Stopped daemon already starts it via CtrlResume).
+func (p *Player) StartPlay() {
+	if p.remote != nil {
+		p.remoteUnsupported("播放本地队列")
+		return
+	}
+	p.Player.StartPlay()
+}
+
+// RemoveSong degrades in connect mode (no daemon playlist mutation command).
+func (p *Player) RemoveSong(index int) (structs.Song, error) {
+	if p.remote != nil {
+		p.remoteUnsupported("编辑播放队列")
+		return structs.Song{}, errors.New("tui-connect: playlist editing is not supported")
+	}
+	return p.Player.RemoveSong(index)
+}
+
+// NextPlaylistSong degrades in connect mode (only reached by the disabled
+// Intelligence flow; kept for shadow completeness).
+func (p *Player) NextPlaylistSong(manual bool) (structs.Song, error) {
+	if p.remote != nil {
+		return structs.Song{}, errors.New("tui-connect: playlist advance is not supported")
+	}
+	return p.Player.NextPlaylistSong(manual)
+}
+
+// MarkPlaylistUpdated is a no-op in connect mode (the daemon owns the
+// playlist timestamp).
+func (p *Player) MarkPlaylistUpdated() {
+	if p.remote != nil {
+		return
+	}
+	p.Player.MarkPlaylistUpdated()
 }
 
 // NewPlayer builds the TUI player wrapper around the core playback
@@ -84,10 +431,15 @@ func (p *Player) InPlayingMenu() bool {
 }
 
 // SetPlayingMenu records the menu that owns the currently playing playlist.
-// A non-ui.Menu resets the playing menu to nil while keeping the key.
+// A non-ui.Menu resets the playing menu to nil while keeping the key. In
+// connect mode the daemon owns the queue, so only the local menu reference is
+// kept (no core playing-menu-key record).
 func (p *Player) SetPlayingMenu(key string, menu model.Menu) {
-	p.Player.SetPlayingMenu(key)
 	p.playingMenu, _ = menu.(Menu)
+	if p.remote != nil {
+		return
+	}
+	p.Player.SetPlayingMenu(key)
 }
 
 // PlayingMenu returns the currently playing menu.
@@ -96,9 +448,14 @@ func (p *Player) PlayingMenu() Menu {
 }
 
 // MarkPlaylistModified invalidates the playing-menu association after the
-// playlist is mutated externally, avoiding stale menu data.
+// playlist is mutated externally, avoiding stale menu data. In connect mode
+// the daemon queue is never mutated by the shell, so only the local reference
+// is cleared.
 func (p *Player) MarkPlaylistModified() {
 	p.playingMenu = nil
+	if p.remote != nil {
+		return
+	}
 	p.Player.MarkPlaylistModified()
 }
 
@@ -139,6 +496,12 @@ func (p *Player) LocatePlayingSong() {
 
 // Intelligence 智能/心动模式
 func (p *Player) Intelligence(appendMode bool) model.Page {
+	if p.remote != nil {
+		// D-TC-3: 智能/心动模式 is disabled in connect mode (it builds a local
+		// playlist and starts playback — both daemon-unreachable).
+		p.remoteUnsupported("心动/智能模式")
+		return nil
+	}
 	var (
 		main    = p.netease.MustMain()
 		curMenu = main.CurMenu()
@@ -201,8 +564,12 @@ func (p *Player) Intelligence(appendMode bool) model.Page {
 	return nil
 }
 
-// RenderTicker returns the render ticker fed by the core position observer.
+// RenderTicker returns the render ticker fed by the core position observer
+// (the remote player's ticker in connect mode).
 func (p *Player) RenderTicker() model.Ticker {
+	if p.remote != nil {
+		return p.remote.RenderTicker()
+	}
 	return p.renderTicker
 }
 
@@ -229,8 +596,13 @@ func (p *Player) OnPosition(_ time.Duration) {
 	}
 }
 
-// RequestLogin forwards login gating to the shell login page.
+// RequestLogin forwards login gating to the shell login page. In connect mode
+// login is owned by the daemon — toast and skip (B8).
 func (p *Player) RequestLogin(afterLogin func()) {
+	if p.remote != nil {
+		p.remoteUnsupported("登录")
+		return
+	}
 	_, _ = p.svc.ToLoginPage(func() model.Page {
 		if afterLogin != nil {
 			afterLogin()

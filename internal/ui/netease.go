@@ -19,6 +19,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
 	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/headless"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
@@ -27,6 +28,14 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	"github.com/go-musicfox/go-musicfox/utils/version"
 )
+
+// connectMode marks the TUI-connect remote-shell assembly (S6). It relaxes the
+// main-menu after-anchor chain assertions (the 9 business plugins never Start,
+// so their anchor keys are absent and the built-in 帮助 entry's after=last_fm
+// anchor legitimately goes missing) and is set by the two shell constructors:
+// NewNeteaseRemote → true, NewNetease → false. Package-level because the menu
+// chain walk (orderMainMenuEntries) has no shell context.
+var connectMode bool
 
 type Netease struct {
 	user *structs.User
@@ -71,6 +80,7 @@ type Netease struct {
 }
 
 func NewNetease(app *model.App) *Netease {
+	connectMode = false
 	n := new(Netease)
 
 	// The user slot must exist before the engine captures &n.user.
@@ -150,8 +160,88 @@ func NewNetease(app *model.App) *Netease {
 	return n
 }
 
+// NewNeteaseRemote is the TUI-connect shell constructor (D-TC-1 方案 B): it
+// shares the standalone assembly shape but builds no engine, registers no
+// business services and runs no Startup sequence (B9). The player data surface
+// is RemotePlayer (subscribed to the daemon via client); the embedded
+// *core.Player is never constructed, so the ui.Player shadowing methods (see
+// player.go) are the only reachable surface — anything missed would
+// nil-dereference as the sentinel panic. Renderer degradation: lyric and
+// spectrum renderers are skipped (B5/B7), the cover renderer is built with a
+// PicUrl-stripped state (empty render, B6), and song info + progress renderers
+// read the remote state. The frontend scope (business plugins + WASM +
+// registerCommandMenus) is skipped (B10), so plugin menus/pages are absent and
+// the shell re-provides the search page so the shared search-flow call sites
+// keep a non-nil singleton (see registerConnectProviders).
+func NewNeteaseRemote(app *model.App, client *headless.SubscribeClient) *Netease {
+	connectMode = true
+	n := new(Netease)
+	n.user = nil
+
+	// The App must be attached BEFORE the remote player is constructed:
+	// NewRemotePlayer starts the event-consumer goroutine, which can render
+	// the already-buffered snapshot frame before this constructor returns.
+	// The consumer reads n.App through rerender, so a late assignment would
+	// race the goroutine (and could nil-dereference it).
+	n.App = app
+
+	// No engine: the wrapper is built directly around the remote data surface.
+	n.player = &Player{
+		netease: n,
+		svc:     newMenuServices(n),
+		remote:  NewRemotePlayer(n, client),
+	}
+	// No framework context: every service lookup (track/lyric/user/login/...)
+	// degrades to nil through the menuServices accessor, which is exactly the
+	// degradation connect mode wants.
+	n.ctx = nil
+
+	// The shell needs the local browsing/search providers that the skipped
+	// frontend scope would have registered (B10). Only providers whose types
+	// live in ui can be re-provided here (search page); menu types that live in
+	// the plugins (search_result / detail jumps) stay absent and degrade to
+	// buildMenuOrToast toasts.
+	registerConnectProviders()
+
+	// Renderers: lyric/spectrum skipped (B5/B7), cover empty (B6). The svc is
+	// resolved through newMenuServices(n) so every accessor is nil-degraded.
+	n.songInfoRenderer = NewSongInfoRenderer(newMenuServices(n), n.player)
+	n.progressRenderer = NewProgressRenderer(newMenuServices(n), n.player)
+	n.coverRenderer = NewCoverRenderer(newMenuServices(n), connectCoverState{p: n.player})
+
+	// Shell-owned search singleton (same as standalone). The provider was
+	// registered by registerConnectProviders; the page renders locally and the
+	// search API call is local — only the menu-driven result flow (plugin
+	// menus) degrades.
+	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
+	if err != nil {
+		slog.Error("build connect search page failed", slogx.Error(err))
+		return nil
+	}
+	n.search = searchPage.(*SearchPage)
+
+	return n
+}
+
+// ConnectMode reports whether the shell runs in TUI-connect remote-shell mode
+// (--frontend=tui --mode=connect): the player data surface is RemotePlayer and
+// no engine/services/Startup exist (D-TC-1/B9).
+func (n *Netease) ConnectMode() bool {
+	return n.player != nil && n.player.remote != nil
+}
+
 func (n *Netease) Components() []model.Component {
 	var components []model.Component
+	if n.ConnectMode() {
+		// TUI-connect renderer set (D-TC-3): lyric and spectrum renderers are
+		// not built (B5/B7); song info + progress read the remote state; the
+		// cover renderer is added but renders empty (PicUrl stripped, B6).
+		components = append(components, n.songInfoRenderer, n.progressRenderer)
+		if n.coverRenderer != nil && n.coverRenderer.IsEnabled() {
+			components = append(components, n.coverRenderer)
+		}
+		return components
+	}
 	if n.spectrumRenderer.IsEnabled() {
 		components = append(components, n.spectrumRenderer)
 	}
@@ -189,6 +279,19 @@ func (n *Netease) EffectiveWindowHeight() int {
 
 // ToLoginPage 需要登录的处理
 func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
+	if n.ConnectMode() {
+		// B8: login is owned by the daemon; the TUI shell cannot log the
+		// daemon in (webui-connect's 503 philosophy). Toast and return — the
+		// caller (NeedsAuth operations / menu gating) degrades cleanly.
+		if n.App != nil {
+			n.Notify(model.NotificationSpec{
+				Level:   model.NotificationWarning,
+				Title:   "遥控模式",
+				Message: "登录由 daemon 管理，请在 daemon 所在会话登录",
+			})
+		}
+		return nil, nil
+	}
 	page := buildPageOrToast("login", LoginPageOpts{Netease: n})
 	if page == nil {
 		return nil, nil
@@ -200,6 +303,21 @@ func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) 
 
 // ToSearchPage 搜索
 func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
+	if n.ConnectMode() {
+		// The menu-driven search flow (search_type / search_result menus and
+		// the detail-jump menus) is plugin-provided and absent in connect mode
+		// (B10: frontend scope skipped), so the search page dead-ends. Toast
+		// instead of opening it (roadmap 8.4 keeps the search API local, but
+		// the result menus need the plugin scope).
+		if n.App != nil {
+			n.Notify(model.NotificationSpec{
+				Level:   model.NotificationWarning,
+				Title:   "遥控模式",
+				Message: "搜索功能不可用：搜索结果菜单由本地插件提供，connect 模式未加载",
+			})
+		}
+		return nil, nil
+	}
 	n.search.searchType = searchType
 	n.coverRenderer.ClearDisplayed()
 	return n.search, tickSearch(time.Nanosecond)
@@ -208,6 +326,19 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 func (n *Netease) InitHook(_ *model.App) {
 	// 注册 TUI 内 toast 回调（此时 App.Run 已启动，program 就绪）
 	n.registerToastHook()
+
+	if n.ConnectMode() {
+		// B9: no engine Startup. The daemon connection + subscription were
+		// established by RunConnect (DialSubscribe) and the remote player's
+		// event consumer goroutine is already running; the shell was fully
+		// assembled in NewNeteaseRemote. Nothing further to run.
+		// The App is running now (InitHook fires after App.Run started the
+		// program), so the consumer's render pokes can reach the shell.
+		if n.player != nil && n.player.remote != nil {
+			n.player.remote.markRunning()
+		}
+		return
+	}
 
 	// The engine owns the startup sequence (jar → user restore → playlist →
 	// hooks → autoplay; see core.Startup). It runs in its own goroutine, and

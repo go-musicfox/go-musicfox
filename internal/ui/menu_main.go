@@ -124,8 +124,10 @@ func orderMainMenuEntries(entries []mainMenuEntry) []mainMenuEntry {
 
 	// relaxed is on when any plugin is disabled in [plugins]: the disabled
 	// plugin's items are not registered at all (P5 disabled = nonexistent), so
-	// dependent After anchors can legitimately go missing.
-	relaxed := configs.AppConfig != nil && len(configs.AppConfig.Plugins.Disabled) > 0
+	// dependent After anchors can legitimately go missing. The TUI-connect
+	// shell (S6) is always relaxed: the frontend scope that registers the 9
+	// business plugins is skipped (B10), so every plugin anchor is absent.
+	relaxed := connectMode || (configs.AppConfig != nil && len(configs.AppConfig.Plugins.Disabled) > 0)
 
 	// Index entries by their After anchor; entries with a missing anchor are
 	// deferred (relaxed mode re-anchors them at the tail). Duplicate anchors
@@ -150,7 +152,11 @@ func orderMainMenuEntries(entries []mainMenuEntry) []mainMenuEntry {
 		if !relaxed {
 			panic("main menu chain: After anchor not registered: " + strings.Join(missing, ", "))
 		}
-		slog.Warn("main menu chain: After anchor not registered (plugin disabled?), re-anchoring entries to the chain tail", "missing", strings.Join(missing, ", "))
+		if connectMode {
+			slog.Warn("main menu chain: plugin anchors absent in connect mode (frontend scope skipped), re-anchoring entries to the chain tail", "missing", strings.Join(missing, ", "))
+		} else {
+			slog.Warn("main menu chain: After anchor not registered (plugin disabled?), re-anchoring entries to the chain tail", "missing", strings.Join(missing, ", "))
+		}
 	}
 
 	ordered := make([]mainMenuEntry, 0, len(entries))
