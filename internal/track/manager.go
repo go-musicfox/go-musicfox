@@ -37,6 +37,10 @@ type persistJob struct {
 
 // Manager 是 songmanager 包的统一入口和协调器。
 // 它为上层应用提供了简单、健壮且并发安全的接口。
+//
+// Manager 实现了 PlayableSourceProvider：内置的 downloaded -> cached ->
+// remote 三源解析即网易云音源的 provider 实现。外部音源 provider 可通过
+// WithPlayableSourceProvider 注入替换默认行为。
 type Manager struct {
 	cacher      *Cacher
 	fetcher     Fetcher
@@ -47,7 +51,13 @@ type Manager struct {
 	quality     service.SongQualityLevel
 	sfGroup     singleflight.Group
 	cloudUserID atomic.Int64
+
+	// provider 为可注入的自定义音源 provider；nil 时使用内置网易云三源逻辑。
+	provider PlayableSourceProvider
 }
+
+// 编译期断言：Manager 实现 PlayableSourceProvider（内置网易云音源 provider）。
+var _ PlayableSourceProvider = (*Manager)(nil)
 
 // ManagerOption 是用于配置 Manager 的函数类型。
 type ManagerOption func(*Manager)
@@ -111,6 +121,14 @@ func WithFetcher(fetcher Fetcher) ManagerOption {
 	}
 }
 
+// WithPlayableSourceProvider 是一个配置选项，用于注入自定义音源 provider。
+// 不注入时使用内置的网易云三源（downloaded -> cached -> remote）逻辑。
+func WithPlayableSourceProvider(provider PlayableSourceProvider) ManagerOption {
+	return func(m *Manager) {
+		m.provider = provider
+	}
+}
+
 // WithTagger 是一个配置选项，用于提供一个自定义的 Tagger 实例。
 func WithTagger(tagger Tagger) ManagerOption {
 	return func(m *Manager) {
@@ -141,7 +159,12 @@ func WithDownloadLyricDir(dir string) ManagerOption {
 
 // ResolvePlayableSource 是 Manager 最核心的公共方法。
 // 它解析一首歌的最佳可播放源，查找顺序: 已下载文件 -> 缓存文件 -> 远程网络。
+// 注入自定义 PlayableSourceProvider 时，解析委托给该 provider。
 func (m *Manager) ResolvePlayableSource(ctx context.Context, song structs.Song) (PlayableSource, error) {
+	if m.provider != nil {
+		return m.provider.ResolvePlayableSource(ctx, song)
+	}
+
 	source, err := m.resolveSongSource(ctx, song)
 	if err != nil {
 		return PlayableSource{}, err

@@ -23,6 +23,7 @@ type Config struct {
 	Reporter    ReporterConfig    `koanf:"reporter"`
 	Keybindings KeybindingsConfig `koanf:"keybindings"`
 	Share       map[string]string `koanf:"share"`
+	Plugins     PluginsConfig     `koanf:"plugins"`
 }
 
 func (cfg *Config) FillToModelOpts(opts *model.Options) {

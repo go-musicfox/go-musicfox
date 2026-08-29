@@ -4,10 +4,8 @@ import (
 	"image/color"
 	"testing"
 
-	"charm.land/bubbles/v2/textinput"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/anhoder/foxful-cli/util"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -19,12 +17,13 @@ func TestCustomPagesFillExplicitAppBackground(t *testing.T) {
 
 	login := NewLoginPage(netease)
 	pages := map[string]model.Page{
-		"search":             NewSearchPage(netease),
-		"login":              login,
-		"qr-login":           NewQRLoginPage(netease, login, nil),
-		"lastfm-auth":        NewLastfmAuthPage(netease),
-		"lastfm-qr-auth":     NewLastfmQRAuthPage(netease, login, nil),
-		"lastfm-api-account": newLastfmCustomAPIPageForBackgroundTest(netease),
+		"search":   NewSearchPage(netease),
+		"login":    login,
+		"qr-login": NewQRLoginPage(netease, login, nil),
+		// The Last.fm pages moved into the internal/plugins/lastfm plugin
+		// (Phase 3.9) and are no longer constructible in this ui test binary
+		// (ui must not import plugins); their background rendering goes through
+		// the same shared FinishCustomPageView helper covered here.
 	}
 	for name, page := range pages {
 		t.Run(name, func(t *testing.T) {
@@ -37,12 +36,9 @@ func TestCustomPagesLeaveTransparentAppBackgroundUnpainted(t *testing.T) {
 	app, netease := newFormPageTestApp(t)
 	login := NewLoginPage(netease)
 	pages := map[string]model.Page{
-		"search":             NewSearchPage(netease),
-		"login":              login,
-		"qr-login":           NewQRLoginPage(netease, login, nil),
-		"lastfm-auth":        NewLastfmAuthPage(netease),
-		"lastfm-qr-auth":     NewLastfmQRAuthPage(netease, login, nil),
-		"lastfm-api-account": newLastfmCustomAPIPageForBackgroundTest(netease),
+		"search":   NewSearchPage(netease),
+		"login":    login,
+		"qr-login": NewQRLoginPage(netease, login, nil),
 	}
 	for name, page := range pages {
 		t.Run(name, func(t *testing.T) {
@@ -55,25 +51,6 @@ func TestCustomPagesLeaveTransparentAppBackgroundUnpainted(t *testing.T) {
 				t.Fatalf("bottom-right background = %#v, want unset", cell.Style.Bg)
 			}
 		})
-	}
-}
-
-func newLastfmCustomAPIPageForBackgroundTest(netease *Netease) *LastfmCustomApiPage {
-	keyInput := textinput.New()
-	keyInput.Placeholder = " Key"
-	secretInput := textinput.New()
-	secretInput.Placeholder = " Secret"
-
-	return &LastfmCustomApiPage{
-		netease:      netease,
-		menuTitle:    &model.MenuItem{Title: "Lastfm API account"},
-		keyInput:     keyInput,
-		secretInput:  secretInput,
-		submitButton: util.GetBlurredSubmitButton(),
-		reloadButton: util.GetBlurredButton("重载"),
-		clearButton:  util.GetBlurredButton("清空"),
-		reloadText:   "重载",
-		clearText:    "清空",
 	}
 }
 

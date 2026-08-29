@@ -1,57 +1,52 @@
+// Package ui implements the foxful-cli TUI layer: the thin-shell Netease
+// coordinator (navigation/assembly/event dispatch), provider-registered menus
+// and pages, and the lyric/cover/spectrum renderers composed by the shell.
+// Business capabilities are resolved by name through internal/framework.
 package ui
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/buger/jsonparser"
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/go-musicfox/netease-music/service"
-	"github.com/go-musicfox/netease-music/util"
-	neteaseutil "github.com/go-musicfox/netease-music/util"
-	cookiejar "github.com/juju/persistent-cookiejar"
-	"github.com/pkg/errors"
 
-	"github.com/go-musicfox/go-musicfox/internal/automator"
-	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
-	"github.com/go-musicfox/go-musicfox/internal/lastfm"
-	"github.com/go-musicfox/go-musicfox/internal/lyric"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/headless"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
-	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils/app"
-	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
-	"github.com/go-musicfox/go-musicfox/utils/likelist"
-	"github.com/go-musicfox/go-musicfox/utils/notify"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	"github.com/go-musicfox/go-musicfox/utils/version"
 )
 
-var appCookieJar *cookiejar.Jar
+// connectMode marks the TUI-connect remote-shell assembly (S6). It relaxes the
+// main-menu after-anchor chain assertions (the 9 business plugins never Start,
+// so their anchor keys are absent and the built-in 帮助 entry's after=last_fm
+// anchor legitimately goes missing) and is set by the two shell constructors:
+// NewNeteaseRemote → true, NewNetease → false. Package-level because the menu
+// chain walk (orderMainMenuEntries) has no shell context.
+var connectMode bool
 
 type Netease struct {
-	user   *structs.User
-	lastfm *lastfm.Client
+	user *structs.User
+
+	// engine owns the UI-free service assembly, startup sequence and cleanup
+	// (internal/core). The shell shares its user slot with the engine and wraps
+	// the core player with the TUI observer/loading/locator seams below.
+	engine *core.Engine
 
 	*model.App
-	login  *LoginPage
 	search *SearchPage
-
-	lyricService *lyric.Service
 
 	lyricRenderer       *LyricRenderer
 	songInfoRenderer    *SongInfoRenderer
@@ -60,65 +55,212 @@ type Netease struct {
 	spectrumRenderer    *SpectrumRenderer
 	spectrogramRenderer *SpectrogramRenderer
 
-	player       *Player
-	shareSvc     *composer.ShareService
-	trackManager *track.Manager
+	player *Player
+
+	// frontendScope is the TUI frontend scope (P5): it mounts uiServicesPlugin
+	// now and the 9 business plugins in P5-2. Owned by the shell — CloseHook
+	// disposes it after the engine root scope cleanup.
+	frontendScope *framework.Scope
+
+	// wasmScope is the frontend-scope child (P6) that owns the app-wide WASM
+	// manager (wasm.ManagerPlugin) and the dynamically loaded per-directory
+	// wasmPlugin adapters (added by loadWasmPlugins via wasm.LoadIntoScope). Its
+	// lifecycle rides the frontend scope's Dispose in CloseHook, so the shell
+	// keeps no separate manager reference/cleanup.
+	wasmScope *framework.Scope
+
+	// ctx is the app-wide service registry context owned by the engine.
+	ctx *framework.Context
 
 	playbarHoveredElement PlaybarElement
 
 	// Theme switch notification: update in-place when visible, recreate when expired.
 	themeNotifID    model.NotificationID
 	themeNotifTimer *time.Timer
-
-	desktopLyrics desktop_lyrics.Controller
 }
 
 func NewNetease(app *model.App) *Netease {
+	connectMode = false
 	n := new(Netease)
-	n.lastfm = lastfm.NewClient()
 
-	quality := configs.AppConfig.Player.SongLevel
-	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
-	nameGen := composer.NewFileNameGenerator()
-	nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
-	nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
-	n.trackManager = track.NewManager(
-		track.WithNameGenerator(nameGen),
-		track.WithCacher(track.NewCacher(maxSizeMB)),
-		track.WithSongQuality(quality))
+	// The user slot must exist before the engine captures &n.user.
+	n.user = nil
 
-	showTranslation := configs.AppConfig.Main.Lyric.ShowTranslation
-	offset := time.Duration(configs.AppConfig.Main.Lyric.Offset) * time.Millisecond
-	showLyric := configs.AppConfig.Main.Lyric.Show
-	skipParseErr := configs.AppConfig.Main.Lyric.SkipParseErr
+	// The playback coordinator and its service assembly are UI-free: build the
+	// core engine first (it owns the framework context/scope, the service
+	// instances and the user slot), then wrap it with the TUI shell
+	// (observer/loading/locator wiring happens in NewPlayer below).
+	n.engine = core.NewEngine(core.EngineOptions{User: &n.user, DesktopLyrics: true})
+	n.player = NewPlayer(n, n.engine.Player())
+	n.ctx = n.engine.Ctx()
 
-	n.lyricService = lyric.NewService(n.trackManager, showTranslation, offset, skipParseErr)
-	n.lyricService.EnableYRC(true) // Enable word-by-word lyrics
-
-	// Initialize desktop lyrics
-	n.desktopLyrics = desktop_lyrics.NewController(configs.AppConfig.Main.Lyric.DesktopLyrics)
-
-	n.player = NewPlayer(n, n.lyricService)
-
-	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
-	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
-	n.progressRenderer = NewProgressRenderer(n, n.player)
-	n.coverRenderer = NewCoverRenderer(n, n.player)
+	// The framework context must exist before any newMenuServices call: the
+	// accessor snapshots n.ctx at construction time (Player and renderers below
+	// build their svc through it), so a nil ctx would make every service lookup
+	// degrade to nil at play time. Services themselves are registered by the
+	// engine (core) plus registerUIExtraServices below.
+	n.lyricRenderer = NewLyricRenderer(newMenuServices(n), n.engine.LyricService(), configs.AppConfig.Main.Lyric.Show)
+	n.songInfoRenderer = NewSongInfoRenderer(newMenuServices(n), n.player)
+	n.progressRenderer = NewProgressRenderer(newMenuServices(n), n.player)
+	n.coverRenderer = NewCoverRenderer(newMenuServices(n), n.player)
 	n.spectrumRenderer = NewSpectrumRenderer(n.player)
 	n.spectrogramRenderer = NewSpectrogramRenderer(n.player)
 
-	n.login = NewLoginPage(n)
-	n.search = NewSearchPage(n)
+	// The engine registers its 8 core services into the app-wide context; the
+	// TUI-only services (coverRenderer/menuRegistry/pageRegistry) are provided
+	// by the frontend scope's uiServicesPlugin, and the 9 business plugins
+	// (mounted by NewFrontendScope, filtered by [plugins] disabled) register
+	// their menus/pages/main-menu items inside their own Start. The scope Start
+	// is synchronous and replaces the former direct registerUIExtraServices +
+	// init()-time plugin registration with identical effect.
+	n.frontendScope = NewFrontendScope(n.engine, n)
+	if err := n.frontendScope.Start(n.ctx); err != nil {
+		slog.Error("framework frontend scope start failed", slogx.Error(err))
+		return nil
+	}
+
+	// The search page is a shell-owned singleton: its wordsInput/result/
+	// searchType state is shared with the SearchResultMenu flow (and operate.go
+	// searchSong), so the shell keeps one instance built through the registry.
+	// The login page is built per-navigation in ToLoginPage (no cross-component
+	// state to preserve), so the shell holds no login field. Since P5 the
+	// "search" page provider is registered by the search plugin's Start (inside
+	// the frontend scope above), so this build must run after scope.Start.
+	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
+	if err != nil {
+		slog.Error("build search page failed", slogx.Error(err))
+		return nil
+	}
+	n.search = searchPage.(*SearchPage) // BuildPage returns model.Page; concrete type asserted back
 	n.App = app
 
-	n.shareSvc = composer.NewShareService()
-	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
+	// WASM plugins must register here (inside NewNetease, before the main menu
+	// is constructed in internal/commands) so their command providers and
+	// main-menu items participate in the after-anchor chain from the start.
+	// loadWasmPlugins mounts one wasmPlugin adapter per loaded plugin directory
+	// into the wasm sub-scope (which the frontend scope Start already brought
+	// up); the commands land in the frontend registry via the tui sink.
+	n.loadWasmPlugins(context.Background())
+
+	// Track-B commands become TUI CommandMenu entries after WASM plugins load
+	// (and before the main menu is constructed in internal/commands), so their
+	// providers and main-menu items join the after-anchor chain from the start.
+	registerCommandMenus()
+
+	// Startup completeness: a provider set missing any canonical key is a
+	// programmer error; fail loudly instead of surfacing it at navigation time.
+	// The assertions run after every contribution is registered (frontend scope
+	// business-plugin Start → WASM → registerCommandMenus) and before the main
+	// menu is constructed downstream (internal/ui/frontend.go NewMainMenu).
+	// `expectedMenuKeys`/`expectedPageKeys` only lock the built-in set — keys
+	// supplied by enabled plugins are intentionally absent.
+	AssertMenuRegistryComplete(expectedMenuKeys...)
+	AssertPageRegistryComplete(expectedPageKeys...)
 
 	return n
 }
 
+// NewNeteaseRemote is the TUI-connect shell constructor (D-TC-1 方案 B): it
+// shares the standalone assembly shape but builds no engine, registers no
+// business services and runs no Startup sequence (B9). The player data surface
+// is RemotePlayer (subscribed to the daemon via client); the embedded
+// *core.Player is never constructed, so the ui.Player shadowing methods (see
+// player.go) are the only reachable surface — anything missed would
+// nil-dereference as the sentinel panic. Renderer degradation: lyric and
+// spectrum renderers are skipped (B5/B7), the cover renderer is built with a
+// PicUrl-stripped state (empty render, B6), and song info + progress renderers
+// read the remote state.
+//
+// The frontend scope (S6-R1) mounts the 8 engine-independent business plugins
+// (checkupdate/search/dj/album/artist/recommend/playlist/song; lastfm is
+// excluded — its Deps needs engine services), so the local browsing tree
+// (search / ranks / playlists / album / artist / DJ / recommend) is available
+// in the remote shell per roadmap §8.4. The WASM sub-scope, loadWasmPlugins
+// and registerCommandMenus stay skipped (B10: the command surface is disabled
+// in connect mode).
+func NewNeteaseRemote(app *model.App, client *headless.SubscribeClient) *Netease {
+	connectMode = true
+	n := new(Netease)
+	n.user = nil
+
+	// The App must be attached BEFORE the remote player is constructed:
+	// NewRemotePlayer starts the event-consumer goroutine, which can render
+	// the already-buffered snapshot frame before this constructor returns.
+	// The consumer reads n.App through rerender, so a late assignment would
+	// race the goroutine (and could nil-dereference it).
+	n.App = app
+
+	// No engine: the wrapper is built directly around the remote data surface.
+	n.player = &Player{
+		netease: n,
+		svc:     newMenuServices(n),
+		remote:  NewRemotePlayer(n, client),
+	}
+	// No framework context: every service lookup (track/lyric/user/login/...)
+	// degrades to nil through the menuServices accessor, which is exactly the
+	// degradation connect mode wants.
+	n.ctx = nil
+
+	// The connect frontend scope mounts the 8 engine-independent business
+	// plugins (S6-R1). It must start BEFORE BuildPage("search") below: the
+	// search plugin registers the "search" page provider inside its Start.
+	// Started against a nil context — the mounted plugins ignore ctx.
+	n.frontendScope = NewConnectFrontendScope(n)
+	if err := n.frontendScope.Start(nil); err != nil {
+		slog.Error("framework connect frontend scope start failed", slogx.Error(err))
+		return nil
+	}
+
+	// Fallback guard: the "search" page provider normally comes from the
+	// search plugin's Start above; only when [plugins] disabled contains
+	// "search" does the shell re-provide it so the shared search-flow call
+	// sites keep a non-nil singleton.
+	registerConnectProviders()
+
+	// Renderers: lyric/spectrum skipped (B5/B7), cover empty (B6). The svc is
+	// resolved through newMenuServices(n) so every accessor is nil-degraded.
+	n.songInfoRenderer = NewSongInfoRenderer(newMenuServices(n), n.player)
+	n.progressRenderer = NewProgressRenderer(newMenuServices(n), n.player)
+	n.coverRenderer = NewCoverRenderer(newMenuServices(n), connectCoverState{p: n.player})
+
+	// Shell-owned search singleton (same as standalone): the provider was
+	// registered by the search plugin's Start (or the fallback above); the
+	// page renders locally and the search API call is local.
+	searchPage, err := BuildPage("search", SearchPageOpts{Netease: n})
+	if err != nil {
+		slog.Error("build connect search page failed", slogx.Error(err))
+		return nil
+	}
+	n.search = searchPage.(*SearchPage)
+
+	// Startup completeness: the built-in provider set must be complete after
+	// the connect scope Start (the plugin-supplied keys are intentionally not
+	// asserted, mirroring standalone NewNetease).
+	AssertMenuRegistryComplete(expectedMenuKeys...)
+	AssertPageRegistryComplete(expectedPageKeys...)
+
+	return n
+}
+
+// ConnectMode reports whether the shell runs in TUI-connect remote-shell mode
+// (--frontend=tui --mode=connect): the player data surface is RemotePlayer and
+// no engine/services/Startup exist (D-TC-1/B9).
+func (n *Netease) ConnectMode() bool {
+	return n.player != nil && n.player.remote != nil
+}
+
 func (n *Netease) Components() []model.Component {
 	var components []model.Component
+	if n.ConnectMode() {
+		// TUI-connect renderer set (D-TC-3): lyric and spectrum renderers are
+		// not built (B5/B7); song info + progress read the remote state; the
+		// cover renderer is added but renders empty (PicUrl stripped, B6).
+		components = append(components, n.songInfoRenderer, n.progressRenderer)
+		if n.coverRenderer != nil && n.coverRenderer.IsEnabled() {
+			components = append(components, n.coverRenderer)
+		}
+		return components
+	}
 	if n.spectrumRenderer.IsEnabled() {
 		components = append(components, n.spectrumRenderer)
 	}
@@ -156,286 +298,83 @@ func (n *Netease) EffectiveWindowHeight() int {
 
 // ToLoginPage 需要登录的处理
 func (n *Netease) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
-	n.login.AfterLogin = callback
+	// connect mode runs the same flow (TC-6): the LoginPage renders only the
+	// QR entry and the QR page sources the login from the daemon (D-TC-7), so
+	// no connect-specific branch is needed here — the page itself guards
+	// against the engine-dependent local login paths via n.ConnectMode().
+	page := buildPageOrToast("login", LoginPageOpts{Netease: n})
+	if page == nil {
+		return nil, nil
+	}
+	page.(*LoginPage).AfterLogin = callback
 	n.coverRenderer.ClearDisplayed()
-	return n.login, tickLogin(time.Nanosecond)
+	return page, tickLogin(time.Nanosecond)
 }
 
 // ToSearchPage 搜索
 func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
+	// Search is fully local in connect mode (S6-R1): the search plugin is
+	// mounted in the connect frontend scope, so the search page singleton and
+	// the search_type/search_result/detail-jump menus all exist and the search
+	// API call is local (no login required). Same flow as standalone.
 	n.search.searchType = searchType
 	n.coverRenderer.ClearDisplayed()
 	return n.search, tickSearch(time.Nanosecond)
 }
 
 func (n *Netease) InitHook(_ *model.App) {
-	config := configs.AppConfig
-	dataDir := app.DataDir()
-
 	// 注册 TUI 内 toast 回调（此时 App.Run 已启动，program 就绪）
 	n.registerToastHook()
 
-	// 全局文件Jar
-	cookiePath := filepath.Join(dataDir, "cookie")
-	jar, err := cookiejar.New(&cookiejar.Options{
-		Filename: cookiePath,
-	})
-	if err != nil {
-		slog.Warn("检测到旧版或损坏的 Cookie 文件，准备备份并重置", slogx.Error(err))
-
-		// 备份旧文件
-		timestamp := time.Now().Format("20060102-150405")
-		backupPath := fmt.Sprintf("%s.bak.%s", cookiePath, timestamp)
-
-		if renameErr := os.Rename(cookiePath, backupPath); renameErr != nil && !os.IsNotExist(renameErr) {
-			slog.Error("无法备份损坏的 Cookie 文件", slogx.Error(renameErr))
-			n.user = nil
-		} else {
-			slog.Info("已将损坏的 Cookie 文件备份", "backup_path", backupPath)
+	if n.ConnectMode() {
+		// B9: no engine Startup. The daemon connection + subscription were
+		// established by RunConnect (DialSubscribe) and the remote player's
+		// event consumer goroutine is already running; the shell was fully
+		// assembled in NewNeteaseRemote. Nothing further to run.
+		// The App is running now (InitHook fires after App.Run started the
+		// program), so the consumer's render pokes can reach the shell.
+		if n.player != nil && n.player.remote != nil {
+			n.player.remote.markRunning()
 		}
-
-		// 重新初始化
-		jar, err = cookiejar.New(&cookiejar.Options{
-			Filename: cookiePath,
-		})
-		if err != nil {
-			slog.Error("无法创建持久化 Cookie Jar，将降级为临时会话，重启后将丢失登录状态", slogx.Error(err))
-			// 降级为内存模式
-			memJar, _ := cookiejar.New(nil)
-			jar = memJar
-
-			n.user = nil
-		} else {
-			slog.Info("Cookie 文件已重置，请重新登陆")
-		}
+		return
 	}
 
-	appCookieJar = jar
-	util.SetGlobalCookieJar(appCookieJar)
-
-	// 获取用户信息
+	// The engine owns the startup sequence (jar → user restore → playlist →
+	// hooks → autoplay; see core.Startup). It runs in its own goroutine, and
+	// the TUI-only changelog popup runs after the sequence completes — the
+	// whole sequence used to run in one errorx.Go goroutine before the split.
+	ctx := context.Background()
 	errorx.Go(func() {
-		table := storage.NewTable()
+		_ = n.engine.Startup(ctx, n.player)
+		n.maybeShowChangelog()
+	})
+}
 
-		// 获取用户信息
-		if jsonStr, err := table.GetByKVModel(storage.User{}); err == nil {
-			if user, err := structs.NewUserFromLocalJson(jsonStr); err == nil {
-				n.user = &user
-			}
+// maybeShowChangelog shows the changelog popup on the first launch of a new
+// version (or in debug mode). TUI-only; the engine startup is agnostic. Uses an
+// AfterFunc delay so the startup page completes and the main page is entered.
+func (n *Netease) maybeShowChangelog() {
+	table := storage.NewTable()
+
+	// changelog: 首次启动新版本或 debug 模式 → 弹更新日志
+	// 使用 AfterFunc 延迟弹窗，确保 startup 页完成、主页面已进入
+	{
+		slog.Debug("changelog: entering check",
+			"debug", configs.AppConfig.Main.Debug,
+			"appVersion", types.AppVersion,
+			"app", n.App != nil,
+		)
+		jsonStr, _ := table.GetByKVModel(storage.ChangelogSeen{})
+		var seen storage.ChangelogSeen
+		if len(jsonStr) > 0 {
+			_ = json.Unmarshal(jsonStr, &seen)
 		}
-
-		cookieStr := os.Getenv("MUSICFOX_COOKIE")
-		if cookieStr == "" {
-			cookieStr = config.Main.Account.NeteaseCookie
-		}
-		if n.user == nil && cookieStr != "" {
-			// 使用cookie登录
-
-			err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
-			if err != nil {
-				slog.Error("网易云 cookies 格式错误", "error", err)
-			} else {
-				neteaseutil.SetGlobalCookieJar(appCookieJar)
-				newJar, err := apputils.RefreshCookieJar()
-				if err != nil {
-					slog.Error("使用配置项的cookie登录/刷新失败，将以游客模式启动", slogx.Error(err))
-					n.user = nil
-				} else {
-					appCookieJar = newJar
-					neteaseutil.SetGlobalCookieJar(appCookieJar)
-
-					// 先保存 cookie，确保 token 刷新成功后 cookie 被持久化
-					// 即使后续 LoginCallback 失败，cookie 也已保存
-					if err := appCookieJar.Save(); err != nil {
-						slog.Warn("持久化 Cookie 失败", slogx.Error(err))
-					}
-
-					if err := n.LoginCallback(); err != nil {
-						slog.Warn("使用配置项的cookie获取用户信息失败", slogx.Error(err))
-						n.user = nil
-					}
-				}
-			}
-		}
-
-		if n.user != nil {
-			newJar, err := apputils.RefreshCookieJar()
-			if err != nil {
-				slog.Error("Token 刷新失败，Cookie已彻底失效，降级为游客模式", slogx.Error(err))
-				n.user = nil
-				_ = table.DeleteByKVModel(storage.User{})
-				_ = os.Remove(cookiePath)
-			} else {
-				appCookieJar = newJar
-				neteaseutil.SetGlobalCookieJar(appCookieJar)
-				slog.Info("Token 刷新成功~")
-
-				// 先保存 cookie，确保 token 刷新成功后 cookie 被持久化
-				// 即使后续 LoginCallback 失败，cookie 也已保存
-				if err := appCookieJar.Save(); err != nil {
-					slog.Warn("持久化 Cookie 失败", slogx.Error(err))
-				}
-
-				if err := n.LoginCallback(); err != nil {
-					slog.Warn("触发登录回调失败", slogx.Error(err))
-				}
-			}
-		}
-
-		cloudUserID := int64(0)
-		if n.user != nil {
-			cloudUserID = n.user.UserId
-		}
-		n.trackManager.SetCloudUserID(cloudUserID)
-
-		// 刷新界面用户名
-		n.MustMain().RefreshMenuTitle()
-
-		// 获取播放模式
-		if jsonStr, err := table.GetByKVModel(storage.PlayMode{}); err == nil && len(jsonStr) > 0 {
-			var playMode types.Mode
-			if err = json.Unmarshal(jsonStr, &playMode); err == nil {
-				n.player.SetMode(playMode)
-			}
-		}
-
-		// 获取音量
-		if jsonStr, err := table.GetByKVModel(storage.Volume{}); err == nil && len(jsonStr) > 0 {
-			var volume int
-			if err = json.Unmarshal(jsonStr, &volume); err == nil {
-				v, ok := n.player.Player.(storage.VolumeStorable)
-				if ok {
-					v.SetVolume(volume)
-				}
-			}
-		}
-
-		// 加载播放列表状态
-		if err := n.player.playlistManager.LoadState(); err != nil {
-			// 如果加载失败，记录错误但不影响启动
-			slog.Warn("Failed to load playlist state", slogx.Error(err))
-		}
-		n.Rerender(false)
-
-		// 获取扩展信息
-		{
-			var (
-				extInfo    storage.ExtInfo
-				needUpdate = true
-			)
-			jsonStr, _ := table.GetByKVModel(extInfo)
-			if len(jsonStr) != 0 {
-				if err := json.Unmarshal(jsonStr, &extInfo); err == nil && version.CompareVersion(extInfo.StorageVersion, types.AppVersion, true) {
-					needUpdate = false
-				}
-			}
-			if needUpdate {
-				// 删除旧notifier
-				_ = os.RemoveAll(filepath.Join(dataDir, "musicfox-notifier.app"))
-
-				// 删除旧logo
-				_ = os.Remove(filepath.Join(dataDir, types.DefaultNotifyIcon))
-
-				extInfo.StorageVersion = types.AppVersion
-				_ = table.SetByKVModel(extInfo, extInfo)
-			}
-		}
-
-		// 刷新like list
-		if n.user != nil {
-			likelist.RefreshLikeList(n.user.UserId)
-			n.Rerender(false)
-		}
-
-		// 签到
-		if config.Startup.SignIn {
-			var lastSignIn int
-			if jsonStr, err := table.GetByKVModel(storage.LastSignIn{}); err == nil && len(jsonStr) > 0 {
-				_ = json.Unmarshal(jsonStr, &lastSignIn)
-			}
-			today, err := strconv.Atoi(time.Now().Format("20060102"))
-			if n.user != nil && err == nil && lastSignIn != today {
-				var notifyMsg string
-				// 手机签到
-				signInService := service.DailySigninService{}
-				signInService.Type = "0"
-				signInService.DailySignin()
-				notifyMsg += "手机✅ "
-				// PC签到
-				signInService.Type = "1"
-				signInService.DailySignin()
-				notifyMsg += "PC✅ "
-				// 云贝签到
-				yunbeiService := service.YunbeiService{}
-				result, err := yunbeiService.Sign()
-
-				var yunbeiResult string
-				if err != nil {
-					slog.Error("云贝签到网络/接口错误", slogx.Error(err))
-					yunbeiResult = "云贝:异常❌"
-				} else if result.Code != 200 {
-					slog.Warn("云贝签到返回非200", "code", result.Code, "msg", result.Message)
-					yunbeiResult = "云贝:失败❌"
-				} else {
-					if result.Data.YunbeiNum > 0 {
-						yunbeiResult = fmt.Sprintf("云贝:+%d✅", result.Data.YunbeiNum)
-						slog.Info("云贝签到成功", "数量", result.Data.YunbeiNum)
-					} else {
-						yunbeiResult = "云贝:无奖励✅"
-					}
-				}
-				notifyMsg += yunbeiResult
-
-				_ = table.SetByKVModel(storage.LastSignIn{}, today)
-				notify.Notify(notify.NotifyContent{
-					Title:   "自动签到完成",
-					Text:    notifyMsg,
-					Url:     types.AppGithubUrl,
-					GroupId: types.GroupID,
-					Level:   notify.ToastSuccess,
-				})
-			}
-		}
-
-		// 检查更新
-		if config.Startup.CheckUpdate {
-			if ok, newVersion := version.CheckUpdate(); ok {
-				notify.Notify(newVersionNotifyContent(newVersion))
-			}
-		}
-
-		// 自动播放
-		if config.Autoplay.Enable {
-			autoPlayer := automator.NewAutoPlayer(n.user, n.player, config.Autoplay)
-			if err := autoPlayer.Start(); err != nil {
-				slog.Error("自动播放失败", slogx.Error(err))
-				notify.Notify(notify.NotifyContent{
-					Title: "自动播放失败",
-					Text:  err.Error(),
-					Level: notify.ToastError,
-				})
-			}
-		}
-
-		// changelog: 首次启动新版本或 debug 模式 → 弹更新日志
-		// 使用 AfterFunc 延迟弹窗，确保 startup 页完成、主页面已进入
-		{
-			slog.Debug("changelog: entering check",
-				"debug", configs.AppConfig.Main.Debug,
-				"appVersion", types.AppVersion,
-				"app", n.App != nil,
-			)
-			jsonStr, _ := table.GetByKVModel(storage.ChangelogSeen{})
-			var seen storage.ChangelogSeen
-			if len(jsonStr) > 0 {
-				_ = json.Unmarshal(jsonStr, &seen)
-			}
-			shouldShow := configs.AppConfig.Main.Debug || seen.Version == "" || version.CompareVersion(types.AppVersion, seen.Version, false)
-			slog.Debug("changelog: shouldShow",
-				"shouldShow", shouldShow,
-				"debug", configs.AppConfig.Main.Debug,
-				"seenVersion", seen.Version,
-			)
+		shouldShow := configs.AppConfig.Main.Debug || seen.Version == "" || version.CompareVersion(types.AppVersion, seen.Version, false)
+		slog.Debug("changelog: shouldShow",
+			"shouldShow", shouldShow,
+			"debug", configs.AppConfig.Main.Debug,
+			"seenVersion", seen.Version,
+		)
 		if shouldShow {
 			if !configs.AppConfig.Main.Debug {
 				if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
@@ -444,23 +383,29 @@ func (n *Netease) InitHook(_ *model.App) {
 					slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
 				}
 			}
-				app := n.App
-				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
-				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
-					slog.Debug("changelog: AfterFunc triggered, showing popup")
-					showChangelogPopup(app)
-				})
-			}
+			app := n.App
+			slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
+			time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
+				slog.Debug("changelog: AfterFunc triggered, showing popup")
+				showChangelogPopup(app)
+			})
 		}
-	})
+	}
 }
 
 func (n *Netease) CloseHook(_ *model.App) {
-	_ = n.player.Close()
-	n.lastfm.Close()
+	// The frontend scope owns the TUI-only plugins (uiServicesPlugin, the 9
+	// business plugins and the WASM sub-scope — the manager + plugin instances
+	// are closed by the recursive child-scope Dispose). Dispose it before the
+	// engine's root scope so frontend plugins are finalized ahead of the
+	// service constructors (docs/plugin_ecosystem.md §五 step 8).
+	if n.frontendScope != nil {
+		_ = n.frontendScope.Dispose()
+	}
 
-	if n.desktopLyrics != nil {
-		n.desktopLyrics.Close()
+	// The engine owns the player/lastfm/desktopLyrics/scope cleanup.
+	if n.engine != nil {
+		_ = n.engine.Close()
 	}
 
 	if n.coverRenderer != nil {
@@ -470,113 +415,21 @@ func (n *Netease) CloseHook(_ *model.App) {
 	CloseGohookLogger()
 }
 
+// Ctx returns the app-wide framework context holding the service registry.
+func (n *Netease) Ctx() *framework.Context {
+	return n.ctx
+}
+
 func (n *Netease) Player() *Player {
 	return n.player
 }
 
-// DesktopLyrics returns the desktop lyrics controller.
+// DesktopLyrics returns the desktop lyrics controller (owned by the engine).
 func (n *Netease) DesktopLyrics() desktop_lyrics.Controller {
-	return n.desktopLyrics
-}
-
-// GetDesktopLyricsLines returns the current lyrics lines for desktop display.
-// Returns the current line, the next line (with word-level data when YRC is available),
-// and the current index.
-func (n *Netease) GetDesktopLyricsLines() (curLine, nextLine desktop_lyrics.LyricLine, currentIndex int) {
-	if n.desktopLyrics == nil || n.lyricService == nil {
-		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
+	if n.engine == nil {
+		return nil
 	}
-
-	state := n.lyricService.State()
-	if !state.IsRunning {
-		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
-	}
-
-	// Helper to build display text including translation
-	buildText := func(content, translation string) string {
-		if translation != "" {
-			return content + "\n" + translation
-		}
-		return content
-	}
-
-	if state.YRCEnabled && len(state.YRCLines) > 0 {
-		idx := state.YRCLineIndex
-		if idx < 0 {
-			idx = 0
-		}
-		if idx >= len(state.YRCLines) {
-			idx = len(state.YRCLines) - 1
-		}
-
-		// Current line — with word data
-		if idx < len(state.YRCLines) {
-			line := state.YRCLines[idx]
-			var sb strings.Builder
-			words := make([]desktop_lyrics.LyricWord, len(line.Words))
-			for i, w := range line.Words {
-				sb.WriteString(w.Word)
-				words[i] = desktop_lyrics.LyricWord{
-					Word:      w.Word,
-					StartTime: w.StartTime,
-					EndTime:   w.EndTime,
-				}
-			}
-			curLine = desktop_lyrics.LyricLine{Text: buildText(sb.String(), line.TranslatedLyric), Words: words}
-		}
-
-		// Next line
-		nextIdx := idx + 1
-		if nextIdx < len(state.YRCLines) {
-			line := state.YRCLines[nextIdx]
-			var sb strings.Builder
-			nextWords := make([]desktop_lyrics.LyricWord, len(line.Words))
-			for i, w := range line.Words {
-				sb.WriteString(w.Word)
-				nextWords[i] = desktop_lyrics.LyricWord{
-					Word:      w.Word,
-					StartTime: w.StartTime,
-					EndTime:   w.EndTime,
-				}
-			}
-			nextLine = desktop_lyrics.LyricLine{Text: buildText(sb.String(), line.TranslatedLyric), Words: nextWords}
-		}
-
-		return curLine, nextLine, idx
-
-	} else if len(state.Fragments) > 0 {
-		idx := state.CurrentIndex
-		if idx < 0 {
-			idx = 0
-		}
-		if idx >= len(state.Fragments) {
-			idx = len(state.Fragments) - 1
-		}
-
-		// Current line — plain text (no word data for LRC)
-		if idx < len(state.Fragments) {
-			f := state.Fragments[idx]
-			trans := ""
-			if state.ShowTranslation {
-				trans = state.TranslatedFragments[f.StartTimeMs]
-			}
-			curLine = desktop_lyrics.LyricLine{Text: buildText(f.Content, trans)}
-		}
-
-		// Next line
-		if idx+1 < len(state.Fragments) {
-			f := state.Fragments[idx+1]
-			trans := ""
-			if state.ShowTranslation {
-				trans = state.TranslatedFragments[f.StartTimeMs]
-			}
-			nextLine = desktop_lyrics.LyricLine{Text: buildText(f.Content, trans)}
-		}
-
-		return curLine, nextLine, idx
-	}
-
-	return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
+	return n.engine.DesktopLyrics()
 }
 
 // GetCoverWidth returns the cover image width in columns, or 0 if cover is disabled.
@@ -602,48 +455,6 @@ func (n *Netease) GetLyricPosition() (startRow int, lineCount int) {
 		return 0, 0
 	}
 	return n.lyricRenderer.GetLyricPosition()
-}
-
-func (n *Netease) LoginCallback() error {
-	code, resp := (&service.UserAccountService{}).AccountInfo()
-	if code != 200 {
-		return errors.Errorf("accountInfo code: %f, resp: %s", code, string(resp))
-	}
-
-	user, err := structs.NewUserFromJsonForLogin(resp)
-	if err != nil {
-		return errors.WithMessagef(err, "parse user err, code: %f, resp: %s", code, string(resp))
-	}
-	n.user = &user
-	n.trackManager.SetCloudUserID(user.UserId)
-
-	// 获取我喜欢的歌单
-	userPlaylists := service.UserPlaylistService{
-		Uid:    strconv.FormatInt(n.user.UserId, 10),
-		Limit:  strconv.Itoa(1),
-		Offset: strconv.Itoa(0),
-	}
-	_, response := userPlaylists.UserPlaylist()
-	n.user.MyLikePlaylistID, err = jsonparser.GetInt(response, "playlist", "[0]", "id")
-	if err != nil {
-		slog.Warn("获取歌单ID失败", slogx.Error(err), slog.String("response", string(response)))
-	}
-
-	// 写入本地数据库
-	table := storage.NewTable()
-	_ = table.SetByKVModel(storage.User{}, user)
-
-	// 持久化存储
-	if err := appCookieJar.Save(); err != nil {
-		slog.Error("登录成功，但持久化 cookie 到文件失败", slogx.Error(err))
-	} else {
-		slog.Info("登录成功，会话Cookie成功保存")
-	}
-
-	// 更新like list
-	go likelist.RefreshLikeList(user.UserId)
-
-	return nil
 }
 
 // showChangelogPopup reads the embedded CHANGELOG.md and displays it as a markdown popup.
@@ -692,10 +503,10 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ss := registry.CurrentStyleSet(isDark)
 		if ss != nil {
 			style.SetStyleSet(*ss)
-			n.App.SetStyleSet(*ss)
+			n.SetStyleSet(*ss)
 		}
 		n.notifyThemeSwitch(n.App, "外观模式已切换", configs.CurrentThemeRegistry().CurrentName(isDark))
-		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
+		return n, tea.Sequence(cmd, n.RerenderCmd(true))
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd

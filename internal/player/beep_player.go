@@ -435,7 +435,9 @@ func (p *beepPlayer) pausedNoLock() {
 		return
 	}
 	p.ctrl.Paused = true
-	p.timer.Pause()
+	if p.timer != nil {
+		p.timer.Pause()
+	}
 	p.setState(types.Paused)
 }
 
@@ -448,6 +450,11 @@ func (p *beepPlayer) Pause() {
 
 func (p *beepPlayer) resumeNoLock() {
 	if types.State(p.state.Load()) == types.Playing {
+		return
+	}
+	// timer is only created once a song is loaded; without it there is
+	// nothing to resume and flipping the state would corrupt the player.
+	if p.timer == nil {
 		return
 	}
 	p.ctrl.Paused = false
@@ -467,7 +474,9 @@ func (p *beepPlayer) stopNoLock() {
 		return
 	}
 	p.ctrl.Paused = true
-	p.timer.Pause()
+	if p.timer != nil {
+		p.timer.Pause()
+	}
 	p.setState(types.Stopped)
 }
 

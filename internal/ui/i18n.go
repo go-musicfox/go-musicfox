@@ -32,6 +32,7 @@ const (
 	MsgLoginCookieInvalid       model.MessageID = "login.error.cookie_invalid"
 	MsgLoginCookieVerifying     model.MessageID = "login.cookie.verifying"
 	MsgLoginCookieRequired      model.MessageID = "login.error.cookie_required"
+	MsgLoginConnectQRHint       model.MessageID = "login.connect.qr_hint"
 
 	MsgLoginWebviewButton      model.MessageID = "login.button.webview"
 	MsgLoginWebviewPageTitle   model.MessageID = "login.webview.page.title"
@@ -131,6 +132,7 @@ var zhMessages = map[model.MessageID]string{
 	MsgLoginCookieInvalid:       "Cookie 格式错误: %w",
 	MsgLoginCookieVerifying:     "正在验证 Cookie...",
 	MsgLoginCookieRequired:      "请输入 Cookie",
+	MsgLoginConnectQRHint:       "遥控模式：扫码登录由 daemon 完成",
 
 	MsgLoginWebviewButton:      "网页登录",
 	MsgLoginWebviewPageTitle:   "网页登录",

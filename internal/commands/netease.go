@@ -1,23 +1,27 @@
+// Package commands implements the CLI subcommands (netease player, reset,
+// config upgrade, notify test).
 package commands
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"strconv"
+	"strings"
 
-	tea "charm.land/bubbletea/v2"
-	"github.com/anhoder/foxful-cli/model"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/gookit/gcli/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/frontend"
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/internal/ui"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
-	neteaseutil "github.com/go-musicfox/netease-music/util"
 )
 
 func NewPlayerCommand() *gcli.Command {
@@ -30,6 +34,59 @@ func NewPlayerCommand() *gcli.Command {
 }
 
 func runPlayer(_ *gcli.Command, _ []string) error {
+	if err := bootstrap(); err != nil {
+		return err
+	}
+	id := resolveFrontendID()
+	fe, ok := frontend.ByID(id)
+	if !ok {
+		return fmt.Errorf("未知前端 %q（可用: %s）", id, strings.Join(frontend.Registered(), ", "))
+	}
+	if GlobalOptions.Once != "" && id != "headless" {
+		return errors.New("--once 仅支持 headless 前端")
+	}
+	// --mode is validated here (standalone|connect; the enumeration is
+	// unchanged). Since S6 the tui frontend also consumes connect — opts.Mode
+	// is dispatched in ui.RunConnect (remote shell over the headless daemon) —
+	// while other frontends keep ignoring the flag.
+	mode := frontend.Mode(GlobalOptions.Mode)
+	switch mode {
+	case "", frontend.ModeStandalone, frontend.ModeConnect:
+	default:
+		return fmt.Errorf("未知模式 %q（可用: standalone|connect）", GlobalOptions.Mode)
+	}
+	return fe.Run(context.Background(), frontend.LaunchOptions{
+		Once:  GlobalOptions.Once,
+		Debug: GlobalOptions.DebugMode,
+		Pprof: GlobalOptions.PProfMode,
+		Mode:  mode,
+	})
+}
+
+// resolveFrontendID 优先级：--frontend CLI ＞ --headless（legacy 别名）
+// ＞ [main] frontend ＞ [main] headless（legacy 配置）＞ 缺省 tui。
+func resolveFrontendID() string {
+	if GlobalOptions.Frontend != "" {
+		return GlobalOptions.Frontend
+	}
+	if GlobalOptions.Headless {
+		return "headless"
+	}
+	if configs.AppConfig != nil {
+		if configs.AppConfig.Main.Frontend != "" {
+			return configs.AppConfig.Main.Frontend
+		}
+		if configs.AppConfig.Main.Headless {
+			return "headless"
+		}
+	}
+	return "tui"
+}
+
+// bootstrap runs the frontend-independent setup shared by the TUI and the
+// headless frontend: pprof, debug log level sync, HTTP timeouts / runewidth
+// and the storage DB manager. Order is preserved from the former inline setup.
+func bootstrap() error {
 	if GlobalOptions.PProfMode {
 		errorx.Go(func() {
 			panic(http.ListenAndServe(":"+strconv.Itoa(configs.AppConfig.Main.Pprof.Port), nil))
@@ -51,56 +108,8 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 	neteaseutil.HTTPClientTimeout = types.AppHttpTimeout
 	runewidth.DefaultCondition.EastAsianWidth = false
 
-	opts := model.DefaultOptions()
-	configs.AppConfig.FillToModelOpts(opts)
-
-	model.Submit = types.SubmitText
-	model.SearchPlaceholder = types.SearchPlaceholder
-	model.SearchResult = types.SearchResult
-	ui.SetupI18n(configs.AppConfig.Main.Locale)
-
 	// DBManager 初始化
 	storage.DBManager = new(storage.LocalDBManager)
 
-	var (
-		netease      = ui.NewNetease(model.NewApp(opts))
-		eventHandler = ui.NewEventHandler(netease)
-	)
-	eventHandler.RegisterGlobalHotkeys(opts)
-	netease.With(
-		model.WithHook(netease.InitHook, netease.CloseHook),
-		model.WithMainMenu(ui.NewMainMenu(netease), &model.MenuItem{Title: "网易云音乐"}),
-		func(options *model.Options) {
-			options.TeaOptions = []tea.ProgramOption{
-				tea.WithHardTabs(false),
-			}
-			options.LocalSearchMenu = ui.NewLocalSearchMenu(netease)
-			options.Components = append(options.Components, netease.Components()...)
-			options.KBControllers = append(options.KBControllers, eventHandler)
-			options.MouseControllers = append(options.MouseControllers, eventHandler)
-			options.Ticker = netease.Player().RenderTicker()
-			options.DynamicRowCount = configs.AppConfig.Theme.DynamicMenuRows
-			options.CenterEverything = configs.AppConfig.Theme.CenterEverything
-
-		// 状态栏：若配置启用，注入队列位置与音质中间文本
-		if options.StatusBar != nil {
-			options.StatusBar = ui.NewQueueQualityStatusBar(netease.Player())
-		}
-
-			if options.DynamicRowCount {
-				// BottomHeight 是底部组件的最大预估高度，用于告诉 foxful-cli
-				// 至少预留多少行给底部组件。菜单会根据剩余空间自适应调整行数。
-				// 当窗口较小时，频谱会根据可用空间自动缩小或隐藏，
-				// 歌词也会从 5 行缩减到 3 行或完全隐藏。
-				// 详见 ui/spectrum_renderer.go 和 ui/lyric_renderer.go 的自适应逻辑。
-				spectrumRows := 0
-				if configs.AppConfig.Main.Visualizer.Enable {
-					spectrumRows = ui.DynamicMenuSpectrumLines // 最大预估频谱行数
-				}
-				options.BottomHeight = ui.DynamicMenuOverhead + ui.DynamicMenuLyricLines + spectrumRows + ui.DynamicMenuBottomLines
-			}
-		},
-	)
-
-	return netease.Run()
+	return nil
 }

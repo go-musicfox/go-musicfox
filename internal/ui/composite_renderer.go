@@ -3,16 +3,16 @@ package ui
 import (
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	tea "charm.land/bubbletea/v2"
 	"github.com/mattn/go-runewidth"
 )
 
 // CompositeRenderer combines multiple components horizontally with percentage-based width allocation.
 // This is used to display the cover image alongside lyrics.
 type CompositeRenderer struct {
-	netease  *Netease
+	svc      *menuServices
 	columns  []CompositeColumn
 	maxLines int // Maximum number of lines from all columns
 }
@@ -21,14 +21,6 @@ type CompositeRenderer struct {
 type CompositeColumn struct {
 	Component  model.Component
 	WidthRatio float64 // Width percentage (0.0-1.0)
-}
-
-// NewCompositeRenderer creates a new composite renderer with the given columns.
-func NewCompositeRenderer(netease *Netease, columns []CompositeColumn) *CompositeRenderer {
-	return &CompositeRenderer{
-		netease: netease,
-		columns: columns,
-	}
 }
 
 // Update handles UI messages and forwards them to all child components.
@@ -46,7 +38,7 @@ func (r *CompositeRenderer) View(a *model.App, main *model.Main) (view string, l
 		return "", 0
 	}
 
-	windowWidth := r.netease.WindowWidth()
+	windowWidth := r.svc.App().WindowWidth()
 
 	// Calculate actual widths for each column
 	widths := make([]int, len(r.columns))

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>musicfox WebUI</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部状态栏 -->
+        <header id="topbar">
+            <div class="brand">musicfox</div>
+            <div id="conn" class="conn">
+                <span id="conn-dot" class="dot off"></span>
+                <span id="conn-text">未连接</span>
+            </div>
+            <div id="user-area">
+                <span id="user">未登录</span>
+                <button id="login-btn" class="btn btn-sm" type="button">登录</button>
+            </div>
+        </header>
+
+        <main id="main">
+            <!-- 歌曲信息区 -->
+            <section id="song">
+                <div id="cover-wrap">
+                    <img id="cover" alt="专辑封面">
+                </div>
+                <div id="song-meta">
+                    <h1 id="song-name">未在播放</h1>
+                    <p id="artist"></p>
+                    <p id="album"></p>
+                    <p id="playlist-info">播放列表 0 首</p>
+                </div>
+            </section>
+
+            <!-- 播放搜索 -->
+            <section id="search">
+                <input id="search-input" type="text" placeholder="输入歌曲关键词搜索并播放…" autocomplete="off">
+                <button id="search-btn" class="btn" type="button">搜索播放</button>
+            </section>
+
+            <!-- 控制区 -->
+            <section id="controls">
+                <div id="transport">
+                    <button id="btn-prev" class="btn" type="button" title="上一首">上一首</button>
+                    <button id="btn-play" class="btn btn-primary" type="button" title="播放/暂停">播放</button>
+                    <button id="btn-next" class="btn" type="button" title="下一首">下一首</button>
+                    <button id="btn-stop" class="btn" type="button" title="停止">停止</button>
+                </div>
+                <div id="progress-row">
+                    <span id="progress-time-cur">0:00</span>
+                    <div id="progress" role="slider" aria-label="播放进度" tabindex="0">
+                        <div id="progress-fill"></div>
+                        <div id="progress-thumb"></div>
+                    </div>
+                    <span id="progress-time-total">0:00</span>
+                </div>
+                <div id="extras">
+                    <button id="btn-repeat" class="btn btn-sm" type="button" title="播放模式">循环:关</button>
+                    <button id="btn-shuffle" class="btn btn-sm" type="button" title="随机播放">随机:关</button>
+                    <button id="btn-like" class="btn btn-sm" type="button" title="喜欢当前歌曲">喜欢</button>
+                    <div id="volume-wrap">
+                        <span id="volume-val">100%</span>
+                        <input id="volume" type="range" min="0" max="100" step="1" value="100" aria-label="音量">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 插件命令区（空容器，由 app.js 填充命令按钮） -->
+            <section id="commands" hidden></section>
+
+            <!-- 歌词面板 -->
+            <section id="lyrics-panel">
+                <div id="lyrics-empty">暂无歌词</div>
+                <div id="lyrics"></div>
+            </section>
+        </main>
+
+        <footer id="footer">
+            <span id="status-hint"></span>
+        </footer>
+    </div>
+
+    <!-- 登录弹层 -->
+    <div id="login-modal" class="modal" hidden>
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>扫码登录</h2>
+                <button id="login-modal-close" class="btn btn-sm" type="button">关闭</button>
+            </div>
+            <img id="login-qr" alt="登录二维码">
+            <p id="login-qr-status">获取二维码中…</p>
+        </div>
+    </div>
+
+    <script src="/app.js" defer></script>
+    <script src="/player.js" defer></script>
+</body>
+</html>

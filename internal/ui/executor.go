@@ -2,25 +2,28 @@ package ui
 
 import (
 	"github.com/anhoder/foxful-cli/model"
+
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
-// CoreFunc 是操作的核心逻辑函数，它接收 Netease 实例作为参数。
-type CoreFunc func(m *Netease) model.Page
+// CoreFunc 是操作的核心逻辑函数，它接收 services 类型安全访问器作为参数
+// （认证、播放器、主页面等能力都经它解析，不再依赖 *Netease 薄壳）。
+type CoreFunc func(svc *menuServices) model.Page
 
 // Operation 代表一个可执行的操作单元。
 type Operation struct {
-	n           *Netease
+	svc         *menuServices
 	coreFunc    CoreFunc
 	needsAuth   bool
 	showLoading bool
 }
 
 // NewOperation 创建一个新操作。
-// 参数 m 是 Netease 主模型，coreFunc 是要执行的核心业务逻辑。
-func NewOperation(n *Netease, coreFunc CoreFunc) *Operation {
+// 参数 svc 是 services 访问器（由调用方从其 *Netease/访问器构造），
+// coreFunc 是要执行的核心业务逻辑。
+func NewOperation(svc *menuServices, coreFunc CoreFunc) *Operation {
 	return &Operation{
-		n:        n,
+		svc:      svc,
 		coreFunc: coreFunc,
 	}
 }
@@ -53,8 +56,8 @@ func (op *Operation) ShowLoading() *Operation {
 func (op *Operation) Execute() model.Page {
 	// 优先处理认证检查（同步），避免对未登录用户显示无意义的加载状态
 	if op.needsAuth {
-		if _struct.CheckUserInfo(op.n.user) == _struct.NeedLogin {
-			page, _ := op.n.ToLoginPage(func() model.Page {
+		if _struct.CheckUserInfo(op.svc.User()) == _struct.NeedLogin {
+			page, _ := op.svc.ToLoginPage(func() model.Page {
 				return op.Execute()
 			})
 			return page
@@ -64,10 +67,10 @@ func (op *Operation) Execute() model.Page {
 	// 若需要显示加载状态，委托给 DeferWithLoading 异步执行，
 	// 使加载提示在核心逻辑运行前得以渲染。
 	if op.showLoading {
-		main := op.n.MustMain()
+		main := op.svc.MustMain()
 		scheduled := main.DeferWithLoading(func(m *model.Main) (bool, model.Page) {
 			// 核心逻辑在 tick 处理器中执行，此时加载提示已渲染
-			resultPage := op.coreFunc(op.n)
+			resultPage := op.coreFunc(op.svc)
 			if resultPage != nil {
 				// 核心逻辑返回了新页面，通知框架结束加载并导航至该页面
 				return false, resultPage
@@ -80,7 +83,7 @@ func (op *Operation) Execute() model.Page {
 		if !scheduled {
 			// DeferWithLoading 因互斥检查失败（已有其他待执行操作），
 			// 降级为同步执行以保证操作不丢失
-			return op.coreFunc(op.n)
+			return op.coreFunc(op.svc)
 		}
 
 		// 异步执行已调度，立即返回 nil。
@@ -89,5 +92,5 @@ func (op *Operation) Execute() model.Page {
 	}
 
 	// 不需要加载状态，直接同步执行
-	return op.coreFunc(op.n)
+	return op.coreFunc(op.svc)
 }

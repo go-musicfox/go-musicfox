@@ -15,7 +15,7 @@ import (
 )
 
 func TestSongInfoHoverDoesNotLeakANSISequences(t *testing.T) {
-	app, netease := newFormPageTestApp(t)
+	app, shell := newFormPageTestApp(t)
 	song := structs.Song{
 		Id:   1,
 		Name: "粗糙",
@@ -24,7 +24,7 @@ func TestSongInfoHoverDoesNotLeakANSISequences(t *testing.T) {
 		},
 	}
 	state := songInfoTestState{song: song}
-	renderer := NewSongInfoRenderer(netease, state)
+	renderer := NewSongInfoRenderer(newMenuServices(shell), state)
 
 	tests := []struct {
 		name    string
@@ -36,7 +36,7 @@ func TestSongInfoHoverDoesNotLeakANSISequences(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			netease.playbarHoveredElement = tt.hovered
+			shell.playbarHoveredElement = tt.hovered
 			view, _ := renderer.View(app, app.MustMain())
 			plain := ansi.Strip(view)
 			if !strings.Contains(plain, tt.want) {
@@ -63,7 +63,7 @@ func TestSongInfoHoverDoesNotLeakANSISequences(t *testing.T) {
 // (component→app→transparent chain) instead of leaving transparent cells that
 // would reveal content drawn beneath the TUI (e.g. the cover image).
 func TestSongInfoPaintsAppBackgroundOnGlyphs(t *testing.T) {
-	app, netease := newFormPageTestApp(t)
+	app, shell := newFormPageTestApp(t)
 
 	appBg := lipgloss.Color("#1E1E2E")
 	theme := style.DefaultDarkTheme()
@@ -76,7 +76,7 @@ func TestSongInfoPaintsAppBackgroundOnGlyphs(t *testing.T) {
 		Name:    "背景测试",
 		Artists: []structs.Artist{{Name: "测试歌手"}},
 	}
-	renderer := NewSongInfoRenderer(netease, songInfoTestState{song: song})
+	renderer := NewSongInfoRenderer(newMenuServices(shell), songInfoTestState{song: song})
 	view, _ := renderer.View(app, app.MustMain())
 
 	plain := ansi.Strip(view)
@@ -102,7 +102,7 @@ func TestSongInfoPaintsAppBackgroundOnGlyphs(t *testing.T) {
 // content row — including the trailing padding after the artist name — carries
 // the app background, so no cell at the right edge stays transparent.
 func TestSongInfoFillsEntireRowWithAppBackground(t *testing.T) {
-	app, netease := newFormPageTestApp(t)
+	app, shell := newFormPageTestApp(t)
 
 	appBg := lipgloss.Color("#1E1E2E")
 	theme := style.DefaultDarkTheme()
@@ -114,13 +114,13 @@ func TestSongInfoFillsEntireRowWithAppBackground(t *testing.T) {
 		Name:    "测试歌曲",
 		Artists: []structs.Artist{{Name: "歌手"}},
 	}
-	renderer := NewSongInfoRenderer(netease, songInfoTestState{song: song})
+	renderer := NewSongInfoRenderer(newMenuServices(shell), songInfoTestState{song: song})
 	view, _ := renderer.View(app, app.MustMain())
 
 	// Inspect only the content row (row 0); row 1 is the blank separator.
 	line := strings.Split(view, "\n")[0]
 	screen := formStyledScreen(line)
-	width := netease.WindowWidth()
+	width := shell.WindowWidth()
 	for x := 0; x < width; x++ {
 		cell := screen.CellAt(x, 0)
 		if cell == nil || cell.Width == 0 {
@@ -137,7 +137,7 @@ func TestSongInfoFillsEntireRowWithAppBackground(t *testing.T) {
 // including the time display and the separator spaces around it — carries the
 // app background across its full width, leaving no transparent cell.
 func TestProgressTimePaintsAppBackground(t *testing.T) {
-	app, netease := newFormPageTestApp(t)
+	app, shell := newFormPageTestApp(t)
 
 	appBg := lipgloss.Color("#1E1E2E")
 	theme := style.DefaultDarkTheme()
@@ -149,7 +149,7 @@ func TestProgressTimePaintsAppBackground(t *testing.T) {
 		Name:     "测试歌曲",
 		Duration: 4*time.Minute + 30*time.Second,
 	}
-	renderer := NewProgressRenderer(netease, progressTestState{song: song, passed: time.Minute})
+	renderer := NewProgressRenderer(newMenuServices(shell), progressTestState{song: song, passed: time.Minute})
 	view, _ := renderer.View(app, app.MustMain())
 
 	plain := ansi.Strip(view)
@@ -159,7 +159,7 @@ func TestProgressTimePaintsAppBackground(t *testing.T) {
 	}
 
 	screen := formStyledScreen(view)
-	width := netease.WindowWidth()
+	width := shell.WindowWidth()
 	for x := 0; x < width; x++ {
 		cell := screen.CellAt(x, 0)
 		if cell == nil || cell.Width == 0 {

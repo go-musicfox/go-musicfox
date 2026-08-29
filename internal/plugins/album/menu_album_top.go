@@ -1,0 +1,135 @@
+package album
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/anhoder/foxful-cli/model"
+	"github.com/buger/jsonparser"
+	"github.com/go-musicfox/netease-music/service"
+
+	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
+)
+
+type AlbumTopMenu struct {
+	ui.BaseMenu
+	menus   []model.MenuItem
+	albums  []structs.Album
+	area    string
+	offset  int
+	limit   int
+	hasMore bool
+}
+
+func NewAlbumTopMenu(base ui.BaseMenu, area string) *AlbumTopMenu {
+	return &AlbumTopMenu{
+		BaseMenu: base,
+		area:     area,
+		offset:   0,
+		limit:    50,
+	}
+}
+
+func (m *AlbumTopMenu) IsSearchable() bool {
+	return true
+}
+
+func (m *AlbumTopMenu) GetMenuKey() string {
+	return fmt.Sprintf("album_top_%s", m.area)
+}
+
+func (m *AlbumTopMenu) MenuViews() []model.MenuItem {
+	return m.menus
+}
+
+func (m *AlbumTopMenu) SubMenu(_ *model.App, index int) model.Menu {
+	if len(m.albums) < index {
+		return nil
+	}
+
+	return ui.BuildMenuOrToast("album_detail", m.BaseMenu, ui.AlbumDetailOpts{AlbumID: m.albums[index].Id})
+}
+
+func (m *AlbumTopMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+
+		if len(m.menus) > 0 && len(m.albums) > 0 {
+			return true, nil
+		}
+
+		topAlbumService := service.TopAlbumService{
+			Area:   m.area,
+			Limit:  strconv.Itoa(m.limit),
+			Offset: strconv.Itoa(m.offset),
+		}
+		code, response := topAlbumService.TopAlbum()
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
+			return false, nil
+		}
+
+		// 是否有更多数据
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
+		}
+
+		m.albums = _struct.GetTopAlbums(response)
+
+		for _, album := range m.albums {
+			var artists []string
+			for _, artist := range album.Artists {
+				artists = append(artists, artist.Name)
+			}
+			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
+		}
+
+		return true, nil
+	}
+}
+
+func (m *AlbumTopMenu) BottomOutHook() model.Hook {
+	if !m.hasMore {
+		return nil
+	}
+	return func(main *model.Main) (bool, model.Page) {
+		m.offset = m.offset + len(m.menus)
+		topAlbumService := service.TopAlbumService{
+			Area:   m.area,
+			Limit:  strconv.Itoa(m.limit),
+			Offset: strconv.Itoa(m.offset),
+		}
+		code, response := topAlbumService.TopAlbum()
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
+			return false, nil
+		}
+
+		// 是否有更多数据
+		if hasMore, err := jsonparser.GetBoolean(response, "hasMore"); err == nil {
+			m.hasMore = hasMore
+		}
+
+		albums := _struct.GetTopAlbums(response)
+
+		for _, album := range albums {
+			var artists []string
+			for _, artist := range album.Artists {
+				artists = append(artists, artist.Name)
+			}
+			artistsStr := fmt.Sprintf("[%s]", strings.Join(artists, ","))
+			m.menus = append(m.menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(album.Name), Subtitle: _struct.ReplaceSpecialStr(artistsStr)})
+		}
+
+		m.albums = append(m.albums, albums...)
+
+		return true, nil
+	}
+}
+
+func (m *AlbumTopMenu) Albums() []structs.Album {
+	return m.albums
+}

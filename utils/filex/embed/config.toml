@@ -37,6 +37,11 @@ frameRate = 5
 # 界面语言（影响 foxful-cli 内置文案，如帮助提示、弹窗按钮）
 # 可选："zh"（中文，默认）、"en"（英文）等；留空跟随中文
 locale = "zh"
+# 是否以 headless（无界面）模式运行核心引擎（不启动 TUI；--headless 命令行参数优先于该配置）
+headless = false
+# 前端形态："tui"（默认）或 "headless"（无界面）
+# CLI --frontend 优先于该配置；--headless 为 --frontend=headless 的 legacy 别名
+frontend = "tui"
 
 # 实时频谱显示（目前仅支持 osx, beep 播放引擎）
 # 调高 main.frameRate 更丝滑
@@ -417,6 +422,16 @@ scrobblePoint = 50
 onlyFirstArtist = false
 # 是否跳过电台节目的上报
 skipDjRadio = false
+
+
+# 插件启停配置
+[plugins]
+# 禁用的插件 id 列表（插件 id 即插件目录名，如 "search"、"checkupdate"）
+# 被禁用插件的"主菜单入口"隐藏、"启动钩子"不执行；其菜单仍可按 key 跳转
+disabled = []
+# WASM 插件目录（可选）。为空时使用默认目录 <配置目录>/wasm-plugins。
+# 每个子目录为一个插件：manifest.toml + main.wasm（详见 docs/plugin_development.md）
+wasmDir = ""
 
 
 # 快捷键绑定配置

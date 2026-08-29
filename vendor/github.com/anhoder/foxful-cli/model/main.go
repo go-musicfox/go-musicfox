@@ -467,6 +467,14 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 		return m, a.RerenderCmd(true)
 	}
 
+	// Unknown-message fallback: let an optional hook dispatch messages this
+	// Main.Update does not recognize (e.g. async frontend commands navigating
+	// to a new page). Nil keeps the previous behavior of ignoring them.
+	if m.options.UnknownMsgHandler != nil {
+		if page, cmd := m.options.UnknownMsgHandler(msg, a); page != nil || cmd != nil {
+			return page, cmd
+		}
+	}
 	return m, nil
 }
 

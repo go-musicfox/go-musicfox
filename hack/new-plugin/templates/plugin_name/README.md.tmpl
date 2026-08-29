@@ -1,0 +1,41 @@
+# {{plugin_name}} 插件（hack/new-plugin 生成骨架）
+
+> 本目录由 `hack/new-plugin` 生成（模板：`hack/new-plugin/templates/plugin_name/`）。
+
+生成参数：name=`{{plugin_name}}` · menu=`{{MenuType}}` · key=`{{menu_key}}` ·
+title=`{{menu_title}}` · after=`{{menu_after}}`。
+
+## 已生成文件
+
+- `registry.go`：编译期注册入口（`init()`）——`ui.RegisterMenu` 注册无参菜单 +
+  主菜单入口 `ui.RegisterMainMenuItemAfter`，并含可选扩展的注释示例（启动钩子 /
+  右键菜单 / 状态栏 / 快捷键操作）。
+- `menu.go`：`{{MenuType}}Menu` 最小菜单实现（嵌入 `ui.BaseMenu`）。
+- `{{plugin_name}}_test.go`：注册表构建 + 菜单接口断言骨架。
+
+## 重新生成
+
+占位符（`{{plugin_name}}` / `{{MenuType}}` / `{{menu_key}}` / `{{menu_title}}` /
+`{{menu_after}}`）在生成时已替换为上述参数值；要改值可手工编辑，或重新运行：
+
+    go run ./hack/new-plugin -name {{plugin_name}} -menu {{MenuType}} -key {{menu_key}} -title {{menu_title}} -after {{menu_after}} -force
+
+注意：key 必须全局唯一（不得与内置 `expectedMenuKeys` 或其它插件冲突）。
+
+## 接入二进制（聚合器空导入）
+
+在 `internal/plugins/plugins.go` 增加一行空导入，使本包 `init()` 注册在链接时生效：
+
+    _ "github.com/go-musicfox/go-musicfox/internal/plugins/{{plugin_name}}"
+
+## 可选声明
+
+- **主菜单入口**：`registry.go` 已声明 `RegisterMainMenuItemAfter("{{menu_key}}", "{{menu_title}}", {{menu_after_expr}}, nil)`。改 after 锚点（已注册入口 key 或 `ui.MainMenuStart`）即调整主菜单位置；纯跳转目标删除该行。
+- **启动钩子 / 右键菜单 / 状态栏组件 / 快捷键操作**：`registry.go` 内为被注释的示例代码，取消注释并按需补全（API 与示例见 docs/plugin_development.md）。
+
+## 下一步
+
+1. `gofmt -w .` 格式化（生成器已默认执行）。
+2. `internal/plugins/plugins.go` 添加空导入。
+3. `go build ./...` 与 `go test ./internal/plugins/{{plugin_name}}/...`。
+4. 将 `menu.go` 的静态项替换为真实业务逻辑。

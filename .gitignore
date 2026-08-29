@@ -15,8 +15,15 @@ __debug*
 .slim/
 .planning/
 .rules/
+.tmp/
 
 # Agent pipeline: per-run QA state (generated, not source)
 .ai/qa/artifacts_*/
 .ai/qa/test-env.json
 .ai/qa/test-env.env
+
+# Agent pipeline: brainstorm briefs stay uncommitted (om-brainstorm contract;
+# the routed skill makes them durable in a spec/issue) and temporary
+# om-auto-create-pr worktree locations (managed by git worktree, not commits)
+.ai/specs/briefs/
+.ai/tmp/

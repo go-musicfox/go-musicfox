@@ -48,6 +48,12 @@ type MainConfig struct {
 	Account      AccountConfig      `koanf:"account"`
 	// 界面语言（如 "zh"、"zh-CN"、"en"），影响 foxful-cli 内置文案。留空跟随默认（中文）
 	Locale string `koanf:"locale"`
+	// Headless runs the core engine without the TUI (no bubbletea/foxful).
+	// CLI flag --headless overrides this value.
+	Headless bool `koanf:"headless"`
+	// Frontend 选择前端形态："tui" 或 "headless"（缺省 tui）。
+	// CLI --frontend 优先于本配置；--headless 为 legacy 别名。
+	Frontend string `koanf:"frontend"`
 }
 
 // NotificationConfig 桌面通知相关设置
@@ -99,14 +105,14 @@ type VisualizerConfig struct {
 	DotEmptyBlock string `koanf:"dotEmptyBlock"` // block mode: empty cell (default space)
 
 	// --- oscilloscope style (time-domain waveform) ---
-	OscilloscopeMode       string `koanf:"oscilloscopeMode"`       // "braille" (default) or "block"
-	OscilloscopeScatter    bool   `koanf:"oscilloscopeScatter"`    // scatter dots vs connected line
+	OscilloscopeMode       string `koanf:"oscilloscopeMode"`    // "braille" (default) or "block"
+	OscilloscopeScatter    bool   `koanf:"oscilloscopeScatter"` // scatter dots vs connected line
 	OscilloscopeFullBlock  string `koanf:"oscilloscopeFullBlock"`
 	OscilloscopeHalfBlock  string `koanf:"oscilloscopeHalfBlock"`
 	OscilloscopeEmptyBlock string `koanf:"oscilloscopeEmptyBlock"`
 
 	// --- vectorscope style (Lissajous L×R scatter) ---
-	VectorscopeMode       string `koanf:"vectorscopeMode"`       // "braille" (default) or "block"
+	VectorscopeMode       string `koanf:"vectorscopeMode"` // "braille" (default) or "block"
 	VectorscopeFullBlock  string `koanf:"vectorscopeFullBlock"`
 	VectorscopeHalfBlock  string `koanf:"vectorscopeHalfBlock"`
 	VectorscopeEmptyBlock string `koanf:"vectorscopeEmptyBlock"`
@@ -115,8 +121,8 @@ type VisualizerConfig struct {
 	SpectrogramSpeed int `koanf:"spectrogramSpeed"` // scrolling speed (1=slow, 10=fast, default 4)
 
 	// --- spectrum-wide settings (line, dot styles) ---
-	SpectrumAverage  int  `koanf:"spectrumAverage"`  // FFT frame averaging count (1 = off, higher = smoother)
-	SpectrumLogScale bool `koanf:"spectrumLogScale"` // use dB (true) or linear amplitude (false) for Y axis
+	SpectrumAverage   int  `koanf:"spectrumAverage"`   // FFT frame averaging count (1 = off, higher = smoother)
+	SpectrumLogScale  bool `koanf:"spectrumLogScale"`  // use dB (true) or linear amplitude (false) for Y axis
 	SpectrumPhaseDiff bool `koanf:"spectrumPhaseDiff"` // overlay channel phase correlation
 
 	// --- cava-inspired smoothing (applied after spring/EMA, affects bar/mirror_bar) ---
@@ -191,8 +197,6 @@ func (c VisualizerConfig) IsSpectrogram() bool {
 	return c.Style == "spectrogram"
 }
 
-
-
 // LyricConfig 歌词显示相关设置
 type LyricConfig struct {
 	// 显示歌词
@@ -247,16 +251,16 @@ type DesktopLyricsConfig struct {
 	MaxWindowWidth float64 `koanf:"maxWindowWidth"`
 
 	// 桌面歌词频谱可视化
-	SpectrumEnabled    bool    `koanf:"spectrumEnabled"`    // 启用频谱
-	SpectrumHeight     float64 `koanf:"spectrumHeight"`     // 频谱区域高度（像素）
-	SpectrumBarCount   int     `koanf:"spectrumBarCount"`   // 频段数量（≤64）
-	SpectrumBarGap     float64 `koanf:"spectrumBarGap"`     // 频段间距（像素）
-	SpectrumFPS        int     `koanf:"spectrumFPS"`        // 刷新帧率
-	SpectrumOpacity    float64 `koanf:"spectrumOpacity"`    // 频谱整体透明度
-	SpectrumStyle      string  `koanf:"spectrumStyle"`      // 样式："bar"(默认) / "mirror"
-	SpectrumColorLow   string  `koanf:"spectrumColorLow"`   // 低频颜色（hex）
-	SpectrumColorMid   string  `koanf:"spectrumColorMid"`   // 中频颜色（hex）
-	SpectrumColorHigh  string  `koanf:"spectrumColorHigh"`  // 高频颜色（hex）
+	SpectrumEnabled   bool    `koanf:"spectrumEnabled"`   // 启用频谱
+	SpectrumHeight    float64 `koanf:"spectrumHeight"`    // 频谱区域高度（像素）
+	SpectrumBarCount  int     `koanf:"spectrumBarCount"`  // 频段数量（≤64）
+	SpectrumBarGap    float64 `koanf:"spectrumBarGap"`    // 频段间距（像素）
+	SpectrumFPS       int     `koanf:"spectrumFPS"`       // 刷新帧率
+	SpectrumOpacity   float64 `koanf:"spectrumOpacity"`   // 频谱整体透明度
+	SpectrumStyle     string  `koanf:"spectrumStyle"`     // 样式："bar"(默认) / "mirror"
+	SpectrumColorLow  string  `koanf:"spectrumColorLow"`  // 低频颜色（hex）
+	SpectrumColorMid  string  `koanf:"spectrumColorMid"`  // 中频颜色（hex）
+	SpectrumColorHigh string  `koanf:"spectrumColorHigh"` // 高频颜色（hex）
 }
 
 // CoverConfig 封面图显示设置

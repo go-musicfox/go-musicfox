@@ -73,6 +73,13 @@ type Options struct {
 	InitHook  func(a *App)
 	CloseHook func(a *App)
 
+	// UnknownMsgHandler optionally dispatches messages that Main.Update does
+	// not recognize. When nil, behavior is unchanged (unknown messages are
+	// ignored). When a Page is returned, the App switches to that page
+	// (setPage semantics, main-event-loop only). Used for frontend extensions
+	// such as go-musicfox S1 (async command results navigating to a new page).
+	UnknownMsgHandler func(msg tea.Msg, a *App) (Page, tea.Cmd)
+
 	AltScreen bool
 	MouseMode tea.MouseMode
 }
@@ -156,6 +163,15 @@ func WithHook(init, close func(a *App)) WithOption {
 	return func(opts *Options) {
 		opts.InitHook = init
 		opts.CloseHook = close
+	}
+}
+
+// WithUnknownMsgHandler sets the fallback dispatcher for messages Main.Update
+// does not recognize. See Options.UnknownMsgHandler. The handler runs in the
+// main event loop; it must not block or spawn goroutines that mutate the App.
+func WithUnknownMsgHandler(h func(msg tea.Msg, a *App) (Page, tea.Cmd)) WithOption {
+	return func(opts *Options) {
+		opts.UnknownMsgHandler = h
 	}
 }
 

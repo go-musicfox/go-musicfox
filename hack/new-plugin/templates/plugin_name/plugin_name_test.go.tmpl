@@ -1,0 +1,41 @@
+package {{plugin_name}}
+
+import (
+	"testing"
+
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+)
+
+// Test{{MenuType}}MenuBuildsViaRegistryFactory proves the plugin menu is
+// constructible through the real registry factory — the compile-time boundary
+// form used by internal/plugins/checkupdate/checkupdate_test.go.
+func Test{{MenuType}}MenuBuildsViaRegistryFactory(t *testing.T) {
+	menu, err := ui.BuildMenu("{{menu_key}}", ui.BaseMenu{}, ui.NoArgMenuOpts{})
+	if err != nil {
+		t.Fatalf("BuildMenu(%q) error = %v", "{{menu_key}}", err)
+	}
+	m, ok := menu.(*{{MenuType}}Menu)
+	if !ok {
+		t.Fatalf("BuildMenu(%q) = %T, want *{{MenuType}}Menu", "{{menu_key}}", menu)
+	}
+	if key := m.GetMenuKey(); key != "{{menu_key}}" {
+		t.Fatalf("GetMenuKey() = %q, want %q", key, "{{menu_key}}")
+	}
+	if m.IsPlayable() {
+		t.Fatalf("%q menu must not be playable", "{{menu_key}}")
+	}
+	if m.IsLocatable() {
+		t.Fatalf("%q menu must not be locatable", "{{menu_key}}")
+	}
+	if views := m.MenuViews(); views == nil {
+		t.Fatal("MenuViews() must be non-nil")
+	}
+	if sub := m.SubMenu(nil, 0); sub != nil {
+		t.Fatalf("SubMenu() = %v, want nil", sub)
+	}
+}
+
+// TODO: 扩展测试——数据加载后断言 MenuViews 内容、SubMenu 经
+// ui.BuildMenuOrToast 解析的跳转目标，以及可选扩展（启动钩子 / 右键菜单 /
+// 状态栏 / 快捷键操作）的注册与行为。参考模式：
+// internal/plugins/checkupdate/checkupdate_test.go 与 internal/ui/registry_test.go。

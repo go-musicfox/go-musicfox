@@ -12,11 +12,11 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
 	"github.com/go-musicfox/netease-music/service"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/core"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
@@ -40,9 +40,15 @@ const (
 type tickLoginMsg struct{}
 
 func tickLogin(duration time.Duration) tea.Cmd {
-	return tea.Tick(duration, func(t time.Time) tea.Msg {
+	return tea.Tick(duration, func(time.Time) tea.Msg {
 		return tickLoginMsg{}
 	})
+}
+
+// TickLogin is the exported form of tickLogin (Phase 3.9 plugin boundary; the
+// lastfm pages moved into internal/plugins/lastfm use it to re-render).
+func TickLogin(duration time.Duration) tea.Cmd {
+	return tickLogin(duration)
 }
 
 type LoginPage struct {
@@ -74,8 +80,6 @@ type LoginPage struct {
 	qrEndX        int // 扫码按钮结束 X（0-based，闭区间）
 	webviewStartX int // 网页登录按钮起始 X（0-based）
 	webviewEndX   int // 网页登录按钮结束 X（0-based，闭区间）
-	cookieStartX  int // Cookie按钮起始 X（0-based）
-	cookieEndX    int // Cookie按钮结束 X（0-based，闭区间）
 	tabStartX     int // Tabs 起始 X（0-based）
 	tabsStartRowY int // Tabs 起始行（1-based）
 	tabsEndRowY   int // Tabs 结束行（1-based）
@@ -92,7 +96,7 @@ type LoginPage struct {
 	webviewAvailable bool // 网页登录（原生 WebView）是否可用，初始化时检测一次
 }
 
-// 执行登录操作回显的信息结构体
+// LoginMsg 执行登录操作回显的信息结构体
 type LoginMsg struct {
 	err error
 }
@@ -147,8 +151,14 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	}
 
 	if loginMsg, ok := msg.(LoginMsg); ok {
+		if l.netease.ConnectMode() {
+			// TC-6: the daemon owns login completion in connect mode; a stray
+			// LoginMsg (unreachable — the local paths that produce it are
+			// hidden) must not reach the engine-dependent loginSuccessHandle.
+			return l.netease.MustMain(), model.TickMain(time.Nanosecond)
+		}
 		if loginMsg.err != nil {
-			l.tips = util.SetFgStyle(loginMsg.err.Error(), lipgloss.BrightRed)
+			l.tips = style.FG(loginMsg.err.Error(), lipgloss.BrightRed)
 			return l, nil
 		}
 		if newPage := l.loginSuccessHandle(l.netease); newPage != nil {
@@ -286,6 +296,21 @@ func (l *LoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	if !ok {
 		return l.updateActiveInput(msg)
 	}
+	if l.netease.ConnectMode() {
+		// TC-6: in connect mode the only interactive entry is the QR button
+		// (renderConnectQRView); Enter fires it, b/esc returns, everything
+		// else is ignored — the account/cookie/webview paths are hidden
+		// because they dereference the engine the connect shell never builds.
+		switch key.String() {
+		case "enter":
+			l.index = qrLoginIndex
+			return l.enterHandler()
+		case "b", "esc":
+			l.tips = ""
+			return l.netease.MustMain(), l.netease.RerenderCmd(true)
+		}
+		return l, nil
+	}
 	if l.index < 0 && l.updateTabs(msg, key.String()) {
 		return l, nil
 	}
@@ -412,6 +437,17 @@ func (l *LoginPage) View(a *model.App) string {
 	write("\n")
 	top++
 
+	if l.netease.ConnectMode() {
+		// TC-6: the remote shell's login is a daemon-side QR flow (D-TC-7), so
+		// only the QR entry is rendered — the account/password/cookie tabs and
+		// the webview button are hidden because their local login paths
+		// dereference the engine the connect shell never builds (n.engine,
+		// B9). The QR page sources its data from the daemon through
+		// RemotePlayer.CallQRKey/CallQRStatus.
+		l.renderConnectQRView(a, mainPage, &builder, &top, write, curRow)
+		return finishCustomPageView(&builder, a)
+	}
+
 	write("\n")
 	l.tabStartX = max(0, mainPage.MenuStartColumn())
 	l.tabsStartRowY = curRow()
@@ -436,6 +472,45 @@ func (l *LoginPage) View(a *model.App) string {
 	return finishCustomPageView(&builder, a)
 }
 
+// renderConnectQRView renders the connect-mode login surface (TC-6): only the
+// QR entry button plus a hint are shown; the account/cookie tabs and the
+// webview button are hidden because their local login paths dereference the
+// engine the connect shell never builds (n.engine == nil, B9). The QR page
+// sources its data from the daemon (D-TC-7).
+func (l *LoginPage) renderConnectQRView(a *model.App, mainPage *model.Main, builder *strings.Builder, top *int, write func(string), curRow func() int) {
+	write("\n")
+	(*top)++
+	if mainPage.MenuStartColumn() > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	}
+	// 扫码登录按钮（connect 唯一入口），坐标记录对齐其它按钮的命中约定。
+	l.buttonsRowY = curRow()
+	l.index = qrLoginIndex
+	qrButtonView := l.qrLoginButton
+	if l.hoveredButton == 1 {
+		qrButtonView = pageButtonHoverView(l.qrButtonTextByStep())
+	}
+	qrX := max(0, mainPage.MenuStartColumn())
+	l.qrStartX = qrX
+	l.qrEndX = qrX + lipgloss.Width(qrButtonView) - 1
+	write(qrButtonView)
+	spaceLen := a.WindowWidth() - mainPage.MenuStartColumn() - lipgloss.Width(qrButtonView)
+	if spaceLen > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", spaceLen)))
+	}
+	write("\n\n")
+	(*top)++
+	if mainPage.MenuStartColumn() > 0 {
+		write(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", mainPage.MenuStartColumn())))
+	}
+	if l.tips != "" {
+		write(l.tips)
+	} else {
+		write(style.FG(model.T(MsgLoginConnectQRHint), lipgloss.BrightBlack))
+	}
+	write("\n")
+}
+
 func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builder, top *int, mainPage *model.Main, write func(string), curRow func() int) {
 	inputs := []*textinput.Model{
 		&l.accountInput,
@@ -451,9 +526,10 @@ func (l *LoginPage) renderAccountLoginView(a *model.App, builder *strings.Builde
 		write(pageInputView(*input, l.hoveredInputBox == i))
 
 		// 记录输入框所在行号（1-based）
-		if i == 0 {
+		switch i {
+		case 0:
 			l.accountRowY = curRow()
-		} else if i == 1 {
+		case 1:
 			l.passwordRowY = curRow()
 		}
 
@@ -624,12 +700,16 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 
 	switch l.index {
 	case submitIndex:
+		if l.netease.ConnectMode() {
+			// TC-6: connect mode hides the account/cookie login (n.engine nil).
+			return l, nil
+		}
 		if l.activeTab() == tabCookie {
 			return l.loginByCookie()
 		}
 		// 提交
 		if len(l.accountInput.Value()) <= 0 || len(l.passwordInput.Value()) <= 0 {
-			l.tips = util.SetFgStyle(model.T(MsgLoginCredentialRequired), lipgloss.BrightRed)
+			l.tips = style.FG(model.T(MsgLoginCredentialRequired), lipgloss.BrightRed)
 			return l, nil
 		}
 		return l.loginByAccount()
@@ -637,6 +717,10 @@ func (l *LoginPage) enterHandler() (model.Page, tea.Cmd) {
 		// 扫码登录
 		return l.loginByQRCode()
 	case webviewLoginIndex:
+		if l.netease.ConnectMode() {
+			// TC-6: connect mode hides the webview login (n.engine nil).
+			return l, nil
+		}
 		// 网页登录
 		return l.loginByWebview()
 	}
@@ -682,7 +766,7 @@ func (l *LoginPage) loginByAccount() (model.Page, tea.Cmd) {
 		code, bodyBytes, err = loginService.LoginCellphone()
 
 		if err != nil {
-			l.tips = util.SetFgStyle(model.T(MsgLoginFailed)+err.Error(), lipgloss.BrightRed)
+			l.tips = style.FG(model.T(MsgLoginFailed)+err.Error(), lipgloss.BrightRed)
 			slog.Error("使用账号密码登录失败", slogx.Error(err))
 			return l, tickLogin(time.Nanosecond)
 		}
@@ -757,7 +841,7 @@ func (l *LoginPage) loginByQRCode() (model.Page, tea.Cmd) {
 // loginByWebview 跳转到网页登录界面（仅 macOS 支持原生 WKWebView 窗口）
 func (l *LoginPage) loginByWebview() (model.Page, tea.Cmd) {
 	if !l.webviewAvailable {
-		l.tips = util.SetFgStyle(model.T(MsgLoginWebviewUnsupported), lipgloss.BrightRed)
+		l.tips = style.FG(model.T(MsgLoginWebviewUnsupported), lipgloss.BrightRed)
 		return l, nil
 	}
 	webviewPage := NewWebviewLoginPage(l.netease, l, l.AfterLogin)
@@ -767,11 +851,11 @@ func (l *LoginPage) loginByWebview() (model.Page, tea.Cmd) {
 func (l *LoginPage) loginSuccessHandle(n *Netease) model.Page {
 	// 先保存 cookie，确保登录成功后 cookie 被持久化
 	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
-	if err := appCookieJar.Save(); err != nil {
+	if err := core.AppCookieJar().Save(); err != nil {
 		slog.Warn("持久化 Cookie 失败", slogx.Error(err))
 	}
 
-	if err := n.LoginCallback(); err != nil {
+	if err := n.engine.LoginCallback(); err != nil {
 		slog.Error("login callback error", slogx.Error(err))
 	}
 
@@ -866,23 +950,23 @@ func (l *LoginPage) updateCookieInput(msg tea.Msg) (model.Page, tea.Cmd) {
 
 func checkCookieCmd(cookieStr string) tea.Cmd {
 	return func() tea.Msg {
-		err := apputils.ParseCookieFromStr(cookieStr, appCookieJar)
+		err := apputils.ParseCookieFromStr(cookieStr, core.AppCookieJar())
 		if err != nil {
 			return LoginMsg{err: fmt.Errorf(model.T(MsgLoginCookieInvalid), err)}
 		}
 
 		// 正确的写法应该是立即用反序列化的cookie去刷新token
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
+		neteaseutil.SetGlobalCookieJar(core.AppCookieJar())
 		jar, err := apputils.RefreshCookieJar()
 		if err != nil {
 			slog.Error("Cookie 登录失败", slogx.Error(err))
-			return LoginMsg{err: fmt.Errorf("Cookie 登录失败: %w", err)}
+			return LoginMsg{err: fmt.Errorf("cookie 登录失败: %w", err)}
 		}
 
 		slog.Info("使用 Cookie 登录成功")
-		appCookieJar = jar
-		neteaseutil.SetGlobalCookieJar(appCookieJar)
-		err = appCookieJar.Save()
+		core.SetAppCookieJar(jar)
+		neteaseutil.SetGlobalCookieJar(core.AppCookieJar())
+		err = core.AppCookieJar().Save()
 		if err != nil {
 			slog.Warn("刷新token成功但保存 Cookie 失败", slogx.Error(err))
 		}
@@ -894,11 +978,11 @@ func checkCookieCmd(cookieStr string) tea.Cmd {
 func (l *LoginPage) loginByCookie() (model.Page, tea.Cmd) {
 	cookieStr := l.cookieInput.Value()
 	if len(cookieStr) <= 0 {
-		l.tips = util.SetFgStyle(model.T(MsgLoginCookieRequired), lipgloss.BrightRed)
+		l.tips = style.FG(model.T(MsgLoginCookieRequired), lipgloss.BrightRed)
 		return l, nil
 	}
 
-	l.tips = util.SetFgStyle(model.T(MsgLoginCookieVerifying), lipgloss.BrightCyan)
+	l.tips = style.FG(model.T(MsgLoginCookieVerifying), lipgloss.BrightCyan)
 	l.cookieInput.SetValue("")
 
 	return l, checkCookieCmd(cookieStr)

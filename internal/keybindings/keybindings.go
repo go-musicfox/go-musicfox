@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 type OperateType int
@@ -185,14 +187,14 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpShareSelectItem:                {name: "shareSelectItem", desc: "分享当前选中"},
 	OpToggleSortOrder:                {name: "toggleSortOrder", desc: "切换排序顺序"},
 
-	OpSubscribeAlbumOfPlayingSong:       {name: "subscribeAlbumOfPlayingSong", desc: "收藏播放中歌曲的专辑"},
-	OpUnsubscribeAlbumOfPlayingSong:     {name: "unsubscribeAlbumOfPlayingSong", desc: "取消收藏播放中歌曲的专辑"},
-	OpSubscribeArtistOfPlayingSong:      {name: "subscribeArtistOfPlayingSong", desc: "收藏播放中歌曲的歌手"},
-	OpUnsubscribeArtistOfPlayingSong:    {name: "unsubscribeArtistOfPlayingSong", desc: "取消收藏播放中歌曲的歌手"},
-	OpSubscribeAlbumOfSelectedSong:      {name: "subscribeAlbumOfSelectedSong", desc: "收藏选中歌曲的专辑"},
-	OpUnsubscribeAlbumOfSelectedSong:    {name: "unsubscribeAlbumOfSelectedSong", desc: "取消收藏选中歌曲的专辑"},
-	OpSubscribeArtistOfSelectedSong:     {name: "subscribeArtistOfSelectedSong", desc: "收藏选中歌曲的歌手"},
-	OpUnsubscribeArtistOfSelectedSong:   {name: "unsubscribeArtistOfSelectedSong", desc: "取消收藏选中歌曲的歌手"},
+	OpSubscribeAlbumOfPlayingSong:     {name: "subscribeAlbumOfPlayingSong", desc: "收藏播放中歌曲的专辑"},
+	OpUnsubscribeAlbumOfPlayingSong:   {name: "unsubscribeAlbumOfPlayingSong", desc: "取消收藏播放中歌曲的专辑"},
+	OpSubscribeArtistOfPlayingSong:    {name: "subscribeArtistOfPlayingSong", desc: "收藏播放中歌曲的歌手"},
+	OpUnsubscribeArtistOfPlayingSong:  {name: "unsubscribeArtistOfPlayingSong", desc: "取消收藏播放中歌曲的歌手"},
+	OpSubscribeAlbumOfSelectedSong:    {name: "subscribeAlbumOfSelectedSong", desc: "收藏选中歌曲的专辑"},
+	OpUnsubscribeAlbumOfSelectedSong:  {name: "unsubscribeAlbumOfSelectedSong", desc: "取消收藏选中歌曲的专辑"},
+	OpSubscribeArtistOfSelectedSong:   {name: "subscribeArtistOfSelectedSong", desc: "收藏选中歌曲的歌手"},
+	OpUnsubscribeArtistOfSelectedSong: {name: "unsubscribeArtistOfSelectedSong", desc: "取消收藏选中歌曲的歌手"},
 
 	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
 	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},
@@ -602,4 +604,67 @@ func init() {
 		}
 	}
 	opNameToOperateMap = maps
+}
+
+// --- 插件自定义操作（RegisterOperate） ---
+//
+// 插件在编译期 init() 中调用 RegisterOperate 注册自定义快捷键操作，与内置
+// 操作共用同一套权威注册表（keyBindingsRegistry / opNameToOperateMap /
+// defaultOtherOperateToKeys），因此用户配置解析（ProcessUserBindings）与
+// 默认键合并（InitDefaults）无需任何改动即可覆盖插件操作。
+
+// pluginOperateStart 是插件操作 id 分配的起始值。固定取高位（1000），与内置
+// 操作的 iota 序列（当前正数最大值 OpSwitchTheme 约 74，负数段为 foxful-cli
+// 内置操作）保持足够距离：即使未来新增内置操作，也不会与插件动态分配的
+// id 冲突。
+const pluginOperateStart = 1000
+
+// nextPluginOperateID 是插件操作 id 的原子计数器，起始于
+// pluginOperateStart-1（首次 Add(1) 即得到 pluginOperateStart）。原子计数
+// 保证并发安全，动态分配无需扫描现有最大值。
+var nextPluginOperateID atomic.Int64
+
+func nextPluginOperate() OperateType {
+	return OperateType(nextPluginOperateID.Add(1) + pluginOperateStart - 1)
+}
+
+// pluginOperateMu 保护 RegisterOperate 对 keyBindingsRegistry、
+// opNameToOperateMap 与 defaultOtherOperateToKeys 的写访问。插件在 init()
+// 期（先于 configs 加载与事件循环）注册，防御性加锁仅为避免未来运行时
+// 注册引入数据竞争。
+var pluginOperateMu sync.Mutex
+
+// RegisterOperate 注册一个插件自定义操作：唯一操作名（name，用于用户配置
+// 解析与显示）、用户可见描述、默认按键（可为空）。返回动态分配的
+// OperateType。name 冲突时 panic（程序错误）。
+func RegisterOperate(name, desc string, defaultKeys []string) OperateType {
+	pluginOperateMu.Lock()
+	defer pluginOperateMu.Unlock()
+
+	if _, ok := opNameToOperateMap[name]; ok {
+		panic(fmt.Sprintf("keybindings: duplicate operate name %q", name))
+	}
+
+	op := nextPluginOperate()
+	keyBindingsRegistry[op] = OperationInfo{name: name, desc: desc}
+	opNameToOperateMap[name] = op
+	if len(defaultKeys) > 0 {
+		defaultOtherOperateToKeys[op] = append([]string(nil), defaultKeys...)
+	}
+	return op
+}
+
+// RegisteredOperates 返回所有已注册插件操作（id >= pluginOperateStart）的
+// 快照，供测试与 EventHandler 遍历使用。
+func RegisteredOperates() []OperateType {
+	pluginOperateMu.Lock()
+	defer pluginOperateMu.Unlock()
+
+	ops := make([]OperateType, 0, 4)
+	for op := range keyBindingsRegistry {
+		if op >= pluginOperateStart {
+			ops = append(ops, op)
+		}
+	}
+	return ops
 }

@@ -45,15 +45,16 @@ func (m *CurPlaylist) Songs() []structs.Song {
 
 func (m *CurPlaylist) BottomOutHook() model.Hook {
 	return func(main *model.Main) (bool, model.Page) {
-		if m.netease.player.playingMenu == nil || m.netease.player.playingMenu.GetMenuKey() == CurPlaylistKey {
+		playingMenu := m.svc.Player().PlayingMenu()
+		if playingMenu == nil || playingMenu.GetMenuKey() == CurPlaylistKey {
 			return true, nil
 		}
-		hook := m.netease.player.playingMenu.BottomOutHook()
+		hook := playingMenu.BottomOutHook()
 		if hook == nil {
 			return true, nil
 		}
 		res, page := hook(main)
-		m.songs = m.netease.player.Playlist()
+		m.songs = m.svc.Player().Playlist()
 		m.menus = menux.GetViewFromSongs(m.songs)
 		return res, page
 	}

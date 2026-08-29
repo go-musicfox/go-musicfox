@@ -82,7 +82,7 @@ func TestBuildHelpMarkdown(t *testing.T) {
 func TestMainMenuHelpActionShowsMarkdownPopup(t *testing.T) {
 	keybindings.InitDefaults(true)
 	app, netease := newFormPageTestApp(t)
-	menu := NewMainMenu(netease)
+	menu := NewMainMenu(newBaseMenu(netease))
 	helpIndex := -1
 	for i, item := range menu.menus {
 		if item.Title == "帮助" {
@@ -106,9 +106,18 @@ func TestMainMenuHelpActionShowsMarkdownPopup(t *testing.T) {
 	}
 }
 
-func TestMainMenuCheckUpdateActionReturnsNotificationCommand(t *testing.T) {
+func TestMainMenuPluginItemRoutesToPluginMenu(t *testing.T) {
+	// The "check_update" provider and its main-menu entry ship with the
+	// external-style plugin (internal/plugins/checkupdate), which this ui test
+	// binary cannot link (ui must not import plugins). Register behavior-
+	// equivalent test-doubles so the plugin main-menu item is exercised.
+	RegisterMenu("check_update", func(base baseMenu, _ NoArgMenuOpts) (Menu, error) {
+		return &testCheckUpdateMenu{baseMenu: base}, nil
+	})
+	RegisterMainMenuItem("check_update", "检查更新")
+
 	app, netease := newFormPageTestApp(t)
-	menu := NewMainMenu(netease)
+	menu := NewMainMenu(newBaseMenu(netease))
 	updateIndex := -1
 	for i, item := range menu.menus {
 		if item.Title == "检查更新" {
@@ -120,47 +129,48 @@ func TestMainMenuCheckUpdateActionReturnsNotificationCommand(t *testing.T) {
 		t.Fatal("main menu does not contain check-update entry")
 	}
 
-	page, cmd := menu.Action(app, updateIndex)
-	if page != app.MustMain() || cmd == nil {
-		t.Fatalf("check-update action returned page=%T cmd=%v, want current main page and notification command", page, cmd)
+	// The main menu no longer special-cases the check-update index: Action
+	// falls through (nil/nil) and the trigger is handled by the plugin menu's
+	// own BeforeEnterMenuHook/Action.
+	if page, cmd := menu.Action(app, updateIndex); page != nil || cmd != nil {
+		t.Fatalf("main menu check-update action = page=%T cmd=%v, want nil/nil (fall through to plugin menu)", page, cmd)
 	}
-	if submenu := menu.SubMenu(app, updateIndex); submenu != nil {
-		t.Fatalf("check-update entry still opens submenu %T", submenu)
+	submenu := menu.SubMenu(app, updateIndex)
+	if submenu == nil {
+		t.Fatal("check-update entry does not route to a plugin submenu")
 	}
-}
-
-func TestCheckUpdateNotificationMsgCoversAllResults(t *testing.T) {
-	tests := []struct {
-		name          string
-		hasUpdate     bool
-		latestVersion string
-		wantLevel     model.NotificationLevel
-		wantText      string
-		wantActions   int
-	}{
-		{name: "update available", hasUpdate: true, latestVersion: "v9.9.9", wantLevel: model.NotificationInfo, wantText: "v9.9.9", wantActions: 1},
-		{name: "already latest", latestVersion: types.AppVersion, wantLevel: model.NotificationSuccess, wantText: "已是最新版本"},
-		{name: "check failed", wantLevel: model.NotificationError, wantText: "无法获取最新版本信息"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			msg := checkUpdateNotificationMsg(tt.hasUpdate, tt.latestVersion)
-			if msg.Spec.Level != tt.wantLevel {
-				t.Fatalf("notification level = %v, want %v", msg.Spec.Level, tt.wantLevel)
-			}
-			if text := msg.Spec.Title + " " + msg.Spec.Message; !strings.Contains(text, tt.wantText) {
-				t.Fatalf("notification text = %q, want it to contain %q", text, tt.wantText)
-			}
-			if len(msg.Spec.Actions) != tt.wantActions {
-				t.Fatalf("notification actions = %d, want %d", len(msg.Spec.Actions), tt.wantActions)
-			}
-		})
+	if key := submenu.GetMenuKey(); key != "check_update" {
+		t.Fatalf("check-update submenu key = %q, want check_update", key)
 	}
 }
 
+// testCheckUpdateMenu is the ui test-double for the plugin-supplied
+// "check_update" provider: its Action returns the current main page plus a
+// notification command, mirroring the CheckUpdateMenu contract in
+// internal/plugins/checkupdate.
+type testCheckUpdateMenu struct {
+	baseMenu
+}
+
+func (m *testCheckUpdateMenu) GetMenuKey() string          { return "check_update" }
+func (m *testCheckUpdateMenu) MenuViews() []model.MenuItem { return nil }
+func (m *testCheckUpdateMenu) SubMenu(_ *model.App, _ int) model.Menu {
+	return nil
+}
+func (m *testCheckUpdateMenu) Action(a *model.App, _ int) (model.Page, tea.Cmd) {
+	return a.MustMain(), func() tea.Msg { return model.ShowNotificationMsg{} }
+}
+
+// TestCheckUpdateResultRendersDirectlyInTUI 验证 model.ShowNotificationMsg
+// 经 app.Update 直接渲染为 TUI 通知。检查更新消息的构造已随插件提取移入
+// internal/plugins/checkupdate，这里内联构造等效消息验证框架渲染路径。
 func TestCheckUpdateResultRendersDirectlyInTUI(t *testing.T) {
 	app, _ := newFormPageTestApp(t)
-	msg := checkUpdateNotificationMsg(false, types.AppVersion)
+	msg := model.ShowNotificationMsg{Spec: model.NotificationSpec{
+		Level:   model.NotificationSuccess,
+		Title:   "检查更新",
+		Message: types.AppVersion + " 已是最新版本",
+	}}
 	_, _ = app.Update(msg)
 
 	if view := app.View().Content; !strings.Contains(view, "已是最新版本") {
@@ -212,14 +222,19 @@ func TestDualColumnSelectedMenuItemDoesNotWrap(t *testing.T) {
 }
 
 func TestUpdateNotificationOpensVersionRelease(t *testing.T) {
-	content := newVersionNotifyContent("v9.9.9")
+	content := notify.NotifyContent{
+		Title:       "发现新版本: v9.9.9",
+		Text:        "去看看呗",
+		Url:         types.AppGithubUrl + "/releases/tag/v9.9.9",
+		ActionLabel: "前往 GitHub",
+	}
 	wantURL := types.AppGithubUrl + "/releases/tag/v9.9.9"
 	if content.Url != wantURL || content.ActionLabel != "前往 GitHub" {
 		t.Fatalf("update notification = %#v, want URL %q with GitHub action", content, wantURL)
 	}
 
 	openedURL := ""
-	spec := buildToastNotificationSpec(content, notify.ToastInfo, func(url string) error {
+	spec := BuildToastNotificationSpec(content, notify.ToastInfo, func(url string) error {
 		openedURL = url
 		return nil
 	})
@@ -359,14 +374,14 @@ func (dualColumnTruncateMenu) GetMenuKey() string { return "dual-column-truncate
 
 func (dualColumnTruncateMenu) MenuViews() []model.MenuItem {
 	titles := []string{
-		"私人雷达",                        // 0 (left)
-		"华语必听100首，金曲新歌全都有",   // 1 (right)
-		"滚石唱片",                        // 2 (left)
-		"神级翻唱：戴上耳机领略仙音！",     // 3 (right)
+		"私人雷达", // 0 (left)
+		"华语必听100首，金曲新歌全都有", // 1 (right)
+		"滚石唱片", // 2 (left)
+		"神级翻唱：戴上耳机领略仙音！", // 3 (right)
 		// 4 (left): 36 ASCII + wide runes. "    4. " prefix is 7 cells, so the
 		// title truncates to 43 cells stopping before a wide rune.
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa中文哈哈",
-		"许嵩『安泊猜想巡回演唱会』2026",  // 5 (right)
+		"许嵩『安泊猜想巡回演唱会』2026", // 5 (right)
 	}
 	items := make([]model.MenuItem, 0, len(titles))
 	for _, title := range titles {

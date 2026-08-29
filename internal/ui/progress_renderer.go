@@ -17,8 +17,8 @@ import (
 
 // ProgressRenderer is a dedicated UI component for rendering the playback progress bar.
 type ProgressRenderer struct {
-	netease *Netease
-	state   playerRendererState
+	svc   *menuServices
+	state playerRendererState
 
 	progressLastWidth float64
 	progressRamp      []color.Color
@@ -32,10 +32,10 @@ type ProgressRenderer struct {
 }
 
 // NewProgressRenderer creates a new progress bar renderer component.
-func NewProgressRenderer(netease *Netease, state playerRendererState) *ProgressRenderer {
+func NewProgressRenderer(svc *menuServices, state playerRendererState) *ProgressRenderer {
 	return &ProgressRenderer{
-		netease: netease,
-		state:   state,
+		svc:   svc,
+		state: state,
 	}
 }
 
@@ -80,7 +80,7 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	}
 	progress := float64(progressPct) / 100.0
 
-	width := r.netease.WindowWidth() - ProgressTimeDisplayWidth
+	width := r.svc.App().WindowWidth() - ProgressTimeDisplayWidth
 	if width < 0 {
 		width = 0
 	}
@@ -130,9 +130,9 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	timesBg := configs.ResolveBackground(nil)
 	var styledTimes string
 	if timesBg != nil {
-		styledTimes = util.SetFgBgStyle(times, util.GetPrimaryColor(), timesBg)
+		styledTimes = style.FGBG(times, util.GetPrimaryColor(), timesBg)
 	} else {
-		styledTimes = util.SetFgStyle(times, util.GetPrimaryColor())
+		styledTimes = style.FG(times, util.GetPrimaryColor())
 	}
 
 	view = progressView + appBg.Render(" ") + styledTimes
@@ -140,7 +140,7 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 		view += appBg.Render(" ")
 	}
 	viewWidth := runewidth.StringWidth(stripAnsiCodes(view))
-	windowWidth := r.netease.WindowWidth()
+	windowWidth := r.svc.App().WindowWidth()
 	remainingWidth := windowWidth - viewWidth
 	if remainingWidth > 0 {
 		view += appBg.Render(strings.Repeat(" ", remainingWidth))

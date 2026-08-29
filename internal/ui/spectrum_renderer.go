@@ -207,7 +207,7 @@ type SpectrumRenderer struct {
 }
 
 func NewSpectrumRenderer(state *Player) *SpectrumRenderer {
-	provider, _ := state.Player.(player.SpectrumProvider)
+	provider, _ := state.Engine().(player.SpectrumProvider)
 	return &SpectrumRenderer{provider: provider}
 }
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
+
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
@@ -44,7 +45,8 @@ const (
 // 与 Header 文案形成父子层级。放在图标之前（缩进 + icon + 文案）。
 const itemIndent = "  "
 
-// TODO: 自适应添加
+// ActionItem 表示操作菜单中的一个可执行操作项：展示标题、可选的动作回调
+// 与页面跳转回调、以及所属分组（group 用于归类，TODO: 自适应添加分组宽度）。
 type ActionItem struct {
 	title  model.MenuItem
 	action func()
@@ -122,33 +124,33 @@ func (m *ActionMenu) FormatMenuItem(item *model.MenuItem) {
 func (m *ActionMenu) buildActionItems() {
 	if m.playing {
 		var ok bool
-		if m.playingSong, ok = getTargetSong(m.netease, false); !ok {
+		if m.playingSong, ok = getTargetSong(m.svc, false); !ok {
 			slog.Debug("无法获取到当前播放歌曲")
 			m.items = nil
 			return
 		}
 	}
 
-	m.items = actionItemsForMenu(m.netease, m.from, m.playing, m.netease.MustMain().SelectedIndex())
+	m.items = actionItemsForMenu(m.svc, m.from, m.playing, m.svc.MustMain().SelectedIndex())
 }
 
-func actionItemsForMenu(n *Netease, from string, playing bool, selectedIndex int) []ActionItem {
+func actionItemsForMenu(svc *menuServices, from string, playing bool, selectedIndex int) []ActionItem {
 	isSelected := !playing
 	var actions []ActionItem
-	menu := n.MustMain().CurMenu()
+	menu := svc.MustMain().CurMenu()
 
 	if playing || isSongsProvider(menu) {
-		actions = append(actions, buildSongActions(n, isSelected)...)
+		actions = append(actions, buildSongActions(svc, isSelected)...)
 	}
 
 	if canCollectPlaylist(menu) {
-		actions = append(actions, buildPlaylistActions(n)...)
+		actions = append(actions, buildPlaylistActions(svc)...)
 	}
 
 	if isSelected && from == CurPlaylistKey {
 		actions = append(actions, ActionItem{
 			title: model.MenuItem{Title: iconDelete + "从播放列表移除"},
-			page:  func() model.Page { return delSongFromPlaylist(n) },
+			page:  func() model.Page { return delSongFromPlaylist(svc) },
 			group: "playlist",
 		})
 	}
@@ -156,7 +158,7 @@ func actionItemsForMenu(n *Netease, from string, playing bool, selectedIndex int
 	if playing || canShare(menu) {
 		actions = append(actions, ActionItem{
 			title:  model.MenuItem{Title: iconShare + "分享"},
-			action: func() { shareItem(n, isSelected, selectedIndex) },
+			action: func() { shareItem(svc, isSelected, selectedIndex) },
 			group:  "share",
 		})
 	}
@@ -164,7 +166,7 @@ func actionItemsForMenu(n *Netease, from string, playing bool, selectedIndex int
 	if playing || canOpenInWeb(menu) {
 		actions = append(actions, ActionItem{
 			title:  model.MenuItem{Title: iconWeb + "在网页打开"},
-			action: func() { openInWeb(n, isSelected, selectedIndex) },
+			action: func() { openInWeb(svc, isSelected, selectedIndex) },
 			group:  "share",
 		})
 	}
@@ -261,96 +263,96 @@ func appendContextMenuGlobalItems(items []model.ContextMenuItem, hasPlaylist boo
 	return append(items, genericContextMenuItems()...)
 }
 
-func buildPlaylistActions(n *Netease) []ActionItem {
+func buildPlaylistActions(svc *menuServices) []ActionItem {
 	items := []ActionItem{
 		{
 			title: model.MenuItem{Title: iconHeartFilled + "收藏"},
-			page:  func() model.Page { return collectSelectedPlaylist(n, true) },
+			page:  func() model.Page { return collectSelectedPlaylist(svc, true) },
 			group: "subscribe",
 		}, {
 			title: model.MenuItem{Title: iconHeartOutline + "取消收藏"},
-			page:  func() model.Page { return collectSelectedPlaylist(n, false) },
+			page:  func() model.Page { return collectSelectedPlaylist(svc, false) },
 			group: "subscribe",
 		},
 	}
 	return items
 }
 
-func buildSongActions(n *Netease, isSelected bool) []ActionItem {
+func buildSongActions(svc *menuServices, isSelected bool) []ActionItem {
 	items := []ActionItem{
 		{
 			title:  model.MenuItem{Title: iconAlbum + "所属专辑"},
-			action: func() { goToAlbumOfSong(n, isSelected) },
+			action: func() { goToAlbumOfSong(svc, isSelected) },
 			group:  "nav",
 		},
 		{
 			title:  model.MenuItem{Title: iconArtist + "所属歌手"},
-			action: func() { goToArtistOfSong(n, isSelected) },
+			action: func() { goToArtistOfSong(svc, isSelected) },
 			group:  "nav",
 		},
 		{
 			title: model.MenuItem{Title: iconHeartFilled + "收藏专辑"},
-			page:  func() model.Page { return subscribeAlbum(n, true, isSelected) },
+			page:  func() model.Page { return subscribeAlbum(svc, true, isSelected) },
 			group: "subscribe",
 		},
 		{
 			title: model.MenuItem{Title: iconHeartOutline + "取消收藏专辑"},
-			page:  func() model.Page { return subscribeAlbum(n, false, isSelected) },
+			page:  func() model.Page { return subscribeAlbum(svc, false, isSelected) },
 			group: "subscribe",
 		},
 		{
 			title: model.MenuItem{Title: iconHeartFilled + "收藏歌手"},
-			page:  func() model.Page { return subscribeArtist(n, true, isSelected) },
+			page:  func() model.Page { return subscribeArtist(svc, true, isSelected) },
 			group: "subscribe",
 		},
 		{
 			title: model.MenuItem{Title: iconHeartOutline + "取消收藏歌手"},
-			page:  func() model.Page { return subscribeArtist(n, false, isSelected) },
+			page:  func() model.Page { return subscribeArtist(svc, false, isSelected) },
 			group: "subscribe",
 		},
 		{
 			title:  model.MenuItem{Title: iconDownload + "下载"},
-			action: func() { downloadSong(n, isSelected) },
+			action: func() { downloadSong(svc, isSelected) },
 			group:  "download",
 		},
 		{
 			title:  model.MenuItem{Title: iconDownloadDoc + "下载歌词"},
-			action: func() { downloadSongLrc(n, isSelected) },
+			action: func() { downloadSongLrc(svc, isSelected) },
 			group:  "download",
 		},
 		{
 			title: model.MenuItem{Title: iconThumbUp + "添加到喜欢"},
-			page:  func() model.Page { return likeSong(n, true, isSelected) },
+			page:  func() model.Page { return likeSong(svc, true, isSelected) },
 			group: "like",
 		},
 		{
 			title: model.MenuItem{Title: iconThumbDown + "从喜欢移除"},
-			page:  func() model.Page { return likeSong(n, false, isSelected) },
+			page:  func() model.Page { return likeSong(svc, false, isSelected) },
 			group: "like",
 		},
 		{
 			title:  model.MenuItem{Title: iconThumbBan + "标记为不喜欢"},
-			action: func() { confirmTrashSong(n, isSelected) },
+			action: func() { confirmTrashSong(svc, isSelected) },
 			group:  "like",
 		},
 		{
 			title: model.MenuItem{Title: iconPlaylistAdd + "添加至歌单"},
-			page:  func() model.Page { return openAddSongToUserPlaylistMenu(n, isSelected, true) },
+			page:  func() model.Page { return openAddSongToUserPlaylistMenu(svc, isSelected, true) },
 			group: "playlist",
 		},
 		{
 			title: model.MenuItem{Title: iconPlaylistRemove + "从歌单移除"},
-			page:  func() model.Page { return openAddSongToUserPlaylistMenu(n, isSelected, false) },
+			page:  func() model.Page { return openAddSongToUserPlaylistMenu(svc, isSelected, false) },
 			group: "playlist",
 		},
 		{
 			title:  model.MenuItem{Title: iconShuffle + "相似的歌曲"},
-			action: func() { findSimilarSongs(n, isSelected) },
+			action: func() { findSimilarSongs(svc, isSelected) },
 			group:  "discover",
 		},
 		{
 			title:  model.MenuItem{Title: iconSearch + "搜索歌名"},
-			action: func() { searchSong(n, isSelected) },
+			action: func() { searchSong(svc, isSelected) },
 			group:  "discover",
 		},
 	}

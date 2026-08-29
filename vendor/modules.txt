@@ -20,6 +20,13 @@ charm.land/glamour/v2/styles
 ## explicit; go 1.25.0
 charm.land/lipgloss/v2
 charm.land/lipgloss/v2/table
+# git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3
+## explicit; go 1.20
+git.sr.ht/~jackmordaunt/go-toast/v2
+git.sr.ht/~jackmordaunt/go-toast/v2/internal/winrt/data/xml/dom
+git.sr.ht/~jackmordaunt/go-toast/v2/internal/winrt/ui/notifications
+git.sr.ht/~jackmordaunt/go-toast/v2/tmpl
+git.sr.ht/~jackmordaunt/go-toast/v2/wintoast
 # github.com/13thgoutham/go-webview2 v1.0.25
 ## explicit; go 1.20
 github.com/13thgoutham/go-webview2/pkg/combridge
@@ -47,7 +54,7 @@ github.com/alecthomas/chroma/v2/styles
 ## explicit; go 1.22
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
-# github.com/anhoder/foxful-cli v1.1.4
+# github.com/anhoder/foxful-cli v1.1.5
 ## explicit; go 1.25.8
 github.com/anhoder/foxful-cli/layout
 github.com/anhoder/foxful-cli/model
@@ -60,6 +67,9 @@ github.com/atotto/clipboard
 ## explicit
 github.com/aymerick/douceur/css
 github.com/aymerick/douceur/parser
+# github.com/bep/debounce v1.2.1
+## explicit
+github.com/bep/debounce
 # github.com/bogem/id3v2/v2 v2.1.4
 ## explicit; go 1.13
 github.com/bogem/id3v2/v2
@@ -119,6 +129,15 @@ github.com/cnsilvan/UnblockNeteaseMusic/version
 # github.com/cocoonlife/goflac v0.0.0-20170210142907-50ea06ed5a9d => github.com/go-musicfox/goflac v0.1.5
 ## explicit
 github.com/cocoonlife/goflac
+# github.com/coder/websocket v1.8.12
+## explicit; go 1.19
+github.com/coder/websocket
+github.com/coder/websocket/internal/bpool
+github.com/coder/websocket/internal/errd
+github.com/coder/websocket/internal/util
+github.com/coder/websocket/internal/wsjs
+github.com/coder/websocket/internal/xsync
+github.com/coder/websocket/wsjson
 # github.com/dlclark/regexp2 v1.11.0
 ## explicit; go 1.13
 github.com/dlclark/regexp2
@@ -191,7 +210,10 @@ github.com/godbus/dbus/v5/prop
 # github.com/google/go-querystring v1.1.0
 ## explicit; go 1.10
 github.com/google/go-querystring/query
-# github.com/gookit/color v1.5.3
+# github.com/google/uuid v1.6.0
+## explicit
+github.com/google/uuid
+# github.com/gookit/color v1.5.4
 ## explicit; go 1.18
 github.com/gookit/color
 # github.com/gookit/gcli/v2 v2.3.4 => github.com/anhoder/gcli/v2 v2.3.5
@@ -234,6 +256,9 @@ github.com/gopxl/beep/wav
 # github.com/gorilla/css v1.0.1
 ## explicit; go 1.20
 github.com/gorilla/css/scanner
+# github.com/gorilla/websocket v1.5.3
+## explicit; go 1.12
+github.com/gorilla/websocket
 # github.com/hajimehoshi/go-mp3 v0.3.4 => github.com/go-musicfox/go-mp3 v0.3.3
 ## explicit; go 1.14
 github.com/hajimehoshi/go-mp3
@@ -325,9 +350,35 @@ github.com/knadh/koanf/providers/rawbytes
 # github.com/knadh/koanf/v2 v2.3.0
 ## explicit; go 1.23.0
 github.com/knadh/koanf/v2
+# github.com/labstack/echo/v4 v4.13.3
+## explicit; go 1.20
+github.com/labstack/echo/v4
+# github.com/labstack/gommon v0.4.2
+## explicit; go 1.18
+github.com/labstack/gommon/color
+github.com/labstack/gommon/log
+# github.com/leaanthony/go-ansi-parser v1.6.1
+## explicit; go 1.16
+github.com/leaanthony/go-ansi-parser
+# github.com/leaanthony/gosod v1.0.4
+## explicit; go 1.18
+github.com/leaanthony/gosod
+github.com/leaanthony/gosod/internal/templatedir
+# github.com/leaanthony/slicer v1.6.0
+## explicit; go 1.13
+github.com/leaanthony/slicer
+# github.com/leaanthony/u v1.1.1
+## explicit; go 1.21
+github.com/leaanthony/u
 # github.com/lucasb-eyer/go-colorful v1.4.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
+# github.com/mattn/go-colorable v0.1.14
+## explicit; go 1.18
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.20
+## explicit; go 1.15
+github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.23
 ## explicit; go 1.20
 github.com/mattn/go-runewidth
@@ -378,6 +429,9 @@ github.com/pelletier/go-toml/v2/internal/parserbridge
 github.com/pelletier/go-toml/v2/internal/tracker
 github.com/pelletier/go-toml/v2/unstable
 github.com/pelletier/go-toml/v2/unstable/edit
+# github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+## explicit; go 1.14
+github.com/pkg/browser
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -456,6 +510,12 @@ github.com/saltosystems/winrt-go/windows/storage/fileproperties
 github.com/saltosystems/winrt-go/windows/storage/streams
 github.com/saltosystems/winrt-go/windows/system
 github.com/saltosystems/winrt-go/windows/web/http
+# github.com/samber/lo v1.49.1
+## explicit; go 1.18
+github.com/samber/lo
+github.com/samber/lo/internal/constraints
+github.com/samber/lo/internal/rand
+github.com/samber/lo/mutable
 # github.com/shkh/lastfm-go v0.0.0-20191215035245-89a801c244e0 => github.com/go-musicfox/lastfm-go v0.0.2
 ## explicit; go 1.19
 github.com/shkh/lastfm-go
@@ -470,6 +530,42 @@ github.com/skratchdot/open-golang/open
 # github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af
 ## explicit
 github.com/tadvi/systray
+# github.com/tetratelabs/wazero v1.12.0
+## explicit; go 1.25.0
+github.com/tetratelabs/wazero
+github.com/tetratelabs/wazero/api
+github.com/tetratelabs/wazero/experimental
+github.com/tetratelabs/wazero/experimental/sys
+github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1
+github.com/tetratelabs/wazero/internal/descriptor
+github.com/tetratelabs/wazero/internal/engine/interpreter
+github.com/tetratelabs/wazero/internal/engine/wazevo
+github.com/tetratelabs/wazero/internal/engine/wazevo/backend
+github.com/tetratelabs/wazero/internal/engine/wazevo/backend/isa/amd64
+github.com/tetratelabs/wazero/internal/engine/wazevo/backend/isa/arm64
+github.com/tetratelabs/wazero/internal/engine/wazevo/backend/regalloc
+github.com/tetratelabs/wazero/internal/engine/wazevo/frontend
+github.com/tetratelabs/wazero/internal/engine/wazevo/ssa
+github.com/tetratelabs/wazero/internal/engine/wazevo/wazevoapi
+github.com/tetratelabs/wazero/internal/expctxkeys
+github.com/tetratelabs/wazero/internal/filecache
+github.com/tetratelabs/wazero/internal/ieee754
+github.com/tetratelabs/wazero/internal/internalapi
+github.com/tetratelabs/wazero/internal/leb128
+github.com/tetratelabs/wazero/internal/moremath
+github.com/tetratelabs/wazero/internal/platform
+github.com/tetratelabs/wazero/internal/sock
+github.com/tetratelabs/wazero/internal/sys
+github.com/tetratelabs/wazero/internal/sysfs
+github.com/tetratelabs/wazero/internal/u32
+github.com/tetratelabs/wazero/internal/u64
+github.com/tetratelabs/wazero/internal/version
+github.com/tetratelabs/wazero/internal/wasip1
+github.com/tetratelabs/wazero/internal/wasm
+github.com/tetratelabs/wazero/internal/wasm/binary
+github.com/tetratelabs/wazero/internal/wasmdebug
+github.com/tetratelabs/wazero/internal/wasmruntime
+github.com/tetratelabs/wazero/sys
 # github.com/tidwall/gjson v1.17.1
 ## explicit; go 1.12
 github.com/tidwall/gjson
@@ -479,15 +575,80 @@ github.com/tidwall/match
 # github.com/tidwall/pretty v1.2.1
 ## explicit; go 1.16
 github.com/tidwall/pretty
+# github.com/tkrajina/go-reflector v0.5.8
+## explicit; go 1.17
+github.com/tkrajina/go-reflector/reflector
 # github.com/tosone/minimp3 v1.0.2
 ## explicit; go 1.18
 github.com/tosone/minimp3
+# github.com/valyala/bytebufferpool v1.0.0
+## explicit
+github.com/valyala/bytebufferpool
+# github.com/valyala/fasttemplate v1.2.2
+## explicit; go 1.12
+github.com/valyala/fasttemplate
 # github.com/vcaesar/go-wayland v0.40.0
 ## explicit; go 1.25.0
 github.com/vcaesar/go-wayland/client
 # github.com/vcaesar/keycode v0.20.0
 ## explicit; go 1.17
 github.com/vcaesar/keycode
+# github.com/wailsapp/go-webview2 v1.0.22
+## explicit; go 1.20
+github.com/wailsapp/go-webview2/internal/w32
+github.com/wailsapp/go-webview2/pkg/combridge
+github.com/wailsapp/go-webview2/pkg/edge
+github.com/wailsapp/go-webview2/webviewloader
+# github.com/wailsapp/mimetype v1.4.1
+## explicit; go 1.12
+github.com/wailsapp/mimetype
+github.com/wailsapp/mimetype/internal/charset
+github.com/wailsapp/mimetype/internal/json
+github.com/wailsapp/mimetype/internal/magic
+# github.com/wailsapp/wails/v2 v2.15.0
+## explicit; go 1.25.0
+github.com/wailsapp/wails/v2
+github.com/wailsapp/wails/v2/internal/app
+github.com/wailsapp/wails/v2/internal/binding
+github.com/wailsapp/wails/v2/internal/frontend
+github.com/wailsapp/wails/v2/internal/frontend/desktop
+github.com/wailsapp/wails/v2/internal/frontend/desktop/darwin
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux
+github.com/wailsapp/wails/v2/internal/frontend/desktop/windows
+github.com/wailsapp/wails/v2/internal/frontend/desktop/windows/win32
+github.com/wailsapp/wails/v2/internal/frontend/desktop/windows/winc
+github.com/wailsapp/wails/v2/internal/frontend/desktop/windows/winc/w32
+github.com/wailsapp/wails/v2/internal/frontend/devserver
+github.com/wailsapp/wails/v2/internal/frontend/dispatcher
+github.com/wailsapp/wails/v2/internal/frontend/originvalidator
+github.com/wailsapp/wails/v2/internal/frontend/runtime
+github.com/wailsapp/wails/v2/internal/frontend/runtime/wrapper
+github.com/wailsapp/wails/v2/internal/frontend/utils
+github.com/wailsapp/wails/v2/internal/fs
+github.com/wailsapp/wails/v2/internal/go-common-file-dialog/cfd
+github.com/wailsapp/wails/v2/internal/goversion
+github.com/wailsapp/wails/v2/internal/logger
+github.com/wailsapp/wails/v2/internal/menumanager
+github.com/wailsapp/wails/v2/internal/platform/win32
+github.com/wailsapp/wails/v2/internal/project
+github.com/wailsapp/wails/v2/internal/shell
+github.com/wailsapp/wails/v2/internal/signal
+github.com/wailsapp/wails/v2/internal/system/operatingsystem
+github.com/wailsapp/wails/v2/internal/typescriptify
+github.com/wailsapp/wails/v2/internal/webview2runtime
+github.com/wailsapp/wails/v2/internal/wv2installer
+github.com/wailsapp/wails/v2/pkg/application
+github.com/wailsapp/wails/v2/pkg/assetserver
+github.com/wailsapp/wails/v2/pkg/assetserver/webview
+github.com/wailsapp/wails/v2/pkg/logger
+github.com/wailsapp/wails/v2/pkg/menu
+github.com/wailsapp/wails/v2/pkg/menu/keys
+github.com/wailsapp/wails/v2/pkg/options
+github.com/wailsapp/wails/v2/pkg/options/assetserver
+github.com/wailsapp/wails/v2/pkg/options/linux
+github.com/wailsapp/wails/v2/pkg/options/mac
+github.com/wailsapp/wails/v2/pkg/options/windows
+github.com/wailsapp/wails/v2/pkg/runtime
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
 ## explicit; go 1.19
 github.com/xo/terminfo
@@ -510,8 +671,10 @@ github.com/yuin/goldmark-emoji/definition
 # go.etcd.io/bbolt v1.3.7
 ## explicit; go 1.17
 go.etcd.io/bbolt
-# golang.org/x/crypto v0.52.0
+# golang.org/x/crypto v0.53.0
 ## explicit; go 1.25.0
+golang.org/x/crypto/acme
+golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
@@ -521,15 +684,19 @@ golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.55.0
+# golang.org/x/net v0.56.0
 ## explicit; go 1.25.0
 golang.org/x/net/bpf
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/http/httpguts
+golang.org/x/net/http2
+golang.org/x/net/http2/h2c
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
+golang.org/x/net/internal/httpcommon
+golang.org/x/net/internal/httpsfv
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
@@ -546,10 +713,10 @@ golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/term v0.43.0
+# golang.org/x/term v0.44.0
 ## explicit; go 1.25.0
 golang.org/x/term
-# golang.org/x/text v0.37.0
+# golang.org/x/text v0.39.0
 ## explicit; go 1.25.0
 golang.org/x/text/cases
 golang.org/x/text/encoding

@@ -56,14 +56,14 @@ func pageSubmitButton(focused bool) string {
 
 func pageButton(text string, focused bool) string {
 	if focused {
-		return "[ " + util.GetPrimaryFontStyle(false).Render(text) + " ]"
+		return "[ " + lipgloss.NewStyle().Foreground(util.GetPrimaryColor()).Render(text) + " ]"
 	}
 	return util.GetBlurredButton(text)
 }
 
 func pageInputStyles() textinput.Styles {
 	styles := textinput.DefaultStyles(style.HasDarkBackground())
-	primary := util.GetPrimaryFontStyle(false)
+	primary := lipgloss.NewStyle().Foreground(util.GetPrimaryColor())
 	styles.Focused.Text = primary
 	styles.Focused.Prompt = primary
 	styles.Focused.Suggestion = primary
@@ -89,7 +89,7 @@ func pageInputView(input textinput.Model, hovered bool) string {
 	}
 
 	styles := input.Styles()
-	hoverStyle := util.GetPrimaryFontStyle(false)
+	hoverStyle := lipgloss.NewStyle().Foreground(util.GetPrimaryColor())
 	styles.Focused.Text = hoverStyle
 	styles.Focused.Prompt = hoverStyle
 	styles.Blurred.Text = hoverStyle
@@ -99,7 +99,7 @@ func pageInputView(input textinput.Model, hovered bool) string {
 }
 
 func pageButtonHoverView(text string) string {
-	return "[ " + util.GetPrimaryFontStyle(true).Underline(true).Render(text) + " ]"
+	return "[ " + lipgloss.NewStyle().Foreground(util.GetPrimaryColor()).Bold(true).Underline(true).Render(text) + " ]"
 }
 
 func setPageInputCursor(input *textinput.Model, mouseX, inputStartX int) {
@@ -207,4 +207,92 @@ func pageMenuTitleViewWithBack(a *model.App, main *model.Main, top *int, title *
 	builder.WriteString(" ")
 	builder.WriteString(style.CurrentStyleSet().MenuTitle.Render(content))
 	return builder.String()
+}
+
+// --- Exported custom-page helpers (Phase 3.9 plugin boundary). The Last.fm
+// pages moved into internal/plugins/lastfm and render through the shared
+// custom-page layout machinery; these exported names are their stable plugin
+// surface. Internal pages keep using the unexported helpers below.
+
+// PageBackButtonWidth is the exported form of pageBackButtonWidth.
+const PageBackButtonWidth = pageBackButtonWidth
+
+// PageMenuTitleRow is the exported form of pageMenuTitleRow.
+func PageMenuTitleRow(a *model.App, main *model.Main, topBefore int) int {
+	return pageMenuTitleRow(a, main, topBefore)
+}
+
+// FinishCustomPageView is the exported form of finishCustomPageView.
+func FinishCustomPageView(builder *strings.Builder, a *model.App) string {
+	return finishCustomPageView(builder, a)
+}
+
+// PageSubmitText is the exported form of pageSubmitText.
+func PageSubmitText() string {
+	return pageSubmitText()
+}
+
+// PageSubmitButton is the exported form of pageSubmitButton.
+func PageSubmitButton(focused bool) string {
+	return pageSubmitButton(focused)
+}
+
+// PageButton is the exported form of pageButton.
+func PageButton(text string, focused bool) string {
+	return pageButton(text, focused)
+}
+
+// PageInputStyles is the exported form of pageInputStyles.
+func PageInputStyles() textinput.Styles {
+	return pageInputStyles()
+}
+
+// FocusPageInput is the exported form of focusPageInput.
+func FocusPageInput(input *textinput.Model) {
+	focusPageInput(input)
+}
+
+// BlurPageInput is the exported form of blurPageInput.
+func BlurPageInput(input *textinput.Model) {
+	blurPageInput(input)
+}
+
+// PageInputView is the exported form of pageInputView.
+func PageInputView(input textinput.Model, hovered bool) string {
+	return pageInputView(input, hovered)
+}
+
+// PageButtonHoverView is the exported form of pageButtonHoverView.
+func PageButtonHoverView(text string) string {
+	return pageButtonHoverView(text)
+}
+
+// SetPageInputCursor is the exported form of setPageInputCursor.
+func SetPageInputCursor(input *textinput.Model, mouseX, inputStartX int) {
+	setPageInputCursor(input, mouseX, inputStartX)
+}
+
+// PageTitleView is the exported form of pageTitleView.
+func PageTitleView(a *model.App, main *model.Main, top *int) string {
+	return pageTitleView(a, main, top)
+}
+
+// PageBreadcrumbMotion is the exported form of pageBreadcrumbMotion.
+func PageBreadcrumbMotion(a *model.App, main *model.Main, x, y int) (changed bool, over bool) {
+	return pageBreadcrumbMotion(a, main, x, y)
+}
+
+// PageBreadcrumbClick is the exported form of pageBreadcrumbClick.
+func PageBreadcrumbClick(a *model.App, main *model.Main, x, y int) model.Page {
+	return pageBreadcrumbClick(a, main, x, y)
+}
+
+// PageMenuTitleView is the exported form of pageMenuTitleView.
+func PageMenuTitleView(a *model.App, main *model.Main, top *int, title *model.MenuItem) string {
+	return pageMenuTitleView(a, main, top, title)
+}
+
+// PageMenuTitleViewWithBack is the exported form of pageMenuTitleViewWithBack.
+func PageMenuTitleViewWithBack(a *model.App, main *model.Main, top *int, title *model.MenuItem, hovered bool) string {
+	return pageMenuTitleViewWithBack(a, main, top, title, hovered)
 }

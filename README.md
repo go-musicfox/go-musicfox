@@ -331,6 +331,78 @@ $ musicfox
 <details>
 <summary>
 
+### 无界面模式（headless）
+</summary>
+
+无界面模式运行核心引擎（播放、歌词、桌面通知、远程控制等）而不启动 TUI，适合后台常驻播放，也可配合脚本使用。启用方式（CLI 标志优先于配置）：
+
+```sh
+$ musicfox --headless   # 后台常驻播放，并开启本地控制通道
+```
+
+或在 `config.toml` 中设置：
+
+```toml
+[main]
+headless = true
+```
+
+无界面模式下桌面歌词窗口、MPRIS / Now Playing 等远程控制与系统通知仍正常工作。
+
+#### 单次执行
+
+`--headless --once` 执行一条控制命令后退出，结果以紧凑 JSON 输出到 stdout（不启动控制通道）：
+
+```sh
+$ musicfox --headless --once "status"
+$ musicfox --headless --once "play 周杰伦"
+```
+
+#### 控制正在运行的后台实例
+
+```sh
+$ musicfox ctrl <cmd> [args...]
+```
+
+| 命令 | 说明 |
+| :--- | :--- |
+| `status` | 查看当前播放状态 |
+| `play <query>` | 搜索并播放歌曲 |
+| `pause` / `resume` / `toggle` | 暂停 / 继续 / 切换播放状态 |
+| `stop` / `next` / `prev` | 停止 / 下一首 / 上一首 |
+| `seek <seconds>` | 跳转到指定秒数 |
+| `volume [value]` | 查看或设置音量 |
+| `repeat <off\|one\|all>` | 设置播放模式：顺序播放 / 单曲循环 / 列表循环 |
+| `shuffle <on\|off>` | 开启或关闭随机播放 |
+| `like` / `dislike` | 喜欢 / 取消喜欢当前播放歌曲 |
+| `quit` | 停止后台实例并退出 |
+
+#### WebUI 浏览器控制（connect 模式）
+
+`--frontend=webui --mode=connect` 让 WebUI 以**客户端模式**连接正在运行的后台实例（headless daemon），在浏览器中提供富控制面板（播放控制 / 状态快照 / 事件实时刷新），**不新建播放引擎**：
+
+```sh
+$ musicfox --headless &                    # 先启动常驻 daemon
+$ musicfox --frontend=webui --mode=connect # 浏览器打开控制面板
+```
+
+`--mode` 目前由 `webui` 与 `tui` 前端消费（其余前端忽略）：`standalone`（缺省）= 自建引擎独立运行；`connect` = 连接本地 headless daemon。connect 模式下播放控制 / 状态 / 事件均来自 daemon；命令面为空、QR 登录不可用、封面图 404、歌词为空结构（前端降级不崩）。脚本 / 单条命令控制仍走 `musicfox ctrl`。
+
+#### TUI 遥控（connect 模式）
+
+`--frontend=tui --mode=connect` 让 TUI 以**遥控壳**形态连接正在运行的后台实例（headless daemon）——在终端里遥控常驻播放器，**不新建播放引擎**：播放控制经 daemon 转发、播放状态 / 进度经订阅实时刷新，浏览 / 搜索等本地能力照常：
+
+```sh
+$ musicfox --headless &                    # 先启动常驻 daemon
+$ musicfox --frontend=tui --mode=connect   # 终端遥控（无浏览器依赖）
+```
+
+connect 模式完整能力：**登录**在 daemon 侧完成、TUI 遥控扫码（登录页只显二维码入口，扫码成功后用户态即时刷新，显示昵称与 UserId）；**选歌播放**经 `play_list` 投递 daemon（菜单选中即播放，next/prev 与播放队列同步）。仍降级：播放队列编辑、智能模式、命令面（轨 B/WASM）toast 提示不可用；需登录浏览（收藏 / 我的歌单 / 云盘 / 每日推荐 / 最近播放 / 私人FM）toast 降级；歌词 / 封面 / 频谱隐藏或空渲染；daemon 断开后状态冻结提示（不自动重连）。无 daemon 时 `--mode=connect` 报错退出（非 0）。
+
+</details>
+<details>
+<summary>
+
 ### 注意事项
 </summary>
 

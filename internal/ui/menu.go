@@ -8,8 +8,14 @@ import (
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
 
+	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/desktop_lyrics"
+	"github.com/go-musicfox/go-musicfox/internal/framework"
+	"github.com/go-musicfox/go-musicfox/internal/lastfm"
+	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/internal/track"
 )
 
 // Menu menu interface
@@ -26,6 +32,68 @@ type Menu interface {
 // DjMenu dj menu interface
 type DjMenu interface {
 	Menu
+}
+
+// DjRadioDetailSortable is implemented by the DJ radio detail menu (the
+// concrete type now lives in the internal/plugins/dj plugin). The
+// OpToggleSortOrder key handler toggles the program sort order through this
+// interface instead of a concrete ui type — package ui must not import plugin
+// packages.
+type DjRadioDetailSortable interface {
+	ToggleSortOrder()
+	Reload() (bool, model.Page)
+}
+
+// AlbumDetailIDGetter is implemented by the album detail menu (the concrete
+// type now lives in the internal/plugins/album plugin). operate.go's
+// goToAlbumOfSong avoids re-entering the same album through this interface
+// instead of a concrete ui type — package ui must not import plugin packages.
+type AlbumDetailIDGetter interface {
+	AlbumID() int64
+}
+
+// ArtistDetailIDGetter is implemented by the artist detail menu (the concrete
+// type now lives in the internal/plugins/artist plugin). operate.go's
+// goToArtistOfSong avoids re-entering the same artist through this interface.
+type ArtistDetailIDGetter interface {
+	ArtistID() int64
+}
+
+// ArtistsOfSongSongIDGetter is implemented by the artists-of-song menu (the
+// concrete type now lives in the internal/plugins/artist plugin). operate.go's
+// goToArtistOfSong avoids re-entering the same multi-artist list through this
+// interface.
+type ArtistsOfSongSongIDGetter interface {
+	SongID() int64
+}
+
+// PlaylistDetailGetter is implemented by the playlist detail menu (the
+// concrete type now lives in the internal/plugins/playlist plugin). player.go's
+// Intelligence smart-play flow reads the open playlist's songs and ID through
+// this interface instead of a concrete ui type.
+type PlaylistDetailGetter interface {
+	SongsMenu
+	PlaylistID() int64
+}
+
+// AddToUserPlaylistGetter is implemented by the add-to-playlist menu (the
+// concrete type now lives in the internal/plugins/song plugin). event_handler.go
+// and operate.go run the add/remove flow with the open menu's song payload and
+// add-or-del flag through this interface instead of a concrete ui type. IsAdd
+// reports the menu's add-vs-del mode (true = add, false = del); it is named
+// IsAdd (not Action) because model.Menu already owns an Action method.
+type AddToUserPlaylistGetter interface {
+	PlaylistsMenu
+	Song() structs.Song
+	IsAdd() bool
+}
+
+// SimilarSongsRelateSongIDGetter is implemented by the similar-songs menu (the
+// concrete type now lives in the internal/plugins/song plugin). operate.go's
+// findSimilarSongs avoids re-entering the same similar-songs list through this
+// interface instead of a concrete ui type.
+type SimilarSongsRelateSongIDGetter interface {
+	RelateSongID() int64
 }
 
 type SongsMenu interface {
@@ -48,22 +116,193 @@ type ArtistsMenu interface {
 	Artists() []structs.Artist
 }
 
-type baseMenu struct {
+// BaseMenu is the embeddable base for menus. It is exported so external plugin
+// factories (outside package ui) can embed it and implement the ui.Menu
+// interface; it carries the menuServices accessor through which plugins reach
+// services and the thin-shell navigation surface (see the forwarding methods
+// below and docs/plugin_development.md). baseMenu is an alias, so all existing
+// internal code and registry registrations keep compiling untouched.
+type BaseMenu struct {
 	model.DefaultMenu
-	netease *Netease
+	svc *menuServices
 }
+
+// baseMenu is the unexported alias kept for internal call sites and the
+// RegisterMenu/BuildMenu signatures (aliases are interchangeable, so factories
+// written with BaseMenu are accepted as-is).
+type baseMenu = BaseMenu
 
 func newBaseMenu(netease *Netease) baseMenu {
 	return baseMenu{
-		netease: netease,
+		svc: newMenuServices(netease),
 	}
 }
 
-func (e *baseMenu) HelpHints() []model.HelpHint {
+// NewBaseMenu builds a BaseMenu rooted at the given Netease shell. Exported for
+// the app bootstrap (internal/commands), whose call sites predate the baseMenu
+// signature and only hold the shell.
+func NewBaseMenu(n *Netease) BaseMenu {
+	return newBaseMenu(n)
+}
+
+// newBaseMenuFromSvc builds a baseMenu from an existing accessor, avoiding a
+// round trip through the *Netease shell (Phase 3.3.3 menu constructions).
+func newBaseMenuFromSvc(svc *menuServices) baseMenu {
+	return baseMenu{svc: svc}
+}
+
+// --- Exported accessor forwarding (plugin boundary, Phase 3.6). External
+// plugin menus embed BaseMenu and reach services/navigation through these
+// methods; each forwards to the menuServices accessor and is nil-safe (a
+// zero-value BaseMenu degrades to the zero value without a panic).
+
+// Player resolves the player service.
+func (e *BaseMenu) Player() *Player {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Player()
+}
+
+// User resolves the current user (nil until login).
+func (e *BaseMenu) User() *structs.User {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.User()
+}
+
+// TrackManager resolves the track manager service.
+func (e *BaseMenu) TrackManager() *track.Manager {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.TrackManager()
+}
+
+// LyricService resolves the lyric service.
+func (e *BaseMenu) LyricService() *lyric.Service {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.LyricService()
+}
+
+// DesktopLyrics resolves the desktop lyrics controller.
+func (e *BaseMenu) DesktopLyrics() desktop_lyrics.Controller {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.DesktopLyrics()
+}
+
+// CoverRenderer resolves the cover renderer.
+func (e *BaseMenu) CoverRenderer() *CoverRenderer {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.CoverRenderer()
+}
+
+// ShareSvc resolves the share service.
+func (e *BaseMenu) ShareSvc() *composer.ShareService {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.ShareSvc()
+}
+
+// Lastfm resolves the Last.fm client.
+func (e *BaseMenu) Lastfm() *lastfm.Client {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Lastfm()
+}
+
+// Ctx returns the app-wide framework context backing the accessor.
+func (e *BaseMenu) Ctx() *framework.Context {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Ctx()
+}
+
+// App returns the foxful app shell (nil when unset).
+func (e *BaseMenu) App() *model.App {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.App()
+}
+
+// MustMain returns the foxful main page (nil when the app has not started).
+func (e *BaseMenu) MustMain() *model.Main {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.MustMain()
+}
+
+// Rerender returns a tea.Cmd that forces a re-render on the app shell.
+func (e *BaseMenu) Rerender() tea.Cmd {
+	if e.svc == nil || e.svc.App() == nil {
+		return nil
+	}
+	return e.svc.App().RerenderCmd(true)
+}
+
+// Search returns the shell-owned search page singleton (nil when unset).
+func (e *BaseMenu) Search() *SearchPage {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Search()
+}
+
+// ToLoginPage forwards to the thin-shell login navigation.
+func (e *BaseMenu) ToLoginPage(callback func() model.Page) (model.Page, tea.Cmd) {
+	if e.svc == nil {
+		return nil, nil
+	}
+	return e.svc.ToLoginPage(callback)
+}
+
+// ToSearchPage forwards to the thin-shell search navigation.
+func (e *BaseMenu) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
+	if e.svc == nil {
+		return nil, nil
+	}
+	return e.svc.ToSearchPage(searchType)
+}
+
+// Services returns the underlying menuServices accessor (exported interface).
+// Plugins pass it into page-opts fields and constructors that require the
+// accessor type — the unexported svc field itself is unreachable outside ui.
+// A zero base (nil svc) returns a true nil MenuServices, preserving the
+// pre-interface alias semantics: callers may compare this return value to nil.
+func (e *BaseMenu) Services() MenuServices {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc
+}
+
+// Netease returns the Netease shell. Escape hatch for legacy helper calls that
+// still take *Netease; new external plugin code should prefer the accessor
+// methods above.
+func (e *BaseMenu) Netease() *Netease {
+	if e.svc == nil {
+		return nil
+	}
+	return e.svc.Netease()
+}
+
+func (e *BaseMenu) HelpHints() []model.HelpHint {
 	return nil
 }
 
-func (e *baseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
+func (e *BaseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
 	menu := a.MustMain().CurMenu()
 	songsMenu, ok := menu.(SongsMenu)
 	if !ok || !songsMenu.IsPlayable() {
@@ -75,11 +314,11 @@ func (e *baseMenu) Action(a *model.App, index int) (model.Page, tea.Cmd) {
 		return nil, nil
 	}
 
-	playOrToggle(e.netease, selectedIndex)
+	playOrToggle(e.svc, selectedIndex)
 	return nil, a.RerenderCmd(true)
 }
 
-func (e *baseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenuItem {
+func (e *BaseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenuItem {
 	main := a.MustMain()
 	menu := main.CurMenu()
 	if menu.GetMenuKey() == actionMenuKey {
@@ -89,32 +328,45 @@ func (e *baseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenu
 	var items []model.ContextMenuItem
 
 	if index >= 0 && index < len(menu.MenuViews()) {
-		selActions := actionItemsForMenu(e.netease, menu.GetMenuKey(), false, index)
+		selActions := actionItemsForMenu(e.svc, menu.GetMenuKey(), false, index)
 		if len(selActions) > 0 {
 			title := selectedContextTitle(menu, index)
 			items = append(items, buildGroupItems("sel", title, selActions, false)...)
 		}
 	}
 
-	if song, ok := getTargetSong(e.netease, false); ok {
-		playActions := actionItemsForMenu(e.netease, menu.GetMenuKey(), true, -1)
+	if song, ok := getTargetSong(e.svc, false); ok {
+		playActions := actionItemsForMenu(e.svc, menu.GetMenuKey(), true, -1)
 		if len(playActions) > 0 {
 			title := iconMusicNote + "当前播放：" + songTitleBrief(song.Name)
 			items = append(items, buildGroupItems("play", title, playActions, len(items) > 0)...)
 		}
 	}
 
-	return appendContextMenuGlobalItems(items, len(e.netease.Player().Playlist()) > 0)
+	ctx := ContextMenuContext{SelectedIndex: index}
+	if m, ok := menu.(Menu); ok {
+		ctx.Menu = m
+	}
+	pluginItems := buildPluginContextMenuItems(ctx)
+	items = appendContextMenuGlobalItems(items, len(e.svc.Player().Playlist()) > 0)
+	if len(pluginItems) > 0 {
+		// 插件组追加在 generic 全局组之后；非空时先插入分隔线。
+		if len(items) > 0 {
+			items = append(items, model.ContextMenuItem{Separator: true})
+		}
+		items = append(items, pluginItems...)
+	}
+	return items
 }
 
-func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.ContextMenuItem) (model.Page, tea.Cmd) {
+func (e *BaseMenu) ContextMenuAction(a *model.App, index int, item model.ContextMenuItem) (model.Page, tea.Cmd) {
 	main := a.MustMain()
 	menu := main.CurMenu()
 	if menu.GetMenuKey() == actionMenuKey {
 		return nil, nil
 	}
 	if strings.HasPrefix(item.ID, "generic:") {
-		return handleGenericContextAction(e.netease, a, item.ID)
+		return handleGenericContextAction(e.svc, a, item.ID)
 	}
 
 	if rest, ok := strings.CutPrefix(item.ID, "sel:"); ok {
@@ -122,7 +374,7 @@ func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		if err != nil {
 			return nil, nil
 		}
-		actions := actionItemsForMenu(e.netease, menu.GetMenuKey(), false, index)
+		actions := actionItemsForMenu(e.svc, menu.GetMenuKey(), false, index)
 		return runContextAction(actions, i, a)
 	}
 	if rest, ok := strings.CutPrefix(item.ID, "play:"); ok {
@@ -130,8 +382,15 @@ func (e *baseMenu) ContextMenuAction(a *model.App, index int, item model.Context
 		if err != nil {
 			return nil, nil
 		}
-		actions := actionItemsForMenu(e.netease, menu.GetMenuKey(), true, -1)
+		actions := actionItemsForMenu(e.svc, menu.GetMenuKey(), true, -1)
 		return runContextAction(actions, i, a)
+	}
+	if strings.HasPrefix(item.ID, "plugin:") {
+		ctx := ContextMenuContext{SelectedIndex: index}
+		if m, ok := menu.(Menu); ok {
+			ctx.Menu = m
+		}
+		return handlePluginContextAction(e.svc, ctx, item.ID)
 	}
 	return nil, nil
 }
@@ -151,20 +410,20 @@ func runContextAction(actions []ActionItem, i int, a *model.App) (model.Page, te
 	return nil, nil
 }
 
-func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page, tea.Cmd) {
+func handleGenericContextAction(svc *menuServices, a *model.App, id string) (model.Page, tea.Cmd) {
 	main := a.MustMain()
 	switch id {
 	case "generic:refresh":
 		main.RefreshMenuWithLoading()
 		return nil, nil
 	case "generic:toggle":
-		n.player.Toggle()
+		svc.Player().Toggle()
 		return nil, a.RerenderCmd(true)
 	case "generic:prev":
-		n.player.PreviousSong(true)
+		svc.Player().PreviousSong(true)
 		return nil, a.RerenderCmd(true)
 	case "generic:next":
-		n.player.NextSong(true)
+		svc.Player().NextSong(true)
 		return nil, a.RerenderCmd(true)
 	case "generic:switchTheme":
 		registry := configs.CurrentThemeRegistry()
@@ -174,18 +433,18 @@ func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page
 			style.SetStyleSet(*newSS)
 			a.SetStyleSet(*newSS)
 			themeName := registry.CurrentName(style.HasDarkBackground())
-			n.saveActiveTheme(themeName)
-			n.notifyThemeSwitch(a, "切换主题", themeName)
+			svc.SaveActiveTheme(themeName)
+			svc.NotifyThemeSwitch(a, "切换主题", themeName)
 		}
 		return nil, a.RerenderCmd(true)
 	}
 	return nil, nil
 }
 
-func (e *baseMenu) IsPlayable() bool {
+func (e *BaseMenu) IsPlayable() bool {
 	return false
 }
 
-func (e *baseMenu) IsLocatable() bool {
+func (e *BaseMenu) IsLocatable() bool {
 	return true
 }

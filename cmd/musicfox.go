@@ -5,12 +5,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/gookit/gcli/v2"
 
 	"github.com/go-musicfox/go-musicfox/internal/commands"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	_ "github.com/go-musicfox/go-musicfox/internal/frontend/registration" // 前端聚合器：触发 ui/headless 注册
+	_ "github.com/go-musicfox/go-musicfox/internal/plugins"               // 编译期插件聚合器：触发各插件 init() 注册
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	mfoxapp "github.com/go-musicfox/go-musicfox/utils/app"
@@ -41,6 +44,10 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")
 		gf.BoolOpt(&commands.GlobalOptions.DebugMode, "debug", "", false, "enable debug log level")
 		gf.BoolOpt(&commands.GlobalOptions.PureMode, "pure", "", false, "start with default config in a temporary directory")
+		gf.BoolOpt(&commands.GlobalOptions.Headless, "headless", "", false, "run without the TUI (legacy alias for --frontend=headless)")
+		gf.StrOpt(&commands.GlobalOptions.Frontend, "frontend", "", "", "select frontend: tui|headless (default tui)")
+		gf.StrOpt(&commands.GlobalOptions.Once, "once", "", "", "run a single headless command and exit (e.g. \"status\" or \"play 周杰伦\")")
+		gf.StrOpt(&commands.GlobalOptions.Mode, "mode", "", "", "frontend run mode: standalone|connect (default standalone; webui only)")
 	}
 
 	// --pure flag: start with a temporary directory as MUSICFOX_ROOT
@@ -59,11 +66,22 @@ func musicfox() {
 
 	loadConfig()
 
-	util.PrimaryColor = configs.AppConfig.Theme.PrimaryColor
+	// 主色：优先取活跃主题文件（theme 文件机制）的 primary；旧 config 字段
+	// （deprecated，Kept for backward compatibility）仅作回退。
+	util.PrimaryColor = configs.AppConfig.Theme.PrimaryColor //nolint:staticcheck // 旧字段向后兼容回退
+	if tf, ok := configs.CurrentThemeRegistry().ActiveThemeOrDefault(configs.AppConfig.Theme.ActiveTheme); ok {
+		variant := tf.Dark
+		if !style.HasDarkBackground() {
+			variant = tf.Light
+		}
+		if variant.Primary != "" {
+			util.PrimaryColor = variant.Primary
+		}
+	}
 	var (
 		logo         = util.GetAlphaAscii(app.Name)
 		randomColor  = util.GetPrimaryColor()
-		logoColorful = util.SetFgStyle(logo, randomColor)
+		logoColorful = style.FG(logo, randomColor)
 	)
 
 	gcli.AppHelpTemplate = fmt.Sprintf(types.AppHelpTemplate, logoColorful)
@@ -82,6 +100,7 @@ func musicfox() {
 	app.Add(commands.NewConfigCommand())
 	app.Add(commands.NewUpgradeConfigCommand())
 	app.Add(commands.NewResetCommand())
+	app.Add(commands.NewCtrlCommand())
 	app.DefaultCommand(playerCommand.Name)
 
 	app.Run()

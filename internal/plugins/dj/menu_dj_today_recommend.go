@@ -1,0 +1,96 @@
+package dj
+
+import (
+	"time"
+
+	"github.com/anhoder/foxful-cli/model"
+	"github.com/go-musicfox/netease-music/service"
+
+	"github.com/go-musicfox/go-musicfox/internal/structs"
+	ui "github.com/go-musicfox/go-musicfox/internal/ui"
+	"github.com/go-musicfox/go-musicfox/utils/menux"
+	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
+	"github.com/go-musicfox/go-musicfox/utils/timex"
+)
+
+type DjTodayRecommendMenu struct {
+	ui.BaseMenu
+	menus     []model.MenuItem
+	radios    []structs.DjRadio
+	fetchTime time.Time
+}
+
+func NewDjTodayRecommendMenu(base ui.BaseMenu) *DjTodayRecommendMenu {
+	return &DjTodayRecommendMenu{
+		BaseMenu: base,
+	}
+}
+
+func (m *DjTodayRecommendMenu) IsSearchable() bool {
+	return true
+}
+
+func (m *DjTodayRecommendMenu) GetMenuKey() string {
+	return "dj_today_recommend"
+}
+
+func (m *DjTodayRecommendMenu) MenuViews() []model.MenuItem {
+	return m.menus
+}
+
+func (m *DjTodayRecommendMenu) SubMenu(_ *model.App, index int) model.Menu {
+	if index >= len(m.radios) {
+		return nil
+	}
+
+	return ui.BuildMenuOrToast("dj_radio_detail", m.BaseMenu, ui.DjRadioDetailOpts{DjRadioID: m.radios[index].Id})
+}
+
+func (m *DjTodayRecommendMenu) ItemToShare(index int) any {
+	if index >= 0 && index < len(m.radios) {
+		return m.radios[index]
+	}
+	return nil
+}
+
+func (m *DjTodayRecommendMenu) BeforeEnterMenuHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		// 不重复请求
+		now := time.Now()
+		if len(m.menus) > 0 && len(m.radios) > 0 && timex.IsSameDate(m.fetchTime, now) {
+			return true, nil
+		}
+
+		djTodayService := service.DjTodayPerferedService{}
+		code, response := djTodayService.DjTodayPerfered()
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
+			return false, nil
+		}
+
+		m.radios = _struct.GetDjRadiosOfToday(response)
+		m.menus = menux.GetViewFromDjRadios(m.radios)
+		m.fetchTime = now
+
+		return true, nil
+	}
+}
+
+func (m *DjTodayRecommendMenu) BottomOutHook() model.Hook {
+	return func(main *model.Main) (bool, model.Page) {
+		djTodayService := service.DjTodayPerferedService{}
+		code, response := djTodayService.DjTodayPerfered()
+		codeType := _struct.CheckCode(code)
+		if codeType != _struct.Success {
+			return false, nil
+		}
+
+		radios := _struct.GetDjRadiosOfToday(response)
+		menus := menux.GetViewFromDjRadios(radios)
+
+		m.radios = append(m.radios, radios...)
+		m.menus = append(m.menus, menus...)
+
+		return true, nil
+	}
+}

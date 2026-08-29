@@ -16,6 +16,8 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/go-musicfox/go-musicfox/internal/core"
+	"github.com/go-musicfox/go-musicfox/internal/core/qrlogin"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
@@ -47,6 +49,12 @@ type QRLoginPage struct {
 	netease *Netease
 	from    model.Page
 
+	// remote is the TUI-connect data surface (TC-6): non-nil in connect mode
+	// and the QR flow then sources its key/status from the daemon
+	// (CallQRKey/CallQRStatus, D-TC-7). nil = standalone, the local qrlogin
+	// client path (unchanged).
+	remote *RemotePlayer
+
 	uniKey     string
 	qrCodeView string
 	qrCodePath string
@@ -77,6 +85,13 @@ func NewQRLoginPage(netease *Netease, from model.Page, afterLogin LoginCallback)
 		AfterLogin: afterLogin,
 		statusMsg:  model.T(MsgQRLoginGenerating),
 		isExpired:  false,
+	}
+	// The remote data surface is resolved through the shell wrapper so it stays
+	// nil in standalone mode (and on a bare test shell with no player): only
+	// the connect shell sets Player.remote, and only there does the QR flow
+	// source its data from the daemon (D-TC-7).
+	if pl := netease.Player(); pl != nil {
+		page.remote = pl.remote
 	}
 	page.loading = model.NewLoading(netease.MustMain(), &model.MenuItem{Title: model.T(MsgQRLoginPageTitle)})
 	page.loading.DisplayNotOnlyOnMain()
@@ -292,8 +307,18 @@ func (p *QRLoginPage) View(a *model.App) string {
 
 // generateQRCodeCmd 异步获取和生成二维码
 func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
-	cookieJar := neteaseutil.GetGlobalCookieJar()
-	uniKey, url, err := qrGetKey(cookieJar)
+	var (
+		uniKey string
+		url    string
+		err    error
+	)
+	if p.remote != nil {
+		// TC-6: connect mode sources the QR key from the daemon (D-TC-7).
+		uniKey, url, err = p.remote.CallQRKey()
+	} else {
+		cookieJar := neteaseutil.GetGlobalCookieJar()
+		uniKey, url, err = qrlogin.GetKey(cookieJar)
+	}
 	if err != nil {
 		return qrErrorMsg{err}
 	}
@@ -313,23 +338,42 @@ func (p *QRLoginPage) generateQRCodeCmd() tea.Msg {
 
 // pollQRStatusCmd 轮询二维码状态
 func (p *QRLoginPage) pollQRStatusCmd() tea.Msg {
-	cookieJar := neteaseutil.GetGlobalCookieJar()
-	code, resp, err := qrCheckStatus(p.uniKey, cookieJar)
+	var (
+		code float64
+		err  error
+	)
+	if p.remote != nil {
+		// TC-6: connect mode polls the daemon (D-TC-7); on 803 the daemon has
+		// already completed the login and broadcast EvLogin.
+		code, err = p.remote.CallQRStatus(p.uniKey)
+	} else {
+		cookieJar := neteaseutil.GetGlobalCookieJar()
+		var resp []byte
+		code, resp, err = qrlogin.CheckStatus(p.uniKey, cookieJar)
+		_ = resp // wire parity: the standalone path still passes resp through
+	}
 	if err != nil {
 		return qrErrorMsg{err}
 	}
-	return qrStatusMsg{code: code, resp: resp}
+	return qrStatusMsg{code: code}
 }
 
 // loginSuccessHandle 登录成功函数
 func (p *QRLoginPage) loginSuccessHandle(n *Netease) model.Page {
-	// 先保存 cookie，确保登录成功后 cookie 被持久化
-	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
-	if err := appCookieJar.Save(); err != nil {
-		slog.Warn("持久化 Cookie 失败", slogx.Error(err))
+	if p.remote != nil {
+		// TC-6: connect mode — the daemon already completed the login inside
+		// cmdLoginQRStatus (CompleteQRLogin + EvLogin broadcast, D-TC-7); the
+		// TUI only runs the AfterLogin callback and returns.
+		var newPage model.Page
+		if p.AfterLogin != nil {
+			newPage = p.AfterLogin()
+		}
+		return newPage
 	}
 
-	if err := n.LoginCallback(); err != nil {
+	// 先保存 cookie，确保登录成功后 cookie 被持久化
+	// 即使后续 LoginCallback 失败（AccountInfo 失败），cookie 也已保存
+	if err := n.engine.CompleteQRLogin(core.AppCookieJar()); err != nil {
 		slog.Error("login callback error", slogx.Error(err))
 	}
 

@@ -24,7 +24,10 @@ func toastLevelToModel(l notify.ToastLevel) model.NotificationLevel {
 
 const toastOpenURLActionID = "open-url"
 
-func buildToastNotificationSpec(content notify.NotifyContent, level notify.ToastLevel, openURL func(string) error) model.NotificationSpec {
+// BuildToastNotificationSpec 将 notify.NotifyContent 转为 foxful-cli 的
+// NotificationSpec（含可选的打开链接动作）。导出供外部插件复用（检查更新
+// 插件经 ui.BuildToastNotificationSpec 构建「发现新版本」toast）。
+func BuildToastNotificationSpec(content notify.NotifyContent, level notify.ToastLevel, openURL func(string) error) model.NotificationSpec {
 	spec := model.NotificationSpec{
 		Level:   toastLevelToModel(level),
 		Title:   content.Title,
@@ -52,6 +55,6 @@ func (n *Netease) registerToastHook() {
 		return
 	}
 	notify.SetToastHook(func(content notify.NotifyContent, level notify.ToastLevel) {
-		n.App.Notify(buildToastNotificationSpec(content, level, open.Start))
+		n.Notify(BuildToastNotificationSpec(content, level, open.Start))
 	})
 }

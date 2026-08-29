@@ -17,6 +17,33 @@ import (
 
 const musicfoxStatusBarLabel = "musicfox"
 
+// --- Plugin status bar components ---
+
+// statusBarComponents holds the plugin-registered status bar components in
+// registration order (compile-time registration via init()). They are appended
+// to DefaultStatusBar's centered Components area after the built-in
+// queue/quality component when a bar is constructed.
+var statusBarComponents []model.StatusBarComponent
+
+// RegisterStatusBarComponent registers a plugin status bar component, appended
+// to DefaultStatusBar's centered Components area after the built-in
+// queue/quality component, in registration order. Panics on a nil component
+// (programmer error).
+func RegisterStatusBarComponent(comp model.StatusBarComponent) {
+	if comp == nil {
+		panic("RegisterStatusBarComponent: nil component")
+	}
+	statusBarComponents = append(statusBarComponents, comp)
+}
+
+// StatusBarComponents returns a snapshot of the registered plugin status bar
+// components in registration order.
+func StatusBarComponents() []model.StatusBarComponent {
+	components := make([]model.StatusBarComponent, len(statusBarComponents))
+	copy(components, statusBarComponents)
+	return components
+}
+
 // qualityDisplayName 返回音质的中文显示名称。
 func qualityDisplayName(level service.SongQualityLevel) string {
 	switch level {
@@ -100,9 +127,8 @@ func NewQueueQualityStatusBar(player *Player) *model.DefaultStatusBar {
 }
 
 func newQueueQualityStatusBar(player *Player, openURL func(string) error) *model.DefaultStatusBar {
-	return &model.DefaultStatusBar{
-		Components: []model.StatusBarComponent{
-			&queueQualityStatusBarComponent{player: player, openURL: openURL},
-		},
-	}
+	components := make([]model.StatusBarComponent, 0, 1+len(statusBarComponents))
+	components = append(components, &queueQualityStatusBarComponent{player: player, openURL: openURL})
+	components = append(components, statusBarComponents...)
+	return &model.DefaultStatusBar{Components: components}
 }
