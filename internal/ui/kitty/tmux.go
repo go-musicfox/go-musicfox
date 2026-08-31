@@ -75,15 +75,10 @@ func failureCacheValid(failAt, now time.Time) bool {
 // (top+1, left+1). Only meaningful in tmux passthrough mode (caller's
 // responsibility), and defensively safe: returns ok=false when not inside
 // tmux or when the query fails. Successful results are cached for
-// tmuxPaneOffsetTTL and failures are negatively cached for
-// tmuxPaneOffsetFailTTL. Never panics.
+// tmuxPaneOffsetTTL; failures — including missing TMUX/TMUX_PANE — are
+// negatively cached for tmuxPaneOffsetFailTTL so callers get a consistent
+// backoff. Never panics.
 func TmuxPaneOffset() (top, left int, ok bool) {
-	tmux := os.Getenv("TMUX")
-	tmuxPane := os.Getenv("TMUX_PANE")
-	if tmux == "" || tmuxPane == "" {
-		return 0, 0, false
-	}
-
 	tmuxPaneOffsetMu.Lock()
 	defer tmuxPaneOffsetMu.Unlock()
 
@@ -92,6 +87,16 @@ func TmuxPaneOffset() (top, left int, ok bool) {
 		return tmuxPaneOffsetTop, tmuxPaneOffsetLeft, true
 	}
 	if failureCacheValid(tmuxPaneOffsetFailAt, now) {
+		return 0, 0, false
+	}
+
+	// Missing TMUX/TMUX_PANE is treated as a failed query and feeds the same
+	// negative cache: callers inside tmux passthrough mode get the backoff
+	// instead of re-checking the environment (and re-failing) every frame.
+	tmux := os.Getenv("TMUX")
+	tmuxPane := os.Getenv("TMUX_PANE")
+	if tmux == "" || tmuxPane == "" {
+		tmuxPaneOffsetFailAt = now
 		return 0, 0, false
 	}
 

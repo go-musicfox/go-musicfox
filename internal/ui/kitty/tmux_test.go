@@ -146,3 +146,29 @@ func TestTmuxPaneOffsetNegativeCache(t *testing.T) {
 		t.Error("expected negative cache to report failure without re-query")
 	}
 }
+
+func TestTmuxPaneOffsetEnvMissingRecordsFailure(t *testing.T) {
+	t.Setenv("TMUX", "")
+	t.Setenv("TMUX_PANE", "")
+	t.Cleanup(InvalidateTmuxPaneOffset)
+
+	if _, _, ok := TmuxPaneOffset(); ok {
+		t.Fatal("expected failure when TMUX/TMUX_PANE are missing")
+	}
+
+	// The env-missing early return must feed the same negative cache as a
+	// failed exec, so callers get a consistent backoff instead of
+	// re-checking the environment (and re-failing) on every frame.
+	tmuxPaneOffsetMu.Lock()
+	failAt := tmuxPaneOffsetFailAt
+	tmuxPaneOffsetMu.Unlock()
+	if failAt.IsZero() {
+		t.Error("expected env-missing early return to record a failure timestamp")
+	}
+
+	// Within the negative window a follow-up call must skip the query
+	// entirely and report not-ok.
+	if _, _, ok := TmuxPaneOffset(); ok {
+		t.Error("expected negative cache to suppress the follow-up query")
+	}
+}
