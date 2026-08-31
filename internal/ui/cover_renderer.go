@@ -21,6 +21,13 @@ import (
 	"github.com/go-musicfox/go-musicfox/utils/app"
 )
 
+// placeBackoffInitial is the first retry delay after a failed placement
+// (tmux pane offset query).
+const placeBackoffInitial = time.Second
+
+// placeBackoffMax caps the exponential placement retry delay.
+const placeBackoffMax = 30 * time.Second
+
 // CoverRenderer is a dedicated UI component for rendering album cover images
 // using the Kitty graphics protocol.
 type CoverRenderer struct {
@@ -58,6 +65,15 @@ type CoverRenderer struct {
 	// app background. When it changes, the cached kitty sequence is invalidated
 	// so the cover is re-rendered with the correct z-index.
 	lastBgTransparent bool
+
+	// placeFailAt/placeBackoff implement an exponential retry backoff after
+	// a failed placement (tmux pane offset query): without it, render
+	// retries (song change, resize, mouse-driven rerender — even while
+	// music is paused) would regenerate and rewrite megabytes of animation
+	// frame data every frame while the offset query keeps failing. Guarded
+	// by mu.
+	placeFailAt  time.Time
+	placeBackoff time.Duration
 }
 
 type renderResult struct {
@@ -66,6 +82,10 @@ type renderResult struct {
 	startRow int
 	startCol int
 	animID   uint32
+	// ok reports whether the animation placement (including the pane offset
+	// query it depends on) succeeded. On failure the sequence is empty and
+	// the receiver must not apply it to the terminal.
+	ok bool
 }
 
 // NewCoverRenderer creates a new cover image renderer component.
@@ -96,6 +116,11 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 
 	switch msg.(type) {
 	case tea.WindowSizeMsg:
+		// Pane offsets change when the window is resized or panes are
+		// rearranged; drop the cached geometry so the next render re-queries.
+		if kitty.UseTmuxPassthrough() {
+			kitty.InvalidateTmuxPaneOffset()
+		}
 		// Reset state to force re-render after resize
 		// Note: Don't calculate dimensions here - netease.WindowWidth/Height
 		// might not be updated yet. We'll calculate in View instead.
@@ -260,7 +285,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
 			if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
 				if r.imageRendered {
-					r.writeStdout(kitty.DeleteAllImages())
+					r.writeKitty(kitty.DeleteAllImages())
 					r.imageRendered = false
 					r.cachedSeq = ""
 				}
@@ -276,6 +301,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	forceRerender := r.forceRerender
 	songChanged := song.Id != r.currentSongId
 	positionChanged := r.lastStartRow != coverStartRow || r.lastStartCol != coverStartCol
+	// Placement backoff: while active, no new render is spawned even if the
+	// conditions below hold (song change / resize / theme change included);
+	// the capped backoff guarantees a retry eventually happens.
+	backoffActive := r.placeBackoffActive(time.Now())
 
 	spin := configs.AppConfig.Main.Lyric.Cover.Spin
 
@@ -286,6 +315,19 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		case res := <-r.renderChan:
 			// Verify this result is for the song we still want to show
 			if res.songID == song.Id {
+				if !res.ok {
+					// Placement failed (e.g. pane offset query): keep the
+					// currently displayed cover untouched, clear the
+					// rendering flag and arm the exponential backoff so the
+					// next spawn is delayed instead of regenerating and
+					// rewriting megabytes of frame data every frame.
+					if r.renderingID == res.songID {
+						r.renderingID = 0
+					}
+					r.recordPlaceFailure(time.Now())
+					r.mu.Unlock()
+					return "", 0
+				}
 				// Apply to terminal
 				r.writeStdout(res.sequence)
 
@@ -297,6 +339,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				r.forceRerender = false
 				r.renderingID = 0               // Clear rendering flag
 				r.lastPlayerState = playerState // Initialize player state
+				r.recordPlaceSuccess()          // Placement succeeded, reset backoff
 
 				// Successfully updated, return immediately to avoid re-triggering logic below
 				r.mu.Unlock()
@@ -316,10 +359,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		if stateChanged && r.imageRendered && r.animImageID != 0 {
 			if playerState == types.Paused {
 				// Pause animation
-				r.writeStdout(kitty.StopAnimation(r.animImageID))
+				r.writeKitty(kitty.StopAnimation(r.animImageID))
 			} else if playerState == types.Playing && r.lastPlayerState == types.Paused {
 				// Resume animation
-				r.writeStdout(kitty.StartAnimation(r.animImageID))
+				r.writeKitty(kitty.StartAnimation(r.animImageID))
 			}
 			r.lastPlayerState = playerState
 		}
@@ -337,8 +380,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		}
 
 		// 4. Start Async Generation
-		// Only if we actually have something to render
-		if (songChanged || forceRerender || !r.imageRendered || positionChanged) && song.Id != 0 {
+		// Only if we actually have something to render, and not while a
+		// placement failure backoff is active: mouse-driven rerenders can
+		// re-enter View every frame (even while music is paused), and without
+		// the gate each retry would regenerate and rewrite megabytes of
+		// frame data after the failed placement.
+		if (songChanged || forceRerender || !r.imageRendered || positionChanged) && song.Id != 0 && !backoffActive {
 			// Cancel previous work if any
 			if r.cancelFunc != nil {
 				r.cancelFunc()
@@ -362,6 +409,35 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 			// Capture variables for closure
 			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32, bgZIndex int) {
+				// In tmux passthrough mode the pane offset must be known
+				// before any frame data is generated or written: on failure
+				// the placement cannot be built, and frame data written
+				// beforehand (megabytes, wrapped in DCS passthrough) would be
+				// wasted and re-written on every retry — an output flood
+				// driven even by mouse motion while music is paused. Query
+				// once up front; on failure report without any stdout output
+				// so View clears renderingID and arms the backoff. On success
+				// the captured offset is reused for the placement (a few
+				// seconds of staleness while frames are generated is
+				// acceptable; the next song change re-queries). The static
+				// image rendered just before this goroutine spawned queried
+				// the offset separately (it runs before spawn, see
+				// renderStaticForAnimation); its result is shared through the
+				// short kitty-level offset cache.
+				var paneTop, paneLeft int
+				if kitty.UseTmuxPassthrough() {
+					top, left, ok := kitty.TmuxPaneOffset()
+					if !ok {
+						select {
+						case <-ctx.Done():
+							return
+						case r.renderChan <- renderResult{songID: bgSong.Id, ok: false}:
+						}
+						return
+					}
+					paneTop, paneLeft = top, left
+				}
+
 				// Fetch image with timeout (derived from cancellable context)
 				fetchCtx, fetchCancel := context.WithTimeout(ctx, 15*time.Second)
 				defer fetchCancel()
@@ -476,21 +552,29 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Transmit frames (skipping frame 0 which is already visible),
 				// chunked so a cancelled generation stops writing promptly
 				// instead of flushing one multi-megabyte burst, and so the
-				// terminal is not hit with a single huge write.
+				// terminal is not hit with a single huge write. In tmux
+				// passthrough mode a batch is wrapped into a single DCS
+				// packet, and tmux drops packets larger than its
+				// input-buffer-size option (default 1 MiB) entirely — so each
+				// batch is additionally flushed once it reaches 512 KiB,
+				// keeping the wrapped packet well below the limit. Non-tmux
+				// mode keeps the frame-count-only flush policy.
 				const transmitBatch = 16
+				const tmuxMaxBatchBytes = 512 * 1024
+				tmuxMode := kitty.UseTmuxPassthrough()
 				var frameData strings.Builder
 				for i, seq := range frameSeqs {
 					if seq == "" {
 						continue
 					}
-					if i%transmitBatch == 0 {
+					if i%transmitBatch == 0 || (tmuxMode && frameData.Len() >= tmuxMaxBatchBytes) {
 						select {
 						case <-ctx.Done():
 							return
 						default:
 						}
 						if frameData.Len() > 0 {
-							r.writeStdout(frameData.String())
+							r.writeKitty(frameData.String())
 							frameData.Reset()
 						}
 					}
@@ -502,37 +586,26 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 						return
 					default:
 					}
-					r.writeStdout(frameData.String())
+					r.writeKitty(frameData.String())
 				}
 
-				// Assemble minimal sequence for animation playback
-				var sb strings.Builder
+				// Assemble sequence for animation playback; the placement is
+				// built from the pane offset captured at goroutine start —
+				// do not re-query here.
+				sequence, seqOK := buildAnimationSequence(bgAnimID, oldBgAnimID, frameDuration, bgRow, bgCol, bgCols, bgZIndex, paneTop, paneLeft)
 
-				// Setup Animation
-				sb.WriteString(kitty.SetFrameGap(bgAnimID, 1, frameDuration))
-				sb.WriteString(kitty.StartAnimation(bgAnimID))
-
-				// Placement
-				sb.WriteString("\x1b[s")
-				fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
-				sb.WriteString(kitty.PlaceImage(bgAnimID, bgCols, 0, bgZIndex))
-				sb.WriteString("\x1b[u")
-
-				// Delete OLD ID
-				if oldBgAnimID != 0 && oldBgAnimID != bgAnimID {
-					sb.WriteString(kitty.DeleteImage(oldBgAnimID))
-				}
-
-				// Send result (only if not cancelled)
+				// Send result (only if not cancelled); seqOK=false tells the
+				// receiver the placement failed and must not be applied.
 				select {
 				case <-ctx.Done():
 					return
 				case r.renderChan <- renderResult{
 					songID:   bgSong.Id,
-					sequence: sb.String(),
+					sequence: sequence,
 					startRow: bgRow,
 					startCol: bgCol,
 					animID:   bgAnimID,
+					ok:       seqOK,
 				}:
 				}
 			}(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID, zIndex)
@@ -554,19 +627,29 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		}
 
 		// If only position changed but same song, re-render at new position
-		if !songChanged && r.cachedSeq != "" && song.Id != 0 {
+		// (skipped while the placement backoff is active; the fall-through
+		// gate below returns instead).
+		if !songChanged && r.cachedSeq != "" && song.Id != 0 && !backoffActive {
 			seq := r.cachedSeq
 			r.lastStartRow = coverStartRow
 			r.lastStartCol = coverStartCol
 			r.mu.Unlock()
-			r.writeToTerminal(seq, coverStartRow, coverStartCol, true)
+			written := r.writeToTerminal(seq, coverStartRow, coverStartCol, true)
 			r.mu.Lock()
-			r.imageRendered = true
+			if written {
+				r.imageRendered = true
+				r.recordPlaceSuccess()
+			}
 			r.mu.Unlock()
 			return "", 0
 		}
 	}
 	r.mu.Unlock()
+
+	// Throttle the fetch/render retry while the placement backoff is active.
+	if backoffActive {
+		return "", 0
+	}
 
 	// Fetch and generate kitty sequence
 	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picUrl, r.cols, r.rows)
@@ -587,11 +670,17 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	r.mu.Unlock()
 
 	// Write directly to stdout, delete old images when song changes
-	r.writeToTerminal(kittySeq, coverStartRow, coverStartCol, true)
+	written := r.writeToTerminal(kittySeq, coverStartRow, coverStartCol, true)
 
 	r.mu.Lock()
-	r.imageRendered = true
-	r.forceRerender = false // Reset forceRerender after successful render
+	// Only mark success when the write happened (tmux pane offset query may
+	// fail); otherwise the next frame retries via the !imageRendered path
+	// (throttled by the placement backoff).
+	if written {
+		r.imageRendered = true
+		r.forceRerender = false // Reset forceRerender after successful render
+		r.recordPlaceSuccess()
+	}
 	r.mu.Unlock()
 
 	return "", 0
@@ -606,10 +695,40 @@ func (r *CoverRenderer) writeStdout(s string) {
 	_ = os.Stdout.Sync()
 }
 
-// writeToTerminal writes the kitty graphics sequence directly to stdout,
-// bypassing bubbletea's rendering pipeline.
-// deleteOld controls whether to delete existing images first (only needed when changing images).
-func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int, deleteOld bool) {
+// writeKitty writes a bare kitty APC sequence, wrapping it in tmux DCS
+// passthrough when running in tmux passthrough mode (Wrap checks the mode
+// itself). For positioning writes use writePositioned instead: pane-relative
+// cursor sequences must not be passed through to the outer terminal.
+func (r *CoverRenderer) writeKitty(s string) {
+	r.writeStdout(kitty.Wrap(s))
+}
+
+// writePositioned writes the kitty image sequence positioned at the given
+// 1-based in-pane row/column and reports whether anything was written. In
+// non-tmux mode the behavior is unchanged (optional DeleteAllImages + \e[s +
+// CUP + image + \e[u) and it always returns true. In tmux passthrough mode,
+// positioning must target the outer terminal's absolute cursor: tmux only
+// restores the real cursor to the focused pane on redraw, so pane-relative
+// CUP sequences would paint the image at whatever pane currently owns the
+// cursor. Instead, the pane offset is queried via `tmux display -p` and the
+// whole payload (save outer cursor + absolute CUP + image + restore outer
+// cursor) is wrapped into a single DCS passthrough packet to avoid races with
+// tmux redrawing. If the pane offset cannot be queried, nothing is written —
+// better to skip the cover than paint it into another pane — and callers must
+// not mark the render as successful so the next frame retries.
+func (r *CoverRenderer) writePositioned(startRow, startCol int, imageSeq string, deleteOld bool) bool {
+	if kitty.UseTmuxPassthrough() {
+		top, left, ok := kitty.TmuxPaneOffset()
+		if !ok {
+			slog.Debug("CoverRenderer: failed to query tmux pane offset, skipping cover render")
+			return false
+		}
+		payload := kitty.BuildTmuxPositionedPayload(top, left, startRow, startCol, imageSeq, deleteOld)
+		r.writeStdout(kitty.Wrap(payload))
+		return true
+	}
+
+	// Non-tmux path: unchanged behavior.
 	// Build the output sequence
 	var output string
 
@@ -626,18 +745,124 @@ func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int,
 	output += fmt.Sprintf("\x1b[%d;%dH", startRow, startCol)
 
 	// Output the kitty image sequence
-	output += kittySeq
+	output += imageSeq
 
 	// Restore cursor position
 	output += "\x1b[u"
 
 	r.writeStdout(output)
+	return true
+}
+
+// writeToTerminal writes the kitty graphics sequence directly to stdout,
+// bypassing bubbletea's rendering pipeline. It reports whether anything was
+// written (see writePositioned).
+// deleteOld controls whether to delete existing images first (only needed when changing images).
+func (r *CoverRenderer) writeToTerminal(kittySeq string, startRow, startCol int, deleteOld bool) bool {
+	return r.writePositioned(startRow, startCol, kittySeq, deleteOld)
+}
+
+// recordPlaceFailure arms the exponential placement backoff: the retry delay
+// starts at placeBackoffInitial and doubles on every consecutive failure,
+// capped at placeBackoffMax, so a persistently failing placement (tmux pane
+// offset query) is retried at most once per window instead of per frame.
+// Caller must hold r.mu.
+func (r *CoverRenderer) recordPlaceFailure(now time.Time) {
+	if r.placeBackoff == 0 {
+		r.placeBackoff = placeBackoffInitial
+	} else {
+		r.placeBackoff = min(r.placeBackoff*2, placeBackoffMax)
+	}
+	r.placeFailAt = now
+}
+
+// placeBackoffActive reports whether a failed placement still suppresses
+// render retries at time now. Caller must hold r.mu.
+func (r *CoverRenderer) placeBackoffActive(now time.Time) bool {
+	return r.placeBackoff > 0 && now.Sub(r.placeFailAt) < r.placeBackoff
+}
+
+// recordPlaceSuccess clears the placement backoff after a successful
+// placement (static image or animation). Caller must hold r.mu.
+func (r *CoverRenderer) recordPlaceSuccess() {
+	r.placeFailAt = time.Time{}
+	r.placeBackoff = 0
+}
+
+// buildAnimationSequence assembles the final animation playback sequence
+// (frame gap setup, animation start, old image delete, new image placement)
+// and reports whether the placement succeeded. In non-tmux mode it keeps the
+// original layout: SetFrameGap + StartAnimation first, then pane-relative
+// cursor save / CUP / PlaceImage / restore, old image delete last; it always
+// returns ok=true and ignores paneTop/paneLeft. In tmux passthrough mode the
+// whole sequence travels as a single wrapped DCS — including the animation
+// control commands: SetFrameGap/StartAnimation are bare Kitty APCs, and a
+// bare APC written to the pane is consumed by tmux as a pane title (dropped
+// or polluting the title) instead of reaching the outer terminal, so the
+// animation would never start. The placement targets the outer terminal's
+// absolute cursor (see writePositioned). paneTop/paneLeft must have been
+// queried successfully before any frame data was generated (see the render
+// goroutine) and are reused here — the function never re-queries. The old
+// image delete is merged into the payload so that when the offset query
+// fails nothing is sent at all and the old cover stays on screen — a
+// standalone delete packet would drop the old cover and leave nothing in
+// its place. The delete is a by-ID delete (not a=d,d=a) because the
+// placement only references already-transmitted image data: deleting all
+// images would also wipe the new animation's data and make a=p fail (the
+// static path can afford d=a only because a full re-transmit follows it).
+// The sequence must be written with writeStdout (it is already wrapped).
+func buildAnimationSequence(animID, oldAnimID uint32, frameDuration, bgRow, bgCol, bgCols, bgZIndex, paneTop, paneLeft int) (string, bool) {
+	placement := kitty.PlaceImage(animID, bgCols, 0, bgZIndex)
+
+	if kitty.UseTmuxPassthrough() {
+		// Single fully wrapped DCS: animation control + positioning +
+		// placement. Merge the old image delete into the payload (see doc
+		// comment); the direct-mode path keeps the delete as a separate
+		// plain command appended after the placement.
+		if oldAnimID != 0 && oldAnimID != animID {
+			placement = kitty.DeleteImage(oldAnimID) + placement
+		}
+		payload := kitty.SetFrameGap(animID, 1, frameDuration) +
+			kitty.StartAnimation(animID) +
+			kitty.BuildTmuxPositionedPayload(paneTop, paneLeft, bgRow, bgCol, placement, false)
+		return kitty.Wrap(payload), true
+	}
+
+	// Non-tmux path: unchanged layout.
+	var sb strings.Builder
+	sb.WriteString(kitty.SetFrameGap(animID, 1, frameDuration))
+	sb.WriteString(kitty.StartAnimation(animID))
+
+	// Placement
+	sb.WriteString("\x1b[s")
+	fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)
+	sb.WriteString(placement)
+	sb.WriteString("\x1b[u")
+
+	// Delete OLD ID
+	if oldAnimID != 0 && oldAnimID != animID {
+		sb.WriteString(kitty.DeleteImage(oldAnimID))
+	}
+
+	return sb.String(), true
 }
 
 // renderStaticForAnimation renders a static (non-spinning) version of the cover image
 // immediately while the animation is being calculated in the background.
 // Animation frames will overwrite this static image when ready.
 func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32, zIndex int) {
+	// In tmux passthrough mode check the pane offset before doing any work:
+	// on failure nothing may be written (zero output), not even the image
+	// fetch or PNG encode. This query runs before the animation goroutine
+	// spawns; the goroutine re-queries separately and shares the result via
+	// the short kitty-level offset cache (success or negative cache), with
+	// the renderer-level backoff as the flood guard.
+	if kitty.UseTmuxPassthrough() {
+		if _, _, ok := kitty.TmuxPaneOffset(); !ok {
+			return
+		}
+	}
+
 	img, err := r.imageCache.GetImage(ctx, picUrl, cols, rows)
 	if err != nil || img == nil {
 		return
@@ -650,12 +875,11 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 		return
 	}
 
-	output := "\x1b[s"
-	output += fmt.Sprintf("\x1b[%d;%dH", startRow, startCol)
-	output += kittySeq
-	output += "\x1b[u"
-
-	r.writeStdout(output)
+	// On failure (tmux pane offset query) return before touching any state,
+	// so the renderer keeps treating the old cover as current and retries.
+	if !r.writePositioned(startRow, startCol, kittySeq, false) {
+		return
+	}
 
 	r.mu.Lock()
 	r.currentSongId = song.Id
@@ -663,6 +887,7 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 	r.lastStartRow = startRow
 	r.lastStartCol = startCol
 	r.imageRendered = true
+	r.recordPlaceSuccess()
 	r.mu.Unlock()
 }
 
@@ -747,7 +972,7 @@ func (r *CoverRenderer) ClearDisplayed() {
 		return
 	}
 
-	r.writeStdout(kitty.DeleteAllImages())
+	r.writeKitty(kitty.DeleteAllImages())
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -784,35 +1009,57 @@ func (r *CoverRenderer) Close() {
 	}
 
 	// Delete all Kitty graphics images
-	r.writeStdout(kitty.DeleteAllImages())
+	r.writeKitty(kitty.DeleteAllImages())
 
 	// In non-alt-screen mode, we need to be more aggressive with cleanup.
 	// Move cursor to where the image was and clear that area.
+	// Capture the geometry under the lock, then query the tmux pane offset
+	// outside it: the `tmux` subprocess can block for up to tmuxExecTimeout
+	// and must not stall other renderers holding r.mu.
 	r.mu.Lock()
-	if r.lastStartRow > 0 && r.lastStartCol > 0 && r.rows > 0 {
-		// Build cleanup sequence
-		var cleanup strings.Builder
+	startRow, startCol, rows := r.lastStartRow, r.lastStartCol, r.rows
+	r.mu.Unlock()
 
-		// Save cursor position
-		cleanup.WriteString("\x1b[s")
-
-		// Move to where the image started
-		fmt.Fprintf(&cleanup, "\x1b[%d;%dH", r.lastStartRow, r.lastStartCol)
-
-		// Clear the area where the image was (clear each line)
-		for i := 0; i < r.rows; i++ {
-			cleanup.WriteString("\x1b[2K") // Clear entire line
-			if i < r.rows-1 {
-				cleanup.WriteString("\x1b[B") // Move down one line
+	if startRow > 0 && startCol > 0 && rows > 0 {
+		// Build the clear-rows payload (clear each line, moving down).
+		var clearLines strings.Builder
+		for i := 0; i < rows; i++ {
+			clearLines.WriteString("\x1b[2K") // Clear entire line
+			if i < rows-1 {
+				clearLines.WriteString("\x1b[B") // Move down one line
 			}
 		}
 
-		// Restore cursor position
-		cleanup.WriteString("\x1b[u")
+		if kitty.UseTmuxPassthrough() {
+			// The clear sequence must target the outer terminal's absolute
+			// cursor (see writePositioned): wrap save/absolute CUP/clear/
+			// restore into a single DCS passthrough packet. If the pane
+			// offset cannot be queried, skip this cleanup — DeleteAllImages
+			// above already removed the image.
+			top, left, ok := kitty.TmuxPaneOffset()
+			if ok {
+				payload := kitty.BuildTmuxPositionedPayload(top, left, startRow, startCol, clearLines.String(), false)
+				r.writeStdout(kitty.Wrap(payload))
+			}
+		} else {
+			// Non-tmux path: unchanged behavior.
+			var cleanup strings.Builder
 
-		r.writeStdout(cleanup.String())
+			// Save cursor position
+			cleanup.WriteString("\x1b[s")
+
+			// Move to where the image started
+			fmt.Fprintf(&cleanup, "\x1b[%d;%dH", startRow, startCol)
+
+			// Clear the area where the image was
+			cleanup.WriteString(clearLines.String())
+
+			// Restore cursor position
+			cleanup.WriteString("\x1b[u")
+
+			r.writeStdout(cleanup.String())
+		}
 	}
-	r.mu.Unlock()
 
 	// Small delay to ensure terminal processes the commands
 	// This is especially important in non-alt-screen mode
