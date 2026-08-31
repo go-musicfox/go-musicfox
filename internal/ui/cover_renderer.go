@@ -552,14 +552,22 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Transmit frames (skipping frame 0 which is already visible),
 				// chunked so a cancelled generation stops writing promptly
 				// instead of flushing one multi-megabyte burst, and so the
-				// terminal is not hit with a single huge write.
+				// terminal is not hit with a single huge write. In tmux
+				// passthrough mode a batch is wrapped into a single DCS
+				// packet, and tmux drops packets larger than its
+				// input-buffer-size option (default 1 MiB) entirely — so each
+				// batch is additionally flushed once it reaches 512 KiB,
+				// keeping the wrapped packet well below the limit. Non-tmux
+				// mode keeps the frame-count-only flush policy.
 				const transmitBatch = 16
+				const tmuxMaxBatchBytes = 512 * 1024
+				tmuxMode := kitty.UseTmuxPassthrough()
 				var frameData strings.Builder
 				for i, seq := range frameSeqs {
 					if seq == "" {
 						continue
 					}
-					if i%transmitBatch == 0 {
+					if i%transmitBatch == 0 || (tmuxMode && frameData.Len() >= tmuxMaxBatchBytes) {
 						select {
 						case <-ctx.Done():
 							return
@@ -784,44 +792,47 @@ func (r *CoverRenderer) recordPlaceSuccess() {
 // buildAnimationSequence assembles the final animation playback sequence
 // (frame gap setup, animation start, old image delete, new image placement)
 // and reports whether the placement succeeded. In non-tmux mode it keeps the
-// original layout: pane-relative cursor save / CUP / restore around
-// PlaceImage, old image delete last; it always returns ok=true and ignores
-// paneTop/paneLeft. In tmux passthrough mode the placement must target the
-// outer terminal's absolute cursor (see writePositioned): the non-positioning
-// commands are wrapped as one DCS and the placement payload (save outer
-// cursor + absolute CUP + delete + PlaceImage + restore outer cursor) as a
-// single wrapped DCS. paneTop/paneLeft must have been queried successfully
-// before any frame data was generated (see the render goroutine) and are
-// reused here — the function never re-queries. The old image delete is
-// merged into the placement payload so that when the offset query fails
-// nothing is sent at all and the old cover stays on screen — a standalone
-// delete packet would drop the old cover and leave nothing in its place. The
-// delete is a by-ID delete (not a=d,d=a) because the placement only
-// references already-transmitted image data: deleting all images would also
-// wipe the new animation's data and make a=p fail (the static path can
-// afford d=a only because a full re-transmit follows it). The sequence must
-// be written with writeStdout (it is already wrapped).
+// original layout: SetFrameGap + StartAnimation first, then pane-relative
+// cursor save / CUP / PlaceImage / restore, old image delete last; it always
+// returns ok=true and ignores paneTop/paneLeft. In tmux passthrough mode the
+// whole sequence travels as a single wrapped DCS — including the animation
+// control commands: SetFrameGap/StartAnimation are bare Kitty APCs, and a
+// bare APC written to the pane is consumed by tmux as a pane title (dropped
+// or polluting the title) instead of reaching the outer terminal, so the
+// animation would never start. The placement targets the outer terminal's
+// absolute cursor (see writePositioned). paneTop/paneLeft must have been
+// queried successfully before any frame data was generated (see the render
+// goroutine) and are reused here — the function never re-queries. The old
+// image delete is merged into the payload so that when the offset query
+// fails nothing is sent at all and the old cover stays on screen — a
+// standalone delete packet would drop the old cover and leave nothing in
+// its place. The delete is a by-ID delete (not a=d,d=a) because the
+// placement only references already-transmitted image data: deleting all
+// images would also wipe the new animation's data and make a=p fail (the
+// static path can afford d=a only because a full re-transmit follows it).
+// The sequence must be written with writeStdout (it is already wrapped).
 func buildAnimationSequence(animID, oldAnimID uint32, frameDuration, bgRow, bgCol, bgCols, bgZIndex, paneTop, paneLeft int) (string, bool) {
-	// Non-positioning part: animation setup.
-	var sb strings.Builder
-	sb.WriteString(kitty.SetFrameGap(animID, 1, frameDuration))
-	sb.WriteString(kitty.StartAnimation(animID))
-
 	placement := kitty.PlaceImage(animID, bgCols, 0, bgZIndex)
 
 	if kitty.UseTmuxPassthrough() {
-		// Merge the old image delete into the placement payload (see doc
+		// Single fully wrapped DCS: animation control + positioning +
+		// placement. Merge the old image delete into the payload (see doc
 		// comment); the direct-mode path keeps the delete as a separate
 		// plain command appended after the placement.
 		if oldAnimID != 0 && oldAnimID != animID {
 			placement = kitty.DeleteImage(oldAnimID) + placement
 		}
-		payload := kitty.BuildTmuxPositionedPayload(paneTop, paneLeft, bgRow, bgCol, placement, false)
-		sb.WriteString(kitty.Wrap(payload))
-		return sb.String(), true
+		payload := kitty.SetFrameGap(animID, 1, frameDuration) +
+			kitty.StartAnimation(animID) +
+			kitty.BuildTmuxPositionedPayload(paneTop, paneLeft, bgRow, bgCol, placement, false)
+		return kitty.Wrap(payload), true
 	}
 
 	// Non-tmux path: unchanged layout.
+	var sb strings.Builder
+	sb.WriteString(kitty.SetFrameGap(animID, 1, frameDuration))
+	sb.WriteString(kitty.StartAnimation(animID))
+
 	// Placement
 	sb.WriteString("\x1b[s")
 	fmt.Fprintf(&sb, "\x1b[%d;%dH", bgRow, bgCol)

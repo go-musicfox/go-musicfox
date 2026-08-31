@@ -2,6 +2,7 @@ package kitty
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -20,6 +21,14 @@ var (
 // wrapped in tmux DCS passthrough.
 func UseTmuxPassthrough() bool {
 	return tmuxPassthrough
+}
+
+// SetTmuxPassthroughForTest overrides the package-level tmux passthrough
+// mode. Test-only: it mutates global package state, so callers must restore
+// the previous value (typically via t.Cleanup) and must not use
+// t.Parallel() in tests that touch it.
+func SetTmuxPassthroughForTest(on bool) {
+	tmuxPassthrough = on
 }
 
 // IsSupported returns whether the current terminal supports the Kitty graphics protocol.
@@ -50,10 +59,9 @@ func detectKittySupport() bool {
 		// WEZTERM_EXECUTABLE are typically inherited from the outer terminal).
 		// If the outer terminal supports kitty graphics, sequences are wrapped
 		// in DCS tmux; passthrough (requires tmux >= 3.3 with
-		// `set -g allow-passthrough on`).
+		// `set -g allow-passthrough on`, which is verified below).
 		if detectDirectTerminalSupport(os.Getenv) {
-			tmuxPassthrough = true
-			return true
+			return enableTmuxPassthrough()
 		}
 		// tmux 3.4+ overwrites pane environment variables (TERM=tmux-256color,
 		// TERM_PROGRAM=tmux), so pane env may not identify the outer terminal.
@@ -61,8 +69,7 @@ func detectKittySupport() bool {
 		// which tracks the attaching client and does.
 		if m := tmuxSessionEnv(); m != nil {
 			if detectDirectTerminalSupport(func(k string) string { return m[k] }) {
-				tmuxPassthrough = true
-				return true
+				return enableTmuxPassthrough()
 			}
 		}
 		return false
@@ -165,6 +172,39 @@ func parseTmuxShowEnvironment(output string) map[string]string {
 		env[line[:idx]] = line[idx+1:]
 	}
 	return env
+}
+
+// enableTmuxPassthrough turns on tmux DCS passthrough mode after verifying
+// that the running tmux server actually has `allow-passthrough on`: tmux 3.3+
+// defaults it to off, and with it off tmux silently drops every passthrough
+// packet — claiming support anyway would make the cover image fail silently
+// and frustrate debugging. Fail-safe: on query failure (including tmux
+// versions without the option) or an off/unknown value, passthrough stays
+// disabled, matching the pre-passthrough behavior. Caller must be inside
+// tmux with a supported outer terminal.
+func enableTmuxPassthrough() bool {
+	if !tmuxAllowPassthroughEnabled() {
+		return false
+	}
+	tmuxPassthrough = true
+	return true
+}
+
+// tmuxAllowPassthroughEnabled reports whether the tmux server has
+// `allow-passthrough on` ("1"/"on"). It is a variable so tests can override
+// the subprocess-backed probe.
+var tmuxAllowPassthroughEnabled = func() bool {
+	output, err := tmuxExec(context.Background(), "display", "-p", "#{allow-passthrough}")
+	if err != nil {
+		slog.Debug("kitty: tmux allow-passthrough query failed, disabling passthrough", slog.Any("error", err))
+		return false
+	}
+	value := strings.TrimSpace(string(output))
+	if value != "1" && value != "on" {
+		slog.Debug("kitty: tmux allow-passthrough is not enabled, disabling passthrough", slog.String("value", value))
+		return false
+	}
+	return true
 }
 
 // ForceEnable forces kitty support to be enabled (useful for testing).

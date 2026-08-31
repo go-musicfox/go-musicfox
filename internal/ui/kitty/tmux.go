@@ -69,15 +69,19 @@ func failureCacheValid(failAt, now time.Time) bool {
 }
 
 // TmuxPaneOffset returns the origin of the current tmux pane relative to the
-// window top-left (window top = outer terminal row 1), as reported by
-// `tmux display -p '#{pane_top},#{pane_left}'`. pane_top/pane_left are 0-based
-// offsets, so the outer-terminal 1-based position of the pane's first cell is
-// (top+1, left+1). Only meaningful in tmux passthrough mode (caller's
-// responsibility), and defensively safe: returns ok=false when not inside
-// tmux or when the query fails. Successful results are cached for
-// tmuxPaneOffsetTTL; failures — including missing TMUX/TMUX_PANE — are
-// negatively cached for tmuxPaneOffsetFailTTL so callers get a consistent
-// backoff. Never panics.
+// outer terminal's top-left (row 1 = outer terminal's first row), as reported
+// by `tmux display -p
+// '#{pane_top},#{pane_left},#{status-position},#{status-height}'`.
+// pane_top/pane_left are 0-based offsets relative to the window, so the
+// returned top is adjusted by the status line height when the status line
+// sits at the top of the outer terminal (status-position top); with the
+// default bottom status the returned top equals pane_top. The outer-terminal
+// 1-based position of the pane's first cell is (top+1, left+1). Only
+// meaningful in tmux passthrough mode (caller's responsibility), and
+// defensively safe: returns ok=false when not inside tmux or when the query
+// fails. Successful results are cached for tmuxPaneOffsetTTL; failures —
+// including missing TMUX/TMUX_PANE — are negatively cached for
+// tmuxPaneOffsetFailTTL so callers get a consistent backoff. Never panics.
 func TmuxPaneOffset() (top, left int, ok bool) {
 	tmuxPaneOffsetMu.Lock()
 	defer tmuxPaneOffsetMu.Unlock()
@@ -100,7 +104,7 @@ func TmuxPaneOffset() (top, left int, ok bool) {
 		return 0, 0, false
 	}
 
-	output, err := tmuxExec(context.Background(), "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left}")
+	output, err := tmuxExec(context.Background(), "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left},#{status-position},#{status-height}")
 	if err != nil {
 		tmuxPaneOffsetFailAt = now
 		return 0, 0, false
@@ -128,17 +132,23 @@ func InvalidateTmuxPaneOffset() {
 	tmuxPaneOffsetFailAt = time.Time{}
 }
 
-// parseTmuxPaneGeometry parses a "#{pane_top},#{pane_left}" expansion.
-// Leading/trailing whitespace (including a trailing newline) is trimmed;
-// both fields must be non-negative integers. Returns ok=false on any
-// malformed output.
+// parseTmuxPaneGeometry parses a
+// "#{pane_top},#{pane_left},#{status-position},#{status-height}" expansion
+// and folds the status line offset into the returned top: when the status
+// line sits at the top of the outer terminal (status-position "top"), the
+// window starts status_height rows below the terminal's first row, so
+// effectiveTop = pane_top + status_height. The pane geometry fields (first
+// two) must be non-negative integers, otherwise ok=false. The status fields
+// are best-effort: unparsable status-height, a missing fourth field (e.g.
+// older tmux), or a status-position other than "top" degrade to a 0
+// adjustment, matching the default bottom-status behavior.
 func parseTmuxPaneGeometry(output string) (top, left int, ok bool) {
 	line := strings.TrimSpace(output)
 	if i := strings.IndexAny(line, "\r\n"); i >= 0 {
 		line = line[:i]
 	}
 	parts := strings.Split(line, ",")
-	if len(parts) != 2 {
+	if len(parts) < 2 {
 		return 0, 0, false
 	}
 	top, err := strconv.Atoi(strings.TrimSpace(parts[0]))
@@ -148,6 +158,11 @@ func parseTmuxPaneGeometry(output string) (top, left int, ok bool) {
 	left, err = strconv.Atoi(strings.TrimSpace(parts[1]))
 	if err != nil || left < 0 {
 		return 0, 0, false
+	}
+	if len(parts) >= 4 && strings.TrimSpace(parts[2]) == "top" {
+		if height, err := strconv.Atoi(strings.TrimSpace(parts[3])); err == nil && height > 0 {
+			top += height
+		}
 	}
 	return top, left, true
 }

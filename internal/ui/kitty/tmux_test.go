@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+// NOTE: tests in this package mutate package globals (tmuxPassthrough, the
+// pane offset caches, the detection state) and must not run in parallel —
+// do not add t.Parallel() to any test in this package.
+
 func TestParseTmuxPaneGeometry(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -21,7 +25,14 @@ func TestParseTmuxPaneGeometry(t *testing.T) {
 		{"crlf", "3,74\r\n", 3, 74, true},
 		{"non numeric", "abc,74", 0, 0, false},
 		{"missing column", "3", 0, 0, false},
-		{"extra column", "3,74,1", 0, 0, false},
+		{"negative", "-1,74", 0, 0, false},
+		{"empty", "", 0, 0, false},
+		// Status line fields: bottom status adds no offset.
+		{"four fields bottom", "3,74,bottom,1", 3, 74, true},
+		{"four fields zero height", "3,74,top,0", 3, 74, true},
+		{"top status adds height", "2,0,top,3", 5, 0, true},
+		{"top status bad height degrades", "2,0,top,x", 2, 0, true},
+		{"missing status fields degrade", "3,74", 3, 74, true},
 		{"negative", "-1,74", 0, 0, false},
 		{"empty", "", 0, 0, false},
 	}

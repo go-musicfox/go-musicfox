@@ -33,18 +33,47 @@ func resetDetectionState(t *testing.T) {
 	})
 }
 
+// stubAllowPassthrough overrides the tmux allow-passthrough probe. Tests
+// mutate package globals and must not run in parallel.
+func stubAllowPassthrough(t *testing.T, on bool) {
+	t.Helper()
+	orig := tmuxAllowPassthroughEnabled
+	tmuxAllowPassthroughEnabled = func() bool { return on }
+	t.Cleanup(func() { tmuxAllowPassthroughEnabled = orig })
+}
+
 func TestDetectKittySupportInsideTmuxWithGhostty(t *testing.T) {
 	clearTerminalEnv(t)
 	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-nonexistent-socket,123,0")
 	t.Setenv("TERM", "tmux-256color")
 	t.Setenv("TERM_PROGRAM", "ghostty")
 	resetDetectionState(t)
+	stubAllowPassthrough(t, true)
 
 	if !detectKittySupport() {
 		t.Error("expected kitty support inside tmux with ghostty outer terminal")
 	}
 	if !UseTmuxPassthrough() {
 		t.Error("expected tmux passthrough to be enabled")
+	}
+}
+
+func TestDetectKittySupportInsideTmuxPassthroughDisabled(t *testing.T) {
+	clearTerminalEnv(t)
+	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-nonexistent-socket,123,0")
+	t.Setenv("TERM", "tmux-256color")
+	t.Setenv("TERM_PROGRAM", "ghostty")
+	resetDetectionState(t)
+	// allow-passthrough off (or the probe failing): detection must fail safe
+	// and stay disabled even though the outer terminal supports kitty
+	// graphics, because tmux would silently drop every passthrough packet.
+	stubAllowPassthrough(t, false)
+
+	if detectKittySupport() {
+		t.Error("expected no support when allow-passthrough is off")
+	}
+	if UseTmuxPassthrough() {
+		t.Error("expected tmux passthrough to stay disabled")
 	}
 }
 
