@@ -224,8 +224,10 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 			s.yrcLines = yrcLines
 
 			// Optionally align translation and roman lyrics to YRC
-			if s.showTranslation && lrcData.Ytlrc != "" {
-				s.yrcLines = AlignTranslationToYRC(s.yrcLines, lrcData.Ytlrc)
+			//ytlrc有缺行现象
+			//as まふまふ的单曲《猛独が襲う》: https://music.163.com/m/song?id=524152942 (来自@网易云音乐)
+			if s.showTranslation && lrcData.Translated != "" {
+				s.yrcLines = AlignTranslationFragmentsToYRC(s.fragments, s.yrcLines, s.transFragments)
 			}
 			if lrcData.Yromalrc != "" {
 				s.yrcLines = AlignRomanToYRC(s.yrcLines, lrcData.Yromalrc)
@@ -297,7 +299,7 @@ func (s *Service) EnableTranslation(enable bool) {
 				s.yrcLines = AlignTranslationToYRC(s.yrcLines, s.lastLRCData.Ytlrc)
 			} else if len(s.transFragments) > 0 {
 				// Fallback when no ytlrc
-				s.yrcLines = AlignTranslationFragmentsToYRC(s.yrcLines, s.transFragments)
+				s.yrcLines = AlignTranslationFragmentsToYRC(s.fragments, s.yrcLines, s.transFragments)
 			}
 		}
 	} else {
