@@ -276,9 +276,12 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	r.prepareLyricLines()
 
 	var lyricBuilder strings.Builder
+	windowWidth := r.netease.WindowWidth()
 	topPadding := r.lyricStartRow - main.MenuBottomRow() - specLines
-	if topPadding > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", topPadding))
+	// Absolute screen row of the first line this component emits (1-based).
+	padStartRow := r.lyricStartRow - topPadding
+	for i := 0; i < topPadding; i++ {
+		r.writePaddingRow(&lyricBuilder, padStartRow+i, windowWidth)
 	}
 
 	if main.CenterEverything() {
@@ -296,8 +299,9 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if specLines > 0 && bottomPad > 0 {
 		bottomPad--
 	}
-	if bottomPad > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", bottomPad))
+	bottomStart := r.lyricStartRow + r.lyricLines
+	for i := 0; i < bottomPad; i++ {
+		r.writePaddingRow(&lyricBuilder, bottomStart+i, windowWidth)
 	}
 
 	// Return the view with the actual number of newlines in the output.
@@ -515,6 +519,38 @@ func (r *LyricRenderer) writeLyricLeadingPadding(b *strings.Builder, absRow, tex
 	if textStartCol > 0 {
 		b.WriteString(strings.Repeat(" ", textStartCol))
 	}
+}
+
+// writePaddingRow emits one vertical padding row. Cover rectangles taller than
+// the lyric text block spill into these rows; without Unicode placeholders
+// there the image would only appear on the lyric lines (often ~half height).
+// Rows with no cover stay as empty newlines so AppBackground fills them.
+func (r *LyricRenderer) writePaddingRow(b *strings.Builder, absRow, width int) {
+	if startCol, cells, ok := r.netease.CoverPlaceholderSegment(absRow); ok && width > 0 {
+		before := max(0, startCol-1)
+		cellW := ansi.StringWidth(cells)
+		after := max(0, width-before-cellW)
+		if before > 0 {
+			pad := strings.Repeat(" ", before)
+			if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
+				b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
+			} else {
+				b.WriteString(pad)
+			}
+		}
+		b.WriteString(cells)
+		if after > 0 {
+			pad := strings.Repeat(" ", after)
+			if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
+				b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
+			} else {
+				b.WriteString(pad)
+			}
+		}
+		b.WriteString("\n")
+		return
+	}
+	b.WriteString("\n")
 }
 
 // styleLyricText paints lyric glyphs with the given foreground and the app

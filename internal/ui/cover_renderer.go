@@ -1006,16 +1006,17 @@ func (r *CoverRenderer) deleteDisplayedImagesLocked() {
 }
 
 // applyCoverBackgroundExclusionLocked registers the cover rect so Main.View
-// leaves those cells without AppBackground fill. Height is rows-1 to match
-// the Kitty fill (last cell row stays painted). Caller must hold r.mu.
+// leaves those cells without AppBackground fill. Absolute Kitty overlays use
+// height rows-1 (image does not fill the last cell row). Unicode placeholders
+// occupy every placement row, so the full height is excluded. Caller must hold r.mu.
 func (r *CoverRenderer) applyCoverBackgroundExclusionLocked(a *model.App) {
 	if a == nil || !kitty.UseTmuxPassthrough() || !r.imageRendered {
 		return
 	}
-	if r.cols <= 0 || r.rows <= 1 || r.lastStartRow <= 0 || r.lastStartCol <= 0 {
+	if r.cols <= 0 || r.rows <= 0 || r.lastStartRow <= 0 || r.lastStartCol <= 0 {
 		return
 	}
-	a.SetAppBackgroundExclusion(r.lastStartCol-1, r.lastStartRow-1, r.cols, r.rows-1)
+	a.SetAppBackgroundExclusion(r.lastStartCol-1, r.lastStartRow-1, r.cols, r.rows)
 }
 
 // PlaceholderSegment returns a Unicode-placeholder string for the cover
