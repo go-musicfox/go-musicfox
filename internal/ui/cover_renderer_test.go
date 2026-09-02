@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 )
@@ -416,7 +417,49 @@ func TestProcessRSSBytesDoesNotPanic(t *testing.T) {
 	_ = processRSSBytes()
 }
 
+func TestPlaceholderSegmentRequiresTmuxAndImage(t *testing.T) {
+	r := &CoverRenderer{
+		imageRendered:  true,
+		displayImageID: 42,
+		cols:           4,
+		rows:           3,
+		lastStartRow:   10,
+		lastStartCol:   5,
+	}
+
+	if _, _, ok := r.PlaceholderSegment(10); ok {
+		t.Fatal("expected ok=false outside tmux passthrough")
+	}
+
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	startCol, cells, ok := r.PlaceholderSegment(11)
+	if !ok {
+		t.Fatal("expected placeholder for absRow inside cover rect")
+	}
+	if startCol != 5 {
+		t.Fatalf("startCol = %d, want 5", startCol)
+	}
+	if got := ansi.StringWidth(cells); got != 4 {
+		t.Fatalf("placeholder cells StringWidth = %d, want 4", got)
+	}
+
+	if _, _, ok := r.PlaceholderSegment(9); ok {
+		t.Fatal("expected ok=false for row above cover")
+	}
+	if _, _, ok := r.PlaceholderSegment(13); ok {
+		t.Fatal("expected ok=false for row below cover")
+	}
+
+	r.displayImageID = 0
+	if _, _, ok := r.PlaceholderSegment(10); ok {
+		t.Fatal("expected ok=false without displayImageID")
+	}
+}
+
 func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
+
 	prev := configs.AppConfig
 	t.Cleanup(func() { configs.AppConfig = prev })
 

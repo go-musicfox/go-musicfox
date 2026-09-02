@@ -8,6 +8,8 @@ import (
 	"image/png"
 	"strings"
 	"sync/atomic"
+
+	kittyansi "github.com/charmbracelet/x/ansi/kitty"
 )
 
 const (
@@ -66,8 +68,13 @@ func TransmitAndDisplayWithIDZ(img image.Image, cols, rows int, imageID uint32, 
 	return transmit(img, cols, rows, imageID, "T", 0, zIndex)
 }
 
-// TransmitImage transmits an image without displaying it.
+// TransmitImage transmits an image without displaying it (action a=t).
 // Returns the escape sequence string.
+//
+// The tmux Unicode-placeholder path must use TransmitImage (a=t) followed by
+// VirtualPlaceImage (a=p,U=1). Do not use TransmitAndDisplay / a=T there: a
+// real placement would leave a ghost overlay that is not grid-resident and
+// can bleed across tmux window switches.
 func TransmitImage(img image.Image, cols, rows int, imageID uint32) (string, error) {
 	return transmit(img, cols, rows, imageID, "t", 0, 0)
 }
@@ -109,8 +116,9 @@ func ClearImageArea(rows int) string {
 	return result.String()
 }
 
-// Placeholder creates a placeholder string of the specified size.
-// This is used to reserve space for the image in the terminal output.
+// Placeholder creates a space-filled placeholder string of the specified size.
+// This reserves blank cells for absolute (non-Unicode) Kitty placements.
+// For tmux grid-resident covers use UnicodePlaceholderRow instead.
 func Placeholder(cols, rows int) string {
 	var result strings.Builder
 	space := strings.Repeat(" ", cols)
@@ -121,6 +129,46 @@ func Placeholder(cols, rows int) string {
 		}
 	}
 	return result.String()
+}
+
+// VirtualPlaceImage creates a virtual placement (a=p,U=1) for Unicode
+// placeholders. The image must already have been transmitted with a=t
+// (TransmitImage). Include r when rows > 0.
+func VirtualPlaceImage(imageID uint32, cols, rows int) string {
+	if rows > 0 {
+		return fmt.Sprintf("%sa=p,U=1,i=%d,c=%d,r=%d,q=2%s", apcStart, imageID, cols, rows, st)
+	}
+	return fmt.Sprintf("%sa=p,U=1,i=%d,c=%d,q=2%s", apcStart, imageID, cols, st)
+}
+
+// UnicodePlaceholderCell returns one Kitty Unicode placeholder cell for the
+// given image ID at 0-based (row, col) within the virtual placement.
+// The image ID is encoded in the truecolor foreground as
+// (id>>16)&255, (id>>8)&255, id&255 (e.g. id 42 → 38;2;0;0;42).
+func UnicodePlaceholderCell(imageID uint32, row, col int) string {
+	r := (imageID >> 16) & 255
+	g := (imageID >> 8) & 255
+	b := imageID & 255
+	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm%c%c%c",
+		r, g, b,
+		kittyansi.Placeholder,
+		kittyansi.Diacritic(row),
+		kittyansi.Diacritic(col),
+	)
+}
+
+// UnicodePlaceholderRow returns cols Unicode placeholder cells for one row of
+// a virtual placement. Every cell emits both row and column diacritics for
+// robustness (no reliance on left-to-right inheritance).
+func UnicodePlaceholderRow(imageID uint32, row, cols int) string {
+	if cols <= 0 {
+		return ""
+	}
+	var b strings.Builder
+	for c := range cols {
+		b.WriteString(UnicodePlaceholderCell(imageID, row, c))
+	}
+	return b.String()
 }
 
 // splitIntoChunks splits a string into chunks of the specified size.

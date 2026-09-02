@@ -31,6 +31,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 	"github.com/go-musicfox/go-musicfox/utils/app"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
@@ -125,11 +126,17 @@ func (n *Netease) Components() []model.Component {
 	if n.spectrogramRenderer.IsEnabled() {
 		components = append(components, n.spectrogramRenderer)
 	}
+	// In tmux Unicode-placeholder mode Cover must run before Lyric so the
+	// same frame can splice U+10EEEE cells after transmit/virtual-place.
+	// Non-tmux absolute overlays still render last so CUP/APC win over the
+	// normal layout pass.
+	coverEarly := n.coverRenderer.IsEnabled() && kitty.UseTmuxPassthrough()
+	if coverEarly {
+		components = append(components, n.coverRenderer)
+	}
 	components = append(components, n.lyricRenderer)
 	components = append(components, n.songInfoRenderer, n.progressRenderer)
-	// CoverRenderer uses absolute positioning and returns 0 lines, so it must
-	// be rendered last to overlay the normal layout.
-	if n.coverRenderer.IsEnabled() {
+	if n.coverRenderer.IsEnabled() && !coverEarly {
 		components = append(components, n.coverRenderer)
 	}
 	return components
@@ -436,14 +443,14 @@ func (n *Netease) InitHook(_ *model.App) {
 				"debug", configs.AppConfig.Main.Debug,
 				"seenVersion", seen.Version,
 			)
-		if shouldShow {
-			if !configs.AppConfig.Main.Debug {
-				if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
-					slog.Error("changelog: failed to persist seen version", slogx.Error(err))
-				} else {
-					slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
+			if shouldShow {
+				if !configs.AppConfig.Main.Debug {
+					if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
+						slog.Error("changelog: failed to persist seen version", slogx.Error(err))
+					} else {
+						slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
+					}
 				}
-			}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
 				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
@@ -593,6 +600,24 @@ func (n *Netease) GetCoverEndColumn() int {
 		return 0
 	}
 	return n.coverRenderer.GetCoverEndColumn()
+}
+
+// CoverPlaceholderSegment returns a Unicode-placeholder segment for the cover
+// on absolute screen row absRow (1-based). Thin passthrough to CoverRenderer.
+func (n *Netease) CoverPlaceholderSegment(absRow int) (startCol int, cells string, ok bool) {
+	if n == nil || n.coverRenderer == nil {
+		return 0, "", false
+	}
+	return n.coverRenderer.PlaceholderSegment(absRow)
+}
+
+// CoverPlaceholderCacheFields returns tmux Unicode cover identity/geometry for
+// lyric output-cache invalidation.
+func (n *Netease) CoverPlaceholderCacheFields() (imageID uint32, startRow, startCol, cols int) {
+	if n == nil || n.coverRenderer == nil {
+		return 0, 0, 0, 0
+	}
+	return n.coverRenderer.PlaceholderCacheFields()
 }
 
 // GetLyricPosition returns the current lyric display position.
