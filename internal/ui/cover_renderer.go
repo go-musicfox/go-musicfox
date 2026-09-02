@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -33,7 +32,6 @@ const placeBackoffMax = 30 * time.Second
 const (
 	coverWriteTraceMinBytes = 1024
 	coverWriteSlowThreshold = 200 * time.Millisecond
-	coverHeartbeatInterval  = 2 * time.Second
 
 	tmuxImageSingleMaxBytes = 768 * 1024
 	tmuxImageRateBytes      = 1024 * 1024
@@ -230,11 +228,6 @@ type CoverRenderer struct {
 	placeBackoff time.Duration
 
 	tmuxImageLimiter *tmuxImageLimiter
-
-	heartbeatCancel context.CancelFunc
-	lastWriteBytes  atomic.Int64
-	lastWriteDurNs  atomic.Int64
-	lastWriteAtNs   atomic.Int64
 }
 
 func coverDebugEnabled() bool {
@@ -275,11 +268,6 @@ func NewCoverRenderer(netease *Netease, state playerRendererState) *CoverRendere
 		tmuxImageLimiter: newTmuxImageLimiter(time.Now()),
 	}
 	r.logCoverEnvSnapshot()
-	if coverDebugEnabled() {
-		ctx, cancel := context.WithCancel(context.Background())
-		r.heartbeatCancel = cancel
-		go r.coverHeartbeatLoop(ctx)
-	}
 	return r
 }
 
@@ -298,8 +286,11 @@ func (r *CoverRenderer) logCoverEnvSnapshot() {
 		playerEngine = cfg.Player.Engine
 		debug = cfg.Main.Debug
 	}
+	// One-shot startup snapshot (not a periodic probe). Flush once so a
+	// hard kill shortly after launch still leaves the env line on disk.
 	slog.Info("cover: env snapshot",
 		slog.Int("pid", os.Getpid()),
+		slog.Uint64("rssBytes", processRSSBytes()),
 		slog.String("TERM", os.Getenv("TERM")),
 		slog.String("TERM_PROGRAM", os.Getenv("TERM_PROGRAM")),
 		slog.Bool("tmux", os.Getenv("TMUX") != ""),
@@ -314,53 +305,6 @@ func (r *CoverRenderer) logCoverEnvSnapshot() {
 		slog.Bool("debug", debug),
 	)
 	slogx.Flush()
-}
-
-func (r *CoverRenderer) coverHeartbeatLoop(ctx context.Context) {
-	ticker := time.NewTicker(coverHeartbeatInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			r.logCoverHeartbeat()
-		}
-	}
-}
-
-func (r *CoverRenderer) logCoverHeartbeat() {
-	lastAt := r.lastWriteAtNs.Load()
-	var age time.Duration
-	if lastAt != 0 {
-		age = time.Since(time.Unix(0, lastAt))
-	}
-	tmuxCfg := false
-	if configs.AppConfig != nil {
-		tmuxCfg = configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough
-	}
-	limitState := r.imageLimiter().snapshot(time.Now())
-	slog.Debug("cover: heartbeat",
-		slog.Int64("lastWriteBytes", r.lastWriteBytes.Load()),
-		slog.Duration("lastWriteDur", time.Duration(r.lastWriteDurNs.Load())),
-		slog.Duration("lastWriteAge", age),
-		slog.Int("goroutines", runtime.NumGoroutine()),
-		slog.Bool("enabled", r.IsEnabled()),
-		slog.Bool("tmuxPassthroughDetected", kitty.UseTmuxPassthrough()),
-		slog.Bool("tmuxPassthroughConfig", tmuxCfg),
-		slog.Int64("tmuxAdmittedBytes", limitState.admittedBytes),
-		slog.Int64("tmuxTokens", limitState.tokens),
-		slog.Duration("tmuxCooldownRemaining", limitState.cooldownRemaining),
-		slog.Int64("tmuxLimitedCount", limitState.limitedCount),
-	)
-	slogx.Flush()
-}
-
-func (r *CoverRenderer) stopCoverHeartbeat() {
-	if r.heartbeatCancel != nil {
-		r.heartbeatCancel()
-		r.heartbeatCancel = nil
-	}
 }
 
 // IsEnabled returns whether cover rendering is enabled and supported.
@@ -977,32 +921,41 @@ func (r *CoverRenderer) writeStdout(s string) coverWriteResult {
 	n := len(s)
 	debug := coverDebugEnabled()
 	if coverWriteShouldTraceBegin(debug, n) {
-		slog.Debug("cover: stdout write begin", slog.Int("bytes", n))
-		slogx.Flush()
+		// Event-driven only (no periodic probe). Match upstream debug style:
+		// log when something happens; do not fsync on every debug line.
+		slog.Debug("cover: stdout write begin",
+			slog.Int("bytes", n),
+			slog.Uint64("rssBytes", processRSSBytes()),
+			slog.Int("goroutines", runtime.NumGoroutine()),
+		)
 	}
 
 	start := time.Now()
 	written, err := coverStdoutWrite(s)
 	dur := time.Since(start)
 
-	r.lastWriteBytes.Store(int64(n))
-	r.lastWriteDurNs.Store(dur.Nanoseconds())
-	r.lastWriteAtNs.Store(time.Now().UnixNano())
-
 	if coverWriteShouldTraceBegin(debug, n) {
+		limitState := r.imageLimiter().snapshot(time.Now())
 		slog.Debug("cover: stdout write end",
 			slog.Int("bytes", n),
 			slog.Duration("duration", dur),
 			slog.Int("n", written),
 			slog.Any("err", err),
+			slog.Uint64("rssBytes", processRSSBytes()),
+			slog.Int("goroutines", runtime.NumGoroutine()),
+			slog.Int64("tmuxAdmittedBytes", limitState.admittedBytes),
+			slog.Int64("tmuxLimitedCount", limitState.limitedCount),
+			slog.Duration("tmuxCooldownRemaining", limitState.cooldownRemaining),
 		)
-		slogx.Flush()
 	}
 	if coverWriteIsSlow(dur) {
 		slog.Warn("cover: stdout write slow",
 			slog.Int("bytes", n),
 			slog.Duration("duration", dur),
+			slog.Uint64("rssBytes", processRSSBytes()),
 		)
+		// Flush only on Warn: survives hard kill without turning debug into
+		// a continuous fsync load.
 		slogx.Flush()
 	}
 	return coverWriteResult{written: written, duration: dur, err: err}
@@ -1366,7 +1319,6 @@ func (r *CoverRenderer) ClearDisplayed() {
 // Close cleans up the cover renderer, clearing any displayed images.
 // This should be called when the application exits.
 func (r *CoverRenderer) Close() {
-	r.stopCoverHeartbeat()
 	if !r.kittySupport {
 		return
 	}

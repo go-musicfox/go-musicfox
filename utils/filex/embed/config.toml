@@ -30,7 +30,7 @@ checkUpdate = true
 altScreen = true
 # 是否在界面中启用鼠标事件
 enableMouseEvent = true
-# 是否开启 Debug 模式（记录每次 tmux 图像写入的实际字节、吞吐与终端拥塞代理，并启用每 2 秒 heartbeat，写入 musicfox.log）
+# 是否开启 Debug 模式（封面大包写入时记录字节/耗时/RSS/限流状态到 musicfox.log；慢写会 Warn）
 debug = false
 # 播放时 UI 刷新帧率（更高帧率可使动画更平滑，但消耗更多cpu）
 frameRate = 5

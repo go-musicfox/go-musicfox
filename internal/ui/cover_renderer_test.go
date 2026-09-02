@@ -381,18 +381,15 @@ func TestWriteStdoutInvokesStubAndRecordsDuration(t *testing.T) {
 	}
 
 	r := &CoverRenderer{}
-	r.writeStdout(payload)
+	got := r.writeStdout(payload)
 	if !called {
 		t.Fatal("expected coverStdoutWrite stub to be invoked")
 	}
-	if got := r.lastWriteBytes.Load(); got != int64(len(payload)) {
-		t.Fatalf("lastWriteBytes = %d, want %d", got, len(payload))
+	if got.written != len(payload) {
+		t.Fatalf("written = %d, want %d", got.written, len(payload))
 	}
-	if dur := time.Duration(r.lastWriteDurNs.Load()); !coverWriteIsSlow(dur) {
-		t.Fatalf("expected recorded duration to be slow, got %v", dur)
-	}
-	if r.lastWriteAtNs.Load() == 0 {
-		t.Fatal("expected last write time to be recorded")
+	if !coverWriteIsSlow(got.duration) {
+		t.Fatalf("expected write duration to be slow, got %v", got.duration)
 	}
 }
 
@@ -415,7 +412,11 @@ func TestNewCoverRendererEmptyConfigDoesNotPanic(t *testing.T) {
 	r.Close()
 }
 
-func TestCoverHeartbeatCloseDoesNotHang(t *testing.T) {
+func TestProcessRSSBytesDoesNotPanic(t *testing.T) {
+	_ = processRSSBytes()
+}
+
+func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
 	prev := configs.AppConfig
 	t.Cleanup(func() { configs.AppConfig = prev })
 
@@ -431,6 +432,6 @@ func TestCoverHeartbeatCloseDoesNotHang(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
-		t.Fatal("Close hung with debug heartbeat running")
+		t.Fatal("Close hung with debug enabled")
 	}
 }
