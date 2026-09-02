@@ -438,11 +438,18 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	// Position cover purely based on lyrics: align the cover's bottom edge to the
-	// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
-	// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
-	// compensating for the Kitty image not filling the bottom terminal cell exactly.
+	// Position cover relative to the lyric block.
+	// Non-tmux absolute Kitty placements leave the last cell row empty, so the
+	// historical formula anchors near the lyric bottom and still looks centered.
+	// Unicode placeholders fill every row; reuse that formula and the cover sits
+	// too low — center on the lyric block instead.
 	coverStartRow := lyricStartRow + lyricLines - r.rows/2 - 1
+	if kitty.UseTmuxPassthrough() {
+		coverStartRow = lyricStartRow + (lyricLines-r.rows)/2
+		if coverStartRow < 1 {
+			coverStartRow = 1
+		}
+	}
 
 	// If cover can't fit at all, skip rendering
 	if r.rows > windowHeight-FixedTopBottomRows {
