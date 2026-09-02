@@ -30,7 +30,7 @@ checkUpdate = true
 altScreen = true
 # 是否在界面中启用鼠标事件
 enableMouseEvent = true
-# 是否开启 Debug 模式
+# 是否开启 Debug 模式（封面大包写入时记录字节/耗时/RSS/限流状态到 musicfox.log；慢写会 Warn）
 debug = false
 # 播放时 UI 刷新帧率（更高帧率可使动画更平滑，但消耗更多cpu）
 frameRate = 5
@@ -160,6 +160,12 @@ spinFPS = 30
 # 旋转一圈的时长（秒，取值范围 1-30，默认 6）
 # 时长和帧率挂钩：60fps*6s=360帧，30fps*6s=180帧，30fps*12s=360帧
 spinDuration = 6
+# 是否允许在 tmux 内经 DCS 透传绘制封面（实验性功能，开启可能导致终端卡死甚至系统重启）
+# 已知风险：Ghostty + tmux 透传大图时会拖死 GPU/WindowServer，触发 macOS watchdog 整机重启
+# 直接在 Ghostty、Kitty、WezTerm 等终端中运行（不套 tmux）不受此限制；
+# 开启后 tmux 内仍会强制关闭旋转封面，仅显示静态封面
+# 默认运行时安全预算：单包 768 KiB、持续 1 MiB/s；写入超过 200ms 时按 5-30 秒冷却
+tmuxPassthrough = false
 
 # 桌面歌词设置（目前仅支持 macOS）
 [main.lyric.desktopLyrics]

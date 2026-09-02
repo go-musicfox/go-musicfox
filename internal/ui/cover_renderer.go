@@ -19,6 +19,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 // placeBackoffInitial is the first retry delay after a failed placement
@@ -27,6 +28,157 @@ const placeBackoffInitial = time.Second
 
 // placeBackoffMax caps the exponential placement retry delay.
 const placeBackoffMax = 30 * time.Second
+
+const (
+	coverWriteTraceMinBytes = 1024
+	coverWriteSlowThreshold = 200 * time.Millisecond
+
+	tmuxImageSingleMaxBytes = 768 * 1024
+	tmuxImageRateBytes      = 1024 * 1024
+	tmuxImageBurstBytes     = 1024 * 1024
+	tmuxSlowCooldownInitial = 5 * time.Second
+	tmuxSlowCooldownMax     = 30 * time.Second
+)
+
+// coverStdoutWrite is the actual stdout write used by writeStdout. Tests stub it.
+var coverStdoutWrite = func(s string) (int, error) {
+	return os.Stdout.WriteString(s)
+}
+
+var (
+	tmuxCoverDisabledLogOnce sync.Once
+	tmuxImageOversizeLogOnce sync.Once
+	coverTmuxPaneOffset      = kitty.TmuxPaneOffset
+)
+
+type coverWriteResult struct {
+	written  int
+	duration time.Duration
+	err      error
+}
+
+func (r coverWriteResult) complete(want int) bool {
+	return r.err == nil && r.written == want
+}
+
+type tmuxImageLimitDecision struct {
+	allowed    bool
+	reason     string
+	retryAfter time.Duration
+}
+
+type tmuxImageLimiterSnapshot struct {
+	admittedBytes     int64
+	tokens            int64
+	cooldownRemaining time.Duration
+	limitedCount      int64
+}
+
+type tmuxImageLimiter struct {
+	mu sync.Mutex
+
+	tokens        float64
+	lastRefill    time.Time
+	cooldownUntil time.Time
+	cooldownLevel time.Duration
+	admittedBytes int64
+	limitedCount  int64
+}
+
+func newTmuxImageLimiter(now time.Time) *tmuxImageLimiter {
+	return &tmuxImageLimiter{
+		tokens:     tmuxImageBurstBytes,
+		lastRefill: now,
+	}
+}
+
+func (l *tmuxImageLimiter) refill(now time.Time) {
+	if now.After(l.lastRefill) {
+		l.tokens = min(
+			float64(tmuxImageBurstBytes),
+			l.tokens+now.Sub(l.lastRefill).Seconds()*float64(tmuxImageRateBytes),
+		)
+		l.lastRefill = now
+	}
+}
+
+func (l *tmuxImageLimiter) allow(now time.Time, bytes int) tmuxImageLimitDecision {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.refill(now)
+	if bytes > tmuxImageSingleMaxBytes {
+		l.limitedCount++
+		return tmuxImageLimitDecision{reason: "single_packet_limit"}
+	}
+	if now.Before(l.cooldownUntil) {
+		l.limitedCount++
+		return tmuxImageLimitDecision{
+			reason:     "cooldown",
+			retryAfter: l.cooldownUntil.Sub(now),
+		}
+	}
+	if float64(bytes) > l.tokens {
+		l.limitedCount++
+		retryAfter := time.Duration((float64(bytes) - l.tokens) / float64(tmuxImageRateBytes) * float64(time.Second))
+		return tmuxImageLimitDecision{
+			reason:     "rate_limit",
+			retryAfter: max(retryAfter, time.Nanosecond),
+		}
+	}
+
+	l.tokens -= float64(bytes)
+	l.admittedBytes += int64(bytes)
+	return tmuxImageLimitDecision{allowed: true}
+}
+
+func (l *tmuxImageLimiter) report(now time.Time, result coverWriteResult, want int) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if !result.complete(want) || coverWriteIsSlow(result.duration) {
+		if l.cooldownLevel == 0 {
+			l.cooldownLevel = tmuxSlowCooldownInitial
+		} else {
+			l.cooldownLevel = min(l.cooldownLevel*2, tmuxSlowCooldownMax)
+		}
+		l.cooldownUntil = now.Add(l.cooldownLevel)
+		if !result.complete(want) {
+			return "error"
+		}
+		return "slow"
+	}
+
+	l.cooldownLevel = 0
+	l.cooldownUntil = time.Time{}
+	return "normal"
+}
+
+func (l *tmuxImageLimiter) snapshot(now time.Time) tmuxImageLimiterSnapshot {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.refill(now)
+	var remaining time.Duration
+	if now.Before(l.cooldownUntil) {
+		remaining = l.cooldownUntil.Sub(now)
+	}
+	return tmuxImageLimiterSnapshot{
+		admittedBytes:     l.admittedBytes,
+		tokens:            int64(l.tokens),
+		cooldownRemaining: remaining,
+		limitedCount:      l.limitedCount,
+	}
+}
+
+// logTmuxCoverDisabledOnce explains once why covers are suppressed inside
+// tmux when the experimental passthrough flag is not opted in, so a silent
+// blank cover area is not mistaken for a rendering bug.
+func logTmuxCoverDisabledOnce() {
+	tmuxCoverDisabledLogOnce.Do(func() {
+		slog.Warn("cover: kitty graphics disabled inside tmux (set main.lyric.cover.tmuxPassthrough=true to opt in; ghostty+tmux image passthrough has caused macOS watchdog reboots)")
+	})
+}
 
 // CoverRenderer is a dedicated UI component for rendering album cover images
 // using the Kitty graphics protocol.
@@ -74,6 +226,20 @@ type CoverRenderer struct {
 	// by mu.
 	placeFailAt  time.Time
 	placeBackoff time.Duration
+
+	tmuxImageLimiter *tmuxImageLimiter
+}
+
+func coverDebugEnabled() bool {
+	return configs.AppConfig != nil && configs.AppConfig.Main.Debug
+}
+
+func coverWriteIsSlow(d time.Duration) bool {
+	return d > coverWriteSlowThreshold
+}
+
+func coverWriteShouldTraceBegin(debug bool, n int) bool {
+	return debug && n >= coverWriteTraceMinBytes
 }
 
 type renderResult struct {
@@ -93,19 +259,67 @@ func NewCoverRenderer(netease *Netease, state playerRendererState) *CoverRendere
 	kittySupport := kitty.IsSupported()
 
 	r := &CoverRenderer{
-		netease:      netease,
-		state:        state,
-		imageCache:   kitty.NewImageCache(10),
-		kittySupport: kittySupport,
-		animImageID:  kitty.NewImageID(),
-		renderChan:   make(chan renderResult, 1),
+		netease:          netease,
+		state:            state,
+		imageCache:       kitty.NewImageCache(10),
+		kittySupport:     kittySupport,
+		animImageID:      kitty.NewImageID(),
+		renderChan:       make(chan renderResult, 1),
+		tmuxImageLimiter: newTmuxImageLimiter(time.Now()),
 	}
+	r.logCoverEnvSnapshot()
 	return r
+}
+
+func (r *CoverRenderer) logCoverEnvSnapshot() {
+	show, spin, tmuxPass := false, false, false
+	var frameRate configs.FrameRate
+	visualizerEnable := false
+	playerEngine := ""
+	debug := false
+	if cfg := configs.AppConfig; cfg != nil {
+		show = cfg.Main.Lyric.Cover.Show
+		spin = cfg.Main.Lyric.Cover.Spin
+		tmuxPass = cfg.Main.Lyric.Cover.TmuxPassthrough
+		frameRate = cfg.Main.FrameRate
+		visualizerEnable = cfg.Main.Visualizer.Enable
+		playerEngine = cfg.Player.Engine
+		debug = cfg.Main.Debug
+	}
+	// One-shot startup snapshot (not a periodic probe). Flush once so a
+	// hard kill shortly after launch still leaves the env line on disk.
+	slog.Info("cover: env snapshot",
+		slog.Int("pid", os.Getpid()),
+		slog.Uint64("rssBytes", processRSSBytes()),
+		slog.String("TERM", os.Getenv("TERM")),
+		slog.String("TERM_PROGRAM", os.Getenv("TERM_PROGRAM")),
+		slog.Bool("tmux", os.Getenv("TMUX") != ""),
+		slog.Bool("kittySupport", r.kittySupport),
+		slog.Bool("kittyTmuxPassthrough", kitty.UseTmuxPassthrough()),
+		slog.Bool("cover.show", show),
+		slog.Bool("cover.spin", spin),
+		slog.Bool("cover.tmuxPassthrough", tmuxPass),
+		slog.Int("frameRate", int(frameRate)),
+		slog.Bool("visualizer.enable", visualizerEnable),
+		slog.String("player.engine", playerEngine),
+		slog.Bool("debug", debug),
+	)
+	slogx.Flush()
 }
 
 // IsEnabled returns whether cover rendering is enabled and supported.
 func (r *CoverRenderer) IsEnabled() bool {
-	return r.kittySupport && configs.AppConfig.Main.Lyric.Cover.Show
+	if !r.kittySupport || !configs.AppConfig.Main.Lyric.Cover.Show {
+		return false
+	}
+	// Kitty graphics via tmux DCS passthrough can stall GPU compositors
+	// (observed with Ghostty: WindowServer hang → macOS watchdog reboot).
+	// Require an explicit opt-in before sending image payloads through tmux.
+	if kitty.UseTmuxPassthrough() && !configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough {
+		logTmuxCoverDisabledOnce()
+		return false
+	}
+	return true
 }
 
 // Update handles UI messages, primarily for resizing.
@@ -307,6 +521,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	backoffActive := r.placeBackoffActive(time.Now())
 
 	spin := configs.AppConfig.Main.Lyric.Cover.Spin
+	// Even with an explicit tmuxPassthrough opt-in, never stream rotating
+	// cover frames through tmux: hundreds of PNG payloads via DCS are what
+	// previously stalled Ghostty / WindowServer into a watchdog reboot.
+	if spin && kitty.UseTmuxPassthrough() {
+		spin = false
+	}
 
 	if spin {
 		// Native Animation Mode
@@ -688,11 +908,57 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 // writeStdout serializes direct terminal writes from the cover renderer
 // (View, animation goroutines, Close) so kitty sequences never interleave.
-func (r *CoverRenderer) writeStdout(s string) {
+//
+// Intentionally does not Sync(): Kitty image payloads can be large, and
+// Sync() blocks until the PTY consumer drains. If the terminal GPU path is
+// stalled (the Ghostty + tmux failure mode), Sync turns a soft lag into a
+// hard hang that can freeze the UI thread and contribute to watchdog
+// timeouts. The kernel still delivers writes through the PTY buffer.
+func (r *CoverRenderer) writeStdout(s string) coverWriteResult {
 	r.writeMu.Lock()
 	defer r.writeMu.Unlock()
-	_, _ = os.Stdout.WriteString(s)
-	_ = os.Stdout.Sync()
+
+	n := len(s)
+	debug := coverDebugEnabled()
+	if coverWriteShouldTraceBegin(debug, n) {
+		// Event-driven only (no periodic probe). Match upstream debug style:
+		// log when something happens; do not fsync on every debug line.
+		slog.Debug("cover: stdout write begin",
+			slog.Int("bytes", n),
+			slog.Uint64("rssBytes", processRSSBytes()),
+			slog.Int("goroutines", runtime.NumGoroutine()),
+		)
+	}
+
+	start := time.Now()
+	written, err := coverStdoutWrite(s)
+	dur := time.Since(start)
+
+	if coverWriteShouldTraceBegin(debug, n) {
+		limitState := r.imageLimiter().snapshot(time.Now())
+		slog.Debug("cover: stdout write end",
+			slog.Int("bytes", n),
+			slog.Duration("duration", dur),
+			slog.Int("n", written),
+			slog.Any("err", err),
+			slog.Uint64("rssBytes", processRSSBytes()),
+			slog.Int("goroutines", runtime.NumGoroutine()),
+			slog.Int64("tmuxAdmittedBytes", limitState.admittedBytes),
+			slog.Int64("tmuxLimitedCount", limitState.limitedCount),
+			slog.Duration("tmuxCooldownRemaining", limitState.cooldownRemaining),
+		)
+	}
+	if coverWriteIsSlow(dur) {
+		slog.Warn("cover: stdout write slow",
+			slog.Int("bytes", n),
+			slog.Duration("duration", dur),
+			slog.Uint64("rssBytes", processRSSBytes()),
+		)
+		// Flush only on Warn: survives hard kill without turning debug into
+		// a continuous fsync load.
+		slogx.Flush()
+	}
+	return coverWriteResult{written: written, duration: dur, err: err}
 }
 
 // writeKitty writes a bare kitty APC sequence, wrapping it in tmux DCS
@@ -701,6 +967,15 @@ func (r *CoverRenderer) writeStdout(s string) {
 // cursor sequences must not be passed through to the outer terminal.
 func (r *CoverRenderer) writeKitty(s string) {
 	r.writeStdout(kitty.Wrap(s))
+}
+
+func (r *CoverRenderer) imageLimiter() *tmuxImageLimiter {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.tmuxImageLimiter == nil {
+		r.tmuxImageLimiter = newTmuxImageLimiter(time.Now())
+	}
+	return r.tmuxImageLimiter
 }
 
 // writePositioned writes the kitty image sequence positioned at the given
@@ -718,13 +993,63 @@ func (r *CoverRenderer) writeKitty(s string) {
 // not mark the render as successful so the next frame retries.
 func (r *CoverRenderer) writePositioned(startRow, startCol int, imageSeq string, deleteOld bool) bool {
 	if kitty.UseTmuxPassthrough() {
-		top, left, ok := kitty.TmuxPaneOffset()
+		top, left, ok := coverTmuxPaneOffset()
 		if !ok {
 			slog.Debug("CoverRenderer: failed to query tmux pane offset, skipping cover render")
 			return false
 		}
 		payload := kitty.BuildTmuxPositionedPayload(top, left, startRow, startCol, imageSeq, deleteOld)
-		r.writeStdout(kitty.Wrap(payload))
+		wrapped := kitty.Wrap(payload)
+		if imageSeq == "" {
+			r.writeStdout(wrapped)
+			return true
+		}
+		now := time.Now()
+		limiter := r.imageLimiter()
+		decision := limiter.allow(now, len(wrapped))
+		if !decision.allowed {
+			slog.Debug("cover: tmux image write limited",
+				slog.Int("bytes", len(wrapped)),
+				slog.String("reason", decision.reason),
+				slog.Duration("retryAfter", decision.retryAfter),
+			)
+			if decision.reason == "single_packet_limit" {
+				tmuxImageOversizeLogOnce.Do(func() {
+					slog.Warn("cover: tmux image packet exceeds runtime safety limit",
+						slog.Int("bytes", len(wrapped)),
+						slog.Int("limitBytes", tmuxImageSingleMaxBytes),
+					)
+				})
+			}
+			r.mu.Lock()
+			r.recordPlaceFailure(now)
+			r.mu.Unlock()
+			return false
+		}
+
+		result := r.writeStdout(wrapped)
+		pressure := limiter.report(time.Now(), result, len(wrapped))
+		if coverDebugEnabled() {
+			var throughput int64
+			if result.duration > 0 {
+				throughput = int64(float64(result.written) / result.duration.Seconds())
+			}
+			slog.Debug("cover: tmux image write",
+				slog.Int("bytes", len(wrapped)),
+				slog.Int("written", result.written),
+				slog.Duration("duration", result.duration),
+				slog.Int64("throughputBytesPerSec", throughput),
+				slog.Int("limitBytesPerSec", tmuxImageRateBytes),
+				slog.Int("burstBytes", tmuxImageBurstBytes),
+				slog.String("pressureProxy", pressure),
+			)
+		}
+		if !result.complete(len(wrapped)) {
+			r.mu.Lock()
+			r.recordPlaceFailure(time.Now())
+			r.mu.Unlock()
+			return false
+		}
 		return true
 	}
 

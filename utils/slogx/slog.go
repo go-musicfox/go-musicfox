@@ -73,6 +73,15 @@ func LogFile() *os.File {
 	return logFile
 }
 
+// Flush Syncs the log file so recent slog lines survive a hard kill
+// (watchdog reboot). No-op when Init has not opened a file.
+func Flush() {
+	if logFile == nil {
+		return
+	}
+	_ = logFile.Sync()
+}
+
 // ResolveLogFilePath 返回日志文件路径（不依赖 Init，供包装进程等场景使用）。
 func ResolveLogFilePath() string {
 	return filepath.Join(app.LogDir(), LogFileName)
