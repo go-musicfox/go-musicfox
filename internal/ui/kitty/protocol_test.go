@@ -6,6 +6,9 @@ import (
 	"math/rand/v2"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+	kittyansi "github.com/charmbracelet/x/ansi/kitty"
 )
 
 func setTmuxPassthrough(t *testing.T, enabled bool) {
@@ -76,6 +79,47 @@ func TestWrapWithoutPassthrough(t *testing.T) {
 	raw := DeleteAllImages()
 	if got := Wrap(raw); got != raw {
 		t.Errorf("expected Wrap to return the sequence unchanged, got %q", got)
+	}
+}
+
+func TestVirtualPlaceImage(t *testing.T) {
+	seq := VirtualPlaceImage(42, 10, 5)
+	if !strings.Contains(seq, "a=p") {
+		t.Fatalf("expected a=p in %q", seq)
+	}
+	if !strings.Contains(seq, "U=1") {
+		t.Fatalf("expected U=1 in %q", seq)
+	}
+	if !strings.Contains(seq, "i=42") || !strings.Contains(seq, "c=10") || !strings.Contains(seq, "r=5") {
+		t.Fatalf("expected i/c/r params in %q", seq)
+	}
+
+	noRows := VirtualPlaceImage(1, 3, 0)
+	if strings.Contains(noRows, ",r=") {
+		t.Fatalf("rows=0 must omit r: %q", noRows)
+	}
+}
+
+func TestUnicodePlaceholderCellAndRow(t *testing.T) {
+	const imageID uint32 = 42
+	cell := UnicodePlaceholderCell(imageID, 0, 1)
+	if !strings.Contains(cell, string(kittyansi.Placeholder)) {
+		t.Fatalf("cell missing U+10EEEE: %q", cell)
+	}
+	if !strings.Contains(cell, "38;2;0;0;42") {
+		t.Fatalf("expected truecolor FG for id 42, got %q", cell)
+	}
+	if !strings.Contains(cell, string(kittyansi.Diacritic(0))) || !strings.Contains(cell, string(kittyansi.Diacritic(1))) {
+		t.Fatalf("expected row/col diacritics in %q", cell)
+	}
+
+	const cols = 7
+	row := UnicodePlaceholderRow(imageID, 2, cols)
+	if got := ansi.StringWidth(row); got != cols {
+		t.Fatalf("UnicodePlaceholderRow StringWidth = %d, want %d", got, cols)
+	}
+	if strings.Count(row, string(kittyansi.Placeholder)) != cols {
+		t.Fatalf("expected %d placeholders in row", cols)
 	}
 }
 
