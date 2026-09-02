@@ -1,13 +1,8 @@
 package playlist
 
 import (
-	"strconv"
-
-	"github.com/go-musicfox/netease-music/service"
-
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 )
 
 // IntelligentPlayMode 心动模式播放实现
@@ -118,24 +113,5 @@ func (i *IntelligentPlayMode) OnPlaylistChanged(currentIndex int, playlist []str
 	}
 
 	return nil
-}
-
-// GetIntelligentRecommendations 获取智能推荐歌曲列表
-// 这是心动模式的核心功能，基于指定歌曲获取推荐
-func (i *IntelligentPlayMode) GetIntelligentRecommendations(songId, playlistId int64) ([]structs.Song, error) {
-	intelligenceService := service.PlaymodeIntelligenceListService{
-		SongId:       strconv.FormatInt(songId, 10),
-		PlaylistId:   strconv.FormatInt(playlistId, 10),
-		StartMusicId: strconv.FormatInt(songId, 10),
-	}
-
-	code, response := intelligenceService.PlaymodeIntelligenceList()
-	codeType := _struct.CheckCode(code)
-	if codeType != _struct.Success {
-		return nil, ErrInvalidPlayMode // 使用现有错误类型
-	}
-
-	songs := _struct.GetIntelligenceSongs(response)
-	return songs, nil
 }
 
