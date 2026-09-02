@@ -340,8 +340,7 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 		// Note: Don't calculate dimensions here - netease.WindowWidth/Height
 		// might not be updated yet. We'll calculate in View instead.
 		r.mu.Lock()
-		r.cachedSeq = ""
-		r.imageRendered = false
+		r.hideDisplayedLocked(a)
 		r.lastStartRow = 0
 		r.lastStartCol = 0
 		r.currentSongId = 0
@@ -470,6 +469,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	picUrl := getCoverUrl(song)
 
 	if picUrl == "" {
+		// Drop any previous cover so a song without artwork does not keep
+		// showing the last track's Unicode placeholders / exclusion hole.
+		r.mu.Lock()
+		r.hideDisplayedLocked(a)
+		r.currentSongId = song.Id
+		r.mu.Unlock()
 		return "", 0
 	}
 
@@ -495,8 +500,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// the next View() pass must regenerate sequences with the correct z-index.
 	if r.lastBgTransparent != isTransparent {
 		r.imageCache.Clear()
-		r.cachedSeq = ""
-		r.imageRendered = false
+		r.hideDisplayedLocked(a)
 	}
 	r.lastBgTransparent = isTransparent
 
@@ -506,11 +510,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if !isTransparent {
 		if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
 			if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
-				if r.imageRendered {
-					r.deleteDisplayedImagesLocked()
-					r.imageRendered = false
-					r.cachedSeq = ""
-				}
+				r.hideDisplayedLocked(a)
 				r.mu.Unlock()
 				return "", 0
 			}
@@ -1010,6 +1010,27 @@ func (r *CoverRenderer) deleteDisplayedImagesLocked() {
 		return
 	}
 	r.writeKitty(kitty.DeleteAllImages())
+}
+
+// hideDisplayedLocked deletes the on-screen cover and clears the background
+// exclusion hole. Used for empty artwork, modal overlap, resize, and theme
+// flips — keep it small; cover is not a core path. Caller must hold r.mu.
+func (r *CoverRenderer) hideDisplayedLocked(a *model.App) {
+	had := r.imageRendered || r.displayImageID != 0 || r.cachedSeq != ""
+	r.deleteDisplayedImagesLocked()
+	r.imageRendered = false
+	r.cachedSeq = ""
+	r.animImageID = 0
+	if !had {
+		return
+	}
+	if a != nil {
+		a.ClearAppBackgroundExclusion()
+		return
+	}
+	if r.netease != nil {
+		r.netease.ClearAppBackgroundExclusion()
+	}
 }
 
 // applyCoverBackgroundExclusionLocked registers the cover rect so Main.View

@@ -458,6 +458,37 @@ func TestPlaceholderSegmentRequiresTmuxAndImage(t *testing.T) {
 	}
 }
 
+func TestHideDisplayedLockedClearsUnicodeState(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	var writes int
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		writes++
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{
+		imageRendered:  true,
+		displayImageID: 7,
+		cachedSeq:      "stale",
+		animImageID:    3,
+	}
+	r.mu.Lock()
+	r.hideDisplayedLocked(nil)
+	r.mu.Unlock()
+
+	if r.imageRendered || r.displayImageID != 0 || r.cachedSeq != "" || r.animImageID != 0 {
+		t.Fatalf("hideDisplayedLocked left state: rendered=%v id=%d seq=%q anim=%d",
+			r.imageRendered, r.displayImageID, r.cachedSeq, r.animImageID)
+	}
+	if writes == 0 {
+		t.Fatal("expected a delete write for the previous image id")
+	}
+}
+
 func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
 
 	prev := configs.AppConfig
