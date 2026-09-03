@@ -19,6 +19,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/slogx"
 )
 
 // placeBackoffInitial is the first retry delay after a failed placement
@@ -27,6 +28,158 @@ const placeBackoffInitial = time.Second
 
 // placeBackoffMax caps the exponential placement retry delay.
 const placeBackoffMax = 30 * time.Second
+
+const (
+	coverWriteTraceMinBytes = 1024
+	coverWriteSlowThreshold = 200 * time.Millisecond
+
+	tmuxImageSingleMaxBytes = 768 * 1024
+	tmuxImageRateBytes      = 1024 * 1024
+	tmuxImageBurstBytes     = 1024 * 1024
+	tmuxSlowCooldownInitial = 5 * time.Second
+	tmuxSlowCooldownMax     = 30 * time.Second
+)
+
+// coverStdoutWrite is the actual stdout write used by writeStdout. Tests stub it.
+var coverStdoutWrite = func(s string) (int, error) {
+	return os.Stdout.WriteString(s)
+}
+
+var (
+	tmuxCoverDisabledLogOnce    sync.Once
+	tmuxCoverNonLeftPaneLogOnce sync.Once
+	tmuxImageOversizeLogOnce    sync.Once
+	coverTmuxPaneOffset         = kitty.TmuxPaneOffset
+)
+
+type coverWriteResult struct {
+	written  int
+	duration time.Duration
+	err      error
+}
+
+func (r coverWriteResult) complete(want int) bool {
+	return r.err == nil && r.written == want
+}
+
+type tmuxImageLimitDecision struct {
+	allowed    bool
+	reason     string
+	retryAfter time.Duration
+}
+
+type tmuxImageLimiterSnapshot struct {
+	admittedBytes     int64
+	tokens            int64
+	cooldownRemaining time.Duration
+	limitedCount      int64
+}
+
+type tmuxImageLimiter struct {
+	mu sync.Mutex
+
+	tokens        float64
+	lastRefill    time.Time
+	cooldownUntil time.Time
+	cooldownLevel time.Duration
+	admittedBytes int64
+	limitedCount  int64
+}
+
+func newTmuxImageLimiter(now time.Time) *tmuxImageLimiter {
+	return &tmuxImageLimiter{
+		tokens:     tmuxImageBurstBytes,
+		lastRefill: now,
+	}
+}
+
+func (l *tmuxImageLimiter) refill(now time.Time) {
+	if now.After(l.lastRefill) {
+		l.tokens = min(
+			float64(tmuxImageBurstBytes),
+			l.tokens+now.Sub(l.lastRefill).Seconds()*float64(tmuxImageRateBytes),
+		)
+		l.lastRefill = now
+	}
+}
+
+func (l *tmuxImageLimiter) allow(now time.Time, bytes int) tmuxImageLimitDecision {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.refill(now)
+	if bytes > tmuxImageSingleMaxBytes {
+		l.limitedCount++
+		return tmuxImageLimitDecision{reason: "single_packet_limit"}
+	}
+	if now.Before(l.cooldownUntil) {
+		l.limitedCount++
+		return tmuxImageLimitDecision{
+			reason:     "cooldown",
+			retryAfter: l.cooldownUntil.Sub(now),
+		}
+	}
+	if float64(bytes) > l.tokens {
+		l.limitedCount++
+		retryAfter := time.Duration((float64(bytes) - l.tokens) / float64(tmuxImageRateBytes) * float64(time.Second))
+		return tmuxImageLimitDecision{
+			reason:     "rate_limit",
+			retryAfter: max(retryAfter, time.Nanosecond),
+		}
+	}
+
+	l.tokens -= float64(bytes)
+	l.admittedBytes += int64(bytes)
+	return tmuxImageLimitDecision{allowed: true}
+}
+
+func (l *tmuxImageLimiter) report(now time.Time, result coverWriteResult, want int) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if !result.complete(want) || coverWriteIsSlow(result.duration) {
+		if l.cooldownLevel == 0 {
+			l.cooldownLevel = tmuxSlowCooldownInitial
+		} else {
+			l.cooldownLevel = min(l.cooldownLevel*2, tmuxSlowCooldownMax)
+		}
+		l.cooldownUntil = now.Add(l.cooldownLevel)
+		if !result.complete(want) {
+			return "error"
+		}
+		return "slow"
+	}
+
+	l.cooldownLevel = 0
+	l.cooldownUntil = time.Time{}
+	return "normal"
+}
+
+func (l *tmuxImageLimiter) snapshot(now time.Time) tmuxImageLimiterSnapshot {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.refill(now)
+	var remaining time.Duration
+	if now.Before(l.cooldownUntil) {
+		remaining = l.cooldownUntil.Sub(now)
+	}
+	return tmuxImageLimiterSnapshot{
+		admittedBytes:     l.admittedBytes,
+		tokens:            int64(l.tokens),
+		cooldownRemaining: remaining,
+		limitedCount:      l.limitedCount,
+	}
+}
+
+// logTmuxCoverDisabledOnce explains once why covers are suppressed inside
+// tmux when the experimental passthrough flag is not opted in, so a silent
+// blank cover area is not mistaken for a rendering bug.
+func logTmuxCoverDisabledOnce() {
+	tmuxCoverDisabledLogOnce.Do(func() {
+		slog.Warn("cover: kitty graphics disabled inside tmux (set main.lyric.cover.tmuxPassthrough=true to opt in; ghostty+tmux image passthrough has caused macOS watchdog reboots)")
+	})
+}
 
 // CoverRenderer is a dedicated UI component for rendering album cover images
 // using the Kitty graphics protocol.
@@ -45,11 +198,15 @@ type CoverRenderer struct {
 	cachedSeq     string // Cached kitty sequence
 	lastStartRow  int    // Last rendered start row position
 	lastStartCol  int    // Last rendered start column position
-	imageRendered bool   // Whether the image has been rendered to terminal
-	forceRerender bool   // Force re-render on next View call (set after resize)
-	skipFrames    int    // Number of View calls to skip before rendering (for resize timing)
+	lastPaneTop   int    // Last tmux pane_top (detect swap-pane without resize)
+	lastPaneLeft  int    // Last tmux pane_left
+	havePaneGeom  bool
+	imageRendered bool // Whether the image has been rendered to terminal
+	forceRerender bool // Force re-render on next View call (set after resize)
+	skipFrames    int  // Number of View calls to skip before rendering (for resize timing)
 
 	animImageID     uint32      // ID for animated cover
+	displayImageID  uint32      // ID for tmux Unicode-placeholder virtual placement
 	lastAngle       float64     // Last rendered rotation angle
 	lastPlayerState types.State // Track player state to control animation
 
@@ -74,6 +231,20 @@ type CoverRenderer struct {
 	// by mu.
 	placeFailAt  time.Time
 	placeBackoff time.Duration
+
+	tmuxImageLimiter *tmuxImageLimiter
+}
+
+func coverDebugEnabled() bool {
+	return configs.AppConfig != nil && configs.AppConfig.Main.Debug
+}
+
+func coverWriteIsSlow(d time.Duration) bool {
+	return d > coverWriteSlowThreshold
+}
+
+func coverWriteShouldTraceBegin(debug bool, n int) bool {
+	return debug && n >= coverWriteTraceMinBytes
 }
 
 type renderResult struct {
@@ -93,19 +264,67 @@ func NewCoverRenderer(netease *Netease, state playerRendererState) *CoverRendere
 	kittySupport := kitty.IsSupported()
 
 	r := &CoverRenderer{
-		netease:      netease,
-		state:        state,
-		imageCache:   kitty.NewImageCache(10),
-		kittySupport: kittySupport,
-		animImageID:  kitty.NewImageID(),
-		renderChan:   make(chan renderResult, 1),
+		netease:          netease,
+		state:            state,
+		imageCache:       kitty.NewImageCache(10),
+		kittySupport:     kittySupport,
+		animImageID:      kitty.NewImageID(),
+		renderChan:       make(chan renderResult, 1),
+		tmuxImageLimiter: newTmuxImageLimiter(time.Now()),
 	}
+	r.logCoverEnvSnapshot()
 	return r
+}
+
+func (r *CoverRenderer) logCoverEnvSnapshot() {
+	show, spin, tmuxPass := false, false, false
+	var frameRate configs.FrameRate
+	visualizerEnable := false
+	playerEngine := ""
+	debug := false
+	if cfg := configs.AppConfig; cfg != nil {
+		show = cfg.Main.Lyric.Cover.Show
+		spin = cfg.Main.Lyric.Cover.Spin
+		tmuxPass = cfg.Main.Lyric.Cover.TmuxPassthrough
+		frameRate = cfg.Main.FrameRate
+		visualizerEnable = cfg.Main.Visualizer.Enable
+		playerEngine = cfg.Player.Engine
+		debug = cfg.Main.Debug
+	}
+	// One-shot startup snapshot (not a periodic probe). Flush once so a
+	// hard kill shortly after launch still leaves the env line on disk.
+	slog.Info("cover: env snapshot",
+		slog.Int("pid", os.Getpid()),
+		slog.Uint64("rssBytes", processRSSBytes()),
+		slog.String("TERM", os.Getenv("TERM")),
+		slog.String("TERM_PROGRAM", os.Getenv("TERM_PROGRAM")),
+		slog.Bool("tmux", os.Getenv("TMUX") != ""),
+		slog.Bool("kittySupport", r.kittySupport),
+		slog.Bool("kittyTmuxPassthrough", kitty.UseTmuxPassthrough()),
+		slog.Bool("cover.show", show),
+		slog.Bool("cover.spin", spin),
+		slog.Bool("cover.tmuxPassthrough", tmuxPass),
+		slog.Int("frameRate", int(frameRate)),
+		slog.Bool("visualizer.enable", visualizerEnable),
+		slog.String("player.engine", playerEngine),
+		slog.Bool("debug", debug),
+	)
+	slogx.Flush()
 }
 
 // IsEnabled returns whether cover rendering is enabled and supported.
 func (r *CoverRenderer) IsEnabled() bool {
-	return r.kittySupport && configs.AppConfig.Main.Lyric.Cover.Show
+	if !r.kittySupport || !configs.AppConfig.Main.Lyric.Cover.Show {
+		return false
+	}
+	// Kitty graphics via tmux DCS passthrough can stall GPU compositors
+	// (observed with Ghostty: WindowServer hang → macOS watchdog reboot).
+	// Require an explicit opt-in before sending image payloads through tmux.
+	if kitty.UseTmuxPassthrough() && !configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough {
+		logTmuxCoverDisabledOnce()
+		return false
+	}
+	return true
 }
 
 // Update handles UI messages, primarily for resizing.
@@ -125,8 +344,7 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 		// Note: Don't calculate dimensions here - netease.WindowWidth/Height
 		// might not be updated yet. We'll calculate in View instead.
 		r.mu.Lock()
-		r.cachedSeq = ""
-		r.imageRendered = false
+		r.hideDisplayedLocked(a)
 		r.lastStartRow = 0
 		r.lastStartCol = 0
 		r.currentSongId = 0
@@ -187,6 +405,12 @@ func isAppBackgroundTransparent(a *model.App) bool {
 	return isNoColor
 }
 
+// paneGeomMoved reports whether tmux pane_top/pane_left changed since the
+// last sample. Used to catch swap-pane (no WindowSizeMsg).
+func paneGeomMoved(have bool, prevTop, prevLeft, top, left int) bool {
+	return have && (top != prevTop || left != prevLeft)
+}
+
 // View renders the cover image component.
 // This component writes directly to stdout for kitty graphics,
 // bypassing bubbletea's rendering pipeline which may not handle APC sequences correctly.
@@ -199,6 +423,35 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	playerState := r.state.State()
 	if playerState != types.Playing && playerState != types.Paused {
 		return "", 0
+	}
+
+	// swap-pane moves pane_top/pane_left without a WindowSizeMsg. Unicode
+	// placeholders mis-composite on non-left panes (stacked edges on the
+	// right half after swap; Ghostty+tmux has related placeholder bugs).
+	// Suppress covers unless the pane is at the left edge (pane_left==0).
+	if kitty.UseTmuxPassthrough() {
+		kitty.InvalidateTmuxPaneOffset()
+		if top, left, ok := coverTmuxPaneOffset(); ok {
+			r.mu.Lock()
+			moved := paneGeomMoved(r.havePaneGeom, r.lastPaneTop, r.lastPaneLeft, top, left)
+			r.lastPaneTop, r.lastPaneLeft = top, left
+			r.havePaneGeom = true
+			unsupported := left > 0
+			if moved || unsupported {
+				r.hideDisplayedLocked(a)
+				r.forceRerender = !unsupported
+				r.lastStartRow = 0
+				r.lastStartCol = 0
+				r.currentSongId = 0
+			}
+			r.mu.Unlock()
+			if unsupported {
+				tmuxCoverNonLeftPaneLogOnce.Do(func() {
+					slog.Warn("cover: tmux unicode covers disabled when pane_left>0 (right/split pane); move pane to the left edge to show covers")
+				})
+				return "", 0
+			}
+		}
 	}
 
 	// Skip frames after resize to let bubbletea finish redrawing
@@ -223,11 +476,18 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 	lyricStartRow, lyricLines := r.netease.GetLyricPosition()
 
-	// Position cover purely based on lyrics: align the cover's bottom edge to the
-	// lyric block's bottom edge so they form a tight horizontal group at the same baseline.
-	// The +CoverBottomAlignOffset nudges the cover down to visually match the lyric baseline,
-	// compensating for the Kitty image not filling the bottom terminal cell exactly.
+	// Position cover relative to the lyric block.
+	// Non-tmux absolute Kitty placements leave the last cell row empty, so the
+	// historical formula anchors near the lyric bottom and still looks centered.
+	// Unicode placeholders fill every row; reuse that formula and the cover sits
+	// too low — center on the lyric block instead.
 	coverStartRow := lyricStartRow + lyricLines - r.rows/2 - 1
+	if kitty.UseTmuxPassthrough() {
+		coverStartRow = lyricStartRow + (lyricLines-r.rows)/2
+		if coverStartRow < 1 {
+			coverStartRow = 1
+		}
+	}
 
 	// If cover can't fit at all, skip rendering
 	if r.rows > windowHeight-FixedTopBottomRows {
@@ -248,6 +508,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	picUrl := getCoverUrl(song)
 
 	if picUrl == "" {
+		// Drop any previous cover so a song without artwork does not keep
+		// showing the last track's Unicode placeholders / exclusion hole.
+		r.mu.Lock()
+		r.hideDisplayedLocked(a)
+		r.currentSongId = song.Id
+		r.mu.Unlock()
 		return "", 0
 	}
 
@@ -273,8 +539,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// the next View() pass must regenerate sequences with the correct z-index.
 	if r.lastBgTransparent != isTransparent {
 		r.imageCache.Clear()
-		r.cachedSeq = ""
-		r.imageRendered = false
+		r.hideDisplayedLocked(a)
 	}
 	r.lastBgTransparent = isTransparent
 
@@ -284,11 +549,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if !isTransparent {
 		if mx, my, mw, mh, ok := a.TopModalBounds(); ok {
 			if rectsOverlap(coverStartCol-1, coverStartRow-1, r.cols, r.rows, mx, my, mw, mh) {
-				if r.imageRendered {
-					r.writeKitty(kitty.DeleteAllImages())
-					r.imageRendered = false
-					r.cachedSeq = ""
-				}
+				r.hideDisplayedLocked(a)
 				r.mu.Unlock()
 				return "", 0
 			}
@@ -307,6 +568,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	backoffActive := r.placeBackoffActive(time.Now())
 
 	spin := configs.AppConfig.Main.Lyric.Cover.Spin
+	// Even with an explicit tmuxPassthrough opt-in, never stream rotating
+	// cover frames through tmux: hundreds of PNG payloads via DCS are what
+	// previously stalled Ghostty / WindowServer into a watchdog reboot.
+	if spin && kitty.UseTmuxPassthrough() {
+		spin = false
+	}
 
 	if spin {
 		// Native Animation Mode
@@ -618,30 +885,42 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Static Logic
+	tmuxUnicode := kitty.UseTmuxPassthrough()
 	// If force rerender is set (e.g., after resize), skip all caching logic
 	if !forceRerender {
+		alreadyShown := r.imageRendered && song.Id != 0 &&
+			((tmuxUnicode && r.displayImageID != 0) || (!tmuxUnicode && r.cachedSeq != ""))
 		// If nothing changed and image is already rendered, skip
-		if !songChanged && !positionChanged && r.imageRendered && r.cachedSeq != "" && song.Id != 0 {
+		if !songChanged && !positionChanged && alreadyShown {
+			if tmuxUnicode {
+				r.applyCoverBackgroundExclusionLocked(a)
+			}
 			r.mu.Unlock()
 			return "", 0
 		}
 
-		// If only position changed but same song, re-render at new position
-		// (skipped while the placement backoff is active; the fall-through
-		// gate below returns instead).
-		if !songChanged && r.cachedSeq != "" && song.Id != 0 && !backoffActive {
-			seq := r.cachedSeq
-			r.lastStartRow = coverStartRow
-			r.lastStartCol = coverStartCol
-			r.mu.Unlock()
-			written := r.writeToTerminal(seq, coverStartRow, coverStartCol, true)
-			r.mu.Lock()
-			if written {
-				r.imageRendered = true
-				r.recordPlaceSuccess()
+		// If only position changed but same song: non-tmux re-CUPs the cached
+		// overlay. tmux Unicode must erase old U+10EEEE cells then fall
+		// through to DeleteImage+new ID — partial lyric redraws leave stale
+		// placeholders that stack as overlapping edges on the right pane.
+		if !songChanged && song.Id != 0 && !backoffActive {
+			if !tmuxUnicode && r.cachedSeq != "" {
+				seq := r.cachedSeq
+				r.lastStartRow = coverStartRow
+				r.lastStartCol = coverStartCol
+				r.mu.Unlock()
+				written := r.writeToTerminal(seq, coverStartRow, coverStartCol, true)
+				r.mu.Lock()
+				if written {
+					r.imageRendered = true
+					r.recordPlaceSuccess()
+				}
+				r.mu.Unlock()
+				return "", 0
 			}
-			r.mu.Unlock()
-			return "", 0
+		}
+		if tmuxUnicode && positionChanged && (r.imageRendered || r.displayImageID != 0) {
+			r.clearTmuxPlaceholderCellsLocked()
 		}
 	}
 	r.mu.Unlock()
@@ -649,6 +928,10 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// Throttle the fetch/render retry while the placement backoff is active.
 	if backoffActive {
 		return "", 0
+	}
+
+	if tmuxUnicode {
+		return r.renderStaticTmuxUnicode(a, song, picUrl, coverStartRow, coverStartCol)
 	}
 
 	// Fetch and generate kitty sequence
@@ -688,11 +971,57 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 // writeStdout serializes direct terminal writes from the cover renderer
 // (View, animation goroutines, Close) so kitty sequences never interleave.
-func (r *CoverRenderer) writeStdout(s string) {
+//
+// Intentionally does not Sync(): Kitty image payloads can be large, and
+// Sync() blocks until the PTY consumer drains. If the terminal GPU path is
+// stalled (the Ghostty + tmux failure mode), Sync turns a soft lag into a
+// hard hang that can freeze the UI thread and contribute to watchdog
+// timeouts. The kernel still delivers writes through the PTY buffer.
+func (r *CoverRenderer) writeStdout(s string) coverWriteResult {
 	r.writeMu.Lock()
 	defer r.writeMu.Unlock()
-	_, _ = os.Stdout.WriteString(s)
-	_ = os.Stdout.Sync()
+
+	n := len(s)
+	debug := coverDebugEnabled()
+	if coverWriteShouldTraceBegin(debug, n) {
+		// Event-driven only (no periodic probe). Match upstream debug style:
+		// log when something happens; do not fsync on every debug line.
+		slog.Debug("cover: stdout write begin",
+			slog.Int("bytes", n),
+			slog.Uint64("rssBytes", processRSSBytes()),
+			slog.Int("goroutines", runtime.NumGoroutine()),
+		)
+	}
+
+	start := time.Now()
+	written, err := coverStdoutWrite(s)
+	dur := time.Since(start)
+
+	if coverWriteShouldTraceBegin(debug, n) {
+		limitState := r.imageLimiter().snapshot(time.Now())
+		slog.Debug("cover: stdout write end",
+			slog.Int("bytes", n),
+			slog.Duration("duration", dur),
+			slog.Int("n", written),
+			slog.Any("err", err),
+			slog.Uint64("rssBytes", processRSSBytes()),
+			slog.Int("goroutines", runtime.NumGoroutine()),
+			slog.Int64("tmuxAdmittedBytes", limitState.admittedBytes),
+			slog.Int64("tmuxLimitedCount", limitState.limitedCount),
+			slog.Duration("tmuxCooldownRemaining", limitState.cooldownRemaining),
+		)
+	}
+	if coverWriteIsSlow(dur) {
+		slog.Warn("cover: stdout write slow",
+			slog.Int("bytes", n),
+			slog.Duration("duration", dur),
+			slog.Uint64("rssBytes", processRSSBytes()),
+		)
+		// Flush only on Warn: survives hard kill without turning debug into
+		// a continuous fsync load.
+		slogx.Flush()
+	}
+	return coverWriteResult{written: written, duration: dur, err: err}
 }
 
 // writeKitty writes a bare kitty APC sequence, wrapping it in tmux DCS
@@ -701,6 +1030,217 @@ func (r *CoverRenderer) writeStdout(s string) {
 // cursor sequences must not be passed through to the outer terminal.
 func (r *CoverRenderer) writeKitty(s string) {
 	r.writeStdout(kitty.Wrap(s))
+}
+
+// deleteDisplayedImagesLocked removes the currently displayed cover image.
+// Under tmux Unicode-placeholder mode virtual placements require d=i (by ID);
+// d=a does not affect them. Caller must hold r.mu.
+func (r *CoverRenderer) deleteDisplayedImagesLocked() {
+	if kitty.UseTmuxPassthrough() {
+		id := r.displayImageID
+		r.displayImageID = 0
+		if id != 0 {
+			r.writeKitty(kitty.DeleteImage(id))
+		}
+		return
+	}
+	r.writeKitty(kitty.DeleteAllImages())
+}
+
+// clearTmuxPlaceholderCellsLocked overwrites the last cover rectangle with
+// spaces using pane-local CUP (not tmux DCS). Lyric/partial redraws often
+// skip rows that left the cover rect, so U+10EEEE cells would otherwise keep
+// painting the old virtual placement and stack as overlapping edges.
+// Caller must hold r.mu.
+func (r *CoverRenderer) clearTmuxPlaceholderCellsLocked() {
+	if !kitty.UseTmuxPassthrough() || r.lastStartRow <= 0 || r.lastStartCol <= 0 || r.cols <= 0 || r.rows <= 0 {
+		return
+	}
+	var b strings.Builder
+	b.Grow(r.rows * (16 + r.cols))
+	b.WriteString("\x1b7")
+	rowSpaces := strings.Repeat(" ", r.cols)
+	for i := 0; i < r.rows; i++ {
+		fmt.Fprintf(&b, "\x1b[%d;%dH", r.lastStartRow+i, r.lastStartCol)
+		b.WriteString(rowSpaces)
+	}
+	b.WriteString("\x1b8")
+	r.writeStdout(b.String())
+}
+
+// hideDisplayedLocked deletes the on-screen cover and clears the background
+// exclusion hole. Used for empty artwork, modal overlap, resize, and theme
+// flips — keep it small; cover is not a core path. Caller must hold r.mu.
+func (r *CoverRenderer) hideDisplayedLocked(a *model.App) {
+	had := r.imageRendered || r.displayImageID != 0 || r.cachedSeq != ""
+	if had && kitty.UseTmuxPassthrough() {
+		r.clearTmuxPlaceholderCellsLocked()
+	}
+	r.deleteDisplayedImagesLocked()
+	r.imageRendered = false
+	r.cachedSeq = ""
+	r.animImageID = 0
+	if !had {
+		return
+	}
+	if a != nil {
+		a.ClearAppBackgroundExclusion()
+		return
+	}
+	if r.netease != nil {
+		r.netease.ClearAppBackgroundExclusion()
+	}
+}
+
+// applyCoverBackgroundExclusionLocked registers the cover rect so Main.View
+// leaves those cells without AppBackground fill. Absolute Kitty overlays use
+// height rows-1 (image does not fill the last cell row). Unicode placeholders
+// occupy every placement row, so the full height is excluded. Caller must hold r.mu.
+func (r *CoverRenderer) applyCoverBackgroundExclusionLocked(a *model.App) {
+	if a == nil || !kitty.UseTmuxPassthrough() || !r.imageRendered {
+		return
+	}
+	if r.cols <= 0 || r.rows <= 0 || r.lastStartRow <= 0 || r.lastStartCol <= 0 {
+		return
+	}
+	a.SetAppBackgroundExclusion(r.lastStartCol-1, r.lastStartRow-1, r.cols, r.rows)
+}
+
+// PlaceholderSegment returns a Unicode-placeholder string for the cover
+// columns on absolute screen row absRow. absRow is 1-based, matching the
+// coverStartRow / lyricStartRow conventions used by CoverRenderer.
+// ok is false when not in tmux placeholder mode, no image is active, or
+// absRow lies outside the cover rectangle.
+func (r *CoverRenderer) PlaceholderSegment(absRow int) (startCol int, cells string, ok bool) {
+	if r == nil || !kitty.UseTmuxPassthrough() {
+		return 0, "", false
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.imageRendered || r.displayImageID == 0 || r.cols <= 0 || r.rows <= 0 || r.lastStartRow <= 0 {
+		return 0, "", false
+	}
+	row := absRow - r.lastStartRow
+	if row < 0 || row >= r.rows {
+		return 0, "", false
+	}
+	return r.lastStartCol, kitty.UnicodePlaceholderRow(r.displayImageID, row, r.cols), true
+}
+
+// PlaceholderCacheFields returns the tmux Unicode cover identity and geometry
+// used by LyricRenderer to invalidate its output cache when the cover changes.
+func (r *CoverRenderer) PlaceholderCacheFields() (imageID uint32, startRow, startCol, cols int) {
+	if r == nil {
+		return 0, 0, 0, 0
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.displayImageID, r.lastStartRow, r.lastStartCol, r.cols
+}
+
+// renderStaticTmuxUnicode transmits an image with a=t, creates a virtual
+// placement (U=1), and relies on LyricRenderer PlaceholderSegment cells for
+// grid-resident display — no outer-terminal absolute CUP.
+func (r *CoverRenderer) renderStaticTmuxUnicode(a *model.App, song structs.Song, picUrl string, coverStartRow, coverStartCol int) (string, int) {
+	img, err := r.imageCache.GetImage(context.Background(), picUrl, r.cols, r.rows)
+	if err != nil || img == nil {
+		slog.Debug("CoverRenderer: failed to fetch image for tmux unicode cover", slog.Any("error", err))
+		return "", 0
+	}
+
+	imageID := kitty.NewImageID()
+	transmit, err := kitty.TransmitImage(img, r.cols, r.rows, imageID)
+	if err != nil {
+		slog.Debug("CoverRenderer: TransmitImage failed", slog.Any("error", err))
+		return "", 0
+	}
+
+	payload := transmit + kitty.VirtualPlaceImage(imageID, r.cols, r.rows)
+	r.mu.Lock()
+	oldID := r.displayImageID
+	r.mu.Unlock()
+	if oldID != 0 {
+		payload = kitty.DeleteImage(oldID) + payload
+	}
+
+	if !r.writeTmuxLimited(kitty.Wrap(payload)) {
+		return "", 0
+	}
+
+	r.mu.Lock()
+	r.currentSongId = song.Id
+	r.displayImageID = imageID
+	r.cachedSeq = ""
+	r.lastStartRow = coverStartRow
+	r.lastStartCol = coverStartCol
+	r.imageRendered = true
+	r.forceRerender = false
+	r.recordPlaceSuccess()
+	r.applyCoverBackgroundExclusionLocked(a)
+	r.mu.Unlock()
+	return "", 0
+}
+
+// writeTmuxLimited rate-limits and writes an already-wrapped tmux DCS payload.
+// On limiter rejection or incomplete write it arms placement backoff and
+// returns false so callers do not mark the render successful.
+func (r *CoverRenderer) writeTmuxLimited(wrapped string) bool {
+	now := time.Now()
+	limiter := r.imageLimiter()
+	decision := limiter.allow(now, len(wrapped))
+	if !decision.allowed {
+		slog.Debug("cover: tmux image write limited",
+			slog.Int("bytes", len(wrapped)),
+			slog.String("reason", decision.reason),
+			slog.Duration("retryAfter", decision.retryAfter),
+		)
+		if decision.reason == "single_packet_limit" {
+			tmuxImageOversizeLogOnce.Do(func() {
+				slog.Warn("cover: tmux image packet exceeds runtime safety limit",
+					slog.Int("bytes", len(wrapped)),
+					slog.Int("limitBytes", tmuxImageSingleMaxBytes),
+				)
+			})
+		}
+		r.mu.Lock()
+		r.recordPlaceFailure(now)
+		r.mu.Unlock()
+		return false
+	}
+
+	result := r.writeStdout(wrapped)
+	pressure := limiter.report(time.Now(), result, len(wrapped))
+	if coverDebugEnabled() {
+		var throughput int64
+		if result.duration > 0 {
+			throughput = int64(float64(result.written) / result.duration.Seconds())
+		}
+		slog.Debug("cover: tmux image write",
+			slog.Int("bytes", len(wrapped)),
+			slog.Int("written", result.written),
+			slog.Duration("duration", result.duration),
+			slog.Int64("throughputBytesPerSec", throughput),
+			slog.Int("limitBytesPerSec", tmuxImageRateBytes),
+			slog.Int("burstBytes", tmuxImageBurstBytes),
+			slog.String("pressureProxy", pressure),
+		)
+	}
+	if !result.complete(len(wrapped)) {
+		r.mu.Lock()
+		r.recordPlaceFailure(time.Now())
+		r.mu.Unlock()
+		return false
+	}
+	return true
+}
+
+func (r *CoverRenderer) imageLimiter() *tmuxImageLimiter {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.tmuxImageLimiter == nil {
+		r.tmuxImageLimiter = newTmuxImageLimiter(time.Now())
+	}
+	return r.tmuxImageLimiter
 }
 
 // writePositioned writes the kitty image sequence positioned at the given
@@ -718,14 +1258,18 @@ func (r *CoverRenderer) writeKitty(s string) {
 // not mark the render as successful so the next frame retries.
 func (r *CoverRenderer) writePositioned(startRow, startCol int, imageSeq string, deleteOld bool) bool {
 	if kitty.UseTmuxPassthrough() {
-		top, left, ok := kitty.TmuxPaneOffset()
+		top, left, ok := coverTmuxPaneOffset()
 		if !ok {
 			slog.Debug("CoverRenderer: failed to query tmux pane offset, skipping cover render")
 			return false
 		}
 		payload := kitty.BuildTmuxPositionedPayload(top, left, startRow, startCol, imageSeq, deleteOld)
-		r.writeStdout(kitty.Wrap(payload))
-		return true
+		wrapped := kitty.Wrap(payload)
+		if imageSeq == "" {
+			r.writeStdout(wrapped)
+			return true
+		}
+		return r.writeTmuxLimited(wrapped)
 	}
 
 	// Non-tmux path: unchanged behavior.
@@ -972,10 +1516,11 @@ func (r *CoverRenderer) ClearDisplayed() {
 		return
 	}
 
-	r.writeKitty(kitty.DeleteAllImages())
-
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.deleteDisplayedImagesLocked()
+	if r.netease != nil && r.netease.App != nil {
+		r.netease.ClearAppBackgroundExclusion()
+	}
 
 	if r.cancelFunc != nil {
 		r.cancelFunc()
@@ -986,9 +1531,11 @@ func (r *CoverRenderer) ClearDisplayed() {
 	r.cachedSeq = ""
 	r.currentSongId = 0
 	r.animImageID = 0
+	r.displayImageID = 0
 	r.renderingID = 0
 	r.lastStartRow = 0
 	r.lastStartCol = 0
+	r.mu.Unlock()
 }
 
 // Close cleans up the cover renderer, clearing any displayed images.
@@ -1000,10 +1547,30 @@ func (r *CoverRenderer) Close() {
 
 	r.mu.Lock()
 	wasRendered := r.imageRendered
+	tmuxUnicode := kitty.UseTmuxPassthrough()
+	displayID := r.displayImageID
+	startRow, startCol, rows := r.lastStartRow, r.lastStartCol, r.rows
 	r.mu.Unlock()
 
 	// Only attempt cleanup if an image was actually rendered
 	if !wasRendered {
+		r.ClearCache()
+		return
+	}
+
+	if tmuxUnicode {
+		// Virtual placements require d=i; grid-resident placeholders clear
+		// with the text buffer on exit — no outer CUP clear needed.
+		if displayID != 0 {
+			r.writeKitty(kitty.DeleteImage(displayID))
+		}
+		if r.netease != nil && r.netease.App != nil {
+			r.netease.ClearAppBackgroundExclusion()
+		}
+		r.mu.Lock()
+		r.displayImageID = 0
+		r.imageRendered = false
+		r.mu.Unlock()
 		r.ClearCache()
 		return
 	}
@@ -1013,13 +1580,6 @@ func (r *CoverRenderer) Close() {
 
 	// In non-alt-screen mode, we need to be more aggressive with cleanup.
 	// Move cursor to where the image was and clear that area.
-	// Capture the geometry under the lock, then query the tmux pane offset
-	// outside it: the `tmux` subprocess can block for up to tmuxExecTimeout
-	// and must not stall other renderers holding r.mu.
-	r.mu.Lock()
-	startRow, startCol, rows := r.lastStartRow, r.lastStartCol, r.rows
-	r.mu.Unlock()
-
 	if startRow > 0 && startCol > 0 && rows > 0 {
 		// Build the clear-rows payload (clear each line, moving down).
 		var clearLines strings.Builder
@@ -1030,35 +1590,22 @@ func (r *CoverRenderer) Close() {
 			}
 		}
 
-		if kitty.UseTmuxPassthrough() {
-			// The clear sequence must target the outer terminal's absolute
-			// cursor (see writePositioned): wrap save/absolute CUP/clear/
-			// restore into a single DCS passthrough packet. If the pane
-			// offset cannot be queried, skip this cleanup — DeleteAllImages
-			// above already removed the image.
-			top, left, ok := kitty.TmuxPaneOffset()
-			if ok {
-				payload := kitty.BuildTmuxPositionedPayload(top, left, startRow, startCol, clearLines.String(), false)
-				r.writeStdout(kitty.Wrap(payload))
-			}
-		} else {
-			// Non-tmux path: unchanged behavior.
-			var cleanup strings.Builder
+		// Non-tmux path: unchanged behavior.
+		var cleanup strings.Builder
 
-			// Save cursor position
-			cleanup.WriteString("\x1b[s")
+		// Save cursor position
+		cleanup.WriteString("\x1b[s")
 
-			// Move to where the image started
-			fmt.Fprintf(&cleanup, "\x1b[%d;%dH", startRow, startCol)
+		// Move to where the image started
+		fmt.Fprintf(&cleanup, "\x1b[%d;%dH", startRow, startCol)
 
-			// Clear the area where the image was
-			cleanup.WriteString(clearLines.String())
+		// Clear the area where the image was
+		cleanup.WriteString(clearLines.String())
 
-			// Restore cursor position
-			cleanup.WriteString("\x1b[u")
+		// Restore cursor position
+		cleanup.WriteString("\x1b[u")
 
-			r.writeStdout(cleanup.String())
-		}
+		r.writeStdout(cleanup.String())
 	}
 
 	// Small delay to ensure terminal processes the commands

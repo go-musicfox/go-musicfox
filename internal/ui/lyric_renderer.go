@@ -15,6 +15,8 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
@@ -34,6 +36,12 @@ type lyricCacheKey struct {
 	specLines            int
 	isCentered           bool
 	styleGen             uint64 // style.StyleGeneration(): invalidates on theme switch
+	// Tmux Unicode cover placeholders live in lyric leading padding; include
+	// cover identity/geometry so pause + song/cover changes still rebuild.
+	coverImageID  uint32
+	coverStartRow int
+	coverStartCol int
+	coverCols     int
 }
 
 // LyricRenderer is a dedicated UI component for rendering lyrics.
@@ -242,6 +250,7 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// Time is rounded to ~100ms granularity since lyrics don't need
 	// pixel-perfect timing — per-frame precision is wasteful.
 	state := r.lyricService.State()
+	coverImageID, coverStartRow, coverStartCol, coverCols := r.netease.CoverPlaceholderCacheFields()
 	key := lyricCacheKey{
 		currentIndex:         state.CurrentIndex,
 		yrcLineIdx:           state.YRCLineIndex,
@@ -255,6 +264,10 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		specLines:            specLines,
 		isCentered:           main.CenterEverything(),
 		styleGen:             style.StyleGeneration(),
+		coverImageID:         coverImageID,
+		coverStartRow:        coverStartRow,
+		coverStartCol:        coverStartCol,
+		coverCols:            coverCols,
 	}
 	if key == r.cachedKey {
 		return r.cachedView, r.cachedLines
@@ -263,9 +276,12 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	r.prepareLyricLines()
 
 	var lyricBuilder strings.Builder
+	windowWidth := r.netease.WindowWidth()
 	topPadding := r.lyricStartRow - main.MenuBottomRow() - specLines
-	if topPadding > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", topPadding))
+	// Absolute screen row of the first line this component emits (1-based).
+	padStartRow := r.lyricStartRow - topPadding
+	for i := 0; i < topPadding; i++ {
+		r.writePaddingRow(&lyricBuilder, padStartRow+i, windowWidth)
 	}
 
 	if main.CenterEverything() {
@@ -283,8 +299,9 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	if specLines > 0 && bottomPad > 0 {
 		bottomPad--
 	}
-	if bottomPad > 0 {
-		lyricBuilder.WriteString(strings.Repeat("\n", bottomPad))
+	bottomStart := r.lyricStartRow + r.lyricLines
+	for i := 0; i < bottomPad; i++ {
+		r.writePaddingRow(&lyricBuilder, bottomStart+i, windowWidth)
 	}
 
 	// Return the view with the actual number of newlines in the output.
@@ -470,7 +487,8 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 		lineLength := runewidth.StringWidth(visibleLine)
 
 		paddingLeft := max(0, lyricStartCol+(availableWidth-lineLength)/2)
-		lyricBuilder.WriteString(strings.Repeat(" ", paddingLeft))
+		absRow := r.lyricStartRow + (i - startLine)
+		r.writeLyricLeadingPadding(lyricBuilder, absRow, paddingLeft)
 
 		if !hasAnsi {
 			if i == highlightLine {
@@ -483,6 +501,66 @@ func (r *LyricRenderer) buildLyricsCentered(_ *model.Main, lyricBuilder *strings
 		lyricBuilder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", max(0, windowWidth-paddingLeft-lineLength))))
 		lyricBuilder.WriteString("\n")
 	}
+}
+
+// writeLyricLeadingPadding writes the columns before lyric text. When a tmux
+// Unicode cover placeholder is active for absRow (1-based), it splices
+// spaces + placeholder cells + remaining spaces; placeholder cells are not
+// wrapped in AppBackground. Otherwise it emits transparent spaces as before.
+func (r *LyricRenderer) writeLyricLeadingPadding(b *strings.Builder, absRow, textStartCol int) {
+	if startCol, cells, ok := r.netease.CoverPlaceholderSegment(absRow); ok {
+		before := max(0, startCol-1)
+		b.WriteString(strings.Repeat(" ", before))
+		b.WriteString(cells)
+		mid := max(0, textStartCol-before-ansi.StringWidth(cells))
+		b.WriteString(strings.Repeat(" ", mid))
+		return
+	}
+	if textStartCol > 0 {
+		b.WriteString(strings.Repeat(" ", textStartCol))
+	}
+}
+
+// writePaddingRow emits one vertical padding row. Cover rectangles taller than
+// the lyric text block spill into these rows; without Unicode placeholders
+// there the image would only appear on the lyric lines (often ~half height).
+// When the cover moves away from a row, emit spaces (not a bare newline) so
+// leftover U+10EEEE cells are overwritten instead of stacking with the new
+// placement.
+func (r *LyricRenderer) writePaddingRow(b *strings.Builder, absRow, width int) {
+	if startCol, cells, ok := r.netease.CoverPlaceholderSegment(absRow); ok && width > 0 {
+		before := max(0, startCol-1)
+		cellW := ansi.StringWidth(cells)
+		after := max(0, width-before-cellW)
+		if before > 0 {
+			pad := strings.Repeat(" ", before)
+			if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
+				b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
+			} else {
+				b.WriteString(pad)
+			}
+		}
+		b.WriteString(cells)
+		if after > 0 {
+			pad := strings.Repeat(" ", after)
+			if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
+				b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
+			} else {
+				b.WriteString(pad)
+			}
+		}
+		b.WriteString("\n")
+		return
+	}
+	if width > 0 {
+		pad := strings.Repeat(" ", width)
+		if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
+			b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
+		} else {
+			b.WriteString(pad)
+		}
+	}
+	b.WriteString("\n")
 }
 
 // styleLyricText paints lyric glyphs with the given foreground and the app
@@ -518,9 +596,8 @@ func (r *LyricRenderer) buildLyricsTraditional(main *model.Main, lyricBuilder *s
 	}
 
 	renderLine := func(idx int, isHighlight bool) {
-		if startCol > 0 {
-			lyricBuilder.WriteString(strings.Repeat(" ", startCol))
-		}
+		absRow := r.lyricStartRow + idx
+		r.writeLyricLeadingPadding(lyricBuilder, absRow, startCol)
 
 		line := r.lyrics[idx]
 		hasAnsi := strings.Contains(line, "\033[")
