@@ -892,10 +892,9 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		}
 
 		// If only position changed but same song: non-tmux re-CUPs the cached
-		// overlay. tmux Unicode must NOT metadata-only update — leftover
-		// U+10EEEE cells keep the same imageID and stack overlapping edges
-		// (seen after layout settle / swap onto the right pane). Fall through
-		// to renderStaticTmuxUnicode which DeleteImage(old)+new ID.
+		// overlay. tmux Unicode must erase old U+10EEEE cells then fall
+		// through to DeleteImage+new ID — partial lyric redraws leave stale
+		// placeholders that stack as overlapping edges on the right pane.
 		if !songChanged && song.Id != 0 && !backoffActive {
 			if !tmuxUnicode && r.cachedSeq != "" {
 				seq := r.cachedSeq
@@ -911,6 +910,9 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				r.mu.Unlock()
 				return "", 0
 			}
+		}
+		if tmuxUnicode && positionChanged && (r.imageRendered || r.displayImageID != 0) {
+			r.clearTmuxPlaceholderCellsLocked()
 		}
 	}
 	r.mu.Unlock()
@@ -1037,11 +1039,35 @@ func (r *CoverRenderer) deleteDisplayedImagesLocked() {
 	r.writeKitty(kitty.DeleteAllImages())
 }
 
+// clearTmuxPlaceholderCellsLocked overwrites the last cover rectangle with
+// spaces using pane-local CUP (not tmux DCS). Lyric/partial redraws often
+// skip rows that left the cover rect, so U+10EEEE cells would otherwise keep
+// painting the old virtual placement and stack as overlapping edges.
+// Caller must hold r.mu.
+func (r *CoverRenderer) clearTmuxPlaceholderCellsLocked() {
+	if !kitty.UseTmuxPassthrough() || r.lastStartRow <= 0 || r.lastStartCol <= 0 || r.cols <= 0 || r.rows <= 0 {
+		return
+	}
+	var b strings.Builder
+	b.Grow(r.rows * (16 + r.cols))
+	b.WriteString("\x1b7")
+	rowSpaces := strings.Repeat(" ", r.cols)
+	for i := 0; i < r.rows; i++ {
+		fmt.Fprintf(&b, "\x1b[%d;%dH", r.lastStartRow+i, r.lastStartCol)
+		b.WriteString(rowSpaces)
+	}
+	b.WriteString("\x1b8")
+	r.writeStdout(b.String())
+}
+
 // hideDisplayedLocked deletes the on-screen cover and clears the background
 // exclusion hole. Used for empty artwork, modal overlap, resize, and theme
 // flips — keep it small; cover is not a core path. Caller must hold r.mu.
 func (r *CoverRenderer) hideDisplayedLocked(a *model.App) {
 	had := r.imageRendered || r.displayImageID != 0 || r.cachedSeq != ""
+	if had && kitty.UseTmuxPassthrough() {
+		r.clearTmuxPlaceholderCellsLocked()
+	}
 	r.deleteDisplayedImagesLocked()
 	r.imageRendered = false
 	r.cachedSeq = ""
