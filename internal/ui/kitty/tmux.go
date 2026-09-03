@@ -72,27 +72,15 @@ func SetTmuxExecForTest(fn func(ctx context.Context, args ...string) ([]byte, er
 	tmuxExecFn = fn
 }
 
-// TmuxClientCount returns how many clients are attached to the current tmux
-// session (not the whole server). Returns 0 when not inside tmux or when the
-// query fails (fail-open for cover gating). Uncached: callers are expected
-// to be rare edge-case checks, not a hot path that needs TTL machinery.
-//
-// list-clients without -t enumerates every client on the server, so a second
-// session (e.g. coding + musicfox popup) would falsely trip the multi-client
-// cover gate; always scope with -t $session_id from $TMUX.
+// TmuxClientCount returns the number of clients attached to the current tmux
+// server. Returns 0 when not inside tmux or when the query fails (fail-open
+// for cover gating). Uncached: callers are expected to be rare edge-case
+// checks, not a hot path that needs TTL machinery.
 func TmuxClientCount() int {
-	tmux := os.Getenv("TMUX")
-	if tmux == "" {
+	if os.Getenv("TMUX") == "" {
 		return 0
 	}
-	// $TMUX = "socket_path,pid,session_id" — session_id is the integer form;
-	// tmux targets use the "$N" spelling.
-	parts := strings.Split(tmux, ",")
-	if len(parts) < 3 || parts[2] == "" {
-		return 0
-	}
-	session := "$" + parts[2]
-	out, err := tmuxExecFn(context.Background(), "list-clients", "-t", session, "-F", "#{client_tty}")
+	out, err := tmuxExecFn(context.Background(), "list-clients", "-F", "#{client_tty}")
 	if err != nil {
 		return 0
 	}
