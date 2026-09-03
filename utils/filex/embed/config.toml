@@ -164,6 +164,7 @@ spinDuration = 6
 # 已知风险：Ghostty + tmux 透传大图时会拖死 GPU/WindowServer，触发 macOS watchdog 整机重启
 # 直接在 Ghostty、Kitty、WezTerm 等终端中运行（不套 tmux）不受此限制；
 # 开启后 tmux 内仍会强制关闭旋转封面，仅显示静态封面
+# Unicode 占位封面仅在最左 pane（pane_left==0）绘制；右侧 pane 会清图以避免叠影
 # 默认运行时安全预算：单包 768 KiB、持续 1 MiB/s；写入超过 200ms 时按 5-30 秒冷却
 tmuxPassthrough = false
 
