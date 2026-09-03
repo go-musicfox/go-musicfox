@@ -197,9 +197,12 @@ type CoverRenderer struct {
 	cachedSeq     string // Cached kitty sequence
 	lastStartRow  int    // Last rendered start row position
 	lastStartCol  int    // Last rendered start column position
-	imageRendered bool   // Whether the image has been rendered to terminal
-	forceRerender bool   // Force re-render on next View call (set after resize)
-	skipFrames    int    // Number of View calls to skip before rendering (for resize timing)
+	lastPaneTop   int    // Last tmux pane_top (detect swap-pane without resize)
+	lastPaneLeft  int    // Last tmux pane_left
+	havePaneGeom  bool
+	imageRendered bool // Whether the image has been rendered to terminal
+	forceRerender bool // Force re-render on next View call (set after resize)
+	skipFrames    int  // Number of View calls to skip before rendering (for resize timing)
 
 	animImageID     uint32      // ID for animated cover
 	displayImageID  uint32      // ID for tmux Unicode-placeholder virtual placement
@@ -401,6 +404,12 @@ func isAppBackgroundTransparent(a *model.App) bool {
 	return isNoColor
 }
 
+// paneGeomMoved reports whether tmux pane_top/pane_left changed since the
+// last sample. Used to catch swap-pane (no WindowSizeMsg).
+func paneGeomMoved(have bool, prevTop, prevLeft, top, left int) bool {
+	return have && (top != prevTop || left != prevLeft)
+}
+
 // View renders the cover image component.
 // This component writes directly to stdout for kitty graphics,
 // bypassing bubbletea's rendering pipeline which may not handle APC sequences correctly.
@@ -413,6 +422,28 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	playerState := r.state.State()
 	if playerState != types.Playing && playerState != types.Paused {
 		return "", 0
+	}
+
+	// swap-pane moves pane_top/pane_left without a WindowSizeMsg. Unicode
+	// placeholders ride the text grid, but stale outer-terminal placements
+	// and in-pane geometry still need a hide+retransmit when the pane moves
+	// (most visible after swapping onto the right half).
+	if kitty.UseTmuxPassthrough() {
+		kitty.InvalidateTmuxPaneOffset()
+		if top, left, ok := coverTmuxPaneOffset(); ok {
+			r.mu.Lock()
+			moved := paneGeomMoved(r.havePaneGeom, r.lastPaneTop, r.lastPaneLeft, top, left)
+			r.lastPaneTop, r.lastPaneLeft = top, left
+			r.havePaneGeom = true
+			if moved {
+				r.hideDisplayedLocked(a)
+				r.forceRerender = true
+				r.lastStartRow = 0
+				r.lastStartCol = 0
+				r.currentSongId = 0
+			}
+			r.mu.Unlock()
+		}
 	}
 
 	// Skip frames after resize to let bubbletea finish redrawing
@@ -860,18 +891,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 			return "", 0
 		}
 
-		// If only position changed but same song, update geometry (tmux
-		// Unicode placeholders follow text-grid coordinates) or re-CUP the
-		// absolute overlay (non-tmux). Skipped while placement backoff is
-		// active; the fall-through gate below returns instead.
+		// If only position changed but same song: non-tmux re-CUPs the cached
+		// overlay. tmux Unicode must NOT metadata-only update — leftover
+		// U+10EEEE cells keep the same imageID and stack overlapping edges
+		// (seen after layout settle / swap onto the right pane). Fall through
+		// to renderStaticTmuxUnicode which DeleteImage(old)+new ID.
 		if !songChanged && song.Id != 0 && !backoffActive {
-			if tmuxUnicode && r.imageRendered && r.displayImageID != 0 {
-				r.lastStartRow = coverStartRow
-				r.lastStartCol = coverStartCol
-				r.applyCoverBackgroundExclusionLocked(a)
-				r.mu.Unlock()
-				return "", 0
-			}
 			if !tmuxUnicode && r.cachedSeq != "" {
 				seq := r.cachedSeq
 				r.lastStartRow = coverStartRow

@@ -489,8 +489,22 @@ func TestHideDisplayedLockedClearsUnicodeState(t *testing.T) {
 	}
 }
 
-func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
+func TestPaneGeomMoved(t *testing.T) {
+	if paneGeomMoved(false, 0, 0, 0, 74) {
+		t.Fatal("first sample must not count as a move")
+	}
+	if !paneGeomMoved(true, 0, 0, 0, 74) {
+		t.Fatal("expected move when pane_left changes (swap onto right)")
+	}
+	if paneGeomMoved(true, 0, 74, 0, 74) {
+		t.Fatal("same geometry is not a move")
+	}
+	if !paneGeomMoved(true, 2, 74, 0, 74) {
+		t.Fatal("expected move when pane_top changes")
+	}
+}
 
+func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
 	prev := configs.AppConfig
 	t.Cleanup(func() { configs.AppConfig = prev })
 
