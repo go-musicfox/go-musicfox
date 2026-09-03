@@ -489,6 +489,42 @@ func TestHideDisplayedLockedClearsUnicodeState(t *testing.T) {
 	}
 }
 
+func TestClearTmuxPlaceholderCellsWritesPaneLocalSpaces(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	var got string
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		got = s
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{
+		lastStartRow: 10,
+		lastStartCol: 3,
+		cols:         4,
+		rows:         2,
+	}
+	r.mu.Lock()
+	r.clearTmuxPlaceholderCellsLocked()
+	r.mu.Unlock()
+
+	if !strings.Contains(got, "\x1b7") || !strings.Contains(got, "\x1b8") {
+		t.Fatalf("expected cursor save/restore, got %q", got)
+	}
+	if !strings.Contains(got, "\x1b[10;3H") || !strings.Contains(got, "\x1b[11;3H") {
+		t.Fatalf("expected pane-local CUP to cover rows, got %q", got)
+	}
+	if strings.Contains(got, "\x1bPtmux;") {
+		t.Fatal("placeholder cell clear must not use tmux DCS passthrough")
+	}
+	if !strings.Contains(got, "    ") {
+		t.Fatal("expected spaces to overwrite placeholder cells")
+	}
+}
+
 func TestPaneGeomMoved(t *testing.T) {
 	if paneGeomMoved(false, 0, 0, 0, 74) {
 		t.Fatal("first sample must not count as a move")
