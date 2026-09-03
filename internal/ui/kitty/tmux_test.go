@@ -193,18 +193,22 @@ func TestTmuxClientCount(t *testing.T) {
 		output string
 		err    error
 		want   int
+		wantT  string // expected -t session target; empty if exec must not run
 	}{
-		{"no tmux", "", "", nil, 0},
-		{"empty", "/tmp/sock,1,0", "", nil, 0},
-		{"one", "/tmp/sock,1,0", "/dev/ttys001\n", nil, 1},
-		{"two", "/tmp/sock,1,0", "/dev/ttys001\n/dev/ttys002\n", nil, 2},
-		{"blank lines", "/tmp/sock,1,0", "/dev/ttys001\n\n/dev/ttys002\n", nil, 2},
-		{"exec error", "/tmp/sock,1,0", "", errors.New("boom"), 0},
+		{"no tmux", "", "", nil, 0, ""},
+		{"malformed tmux", "/tmp/sock,1", "", nil, 0, ""},
+		{"empty", "/tmp/sock,1,0", "", nil, 0, "$0"},
+		{"one", "/tmp/sock,1,0", "/dev/ttys001\n", nil, 1, "$0"},
+		{"two same session", "/tmp/sock,1,7", "/dev/ttys001\n/dev/ttys002\n", nil, 2, "$7"},
+		{"blank lines", "/tmp/sock,1,0", "/dev/ttys001\n\n/dev/ttys002\n", nil, 2, "$0"},
+		{"exec error", "/tmp/sock,1,0", "", errors.New("boom"), 0, "$0"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("TMUX", tt.tmux)
-			SetTmuxExecForTest(func(context.Context, ...string) ([]byte, error) {
+			var sawArgs []string
+			SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
+				sawArgs = append([]string{}, args...)
 				if tt.err != nil {
 					return nil, tt.err
 				}
@@ -213,6 +217,15 @@ func TestTmuxClientCount(t *testing.T) {
 			t.Cleanup(func() { SetTmuxExecForTest(nil) })
 			if got := TmuxClientCount(); got != tt.want {
 				t.Fatalf("TmuxClientCount() = %d, want %d", got, tt.want)
+			}
+			if tt.wantT == "" {
+				if sawArgs != nil {
+					t.Fatalf("expected no tmux exec, got %v", sawArgs)
+				}
+				return
+			}
+			if len(sawArgs) < 3 || sawArgs[0] != "list-clients" || sawArgs[1] != "-t" || sawArgs[2] != tt.wantT {
+				t.Fatalf("expected list-clients -t %s ..., got %v", tt.wantT, sawArgs)
 			}
 		})
 	}
