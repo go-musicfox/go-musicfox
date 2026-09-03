@@ -524,7 +524,9 @@ func (r *LyricRenderer) writeLyricLeadingPadding(b *strings.Builder, absRow, tex
 // writePaddingRow emits one vertical padding row. Cover rectangles taller than
 // the lyric text block spill into these rows; without Unicode placeholders
 // there the image would only appear on the lyric lines (often ~half height).
-// Rows with no cover stay as empty newlines so AppBackground fills them.
+// When the cover moves away from a row, emit spaces (not a bare newline) so
+// leftover U+10EEEE cells are overwritten instead of stacking with the new
+// placement.
 func (r *LyricRenderer) writePaddingRow(b *strings.Builder, absRow, width int) {
 	if startCol, cells, ok := r.netease.CoverPlaceholderSegment(absRow); ok && width > 0 {
 		before := max(0, startCol-1)
@@ -549,6 +551,14 @@ func (r *LyricRenderer) writePaddingRow(b *strings.Builder, absRow, width int) {
 		}
 		b.WriteString("\n")
 		return
+	}
+	if width > 0 {
+		pad := strings.Repeat(" ", width)
+		if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
+			b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
+		} else {
+			b.WriteString(pad)
+		}
 	}
 	b.WriteString("\n")
 }
