@@ -37,7 +37,7 @@ var (
 	tmuxPaneOffsetFailAt time.Time
 
 	// tmuxExecFn is the subprocess runner used by pane-offset and client
-	// count probes. Tests may override it via SetTmuxExecForTest.
+	// probes. Tests may override it via SetTmuxExecForTest.
 	tmuxExecFn = tmuxExec
 )
 
@@ -61,37 +61,15 @@ func tmuxExec(ctx context.Context, args ...string) ([]byte, error) {
 }
 
 // SetTmuxExecForTest overrides the tmux subprocess runner used by pane-offset
-// and client-count probes. Pass nil to restore the real runner. Test-only:
-// mutates package globals; callers must restore (typically via t.Cleanup)
-// and must not use t.Parallel() in tests that touch it.
+// and client probes. Pass nil to restore the real runner. Test-only: mutates
+// package globals; callers must restore (typically via t.Cleanup) and must
+// not use t.Parallel() in tests that touch it.
 func SetTmuxExecForTest(fn func(ctx context.Context, args ...string) ([]byte, error)) {
 	if fn == nil {
 		tmuxExecFn = tmuxExec
 		return
 	}
 	tmuxExecFn = fn
-}
-
-// TmuxClientCount returns the number of clients attached to the current tmux
-// server. Returns 0 when not inside tmux or when the query fails (fail-open
-// for cover gating). Uncached: callers are expected to be rare edge-case
-// checks, not a hot path that needs TTL machinery.
-func TmuxClientCount() int {
-	if os.Getenv("TMUX") == "" {
-		return 0
-	}
-	out, err := tmuxExecFn(context.Background(), "list-clients", "-F", "#{client_tty}")
-	if err != nil {
-		return 0
-	}
-	n := 0
-	for _, line := range strings.Split(string(out), "\n") {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		n++
-	}
-	return n
 }
 
 // successCacheValid reports whether a cached successful pane geometry query
