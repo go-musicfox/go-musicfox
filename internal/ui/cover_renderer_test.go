@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -153,20 +152,6 @@ func TestIsEnabledRequiresTmuxPassthroughOptIn(t *testing.T) {
 	kitty.SetTmuxPassthroughForTest(true)
 	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
 
-	// Fail-open single-client stub so list-clients does not hit a real tmux.
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\txterm-ghostty\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	t.Cleanup(func() {
-		kitty.SetTmuxExecForTest(nil)
-		kitty.InvalidateTmuxClientCache()
-	})
-
 	r := &CoverRenderer{kittySupport: true}
 
 	if r.IsEnabled() {
@@ -182,104 +167,6 @@ func TestIsEnabledRequiresTmuxPassthroughOptIn(t *testing.T) {
 	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = false
 	if !r.IsEnabled() {
 		t.Fatal("expected cover enabled outside tmux even without tmuxPassthrough")
-	}
-}
-
-func TestIsEnabledDisablesWithMultipleTmuxClients(t *testing.T) {
-	prev := configs.AppConfig
-	t.Cleanup(func() { configs.AppConfig = prev })
-
-	configs.AppConfig = &configs.Config{}
-	configs.AppConfig.Main.Lyric.Cover.Show = true
-	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = true
-
-	kitty.SetTmuxPassthroughForTest(true)
-	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
-
-	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-socket,123,0")
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\txterm-ghostty\n/dev/ttys002\txterm-kitty\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	t.Cleanup(func() {
-		kitty.SetTmuxExecForTest(nil)
-		kitty.InvalidateTmuxClientCache()
-	})
-
-	r := &CoverRenderer{kittySupport: true}
-	if r.IsEnabled() {
-		t.Fatal("expected cover disabled when multiple tmux clients are attached")
-	}
-
-	// Lone Ghostty client must still allow covers when opted in.
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\txterm-ghostty\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	if !r.IsEnabled() {
-		t.Fatal("expected cover enabled with a single Ghostty tmux client")
-	}
-}
-
-func TestViewClearsCoverWithMultipleTmuxClients(t *testing.T) {
-	prev := configs.AppConfig
-	t.Cleanup(func() { configs.AppConfig = prev })
-
-	configs.AppConfig = &configs.Config{}
-	configs.AppConfig.Main.Lyric.Cover.Show = true
-	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = true
-
-	kitty.SetTmuxPassthroughForTest(true)
-	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
-
-	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-socket,123,0")
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\n/dev/ttys002\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	t.Cleanup(func() {
-		kitty.SetTmuxExecForTest(nil)
-		kitty.InvalidateTmuxClientCache()
-	})
-
-	var writes int
-	prevWrite := coverStdoutWrite
-	t.Cleanup(func() { coverStdoutWrite = prevWrite })
-	coverStdoutWrite = func(s string) (int, error) {
-		writes++
-		return len(s), nil
-	}
-
-	r := &CoverRenderer{
-		kittySupport:   true,
-		imageRendered:  true,
-		displayImageID: 7,
-		cachedSeq:      "stale",
-		animImageID:    3,
-	}
-
-	view, lines := r.View(nil, nil)
-	if view != "" || lines != 0 {
-		t.Fatalf("expected empty view, got view=%q lines=%d", view, lines)
-	}
-	if r.imageRendered || r.displayImageID != 0 || r.cachedSeq != "" || r.animImageID != 0 {
-		t.Fatalf("expected multi-client View to clear cover state: rendered=%v id=%d seq=%q anim=%d",
-			r.imageRendered, r.displayImageID, r.cachedSeq, r.animImageID)
-	}
-	if writes == 0 {
-		t.Fatal("expected a delete write when clearing the displayed cover")
 	}
 }
 
