@@ -163,6 +163,7 @@ spinDuration = 6
 # 是否允许在 tmux 内经 DCS 透传绘制封面，默认关闭，需要时手动开启
 # 开启后仅显示静态封面，并自动缩图、限流；写入缓慢时暂停传输后重试
 # 不使用 tmux 时，此设置不影响封面显示与旋转
+# Unicode 占位封面仅在最左 pane（pane_left==0）绘制；右侧 pane 会清图以避免叠影
 tmuxPassthrough = false
 
 # 桌面歌词设置（目前仅支持 macOS）
