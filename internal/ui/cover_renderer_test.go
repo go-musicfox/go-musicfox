@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
@@ -246,6 +247,55 @@ func TestViewClearsCoverWithMultipleTmuxClients(t *testing.T) {
 	}
 	if writes == 0 {
 		t.Fatal("expected a delete write when clearing the displayed cover")
+	}
+}
+
+func TestUpdateResizeMultiClientDoesNotForceRerender(t *testing.T) {
+	prev := configs.AppConfig
+	t.Cleanup(func() { configs.AppConfig = prev })
+
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Main.Lyric.Cover.Show = true
+	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = true
+
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+	stubListClients(t, "/dev/ttys001\n/dev/ttys002\n")
+
+	r := &CoverRenderer{
+		kittySupport:   true,
+		imageRendered:  true,
+		displayImageID: 9,
+		forceRerender:  true, // stale flag from a prior single-client resize
+	}
+	r.Update(tea.WindowSizeMsg{Width: 80, Height: 24}, nil)
+	if r.forceRerender {
+		t.Fatal("multi-client resize must not set forceRerender")
+	}
+	if r.imageRendered || r.displayImageID != 0 {
+		t.Fatalf("expected cover cleared, rendered=%v id=%d", r.imageRendered, r.displayImageID)
+	}
+}
+
+func TestWriteTmuxLimitedRefusesMultiClient(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+	stubListClients(t, "/dev/ttys001\n/dev/ttys002\n")
+
+	var writes int
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		writes++
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{}
+	if r.writeTmuxLimited("payload") {
+		t.Fatal("expected writeTmuxLimited to refuse multi-client fan-out")
+	}
+	if writes != 0 {
+		t.Fatalf("expected no stdout write, got %d", writes)
 	}
 }
 
