@@ -334,16 +334,31 @@ func (r *CoverRenderer) IsEnabled() bool {
 
 // Update handles UI messages, primarily for resizing.
 func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
-	if !r.IsEnabled() {
-		return
-	}
-
 	switch msg.(type) {
 	case tea.WindowSizeMsg:
 		// Pane offsets change when the window is resized or panes are
 		// rearranged; drop the cached geometry so the next render re-queries.
 		if kitty.UseTmuxPassthrough() {
 			kitty.InvalidateTmuxPaneOffset()
+		}
+		// Second-client resize is the hang trigger: tmux shrinks the shared
+		// session → WindowSizeMsg → forceRerender used to retransmit the full
+		// Kitty image via DCS to every attached terminal (Ghostty+Kitty).
+		// When multiple clients are attached, only clear — never retransmit.
+		if tmuxMultiClientBlocked() {
+			r.mu.Lock()
+			r.hideDisplayedLocked(a)
+			r.forceRerender = false
+			r.lastStartRow = 0
+			r.lastStartCol = 0
+			r.currentSongId = 0
+			r.cols = 0
+			r.rows = 0
+			r.mu.Unlock()
+			return
+		}
+		if !r.IsEnabled() {
+			return
 		}
 		// Reset state to force re-render after resize
 		// Note: Don't calculate dimensions here - netease.WindowWidth/Height
@@ -1146,6 +1161,11 @@ func (r *CoverRenderer) renderStaticTmuxUnicode(a *model.App, song structs.Song,
 // On limiter rejection or incomplete write it arms placement backoff and
 // returns false so callers do not mark the render successful.
 func (r *CoverRenderer) writeTmuxLimited(wrapped string) bool {
+	// Last line of defense: never fan out image payloads when multiple
+	// clients share the session (resize retransmit is the common trigger).
+	if tmuxMultiClientBlocked() {
+		return false
+	}
 	now := time.Now()
 	limiter := r.imageLimiter()
 	decision := limiter.allow(now, len(wrapped))
