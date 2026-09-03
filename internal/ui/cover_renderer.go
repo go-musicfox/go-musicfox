@@ -52,10 +52,6 @@ var (
 	coverTmuxPaneOffset                 = kitty.TmuxPaneOffset
 )
 
-func tmuxMultiClientBlocked() bool {
-	return kitty.UseTmuxPassthrough() && kitty.TmuxClientCount() > 1
-}
-
 type coverWriteResult struct {
 	written  int
 	duration time.Duration
@@ -182,6 +178,15 @@ func (l *tmuxImageLimiter) snapshot(now time.Time) tmuxImageLimiterSnapshot {
 func logTmuxCoverDisabledOnce() {
 	tmuxCoverDisabledLogOnce.Do(func() {
 		slog.Warn("cover: kitty graphics disabled inside tmux (set main.lyric.cover.tmuxPassthrough=true to opt in; ghostty+tmux image passthrough has caused macOS watchdog reboots)")
+	})
+}
+
+// logTmuxMultiClientCoverDisabledOnce explains once why covers are cleared
+// when multiple tmux clients are attached: Kitty DCS fan-out to mixed
+// terminals (notably Ghostty + Kitty) has caused CPU/GPU hangs.
+func logTmuxMultiClientCoverDisabledOnce() {
+	tmuxMultiClientCoverDisabledLogOnce.Do(func() {
+		slog.Warn("cover: kitty graphics disabled with multiple tmux clients attached (DCS fan-out to Ghostty+Kitty has caused CPU/GPU hangs)")
 	})
 }
 
@@ -325,8 +330,9 @@ func (r *CoverRenderer) IsEnabled() bool {
 		logTmuxCoverDisabledOnce()
 		return false
 	}
-	// Multiple clients fan out Kitty DCS to every attached terminal.
-	if tmuxMultiClientBlocked() {
+	// Multiple attached clients cause Kitty DCS fan-out across terminals;
+	// suppress covers even when the user opted into tmuxPassthrough.
+	if kitty.UseTmuxPassthrough() && kitty.TmuxHasMultipleClients() {
 		return false
 	}
 	return true
@@ -414,12 +420,11 @@ func isAppBackgroundTransparent(a *model.App) bool {
 // This component writes directly to stdout for kitty graphics,
 // bypassing bubbletea's rendering pipeline which may not handle APC sequences correctly.
 func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines int) {
-	// Clear before IsEnabled: that gate returns false without hiding, so a
-	// mid-session second attach would otherwise leave placeholders behind.
-	if tmuxMultiClientBlocked() {
-		tmuxMultiClientCoverDisabledLogOnce.Do(func() {
-			slog.Warn("cover: disabled with multiple tmux clients (Kitty DCS fan-out)")
-		})
+	// Clear any on-screen cover before the normal IsEnabled gate when a
+	// second tmux client attaches mid-session (Unicode placeholders /
+	// exclusions must not linger).
+	if kitty.UseTmuxPassthrough() && kitty.TmuxHasMultipleClients() {
+		logTmuxMultiClientCoverDisabledOnce()
 		r.mu.Lock()
 		r.hideDisplayedLocked(a)
 		r.mu.Unlock()

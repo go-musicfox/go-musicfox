@@ -1,8 +1,6 @@
 package kitty
 
 import (
-	"context"
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -183,37 +181,5 @@ func TestTmuxPaneOffsetEnvMissingRecordsFailure(t *testing.T) {
 	// entirely and report not-ok.
 	if _, _, ok := TmuxPaneOffset(); ok {
 		t.Error("expected negative cache to suppress the follow-up query")
-	}
-}
-
-func TestTmuxClientCount(t *testing.T) {
-	tests := []struct {
-		name   string
-		tmux   string
-		output string
-		err    error
-		want   int
-	}{
-		{"no tmux", "", "", nil, 0},
-		{"empty", "/tmp/sock,1,0", "", nil, 0},
-		{"one", "/tmp/sock,1,0", "/dev/ttys001\n", nil, 1},
-		{"two", "/tmp/sock,1,0", "/dev/ttys001\n/dev/ttys002\n", nil, 2},
-		{"blank lines", "/tmp/sock,1,0", "/dev/ttys001\n\n/dev/ttys002\n", nil, 2},
-		{"exec error", "/tmp/sock,1,0", "", errors.New("boom"), 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("TMUX", tt.tmux)
-			SetTmuxExecForTest(func(context.Context, ...string) ([]byte, error) {
-				if tt.err != nil {
-					return nil, tt.err
-				}
-				return []byte(tt.output), nil
-			})
-			t.Cleanup(func() { SetTmuxExecForTest(nil) })
-			if got := TmuxClientCount(); got != tt.want {
-				t.Fatalf("TmuxClientCount() = %d, want %d", got, tt.want)
-			}
-		})
 	}
 }
