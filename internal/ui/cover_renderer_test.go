@@ -152,20 +152,7 @@ func TestIsEnabledRequiresTmuxPassthroughOptIn(t *testing.T) {
 
 	kitty.SetTmuxPassthroughForTest(true)
 	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
-
-	// Fail-open single-client stub so list-clients does not hit a real tmux.
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\txterm-ghostty\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	t.Cleanup(func() {
-		kitty.SetTmuxExecForTest(nil)
-		kitty.InvalidateTmuxClientCache()
-	})
+	t.Setenv("TMUX", "") // fail-open: no list-clients
 
 	r := &CoverRenderer{kittySupport: true}
 
@@ -185,6 +172,19 @@ func TestIsEnabledRequiresTmuxPassthroughOptIn(t *testing.T) {
 	}
 }
 
+func stubListClients(t *testing.T, output string) {
+	t.Helper()
+	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-socket,123,0")
+	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
+		joined := strings.Join(args, " ")
+		if strings.HasPrefix(joined, "list-clients") {
+			return []byte(output), nil
+		}
+		return nil, errors.New("unexpected tmux args: " + joined)
+	})
+	t.Cleanup(func() { kitty.SetTmuxExecForTest(nil) })
+}
+
 func TestIsEnabledDisablesWithMultipleTmuxClients(t *testing.T) {
 	prev := configs.AppConfig
 	t.Cleanup(func() { configs.AppConfig = prev })
@@ -196,36 +196,15 @@ func TestIsEnabledDisablesWithMultipleTmuxClients(t *testing.T) {
 	kitty.SetTmuxPassthroughForTest(true)
 	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
 
-	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-socket,123,0")
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\txterm-ghostty\n/dev/ttys002\txterm-kitty\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	t.Cleanup(func() {
-		kitty.SetTmuxExecForTest(nil)
-		kitty.InvalidateTmuxClientCache()
-	})
-
+	stubListClients(t, "/dev/ttys001\n/dev/ttys002\n")
 	r := &CoverRenderer{kittySupport: true}
 	if r.IsEnabled() {
 		t.Fatal("expected cover disabled when multiple tmux clients are attached")
 	}
 
-	// Lone Ghostty client must still allow covers when opted in.
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\txterm-ghostty\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
+	stubListClients(t, "/dev/ttys001\n")
 	if !r.IsEnabled() {
-		t.Fatal("expected cover enabled with a single Ghostty tmux client")
+		t.Fatal("expected cover enabled with a single tmux client")
 	}
 }
 
@@ -239,20 +218,7 @@ func TestViewClearsCoverWithMultipleTmuxClients(t *testing.T) {
 
 	kitty.SetTmuxPassthroughForTest(true)
 	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
-
-	t.Setenv("TMUX", "/tmp/go-musicfox-kitty-test-socket,123,0")
-	kitty.InvalidateTmuxClientCache()
-	kitty.SetTmuxExecForTest(func(_ context.Context, args ...string) ([]byte, error) {
-		joined := strings.Join(args, " ")
-		if strings.HasPrefix(joined, "list-clients") {
-			return []byte("/dev/ttys001\n/dev/ttys002\n"), nil
-		}
-		return nil, errors.New("unexpected tmux args: " + joined)
-	})
-	t.Cleanup(func() {
-		kitty.SetTmuxExecForTest(nil)
-		kitty.InvalidateTmuxClientCache()
-	})
+	stubListClients(t, "/dev/ttys001\n/dev/ttys002\n")
 
 	var writes int
 	prevWrite := coverStdoutWrite
