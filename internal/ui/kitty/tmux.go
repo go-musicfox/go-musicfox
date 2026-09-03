@@ -35,6 +35,10 @@ var (
 	tmuxPaneOffsetCached bool
 	tmuxPaneOffsetAt     time.Time
 	tmuxPaneOffsetFailAt time.Time
+
+	// tmuxExecFn is the subprocess runner used by pane-offset and client
+	// probes. Tests may override it via SetTmuxExecForTest.
+	tmuxExecFn = tmuxExec
 )
 
 // tmuxExec runs `tmux` against the socket reported by $TMUX (the first
@@ -54,6 +58,18 @@ func tmuxExec(ctx context.Context, args ...string) ([]byte, error) {
 		cmd = exec.CommandContext(runCtx, "tmux", args...)
 	}
 	return cmd.Output()
+}
+
+// SetTmuxExecForTest overrides the tmux subprocess runner used by pane-offset
+// and client probes. Pass nil to restore the real runner. Test-only: mutates
+// package globals; callers must restore (typically via t.Cleanup) and must
+// not use t.Parallel() in tests that touch it.
+func SetTmuxExecForTest(fn func(ctx context.Context, args ...string) ([]byte, error)) {
+	if fn == nil {
+		tmuxExecFn = tmuxExec
+		return
+	}
+	tmuxExecFn = fn
 }
 
 // successCacheValid reports whether a cached successful pane geometry query
@@ -104,7 +120,7 @@ func TmuxPaneOffset() (top, left int, ok bool) {
 		return 0, 0, false
 	}
 
-	output, err := tmuxExec(context.Background(), "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left},#{status-position},#{status-height}")
+	output, err := tmuxExecFn(context.Background(), "display", "-p", "-t", tmuxPane, "#{pane_top},#{pane_left},#{status-position},#{status-height}")
 	if err != nil {
 		tmuxPaneOffsetFailAt = now
 		return 0, 0, false
