@@ -46,10 +46,9 @@ var coverStdoutWrite = func(s string) (int, error) {
 }
 
 var (
-	tmuxCoverDisabledLogOnce    sync.Once
-	tmuxCoverNonLeftPaneLogOnce sync.Once
-	tmuxImageOversizeLogOnce    sync.Once
-	coverTmuxPaneOffset         = kitty.TmuxPaneOffset
+	tmuxCoverDisabledLogOnce sync.Once
+	tmuxImageOversizeLogOnce sync.Once
+	coverTmuxPaneOffset      = kitty.TmuxPaneOffset
 )
 
 type coverWriteResult struct {
@@ -425,9 +424,9 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// swap-pane moves pane_top/pane_left without a WindowSizeMsg. Unicode
-	// placeholders mis-composite on non-left panes (stacked edges on the
-	// right half after swap; Ghostty+tmux has related placeholder bugs).
-	// Suppress covers unless the pane is at the left edge (pane_left==0).
+	// placeholders ride the text grid, but stale outer-terminal placements
+	// and in-pane geometry still need a hide+retransmit when the pane moves
+	// (most visible after swapping onto the right half).
 	if kitty.UseTmuxPassthrough() {
 		kitty.InvalidateTmuxPaneOffset()
 		if top, left, ok := coverTmuxPaneOffset(); ok {
@@ -435,21 +434,14 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 			moved := paneGeomMoved(r.havePaneGeom, r.lastPaneTop, r.lastPaneLeft, top, left)
 			r.lastPaneTop, r.lastPaneLeft = top, left
 			r.havePaneGeom = true
-			unsupported := left > 0
-			if moved || unsupported {
+			if moved {
 				r.hideDisplayedLocked(a)
-				r.forceRerender = !unsupported
+				r.forceRerender = true
 				r.lastStartRow = 0
 				r.lastStartCol = 0
 				r.currentSongId = 0
 			}
 			r.mu.Unlock()
-			if unsupported {
-				tmuxCoverNonLeftPaneLogOnce.Do(func() {
-					slog.Warn("cover: tmux unicode covers disabled when pane_left>0 (right/split pane); move pane to the left edge to show covers")
-				})
-				return "", 0
-			}
 		}
 	}
 
