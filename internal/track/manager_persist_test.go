@@ -12,7 +12,7 @@ import (
 
 func TestPersistStreamCorrectsSuffixByContent(t *testing.T) {
 	dir := t.TempDir()
-	m := NewManager(WithDownloadDir(dir))
+	m := NewManager(WithDownloadDir(dir), WithDownloadLyricDir(dir), WithCacher(&Cacher{}))
 
 	song := structs.Song{Id: 123, Name: "CloudSong", Artists: []structs.Artist{{Name: "Singer"}}}
 	fileName, err := m.nameGen.Song(song, "mp3")
@@ -44,7 +44,7 @@ func TestPersistStreamCorrectsSuffixByContent(t *testing.T) {
 
 func TestPersistStreamKeepsDeclaredSuffixWhenSniffUnknown(t *testing.T) {
 	dir := t.TempDir()
-	m := NewManager(WithDownloadDir(dir))
+	m := NewManager(WithDownloadDir(dir), WithDownloadLyricDir(dir), WithCacher(&Cacher{}))
 
 	song := structs.Song{Id: 456, Name: "CloudSong", Artists: []structs.Artist{{Name: "Singer"}}}
 	fileName, err := m.nameGen.Song(song, "mp3")
