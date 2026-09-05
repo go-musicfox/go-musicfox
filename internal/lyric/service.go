@@ -9,8 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/pkg/errors"
+
+	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/utils/errorx"
 )
 
 func min(a, b int) int {
@@ -78,7 +80,8 @@ type Service struct {
 	offset          time.Duration
 	skipParseErr    bool
 
-	mu sync.RWMutex
+	mu         sync.RWMutex
+	loadCancel context.CancelFunc
 }
 
 // NewService creates a new lyric service.
@@ -95,14 +98,54 @@ func NewService(fetcher Fetcher, showTranslation bool, initialOffset time.Durati
 	}
 }
 
-// SetSong loads lyrics for a new song.
+// LoadSong starts an asynchronous load. Register the request before starting the
+// goroutine so rapid track changes cannot reorder requests through scheduling.
+func (s *Service) LoadSong(ctx context.Context, song structs.Song) {
+	if ctx.Err() != nil {
+		return
+	}
+	ctx, cancel := s.beginLoad(ctx)
+	errorx.Go(func() {
+		defer cancel()
+		if err := s.loadSong(ctx, song); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Debug("Failed to load lyrics", "songId", song.Id, "error", err)
+		}
+	}, true)
+}
+
+// SetSong loads lyrics synchronously, without holding the state lock during I/O.
 func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	ctx, cancel := s.beginLoad(ctx)
+	defer cancel()
+	return s.loadSong(ctx, song)
+}
+
+func (s *Service) beginLoad(ctx context.Context) (context.Context, context.CancelFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.loadCancel != nil {
+		s.loadCancel()
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	s.loadCancel = cancel
+	s.resetState(true)
+	return ctx, cancel
+}
 
-	s.resetState(true) // Preserve configuration on reset
-
+func (s *Service) loadSong(ctx context.Context, song structs.Song) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	lrcData, err := s.fetcher.GetLyric(ctx, song)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// A canceled request must never publish, even if the fetcher ignored cancellation.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch lyric data")
 	}
@@ -348,6 +391,10 @@ func (s *Service) State() State {
 func (s *Service) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.loadCancel != nil {
+		s.loadCancel()
+		s.loadCancel = nil
+	}
 	s.resetState(false) // Full reset
 }
 
