@@ -64,6 +64,8 @@ type Netease struct {
 	shareSvc     *composer.ShareService
 	trackManager *track.Manager
 
+	albumSubscriptions *albumSubscriptionState
+
 	playbarHoveredElement PlaybarElement
 
 	// Theme switch notification: update in-place when visible, recreate when expired.
@@ -99,6 +101,7 @@ func NewNetease(app *model.App) *Netease {
 	n.desktopLyrics = desktop_lyrics.NewController(configs.AppConfig.Main.Lyric.DesktopLyrics)
 
 	n.player = NewPlayer(n, n.lyricService)
+	n.albumSubscriptions = newAlbumSubscriptionState()
 
 	n.lyricRenderer = NewLyricRenderer(n, n.lyricService, showLyric)
 	n.songInfoRenderer = NewSongInfoRenderer(n, n.player)
@@ -642,6 +645,7 @@ func (n *Netease) LoginCallback() error {
 
 	// 更新like list
 	go likelist.RefreshLikeList(user.UserId)
+	n.refreshAlbumSubscriptions()
 
 	return nil
 }

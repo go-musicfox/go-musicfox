@@ -138,7 +138,7 @@ func actionItemsForMenu(n *Netease, from string, playing bool, selectedIndex int
 	menu := n.MustMain().CurMenu()
 
 	if playing || isSongsProvider(menu) {
-		actions = append(actions, buildSongActions(n, isSelected)...)
+		actions = append(actions, buildSongActions(n, isSelected, selectedIndex)...)
 	}
 
 	if canCollectPlaylist(menu) {
@@ -276,7 +276,7 @@ func buildPlaylistActions(n *Netease) []ActionItem {
 	return items
 }
 
-func buildSongActions(n *Netease, isSelected bool) []ActionItem {
+func buildSongActions(n *Netease, isSelected bool, selectedIndex int) []ActionItem {
 	items := []ActionItem{
 		{
 			title:  model.MenuItem{Title: iconAlbum + "所属专辑"},
@@ -287,16 +287,6 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			title:  model.MenuItem{Title: iconArtist + "所属歌手"},
 			action: func() { goToArtistOfSong(n, isSelected) },
 			group:  "nav",
-		},
-		{
-			title: model.MenuItem{Title: iconHeartFilled + "收藏专辑"},
-			page:  func() model.Page { return subscribeAlbum(n, true, isSelected) },
-			group: "subscribe",
-		},
-		{
-			title: model.MenuItem{Title: iconHeartOutline + "取消收藏专辑"},
-			page:  func() model.Page { return subscribeAlbum(n, false, isSelected) },
-			group: "subscribe",
 		},
 		{
 			title: model.MenuItem{Title: iconHeartFilled + "收藏歌手"},
@@ -354,6 +344,23 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			group:  "discover",
 		},
 	}
+
+	albumAction := ActionItem{
+		title: model.MenuItem{Title: iconHeartOutline + "管理专辑收藏"},
+		page:  func() model.Page { return toggleAlbumSubscription(n, isSelected) },
+		group: "subscribe",
+	}
+	if album, ok := targetAlbum(n, isSelected, selectedIndex); ok {
+		if subscribed, known := n.albumSubscriptions.get(album.Id); known {
+			albumAction.title.Title = iconHeartFilled + "收藏专辑"
+			albumAction.page = func() model.Page { return subscribeAlbum(n, true, isSelected) }
+			if subscribed {
+				albumAction.title.Title = iconHeartOutline + "取消收藏专辑"
+				albumAction.page = func() model.Page { return subscribeAlbum(n, false, isSelected) }
+			}
+		}
+	}
+	items = append(items[:2], append([]ActionItem{albumAction}, items[2:]...)...)
 	return items
 }
 
