@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/anhoder/foxful-cli/model"
 	"github.com/buger/jsonparser"
 	"github.com/go-musicfox/netease-music/service"
 
@@ -164,11 +165,21 @@ func targetAlbum(n *Netease, isSelected bool, selectedIndex int) (structs.Album,
 	}
 
 	menu := n.MustMain().CurMenu()
+	return selectedAlbum(menu, selectedIndex)
+}
+
+func selectedAlbum(menu model.Menu, selectedIndex int) (structs.Album, bool) {
+	index := menu.RealDataIndex(selectedIndex)
+	if albumsMenu, ok := menu.(AlbumsMenu); ok {
+		albums := albumsMenu.Albums()
+		if index >= 0 && index < len(albums) {
+			return albums[index], albums[index].Id != 0
+		}
+	}
 	songsMenu, ok := menu.(SongsMenu)
 	if !ok {
 		return structs.Album{}, false
 	}
-	index := menu.RealDataIndex(selectedIndex)
 	if index < 0 || index >= len(songsMenu.Songs()) {
 		return structs.Album{}, false
 	}

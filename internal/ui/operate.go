@@ -535,8 +535,8 @@ func toggleAlbumSubscription(n *Netease, isSelected bool) model.Page {
 
 func executeAlbumSubscription(n *Netease, isSelected bool, requestedState *bool) model.Page {
 	coreLogic := func(n *Netease) model.Page {
-		song, ok := getTargetSong(n, isSelected)
-		if !ok || song.Album.Id == 0 {
+		album, ok := targetAlbum(n, isSelected, n.MustMain().SelectedIndex())
+		if !ok {
 			notify.Notify(notify.NotifyContent{
 				Title:   model.T(MsgOperationFailed),
 				Text:    model.T(MsgErrorNoAlbum),
@@ -547,24 +547,24 @@ func executeAlbumSubscription(n *Netease, isSelected bool, requestedState *bool)
 			return nil
 		}
 
-		current, err := fetchAlbumSubscriptionState(n.albumSubscriptions.client, song.Album.Id)
+		current, err := fetchAlbumSubscriptionState(n.albumSubscriptions.client, album.Id)
 		if err != nil {
-			notifyAlbumSubscriptionFailure(song.Album.Name, err.Error())
+			notifyAlbumSubscriptionFailure(album.Name, err.Error())
 			return nil
 		}
-		n.albumSubscriptions.set(song.Album.Id, current)
+		n.albumSubscriptions.set(album.Id, current)
 
 		desired := !current
 		if requestedState != nil {
 			desired = *requestedState
 		}
 		if desired != current {
-			code, response := n.albumSubscriptions.client.update(song.Album.Id, desired)
+			code, response := n.albumSubscriptions.client.update(album.Id, desired)
 			if _struct.CheckCode(code) != _struct.Success {
-				notifyAlbumSubscriptionFailure(song.Album.Name, operationErrorMessage(response))
+				notifyAlbumSubscriptionFailure(album.Name, operationErrorMessage(response))
 				return nil
 			}
-			n.albumSubscriptions.set(song.Album.Id, desired)
+			n.albumSubscriptions.set(album.Id, desired)
 		}
 
 		title := "已收藏专辑"
@@ -573,8 +573,8 @@ func executeAlbumSubscription(n *Netease, isSelected bool, requestedState *bool)
 		}
 		notify.Notify(notify.NotifyContent{
 			Title:   title,
-			Text:    song.Album.Name,
-			Url:     netease.WebUrlOfAlbum(song.Album.Id),
+			Text:    album.Name,
+			Url:     netease.WebUrlOfAlbum(album.Id),
 			GroupId: types.GroupID,
 			Level:   notify.ToastSuccess,
 		})
@@ -1006,7 +1006,7 @@ func shareItem(n *Netease, isSelected bool, selectedIndex int) {
 		})
 		return
 	}
-	
+
 	// 分享成功通知
 	notify.Notify(notify.NotifyContent{
 		Title:   model.T(MsgOperationShareSuccess),

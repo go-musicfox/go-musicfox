@@ -3,6 +3,8 @@ package ui
 import (
 	"reflect"
 	"testing"
+
+	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
 func TestFetchAlbumSubscriptionsPaginates(t *testing.T) {
@@ -73,5 +75,25 @@ func TestAlbumSubscriptionFromDynamic(t *testing.T) {
 				t.Fatalf("albumSubscriptionFromDynamic() = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestAlbumSearchResultUsesAlbumTarget(t *testing.T) {
+	menu := &SearchResultMenu{
+		searchType: StAlbum,
+		result: []structs.Album{
+			{Id: 3210056, Name: "HEAR YOU"},
+		},
+	}
+
+	if isSongsProvider(menu) {
+		t.Fatal("album search result was classified as a song provider")
+	}
+	if !isAlbumsProvider(menu) {
+		t.Fatal("album search result was not classified as an album provider")
+	}
+	album, ok := selectedAlbum(menu, 0)
+	if !ok || album.Id != 3210056 || album.Name != "HEAR YOU" {
+		t.Fatalf("selectedAlbum() = (%+v, %v), want HEAR YOU album", album, ok)
 	}
 }
