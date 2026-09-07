@@ -16,7 +16,6 @@ import (
 	"github.com/buger/jsonparser"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/go-musicfox/netease-music/service"
-	"github.com/go-musicfox/netease-music/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/pkg/errors"
@@ -32,7 +31,6 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
-	"github.com/go-musicfox/go-musicfox/utils/app"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
@@ -81,8 +79,12 @@ func NewNetease(app *model.App) *Netease {
 	quality := configs.AppConfig.Player.SongLevel
 	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
 	nameGen := composer.NewFileNameGenerator()
-	nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
-	nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
+	if err := nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl); err != nil {
+		slog.Warn("invalid song filename template", slogx.Error(err))
+	}
+	if err := nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl); err != nil {
+		slog.Warn("invalid lyric filename template", slogx.Error(err))
+	}
 	n.trackManager = track.NewManager(
 		track.WithNameGenerator(nameGen),
 		track.WithCacher(track.NewCacher(maxSizeMB)),
@@ -113,7 +115,9 @@ func NewNetease(app *model.App) *Netease {
 	n.App = app
 
 	n.shareSvc = composer.NewShareService()
-	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
+	if err := n.shareSvc.RegisterTemplates(configs.AppConfig.Share); err != nil {
+		slog.Warn("invalid share templates", slogx.Error(err))
+	}
 
 	return n
 }
@@ -177,7 +181,7 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 
 func (n *Netease) InitHook(_ *model.App) {
 	config := configs.AppConfig
-	dataDir := app.DataDir()
+	dataDir := apputils.DataDir()
 
 	// 注册 TUI 内 toast 回调（此时 App.Run 已启动，program 就绪）
 	n.registerToastHook()
@@ -218,7 +222,7 @@ func (n *Netease) InitHook(_ *model.App) {
 	}
 
 	appCookieJar = jar
-	util.SetGlobalCookieJar(appCookieJar)
+	neteaseutil.SetGlobalCookieJar(appCookieJar)
 
 	// 获取用户信息
 	errorx.Go(func() {
@@ -613,9 +617,9 @@ func (n *Netease) CoverPlaceholderSegment(absRow int) (startCol int, cells strin
 
 // CoverPlaceholderCacheFields returns tmux Unicode cover identity/geometry for
 // lyric output-cache invalidation.
-func (n *Netease) CoverPlaceholderCacheFields() (imageID uint32, startRow, startCol, cols int) {
+func (n *Netease) CoverPlaceholderCacheFields() (imageID uint32, startRow, startCol, cols, rows int) {
 	if n == nil || n.coverRenderer == nil {
-		return 0, 0, 0, 0
+		return 0, 0, 0, 0, 0
 	}
 	return n.coverRenderer.PlaceholderCacheFields()
 }
@@ -717,10 +721,10 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ss := registry.CurrentStyleSet(isDark)
 		if ss != nil {
 			style.SetStyleSet(*ss)
-			n.App.SetStyleSet(*ss)
+			n.SetStyleSet(*ss)
 		}
 		n.notifyThemeSwitch(n.App, "外观模式已切换", configs.CurrentThemeRegistry().CurrentName(isDark))
-		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
+		return n, tea.Sequence(cmd, n.RerenderCmd(true))
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd

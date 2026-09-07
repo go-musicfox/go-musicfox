@@ -164,6 +164,11 @@ spinDuration = 6
 # 开启后仅显示静态封面，并自动缩图、限流；写入缓慢时暂停传输后重试
 # 不使用 tmux 时，此设置不影响封面显示与旋转
 tmuxPassthrough = false
+# tmux 3.7c 图片渲染兼容补丁，默认关闭，不按版本号自动开启
+# 若右侧窗格的封面出现多个格子、重复顶部条带，或切歌提示期间失真，可手动设为 true
+# 通过同步刷新保留图片行列坐标；仅在 show 与 tmuxPassthrough 同时开启时生效
+# 已修复的 tmux 通常无需开启；开启也可兼容，但可能增加重绘开销
+tmuxSyncOutput = false
 
 # 桌面歌词设置（目前仅支持 macOS）
 [main.lyric.desktopLyrics]

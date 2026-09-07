@@ -4,19 +4,17 @@ import (
 	"image/color"
 	"regexp"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
 	"github.com/anhoder/foxful-cli/style"
-	"github.com/anhoder/foxful-cli/util"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
+	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 	"github.com/go-musicfox/go-musicfox/utils/app"
-
-	"github.com/charmbracelet/x/ansi"
 )
 
 var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
@@ -24,12 +22,13 @@ var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 // lyricCacheKey holds the state that determines whether the rendered
 // output has changed. Used to skip expensive recomputation in View().
 type lyricCacheKey struct {
-	currentIndex         int
-	yrcLineIdx           int
-	isRunning            bool
-	yrcEnabled           bool
-	showTranslation      bool
-	currentTimeHundredMs int64 // currentTimeMs / 100, ~100ms granularity
+	currentIndex    int
+	yrcLineIdx      int
+	isRunning       bool
+	yrcEnabled      bool
+	showTranslation bool
+	// Quantize playback time to invalidate scrolling and word progress.
+	currentTimeHundredMs int64
 	windowWidth          int
 	windowHeight         int
 	menuBottomRow        int
@@ -38,10 +37,13 @@ type lyricCacheKey struct {
 	styleGen             uint64 // style.StyleGeneration(): invalidates on theme switch
 	// Tmux Unicode cover placeholders live in lyric leading padding; include
 	// cover identity/geometry so pause + song/cover changes still rebuild.
+	// coverRows is required with image-ID reuse: a=t replace keeps the same
+	// i= while row count can change after pane remasure.
 	coverImageID  uint32
 	coverStartRow int
 	coverStartCol int
 	coverCols     int
+	coverRows     int
 }
 
 // LyricRenderer is a dedicated UI component for rendering lyrics.
@@ -54,8 +56,7 @@ type LyricRenderer struct {
 	lyricStartRow     int
 	lyrics            []string // Dynamic-size slice to hold lines for rendering
 	lyricNowScrollBar *app.XScrollBar
-	currentTimeMs     int64     // Current playback time in milliseconds for YRC rendering
-	lastViewTime      time.Time // For debug logging
+	currentTimeMs     int64 // Current playback time in milliseconds for YRC rendering
 
 	// output caching to avoid recomputation when nothing changed
 	cachedView  string
@@ -247,10 +248,8 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Build cache key and skip recomputation if nothing changed.
-	// Time is rounded to ~100ms granularity since lyrics don't need
-	// pixel-perfect timing — per-frame precision is wasteful.
 	state := r.lyricService.State()
-	coverImageID, coverStartRow, coverStartCol, coverCols := r.netease.CoverPlaceholderCacheFields()
+	coverImageID, coverStartRow, coverStartCol, coverCols, coverRows := r.netease.CoverPlaceholderCacheFields()
 	key := lyricCacheKey{
 		currentIndex:         state.CurrentIndex,
 		yrcLineIdx:           state.YRCLineIndex,
@@ -268,6 +267,7 @@ func (r *LyricRenderer) View(a *model.App, main *model.Main) (view string, lines
 		coverStartRow:        coverStartRow,
 		coverStartCol:        coverStartCol,
 		coverCols:            coverCols,
+		coverRows:            coverRows,
 	}
 	if key == r.cachedKey {
 		return r.cachedView, r.cachedLines
@@ -534,31 +534,19 @@ func (r *LyricRenderer) writePaddingRow(b *strings.Builder, absRow, width int) {
 		after := max(0, width-before-cellW)
 		if before > 0 {
 			pad := strings.Repeat(" ", before)
-			if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
-				b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
-			} else {
-				b.WriteString(pad)
-			}
+			b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
 		}
 		b.WriteString(cells)
 		if after > 0 {
 			pad := strings.Repeat(" ", after)
-			if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
-				b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
-			} else {
-				b.WriteString(pad)
-			}
+			b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
 		}
 		b.WriteString("\n")
 		return
 	}
-	if width > 0 {
+	if kitty.UseTmuxPassthrough() && width > 0 {
 		pad := strings.Repeat(" ", width)
-		if style.CurrentStyleSet().AppBackground.GetBackground() != nil {
-			b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
-		} else {
-			b.WriteString(pad)
-		}
+		b.WriteString(style.CurrentStyleSet().AppBackground.Render(pad))
 	}
 	b.WriteString("\n")
 }
@@ -568,10 +556,7 @@ func (r *LyricRenderer) writePaddingRow(b *strings.Builder, absRow, width int) {
 // and never reveal content drawn beneath the TUI. Falls back to a
 // foreground-only style when the theme leaves the app background transparent.
 func styleLyricText(text string, fg color.Color) string {
-	if bg := style.CurrentStyleSet().AppBackground.GetBackground(); bg != nil {
-		return util.SetFgBgStyle(text, fg, bg)
-	}
-	return util.SetFgStyle(text, fg)
+	return style.FGBG(text, fg, style.CurrentStyleSet().AppBackground.GetBackground())
 }
 
 // buildLyricsTraditional contains the rendering logic for the traditional layout.

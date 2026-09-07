@@ -100,6 +100,24 @@ func TestVirtualPlaceImage(t *testing.T) {
 	}
 }
 
+func TestAbsoluteImagePreservesAspectRatio(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	img.Set(0, 0, color.RGBA{1, 2, 3, 255})
+	seq, err := TransmitAndDisplayWithID(img, 4, 2, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(seq, "a=T") || !strings.Contains(seq, "i=7") {
+		t.Fatalf("unexpected transmit seq: %q", seq[:min(80, len(seq))])
+	}
+	if !strings.Contains(seq, ",c=4") {
+		t.Fatalf("expected c=4 in transmit: %q", seq[:min(120, len(seq))])
+	}
+	if strings.Contains(seq, ",r=") {
+		t.Fatalf("absolute placement must derive height from source aspect ratio: %q", seq[:min(120, len(seq))])
+	}
+}
+
 func TestUnicodePlaceholderCellAndRow(t *testing.T) {
 	const imageID uint32 = 42
 	cell := UnicodePlaceholderCell(imageID, 0, 1)
@@ -120,6 +138,9 @@ func TestUnicodePlaceholderCellAndRow(t *testing.T) {
 	}
 	if strings.Count(row, string(kittyansi.Placeholder)) != cols {
 		t.Fatalf("expected %d placeholders in row", cols)
+	}
+	if !strings.HasSuffix(row, "\x1b[0m") {
+		t.Fatalf("placeholder row must end with SGR reset, got %q", row[max(0, len(row)-8):])
 	}
 }
 
@@ -163,5 +184,11 @@ func TestTransmitLargeImageWithPassthrough(t *testing.T) {
 	payload := seq[len("\x1bPtmux;") : len(seq)-len("\x1b\\")]
 	if remaining := strings.ReplaceAll(payload, "\x1b\x1b", ""); strings.Contains(remaining, "\x1b") {
 		t.Errorf("expected all inner ESC bytes to be doubled in multi-chunk sequence")
+	}
+}
+
+func TestDeleteImageDataTargetsOnlyItsImage(t *testing.T) {
+	if got, want := DeleteImageData(42), "\x1b_Ga=d,d=I,i=42,q=2\x1b\\"; got != want {
+		t.Fatalf("delete = %q, want %q", got, want)
 	}
 }

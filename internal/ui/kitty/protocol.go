@@ -31,11 +31,6 @@ const (
 // occlude it without collision detection.
 var CoverZIndex = 1
 
-// coverZIndexTransparentBg places the cover deeply below the text grid so it
-// is visible through a transparent app background. Popups with solid
-// backgrounds naturally cover it without any special handling.
-const coverZIndexTransparentBg = -2000000000
-
 var imageIDCounter uint32
 
 // NewImageID returns the next unique image ID.
@@ -87,6 +82,12 @@ func DeleteImage(imageID uint32) string {
 	// Returns the bare APC sequence; tmux passthrough wrapping is applied at
 	// the write site (see Wrap in tmux.go).
 	return fmt.Sprintf("%sa=d,d=i,i=%d,q=2%s", apcStart, imageID, st)
+}
+
+// DeleteImageData deletes all placements and releases data for this image ID.
+// Use when the next display will retransmit the source image.
+func DeleteImageData(imageID uint32) string {
+	return fmt.Sprintf("%sa=d,d=I,i=%d,q=2%s", apcStart, imageID, st)
 }
 
 // DeleteAllImages deletes all images from the terminal.
@@ -159,7 +160,9 @@ func UnicodePlaceholderCell(imageID uint32, row, col int) string {
 
 // UnicodePlaceholderRow returns cols Unicode placeholder cells for one row of
 // a virtual placement. Every cell emits both row and column diacritics for
-// robustness (no reliance on left-to-right inheritance).
+// robustness (no reliance on left-to-right inheritance). Trailing SGR reset
+// matches Kitty Unicode-placeholder demos and avoids leaking FG into following
+// cells.
 func UnicodePlaceholderRow(imageID uint32, row, cols int) string {
 	if cols <= 0 {
 		return ""
@@ -168,6 +171,7 @@ func UnicodePlaceholderRow(imageID uint32, row, cols int) string {
 	for c := range cols {
 		b.WriteString(UnicodePlaceholderCell(imageID, row, c))
 	}
+	b.WriteString("\x1b[0m")
 	return b.String()
 }
 
