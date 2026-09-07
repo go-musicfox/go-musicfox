@@ -103,7 +103,7 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	}
 	p.reporter.ReportEnd(transition.PlayedTime)
 	p.reporter.ReportStart(song)
-	errorx.Go(func() { p.lyricService.SetSong(context.Background(), song) }, true)
+	p.lyricService.LoadSong(context.Background(), song)
 	p.LocatePlayingSong()
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 	p.updateDesktopLyrics()

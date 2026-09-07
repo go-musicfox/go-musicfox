@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
@@ -152,5 +153,72 @@ func TestGetLyricKeepsRegularLyricsForMatchedCloudSong(t *testing.T) {
 	}
 	if fetcher.cloudCalls != 0 || fetcher.regularCalls != 1 {
 		t.Fatalf("fetch calls = (cloud %d, regular %d), want (0, 1)", fetcher.cloudCalls, fetcher.regularCalls)
+	}
+}
+
+// blockingLyricFetcher simulates an SDK request that cannot be interrupted.
+type blockingLyricFetcher struct {
+	*lyricFetcherStub
+	entered  chan context.Context
+	release  chan struct{}
+	finished chan struct{}
+}
+
+func (f *blockingLyricFetcher) FetchLyric(ctx context.Context, _ int64) (structs.LRCData, error) {
+	f.entered <- ctx
+	<-f.release
+	close(f.finished)
+	return structs.LRCData{Original: "[00:00.00]shared"}, nil
+}
+
+func TestGetLyricCancellationStopsWaiting(t *testing.T) {
+	f := &blockingLyricFetcher{
+		lyricFetcherStub: &lyricFetcherStub{},
+		entered:          make(chan context.Context, 1),
+		release:          make(chan struct{}),
+		finished:         make(chan struct{}),
+	}
+	defer close(f.release)
+	m := &Manager{fetcher: f}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { _, err := m.GetLyric(ctx, structs.Song{Id: 42}); done <- err }()
+	var sharedCtx context.Context
+	select {
+	case sharedCtx = <-f.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("request did not start")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("cancellation did not stop waiting")
+	}
+	if sharedCtx.Err() != nil {
+		t.Fatalf("caller canceled shared request: %v", sharedCtx.Err())
+	}
+	select {
+	case <-f.finished:
+		t.Fatal("request should still be blocked")
+	default:
+	}
+}
+
+func TestGetLyricAlreadyCanceledDoesNotFetch(t *testing.T) {
+	f := &lyricFetcherStub{}
+	m := &Manager{fetcher: f}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := m.GetLyric(ctx, structs.Song{Id: 42})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v", err)
+	}
+	if f.regularCalls != 0 || f.cloudCalls != 0 {
+		t.Fatal("canceled request fetched lyrics")
 	}
 }

@@ -55,13 +55,18 @@ type ManagerOption func(*Manager)
 // NewManager 创建一个新的 Manager 实例。
 func NewManager(opts ...ManagerOption) *Manager {
 	m := &Manager{
-		downloadDir: app.DownloadDir(),
-		lyricDir:    app.DownloadLyricDir(),
-		quality:     service.Standard, // 默认音质
+		quality: service.Standard, // 默认音质
 	}
 
 	for _, opt := range opts {
 		opt(m)
+	}
+
+	if m.downloadDir == "" {
+		m.downloadDir = app.DownloadDir()
+	}
+	if m.lyricDir == "" {
+		m.lyricDir = app.DownloadLyricDir()
 	}
 
 	if m.cacher == nil {
@@ -224,12 +229,18 @@ func (m *Manager) DownloadLyric(ctx context.Context, song structs.Song) (string,
 
 // GetLyric 获取一首歌的歌词。
 func (m *Manager) GetLyric(ctx context.Context, song structs.Song) (structs.LRCData, error) {
+	if err := ctx.Err(); err != nil {
+		return structs.LRCData{}, err
+	}
 	cloudUserID := m.cloudUserID.Load()
 	preferCloudLyric := shouldPreferCloudLyric(song)
 	key := fmt.Sprintf("lyric-fetch-%d-%d-%t", cloudUserID, song.Id, preferCloudLyric)
-	result, err, _ := m.sfGroup.Do(key, func() (any, error) {
+	// The shared request must outlive any one waiter. The SDK does not support
+	// transport cancellation; callers can independently stop waiting below.
+	fetchCtx := context.WithoutCancel(ctx)
+	resultCh := m.sfGroup.DoChan(key, func() (any, error) {
 		if preferCloudLyric && cloudUserID != 0 {
-			data, cloudErr := m.fetcher.FetchCloudLyric(ctx, cloudUserID, song.Id)
+			data, cloudErr := m.fetcher.FetchCloudLyric(fetchCtx, cloudUserID, song.Id)
 			if cloudErr == nil && data.Original != "" {
 				return data, nil
 			}
@@ -241,13 +252,21 @@ func (m *Manager) GetLyric(ctx context.Context, song structs.Song) (structs.LRCD
 					"songId", song.Id)
 			}
 		}
-		return m.fetcher.FetchLyric(ctx, song.Id)
+		return m.fetcher.FetchLyric(fetchCtx, song.Id)
 	})
 
-	if err != nil {
-		return structs.LRCData{}, err
+	select {
+	case <-ctx.Done():
+		return structs.LRCData{}, ctx.Err()
+	case result := <-resultCh:
+		if err := ctx.Err(); err != nil {
+			return structs.LRCData{}, err
+		}
+		if result.Err != nil {
+			return structs.LRCData{}, result.Err
+		}
+		return result.Val.(structs.LRCData), nil
 	}
-	return result.(structs.LRCData), nil
 }
 
 func shouldPreferCloudLyric(song structs.Song) bool {
