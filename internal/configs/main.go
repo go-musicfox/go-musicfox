@@ -273,6 +273,8 @@ type CoverConfig struct {
 	SpinFPS int `koanf:"spinFPS"`
 	// 旋转一圈的时长（秒，取值范围 1-30，默认 6）
 	SpinDuration int `koanf:"spinDuration"`
+	// Opt in to static tmux cover passthrough with resizing and rate limits.
+	TmuxPassthrough bool `koanf:"tmuxPassthrough"`
 }
 
 // PprofConfig Go 性能分析工具 pprof 的相关设置

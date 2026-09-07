@@ -27,6 +27,13 @@ const (
 	DefaultRotationSize = 320
 )
 
+func imageTargetSize(spin, tmux bool) int {
+	if spin || tmux {
+		return DefaultRotationSize
+	}
+	return 512
+}
+
 // rgbaPool provides reusable RGBA image buffers for rotation frames.
 // Avoids 180+ allocations per song change when spinning cover is enabled.
 var rgbaPool = sync.Pool{
@@ -165,10 +172,10 @@ func (c *ImageCache) getOrFetchEntry(ctx context.Context, url string, cols, rows
 	// Use 1:1 ratio (no stretch) - the image will be displayed as a square.
 	// 320px is usually enough for terminal covers (approx 30-40 columns)
 	// and much faster to process/encode for animations than 512px.
-	targetSize := 512
-	if configs.AppConfig.Main.Lyric.Cover.Spin {
-		targetSize = 320
-	}
+	targetSize := imageTargetSize(
+		configs.AppConfig.Main.Lyric.Cover.Spin,
+		UseTmuxPassthrough(),
+	)
 	resized := resizeImageSquare(img, targetSize)
 
 	// Get precomputed corner mask for this size (cached for performance)

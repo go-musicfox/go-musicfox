@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 )
 
@@ -136,5 +138,300 @@ func TestBuildAnimationSequenceTmuxWrapsAllAPCs(t *testing.T) {
 	// (pane top 0 + row 5, pane left 74 + col 1) and the cursor save/restore.
 	if !strings.Contains(seq, "\x1b[5;75H") || !strings.Contains(seq, "\x1b7") || !strings.Contains(seq, "\x1b8") {
 		t.Fatalf("expected absolute CUP (row 5, col 75) with cursor save/restore in the payload: %q", seq)
+	}
+}
+
+func TestIsEnabledRequiresTmuxPassthroughOptIn(t *testing.T) {
+	prev := configs.AppConfig
+	t.Cleanup(func() { configs.AppConfig = prev })
+
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Main.Lyric.Cover.Show = true
+
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	r := &CoverRenderer{kittySupport: true}
+
+	if r.IsEnabled() {
+		t.Fatal("expected cover disabled inside tmux without the tmuxPassthrough opt-in")
+	}
+
+	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = true
+	if !r.IsEnabled() {
+		t.Fatal("expected cover enabled inside tmux after the tmuxPassthrough opt-in")
+	}
+
+	kitty.SetTmuxPassthroughForTest(false)
+	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = false
+	if !r.IsEnabled() {
+		t.Fatal("expected cover enabled outside tmux even without tmuxPassthrough")
+	}
+}
+
+func TestCoverDebugEnabled(t *testing.T) {
+	prev := configs.AppConfig
+	t.Cleanup(func() { configs.AppConfig = prev })
+
+	configs.AppConfig = nil
+	if coverDebugEnabled() {
+		t.Fatal("expected debug disabled when AppConfig is nil")
+	}
+
+	configs.AppConfig = &configs.Config{}
+	if coverDebugEnabled() {
+		t.Fatal("expected debug disabled when Main.Debug is false")
+	}
+
+	configs.AppConfig.Main.Debug = true
+	if !coverDebugEnabled() {
+		t.Fatal("expected debug enabled when Main.Debug is true")
+	}
+}
+
+func TestCoverWriteTraceHelpers(t *testing.T) {
+	if coverWriteIsSlow(coverWriteSlowThreshold) {
+		t.Fatal("duration equal to the threshold should not be slow")
+	}
+	if !coverWriteIsSlow(coverWriteSlowThreshold + time.Millisecond) {
+		t.Fatal("duration above the threshold should be slow")
+	}
+	if coverWriteShouldTraceBegin(false, coverWriteTraceMinBytes) {
+		t.Fatal("begin/end trace should be off when debug is false")
+	}
+	if coverWriteShouldTraceBegin(true, coverWriteTraceMinBytes-1) {
+		t.Fatal("begin/end trace should skip tiny writes")
+	}
+	if !coverWriteShouldTraceBegin(true, coverWriteTraceMinBytes) {
+		t.Fatal("begin/end trace should run for large writes when debug is on")
+	}
+}
+
+func TestTmuxImageLimiterTokenBucket(t *testing.T) {
+	now := time.Unix(100, 0)
+	l := newTmuxImageLimiter(now)
+
+	if decision := l.allow(now, tmuxImageSingleMaxBytes); !decision.allowed {
+		t.Fatalf("initial packet should be allowed: %+v", decision)
+	}
+	if decision := l.allow(now, tmuxImageSingleMaxBytes+1); decision.allowed || decision.reason != "single_packet_limit" {
+		t.Fatalf("oversized packet should be rejected: %+v", decision)
+	}
+	if decision := l.allow(now, tmuxImageSingleMaxBytes); decision.allowed || decision.reason != "rate_limit" {
+		t.Fatalf("packet exceeding remaining tokens should be rejected: %+v", decision)
+	}
+	if decision := l.allow(now.Add(time.Second), tmuxImageSingleMaxBytes); !decision.allowed {
+		t.Fatalf("tokens should refill after time advances: %+v", decision)
+	}
+
+	state := l.snapshot(now.Add(10 * time.Second))
+	if state.tokens != tmuxImageBurstBytes {
+		t.Fatalf("tokens should not refill past burst: got %d, want %d", state.tokens, tmuxImageBurstBytes)
+	}
+}
+
+func TestTmuxImageLimiterCooldown(t *testing.T) {
+	now := time.Unix(200, 0)
+	l := newTmuxImageLimiter(now)
+	slow := coverWriteResult{written: 1, duration: coverWriteSlowThreshold + time.Millisecond}
+
+	want := tmuxSlowCooldownInitial
+	for i := 0; i < 5; i++ {
+		if pressure := l.report(now, slow, 1); pressure != "slow" {
+			t.Fatalf("slow report pressure = %q, want slow", pressure)
+		}
+		state := l.snapshot(now)
+		if state.cooldownRemaining != want {
+			t.Fatalf("cooldown %d = %v, want %v", i, state.cooldownRemaining, want)
+		}
+		if decision := l.allow(now, 1); decision.allowed || decision.reason != "cooldown" {
+			t.Fatalf("write during cooldown should be rejected: %+v", decision)
+		}
+		now = now.Add(want)
+		want = min(want*2, tmuxSlowCooldownMax)
+	}
+
+	fast := coverWriteResult{written: 1, duration: time.Millisecond}
+	if pressure := l.report(now, fast, 1); pressure != "normal" {
+		t.Fatalf("fast report pressure = %q, want normal", pressure)
+	}
+	if state := l.snapshot(now); state.cooldownRemaining != 0 || l.cooldownLevel != 0 {
+		t.Fatalf("fast write should reset cooldown: %+v", state)
+	}
+	l.report(now, slow, 1)
+	if state := l.snapshot(now); state.cooldownRemaining != tmuxSlowCooldownInitial {
+		t.Fatalf("cooldown after reset = %v, want %v", state.cooldownRemaining, tmuxSlowCooldownInitial)
+	}
+}
+
+func prepareTmuxWriteTest(t *testing.T) {
+	t.Helper()
+	origWrite := coverStdoutWrite
+	origOffset := coverTmuxPaneOffset
+	kitty.SetTmuxPassthroughForTest(true)
+	coverTmuxPaneOffset = func() (int, int, bool) { return 2, 3, true }
+	t.Cleanup(func() {
+		coverStdoutWrite = origWrite
+		coverTmuxPaneOffset = origOffset
+		kitty.SetTmuxPassthroughForTest(false)
+	})
+}
+
+func TestWritePositionedTmuxLimiterRejectsWithoutWriting(t *testing.T) {
+	prepareTmuxWriteTest(t)
+	called := false
+	coverStdoutWrite = func(s string) (int, error) {
+		called = true
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(time.Now())}
+	if r.writePositioned(4, 5, strings.Repeat("x", tmuxImageSingleMaxBytes), true) {
+		t.Fatal("oversized wrapped image should be rejected")
+	}
+	if called {
+		t.Fatal("stdout must not be called for a limited image")
+	}
+	if r.placeBackoff == 0 {
+		t.Fatal("limiter rejection should arm placement backoff")
+	}
+}
+
+func TestWritePositionedTmuxRecordsWrappedBytes(t *testing.T) {
+	prepareTmuxWriteTest(t)
+	var got string
+	coverStdoutWrite = func(s string) (int, error) {
+		got = s
+		return len(s), nil
+	}
+
+	now := time.Now()
+	r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(now)}
+	const imageSeq = "\x1b_Gf=100;abc\x1b\\"
+	if !r.writePositioned(4, 5, imageSeq, true) {
+		t.Fatal("expected tmux image write to succeed")
+	}
+	want := kitty.Wrap(kitty.BuildTmuxPositionedPayload(2, 3, 4, 5, imageSeq, true))
+	if got != want {
+		t.Fatalf("stdout payload differs from wrapped positioned payload")
+	}
+	if state := r.tmuxImageLimiter.snapshot(now); state.admittedBytes != int64(len(want)) {
+		t.Fatalf("admitted bytes = %d, want %d", state.admittedBytes, len(want))
+	}
+}
+
+func TestWritePositionedTmuxWriteFailure(t *testing.T) {
+	tests := []struct {
+		name  string
+		write func(string) (int, error)
+	}{
+		{name: "short write", write: func(s string) (int, error) { return len(s) - 1, nil }},
+		{name: "error", write: func(string) (int, error) { return 0, errors.New("write failed") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prepareTmuxWriteTest(t)
+			coverStdoutWrite = tt.write
+			r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(time.Now())}
+			if r.writePositioned(4, 5, "image", false) {
+				t.Fatal("failed stdout write must not count as a successful render")
+			}
+			if state := r.tmuxImageLimiter.snapshot(time.Now()); state.cooldownRemaining <= 0 {
+				t.Fatal("failed stdout write should enter congestion cooldown")
+			}
+		})
+	}
+}
+
+func TestWritePositionedDirectBypassesLimiter(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(false)
+	orig := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = orig })
+
+	called := false
+	coverStdoutWrite = func(s string) (int, error) {
+		called = true
+		return 0, errors.New("best effort direct write")
+	}
+	r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(time.Now())}
+	if !r.writePositioned(1, 1, strings.Repeat("x", tmuxImageBurstBytes+1), false) {
+		t.Fatal("direct writes should preserve best-effort success behavior")
+	}
+	if !called {
+		t.Fatal("direct write should reach stdout regardless of tmux limiter")
+	}
+	if state := r.tmuxImageLimiter.snapshot(time.Now()); state.admittedBytes != 0 {
+		t.Fatalf("direct write unexpectedly consumed limiter tokens: %+v", state)
+	}
+}
+
+func TestWriteStdoutInvokesStubAndRecordsDuration(t *testing.T) {
+	orig := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = orig })
+
+	const payload = "x"
+	called := false
+	coverStdoutWrite = func(s string) (int, error) {
+		called = true
+		if s != payload {
+			t.Errorf("stub got %q, want %q", s, payload)
+		}
+		time.Sleep(250 * time.Millisecond)
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{}
+	got := r.writeStdout(payload)
+	if !called {
+		t.Fatal("expected coverStdoutWrite stub to be invoked")
+	}
+	if got.written != len(payload) {
+		t.Fatalf("written = %d, want %d", got.written, len(payload))
+	}
+	if !coverWriteIsSlow(got.duration) {
+		t.Fatalf("expected write duration to be slow, got %v", got.duration)
+	}
+}
+
+func TestNewCoverRendererEmptyConfigDoesNotPanic(t *testing.T) {
+	prev := configs.AppConfig
+	t.Cleanup(func() { configs.AppConfig = prev })
+
+	configs.AppConfig = &configs.Config{}
+	r := NewCoverRenderer(nil, nil)
+	if r == nil {
+		t.Fatal("expected a renderer")
+	}
+	r.Close()
+
+	configs.AppConfig = nil
+	r = NewCoverRenderer(nil, nil)
+	if r == nil {
+		t.Fatal("expected a renderer with nil AppConfig")
+	}
+	r.Close()
+}
+
+func TestProcessRSSBytesDoesNotPanic(t *testing.T) {
+	_ = processRSSBytes()
+}
+
+func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
+	prev := configs.AppConfig
+	t.Cleanup(func() { configs.AppConfig = prev })
+
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Main.Debug = true
+	r := NewCoverRenderer(nil, nil)
+
+	done := make(chan struct{})
+	go func() {
+		r.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close hung with debug enabled")
 	}
 }
