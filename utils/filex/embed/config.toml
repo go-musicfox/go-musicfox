@@ -160,11 +160,9 @@ spinFPS = 30
 # 旋转一圈的时长（秒，取值范围 1-30，默认 6）
 # 时长和帧率挂钩：60fps*6s=360帧，30fps*6s=180帧，30fps*12s=360帧
 spinDuration = 6
-# 是否允许在 tmux 内经 DCS 透传绘制封面（实验性功能，开启可能导致终端卡死甚至系统重启）
-# 已知风险：Ghostty + tmux 透传大图时会拖死 GPU/WindowServer，触发 macOS watchdog 整机重启
-# 直接在 Ghostty、Kitty、WezTerm 等终端中运行（不套 tmux）不受此限制；
-# 开启后 tmux 内仍会强制关闭旋转封面，仅显示静态封面
-# 默认运行时安全预算：单包 768 KiB、持续 1 MiB/s；写入超过 200ms 时按 5-30 秒冷却
+# 是否允许在 tmux 内经 DCS 透传绘制封面，默认关闭，需要时手动开启
+# 开启后仅显示静态封面，并自动缩图、限流；写入缓慢时暂停传输后重试
+# 不使用 tmux 时，此设置不影响封面显示与旋转
 tmuxPassthrough = false
 
 # 桌面歌词设置（目前仅支持 macOS）

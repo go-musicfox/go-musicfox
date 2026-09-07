@@ -273,7 +273,7 @@ type CoverConfig struct {
 	SpinFPS int `koanf:"spinFPS"`
 	// 旋转一圈的时长（秒，取值范围 1-30，默认 6）
 	SpinDuration int `koanf:"spinDuration"`
-	// 是否允许在 tmux 内经 DCS 透传绘制封面（实验性功能，开启可能导致终端卡死甚至系统重启）
+	// Opt in to static tmux cover passthrough with resizing and rate limits.
 	TmuxPassthrough bool `koanf:"tmuxPassthrough"`
 }
 

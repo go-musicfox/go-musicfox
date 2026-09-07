@@ -176,7 +176,7 @@ func (l *tmuxImageLimiter) snapshot(now time.Time) tmuxImageLimiterSnapshot {
 // blank cover area is not mistaken for a rendering bug.
 func logTmuxCoverDisabledOnce() {
 	tmuxCoverDisabledLogOnce.Do(func() {
-		slog.Warn("cover: kitty graphics disabled inside tmux (set main.lyric.cover.tmuxPassthrough=true to opt in; ghostty+tmux image passthrough has caused macOS watchdog reboots)")
+		slog.Warn("cover: kitty graphics disabled inside tmux (set main.lyric.cover.tmuxPassthrough=true to enable rate-limited static covers)")
 	})
 }
 
@@ -312,9 +312,8 @@ func (r *CoverRenderer) IsEnabled() bool {
 	if !r.kittySupport || !configs.AppConfig.Main.Lyric.Cover.Show {
 		return false
 	}
-	// Kitty graphics via tmux DCS passthrough can stall GPU compositors
-	// (observed with Ghostty: WindowServer hang → macOS watchdog reboot).
 	// Require an explicit opt-in before sending image payloads through tmux.
+	// The enabled path uses static covers, resizing, rate limits and cooldown.
 	if kitty.UseTmuxPassthrough() && !configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough {
 		logTmuxCoverDisabledOnce()
 		return false
