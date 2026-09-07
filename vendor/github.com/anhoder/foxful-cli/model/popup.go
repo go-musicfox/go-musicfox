@@ -700,7 +700,7 @@ func embedTitleInTopBorder(framed, title string, styles style.PopupStyleSet) str
 				Width:   rw,
 				Style: uv.Style{
 					Fg: titleStyle,
-					Bg: styles.Surface,
+					Bg: popupBackground(styles.Surface),
 				},
 			}
 			screen.Lines[0].Set(x, cell)
@@ -714,6 +714,13 @@ func embedTitleInTopBorder(framed, title string, styles style.PopupStyleSet) str
 // addResizeIndicator places a resize indicator near the bottom-right corner.
 // It places the indicator inside the popup, not on the border itself.
 func addResizeIndicator(framed string, surface color.Color) string {
+	// The indicator is drawn in the popup surface color — deliberately subtle
+	// (effectively invisible against the surface). A transparent surface has
+	// nothing to paint against, and NoColor's black RGBA() would leave a
+	// visible black glyph: skip it entirely in that case.
+	if popupBackground(surface) == nil {
+		return framed
+	}
 	screen := popupStyledScreen(framed)
 	if len(screen.Lines) == 0 {
 		return framed
@@ -891,9 +898,28 @@ func textHeight(content string) int {
 	return lipgloss.Height(content)
 }
 
+// popupBackground maps a resolved popup surface color to the background that
+// should be painted on each popup cell. A "transparent" surface resolves to
+// lipgloss.NoColor{}, whose RGBA() reports opaque black; ultraviolet/x/ansi
+// do not recognize the sentinel by type and would encode it as
+// "\x1b[48;2;0;0;0m" (a solid black popup). Detect it by type and map it to
+// nil so the cell stays unpainted, mirroring the NoColor handling in
+// renderAppBackground (main.go) and StartupPage.View (startup.go).
+func popupBackground(surface color.Color) color.Color {
+	if surface == nil {
+		return nil
+	}
+	if _, isNoColor := surface.(lipgloss.NoColor); isNoColor {
+		return nil
+	}
+	return surface
+}
+
 // normalizePopupSurface preserves rendered content's foreground, text
 // attributes, hyperlinks, and grapheme widths while replacing every cell
-// background. Reverse video is removed because it is an implicit background.
+// background with the popup surface. A transparent surface leaves cells
+// unpainted (see popupBackground). Reverse video is removed because it is an
+// implicit background.
 func normalizePopupSurface(content string, surface color.Color) string {
 	if content == "" {
 		return ""
@@ -906,7 +932,7 @@ func normalizePopupSurface(content string, surface color.Color) string {
 			if cell == nil || cell.IsZero() {
 				continue
 			}
-			cell.Style.Bg = surface
+			cell.Style.Bg = popupBackground(surface)
 			cell.Style.Attrs &^= uv.AttrReverse
 		}
 	}
