@@ -306,6 +306,83 @@ func TestListRandomPlayMode_RandomSequence(t *testing.T) {
 	}
 }
 
+func TestListRandomPlayMode_PreviousSongAfterExhaustedNext(t *testing.T) {
+	// 复现真实崩溃（v5.1.0）：列表随机模式播放完随机序列后，
+	// 连续按"下一曲"（每次返回 ErrNoNextSong），再按"上一曲"曾触发
+	// panic: index out of range [18] with length 17。
+	mode := NewListRandomPlayMode().(*ListRandomPlayMode)
+	playlist := createTestPlaylist(17)
+
+	if err := mode.Initialize(0, playlist); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	// 播完整个随机序列（NextSong 最终返回 ErrNoNextSong）
+	currentIndex := 0
+	for {
+		next, err := mode.NextSong(currentIndex, playlist, false)
+		if err != nil {
+			break
+		}
+		currentIndex = next
+	}
+
+	// 模拟用户连按"下一曲"（崩溃日志中观察到 2 次额外 ErrNoNextSong）
+	for i := 0; i < 2; i++ {
+		if _, err := mode.NextSong(currentIndex, playlist, true); err != ErrNoNextSong {
+			t.Fatalf("Expected ErrNoNextSong, got: %v", err)
+		}
+	}
+
+	// 按上一曲不应 panic，且返回有效索引
+	prevIndex, err := mode.PreviousSong(currentIndex, playlist, true)
+	if err != nil {
+		t.Fatalf("PreviousSong after exhausted NextSong returned error: %v", err)
+	}
+	if prevIndex < 0 || prevIndex >= len(playlist) {
+		t.Fatalf("PreviousSong returned invalid index %d", prevIndex)
+	}
+
+	// 状态完整性：currentPos 必须保持在随机序列范围内
+	if mode.currentPos < 0 || mode.currentPos >= len(mode.randomOrder) {
+		t.Fatalf("currentPos drifted out of range: %d (len=%d)", mode.currentPos, len(mode.randomOrder))
+	}
+}
+
+func TestListRandomPlayMode_NextSongAfterExhaustedPrevious(t *testing.T) {
+	// 镜像场景：回到随机序列开头后连按"上一曲"（currentPos 漂移为负），
+	// 再按"下一曲"同样会越界 panic: index out of range [-1]。
+	mode := NewListRandomPlayMode().(*ListRandomPlayMode)
+	playlist := createTestPlaylist(5)
+
+	if err := mode.Initialize(0, playlist); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	// 回到序列开头，然后连按"上一曲"到越界
+	currentIndex := 0
+	mode.currentPos = 0
+	for i := 0; i < 3; i++ {
+		if _, err := mode.PreviousSong(currentIndex, playlist, true); err != ErrNoPreviousSong {
+			t.Fatalf("Expected ErrNoPreviousSong, got: %v", err)
+		}
+	}
+
+	// 按下一曲不应 panic，且返回有效索引
+	nextIndex, err := mode.NextSong(currentIndex, playlist, true)
+	if err != nil {
+		t.Fatalf("NextSong after exhausted PreviousSong returned error: %v", err)
+	}
+	if nextIndex < 0 || nextIndex >= len(playlist) {
+		t.Fatalf("NextSong returned invalid index %d", nextIndex)
+	}
+
+	// 状态完整性：currentPos 必须保持在随机序列范围内
+	if mode.currentPos < 0 || mode.currentPos >= len(mode.randomOrder) {
+		t.Fatalf("currentPos drifted out of range: %d (len=%d)", mode.currentPos, len(mode.randomOrder))
+	}
+}
+
 func TestListRandomPlayMode_PlaylistChangedRegeneration(t *testing.T) {
 	// 测试播放列表变化时重新生成随机序列
 	mode := NewListRandomPlayMode().(*ListRandomPlayMode)

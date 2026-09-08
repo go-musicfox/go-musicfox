@@ -40,6 +40,10 @@ func (l *ListRandomPlayMode) NextSong(currentIndex int, playlist []structs.Song,
 
 	// 如果超出范围，列表随机播放模式下停止播放
 	if l.currentPos >= len(l.randomOrder) {
+		// Clamp to the last position instead of leaving an out-of-range value,
+		// otherwise repeated NextSong calls keep drifting currentPos upward and
+		// a subsequent PreviousSong indexes randomOrder out of bounds.
+		l.currentPos = len(l.randomOrder) - 1
 		return -1, ErrNoNextSong
 	}
 
@@ -72,6 +76,10 @@ func (l *ListRandomPlayMode) PreviousSong(currentIndex int, playlist []structs.S
 
 	// 如果超出范围，列表随机播放模式下停止播放
 	if l.currentPos < 0 {
+		// Clamp to the first position instead of leaving a negative value,
+		// otherwise repeated PreviousSong calls keep drifting currentPos downward
+		// and a subsequent NextSong indexes randomOrder out of bounds.
+		l.currentPos = 0
 		return -1, ErrNoPreviousSong
 	}
 
