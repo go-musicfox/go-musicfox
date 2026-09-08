@@ -83,6 +83,7 @@ type Player struct {
 
 	playErrCount    int // 错误计数，当错误连续超过5次，停止播放
 	stateHandler    *control.RemoteControl
+	playingInfoMu   sync.Mutex
 	ctrl            chan CtrlSignal
 	gaplessMu       sync.Mutex
 	gaplessPending  int64
@@ -147,7 +148,7 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			case <-ctx.Done():
 				return
 			case s := <-p.StateChan():
-				p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+				p.updatePlayingInfo()
 				p.updateDesktopLyrics()
 				if s != types.Stopped {
 					p.netease.Rerender(false)
@@ -267,6 +268,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	})
 
 	p.LocatePlayingSong()
+	lyricLoadID := p.lyricService.BeginSong(song.Id)
 	p.Pause()
 	url, musicType, err := p.getPlayInfo(song)
 
@@ -295,15 +297,14 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		return
 	}
 
-	errorx.Go(func() {
-		p.lyricService.SetSong(context.Background(), song)
-	}, true)
-
 	p.Play(player.URLMusic{
 		URL:  url,
 		Song: song,
 		Type: player.SongTypeMapping[musicType],
 	})
+	p.updatePlayingInfo()
+	p.updateDesktopLyrics()
+	p.loadLyrics(song, lyricLoadID)
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
 	// 上报开始播放
@@ -318,6 +319,21 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	})
 
 	p.playErrCount = 0
+}
+
+func (p *Player) loadLyrics(song structs.Song, loadID uint64) {
+	errorx.Go(func() {
+		loaded, err := p.lyricService.SetSong(context.Background(), song, loadID)
+		if err != nil {
+			slog.Warn("Load lyric failed", slog.Int64("song_id", song.Id), slog.Any("error", err))
+			return
+		}
+		if !loaded || p.CurSong().Id != song.Id {
+			return
+		}
+		p.updatePlayingInfo()
+		p.updateDesktopLyrics()
+	}, true)
 }
 
 func (p *Player) StartPlay() {
@@ -409,7 +425,7 @@ func (p *Player) PreviousSong(manual bool) {
 
 func (p *Player) Seek(duration time.Duration) {
 	p.Player.Seek(duration)
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	p.updatePlayingInfo()
 	p.stateHandler.EmitSeeked(duration)
 }
 
@@ -614,7 +630,7 @@ func (p *Player) UpVolume() {
 		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
 	}
 
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	p.updatePlayingInfo()
 }
 
 func (p *Player) DownVolume() {
@@ -625,13 +641,13 @@ func (p *Player) DownVolume() {
 		_ = table.SetByKVModel(storage.Volume{}, v.Volume())
 	}
 
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	p.updatePlayingInfo()
 }
 
 func (p *Player) SetVolume(volume int) {
 	p.Player.SetVolume(volume)
 
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	p.updatePlayingInfo()
 }
 
 func (p *Player) handleControlSignal(signal CtrlSignal) {
@@ -667,9 +683,19 @@ func (p *Player) handleControlSignal(signal CtrlSignal) {
 	}
 }
 
+func (p *Player) updatePlayingInfo() {
+	p.playingInfoMu.Lock()
+	defer p.playingInfoMu.Unlock()
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+}
+
 func (p *Player) PlayingInfo() control.PlayingInfo {
 	song := p.CurSong()
 	loopStatus, shuffle := modeToLoopStatusAndShuffle(p.Mode())
+	var lrcText string
+	if state := p.lyricService.State(); state.CurrentSongID == song.Id {
+		lrcText = state.FormatAsLRC()
+	}
 	return control.PlayingInfo{
 		TotalDuration:  song.Duration,
 		PassedDuration: p.PassedTime(),
@@ -681,7 +707,7 @@ func (p *Player) PlayingInfo() control.PlayingInfo {
 		Album:          song.Album.Name,
 		Artist:         song.ArtistName(),
 		AlbumArtist:    song.Album.ArtistName(),
-		LRCText:        p.lyricService.State().FormatAsLRC(),
+		LRCText:        lrcText,
 		LoopStatus:     loopStatus,
 		Shuffle:        shuffle,
 	}
