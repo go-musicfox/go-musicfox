@@ -1,3 +1,4 @@
+// Package ui implements the music client terminal interface.
 package ui
 
 import (
@@ -33,11 +34,11 @@ const (
 	coverWriteTraceMinBytes = 1024
 	coverWriteSlowThreshold = 200 * time.Millisecond
 
-	tmuxImageSingleMaxBytes = 768 * 1024
-	tmuxImageRateBytes      = 1024 * 1024
-	tmuxImageBurstBytes     = 1024 * 1024
-	tmuxSlowCooldownInitial = 5 * time.Second
-	tmuxSlowCooldownMax     = 30 * time.Second
+	imageSingleMaxBytes      = 768 * 1024
+	imageRateBytes           = 1024 * 1024
+	imageBurstBytes          = 1024 * 1024
+	imageSlowCooldownInitial = 5 * time.Second
+	imageSlowCooldownMax     = 30 * time.Second
 )
 
 // coverStdoutWrite is the actual stdout write used by writeStdout. Tests stub it.
@@ -47,7 +48,7 @@ var coverStdoutWrite = func(s string) (int, error) {
 
 var (
 	tmuxCoverDisabledLogOnce sync.Once
-	tmuxImageOversizeLogOnce sync.Once
+	imageOversizeLogOnce     sync.Once
 	coverTmuxPaneOffset      = kitty.TmuxPaneOffset
 )
 
@@ -59,116 +60,6 @@ type coverWriteResult struct {
 
 func (r coverWriteResult) complete(want int) bool {
 	return r.err == nil && r.written == want
-}
-
-type tmuxImageLimitDecision struct {
-	allowed    bool
-	reason     string
-	retryAfter time.Duration
-}
-
-type tmuxImageLimiterSnapshot struct {
-	admittedBytes     int64
-	tokens            int64
-	cooldownRemaining time.Duration
-	limitedCount      int64
-}
-
-type tmuxImageLimiter struct {
-	mu sync.Mutex
-
-	tokens        float64
-	lastRefill    time.Time
-	cooldownUntil time.Time
-	cooldownLevel time.Duration
-	admittedBytes int64
-	limitedCount  int64
-}
-
-func newTmuxImageLimiter(now time.Time) *tmuxImageLimiter {
-	return &tmuxImageLimiter{
-		tokens:     tmuxImageBurstBytes,
-		lastRefill: now,
-	}
-}
-
-func (l *tmuxImageLimiter) refill(now time.Time) {
-	if now.After(l.lastRefill) {
-		l.tokens = min(
-			float64(tmuxImageBurstBytes),
-			l.tokens+now.Sub(l.lastRefill).Seconds()*float64(tmuxImageRateBytes),
-		)
-		l.lastRefill = now
-	}
-}
-
-func (l *tmuxImageLimiter) allow(now time.Time, bytes int) tmuxImageLimitDecision {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	l.refill(now)
-	if bytes > tmuxImageSingleMaxBytes {
-		l.limitedCount++
-		return tmuxImageLimitDecision{reason: "single_packet_limit"}
-	}
-	if now.Before(l.cooldownUntil) {
-		l.limitedCount++
-		return tmuxImageLimitDecision{
-			reason:     "cooldown",
-			retryAfter: l.cooldownUntil.Sub(now),
-		}
-	}
-	if float64(bytes) > l.tokens {
-		l.limitedCount++
-		retryAfter := time.Duration((float64(bytes) - l.tokens) / float64(tmuxImageRateBytes) * float64(time.Second))
-		return tmuxImageLimitDecision{
-			reason:     "rate_limit",
-			retryAfter: max(retryAfter, time.Nanosecond),
-		}
-	}
-
-	l.tokens -= float64(bytes)
-	l.admittedBytes += int64(bytes)
-	return tmuxImageLimitDecision{allowed: true}
-}
-
-func (l *tmuxImageLimiter) report(now time.Time, result coverWriteResult, want int) string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if !result.complete(want) || coverWriteIsSlow(result.duration) {
-		if l.cooldownLevel == 0 {
-			l.cooldownLevel = tmuxSlowCooldownInitial
-		} else {
-			l.cooldownLevel = min(l.cooldownLevel*2, tmuxSlowCooldownMax)
-		}
-		l.cooldownUntil = now.Add(l.cooldownLevel)
-		if !result.complete(want) {
-			return "error"
-		}
-		return "slow"
-	}
-
-	l.cooldownLevel = 0
-	l.cooldownUntil = time.Time{}
-	return "normal"
-}
-
-func (l *tmuxImageLimiter) snapshot(now time.Time) tmuxImageLimiterSnapshot {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	l.refill(now)
-	var remaining time.Duration
-	if now.Before(l.cooldownUntil) {
-		remaining = l.cooldownUntil.Sub(now)
-	}
-	return tmuxImageLimiterSnapshot{
-		admittedBytes:     l.admittedBytes,
-		tokens:            int64(l.tokens),
-		cooldownRemaining: remaining,
-		limitedCount:      l.limitedCount,
-	}
 }
 
 // logTmuxCoverDisabledOnce explains once why covers are suppressed inside
@@ -193,7 +84,7 @@ type CoverRenderer struct {
 	// animation goroutine and Close(), so kitty sequences never interleave
 	// and corrupt the escape stream.
 	writeMu       sync.Mutex
-	currentSongId int64  // Track currently displayed song to avoid redundant renders
+	currentSongID int64  // Track currently displayed song to avoid redundant renders
 	cachedSeq     string // Cached kitty sequence
 	lastStartRow  int    // Last rendered start row position
 	lastStartCol  int    // Last rendered start column position
@@ -202,7 +93,6 @@ type CoverRenderer struct {
 	skipFrames    int    // Number of View calls to skip before rendering (for resize timing)
 
 	animImageID     uint32      // ID for animated cover
-	lastAngle       float64     // Last rendered rotation angle
 	lastPlayerState types.State // Track player state to control animation
 
 	renderingID int64              // Song ID currently being rendered in background
@@ -227,7 +117,8 @@ type CoverRenderer struct {
 	placeFailAt  time.Time
 	placeBackoff time.Duration
 
-	tmuxImageLimiter *tmuxImageLimiter
+	limiterOnce  sync.Once
+	writeLimiter *imageLimiter
 }
 
 func coverDebugEnabled() bool {
@@ -259,13 +150,12 @@ func NewCoverRenderer(netease *Netease, state playerRendererState) *CoverRendere
 	kittySupport := kitty.IsSupported()
 
 	r := &CoverRenderer{
-		netease:          netease,
-		state:            state,
-		imageCache:       kitty.NewImageCache(10),
-		kittySupport:     kittySupport,
-		animImageID:      kitty.NewImageID(),
-		renderChan:       make(chan renderResult, 1),
-		tmuxImageLimiter: newTmuxImageLimiter(time.Now()),
+		netease:      netease,
+		state:        state,
+		imageCache:   kitty.NewImageCache(10),
+		kittySupport: kittySupport,
+		animImageID:  kitty.NewImageID(),
+		renderChan:   make(chan renderResult, 1),
 	}
 	r.logCoverEnvSnapshot()
 	return r
@@ -294,6 +184,7 @@ func (r *CoverRenderer) logCoverEnvSnapshot() {
 		slog.String("TERM", os.Getenv("TERM")),
 		slog.String("TERM_PROGRAM", os.Getenv("TERM_PROGRAM")),
 		slog.Bool("tmux", os.Getenv("TMUX") != ""),
+		slog.Bool("herdr", kitty.IsHerdr()),
 		slog.Bool("kittySupport", r.kittySupport),
 		slog.Bool("kittyTmuxPassthrough", kitty.UseTmuxPassthrough()),
 		slog.Bool("cover.show", show),
@@ -342,7 +233,7 @@ func (r *CoverRenderer) Update(msg tea.Msg, a *model.App) {
 		r.imageRendered = false
 		r.lastStartRow = 0
 		r.lastStartCol = 0
-		r.currentSongId = 0
+		r.currentSongID = 0
 		r.forceRerender = true // Force re-render on next View call
 		r.cols = 0             // Reset to trigger recalculation in View
 		r.rows = 0
@@ -393,9 +284,6 @@ func rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2 int) bool {
 // background is transparent.
 func isAppBackgroundTransparent(a *model.App) bool {
 	bg := a.StyleSet().AppBackground.GetBackground()
-	if bg == nil {
-		return true
-	}
 	_, isNoColor := bg.(lipgloss.NoColor)
 	return isNoColor
 }
@@ -458,9 +346,9 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	song := r.state.CurSong()
-	picUrl := getCoverUrl(song)
+	picURL := getCoverURL(song)
 
-	if picUrl == "" {
+	if picURL == "" {
 		return "", 0
 	}
 
@@ -512,20 +400,14 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	// Check if we need to re-render
 	r.mu.Lock()
 	forceRerender := r.forceRerender
-	songChanged := song.Id != r.currentSongId
+	songChanged := song.Id != r.currentSongID
 	positionChanged := r.lastStartRow != coverStartRow || r.lastStartCol != coverStartCol
 	// Placement backoff: while active, no new render is spawned even if the
 	// conditions below hold (song change / resize / theme change included);
 	// the capped backoff guarantees a retry eventually happens.
 	backoffActive := r.placeBackoffActive(time.Now())
 
-	spin := configs.AppConfig.Main.Lyric.Cover.Spin
-	// Even with an explicit tmuxPassthrough opt-in, never stream rotating
-	// cover frames through tmux: hundreds of PNG payloads via DCS are what
-	// previously stalled Ghostty / WindowServer into a watchdog reboot.
-	if spin && kitty.UseTmuxPassthrough() {
-		spin = false
-	}
+	spin := configs.AppConfig.Main.Lyric.Cover.Spin && !kitty.RequiresStaticImages()
 
 	if spin {
 		// Native Animation Mode
@@ -550,7 +432,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 				// Apply to terminal
 				r.writeStdout(res.sequence)
 
-				r.currentSongId = res.songID
+				r.currentSongID = res.songID
 				r.animImageID = res.animID
 				r.lastStartRow = res.startRow
 				r.lastStartCol = res.startCol
@@ -624,7 +506,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 
 			// IMPORTANT: Render static image IMMEDIATELY while animation is being calculated
 			// This avoids a blank cover during the calculation time
-			renderStaticForAnimation(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID, zIndex)
+			renderStaticForAnimation(ctx, song, picURL, coverStartRow, coverStartCol, r.cols, r.rows, r, newAnimID, zIndex)
 
 			// Capture variables for closure
 			go func(ctx context.Context, bgSong structs.Song, bgUrl string, bgRow, bgCol int, bgCols, bgRows int, bgAnimID uint32, oldBgAnimID uint32, bgZIndex int) {
@@ -827,7 +709,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 					ok:       seqOK,
 				}:
 				}
-			}(ctx, song, picUrl, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID, zIndex)
+			}(ctx, song, picURL, coverStartRow, coverStartCol, r.cols, r.rows, newAnimID, oldAnimID, zIndex)
 
 			return "", 0
 		}
@@ -850,12 +732,12 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		// gate below returns instead).
 		if !songChanged && r.cachedSeq != "" && song.Id != 0 && !backoffActive {
 			seq := r.cachedSeq
-			r.lastStartRow = coverStartRow
-			r.lastStartCol = coverStartCol
 			r.mu.Unlock()
 			written := r.writeToTerminal(seq, coverStartRow, coverStartCol, true)
 			r.mu.Lock()
 			if written {
+				r.lastStartRow = coverStartRow
+				r.lastStartCol = coverStartCol
 				r.imageRendered = true
 				r.recordPlaceSuccess()
 			}
@@ -871,7 +753,7 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 	}
 
 	// Fetch and generate kitty sequence
-	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picUrl, r.cols, r.rows)
+	kittySeq, err := r.imageCache.GetOrFetch(context.Background(), picURL, r.cols, r.rows)
 	if err != nil {
 		slog.Debug("CoverRenderer: failed to fetch image", slog.Any("error", err))
 		return "", 0
@@ -880,22 +762,17 @@ func (r *CoverRenderer) View(a *model.App, main *model.Main) (view string, lines
 		return "", 0
 	}
 
-	// Cache the result and render
-	r.mu.Lock()
-	r.currentSongId = song.Id
-	r.cachedSeq = kittySeq
-	r.lastStartRow = coverStartRow
-	r.lastStartCol = coverStartCol
-	r.mu.Unlock()
-
 	// Write directly to stdout, delete old images when song changes
 	written := r.writeToTerminal(kittySeq, coverStartRow, coverStartCol, true)
 
 	r.mu.Lock()
-	// Only mark success when the write happened (tmux pane offset query may
-	// fail); otherwise the next frame retries via the !imageRendered path
-	// (throttled by the placement backoff).
+	// Commit placement state only after a successful write, so a rejected
+	// image is retried after backoff.
 	if written {
+		r.currentSongID = song.Id
+		r.cachedSeq = kittySeq
+		r.lastStartRow = coverStartRow
+		r.lastStartCol = coverStartCol
 		r.imageRendered = true
 		r.forceRerender = false // Reset forceRerender after successful render
 		r.recordPlaceSuccess()
@@ -942,9 +819,9 @@ func (r *CoverRenderer) writeStdout(s string) coverWriteResult {
 			slog.Any("err", err),
 			slog.Uint64("rssBytes", processRSSBytes()),
 			slog.Int("goroutines", runtime.NumGoroutine()),
-			slog.Int64("tmuxAdmittedBytes", limitState.admittedBytes),
-			slog.Int64("tmuxLimitedCount", limitState.limitedCount),
-			slog.Duration("tmuxCooldownRemaining", limitState.cooldownRemaining),
+			slog.Int64("imageAdmittedBytes", limitState.admittedBytes),
+			slog.Int64("imageLimitedCount", limitState.limitedCount),
+			slog.Duration("imageCooldownRemaining", limitState.cooldownRemaining),
 		)
 	}
 	if coverWriteIsSlow(dur) {
@@ -968,19 +845,10 @@ func (r *CoverRenderer) writeKitty(s string) {
 	r.writeStdout(kitty.Wrap(s))
 }
 
-func (r *CoverRenderer) imageLimiter() *tmuxImageLimiter {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.tmuxImageLimiter == nil {
-		r.tmuxImageLimiter = newTmuxImageLimiter(time.Now())
-	}
-	return r.tmuxImageLimiter
-}
-
 // writePositioned writes the kitty image sequence positioned at the given
-// 1-based in-pane row/column and reports whether anything was written. In
-// non-tmux mode the behavior is unchanged (optional DeleteAllImages + \e[s +
-// CUP + image + \e[u) and it always returns true. In tmux passthrough mode,
+// 1-based in-pane row/column and reports whether anything was written.
+// Non-tmux mode uses bare positioning; Herdr image writes are budgeted.
+// In tmux passthrough mode,
 // positioning must target the outer terminal's absolute cursor: tmux only
 // restores the real cursor to the focused pane on redraw, so pane-relative
 // CUP sequences would paint the image at whatever pane currently owns the
@@ -1003,56 +871,10 @@ func (r *CoverRenderer) writePositioned(startRow, startCol int, imageSeq string,
 			r.writeStdout(wrapped)
 			return true
 		}
-		now := time.Now()
-		limiter := r.imageLimiter()
-		decision := limiter.allow(now, len(wrapped))
-		if !decision.allowed {
-			slog.Debug("cover: tmux image write limited",
-				slog.Int("bytes", len(wrapped)),
-				slog.String("reason", decision.reason),
-				slog.Duration("retryAfter", decision.retryAfter),
-			)
-			if decision.reason == "single_packet_limit" {
-				tmuxImageOversizeLogOnce.Do(func() {
-					slog.Warn("cover: tmux image packet exceeds runtime safety limit",
-						slog.Int("bytes", len(wrapped)),
-						slog.Int("limitBytes", tmuxImageSingleMaxBytes),
-					)
-				})
-			}
-			r.mu.Lock()
-			r.recordPlaceFailure(now)
-			r.mu.Unlock()
-			return false
-		}
-
-		result := r.writeStdout(wrapped)
-		pressure := limiter.report(time.Now(), result, len(wrapped))
-		if coverDebugEnabled() {
-			var throughput int64
-			if result.duration > 0 {
-				throughput = int64(float64(result.written) / result.duration.Seconds())
-			}
-			slog.Debug("cover: tmux image write",
-				slog.Int("bytes", len(wrapped)),
-				slog.Int("written", result.written),
-				slog.Duration("duration", result.duration),
-				slog.Int64("throughputBytesPerSec", throughput),
-				slog.Int("limitBytesPerSec", tmuxImageRateBytes),
-				slog.Int("burstBytes", tmuxImageBurstBytes),
-				slog.String("pressureProxy", pressure),
-			)
-		}
-		if !result.complete(len(wrapped)) {
-			r.mu.Lock()
-			r.recordPlaceFailure(time.Now())
-			r.mu.Unlock()
-			return false
-		}
-		return true
+		return r.writeImageLimited(wrapped)
 	}
 
-	// Non-tmux path: unchanged behavior.
+	// Direct positioning, including Herdr panes.
 	// Build the output sequence
 	var output string
 
@@ -1074,6 +896,9 @@ func (r *CoverRenderer) writePositioned(startRow, startCol int, imageSeq string,
 	// Restore cursor position
 	output += "\x1b[u"
 
+	if kitty.IsHerdr() && imageSeq != "" {
+		return r.writeImageLimited(output)
+	}
 	r.writeStdout(output)
 	return true
 }
@@ -1174,7 +999,7 @@ func buildAnimationSequence(animID, oldAnimID uint32, frameDuration, bgRow, bgCo
 // renderStaticForAnimation renders a static (non-spinning) version of the cover image
 // immediately while the animation is being calculated in the background.
 // Animation frames will overwrite this static image when ready.
-func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32, zIndex int) {
+func renderStaticForAnimation(ctx context.Context, song structs.Song, picURL string, startRow, startCol, cols, rows int, r *CoverRenderer, animID uint32, zIndex int) {
 	// In tmux passthrough mode check the pane offset before doing any work:
 	// on failure nothing may be written (zero output), not even the image
 	// fetch or PNG encode. This query runs before the animation goroutine
@@ -1187,7 +1012,7 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 		}
 	}
 
-	img, err := r.imageCache.GetImage(ctx, picUrl, cols, rows)
+	img, err := r.imageCache.GetImage(ctx, picURL, cols, rows)
 	if err != nil || img == nil {
 		return
 	}
@@ -1206,7 +1031,7 @@ func renderStaticForAnimation(ctx context.Context, song structs.Song, picUrl str
 	}
 
 	r.mu.Lock()
-	r.currentSongId = song.Id
+	r.currentSongID = song.Id
 	r.cachedSeq = kittySeq
 	r.lastStartRow = startRow
 	r.lastStartCol = startCol
@@ -1220,7 +1045,7 @@ func (r *CoverRenderer) ClearCache() {
 	r.imageCache.Clear()
 	r.mu.Lock()
 	r.cachedSeq = ""
-	r.currentSongId = 0
+	r.currentSongID = 0
 	r.imageRendered = false
 	r.mu.Unlock()
 }
@@ -1280,14 +1105,14 @@ func centeredCoverLyricLayout(windowWidth, coverWidth int) (coverStartCol, lyric
 	return coverStartCol, lyricStartCol, lyricWidth
 }
 
-// getCoverUrl extracts the cover URL from a song, with resize parameter.
-func getCoverUrl(song structs.Song) string {
-	picUrl := song.PicUrl
-	if picUrl == "" {
+// getCoverURL extracts the cover URL from a song, with resize parameter.
+func getCoverURL(song structs.Song) string {
+	picURL := song.PicUrl
+	if picURL == "" {
 		return ""
 	}
 	// Add resize parameter for better performance (request smaller image)
-	return app.AddResizeParamForPicUrl(picUrl, 512)
+	return app.AddResizeParamForPicUrl(picURL, 512)
 }
 
 // ClearDisplayed clears the displayed cover image when switching pages.
@@ -1308,7 +1133,7 @@ func (r *CoverRenderer) ClearDisplayed() {
 
 	r.imageRendered = false
 	r.cachedSeq = ""
-	r.currentSongId = 0
+	r.currentSongID = 0
 	r.animImageID = 0
 	r.renderingID = 0
 	r.lastStartRow = 0
