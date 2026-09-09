@@ -313,16 +313,48 @@ func AlignRomanToYRC(yrcLines []YRCLine, romanLRC string) []YRCLine {
 
 // AlignTranslationFragmentsToYRC 将已解析的 LRC 翻译片段（timeMs->text）合并到 YRC 行中。
 // 用于没有 ytlrc，仅有传统 tlyric 的回退场景。
-func AlignTranslationFragmentsToYRC(yrcLines []YRCLine, transFragments map[int64]string) []YRCLine {
+func AlignTranslationFragmentsToYRC(fragments []LRCFragment, yrcLines []YRCLine, transFragments map[int64]string) []YRCLine {
 	if len(transFragments) == 0 || len(yrcLines) == 0 {
 		return yrcLines
 	}
+	type processedFrag struct {
+		content string
+		timeMs  int64
+	}
+	procFragments := make([]processedFrag, len(fragments))
+	for i, frag := range fragments {
+		content := strings.TrimSpace(frag.Content)
+		content = strings.TrimPrefix(content, "\ufeff")
+		procFragments[i] = processedFrag{content: content, timeMs: frag.StartTimeMs}
+	}
 
 	for i := range yrcLines {
-		if trans, ok := transFragments[yrcLines[i].StartTime]; ok && trans != "" {
-			yrcLines[i].TranslatedLyric = trans
+		var sb strings.Builder
+		for _, w := range yrcLines[i].Words {
+			sb.WriteString(w.Word)
+		}
+		lineText := strings.TrimSpace(sb.String())
+		lineText = strings.TrimPrefix(lineText, "\ufeff")
+
+		if lineText == "" {
+			continue
+		}
+
+		var matchedTime int64 = -1
+		for _, frag := range procFragments {
+			if frag.content != "" && (lineText == frag.content || strings.Contains(frag.content, lineText) || strings.Contains(lineText, frag.content)) {
+				matchedTime = frag.timeMs
+				break
+			}
+		}
+
+		if matchedTime != -1 {
+			if trans, ok := transFragments[matchedTime]; ok && trans != "" {
+				yrcLines[i].TranslatedLyric = trans
+			}
 		}
 	}
+
 	return yrcLines
 }
 
