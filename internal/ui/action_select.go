@@ -359,18 +359,15 @@ func buildAlbumActions(n *Netease, selectedIndex int) []ActionItem {
 
 func buildAlbumSubscriptionAction(n *Netease, isSelected bool, selectedIndex int) ActionItem {
 	action := ActionItem{
-		title: model.MenuItem{Title: iconHeartOutline + "管理专辑收藏"},
-		page:  func() model.Page { return toggleAlbumSubscription(n, isSelected) },
+		title: model.MenuItem{Title: iconHeartFilled + "收藏专辑"},
+		page:  func() model.Page { return subscribeAlbum(n, true, isSelected) },
 		group: "subscribe",
 	}
+	// Unknown state must never turn an explicit subscribe action into an unsubscribe.
 	if album, ok := targetAlbum(n, isSelected, selectedIndex); ok {
-		if subscribed, known := n.albumSubscriptions.get(album.Id); known {
-			action.title.Title = iconHeartFilled + "收藏专辑"
-			action.page = func() model.Page { return subscribeAlbum(n, true, isSelected) }
-			if subscribed {
-				action.title.Title = iconHeartOutline + "取消收藏专辑"
-				action.page = func() model.Page { return subscribeAlbum(n, false, isSelected) }
-			}
+		if subscribed, known := n.albumSubscriptions.get(album.Id); known && subscribed {
+			action.title.Title = iconHeartOutline + "取消收藏专辑"
+			action.page = func() model.Page { return subscribeAlbum(n, false, isSelected) }
 		}
 	}
 	return action

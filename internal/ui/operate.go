@@ -524,16 +524,6 @@ func collectSelectedPlaylist(n *Netease, isCollect bool) model.Page {
 // isSub: true 为收藏, false 为取消收藏。
 // isSelected: true 操作选中的歌曲, false 操作正在播放的歌曲。
 func subscribeAlbum(n *Netease, isSub bool, isSelected bool) model.Page {
-	return executeAlbumSubscription(n, isSelected, &isSub)
-}
-
-// toggleAlbumSubscription resolves the server-side state before choosing the
-// action. It is used while the background subscription cache is still loading.
-func toggleAlbumSubscription(n *Netease, isSelected bool) model.Page {
-	return executeAlbumSubscription(n, isSelected, nil)
-}
-
-func executeAlbumSubscription(n *Netease, isSelected bool, requestedState *bool) model.Page {
 	coreLogic := func(n *Netease) model.Page {
 		album, ok := targetAlbum(n, isSelected, n.MustMain().SelectedIndex())
 		if !ok {
@@ -554,10 +544,7 @@ func executeAlbumSubscription(n *Netease, isSelected bool, requestedState *bool)
 		}
 		n.albumSubscriptions.set(album.Id, current)
 
-		desired := !current
-		if requestedState != nil {
-			desired = *requestedState
-		}
+		desired := isSub
 		if desired != current {
 			code, response := n.albumSubscriptions.client.update(album.Id, desired)
 			if _struct.CheckCode(code) != _struct.Success {
