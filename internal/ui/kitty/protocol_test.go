@@ -6,6 +6,9 @@ import (
 	"math/rand/v2"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+	kittyansi "github.com/charmbracelet/x/ansi/kitty"
 )
 
 func setTmuxPassthrough(t *testing.T, enabled bool) {
@@ -79,6 +82,68 @@ func TestWrapWithoutPassthrough(t *testing.T) {
 	}
 }
 
+func TestVirtualPlaceImage(t *testing.T) {
+	seq := VirtualPlaceImage(42, 10, 5)
+	if !strings.Contains(seq, "a=p") {
+		t.Fatalf("expected a=p in %q", seq)
+	}
+	if !strings.Contains(seq, "U=1") {
+		t.Fatalf("expected U=1 in %q", seq)
+	}
+	if !strings.Contains(seq, "i=42") || !strings.Contains(seq, "c=10") || !strings.Contains(seq, "r=5") {
+		t.Fatalf("expected i/c/r params in %q", seq)
+	}
+
+	noRows := VirtualPlaceImage(1, 3, 0)
+	if strings.Contains(noRows, ",r=") {
+		t.Fatalf("rows=0 must omit r: %q", noRows)
+	}
+}
+
+func TestAbsoluteImagePreservesAspectRatio(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	img.Set(0, 0, color.RGBA{1, 2, 3, 255})
+	seq, err := TransmitAndDisplayWithID(img, 4, 2, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(seq, "a=T") || !strings.Contains(seq, "i=7") {
+		t.Fatalf("unexpected transmit seq: %q", seq[:min(80, len(seq))])
+	}
+	if !strings.Contains(seq, ",c=4") {
+		t.Fatalf("expected c=4 in transmit: %q", seq[:min(120, len(seq))])
+	}
+	if strings.Contains(seq, ",r=") {
+		t.Fatalf("absolute placement must derive height from source aspect ratio: %q", seq[:min(120, len(seq))])
+	}
+}
+
+func TestUnicodePlaceholderCellAndRow(t *testing.T) {
+	const imageID uint32 = 42
+	cell := UnicodePlaceholderCell(imageID, 0, 1)
+	if !strings.Contains(cell, string(kittyansi.Placeholder)) {
+		t.Fatalf("cell missing U+10EEEE: %q", cell)
+	}
+	if !strings.Contains(cell, "38;2;0;0;42") {
+		t.Fatalf("expected truecolor FG for id 42, got %q", cell)
+	}
+	if !strings.Contains(cell, string(kittyansi.Diacritic(0))) || !strings.Contains(cell, string(kittyansi.Diacritic(1))) {
+		t.Fatalf("expected row/col diacritics in %q", cell)
+	}
+
+	const cols = 7
+	row := UnicodePlaceholderRow(imageID, 2, cols)
+	if got := ansi.StringWidth(row); got != cols {
+		t.Fatalf("UnicodePlaceholderRow StringWidth = %d, want %d", got, cols)
+	}
+	if strings.Count(row, string(kittyansi.Placeholder)) != cols {
+		t.Fatalf("expected %d placeholders in row", cols)
+	}
+	if !strings.HasSuffix(row, "\x1b[0m") {
+		t.Fatalf("placeholder row must end with SGR reset, got %q", row[max(0, len(row)-8):])
+	}
+}
+
 func TestTransmitLargeImageWithPassthrough(t *testing.T) {
 	setTmuxPassthrough(t, true)
 
@@ -119,5 +184,11 @@ func TestTransmitLargeImageWithPassthrough(t *testing.T) {
 	payload := seq[len("\x1bPtmux;") : len(seq)-len("\x1b\\")]
 	if remaining := strings.ReplaceAll(payload, "\x1b\x1b", ""); strings.Contains(remaining, "\x1b") {
 		t.Errorf("expected all inner ESC bytes to be doubled in multi-chunk sequence")
+	}
+}
+
+func TestDeleteImageDataTargetsOnlyItsImage(t *testing.T) {
+	if got, want := DeleteImageData(42), "\x1b_Ga=d,d=I,i=42,q=2\x1b\\"; got != want {
+		t.Fatalf("delete = %q, want %q", got, want)
 	}
 }

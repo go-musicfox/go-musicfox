@@ -16,7 +16,6 @@ import (
 	"github.com/buger/jsonparser"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/go-musicfox/netease-music/service"
-	"github.com/go-musicfox/netease-music/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"github.com/pkg/errors"
@@ -31,7 +30,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/track"
 	"github.com/go-musicfox/go-musicfox/internal/types"
-	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 	apputils "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
@@ -80,8 +79,12 @@ func NewNetease(app *model.App) *Netease {
 	quality := configs.AppConfig.Player.SongLevel
 	maxSizeMB := configs.AppConfig.Storage.Cache.Limit
 	nameGen := composer.NewFileNameGenerator()
-	nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl)
-	nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl)
+	if err := nameGen.RegisterSongTemplate(configs.AppConfig.Storage.FileNameTpl); err != nil {
+		slog.Warn("invalid song filename template", slogx.Error(err))
+	}
+	if err := nameGen.RegisterLyricTemplate(configs.AppConfig.Storage.FileNameTpl); err != nil {
+		slog.Warn("invalid lyric filename template", slogx.Error(err))
+	}
 	n.trackManager = track.NewManager(
 		track.WithNameGenerator(nameGen),
 		track.WithCacher(track.NewCacher(maxSizeMB)),
@@ -112,7 +115,9 @@ func NewNetease(app *model.App) *Netease {
 	n.App = app
 
 	n.shareSvc = composer.NewShareService()
-	n.shareSvc.RegisterTemplates(configs.AppConfig.Share)
+	if err := n.shareSvc.RegisterTemplates(configs.AppConfig.Share); err != nil {
+		slog.Warn("invalid share templates", slogx.Error(err))
+	}
 
 	return n
 }
@@ -125,11 +130,17 @@ func (n *Netease) Components() []model.Component {
 	if n.spectrogramRenderer.IsEnabled() {
 		components = append(components, n.spectrogramRenderer)
 	}
+	// In tmux Unicode-placeholder mode Cover must run before Lyric so the
+	// same frame can splice U+10EEEE cells after transmit/virtual-place.
+	// Non-tmux absolute overlays still render last so CUP/APC win over the
+	// normal layout pass.
+	coverEarly := n.coverRenderer.IsEnabled() && kitty.UseTmuxPassthrough()
+	if coverEarly {
+		components = append(components, n.coverRenderer)
+	}
 	components = append(components, n.lyricRenderer)
 	components = append(components, n.songInfoRenderer, n.progressRenderer)
-	// CoverRenderer uses absolute positioning and returns 0 lines, so it must
-	// be rendered last to overlay the normal layout.
-	if n.coverRenderer.IsEnabled() {
+	if n.coverRenderer.IsEnabled() && !coverEarly {
 		components = append(components, n.coverRenderer)
 	}
 	return components
@@ -170,7 +181,7 @@ func (n *Netease) ToSearchPage(searchType SearchType) (model.Page, tea.Cmd) {
 
 func (n *Netease) InitHook(_ *model.App) {
 	config := configs.AppConfig
-	dataDir := app.DataDir()
+	dataDir := apputils.DataDir()
 
 	// 注册 TUI 内 toast 回调（此时 App.Run 已启动，program 就绪）
 	n.registerToastHook()
@@ -211,7 +222,7 @@ func (n *Netease) InitHook(_ *model.App) {
 	}
 
 	appCookieJar = jar
-	util.SetGlobalCookieJar(appCookieJar)
+	neteaseutil.SetGlobalCookieJar(appCookieJar)
 
 	// 获取用户信息
 	errorx.Go(func() {
@@ -436,14 +447,14 @@ func (n *Netease) InitHook(_ *model.App) {
 				"debug", configs.AppConfig.Main.Debug,
 				"seenVersion", seen.Version,
 			)
-		if shouldShow {
-			if !configs.AppConfig.Main.Debug {
-				if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
-					slog.Error("changelog: failed to persist seen version", slogx.Error(err))
-				} else {
-					slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
+			if shouldShow {
+				if !configs.AppConfig.Main.Debug {
+					if err := table.SetByKVModel(storage.ChangelogSeen{}, storage.ChangelogSeen{Version: types.AppVersion}); err != nil {
+						slog.Error("changelog: failed to persist seen version", slogx.Error(err))
+					} else {
+						slog.Debug("changelog: persisted seen version", "version", types.AppVersion)
+					}
 				}
-			}
 				app := n.App
 				slog.Debug("changelog: scheduling AfterFunc", "hasApp", app != nil)
 				time.AfterFunc(max(configs.AppConfig.Startup.ToModel().LoadingDuration, time.Second)-750*time.Millisecond, func() {
@@ -595,6 +606,24 @@ func (n *Netease) GetCoverEndColumn() int {
 	return n.coverRenderer.GetCoverEndColumn()
 }
 
+// CoverPlaceholderSegment returns a Unicode-placeholder segment for the cover
+// on absolute screen row absRow (1-based). Thin passthrough to CoverRenderer.
+func (n *Netease) CoverPlaceholderSegment(absRow int) (startCol int, cells string, ok bool) {
+	if n == nil || n.coverRenderer == nil {
+		return 0, "", false
+	}
+	return n.coverRenderer.PlaceholderSegment(absRow)
+}
+
+// CoverPlaceholderCacheFields returns tmux Unicode cover identity/geometry for
+// lyric output-cache invalidation.
+func (n *Netease) CoverPlaceholderCacheFields() (imageID uint32, startRow, startCol, cols, rows int) {
+	if n == nil || n.coverRenderer == nil {
+		return 0, 0, 0, 0, 0
+	}
+	return n.coverRenderer.PlaceholderCacheFields()
+}
+
 // GetLyricPosition returns the current lyric display position.
 // Returns (startRow, lineCount). If lyrics are not visible, returns (0, 0).
 func (n *Netease) GetLyricPosition() (startRow int, lineCount int) {
@@ -692,10 +721,10 @@ func (n *Netease) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ss := registry.CurrentStyleSet(isDark)
 		if ss != nil {
 			style.SetStyleSet(*ss)
-			n.App.SetStyleSet(*ss)
+			n.SetStyleSet(*ss)
 		}
 		n.notifyThemeSwitch(n.App, "外观模式已切换", configs.CurrentThemeRegistry().CurrentName(isDark))
-		return n, tea.Sequence(cmd, n.App.RerenderCmd(true))
+		return n, tea.Sequence(cmd, n.RerenderCmd(true))
 	default:
 		_, cmd := n.App.Update(msg)
 		return n, cmd

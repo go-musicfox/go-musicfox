@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // processRSSBytes returns the process resident set size in bytes.
@@ -23,7 +25,9 @@ func processRSSBytes() uint64 {
 }
 
 func rssFromPS() uint64 {
-	out, err := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(os.Getpid())).Output()
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "ps", "-o", "rss=", "-p", strconv.Itoa(os.Getpid())).Output()
 	if err != nil {
 		return 0
 	}

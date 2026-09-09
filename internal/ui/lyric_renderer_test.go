@@ -1,12 +1,14 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
+	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 )
 
 func TestYRCWordTimings(t *testing.T) {
@@ -48,5 +50,43 @@ func TestBuildYRCLineStringPreservesTextAndTranslation(t *testing.T) {
 	rendered := (&LyricRenderer{}).buildYRCLineString(line, 100, true)
 	if got, want := ansi.Strip(rendered), "甲乙 [translation]"; got != want {
 		t.Errorf("visible lyric = %q, want %q", got, want)
+	}
+}
+
+func TestPlaceholderRowsPreserveGeometry(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	cover := &CoverRenderer{
+		imageRendered:  true,
+		displayImageID: 42,
+		cols:           4,
+		rows:           2,
+		lastStartRow:   10,
+		lastStartCol:   3,
+	}
+	lr := &LyricRenderer{netease: &Netease{coverRenderer: cover}}
+
+	var pad strings.Builder
+	lr.writePaddingRow(&pad, 10, 20)
+	gotPad := pad.String()
+	if ansi.StringWidth(strings.TrimSuffix(gotPad, "\n")) != 20 {
+		t.Fatalf("padding row width must match the pane, got %q", gotPad)
+	}
+	if !strings.ContainsRune(gotPad, '\U0010EEEE') {
+		t.Fatal("padding row missing placeholder cells")
+	}
+
+	var lead strings.Builder
+	lr.writeLyricLeadingPadding(&lead, 11, 12)
+	gotLead := lead.String()
+	if ansi.StringWidth(gotLead) != 12 {
+		t.Fatalf("leading padding width must match the text position, got %q", gotLead)
+	}
+
+	var noPH strings.Builder
+	lr.writePaddingRow(&noPH, 99, 20)
+	if strings.ContainsRune(noPH.String(), '\U0010EEEE') {
+		t.Fatal("rows outside the cover must not contain placeholders")
 	}
 }
