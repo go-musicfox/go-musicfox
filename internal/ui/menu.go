@@ -94,13 +94,11 @@ func (e *baseMenu) ContextMenuItems(a *model.App, index int) []model.ContextMenu
 			title := selectedContextTitle(menu, index)
 			items = append(items, buildGroupItems("sel", title, selActions, false)...)
 		}
-	}
-
-	if song, ok := getTargetSong(e.netease, false); ok {
+	} else if song, ok := getTargetSong(e.netease, false); ok {
 		playActions := actionItemsForMenu(e.netease, menu.GetMenuKey(), true, -1)
 		if len(playActions) > 0 {
 			title := iconMusicNote + "当前播放：" + songTitleBrief(song.Name)
-			items = append(items, buildGroupItems("play", title, playActions, len(items) > 0)...)
+			items = append(items, buildGroupItems("play", title, playActions, false)...)
 		}
 	}
 
@@ -142,7 +140,11 @@ func runContextAction(actions []ActionItem, i int, a *model.App) (model.Page, te
 	}
 	action := actions[i]
 	if action.page != nil {
-		return action.page(), nil
+		page := action.page()
+		if page != nil {
+			return page, nil
+		}
+		return nil, a.RerenderCmd(true)
 	}
 	if action.action != nil {
 		action.action()

@@ -137,8 +137,10 @@ func actionItemsForMenu(n *Netease, from string, playing bool, selectedIndex int
 	var actions []ActionItem
 	menu := n.MustMain().CurMenu()
 
-	if playing || isSongsProvider(menu) {
-		actions = append(actions, buildSongActions(n, isSelected)...)
+	if isSelected && isAlbumsProvider(menu) {
+		actions = append(actions, buildAlbumActions(n, selectedIndex)...)
+	} else if playing || isSongsProvider(menu) {
+		actions = append(actions, buildSongActions(n, isSelected, selectedIndex)...)
 	}
 
 	if canCollectPlaylist(menu) {
@@ -229,14 +231,14 @@ func selectedContextTitle(menu model.Menu, index int) string {
 // 用于在右键菜单「当前选中」标题中区分歌曲/歌单/专辑/歌手。
 // 无法识别的类型回退到通用的目标图标。
 func selectedTypeIcon(menu model.Menu) string {
-	switch menu.(type) {
-	case SongsMenu:
+	switch {
+	case isSongsProvider(menu):
 		return iconSong
-	case PlaylistsMenu:
+	case isPlaylistsProvider(menu):
 		return iconPlaylist
-	case AlbumsMenu:
+	case isAlbumsProvider(menu):
 		return iconAlbum
-	case ArtistsMenu:
+	case isArtistsProvider(menu):
 		return iconArtist
 	default:
 		return iconCrosshairs
@@ -276,7 +278,7 @@ func buildPlaylistActions(n *Netease) []ActionItem {
 	return items
 }
 
-func buildSongActions(n *Netease, isSelected bool) []ActionItem {
+func buildSongActions(n *Netease, isSelected bool, selectedIndex int) []ActionItem {
 	items := []ActionItem{
 		{
 			title:  model.MenuItem{Title: iconAlbum + "所属专辑"},
@@ -287,16 +289,6 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			title:  model.MenuItem{Title: iconArtist + "所属歌手"},
 			action: func() { goToArtistOfSong(n, isSelected) },
 			group:  "nav",
-		},
-		{
-			title: model.MenuItem{Title: iconHeartFilled + "收藏专辑"},
-			page:  func() model.Page { return subscribeAlbum(n, true, isSelected) },
-			group: "subscribe",
-		},
-		{
-			title: model.MenuItem{Title: iconHeartOutline + "取消收藏专辑"},
-			page:  func() model.Page { return subscribeAlbum(n, false, isSelected) },
-			group: "subscribe",
 		},
 		{
 			title: model.MenuItem{Title: iconHeartFilled + "收藏歌手"},
@@ -354,7 +346,31 @@ func buildSongActions(n *Netease, isSelected bool) []ActionItem {
 			group:  "discover",
 		},
 	}
+
+	albumAction := buildAlbumSubscriptionAction(n, isSelected, selectedIndex)
+	items = append(items[:2], append([]ActionItem{albumAction}, items[2:]...)...)
 	return items
+}
+
+func buildAlbumActions(n *Netease, selectedIndex int) []ActionItem {
+	albumAction := buildAlbumSubscriptionAction(n, true, selectedIndex)
+	return []ActionItem{albumAction}
+}
+
+func buildAlbumSubscriptionAction(n *Netease, isSelected bool, selectedIndex int) ActionItem {
+	action := ActionItem{
+		title: model.MenuItem{Title: iconHeartFilled + "收藏专辑"},
+		page:  func() model.Page { return subscribeAlbum(n, true, isSelected) },
+		group: "subscribe",
+	}
+	// Unknown state must never turn an explicit subscribe action into an unsubscribe.
+	if album, ok := targetAlbum(n, isSelected, selectedIndex); ok {
+		if subscribed, known := n.albumSubscriptions.get(album.Id); known && subscribed {
+			action.title.Title = iconHeartOutline + "取消收藏专辑"
+			action.page = func() model.Page { return subscribeAlbum(n, false, isSelected) }
+		}
+	}
+	return action
 }
 
 func canShare(menu model.Menu) bool {
@@ -375,11 +391,25 @@ func canOpenInWeb(menu model.Menu) bool {
 }
 
 func canCollectPlaylist(menu model.Menu) bool {
-	_, ok := menu.(PlaylistsMenu)
-	return ok
+	return isPlaylistsProvider(menu)
 }
 
 func isSongsProvider(menu model.Menu) bool {
-	_, ok := menu.(SongsMenu)
-	return ok
+	songs, ok := menu.(SongsMenu)
+	return ok && len(songs.Songs()) > 0
+}
+
+func isAlbumsProvider(menu model.Menu) bool {
+	albums, ok := menu.(AlbumsMenu)
+	return ok && len(albums.Albums()) > 0
+}
+
+func isPlaylistsProvider(menu model.Menu) bool {
+	playlists, ok := menu.(PlaylistsMenu)
+	return ok && len(playlists.Playlists()) > 0
+}
+
+func isArtistsProvider(menu model.Menu) bool {
+	artists, ok := menu.(ArtistsMenu)
+	return ok && len(artists.Artists()) > 0
 }

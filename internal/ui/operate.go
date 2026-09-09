@@ -525,11 +525,8 @@ func collectSelectedPlaylist(n *Netease, isCollect bool) model.Page {
 // isSelected: true 操作选中的歌曲, false 操作正在播放的歌曲。
 func subscribeAlbum(n *Netease, isSub bool, isSelected bool) model.Page {
 	coreLogic := func(n *Netease) model.Page {
-		song, ok := getTargetSong(n, isSelected)
+		album, ok := targetAlbum(n, isSelected, n.MustMain().SelectedIndex())
 		if !ok {
-			return nil
-		}
-		if song.Album.Id == 0 {
 			notify.Notify(notify.NotifyContent{
 				Title:   model.T(MsgOperationFailed),
 				Text:    model.T(MsgErrorNoAlbum),
@@ -539,41 +536,66 @@ func subscribeAlbum(n *Netease, isSub bool, isSelected bool) model.Page {
 			})
 			return nil
 		}
-		t := "1"
-		if !isSub {
-			t = "2" // API 中 '1' 为收藏, '2'（或任何非 1）为取消收藏
-		}
-		s := service.AlbumSubService{ID: strconv.FormatInt(song.Album.Id, 10), T: t}
-		if code, resp := s.AlbumSub(); code != 200 {
-			var msg string
-			if msg, _ = jsonparser.GetString(resp, "message"); msg == "" {
-				msg, _ = jsonparser.GetString(resp, "data", "message")
-			}
-			if msg == "" {
-				msg = model.T(MsgOperationFailed)
-			}
-			notify.Notify(notify.NotifyContent{
-				Title:   msg,
-				Text:    song.Album.Name,
-				Url:     types.AppGithubUrl,
-				GroupId: types.GroupID,
-			})
+
+		current, err := fetchAlbumSubscriptionState(n.albumSubscriptions.client, album.Id)
+		if err != nil {
+			notifyAlbumSubscriptionFailure(album.Name, err.Error())
 			return nil
 		}
+		n.albumSubscriptions.set(album.Id, current)
+
+		desired := isSub
+		if desired != current {
+			code, response := n.albumSubscriptions.client.update(album.Id, desired)
+			if _struct.CheckCode(code) != _struct.Success {
+				notifyAlbumSubscriptionFailure(album.Name, operationErrorMessage(response))
+				return nil
+			}
+			n.albumSubscriptions.set(album.Id, desired)
+		}
+
 		title := "已收藏专辑"
-		if !isSub {
+		if !desired {
 			title = "已取消收藏专辑"
 		}
 		notify.Notify(notify.NotifyContent{
 			Title:   title,
-			Text:    song.Album.Name,
-			Url:     types.AppGithubUrl,
+			Text:    album.Name,
+			Url:     netease.WebUrlOfAlbum(album.Id),
 			GroupId: types.GroupID,
-			Icon:    "",
+			Level:   notify.ToastSuccess,
 		})
 		return nil
 	}
 	return NewOperation(n, coreLogic).ShowLoading().NeedsAuth().Execute()
+}
+
+func fetchAlbumSubscriptionState(client albumSubscriptionClient, albumID int64) (bool, error) {
+	code, response := client.dynamic(albumID)
+	if _struct.CheckCode(code) != _struct.Success {
+		return false, fmt.Errorf("%s", operationErrorMessage(response))
+	}
+	return albumSubscriptionFromDynamic(response)
+}
+
+func operationErrorMessage(response []byte) string {
+	if msg, _ := jsonparser.GetString(response, "message"); msg != "" {
+		return msg
+	}
+	if msg, _ := jsonparser.GetString(response, "data", "message"); msg != "" {
+		return msg
+	}
+	return model.T(MsgOperationFailed)
+}
+
+func notifyAlbumSubscriptionFailure(albumName, message string) {
+	notify.Notify(notify.NotifyContent{
+		Title:   message,
+		Text:    albumName,
+		Url:     types.AppGithubUrl,
+		GroupId: types.GroupID,
+		Level:   notify.ToastError,
+	})
 }
 
 // subscribeArtist 收藏或取消收藏歌曲的歌手
@@ -971,7 +993,7 @@ func shareItem(n *Netease, isSelected bool, selectedIndex int) {
 		})
 		return
 	}
-	
+
 	// 分享成功通知
 	notify.Notify(notify.NotifyContent{
 		Title:   model.T(MsgOperationShareSuccess),
