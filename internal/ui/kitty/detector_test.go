@@ -10,7 +10,7 @@ import (
 func clearTerminalEnv(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{
-		"TMUX", "STY", "TERM", "TERM_PROGRAM",
+		"TMUX", "STY", "TERM", "TERM_PROGRAM", "HERDR_PANE_ID",
 		"KITTY_WINDOW_ID", "WEZTERM_EXECUTABLE",
 		"GHOSTTY_RESOURCES_DIR", "KONSOLE_VERSION",
 	} {
@@ -184,5 +184,32 @@ func TestParseTmuxShowEnvironment(t *testing.T) {
 		if env[k] != v {
 			t.Errorf("env[%q] = %q, want %q", k, env[k], v)
 		}
+	}
+}
+
+func TestHerdrStaticImagesOnly(t *testing.T) {
+	clearTerminalEnv(t)
+	resetDetectionState(t)
+	t.Setenv("TERM_PROGRAM", "ghostty")
+	t.Setenv("HERDR_PANE_ID", "1")
+	if !detectKittySupport() {
+		t.Fatal("static Kitty images should remain supported")
+	}
+	if UseTmuxPassthrough() {
+		t.Fatal("Herdr must not enable tmux wrapping")
+	}
+	if !RequiresStaticImages() {
+		t.Fatal("Herdr does not support native animation")
+	}
+	if got := imageTargetSize(false, RequiresStaticImages()); got != 320 {
+		t.Fatalf("static Herdr image size = %d", got)
+	}
+	t.Setenv("HERDR_PANE_ID", "")
+	if RequiresStaticImages() {
+		t.Fatal("direct terminal animation should remain available")
+	}
+	SetTmuxPassthroughForTest(true)
+	if !RequiresStaticImages() {
+		t.Fatal("tmux animation must remain disabled")
 	}
 }
