@@ -27,6 +27,10 @@ const (
 	iosAppVersion = "9.0.65"
 )
 
+// apiPathPattern 匹配 /api/ /weapi/ /eapi/ 等路径段，每次请求
+// regexp.Compile 同一正则纯属浪费
+var apiPathPattern = regexp.MustCompile(`/\w*api/`)
+
 var (
 	globalDeviceId string
 	deviceIdOnce   sync.Once
@@ -166,13 +170,11 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 	if options.Crypto == "weapi" {
 		data["csrf_token"] = csrfToken
 		data = Weapi(data)
-		reg, _ := regexp.Compile(`/\w*api/`)
-		url = reg.ReplaceAllString(url, "/weapi/")
+		url = apiPathPattern.ReplaceAllString(url, "/weapi/")
 	} else if options.Crypto == "linuxapi" {
 		linuxApiData := make(map[string]interface{}, 3)
 		linuxApiData["method"] = method
-		reg, _ := regexp.Compile(`/\w*api/`)
-		linuxApiData["url"] = reg.ReplaceAllString(url, "/api/")
+		linuxApiData["url"] = apiPathPattern.ReplaceAllString(url, "/api/")
 		linuxApiData["params"] = data
 		data = Linuxapi(linuxApiData)
 		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36")
@@ -182,7 +184,6 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		for key, value := range data {
 			eapiData[key] = value
 		}
-		rand.Seed(time.Now().UnixNano())
 		header := map[string]string{
 			"osver":       osver,
 			"deviceId":    deviceId,
@@ -209,8 +210,7 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 		}
 		eapiData["header"] = header
 		data = Eapi(options.Url, eapiData)
-		reg, _ := regexp.Compile(`/\w*api/`)
-		url = reg.ReplaceAllString(url, "/eapi/")
+		url = apiPathPattern.ReplaceAllString(url, "/eapi/")
 	}
 
 	var (
@@ -271,7 +271,10 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 
 	resCode, err = jsonparser.GetFloat(resResp, "code")
 	if err != nil {
-		resCode = 200
+		// 响应没有 code 字段：风控/网关可能返回 HTML、空体或非 JSON 错误。
+		// 不能默认当 200——上层会拿到空结果且无任何错误提示，用户看到
+		// "歌单为空" 而不是 "请求被拦截"。
+		resCode = 520
 	}
 	return
 }

@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ebitengine/purego/objc"
+
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/cocoa"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/mediaplayer"
@@ -61,6 +63,35 @@ func (s *RemoteControl) registerCommands() {
 	s.remoteCommandCenter.SkipBackwardCommand().SetPreferredIntervals(intervals)
 	s.remoteCommandCenter.SkipForwardCommand().SetPreferredIntervals(intervals)
 
+	// addTarget:action: 是追加语义，且 SetPlayingInfo 每次调用都会触发本函数
+	// （"mac 26 不生效" 的旧 workaround）。必须幂等：先按全部已注册 action
+	// remove 再 add，否则一段时间后按一次媒体键会触发 N 次 handler
+	// （Play/Pause 被 toggle N 次）。
+	commands := []mediaplayer.MPRemoteCommand{
+		s.remoteCommandCenter.PlayCommand(),
+		s.remoteCommandCenter.PauseCommand(),
+		s.remoteCommandCenter.StopCommand(),
+		s.remoteCommandCenter.TogglePlayPauseCommand(),
+		s.remoteCommandCenter.PreviousTrackCommand(),
+		s.remoteCommandCenter.NextTrackCommand(),
+		s.remoteCommandCenter.ChangeRepeatModeCommand().MPRemoteCommand,
+		s.remoteCommandCenter.ChangeShuffleModeCommand().MPRemoteCommand,
+		s.remoteCommandCenter.ChangePlaybackPositionCommand().MPRemoteCommand,
+		s.remoteCommandCenter.LikeCommand().MPRemoteCommand,
+	}
+	actions := []objc.SEL{
+		sel_handlePlayCommand, sel_handlePauseCommand, sel_handleStopCommand,
+		sel_handleTogglePlayPauseCommand, sel_handlePreviousTrackCommand,
+		sel_handleNextTrackCommand, sel_handleChangeRepeatModeCommand,
+		sel_handleChangeShuffleModeCommand, sel_handleChangePlaybackPositionCommand,
+		sel_handleLikeCommand,
+	}
+	for _, cmd := range commands {
+		for _, action := range actions {
+			cmd.RemoveTargetAction(s.commandHandler.ID, action)
+		}
+	}
+
 	s.remoteCommandCenter.PlayCommand().AddTargetAction(s.commandHandler.ID, sel_handlePlayCommand)
 	s.remoteCommandCenter.PauseCommand().AddTargetAction(s.commandHandler.ID, sel_handlePauseCommand)
 	s.remoteCommandCenter.StopCommand().AddTargetAction(s.commandHandler.ID, sel_handleStopCommand)
@@ -95,6 +126,10 @@ func (s *RemoteControl) registerCommands() {
 	// s.remoteCommandCenter.DisableLanguageOptionCommand().AddTargetAction(s.commandHandler.ID, sel_handleDisableLanguageOptionCommand)
 
 	workspaceNC := cocoa.NSWorkspace_sharedWorkspace().NotificationCenter()
+	// 同样先移除再添加，避免重复注册观察者
+	workspaceNC.RemoveObserverNameObject(s.commandHandler.ID, core.String("NSWorkspaceWillSleepNotification"), core.NSObject{})
+	workspaceNC.RemoveObserverNameObject(s.commandHandler.ID, core.String("NSWorkspaceWillPowerOffNotification"), core.NSObject{})
+	workspaceNC.RemoveObserverNameObject(s.commandHandler.ID, core.String("NSWorkspaceDidWakeNotification"), core.NSObject{})
 	workspaceNC.AddObserverSelectorNameObject(s.commandHandler.ID, sel_handleWillSleepOrPowerOff, core.String("NSWorkspaceWillSleepNotification"), core.NSObject{})
 	workspaceNC.AddObserverSelectorNameObject(s.commandHandler.ID, sel_handleWillSleepOrPowerOff, core.String("NSWorkspaceWillPowerOffNotification"), core.NSObject{})
 	workspaceNC.AddObserverSelectorNameObject(s.commandHandler.ID, sel_handleDidWake, core.String("NSWorkspaceDidWakeNotification"), core.NSObject{})

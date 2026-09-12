@@ -1,12 +1,22 @@
 package _struct
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/buger/jsonparser"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
+
+// walkArray 遍历 JSON 数组；解析失败（路径缺失/结构不符）时记一条
+// Debug 日志。原来所有 ArrayEach 错误都被忽略，解析失败与"返回空列表"
+// 无法区分，上层只能显示空菜单，排查困难。
+func walkArray(data []byte, fn func(value []byte, dataType jsonparser.ValueType, offset int, err error), keys ...string) {
+	if _, err := jsonparser.ArrayEach(data, fn, keys...); err != nil {
+		slog.Debug("json array parse failed", "keys", keys, "error", err)
+	}
+}
 
 type ResCode uint8
 
@@ -60,7 +70,7 @@ func ReplaceSpecialStr(str string) string {
 
 // GetDailySongs 获取每日歌曲列表
 func GetDailySongs(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromShortNameSongsJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -72,7 +82,7 @@ func GetDailySongs(data []byte) (list []structs.Song) {
 
 // GetRecentSongs 获取每日歌曲列表
 func GetRecentSongs(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, _ error) {
 		if t, _ := jsonparser.GetString(value, "resourceType"); t != "SONG" {
 			return
 		}
@@ -95,7 +105,7 @@ func GetRecentSongs(data []byte) (list []structs.Song) {
 // GetDailyPlaylists 获取每日推荐歌单
 func GetDailyPlaylists(data []byte) (list []structs.Playlist) {
 
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if playlist, err := structs.NewPlaylistFromJson(value); err == nil {
 			list = append(list, playlist)
 		}
@@ -106,7 +116,7 @@ func GetDailyPlaylists(data []byte) (list []structs.Playlist) {
 
 // GetSongsOfPlaylist 获取播放列表的歌曲
 func GetSongsOfPlaylist(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromShortNameSongsJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -123,7 +133,7 @@ func GetSongsOfAlbum(data []byte) (list []structs.Song) {
 		album = parsedAlbum
 	}
 
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromAlbumSongsJson(value); err == nil {
 			if song.PicUrl == "" && album.PicUrl != "" {
 				song.Album.PicUrl = album.PicUrl
@@ -139,7 +149,7 @@ func GetSongsOfAlbum(data []byte) (list []structs.Song) {
 // GetPlaylists 获取播放列表
 func GetPlaylists(data []byte) (list []structs.Playlist) {
 
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if playlist, err := structs.NewPlaylistFromJson(value); err == nil {
 			list = append(list, playlist)
 		}
@@ -151,7 +161,7 @@ func GetPlaylists(data []byte) (list []structs.Playlist) {
 // GetPlaylistsFromHighQuality 获取精品歌单
 func GetPlaylistsFromHighQuality(data []byte) (list []structs.Playlist) {
 
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if playlist, err := structs.NewPlaylistFromJson(value); err == nil {
 			list = append(list, playlist)
 		}
@@ -162,7 +172,7 @@ func GetPlaylistsFromHighQuality(data []byte) (list []structs.Playlist) {
 
 // GetFmSongs 获取每日歌曲列表
 func GetFmSongs(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromCommonJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -173,7 +183,7 @@ func GetFmSongs(data []byte) (list []structs.Song) {
 
 // GetSimiSongs 获取相似歌曲列表
 func GetSimiSongs(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromCommonJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -184,7 +194,7 @@ func GetSimiSongs(data []byte) (list []structs.Song) {
 
 // GetIntelligenceSongs 获取心动模式歌曲列表
 func GetIntelligenceSongs(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromIntelligenceJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -196,7 +206,7 @@ func GetIntelligenceSongs(data []byte) (list []structs.Song) {
 
 // GetNewAlbums 获取最新专辑列表
 func GetNewAlbums(data []byte) (albums []structs.Album) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
 		if album, err := structs.NewAlbumFromAlbumJson(value); err == nil {
 			albums = append(albums, album)
@@ -209,7 +219,7 @@ func GetNewAlbums(data []byte) (albums []structs.Album) {
 
 // GetAlbumsSublist 获取收藏专辑列表
 func GetAlbumsSublist(data []byte) (albums []structs.Album) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
 		if album, err := structs.NewAlbumFromAlbumJson(value); err == nil {
 			albums = append(albums, album)
@@ -222,7 +232,7 @@ func GetAlbumsSublist(data []byte) (albums []structs.Album) {
 
 // GetTopAlbums 获取专辑列表
 func GetTopAlbums(data []byte) (albums []structs.Album) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
 		if album, err := structs.NewAlbumFromAlbumJson(value); err == nil {
 			albums = append(albums, album)
@@ -235,7 +245,7 @@ func GetTopAlbums(data []byte) (albums []structs.Album) {
 
 // GetArtistHotAlbums 获取歌手热门专辑列表
 func GetArtistHotAlbums(data []byte) (albums []structs.Album) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 
 		if album, err := structs.NewAlbumFromAlbumJson(value); err == nil {
 			albums = append(albums, album)
@@ -248,7 +258,7 @@ func GetArtistHotAlbums(data []byte) (albums []structs.Album) {
 
 // GetSongsOfSearchResult 获取搜索结果的歌曲
 func GetSongsOfSearchResult(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromShortNameSongsJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -260,7 +270,7 @@ func GetSongsOfSearchResult(data []byte) (list []structs.Song) {
 
 // GetAlbumsOfSearchResult 获取搜索结果的专辑
 func GetAlbumsOfSearchResult(data []byte) (list []structs.Album) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if album, err := structs.NewAlbumFromAlbumJson(value); err == nil {
 			list = append(list, album)
 		}
@@ -272,7 +282,7 @@ func GetAlbumsOfSearchResult(data []byte) (list []structs.Album) {
 
 // GetPlaylistsOfSearchResult 获取搜索结果的歌单
 func GetPlaylistsOfSearchResult(data []byte) (list []structs.Playlist) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if playlist, err := structs.NewPlaylistFromJson(value); err == nil {
 			list = append(list, playlist)
 		}
@@ -284,7 +294,7 @@ func GetPlaylistsOfSearchResult(data []byte) (list []structs.Playlist) {
 
 // GetArtistsOfSearchResult 获取搜索结果的歌手
 func GetArtistsOfSearchResult(data []byte) (list []structs.Artist) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if artist, err := structs.NewArtist(value); err == nil {
 			list = append(list, artist)
 		}
@@ -296,7 +306,7 @@ func GetArtistsOfSearchResult(data []byte) (list []structs.Artist) {
 
 // GetArtistsOfTopArtists 获取热门歌手
 func GetArtistsOfTopArtists(data []byte) (list []structs.Artist) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if artist, err := structs.NewArtist(value); err == nil {
 			list = append(list, artist)
 		}
@@ -308,7 +318,7 @@ func GetArtistsOfTopArtists(data []byte) (list []structs.Artist) {
 
 // GetArtistsSublist 获取收藏歌手
 func GetArtistsSublist(data []byte) (list []structs.Artist) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if artist, err := structs.NewArtist(value); err == nil {
 			list = append(list, artist)
 		}
@@ -320,7 +330,7 @@ func GetArtistsSublist(data []byte) (list []structs.Artist) {
 
 // GetSongsOfArtist 获取歌手的歌曲
 func GetSongsOfArtist(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromArtistSongsJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -332,7 +342,7 @@ func GetSongsOfArtist(data []byte) (list []structs.Song) {
 
 // GetUsersOfSearchResult 从搜索结果中获取用户列表
 func GetUsersOfSearchResult(data []byte) (list []structs.User) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewUserFromSearchResultJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -344,7 +354,7 @@ func GetUsersOfSearchResult(data []byte) (list []structs.User) {
 
 // GetDjRadiosOfSearchResult 从搜索结果中获取电台列表
 func GetDjRadiosOfSearchResult(data []byte) (list []structs.DjRadio) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if radio, err := structs.NewDjRadioFromJson(value); err == nil {
 			list = append(list, radio)
 		}
@@ -356,7 +366,7 @@ func GetDjRadiosOfSearchResult(data []byte) (list []structs.DjRadio) {
 
 // GetDjRadios 获取电台列表
 func GetDjRadios(data []byte) (list []structs.DjRadio) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if radio, err := structs.NewDjRadioFromJson(value); err == nil {
 			list = append(list, radio)
 		}
@@ -368,7 +378,7 @@ func GetDjRadios(data []byte) (list []structs.DjRadio) {
 
 // GetDjRadiosOfToday 获取今日优选电台列表
 func GetDjRadiosOfToday(data []byte) (list []structs.DjRadio) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if radio, err := structs.NewDjRadioFromJson(value); err == nil {
 			list = append(list, radio)
 		}
@@ -380,7 +390,7 @@ func GetDjRadiosOfToday(data []byte) (list []structs.DjRadio) {
 
 // GetDjRadiosOfTopDj 获取热门电台列表
 func GetDjRadiosOfTopDj(data []byte) (list []structs.DjRadio) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if radio, err := structs.NewDjRadioFromJson(value); err == nil {
 			list = append(list, radio)
 		}
@@ -392,7 +402,7 @@ func GetDjRadiosOfTopDj(data []byte) (list []structs.DjRadio) {
 
 // GetSongsOfDjRadio 获取电台节目列表的歌曲
 func GetSongsOfDjRadio(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromDjRadioProgramJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -403,7 +413,7 @@ func GetSongsOfDjRadio(data []byte) (list []structs.Song) {
 
 // GetSongsOfDjRank 获取电台节目排行榜列表的歌曲
 func GetSongsOfDjRank(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromDjRankProgramJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -414,7 +424,7 @@ func GetSongsOfDjRank(data []byte) (list []structs.Song) {
 
 // GetSongsOfDjHoursRank 获取电台节目24小时排行榜列表的歌曲
 func GetSongsOfDjHoursRank(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromDjRankProgramJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -426,7 +436,7 @@ func GetSongsOfDjHoursRank(data []byte) (list []structs.Song) {
 // GetRanks 获取排行榜
 func GetRanks(data []byte) (list []structs.Rank) {
 
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if rank, err := structs.NewRankFromJson(value); err == nil {
 			list = append(list, rank)
 		}
@@ -437,7 +447,7 @@ func GetRanks(data []byte) (list []structs.Rank) {
 
 // GetSongsOfCloud 获取云盘的歌曲
 func GetSongsOfCloud(data []byte) (list []structs.Song) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if song, err := structs.NewSongFromCloudJson(value); err == nil {
 			list = append(list, song)
 		}
@@ -448,7 +458,7 @@ func GetSongsOfCloud(data []byte) (list []structs.Song) {
 
 // GetDjCategory 获取电台分类
 func GetDjCategory(data []byte) (list []structs.DjCategory) {
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+	walkArray(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
 		if cate, err := structs.NewDjCategoryFromJson(value); err == nil {
 			list = append(list, cate)
 		}

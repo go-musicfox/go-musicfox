@@ -53,6 +53,11 @@ func FetchLikeSongs(userId int64, getAll bool) (playlist []structs.Song, err err
 		err = NetworkErr
 		return
 	}
+	if len(playlists) == 0 {
+		// 风控降级/异常响应可能返回 Success + 空列表，直接索引会越界崩溃整个 TUI
+		err = NetworkErr
+		return
+	}
 	codeType, songs = FetchSongsOfPlaylist(playlists[0].Id, getAll)
 	if codeType != _struct.Success {
 		err = NetworkErr
