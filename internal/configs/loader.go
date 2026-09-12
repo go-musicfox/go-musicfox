@@ -40,6 +40,27 @@ func NewConfigFromTomlFile(tomlPath string) (*Config, error) {
 		}
 	}
 
+	return newConfigFromKoanf(k)
+}
+
+// NewDefaultConfig 仅加载内嵌默认配置（不含用户文件）。用于用户配置
+// 损坏（手写 TOML 语法错误）时的降级路径：以默认配置继续运行，而不是
+// 让应用无法启动。
+func NewDefaultConfig() (*Config, error) {
+	k := koanf.New(".")
+
+	defaultTomlBytes, err := filex.ReadFileFromEmbed("embed/" + types.AppTomlFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read embedded default config")
+	}
+	if err := k.Load(rawbytes.Provider(defaultTomlBytes), toml.Parser()); err != nil {
+		return nil, errors.Wrap(err, "failed to parse embedded default config")
+	}
+
+	return newConfigFromKoanf(k)
+}
+
+func newConfigFromKoanf(k *koanf.Koanf) (*Config, error) {
 	// 处理动态默认值
 	applyDynamicDefaults(k)
 

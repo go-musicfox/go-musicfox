@@ -151,13 +151,16 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 			}
 		}
 
-		// 解析传统 LRC 格式的行（歌词）
+		// 解析传统 LRC 格式的行（歌词）。尽力解析：ReadLRC 会跳过坏行并
+		// 保留成功行，err 非 nil 只表示存在坏行（如 [ar:]/[ti:] 元数据行），
+		// 不应因此丢弃整份歌词。
 		if len(lrcLines) > 0 {
 			lrcFile, err := ReadLRC(strings.NewReader(strings.Join(lrcLines, "\n")))
-			if err == nil && lrcFile != nil {
+			if lrcFile != nil {
 				s.fragments = append(s.fragments, lrcFile.fragments...)
-			} else if err != nil {
-				slog.Debug("[LRC] Failed to parse traditional LRC lines", "error", err)
+			}
+			if err != nil {
+				slog.Debug("[LRC] Some traditional LRC lines failed to parse, keeping valid ones", "error", err)
 			}
 		}
 
@@ -187,13 +190,12 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 			slog.Warn("[LRC] Failed to parse JSON format LRC", "error", err)
 		}
 	} else {
-		// 传统 LRC 格式 [00:00.00]歌词
+		// 传统 LRC 格式 [00:00.00]歌词。尽力解析：ReadLRC 会跳过坏行并
+		// 保留成功行，err 非 nil 只表示存在坏行（如 [ar:]/[ti:] 元数据行），
+		// 默认不因一行坏数据丢弃整首歌词。
 		lrcFile, err := ReadLRC(strings.NewReader(lrcData.Original))
 		if err != nil {
-			if !s.skipParseErr {
-				return errors.Wrap(err, "failed to parse original lyric")
-			}
-			slog.Debug("ignoring lyric parsing error", "error", err)
+			slog.Debug("some lyric lines failed to parse, keeping valid ones", "error", err)
 		}
 
 		if lrcFile != nil {
@@ -209,7 +211,7 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 				s.transFragments = trans.fragments
 				slog.Debug("ignoring lyric translation parsing error", "error", err)
 			} else {
-				slog.Error("failed to parse lyric translationd", "error", err)
+				slog.Error("failed to parse lyric translation", "error", err)
 			}
 		}
 	}

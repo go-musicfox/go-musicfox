@@ -88,6 +88,9 @@ func (m *Cacher) Put(song structs.Song, quality service.SongQualityLevel, fileTy
 	defer os.Remove(tempFile.Name())
 	defer tempFile.Close()
 
+	// 网络→磁盘拷贝不持锁：GetPath（切歌解析路径）需要 RLock，慢速 FLAC
+	// 后台缓存期间持锁会让每次切歌阻塞数秒到数十秒。锁只覆盖最后的 rename
+	// （prune 跳过 .tmp 文件，锁外建临时文件与拷贝并发安全）。
 	_, err = io.Copy(tempFile, data)
 	if err != nil {
 		return fmt.Errorf("failed to copy data to temp file: %w", err)

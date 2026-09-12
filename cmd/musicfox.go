@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -99,7 +100,13 @@ func loadConfig() {
 	// 加载 TOML 配置
 	cfg, err := configs.NewConfigFromTomlFile(configPath)
 	if err != nil {
-		panic(fmt.Sprintf("fatal: failed to load configuration: %v", err))
+		// 配置文件是用户手写 TOML，一个语法错误（如漏引号）就 panic 的话应用
+		// 无法启动、用户只能手删配置。降级为默认配置继续运行并给出明确警告。
+		slog.Warn("配置解析失败，已回退到默认配置（请检查或运行 upgrade-config 修复）",
+			slog.String("path", configPath),
+			slogx.Error(err),
+		)
+		cfg, _ = configs.NewDefaultConfig()
 	}
 	configs.AppConfig = cfg
 

@@ -459,6 +459,12 @@ func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
 	n.lastfm.Close()
 
+	// 关闭持久化 DB：否则第二实例回退用的临时 DB（/tmp/musicfox*.db）永不
+	// 删除、每次并发运行泄漏一个文件；正常实例也应显式关闭 bbolt
+	if storage.DBManager != nil {
+		_ = storage.DBManager.Close()
+	}
+
 	if n.desktopLyrics != nil {
 		n.desktopLyrics.Close()
 	}
