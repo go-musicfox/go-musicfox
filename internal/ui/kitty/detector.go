@@ -191,7 +191,7 @@ func enableTmuxPassthrough() bool {
 }
 
 // tmuxAllowPassthroughEnabled reports whether the tmux server has
-// `allow-passthrough on` ("1"/"on"). It is a variable so tests can override
+// `allow-passthrough on` or `all` ("1"/"on"/"all"). It is a variable so tests can override
 // the subprocess-backed probe.
 var tmuxAllowPassthroughEnabled = func() bool {
 	output, err := tmuxExec(context.Background(), "display", "-p", "#{allow-passthrough}")
@@ -200,7 +200,7 @@ var tmuxAllowPassthroughEnabled = func() bool {
 		return false
 	}
 	value := strings.TrimSpace(string(output))
-	if value != "1" && value != "on" {
+	if !tmuxPassthroughAllowed(value) {
 		slog.Debug("kitty: tmux allow-passthrough is not enabled, disabling passthrough", slog.String("value", value))
 		return false
 	}
@@ -217,4 +217,9 @@ func ForceEnable() {
 func ForceDisable() {
 	kittyDetectedOnce.Do(func() {})
 	kittySupported = false
+}
+
+// tmuxPassthroughAllowed accepts both enabled modes of the tmux option.
+func tmuxPassthroughAllowed(value string) bool {
+	return value == "1" || value == "on" || value == "all"
 }
