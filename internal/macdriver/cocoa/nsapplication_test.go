@@ -4,8 +4,14 @@ package cocoa
 
 import (
 	"os"
+	"runtime"
 	"testing"
 )
+
+// AppKit must run on the startup thread, including in the test executable.
+func init() {
+	runtime.LockOSThread()
+}
 
 func TestMain(m *testing.M) {
 	app := NSApp()

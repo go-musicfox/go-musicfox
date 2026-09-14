@@ -7,10 +7,20 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 )
 
+func setupPersistConfig(t *testing.T) {
+	t.Helper()
+	// NewManager resolves configured paths before applying option overrides.
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+}
+
 func TestPersistStreamCorrectsSuffixByContent(t *testing.T) {
+	setupPersistConfig(t)
 	dir := t.TempDir()
 	m := NewManager(WithDownloadDir(dir))
 
@@ -43,6 +53,7 @@ func TestPersistStreamCorrectsSuffixByContent(t *testing.T) {
 }
 
 func TestPersistStreamKeepsDeclaredSuffixWhenSniffUnknown(t *testing.T) {
+	setupPersistConfig(t)
 	dir := t.TempDir()
 	m := NewManager(WithDownloadDir(dir))
 
