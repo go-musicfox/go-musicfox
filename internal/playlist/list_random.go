@@ -35,21 +35,21 @@ func (l *ListRandomPlayMode) NextSong(currentIndex int, playlist []structs.Song,
 		l.regenerateOrder(currentIndex, playlist)
 	}
 
-	// 移动到下一个位置
-	l.currentPos++
-
-	// 如果超出范围，列表随机播放模式下停止播放
-	if l.currentPos >= len(l.randomOrder) {
+	// Keep the current position unchanged when a boundary request fails.
+	nextPos := l.currentPos + 1
+	if nextPos < 0 || nextPos >= len(l.randomOrder) {
 		return -1, ErrNoNextSong
 	}
 
-	index := l.randomOrder[l.currentPos]
+	index := l.randomOrder[nextPos]
 
 	// 边界检查：确保索引在有效范围内
 	if index < 0 || index >= len(playlist) {
 		// 索引无效，重置到第一个位置
 		l.currentPos = 0
 		index = l.randomOrder[0]
+	} else {
+		l.currentPos = nextPos
 	}
 
 	return index, nil
@@ -67,21 +67,21 @@ func (l *ListRandomPlayMode) PreviousSong(currentIndex int, playlist []structs.S
 		l.regenerateOrder(currentIndex, playlist)
 	}
 
-	// 移动到上一个位置
-	l.currentPos--
-
-	// 如果超出范围，列表随机播放模式下停止播放
-	if l.currentPos < 0 {
+	// Keep the current position unchanged when a boundary request fails.
+	previousPos := l.currentPos - 1
+	if previousPos < 0 || previousPos >= len(l.randomOrder) {
 		return -1, ErrNoPreviousSong
 	}
 
-	index := l.randomOrder[l.currentPos]
+	index := l.randomOrder[previousPos]
 
 	// 边界检查：确保索引在有效范围内
 	if index < 0 || index >= len(playlist) {
 		// 索引无效，重置到最后一个位置
 		l.currentPos = len(l.randomOrder) - 1
 		index = l.randomOrder[l.currentPos]
+	} else {
+		l.currentPos = previousPos
 	}
 
 	return index, nil

@@ -339,3 +339,81 @@ func TestListRandomPlayMode_PlaylistChangedRegeneration(t *testing.T) {
 		}
 	}
 }
+
+func TestListRandomPlayMode_BoundaryFailuresKeepPosition(t *testing.T) {
+	playlist := createTestPlaylist(4)
+	mode := NewListRandomPlayMode().(*ListRandomPlayMode)
+	if err := mode.Initialize(0, playlist); err != nil {
+		t.Fatal(err)
+	}
+	order := append([]int(nil), mode.randomOrder...)
+	for i := 0; i < 3; i++ {
+		if _, err := mode.PreviousSong(order[0], playlist, true); err != ErrNoPreviousSong {
+			t.Fatalf("PreviousSong error = %v", err)
+		}
+		if mode.currentPos != 0 {
+			t.Fatalf("position after failed previous = %d", mode.currentPos)
+		}
+	}
+	got, err := mode.NextSong(order[0], playlist, true)
+	if err != nil || got != order[1] {
+		t.Fatalf("NextSong = %d, %v; want %d", got, err, order[1])
+	}
+	for mode.currentPos < len(order)-1 {
+		want := order[mode.currentPos+1]
+		got, err = mode.NextSong(order[mode.currentPos], playlist, false)
+		if err != nil || got != want {
+			t.Fatalf("advance = %d, %v; want %d", got, err, want)
+		}
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := mode.NextSong(order[len(order)-1], playlist, true); err != ErrNoNextSong {
+			t.Fatalf("NextSong boundary error = %v", err)
+		}
+		if mode.currentPos != len(order)-1 {
+			t.Fatalf("position after failed next = %d", mode.currentPos)
+		}
+	}
+	got, err = mode.PreviousSong(order[len(order)-1], playlist, true)
+	if err != nil || got != order[len(order)-2] {
+		t.Fatalf("PreviousSong = %d, %v; want %d", got, err, order[len(order)-2])
+	}
+	if !equalInts(mode.randomOrder, order) {
+		t.Fatalf("random order changed: %v", mode.randomOrder)
+	}
+}
+
+func TestListRandomPlayMode_SingleSongBoundaries(t *testing.T) {
+	playlist := createTestPlaylist(1)
+	mode := NewListRandomPlayMode().(*ListRandomPlayMode)
+	if err := mode.Initialize(0, playlist); err != nil {
+		t.Fatal(err)
+	}
+	for _, call := range []struct {
+		name string
+		run  func() error
+	}{
+		{"automatic next", func() error { _, err := mode.NextSong(0, playlist, false); return err }},
+		{"manual next", func() error { _, err := mode.NextSong(0, playlist, true); return err }},
+		{"previous", func() error { _, err := mode.PreviousSong(0, playlist, true); return err }},
+	} {
+		if err := call.run(); err == nil {
+			t.Errorf("%s unexpectedly succeeded", call.name)
+		}
+		if mode.currentPos != 0 {
+			t.Fatalf("position after %s = %d", call.name, mode.currentPos)
+		}
+	}
+}
+
+func equalInts(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
