@@ -18,6 +18,8 @@ type playlistManager struct {
 	mu           sync.RWMutex            // 读写锁，保证线程安全
 	currentIndex int                     // 当前播放歌曲的索引
 	playlist     []structs.Song          // 播放列表
+	insertQueue  []structs.Song          // Temporary songs prioritized before the play mode
+	insertSong   *structs.Song           // Currently playing temporary song
 	playMode     PlayMode                // 当前播放模式策略
 	playModes    map[types.Mode]PlayMode // 所有可用的播放模式
 }
@@ -71,6 +73,8 @@ func (pm *playlistManager) Initialize(index int, playlist []structs.Song) error 
 	defer pm.mu.Unlock()
 
 	if len(playlist) == 0 {
+		pm.insertQueue = nil
+		pm.insertSong = nil
 		pm.playlist = make([]structs.Song, 0)
 		pm.currentIndex = -1
 		// 保存状态
@@ -82,6 +86,8 @@ func (pm *playlistManager) Initialize(index int, playlist []structs.Song) error 
 		return newPlaylistError("initialize", ErrInvalidIndex)
 	}
 
+	pm.insertQueue = nil
+	pm.insertSong = nil
 	pm.playlist = make([]structs.Song, len(playlist))
 	copy(pm.playlist, playlist)
 	pm.currentIndex = index
@@ -122,6 +128,9 @@ func (pm *playlistManager) GetCurrentSong() (structs.Song, error) {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
 
+	if pm.insertSong != nil {
+		return *pm.insertSong, nil
+	}
 	if len(pm.playlist) == 0 {
 		return structs.Song{}, newPlaylistError("get current song", ErrEmptyPlaylist)
 	}
@@ -141,7 +150,12 @@ func (pm *playlistManager) NextSong(manual bool) (structs.Song, error) {
 	if len(pm.playlist) == 0 {
 		return structs.Song{}, newPlaylistError("next song", ErrEmptyPlaylist)
 	}
-
+	if len(pm.insertQueue) > 0 {
+		song := pm.insertQueue[0]
+		pm.insertQueue = pm.insertQueue[1:]
+		pm.insertSong = &song
+		return song, nil
+	}
 	if pm.playMode == nil {
 		return structs.Song{}, newPlaylistError("next song", ErrInvalidPlayMode)
 	}
@@ -156,7 +170,22 @@ func (pm *playlistManager) NextSong(manual bool) (structs.Song, error) {
 	}
 
 	pm.currentIndex = nextIndex
+	pm.insertSong = nil
 	return pm.playlist[pm.currentIndex], nil
+}
+
+// AddSongsToNext queues each batch ahead of previously queued songs.
+func (pm *playlistManager) AddSongsToNext(songs []structs.Song) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	pm.insertQueue = append(slices.Clone(songs), pm.insertQueue...)
+}
+
+// InsertedSongsState reports queued and currently playing temporary songs.
+func (pm *playlistManager) InsertedSongsState() (queued bool, playing bool) {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	return len(pm.insertQueue) > 0, pm.insertSong != nil
 }
 
 // PreviousSong 切换到上一首歌曲
@@ -182,6 +211,7 @@ func (pm *playlistManager) PreviousSong(manual bool) (structs.Song, error) {
 	}
 
 	pm.currentIndex = prevIndex
+	pm.insertSong = nil
 	return pm.playlist[pm.currentIndex], nil
 }
 
@@ -207,6 +237,8 @@ func (pm *playlistManager) RemoveSong(index int) (structs.Song, error) {
 
 	if len(pm.playlist) == 0 {
 		// 播放列表为空
+		pm.insertQueue = nil
+		pm.insertSong = nil
 		pm.currentIndex = -1
 		// 保存状态
 		go pm.saveStateAsync()
@@ -229,6 +261,7 @@ func (pm *playlistManager) RemoveSong(index int) (structs.Song, error) {
 		nextSong = pm.playlist[pm.currentIndex]
 	}
 
+	pm.insertSong = nil
 	// 通知播放模式播放列表已变化
 	if pm.playMode != nil {
 		if err := pm.playMode.OnPlaylistChanged(pm.currentIndex, pm.playlist); err != nil {

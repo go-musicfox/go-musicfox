@@ -78,6 +78,195 @@ func TestInitialize(t *testing.T) {
 	}
 }
 
+func TestAddSongsToNextPrioritizesNewestBatchWithoutAdvancingMode(t *testing.T) {
+	manager := NewPlaylistManager()
+	base := []structs.Song{{Id: 1}, {Id: 2}, {Id: 3}}
+	if err := manager.Initialize(0, base); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SetPlayMode(types.PmSingleLoop); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 10}, {Id: 11}})
+	manager.AddSongsToNext([]structs.Song{{Id: 20}, {Id: 21}})
+	for _, id := range []int64{20, 21, 10, 11, 1} {
+		song, err := manager.NextSong(false)
+		if err != nil || song.Id != id {
+			t.Fatalf("NextSong() = %d, %v; want %d", song.Id, err, id)
+		}
+	}
+	if got := manager.GetPlaylist(); len(got) != len(base) {
+		t.Fatalf("temporary songs changed main playlist: %d songs", len(got))
+	}
+}
+
+func TestTemporarySongsPrecedeEveryPlayMode(t *testing.T) {
+	modes := []types.Mode{
+		types.PmOrdered,
+		types.PmListLoop,
+		types.PmSingleLoop,
+		types.PmListRandom,
+		types.PmInfRandom,
+		types.PmIntelligent,
+	}
+	for _, mode := range modes {
+		t.Run(mode.String(), func(t *testing.T) {
+			manager := NewPlaylistManager().(*playlistManager)
+			if err := manager.Initialize(0, []structs.Song{{Id: 1}, {Id: 2}}); err != nil {
+				t.Fatal(err)
+			}
+			if err := manager.SetPlayMode(mode); err != nil {
+				t.Fatal(err)
+			}
+			manager.AddSongsToNext([]structs.Song{{Id: 9}})
+			song, err := manager.NextSong(false)
+			if err != nil || song.Id != 9 {
+				t.Fatalf("NextSong() = %d, %v; want inserted song 9", song.Id, err)
+			}
+			switch modeState := manager.playMode.(type) {
+			case *ListRandomPlayMode:
+				wantIndex := modeState.randomOrder[modeState.currentPos+1]
+				song, err = manager.NextSong(false)
+				if err != nil || song.Id != manager.playlist[wantIndex].Id {
+					t.Fatalf("random continuation = %d, %v; want playlist index %d", song.Id, err, wantIndex)
+				}
+			case *InfiniteRandomPlayMode:
+				if len(modeState.history) != 1 || modeState.currentPos != 0 {
+					t.Fatalf("inserted song advanced infinite-random history: %#v", modeState.history)
+				}
+				if _, err = manager.NextSong(false); err != nil {
+					t.Fatalf("infinite-random continuation: %v", err)
+				}
+				if len(modeState.history) != 2 || modeState.currentPos != 1 {
+					t.Fatalf("normal continuation did not advance history once: %#v", modeState.history)
+				}
+			default:
+				song, err = manager.NextSong(false)
+				wantID := int64(2)
+				if mode == types.PmSingleLoop {
+					wantID = 1
+				}
+				if err != nil || song.Id != wantID {
+					t.Fatalf("mode continuation = %d, %v; want %d", song.Id, err, wantID)
+				}
+			}
+		})
+	}
+}
+
+func TestInsertedSongWithSameIDIsConsumedBeforeModeAdvance(t *testing.T) {
+	manager := NewPlaylistManager()
+	if err := manager.Initialize(0, []structs.Song{{Id: 1}, {Id: 2}}); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 1}})
+	if song, err := manager.NextSong(false); err != nil || song.Id != 1 {
+		t.Fatalf("inserted NextSong() = %d, %v; want same-ID insert 1", song.Id, err)
+	}
+	if _, playing := manager.InsertedSongsState(); !playing {
+		t.Fatal("same-ID inserted song was not marked as playing")
+	}
+	if song, err := manager.NextSong(false); err != nil || song.Id != 2 {
+		t.Fatalf("mode NextSong() = %d, %v; want main-list successor 2", song.Id, err)
+	}
+	if _, playing := manager.InsertedSongsState(); playing {
+		t.Fatal("inserted playback state remained after returning to main list")
+	}
+}
+
+func TestAddingBatchDuringInsertedPlaybackKeepsCurrentAndPrioritizesNewBatch(t *testing.T) {
+	manager := NewPlaylistManager()
+	if err := manager.Initialize(0, []structs.Song{{Id: 1}, {Id: 2}}); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 10}, {Id: 11}})
+	if song, err := manager.NextSong(false); err != nil || song.Id != 10 {
+		t.Fatalf("NextSong() = %d, %v; want 10", song.Id, err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 20}, {Id: 21}})
+	if song, err := manager.GetCurrentSong(); err != nil || song.Id != 10 {
+		t.Fatalf("current song after enqueue = %d, %v; want still-playing 10", song.Id, err)
+	}
+	for _, want := range []int64{20, 21, 11} {
+		song, err := manager.NextSong(false)
+		if err != nil || song.Id != want {
+			t.Fatalf("NextSong() = %d, %v; want %d", song.Id, err, want)
+		}
+	}
+}
+
+func TestFailedModeAdvanceKeepsInsertedCurrentSong(t *testing.T) {
+	manager := NewPlaylistManager()
+	if err := manager.Initialize(0, []structs.Song{{Id: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 9}})
+	if song, err := manager.NextSong(false); err != nil || song.Id != 9 {
+		t.Fatalf("NextSong() = %d, %v; want inserted song 9", song.Id, err)
+	}
+	if _, err := manager.NextSong(false); err == nil {
+		t.Fatal("expected ordered mode to have no next song")
+	}
+	if song, err := manager.GetCurrentSong(); err != nil || song.Id != 9 {
+		t.Fatalf("GetCurrentSong() = %d, %v; want still-playing inserted song 9", song.Id, err)
+	}
+}
+
+func TestPreviousSongAndRemoveSongClearInsertedCurrentSong(t *testing.T) {
+	manager := NewPlaylistManager()
+	if err := manager.Initialize(1, []structs.Song{{Id: 1}, {Id: 2}, {Id: 3}}); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 9}})
+	_, _ = manager.NextSong(false)
+	if song, err := manager.PreviousSong(true); err != nil || song.Id != 1 {
+		t.Fatalf("PreviousSong() = %d, %v; want 1", song.Id, err)
+	}
+	if song, err := manager.GetCurrentSong(); err != nil || song.Id != 1 {
+		t.Fatalf("GetCurrentSong() = %d, %v; want 1", song.Id, err)
+	}
+
+	manager.AddSongsToNext([]structs.Song{{Id: 9}})
+	_, _ = manager.NextSong(false)
+	if song, err := manager.RemoveSong(2); err != nil || song.Id != 1 {
+		t.Fatalf("RemoveSong() = %d, %v; want 1", song.Id, err)
+	}
+	if song, err := manager.GetCurrentSong(); err != nil || song.Id != 1 {
+		t.Fatalf("GetCurrentSong() after removal = %d, %v; want 1", song.Id, err)
+	}
+}
+
+func TestRemovingLastMainSongClearsTemporarySongs(t *testing.T) {
+	manager := NewPlaylistManager()
+	if err := manager.Initialize(0, []structs.Song{{Id: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 9}})
+	if _, err := manager.RemoveSong(0); err == nil {
+		t.Fatal("expected removing the last main song to return an error")
+	}
+	queued, playing := manager.InsertedSongsState()
+	if queued || playing {
+		t.Fatalf("temporary state remained after removing the playlist: queued=%v playing=%v", queued, playing)
+	}
+}
+
+func TestInitializeClearsTemporarySongs(t *testing.T) {
+	manager := NewPlaylistManager()
+	base := []structs.Song{{Id: 1}, {Id: 2}}
+	if err := manager.Initialize(0, base); err != nil {
+		t.Fatal(err)
+	}
+	manager.AddSongsToNext([]structs.Song{{Id: 10}})
+	if err := manager.Initialize(0, base); err != nil {
+		t.Fatal(err)
+	}
+	song, err := manager.NextSong(false)
+	if err != nil || song.Id != 2 {
+		t.Fatalf("NextSong() after reset = %d, %v; want 2", song.Id, err)
+	}
+}
+
 // TestGetCurrentSong 测试获取当前歌曲
 func TestGetCurrentSong(t *testing.T) {
 	manager := NewPlaylistManager()

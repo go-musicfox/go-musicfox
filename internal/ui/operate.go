@@ -8,7 +8,6 @@ import (
 	"net/http/cookiejar"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 
 	"github.com/anhoder/foxful-cli/model"
@@ -671,15 +670,7 @@ func appendSongsToCurPlaylist(n *Netease, addToNext bool) {
 		var notifyTitle string
 		if addToNext && len(n.player.Playlist()) > 0 {
 			// 添加为下一曲
-			targetIndex := n.player.CurSongIndex() + 1
-			_ = n.player.playlistManager.Initialize(
-				n.player.CurSongIndex(),
-				slices.Concat(
-					n.player.Playlist()[:targetIndex],
-					appendSongs,
-					n.player.Playlist()[targetIndex:],
-				),
-			)
+			n.player.addSongsToNext(appendSongs)
 			notifyTitle = "已添加到下一曲"
 		} else {
 			// 添加到播放列表末尾
@@ -971,7 +962,7 @@ func shareItem(n *Netease, isSelected bool, selectedIndex int) {
 		})
 		return
 	}
-	
+
 	// 分享成功通知
 	notify.Notify(notify.NotifyContent{
 		Title:   model.T(MsgOperationShareSuccess),

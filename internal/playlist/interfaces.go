@@ -23,6 +23,12 @@ type PlaylistManager interface {
 	// GetCurrentSong 获取当前播放的歌曲
 	GetCurrentSong() (structs.Song, error)
 
+	// AddSongsToNext queues songs to play before advancing the current play mode.
+	AddSongsToNext(songs []structs.Song)
+
+	// InsertedSongsState reports whether temporary songs are queued or playing.
+	InsertedSongsState() (queued bool, playing bool)
+
 	// NextSong 切换到下一首歌曲
 	// manual 参数表示是否为手动切换
 	NextSong(manual bool) (structs.Song, error)

@@ -81,13 +81,14 @@ type Player struct {
 
 	lyricService *lyric.Service
 
-	playErrCount    int // 错误计数，当错误连续超过5次，停止播放
-	stateHandler    *control.RemoteControl
-	ctrl            chan CtrlSignal
-	gaplessMu       sync.Mutex
-	gaplessPending  int64
-	gaplessLoading  bool
-	gaplessTriedFor int64
+	playErrCount      int // 错误计数，当错误连续超过5次，停止播放
+	stateHandler      *control.RemoteControl
+	ctrl              chan CtrlSignal
+	gaplessMu         sync.Mutex
+	gaplessGeneration uint64
+	gaplessPending    int64
+	gaplessLoading    bool
+	gaplessTriedFor   int64
 
 	renderTicker *tickerByPlayer // renderTicker 用于渲染
 
@@ -345,6 +346,9 @@ func (p *Player) CurSongIndex() int {
 }
 
 func (p *Player) CurSong() structs.Song {
+	if song, err := p.playlistManager.GetCurrentSong(); err == nil {
+		return song
+	}
 	index := p.CurSongIndex()
 	if index < 0 || len(p.Playlist()) <= index {
 		return structs.Song{}
@@ -357,8 +361,9 @@ func (p *Player) NextSong(manual bool) {
 	index := p.CurSongIndex()
 	playlistLen := len(p.Playlist())
 
-	// 到达底部，则触发翻页或加载更多
-	if playlistLen == 0 || index >= playlistLen-1 {
+	// Prioritize inserted songs before pagination hooks can reset the playlist.
+	hasQueuedInsert, _ := p.playlistManager.InsertedSongsState()
+	if !hasQueuedInsert && (playlistLen == 0 || index >= playlistLen-1) {
 		main := p.netease.MustMain()
 		if p.InPlayingMenu() {
 			if main.IsDualColumn() && index%2 == 0 {

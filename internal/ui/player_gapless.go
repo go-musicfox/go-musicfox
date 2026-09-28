@@ -28,31 +28,40 @@ func (p *Player) maybePreloadGapless(position time.Duration) {
 	if !ok || p.CurMusic().Duration-position > time.Duration(preloadSeconds)*time.Second {
 		return
 	}
-	next, ok := p.peekGaplessSong()
+	next, fromID, generation, ok := p.beginGaplessPreload()
 	if !ok {
 		return
 	}
-	p.gaplessMu.Lock()
-	if p.gaplessLoading || p.gaplessPending == next.Id || p.gaplessTriedFor == p.CurMusic().Id {
-		p.gaplessMu.Unlock()
-		return
-	}
-	p.gaplessLoading = true
-	fromID := p.CurMusic().Id
-	p.gaplessTriedFor = fromID
-	p.gaplessMu.Unlock()
 
 	errorx.Go(func() {
 		url, musicType, err := p.getPlayInfo(next)
-		p.gaplessMu.Lock()
-		defer p.gaplessMu.Unlock()
-		p.gaplessLoading = false
-		if err != nil || url == "" || p.CurMusic().Id != fromID {
+		if err != nil || url == "" {
+			p.gaplessMu.Lock()
+			if p.gaplessGeneration == generation {
+				p.gaplessLoading = false
+			}
+			p.gaplessMu.Unlock()
 			return
 		}
-		gapless.Preload(player.URLMusic{URL: url, Song: next, Type: player.SongTypeMapping[musicType]})
-		p.gaplessPending = next.Id
+		p.finishGaplessPreload(gapless, player.URLMusic{URL: url, Song: next, Type: player.SongTypeMapping[musicType]}, fromID, generation)
 	}, true)
+}
+
+func (p *Player) beginGaplessPreload() (structs.Song, int64, uint64, bool) {
+	p.gaplessMu.Lock()
+	defer p.gaplessMu.Unlock()
+	queued, playing := p.playlistManager.InsertedSongsState()
+	if queued || playing {
+		return structs.Song{}, 0, 0, false
+	}
+	next, ok := p.peekGaplessSong()
+	fromID := p.CurMusic().Id
+	if !ok || p.gaplessLoading || p.gaplessPending == next.Id || p.gaplessTriedFor == fromID {
+		return structs.Song{}, 0, 0, false
+	}
+	p.gaplessLoading = true
+	p.gaplessTriedFor = fromID
+	return next, fromID, p.gaplessGeneration, true
 }
 
 func (p *Player) peekGaplessSong() (structs.Song, bool) {
@@ -117,13 +126,42 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	})
 }
 
-func (p *Player) cancelGaplessPreload() {
+func (p *Player) finishGaplessPreload(gapless player.GaplessPlayer, music player.URLMusic, fromID int64, generation uint64) bool {
+	p.gaplessMu.Lock()
+	defer p.gaplessMu.Unlock()
+	if p.gaplessGeneration != generation {
+		return false
+	}
+	p.gaplessLoading = false
+	if p.CurMusic().Id != fromID {
+		return false
+	}
+	gapless.Preload(music)
+	p.gaplessPending = music.Song.Id
+	return true
+}
+
+func (p *Player) addSongsToNext(songs []structs.Song) {
+	p.gaplessMu.Lock()
+	p.gaplessGeneration++
+	p.gaplessPending = 0
+	p.gaplessLoading = false
+	p.gaplessTriedFor = 0
 	if gapless, ok := p.Player.(player.GaplessPlayer); ok {
 		gapless.CancelPreload()
 	}
+	p.playlistManager.AddSongsToNext(songs)
+	p.gaplessMu.Unlock()
+}
+
+func (p *Player) cancelGaplessPreload() {
 	p.gaplessMu.Lock()
+	p.gaplessGeneration++
 	p.gaplessPending = 0
 	p.gaplessLoading = false
 	p.gaplessTriedFor = 0
 	p.gaplessMu.Unlock()
+	if gapless, ok := p.Player.(player.GaplessPlayer); ok {
+		gapless.CancelPreload()
+	}
 }
