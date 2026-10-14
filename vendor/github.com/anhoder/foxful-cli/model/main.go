@@ -1702,6 +1702,9 @@ func (m *Main) menuLineView(a *App, line int) string {
 	if m.menuStartColumn > 4 {
 		row = lipgloss.NewStyle().Inherit(style.CurrentStyleSet().AppBackground).PaddingLeft(m.menuStartColumn - 4).Render(row)
 	}
+	if pad := a.WindowWidth() - lipgloss.Width(row); pad > 0 {
+		row += style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", pad))
+	}
 
 	// Store the assembled row, with the same cap as the
 	// per-item cache: page changes invalidate naturally via the key fields.
