@@ -27,6 +27,7 @@ func (m *MediaPlayer2) properties() map[string]*prop.Prop {
 		"CanRaise":            newProp(false, nil),         // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanRaise
 		"HasTrackList":        newProp(true, nil),          // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:HasTrackList
 		"Identity":            newProp(types.AppName, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:Identity
+		"DesktopEntry":        newProp(types.AppName, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:DesktopEntry
 		"SupportedUriSchemes": newProp([]string{}, nil),    // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedUriSchemes
 		"SupportedMimeTypes":  newProp([]string{}, nil),    // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedMimeTypes
 	}
@@ -107,6 +108,11 @@ func (s *RemoteControl) IntrospectNode() *introspect.Node {
 					},
 					{
 						Name:   "Identity",
+						Type:   "s",
+						Access: "read",
+					},
+					{
+						Name:   "DesktopEntry",
 						Type:   "s",
 						Access: "read",
 					},
