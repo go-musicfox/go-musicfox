@@ -300,8 +300,8 @@ github.com/juju/go4/lock
 # github.com/juju/persistent-cookiejar v1.0.0
 ## explicit
 github.com/juju/persistent-cookiejar
-# github.com/klauspost/compress v1.18.2
-## explicit; go 1.23
+# github.com/klauspost/compress v1.18.7
+## explicit; go 1.24
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
