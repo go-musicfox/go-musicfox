@@ -486,6 +486,25 @@ cornerRadius = 16.0
 <details>
 <summary>
 
+### Linux 桌面集成
+</summary>
+
+虽然 go-musicfox 是一款命令行音乐客户端，不依赖桌面环境也能正常运行，但提供 `.desktop` 文件仍然有其意义。现代
+命令行工具（如 Helix、Neovim）在打包时也会提供桌面入口，方便用户通过应用启动器搜索和启动程序，并与桌面环境集成。
+
+#### 安装
+
+执行下列命令即可安装。
+
+```bash
+mkdir -p ~/.local/share/applications &&
+curl -fsSL https://raw.githubusercontent.com/go-musicfox/go-musicfox/master/deploy/musicfox.desktop -o ~/.local/share/applications/musicfox.desktop
+```
+
+</details>
+<details>
+<summary>
+
 ### 启动动画
 </summary>
 
