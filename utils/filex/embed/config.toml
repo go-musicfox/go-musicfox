@@ -123,7 +123,7 @@ enable = true
 # (Windows/Linux) 默认通知图标
 icon = "logo.png"
 # (Windows/Linux) 是否使用歌曲的专辑封面作为通知图标（如为否则使用默认通知图标）
-albumCover = false
+albumCover = true
 # 是否在 TUI 内显示原生 toast 通知（点赞、下载、订阅、签到等瞬时事件）
 # 独立于桌面通知开关，可与桌面通知同时启用
 inApp = true
