@@ -312,7 +312,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,
 		Text:    fmt.Sprintf("%s - %s", song.ArtistName(), song.Album.Name),
-		Icon:    app.AddResizeParamForPicUrl(song.PicUrl, 60),
+		Icon:    app.AddResizeParamForPicUrl(song.PicUrl, 1024),
 		Url:     netease.WebUrlOfSong(song.Id),
 		GroupId: types.GroupID,
 	})
