@@ -166,8 +166,11 @@ func Notify(content NotifyContent) {
 		defer freedesktop_dbus.Close()
 		notfiy := freedesktop_dbus.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
 		call := notfiy.Call("org.freedesktop.Notifications.Notify", 0, types.AppName, uint32(0),
-			types.DefaultNotifyIcon, content.Title, content.Text, []string{},
-			map[string]dbus.Variant{}, int32(5000))
+			types.AppName, content.Title, content.Text, []string{},
+			map[string]dbus.Variant{
+				"desktop-entry": dbus.MakeVariant(types.AppName),
+				"image-path":    dbus.MakeVariant(content.Icon),
+			}, int32(5000))
 		// Notify spec  https://specifications.freedesktop.org/notification-spec/1.3/protocol.html#command-notify
 		if call.Err != nil {
 			log.Printf("connect org.freedesktop.Notifications failed: %+v", errors.WithStack(call.Err))
