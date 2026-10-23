@@ -170,6 +170,7 @@ type Player interface {
 ### 其他模块
 
 - **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式；未匹配的云盘歌曲（含旧播放快照）优先通过云盘歌词接口获取内嵌歌词，失败时回退普通歌曲歌词接口
+- **macOS 桌面歌词开关**：`toggleDesktopLyrics` 操作默认绑定 `Ctrl+o`，可通过 `[keybindings.app]` 改键。`internal/ui/desktop_lyrics.go` 首次开启时按需创建悬浮窗，关闭时隐藏并复用窗口以保留位置；开关通过 `configs.SetTOMLValue` 保真写回 `main.lyric.desktopLyrics.enable`，保存失败保持原状态并提示。`Netease.desktopLyricsMu` 同步开关、窗口生命周期与播放更新，防止关闭后被自动显示；暂停时开启遵循 `hideOnPause`，停止时保持隐藏。非 macOS 平台仅提示不支持，不修改配置。
 - **播放列表**：列表循环/顺序/单曲循环/随机/无限随机/智能心动模式
 - **远程控制**：MPRIS(linux)、Now Playing(macOS)、System Media(Windows)。macOS 侧 `internal/macdriver/mediaplayer` 与 `internal/macdriver/cocoa/unnotifications.go` 的框架加载（Dlopen）失败不 panic 静默降级：MediaPlayer.framework 需 macOS 10.12.2+、UserNotifications.framework 需 10.14+，旧系统上 class 查找得 nil、objc 消息发送安全返回 0，对应功能（Now Playing 远程控制/系统通知）自动禁用而不影响主应用启动
 - **状态栏组件**：`model.DefaultStatusBar.Components` 可注入任意 `StatusBarComponent` 到居中区域；展示项只实现 `View`，可点击项额外实现 `InteractiveStatusBarComponent`，以自身局部坐标处理命中和事件。状态栏负责布局、边界与指针，不持有业务回调。播放队列适配器的 `musicfox` 前缀自行打开 `https://github.com/go-musicfox/go-musicfox`，队列位置与音质文本不触发。

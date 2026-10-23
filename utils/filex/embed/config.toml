@@ -167,7 +167,7 @@ tmuxPassthrough = false
 
 # 桌面歌词设置（目前仅支持 macOS）
 [main.lyric.desktopLyrics]
-# 是否启用桌面歌词
+# 是否启用桌面歌词，支持 Ctrl+o 动态切换并保存
 enable = false
 # X 位置系数（0.0-1.0，0.5 表示居中，0.0 最左，1.0 最右）
 xPositionFactor = 0.5
@@ -458,6 +458,8 @@ intelligence = ["P"]
 clearSongCache = ["u", "U"]
 logout = ["W"]
 curPlaylist = ["c", "C"]
+# 桌面歌词（仅 macOS）
+toggleDesktopLyrics = ["ctrl+o"]
 
 
 # 自定义分享模板

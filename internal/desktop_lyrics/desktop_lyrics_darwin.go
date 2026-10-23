@@ -1278,8 +1278,11 @@ func (c *darwinController) tickWordAnimation(now time.Time) (float64, bool) {
 func (c *darwinController) doTick() {
 	c.pendingMu.Lock()
 	closed := c.closed
+	visible := c.visible
 	c.pendingMu.Unlock()
-	if closed {
+	if closed || !visible {
+		c.animating = false
+		c.nextFrameAt = time.Time{}
 		return
 	}
 
