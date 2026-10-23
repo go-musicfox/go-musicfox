@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -70,7 +71,9 @@ type Netease struct {
 	themeNotifID    model.NotificationID
 	themeNotifTimer *time.Timer
 
-	desktopLyrics desktop_lyrics.Controller
+	// Serializes window access and changes to DesktopLyrics.Enable with playback updates.
+	desktopLyricsMu sync.Mutex
+	desktopLyrics   desktop_lyrics.Controller
 }
 
 func NewNetease(app *model.App) *Netease {
@@ -459,9 +462,12 @@ func (n *Netease) CloseHook(_ *model.App) {
 	_ = n.player.Close()
 	n.lastfm.Close()
 
+	n.desktopLyricsMu.Lock()
 	if n.desktopLyrics != nil {
 		n.desktopLyrics.Close()
+		n.desktopLyrics = nil
 	}
+	n.desktopLyricsMu.Unlock()
 
 	if n.coverRenderer != nil {
 		n.coverRenderer.Close()
@@ -474,16 +480,11 @@ func (n *Netease) Player() *Player {
 	return n.player
 }
 
-// DesktopLyrics returns the desktop lyrics controller.
-func (n *Netease) DesktopLyrics() desktop_lyrics.Controller {
-	return n.desktopLyrics
-}
-
 // GetDesktopLyricsLines returns the current lyrics lines for desktop display.
 // Returns the current line, the next line (with word-level data when YRC is available),
 // and the current index.
 func (n *Netease) GetDesktopLyricsLines() (curLine, nextLine desktop_lyrics.LyricLine, currentIndex int) {
-	if n.desktopLyrics == nil || n.lyricService == nil {
+	if n.lyricService == nil {
 		return desktop_lyrics.LyricLine{}, desktop_lyrics.LyricLine{}, -1
 	}
 

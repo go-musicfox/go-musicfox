@@ -176,3 +176,16 @@ func assertScrollState(t *testing.T, state *scrollState, wantOffset, wantPause f
 		t.Errorf("pauseTimer = %v, want %v", state.pauseTimer, wantPause)
 	}
 }
+
+func TestHiddenDesktopLyricsStopsAnimation(t *testing.T) {
+	c := &darwinController{animating: true, nextFrameAt: time.Now()}
+	c.scroll[posFirst] = &scrollState{active: true, maxOffset: 100}
+	c.scroll[posSecond] = &scrollState{}
+	c.doTick()
+	if c.animating || !c.nextFrameAt.IsZero() {
+		t.Fatal("hidden desktop lyrics kept the animation timer running")
+	}
+	if c.scroll[posFirst].offset != 0 {
+		t.Fatal("hidden desktop lyrics advanced scrolling")
+	}
+}
