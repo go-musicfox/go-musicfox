@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/structs"
+	"github.com/go-musicfox/go-musicfox/utils/netease"
 	_struct "github.com/go-musicfox/go-musicfox/utils/struct"
 	"github.com/go-musicfox/go-musicfox/utils/timex"
 )
@@ -50,14 +50,13 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 			return false, page
 		}
 
-		// 不重复请求
+		// Reuse recommendations only on the date they were fetched.
 		now := time.Now()
 		if len(m.menus) > 0 && len(m.playlists) > 0 && timex.IsSameDate(m.fetchTime, now) {
 			return true, nil
 		}
 
-		recommendPlaylists := service.RecommendResourceService{}
-		code, response := recommendPlaylists.RecommendResource()
+		code, response := netease.FetchDailyRecommendPlaylists()
 		codeType := _struct.CheckCode(code)
 		if codeType == _struct.NeedLogin {
 			page, _ := m.netease.ToLoginPage(EnterMenuCallback(main))
