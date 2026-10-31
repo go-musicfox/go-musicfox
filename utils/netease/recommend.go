@@ -7,14 +7,13 @@ import (
 	"github.com/go-musicfox/netease-music/util"
 )
 
-// FetchDailyRecommendPlaylists requests the mobile recommendation batches.
+// FetchDailyRecommendPlaylists requests the current PC recommendation feed.
 func FetchDailyRecommendPlaylists() (float64, []byte) {
-	// Login refresh sets os=pc in the shared jar. Explicitly select mobile mode:
-	// PC-mode recommendations can stay unchanged while mobile batches rotate.
+	// Without a desktop profile this endpoint can return the legacy mobile feed.
 	options := &util.Options{
 		Crypto:  "weapi",
-		Cookies: []*http.Cookie{{Name: "os", Value: "ios"}},
+		Cookies: []*http.Cookie{{Name: "os", Value: "pc"}, {Name: "appver", Value: "3.1.41"}},
 	}
-	code, response, _ := util.CreateRequest("POST", "https://music.163.com/weapi/v1/discovery/recommend/resource", map[string]string{}, options)
+	code, response, _ := util.CreateRequest("POST", "https://music.163.com/weapi/pc/personal/page/playlist/rcmd", map[string]string{}, options)
 	return code, response
 }

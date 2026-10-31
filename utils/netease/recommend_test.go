@@ -17,7 +17,7 @@ func (f recommendRoundTripper) RoundTrip(request *http.Request) (*http.Response,
 	return f(request)
 }
 
-func TestFetchDailyRecommendPlaylistsOverridesPCWithoutLosingLogin(t *testing.T) {
+func TestFetchDailyRecommendPlaylistsUsesCurrentPCFeedWithoutLosingLogin(t *testing.T) {
 	previousTransport := http.DefaultTransport
 	previousJar := neteaseutil.GetGlobalCookieJar()
 	previousProxy := neteaseutil.UNMProxyURL
@@ -33,29 +33,33 @@ func TestFetchDailyRecommendPlaylistsOverridesPCWithoutLosingLogin(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	endpoint, err := url.Parse("https://music.163.com/weapi/v1/discovery/recommend/resource")
+	endpoint, err := url.Parse("https://music.163.com/weapi/pc/personal/page/playlist/rcmd")
 	if err != nil {
 		t.Fatal(err)
 	}
 	jar.SetCookies(endpoint, []*http.Cookie{
-		{Name: "os", Value: "pc", Path: "/"},
+		{Name: "os", Value: "ios", Path: "/"},
+		{Name: "appver", Value: "9.0.65", Path: "/"},
 		{Name: "MUSIC_U", Value: "fake-login-token", Path: "/"},
 	})
 	neteaseutil.SetGlobalCookieJar(jar)
 	neteaseutil.UNMProxyURL = ""
 	neteaseutil.UNMSwitch = false
 
-	const response = `{"code":200,"recommend":[{"id":7,"name":"Fresh recommendations"}]}`
+	const response = `{"code":200,"data":{"blockData":{"creatives":[{"creativeType":"list","resources":[{"resourceType":"list","resourceId":"7","uiElement":{"mainTitle":{"title":"Fresh recommendations"}}}]}]}}}`
 	requests := 0
 	http.DefaultTransport = recommendRoundTripper(func(request *http.Request) (*http.Response, error) {
 		requests++
 		if request.Method != http.MethodPost || request.URL.String() != endpoint.String() {
 			t.Errorf("request = %s %s, want POST %s", request.Method, request.URL, endpoint)
 		}
-		if got := request.Header.Get("os"); got != "ios" {
-			t.Errorf("os header = %q, want ios", got)
+		if got := request.Header.Get("os"); got != "pc" {
+			t.Errorf("os header = %q, want pc", got)
 		}
-		for name, want := range map[string]string{"os": "ios", "MUSIC_U": "fake-login-token"} {
+		if got := request.Header.Get("appver"); got != "3.1.41" {
+			t.Errorf("appver header = %q, want 3.1.41", got)
+		}
+		for name, want := range map[string]string{"os": "pc", "appver": "3.1.41", "MUSIC_U": "fake-login-token"} {
 			cookie, err := request.Cookie(name)
 			if err != nil {
 				t.Errorf("missing %s cookie: %v", name, err)

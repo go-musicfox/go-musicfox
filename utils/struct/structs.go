@@ -1,6 +1,7 @@
 package _struct
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/buger/jsonparser"
@@ -94,12 +95,47 @@ func GetRecentSongs(data []byte) (list []structs.Song) {
 
 // GetDailyPlaylists 获取每日推荐歌单
 func GetDailyPlaylists(data []byte) (list []structs.Playlist) {
-
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		if playlist, err := structs.NewPlaylistFromJson(value); err == nil {
-			list = append(list, playlist)
+	if !json.Valid(data) {
+		return
+	}
+	seen := make(map[int64]bool)
+	appendPlaylist := func(rawID []byte, name string) bool {
+		id, err := jsonparser.ParseInt(rawID)
+		if err != nil || id <= 0 || strings.TrimSpace(name) == "" {
+			return false
 		}
-	}, "recommend")
+		if !seen[id] {
+			seen[id] = true
+			list = append(list, structs.Playlist{Id: id, Name: name})
+		}
+		return true
+	}
+	_, _ = jsonparser.ArrayEach(data, func(creative []byte, _ jsonparser.ValueType, _ int, _ error) {
+		creativeType, _ := jsonparser.GetString(creative, "creativeType")
+		if creativeType != "list" && creativeType != "scroll_playlist" {
+			return
+		}
+		hasPlaylistResource := false
+		_, _ = jsonparser.ArrayEach(creative, func(resource []byte, _ jsonparser.ValueType, _ int, _ error) {
+			resourceType, _ := jsonparser.GetString(resource, "resourceType")
+			if resourceType != "list" {
+				return
+			}
+			id, _, _, _ := jsonparser.Get(resource, "resourceId")
+			name, _ := jsonparser.GetString(resource, "uiElement", "mainTitle", "title")
+			if appendPlaylist(id, name) {
+				hasPlaylistResource = true
+			}
+		}, "resources")
+		if !hasPlaylistResource {
+			action, _ := jsonparser.GetString(creative, "action")
+			if id, ok := strings.CutPrefix(action, "orpheus://playlist/"); ok {
+				id, _, _ = strings.Cut(id, "?")
+				name, _ := jsonparser.GetString(creative, "uiElement", "mainTitle", "title")
+				appendPlaylist([]byte(id), name)
+			}
+		}
+	}, "data", "blockData", "creatives")
 
 	return
 }

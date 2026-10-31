@@ -64,7 +64,11 @@ func (m *DailyRecommendPlaylistsMenu) BeforeEnterMenuHook() model.Hook {
 		} else if codeType != _struct.Success {
 			return false, nil
 		}
-		m.playlists = _struct.GetDailyPlaylists(response)
+		playlists := _struct.GetDailyPlaylists(response)
+		if len(playlists) == 0 {
+			return false, nil
+		}
+		m.playlists = playlists
 		var menus []model.MenuItem
 		for _, playlist := range m.playlists {
 			menus = append(menus, model.MenuItem{Title: _struct.ReplaceSpecialStr(playlist.Name)})
