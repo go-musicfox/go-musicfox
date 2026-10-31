@@ -30,6 +30,16 @@ func NewPlayerCommand() *gcli.Command {
 }
 
 func runPlayer(_ *gcli.Command, _ []string) error {
+	// CLI flags override config.toml after the config has been loaded.
+	if GlobalOptions.ExternalAPIMode {
+		configs.AppConfig.ExternalAPI.Enable = true
+	}
+	if GlobalOptions.ExternalAPIPort > 0 {
+		configs.AppConfig.ExternalAPI.Port = GlobalOptions.ExternalAPIPort
+	}
+	if GlobalOptions.ExternalAPIAllowLAN {
+		configs.AppConfig.ExternalAPI.AllowLAN = true
+	}
 	if GlobalOptions.PProfMode {
 		errorx.Go(func() {
 			panic(http.ListenAndServe(":"+strconv.Itoa(configs.AppConfig.Main.Pprof.Port), nil))

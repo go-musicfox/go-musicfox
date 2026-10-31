@@ -28,6 +28,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gookit/gcli/v2 v2.3.4
 	github.com/gopxl/beep v1.4.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/imroc/req/v3 v3.59.0
 	github.com/juju/persistent-cookiejar v1.0.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
