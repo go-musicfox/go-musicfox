@@ -334,6 +334,9 @@ func allowedOrigin(origin string) bool {
 	if err != nil {
 		return false
 	}
+	if strings.EqualFold(parsed.Scheme, "file") {
+		return true
+	}
 	host := strings.Trim(parsed.Hostname(), "[]")
 	return host == "127.0.0.1" || host == "::1" || host == "localhost"
 }

@@ -181,7 +181,11 @@ func TestHTTPStatusAndCommands(t *testing.T) {
 func TestWebSocketEventsAndControl(t *testing.T) {
 	provider := fixtureProvider()
 	_, baseURL := startTestServer(t, provider)
-	conn, _, err := websocket.DefaultDialer.Dial(strings.Replace(baseURL, "http://", "ws://", 1)+"/ws", nil)
+	headers := http.Header{"Origin": []string{"file://"}}
+	conn, _, err := websocket.DefaultDialer.Dial(
+		strings.Replace(baseURL, "http://", "ws://", 1)+"/ws",
+		headers,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,5 +267,25 @@ func TestWebSocketDisabled(t *testing.T) {
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusForbidden {
 		t.Fatalf("ws status = %d", response.StatusCode)
+	}
+}
+
+func TestAllowedOrigin(t *testing.T) {
+	tests := []struct {
+		origin string
+		want   bool
+	}{
+		{origin: "", want: true},
+		{origin: "null", want: true},
+		{origin: "file://", want: true},
+		{origin: "file:///D:/TMP/splayer-obs/index.html", want: true},
+		{origin: "http://127.0.0.1:6161", want: true},
+		{origin: "http://localhost:6161", want: true},
+		{origin: "https://evil.example", want: false},
+	}
+	for _, test := range tests {
+		if got := allowedOrigin(test.origin); got != test.want {
+			t.Errorf("allowedOrigin(%q) = %v, want %v", test.origin, got, test.want)
+		}
 	}
 }
