@@ -56,8 +56,8 @@ func mockDailyPlaylistsResponses(t *testing.T, responses ...string) *int {
 
 func TestDailyRecommendPlaylistsCachesOnlyCurrentDate(t *testing.T) {
 	requests := mockDailyPlaylistsResponses(t,
-		`{"code":200,"data":{"blockData":{"creatives":[{"creativeType":"list","resources":[{"resourceType":"list","resourceId":"1","uiElement":{"mainTitle":{"title":"First"}}}]}]}}}`,
-		`{"code":200,"data":{"blockData":{"creatives":[{"creativeType":"list","resources":[{"resourceType":"list","resourceId":"2","uiElement":{"mainTitle":{"title":"Second"}}}]}]}}}`,
+		`{"code":200,"data":{"blocks":[{"positionCode":"PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST","dslData":{"blockResource":{"resources":[{"resourceType":"playList","resourceId":"1","title":"First"}]}}}]}}`,
+		`{"code":200,"data":{"blocks":[{"positionCode":"PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST","dslData":{"blockResource":{"resources":[{"resourceType":"playList","resourceId":"2","title":"Second"}]}}}]}}`,
 	)
 	menu := NewDailyRecommendPlaylistMenu(newBaseMenu(&Netease{user: &structs.User{UserId: 1}}))
 	hook := menu.BeforeEnterMenuHook()
@@ -81,7 +81,7 @@ func TestDailyRecommendPlaylistsCachesOnlyCurrentDate(t *testing.T) {
 func TestDailyRecommendPlaylistsRetriesAfterFailedFetch(t *testing.T) {
 	requests := mockDailyPlaylistsResponses(t,
 		`{"code":500}`,
-		`{"code":200,"data":{"blockData":{"creatives":[{"creativeType":"list","resources":[{"resourceType":"list","resourceId":"2","uiElement":{"mainTitle":{"title":"Recovered"}}}]}]}}}`,
+		`{"code":200,"data":{"blocks":[{"positionCode":"PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST","dslData":{"blockResource":{"resources":[{"resourceType":"playList","resourceId":"2","title":"Recovered"}]}}}]}}`,
 	)
 	menu := NewDailyRecommendPlaylistMenu(newBaseMenu(&Netease{user: &structs.User{UserId: 1}}))
 	menu.fetchTime = time.Now().AddDate(0, 0, -1)
@@ -105,12 +105,12 @@ func TestDailyRecommendPlaylistsPreservesCacheForInvalidSuccessfulResponse(t *te
 		name     string
 		response string
 	}{
-		{name: "empty creatives", response: `{"code":200,"data":{"blockData":{"creatives":[]}}}`},
+		{name: "empty blocks", response: `{"code":200,"data":{"blocks":[]}}`},
 		{name: "legacy shape", response: `{"code":200,"recommend":[{"id":9,"name":"Old endpoint"}]}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			requests := mockDailyPlaylistsResponses(t, tc.response,
-				`{"code":200,"data":{"blockData":{"creatives":[{"creativeType":"list","resources":[{"resourceType":"list","resourceId":"2","uiElement":{"mainTitle":{"title":"Recovered"}}}]}]}}}`,
+				`{"code":200,"data":{"blocks":[{"positionCode":"PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST","dslData":{"blockResource":{"resources":[{"resourceType":"playList","resourceId":"2","title":"Recovered"}]}}}]}}`,
 			)
 			menu := NewDailyRecommendPlaylistMenu(newBaseMenu(&Netease{user: &structs.User{UserId: 1}}))
 			previousFetchTime := time.Now().AddDate(0, 0, -1)
@@ -138,7 +138,7 @@ func TestDailyRecommendPlaylistsPreservesCacheForInvalidSuccessfulResponse(t *te
 
 func TestDailyRecommendPlaylistsContextRefreshFetchesAgain(t *testing.T) {
 	requests := mockDailyPlaylistsResponses(t,
-		`{"code":200,"data":{"blockData":{"creatives":[{"creativeType":"list","resources":[{"resourceType":"list","resourceId":"2","uiElement":{"mainTitle":{"title":"Refreshed"}}}]}]}}}`,
+		`{"code":200,"data":{"blocks":[{"positionCode":"PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST","dslData":{"blockResource":{"resources":[{"resourceType":"playList","resourceId":"2","title":"Refreshed"}]}}}]}}`,
 	)
 	app, netease := newFormPageTestApp(t)
 	netease.user = &structs.User{UserId: 1}

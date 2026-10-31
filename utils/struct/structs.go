@@ -99,43 +99,29 @@ func GetDailyPlaylists(data []byte) (list []structs.Playlist) {
 		return
 	}
 	seen := make(map[int64]bool)
-	appendPlaylist := func(rawID []byte, name string) bool {
-		id, err := jsonparser.ParseInt(rawID)
-		if err != nil || id <= 0 || strings.TrimSpace(name) == "" {
-			return false
-		}
-		if !seen[id] {
-			seen[id] = true
-			list = append(list, structs.Playlist{Id: id, Name: name})
-		}
-		return true
-	}
-	_, _ = jsonparser.ArrayEach(data, func(creative []byte, _ jsonparser.ValueType, _ int, _ error) {
-		creativeType, _ := jsonparser.GetString(creative, "creativeType")
-		if creativeType != "list" && creativeType != "scroll_playlist" {
+	_, _ = jsonparser.ArrayEach(data, func(block []byte, _ jsonparser.ValueType, _ int, _ error) {
+		positionCode, _ := jsonparser.GetString(block, "positionCode")
+		if positionCode != "PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST" {
 			return
 		}
-		hasPlaylistResource := false
-		_, _ = jsonparser.ArrayEach(creative, func(resource []byte, _ jsonparser.ValueType, _ int, _ error) {
+		_, _ = jsonparser.ArrayEach(block, func(resource []byte, _ jsonparser.ValueType, _ int, _ error) {
 			resourceType, _ := jsonparser.GetString(resource, "resourceType")
-			if resourceType != "list" {
+			if resourceType != "playList" {
 				return
 			}
-			id, _, _, _ := jsonparser.Get(resource, "resourceId")
-			name, _ := jsonparser.GetString(resource, "uiElement", "mainTitle", "title")
-			if appendPlaylist(id, name) {
-				hasPlaylistResource = true
+			rawID, idType, _, _ := jsonparser.Get(resource, "resourceId")
+			if idType != jsonparser.String && idType != jsonparser.Number {
+				return
 			}
-		}, "resources")
-		if !hasPlaylistResource {
-			action, _ := jsonparser.GetString(creative, "action")
-			if id, ok := strings.CutPrefix(action, "orpheus://playlist/"); ok {
-				id, _, _ = strings.Cut(id, "?")
-				name, _ := jsonparser.GetString(creative, "uiElement", "mainTitle", "title")
-				appendPlaylist([]byte(id), name)
+			id, err := jsonparser.ParseInt(rawID)
+			name, _ := jsonparser.GetString(resource, "title")
+			if err != nil || id <= 0 || strings.TrimSpace(name) == "" || seen[id] {
+				return
 			}
-		}
-	}, "data", "blockData", "creatives")
+			seen[id] = true
+			list = append(list, structs.Playlist{Id: id, Name: name})
+		}, "dslData", "blockResource", "resources")
+	}, "data", "blocks")
 
 	return
 }
