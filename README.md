@@ -389,6 +389,31 @@ DLNA 引擎允许你将音乐投送到兼容 DLNA 的设备（如智能电视、
 </details>
 <details>
 <summary>
+
+### SPlayer-Next 兼容外部 API
+</summary>
+
+go-musicfox 提供可选的 HTTP / WebSocket 外部 API，协议与
+[SPlayer-Next](https://github.com/SPlayer-Dev/SPlayer-Next) 对齐，可供 OBS 浏览器源、
+直播挂件或其他本地工具读取当前歌曲、歌词和播放状态，并控制播放。
+
+在 `config.toml` 中启用：
+
+```toml
+[externalApi]
+enable = true
+enableWs = true
+allowLan = false
+port = 14558
+```
+
+也可以使用 `musicfox --external-api --external-api-port 14558` 临时启用。服务默认只监听
+`127.0.0.1` 且没有鉴权，不要在不可信网络中开启 `allowLan`。完整的接口、WebSocket
+消息格式和 OBS 配置方法见 [外部 API 文档](./docs/external-api.md)。
+
+</details>
+<details>
+<summary>
 引入完整的主题配置系统，支持运行时切换、自定义配色和多种内置主题。
 ### 主题系统
 </summary>
