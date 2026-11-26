@@ -189,24 +189,20 @@ func (c *webviewLoginController) runGTK() {
 		// path below destroys the window, so nothing leaks.
 	} else {
 		session = webkitgtk.NetworkSessionNewEphemeral()
-		// Release our application-side references (transfer-full from the
-		// constructors) on every exit path. Deferred cleanup runs LIFO, so the
-		// window is unref'd before the web view, which is unref'd before the
-		// session: the window holds a reference to the web view until it is
-		// destroyed. The cookie manager is a borrowed reference of the session
-		// and must not be unref'd separately.
+		// The session is a plain GObject not owned by GTK; release it after
+		// the main loop exits. The cookie manager is a borrowed reference of
+		// the session and must not be unref'd separately.
 		defer webkitgtk.GObjectUnref(session)
 		cookieManager = webkitgtk.NetworkSessionGetCookieManager(session)
 		webView = webkitgtk.WebViewNewWithNetworkSession(session)
-		defer webkitgtk.GObjectUnref(webView)
 	}
+	// Do NOT unref the window or the web view: gtk_window_destroy() (reached
+	// from the user's close-request or GtkWindowClose below) releases the
+	// toolkit-owned references and finalizes both objects. A deferred
+	// g_object_unref() after that is a use-after-free and segfaults on
+	// GTK 4.22. Every exit path destroys the window, so nothing leaks beyond
+	// the toolkit's own lifetime.
 	window := webkitgtk.GtkWindowNew()
-	if !legacyAPI {
-		// GTK4: gtk_window_new() returns a transfer-full reference owned by
-		// the app; GtkWindowClose only disposes the window, and the object
-		// stays alive until this unref finalizes it.
-		defer webkitgtk.GObjectUnref(window)
-	}
 
 	// Publish the GTK objects and the callback pointers (the closures capture
 	// c) before entering the main loop.
