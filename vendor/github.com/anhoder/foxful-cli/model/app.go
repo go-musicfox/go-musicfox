@@ -3,6 +3,7 @@ package model
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -56,6 +57,11 @@ type App struct {
 	// 必须使用 getPage（RLock）。主循环读取可直接访问 page，因为它们与唯一
 	// 写入者串行；从 goroutine 写入 page 前必须重新检查所有直接读取点。
 	pageMu sync.RWMutex
+
+	// rerenderPending 标记是否有一个 Rerender 投递 goroutine 正在等待
+	// program.Send。用于合并 Rerender 调用，防止 ticker 在帧渲染慢于 tick
+	// 间隔（高帧率 + 重渲染）时堆积无界数量的阻塞 goroutine。
+	rerenderPending atomic.Bool
 }
 
 // StyleSet returns the app-scoped StyleSet if one was set via SetStyleSet,
@@ -553,10 +559,18 @@ func (a *App) Rerender(cleanScreen bool) {
 	if a.program == nil {
 		return
 	}
-	// Send in a goroutine to avoid blocking on the unbuffered msgs channel.
-	// This is called from goroutines (e.g., ticker) and must not deadlock
-	// when the event loop is busy or hasn't started yet.
+	// Coalesce: at most one delivery goroutine may be pending. program.Send
+	// blocks on the unbuffered msgs channel until the event loop picks the
+	// message up; when a frame takes longer than the tick interval (high
+	// frame rates, heavy renderers), uncoalesced calls pile up unbounded
+	// goroutines that each hold a stale poke message. The delivered message
+	// is just a re-render poke and View always renders the current state, so
+	// dropping intermediate pokes is safe.
+	if !a.rerenderPending.CompareAndSwap(false, true) {
+		return
+	}
 	go func() {
+		defer a.rerenderPending.Store(false)
 		if cleanScreen {
 			a.program.Send(tea.ClearScreen())
 		}

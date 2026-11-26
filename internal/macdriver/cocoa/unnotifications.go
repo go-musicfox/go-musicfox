@@ -15,9 +15,13 @@ var importUserNotificationsOnce sync.Once
 
 func importUserNotificationsFramework() {
 	importUserNotificationsOnce.Do(func() {
-		_, err := purego.Dlopen("/System/Library/Frameworks/UserNotifications.framework/UserNotifications", purego.RTLD_GLOBAL)
-		if err != nil {
-			panic(err)
+		// UserNotifications.framework only exists on macOS 10.14+. On older
+		// systems the dlopen fails: degrade silently instead of panicking so
+		// the app still starts. All class lookups below then yield nil
+		// classes and every objc message send to a nil receiver safely
+		// returns zero.
+		if _, err := purego.Dlopen("/System/Library/Frameworks/UserNotifications.framework/UserNotifications", purego.RTLD_GLOBAL); err != nil {
+			return
 		}
 	})
 }

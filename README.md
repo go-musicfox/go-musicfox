@@ -1,62 +1,25 @@
-# go-musicfox | **另一个Spotify版 [Spotifox](https://github.com/go-musicfox/spotifox)**
+# go-musicfox
 
 go-musicfox 是用 Go 写的又一款网易云音乐命令行客户端，支持各种音质级别、UnblockNeteaseMusic、Last.fm、MPRIS 和 macOS 交互响应（睡眠暂停、蓝牙耳机连接断开响应和菜单栏控制等）等功能特性，以及 DLNA 投送。
 
-> UI 基于 [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea) 进行了部分定制
+[官网](https://musicfox.anhoder.com) | [Icon](https://github.com/go-musicfox/go-musicfox-icon)
 
-![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total) ![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/go-musicfox/go-musicfox) ![GitHub repo size](https://img.shields.io/github/repo-size/go-musicfox/go-musicfox) ![GitHub](https://img.shields.io/github/license/go-musicfox/go-musicfox) ![Last Tag](https://badgen.net/github/tag/go-musicfox/go-musicfox) ![GitHub last commit](https://badgen.net/github/last-commit/go-musicfox/go-musicfox) ![GitHub All Releases](https://img.shields.io/github/downloads/go-musicfox/go-musicfox/total)
+
+![GitHub stars](https://img.shields.io/github/stars/go-musicfox/go-musicfox?style=social) ![GitHub forks](https://img.shields.io/github/forks/go-musicfox/go-musicfox?style=social)
 
 <p><img src="previews/logo.png" alt="logo" width="256"/></p>
 
-([The icon](https://github.com/go-musicfox/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))
-
-> 官方网站：[https://musicfox.anhoder.com](https://musicfox.anhoder.com)
+*([The icon](https://github.com/go-musicfox/go-musicfox-icon) is based on [kitty-icon](https://github.com/DinkDonk/kitty-icon))*
 
 ------------------------------
 ## 预览
 
-#### 1. 启动
+<video src="https://github.com/user-attachments/assets/3a4d1011-14f2-43bb-b70a-1392b7f8ec04"></video>
 
-![启动界面](previews/boot.png)
+<video src="https://github.com/user-attachments/assets/4f771321-0529-45a9-89ce-6a96e7d8164f"></video>
 
-#### 2. 主界面
 
-![主界面](previews/main.png)
-
-#### 3. 通知
-
-![通知](previews/notify.png)
-
-#### 4. 登录
-
-![登录界面](previews/login.png)
-
-#### 5. 搜索
-
-![搜索界面](previews/search.png)
-
-#### 6. Last.fm 授权
-
-![lastfm](previews/lastfm.png)
-
-#### 7. macOS NowPlaying
-
-![NowPlaying](previews/nowplaying.png)
-
-#### 8. UnblockNeteaseMusic
-
-![UNM](previews/unm.png)
-
-#### 9. macOS 桌面歌词 + 频谱
-
-![LyricsX](previews/lyricsX.gif)
-
-> [!NOTE]
-> macOS 原生桌面歌词功能，支持：
-> - YRC 逐字高亮、自动滚动、拖拽定位
-> - 11种频谱可视化样式（柱状/镜像/胶囊/火焰/圆形/波形等）
-> - 完整的视觉定制（字体/颜色/阴影/圆角/透明度）
-> - 配置路径：`[main.lyric.desktopLyrics]`，详见 [changelog](./utils/filex/embed/changelog.md)
 ## 安装
 
 <details>
@@ -820,4 +783,10 @@ See [CHANGELOG.md](./CHANGELOG.md)
 * [gcli](https://github.com/gookit/gcli)
 * ...
 
-[![Star History Chart](https://api.star-history.com/svg?repos=go-musicfox/go-musicfox&type=Date)](https://star-history.com/#go-musicfox/go-musicfox&Date)
+<a href="https://www.star-history.com/?type=date&repos=go-musicfox%2Fgo-musicfox">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=go-musicfox/go-musicfox&type=date&theme=dark&legend=top-left&sealed_token=ZAtixBzEM1DC7Qb_x7HYTNMRwdWVEMvfdIf1dn6luTNC7vpVblPHzXHcA96fQ-DGGqRQSaVqgSPOU6aV7F_yK2rPlNEqJXG6uvK488Wd9BtQHTDLfKt4_s3y3O1NUElqoMtH8IcJHj2oYLr_-jq6v7K3nx47Udzs4BDC9eSZHRBac-7pVqfi8dZdWrPL" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=go-musicfox/go-musicfox&type=date&legend=top-left&sealed_token=ZAtixBzEM1DC7Qb_x7HYTNMRwdWVEMvfdIf1dn6luTNC7vpVblPHzXHcA96fQ-DGGqRQSaVqgSPOU6aV7F_yK2rPlNEqJXG6uvK488Wd9BtQHTDLfKt4_s3y3O1NUElqoMtH8IcJHj2oYLr_-jq6v7K3nx47Udzs4BDC9eSZHRBac-7pVqfi8dZdWrPL" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=go-musicfox/go-musicfox&type=date&legend=top-left&sealed_token=ZAtixBzEM1DC7Qb_x7HYTNMRwdWVEMvfdIf1dn6luTNC7vpVblPHzXHcA96fQ-DGGqRQSaVqgSPOU6aV7F_yK2rPlNEqJXG6uvK488Wd9BtQHTDLfKt4_s3y3O1NUElqoMtH8IcJHj2oYLr_-jq6v7K3nx47Udzs4BDC9eSZHRBac-7pVqfi8dZdWrPL" />
+ </picture>
+</a>

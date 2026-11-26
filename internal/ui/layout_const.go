@@ -97,6 +97,16 @@ const (
 	// 居中歌词渲染的最小额外边距。
 	MinLyricExtraPadding = 8
 
+	// CenteredLyricBlockDivisor is the divisor applied to the window width to
+	// derive the centered lyric block width when a cover is displayed. A larger
+	// divisor yields a narrower block, which pulls the cover + lyric group
+	// tighter together (short lyrics center closer to the cover). Kept
+	// content-independent so the cover column stays stable while lyrics scroll.
+	// 居中模式下显示封面时，用窗口宽度除以该分母得到歌词块宽度。分母越大块越窄，
+	// 使封面与歌词组更紧凑（短歌词在块内居中后更靠近封面）。与歌词内容无关，
+	// 以保证滚动时封面列稳定不抖动。
+	CenteredLyricBlockDivisor = 3
+
 	// ---- Cover image constants / 封面图片常量 ----
 
 	// DefaultCoverWidthRatio is the fraction of window width to use for

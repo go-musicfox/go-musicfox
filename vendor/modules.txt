@@ -20,6 +20,11 @@ charm.land/glamour/v2/styles
 ## explicit; go 1.25.0
 charm.land/lipgloss/v2
 charm.land/lipgloss/v2/table
+# github.com/13thgoutham/go-webview2 v1.0.25
+## explicit; go 1.20
+github.com/13thgoutham/go-webview2/pkg/combridge
+github.com/13thgoutham/go-webview2/pkg/webview2
+github.com/13thgoutham/go-webview2/webviewloader
 # github.com/BurntSushi/toml v1.6.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml
@@ -42,7 +47,7 @@ github.com/alecthomas/chroma/v2/styles
 ## explicit; go 1.22
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
-# github.com/anhoder/foxful-cli v1.1.2
+# github.com/anhoder/foxful-cli v1.1.6
 ## explicit; go 1.25.8
 github.com/anhoder/foxful-cli/layout
 github.com/anhoder/foxful-cli/model
@@ -270,6 +275,14 @@ github.com/imroc/req/v3/internal/transport
 github.com/imroc/req/v3/internal/util
 github.com/imroc/req/v3/pkg/altsvc
 github.com/imroc/req/v3/pkg/tls
+# github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e
+## explicit; go 1.14
+github.com/jchv/go-winloader
+github.com/jchv/go-winloader/internal/loader
+github.com/jchv/go-winloader/internal/memloader
+github.com/jchv/go-winloader/internal/pe
+github.com/jchv/go-winloader/internal/vmem
+github.com/jchv/go-winloader/internal/winloader
 # github.com/jezek/xgb v1.3.1
 ## explicit; go 1.11
 github.com/jezek/xgb

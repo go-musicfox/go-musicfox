@@ -14,3 +14,10 @@ musicfox
 musicfox.exe
 __debug*
 .slim/
+.planning/
+.rules/
+
+# Agent pipeline: per-run QA state (generated, not source)
+.ai/qa/artifacts_*/
+.ai/qa/test-env.json
+.ai/qa/test-env.env

@@ -46,6 +46,19 @@ type DefaultStatusBar struct {
 	Components []StatusBarComponent
 
 	componentBounds []statusBarComponentBounds
+
+	// 整栏渲染缓存（go-musicfox 定制）：组件文本每帧计算，但 nugget/
+	// breadcrumb/时间/填充的 lipgloss 渲染只按 (宽度, 分钟, 样式代,
+	// 组件文本, 面包屑内容, 面包屑 hover) 变化时重做——状态栏是全帧
+	// 渲染的最后一个每帧 lipgloss 大头。
+	cachedView            string
+	cachedWidth           int
+	cachedMinute          string
+	cachedStyleGen        uint64
+	cachedComponents      string
+	cachedBreadcrumb      string
+	cachedBreadcrumbHover int
+	cachedBounds          []statusBarComponentBounds
 }
 
 type statusBarComponentBounds struct {
@@ -62,6 +75,44 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 		return ""
 	}
 	d.componentBounds = d.componentBounds[:0]
+
+	// Render the injected components first — their text may change per frame.
+	// If nothing else changed, reuse the fully rendered bar.
+	componentViews := make([]string, 0, len(d.Components))
+	for _, component := range d.Components {
+		if component == nil {
+			continue
+		}
+		componentViews = append(componentViews, component.View(a, m))
+	}
+	gen := style.StyleGeneration()
+	minute := time.Now().Format("15:04")
+	componentsKey := strings.Join(componentViews, "\x00")
+	// Breadcrumb content is rebuilt from m.menuStack + m.menuTitle on every
+	// navigation, while nothing else in the key changes — so it must
+	// participate in the cache key, or entering/returning submenus keeps the
+	// stale breadcrumb until the next minute boundary, song change or theme
+	// switch. Hover paints a highlight, so it participates too.
+	breadcrumbKey := ""
+	breadcrumbHover := -1
+	if m != nil {
+		breadcrumbHover = m.hoveredBreadcrumbIdx
+		breadcrumbKey = m.menuTitle.Title
+		if m.menuStack != nil {
+			for _, item := range m.menuStack.ToSlice() {
+				if si, ok := item.(*menuStackItem); ok {
+					breadcrumbKey += "\x00" + si.menuTitle.Title
+				}
+			}
+		}
+	}
+	if d.cachedView != "" && d.cachedWidth == w && d.cachedMinute == minute &&
+		d.cachedStyleGen == gen && d.cachedComponents == componentsKey &&
+		d.cachedBreadcrumb == breadcrumbKey &&
+		d.cachedBreadcrumbHover == breadcrumbHover {
+		d.componentBounds = append(d.componentBounds, d.cachedBounds...)
+		return d.cachedView
+	}
 
 	ss := style.CurrentStyleSet()
 
@@ -124,11 +175,13 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 	}
 	renderedComponents := make([]renderedComponent, 0, len(d.Components))
 	centerBlocks := make([]string, 0, len(d.Components))
+	compIdx := 0
 	for _, component := range d.Components {
 		if component == nil {
 			continue
 		}
-		content := component.View(a, m)
+		content := componentViews[compIdx]
+		compIdx++
 		if content == "" {
 			continue
 		}
@@ -197,7 +250,19 @@ func (d *DefaultStatusBar) View(a *App, m *Main) string {
 		Render("")
 
 	bar := lipgloss.JoinHorizontal(lipgloss.Top, pathLabel, breadcrumbBlock, leftFiller, centerBlock, rightFiller, timeNugget)
-	return ss.StatusBar.Width(w).Render(bar)
+	view := ss.StatusBar.Width(w).Render(bar)
+
+	// Store the rendered bar (go-musicfox 定制), including the component
+	// bounds used for mouse hit-testing.
+	d.cachedView = view
+	d.cachedWidth = w
+	d.cachedMinute = minute
+	d.cachedStyleGen = gen
+	d.cachedComponents = componentsKey
+	d.cachedBreadcrumb = breadcrumbKey
+	d.cachedBreadcrumbHover = breadcrumbHover
+	d.cachedBounds = append(d.cachedBounds[:0], d.componentBounds...)
+	return view
 }
 
 func (d *DefaultStatusBar) handleComponentClick(mouse tea.Mouse, a *App, m *Main) (tea.Cmd, bool) {

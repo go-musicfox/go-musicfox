@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	"github.com/go-musicfox/netease-music/service"
@@ -17,10 +18,14 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/composer"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/utils/app"
+	"github.com/go-musicfox/go-musicfox/utils/filex"
 	"github.com/go-musicfox/go-musicfox/utils/netease"
 )
 
-var supportedFileExtensions = []string{"mp3", "flac"}
+// supportedFileExtensions 本地下载目录中会尝试解析的扩展名。
+// 与 utils/filex.SniffAudioFormat 的识别范围保持一致：下载时若内容嗅探结果
+// 与声明不同，文件会以嗅探出的后缀落盘，这里必须能重新解析到该文件。
+var supportedFileExtensions = []string{"mp3", "flac", "ogg", "wav"}
 
 type persistJob struct {
 	ctx           context.Context
@@ -378,7 +383,8 @@ func (m *Manager) persistCachedSource(ctx context.Context, source PlayableSource
 		source:        source,
 		isFromCache:   true,
 	}
-	if err := m.persistStream(job); err != nil {
+	finalFilePath, err = m.persistStream(job)
+	if err != nil {
 		return "", err
 	}
 	if err := m.tagger.SetSongTag(finalFilePath, source.Song); err != nil {
@@ -406,21 +412,22 @@ func (m *Manager) persistRemoteSource(ctx context.Context, source PlayableSource
 		source:        source,
 		isFromCache:   false,
 	}
-	if err := m.persistStream(job); err != nil {
+	finalFilePath, err := m.persistStream(job)
+	if err != nil {
 		return "", err
 	}
-	if err := m.tagger.SetSongTag(filePath, source.Song); err != nil {
-		slog.Warn("Song downloaded, but failed to set metadata.", "file", filePath, "error", err)
+	if err := m.tagger.SetSongTag(finalFilePath, source.Song); err != nil {
+		slog.Warn("Song downloaded, but failed to set metadata.", "file", finalFilePath, "error", err)
 	}
-	return filePath, nil
+	return finalFilePath, nil
 }
 
-func (m *Manager) persistStream(job persistJob) error {
+func (m *Manager) persistStream(job persistJob) (string, error) {
 	defer job.stream.Close()
 
 	tempFile, err := os.CreateTemp(filepath.Dir(job.finalFilePath), "download-*.tmp")
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer os.Remove(tempFile.Name())
 
@@ -456,10 +463,32 @@ func (m *Manager) persistStream(job persistJob) error {
 	closeErr := tempFile.Close()
 
 	if finalErr := errors.Join(copyErr, waitErr, closeErr); finalErr != nil {
-		return finalErr
+		return "", finalErr
 	}
 
-	return os.Rename(tempFile.Name(), job.finalFilePath)
+	// 与播放路径一致：按内容嗅探真实音频格式，检测结果决定下载文件后缀
+	// （如云盘 FLAC 内容被 API 声明为 mp3）。嗅探失败时维持原声明后缀。
+	finalFilePath := job.finalFilePath
+	if detected, sniffed := sniffDownloadFormat(tempFile.Name()); sniffed && detected != strings.TrimPrefix(filepath.Ext(finalFilePath), ".") {
+		if fileName, nameErr := m.nameGen.Song(job.source.Song, detected); nameErr == nil {
+			finalFilePath = filepath.Join(m.downloadDir, fileName)
+		}
+	}
+
+	if err := os.Rename(tempFile.Name(), finalFilePath); err != nil {
+		return "", err
+	}
+	return finalFilePath, nil
+}
+
+// sniffDownloadFormat 读取文件头部嗅探音频格式，返回对应的小写扩展名。
+func sniffDownloadFormat(path string) (string, bool) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", false
+	}
+	defer f.Close()
+	return filex.SniffAudioFormat(f)
 }
 
 func (m *Manager) ensureDirExists(dir string) error {

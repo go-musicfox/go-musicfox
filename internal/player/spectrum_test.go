@@ -153,3 +153,86 @@ func findPeakBand(levels [SpectrumBandCount]float64) int {
 	}
 	return peakBand
 }
+
+// TestPCMAnalyzerRawRingConcurrentReadWriteNoRace exercises the raw PCM ring
+// buffer from both sides at once: the audio callback (consume) writes while the
+// render side (RawSamples) reads. Regression test for the data race between the
+// two; run with -race.
+func TestPCMAnalyzerRawRingConcurrentReadWriteNoRace(t *testing.T) {
+	analyzer := NewPCMAnalyzer(time.Hour) // long interval: keep analyze loop idle
+	defer analyzer.Close()
+	consumer := analyzer.NewConsumer()
+
+	samples := make([]float32, 64)
+	for i := range samples {
+		samples[i] = float32(i) / 64
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 2000; i++ {
+			consumer(44100, samples, nil)
+		}
+	}()
+
+	for i := 0; i < 2000; i++ {
+		frame := analyzer.RawSamples()
+		if frame.Count > len(frame.SamplesL) {
+			t.Fatalf("RawSamples returned count %d > buffer %d", frame.Count, len(frame.SamplesL))
+		}
+	}
+	<-done
+}
+
+// TestPCMAnalyzerRawRingResetConcurrent ensures NewConsumer's ring reset does
+// not race with RawSamples reads either.
+func TestPCMAnalyzerRawRingResetConcurrent(t *testing.T) {
+	analyzer := NewPCMAnalyzer(time.Hour)
+	defer analyzer.Close()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 200; i++ {
+			consumer := analyzer.NewConsumer()
+			consumer(44100, []float32{0.1, 0.2, 0.3}, nil)
+		}
+	}()
+	for i := 0; i < 200; i++ {
+		_ = analyzer.RawSamples()
+	}
+	<-done
+}
+
+// TestPCMAnalyzerStateResetConcurrentNoRace runs the analyze loop at a short
+// interval (so avgLevels/target are actively read and written in the run
+// goroutine) while NewConsumer resets the analyzer state concurrently — the
+// song-switch pattern. Regression test for the avgLevelsL/R + target data
+// races, which the idle-loop tests below cannot trigger.
+func TestPCMAnalyzerStateResetConcurrentNoRace(t *testing.T) {
+	analyzer := NewPCMAnalyzer(time.Millisecond)
+	defer analyzer.Close()
+
+	samples := make([]float32, 256)
+	for i := range samples {
+		samples[i] = float32(i%17) / 17
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 300; i++ {
+			consumer := analyzer.NewConsumer()
+			for j := 0; j < 20; j++ {
+				consumer(44100, samples, nil)
+				time.Sleep(200 * time.Microsecond)
+			}
+		}
+	}()
+	for i := 0; i < 300; i++ {
+		_ = analyzer.Spectrum()
+		time.Sleep(200 * time.Microsecond)
+	}
+	<-done
+}

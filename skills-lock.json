@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "skills": {
+    "om-apply-upgrade-notes": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-apply-upgrade-notes/SKILL.md",
+      "computedHash": "af7688d292a88ee5ae55002f0e247f729b6fee74fcca84db9f18a66c0ee61805"
+    },
+    "om-approve-merge-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-approve-merge-pr/SKILL.md",
+      "computedHash": "c15850fcc029bf9acef9b14cd002d24b5d375130746fe7c63602dd13974c3c56"
+    },
+    "om-auto-continue-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-continue-pr/SKILL.md",
+      "computedHash": "529770c08f0ebefa073b5716e3e5670daac943800d40111e36de642a14be6f3b"
+    },
+    "om-auto-continue-pr-loop": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-continue-pr-loop/SKILL.md",
+      "computedHash": "63252bb258924b1ee7118ae08400b27f00f42035c5d14ae4a49c6d8f45a53b0b"
+    },
+    "om-auto-create-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-create-pr/SKILL.md",
+      "computedHash": "0c5f4802d1144c44232fb1740353b2f2ff1b9ae1f106f6a81b44738437f22ee3"
+    },
+    "om-auto-create-pr-loop": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-create-pr-loop/SKILL.md",
+      "computedHash": "b86f80ef8465078310fac5f524574b859b7d7a4f486cf8adc36cc9c81d2bcdaf"
+    },
+    "om-auto-fix-issue": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-fix-issue/SKILL.md",
+      "computedHash": "f8a7d15fbbf591d993cd2aaf9042be887627afdc9f1b84a0d674f22a0313513a"
+    },
+    "om-auto-fix-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-fix-pr/SKILL.md",
+      "computedHash": "17da02bf9521a9fadd20b75d839e89ddad5632d1f99cc4614cbe68438e3965d1"
+    },
+    "om-auto-implement-spec": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-implement-spec/SKILL.md",
+      "computedHash": "b242ae833d677f441608e618b3b856eff9850f48b6f72d2fc600261c561340cd"
+    },
+    "om-auto-manage-issues": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-manage-issues/SKILL.md",
+      "computedHash": "55778d68639ed8cda2e1c0dd620b94d3f45c6c64c46e2e34ecaf6117694d3991"
+    },
+    "om-auto-qa-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-qa-pr/SKILL.md",
+      "computedHash": "567e1e19416f31905e026beceb7fcb98e2a0df7fbb66fa4cfb24afb4cbc042d2"
+    },
+    "om-auto-review-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-review-pr/SKILL.md",
+      "computedHash": "aead194259b51410cba84e746476da22cf10b2138dce7da97ab84123a68ab534"
+    },
+    "om-auto-update-changelog": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-update-changelog/SKILL.md",
+      "computedHash": "7025f334804b067d2ef50c74898d47ff36ea5f76bbac537ec7d9fec132b48063"
+    },
+    "om-auto-write-spec": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-auto-write-spec/SKILL.md",
+      "computedHash": "6075c8fdd2a5676223188d92ef1e3b4d3d35a2b2b2527acbec415da44b30b5d6"
+    },
+    "om-brainstorm": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-brainstorm/SKILL.md",
+      "computedHash": "832b54010919f6a0673804caf9611a1f7740b03725108d6c92c7ea87b2943ea3"
+    },
+    "om-check-and-commit": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-check-and-commit/SKILL.md",
+      "computedHash": "70253dd35641ab9f21cd98730c1974151f815703586aa324679215dd4268dd81"
+    },
+    "om-close-fixed-issues": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-close-fixed-issues/SKILL.md",
+      "computedHash": "9f8fba5845f5330f6f76a431b20afaa45512dd204cff740403bb9f2f7cf3714d"
+    },
+    "om-code-review": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-code-review/SKILL.md",
+      "computedHash": "9a3183048abb396691c0c41184a2f8968d528c4955e4809ae8019578c94114fe"
+    },
+    "om-create-skill": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-create-skill/SKILL.md",
+      "computedHash": "00e712b756a92f5859d7f1a545fa5e389e0cbe617fb3c57f55b9a77ea6cf9fcf"
+    },
+    "om-fix": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-fix/SKILL.md",
+      "computedHash": "30359b35881177c8ee3df481efcc4a3c8db7d28f08b579dc9742d109a44e33da"
+    },
+    "om-followup-issue-from-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-followup-issue-from-pr/SKILL.md",
+      "computedHash": "61afff0a787be126715280fa49c9613381c241147228a75081a005ba00fe1b3b"
+    },
+    "om-integration-tests": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-integration-tests/SKILL.md",
+      "computedHash": "fbe81dcb3c50bd6dd4b2f3f959914a089c98ebf80470ea0dbae773326cfed813"
+    },
+    "om-merge-buddy": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-merge-buddy/SKILL.md",
+      "computedHash": "98a01aa37d098910d8bfb1a1e1dffd64222ee7d3e67980fec2ca1952c8485457"
+    },
+    "om-open-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-open-pr/SKILL.md",
+      "computedHash": "63c37f2861be4009df67c9147999422b8c4538424b1bbbe0666cad2e41440f5d"
+    },
+    "om-pipeline-retro": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-pipeline-retro/SKILL.md",
+      "computedHash": "db327c484af7b6cc3cbc94e522807f6b4ad21f0c0c28fb43769133531348fadd"
+    },
+    "om-pr-autopilot": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-pr-autopilot/SKILL.md",
+      "computedHash": "5d04d8a65459a46b433f64c77408befbef9118311405691deca55105343e3c39"
+    },
+    "om-prepare-issue": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-prepare-issue/SKILL.md",
+      "computedHash": "18ce232270d85ea05ee7b6933b4fbeb7e123e2a4f4bb78c28a7ea7daac0012b8"
+    },
+    "om-prepare-test-env": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-prepare-test-env/SKILL.md",
+      "computedHash": "2115bcd2cb2767cab6ebea7beaaee2edfb6e5039714bc4a8b80d81f51b7fe294"
+    },
+    "om-review-prs": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-review-prs/SKILL.md",
+      "computedHash": "38a133ad8735c3b1526466fc81f62092799e581212c8289402458e265959be3d"
+    },
+    "om-root-cause": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-root-cause/SKILL.md",
+      "computedHash": "c7b8e375320fda70df95cf4b15e5fde2b3035bd55a695855c490abdd678fface"
+    },
+    "om-setup-agent-pipeline": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-setup-agent-pipeline/SKILL.md",
+      "computedHash": "303ba1fdcc29930e568f7f0e40852580abec2e8ddf00788e1f998fc6bfd7c69a"
+    },
+    "om-spec-writing": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-spec-writing/SKILL.md",
+      "computedHash": "5b34b3777bc584bc166d4806f71fc24bcceb5d67df2633c39ad98480db0353e7"
+    },
+    "om-ux-review-pr": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-ux-review-pr/SKILL.md",
+      "computedHash": "b3b06dc82917fbc74bb29b38a68ccfd4c50425357182c859ff03f1c8674d6c3d"
+    },
+    "om-ux-setup": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-ux-setup/SKILL.md",
+      "computedHash": "c0e596a4e1246bdc8f9365b767cfb09d034c745b8134fb544e1cfb8f3937739a"
+    },
+    "om-ux-shape": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-ux-shape/SKILL.md",
+      "computedHash": "411e734b93c12f0ecaa21713d53da7c9bcb722d41ac30fc7f3d41579b553a972"
+    },
+    "om-verify-in-repo": {
+      "source": "open-mercato/skills",
+      "sourceType": "github",
+      "skillPath": "skills/om-verify-in-repo/SKILL.md",
+      "computedHash": "0151f3c61d7abac2d98e6fb5c9150d523b36e74ea32d10a5560b4df368aec50b"
+    }
+  }
+}

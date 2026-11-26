@@ -38,6 +38,10 @@ type PlayerConfig struct {
 type BeepConfig struct {
 	// beep mp3解码器
 	Mp3Decoder string `koanf:"mp3Decoder"`
+	// 是否启用无缝播放
+	Gapless bool `koanf:"gapless"`
+	// 提前多少秒预加载下一首
+	GaplessPreloadSeconds int `koanf:"gaplessPreloadSeconds"`
 }
 
 // MpdConfig `mpd` 引擎专属配置

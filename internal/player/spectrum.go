@@ -144,10 +144,12 @@ func (a *PCMAnalyzer) NewConsumer() func(sampleRate float64, samplesL, samplesR 
 	generation := a.generation.Add(1)
 	a.frameMu.Lock()
 	a.frame = SpectrumFrame{}
-	a.target = SpectrumFrame{}
 	a.frameMu.Unlock()
 
 	// Clear raw ring buffer for new audio source.
+	// The ring elements are guarded by rawMu (written in consume, read in
+	// RawSamples), so the reset must hold the same lock.
+	a.rawMu.Lock()
 	a.rawRingPos.Store(0)
 	a.rawRingCount.Store(0)
 	a.rawSampleRate.Store(0)
@@ -155,9 +157,11 @@ func (a *PCMAnalyzer) NewConsumer() func(sampleRate float64, samplesL, samplesR 
 		a.rawRingL[i] = 0
 		a.rawRingR[i] = 0
 	}
-	// Reset FFT averaging state.
-	a.avgLevelsL = [SpectrumBandCount]float64{}
-	a.avgLevelsR = [SpectrumBandCount]float64{}
+	a.rawMu.Unlock()
+	// Note: avgLevelsL/R and target are intentionally NOT reset here — they are
+	// owned by the analyze goroutine, which detects the generation bump (in
+	// analyzeLatest) and resets them before the first frame of the new source.
+	// A concurrent write here would race with the running analyze loop.
 
 	return func(sampleRate float64, samplesL, samplesR []float32) {
 		a.consume(generation, sampleRate, samplesL, samplesR)
@@ -170,6 +174,9 @@ func (a *PCMAnalyzer) consume(generation uint64, sampleRate float64, samplesL, s
 	}
 
 	// Copy to raw PCM ring buffer for oscilloscope/vectorscope.
+	// Ring elements are guarded by rawMu; RawSamples linearizes them under the
+	// same lock, so writes must take it too.
+	a.rawMu.Lock()
 	a.rawSampleRate.Store(math.Float64bits(sampleRate))
 	count := min(len(samplesL), rawSampleBufferSize)
 	pos := int(a.rawRingPos.Load())
@@ -185,6 +192,7 @@ func (a *PCMAnalyzer) consume(generation uint64, sampleRate float64, samplesL, s
 	if c := a.rawRingCount.Load(); c < rawSampleBufferSize {
 		a.rawRingCount.Store(min(c+uint32(count), rawSampleBufferSize))
 	}
+	a.rawMu.Unlock()
 
 	for i := range a.slots {
 		slot := &a.slots[i]

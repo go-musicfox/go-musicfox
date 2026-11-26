@@ -12,7 +12,7 @@ import (
 // qrLoginClient 使用 Chrome TLS 指纹模拟的二维码登录专用 HTTP 客户端。
 //
 // 背景：网易云音乐的二维码登录接口对 TLS 指纹有检测，标准 Go http.Client
-// 的 TLS 握手特征与浏览器差异较大，容易被服务端识别并拒绝。
+// 的 TLS 握手特征与浏览器差异较大，容易被服务端识别并拒绝（返回 462）。
 // 通过 imroc/req/v3 的 SetTLSFingerprintChrome() 模拟 Chrome 浏览器的
 // TLS ClientHello 指纹，让服务端认为请求来自真实的 Chrome 浏览器。
 const qrLoginUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"

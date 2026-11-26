@@ -77,6 +77,19 @@ type Main struct {
 	// Mouse hover tracking for menu list items
 	hoveredMenuItemIdx int // -1 = none, 0+ = index in menuList
 
+	// menuItemCache 缓存每行菜单项的渲染结果。鼠标划过菜单时 hover 只影响
+	// 单行，其余行的 lipgloss 渲染可整帧复用；否则每次 hover 变化都全量
+	// 重渲染所有菜单行，CPU 被鼠标事件驱动到接近单核满载。
+	menuItemCache map[int]menuItemViewCacheEntry
+
+	// menuLineCache 缓存整行（含双列间隙与左侧填充）的组装结果，避免每帧
+	// 对 29 行未变化的行重复 lipgloss 组装。
+	menuLineCache map[int]menuLineViewCacheEntry
+
+	// lastViewAt 记录 Main.View 最近一次执行时间，用于把鼠标 hover 引发的
+	// 渲染合并到 tick 帧率（hover 状态即时更新，渲染 ≤33ms 延迟由 tick 兜底）。
+	lastViewAt time.Time
+
 	// Mouse hover tracking for tabs
 	hoveredTabIdx int // -1 = none, 0+ = tab index
 
@@ -454,6 +467,14 @@ func (m *Main) Update(msg tea.Msg, a *App) (Page, tea.Cmd) {
 		return m, a.RerenderCmd(true)
 	}
 
+	// Unknown-message fallback: let an optional hook dispatch messages this
+	// Main.Update does not recognize (e.g. async frontend commands navigating
+	// to a new page). Nil keeps the previous behavior of ignoring them.
+	if m.options.UnknownMsgHandler != nil {
+		if page, cmd := m.options.UnknownMsgHandler(msg, a); page != nil || cmd != nil {
+			return page, cmd
+		}
+	}
 	return m, nil
 }
 
@@ -474,6 +495,9 @@ func (m *Main) View(a *App) string {
 	if w <= 0 || h <= 0 {
 		return ""
 	}
+	// Track the last frame time so hover state changes can merge their
+	// render into the frame-rate cycle instead of re-rendering per event.
+	m.lastViewAt = time.Now()
 
 	a.ClearAppBackgroundExclusion()
 
@@ -595,7 +619,109 @@ func (m *Main) View(a *App) string {
 	return renderAppBackground(content, w, ss.AppBackground, a.appBackgroundExclusion)
 }
 
+// renderAppBackground fills the frame with the app background. Rewritten to
+// avoid running lipgloss's full wrap/align/grapheme pipeline over the whole
+// frame on every render — that was the dominant per-frame cost during mouse
+// sweeps (components already paint their own cells with the background, so
+// only empty, plain-text and short rows need explicit filling).
 func renderAppBackground(content string, width int, background lipgloss.Style, exclusion backgroundRect) string {
+	bg := background.GetBackground()
+	if bg == nil || width <= 0 {
+		return content
+	}
+	// Transparent/empty backgrounds paint nothing — skip all processing.
+	// lipgloss.Color("") (unconfigured theme background) returns NoColor, and
+	// a NoColor RGBA() is indistinguishable from black, so detect it by type.
+	if _, isNoColor := bg.(lipgloss.NoColor); isNoColor {
+		return content
+	}
+	// Build the background SGR prefix once. NoColor must be detected by type
+	// assertion: its RGBA() returns (0,0,0,65535), indistinguishable from a
+	// legitimate black background. Note: this path always emits truecolor —
+	// ansi.BasicColor/IndexedColor (palette themes) have non-zero RGBA() and
+	// do NOT fall back to the lipgloss path below; lipgloss would emit
+	// "48;5;n" for those, an accepted difference.
+	var bgSGR string
+	if _, isNoColor := bg.(lipgloss.NoColor); !isNoColor {
+		if r, g, b, a := bg.RGBA(); a != 0 {
+			bgSGR = fmt.Sprintf("\x1b[48;2;%d;%d;%dm", r>>8, g>>8, b>>8)
+		}
+	}
+	if bgSGR == "" {
+		// Keep the original lipgloss path for unusual background colors.
+		return renderAppBackgroundLipgloss(content, width, background, exclusion)
+	}
+	const resetSGR = "\x1b[m"
+
+	lines := strings.Split(content, "\n")
+	overwide := false
+	for y, line := range lines {
+		// Exclusion row (cover image placeholder): fill the segments around
+		// the excluded span, leave the span itself untouched. Pad the row to
+		// the frame width first, matching the original full-frame Width pass.
+		// NB: SetAppBackgroundExclusion currently has no callers in
+		// go-musicfox, so this branch is unreachable in practice (cover
+		// rendering uses its own clear mechanism); kept for API parity.
+		if exclusion.w > 0 && exclusion.h > 0 && y >= exclusion.y && y < exclusion.y+exclusion.h {
+			start := max(exclusion.x, 0)
+			end := min(exclusion.x+exclusion.w, width)
+			if start < end {
+				if lw := ansi.StringWidth(line); lw > width {
+					overwide = true
+				} else if lw < width {
+					line += bgSGR + strings.Repeat(" ", width-lw) + resetSGR
+				}
+				left := ansi.Cut(line, 0, start)
+				mid := ansi.Cut(line, start, end)
+				right := ansi.Cut(line, end, width)
+				lines[y] = bgSGR + left + resetSGR + mid + bgSGR + right + resetSGR
+				continue
+			}
+		}
+
+		switch {
+		case line == "":
+			// Empty row: fast path, no width computation needed.
+			lines[y] = bgSGR + strings.Repeat(" ", width) + resetSGR
+		case !strings.Contains(line, "\x1b"):
+			// Plain-text row: pad with runewidth (no ANSI to parse) and paint.
+			if lw := runewidth.StringWidth(line); lw > width {
+				overwide = true
+			} else if lw < width {
+				line += strings.Repeat(" ", width-lw)
+				lines[y] = bgSGR + line + resetSGR
+			} else {
+				lines[y] = bgSGR + line + resetSGR
+			}
+		default:
+			// ANSI row: byte length is not a reliable width proxy (a row of
+			// many short styled segments can exceed width*2 bytes while still
+			// leaving unfilled cells), so measure the visible width and pad
+			// precisely. The leading SGR is a fallback for cells without an
+			// explicit background; styled cells carry their own.
+			if lw := ansi.StringWidth(line); lw > width {
+				overwide = true
+			} else if lw < width {
+				line += bgSGR + strings.Repeat(" ", width-lw) + resetSGR
+			}
+			lines[y] = bgSGR + line + resetSGR
+		}
+	}
+	if overwide {
+		// An over-wide row wraps into extra lines under the original lipgloss
+		// Width() pass, shifting every subsequent row, so the manual filler
+		// cannot reproduce it line-by-line. Fall back to the full lipgloss
+		// pipeline (rare: components are expected to keep rows within the
+		// frame width).
+		return renderAppBackgroundLipgloss(content, width, background, exclusion)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// renderAppBackgroundLipgloss is the original full-frame lipgloss
+// implementation, kept for background color types that cannot be expressed as
+// raw RGB SGR (fallback path of renderAppBackground).
+func renderAppBackgroundLipgloss(content string, width int, background lipgloss.Style, exclusion backgroundRect) string {
 	content = lipgloss.NewStyle().Width(width).Render(content)
 	if exclusion.w <= 0 || exclusion.h <= 0 {
 		return background.Render(content)
@@ -945,7 +1071,8 @@ func (m *Main) backButtonIcon() string {
 	return ss.BackButton.Render("←")
 }
 
-// menuTitleViewContent renders the menu title content string, left-aligned
+// menuTitleViewContent renders the menu title content string.
+// In centerEverything mode, the title is centered; otherwise it's left-aligned
 // at menuStartColumn to match the menu items' horizontal position.
 // The loading tips should be injected by the caller (see View).
 func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
@@ -956,18 +1083,43 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 	startCol := m.menuStartColumn
 	ss := style.CurrentStyleSet()
 
-	// When in a submenu, show a back button to the left of the title.
-	// The back button is positioned at startCol - backButtonWidth so the
-	// title itself remains at its original startCol position.
 	showBack := m.menuStack.Len() > 0
-
-	maxLen := windowWidth - startCol
 	realString := menuTitle.OriginString()
 	formatString := menuTitle.String()
 
+	// In centerEverything mode, center the title without fixed width padding
+	if m.options.CenterEverything {
+		var titleText string
+		if lipgloss.Width(realString) > windowWidth-4 {
+			tmp := *menuTitle
+			titleLen := lipgloss.Width(tmp.Title)
+			subTitleLen := lipgloss.Width(tmp.Subtitle)
+			maxTitleLen := windowWidth - 4
+			if titleLen >= maxTitleLen-1 {
+				tmp.Title = lipgloss.NewStyle().MaxWidth(maxTitleLen - 1).Render(tmp.Title)
+				tmp.Subtitle = ""
+			} else if subTitleLen >= maxTitleLen-titleLen-1 {
+				tmp.Subtitle = lipgloss.NewStyle().MaxWidth(maxTitleLen - titleLen - 1).Render(tmp.Subtitle)
+			}
+			titleText = tmp.String()
+		} else {
+			titleText = formatString
+		}
+		styledTitle := ss.MenuTitle.Render(titleText)
+
+		if showBack {
+			backIcon := m.backButtonIcon()
+			sep := ss.AppBackground.Render(" ")
+			content := backIcon + sep + styledTitle
+			return layout.Place(windowWidth, 1, lipgloss.Center, lipgloss.Top, content)
+		}
+		return layout.Place(windowWidth, 1, lipgloss.Center, lipgloss.Top, styledTitle)
+	}
+
+	// Default left-aligned mode
+	maxLen := windowWidth - startCol
 	var titleText string
 	if lipgloss.Width(realString) > maxLen {
-		// Truncate long titles: prioritize title, clip subtitle if needed
 		tmp := *menuTitle
 		titleLen := lipgloss.Width(tmp.Title)
 		subTitleLen := lipgloss.Width(tmp.Subtitle)
@@ -982,15 +1134,9 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		titleText = lipgloss.NewStyle().Inherit(ss.AppBackground).Width(maxLen).Render(formatString)
 	}
 
-	// Style the title independently — back button must NOT affect its color.
 	styledTitle := ss.MenuTitle.Render(titleText)
 
 	if showBack {
-		// Back button at startCol - backButtonWidth, title unchanged at startCol.
-		// Layout: [padding]←[space][title...]
-		// backIcon and styledTitle are pre-rendered and emit their own reset
-		// sequences, which clear the outer AppBackground mid-line; paint the
-		// separating space explicitly so it never reveals content beneath the TUI.
 		backIcon := m.backButtonIcon()
 		padding := startCol - backButtonWidth
 		if padding < 0 {
@@ -1000,7 +1146,6 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		return lipgloss.NewStyle().Inherit(ss.AppBackground).Render(strings.Repeat(" ", padding) + backIcon + sep + styledTitle)
 	}
 
-	// No back button: original padding + title
 	if startCol > 0 {
 		styledTitle = lipgloss.NewStyle().Inherit(ss.AppBackground).PaddingLeft(startCol).Render(styledTitle)
 	}
@@ -1029,9 +1174,15 @@ func (m *Main) forceEntryLength(item *MenuItem, targetLength int) string {
 	titleWidth := layout.Width(item.Title)
 	minSubtitleWidth := 5
 	if titleWidth >= targetLength-minSubtitleWidth {
+		title := item.Title
+		// Truncate overlong titles to avoid lipgloss wrapping to a second line.
+		if titleWidth > targetLength {
+			title = truncateVisualWidth(title, targetLength)
+		}
 		return lipgloss.NewStyle().
 			Width(targetLength).
-			Render(item.Title)
+			MaxWidth(targetLength).
+			Render(title)
 	}
 	// Case 2:
 	// Enough space for everything.
@@ -1066,19 +1217,59 @@ func (m *Main) formatEntry(item *MenuItem, index int, targetLength int) string {
 	if item == nil {
 		return lipgloss.NewStyle().Inherit(style.CurrentStyleSet().MenuItem).Width(targetLength).Render("")
 	}
-	var fmtStart string
-	if !m.inSearching && index == m.selectedIndex {
-		fmtStart = " => "
-	} else {
-		fmtStart = "    "
+	ss := style.CurrentStyleSet()
+	selected := m.isSelected(index)
+
+	fmtStart := "    "
+	if selected {
+		// No leading space: leftSep(1) + "=> "(3) == unselected "    "(4), so the
+		// index column aligns between selected and unselected rows.
+		fmtStart = "=> "
 	}
-	titleLength := targetLength - m.getMaxIndexWidth() - 6
+
+	// Reserve the left separator in the content budget. The right separator
+	// replaces trailing padding when available, or gets a dedicated cell.
+	var leftSep, rightSep string
+	leftSepWidth, rightSepWidth := 0, 0
+	if selected {
+		leftSep = ss.MenuSelectedSepLeft
+		if leftSep == "" {
+			leftSep = " "
+		}
+		rightSep = ss.MenuSelectedSepRight
+		if rightSep == "" {
+			rightSep = " "
+		}
+		leftSepWidth = lipgloss.Width(leftSep)
+		rightSepWidth = lipgloss.Width(rightSep)
+	}
+
+	// Overhead before the title: prefix width + ". " (2) + the left
+	// separator. The right separator uses trailing padding or an extra cell.
+	titleLength := targetLength - m.getMaxIndexWidth() - lipgloss.Width(fmtStart) - 2 - leftSepWidth
 	songEntry := fmt.Sprintf(
 		fmt.Sprintf("%s%%%dd. %%s", fmtStart, m.getMaxIndexWidth()),
 		index,
 		m.forceEntryLength(item, titleLength))
-	if m.isSelected(index) {
-		return style.CurrentStyleSet().SelectedItem.Render(songEntry)
+	if selected {
+		// Arc glyphs: foreground = selected background, background = surrounding
+		// (menu) background, forming rounded caps against the row's fill cells.
+		selBg := ss.SelectedItem.GetBackground()
+		sepBg := ss.MenuItem.GetBackground()
+		sepStyle := lipgloss.NewStyle().Foreground(selBg).Background(sepBg)
+		rightSepView := ""
+		if rightSepWidth > 0 {
+			plainEntry := ansi.Strip(songEntry)
+			trimmedEntry := strings.TrimRightFunc(plainEntry, unicode.IsSpace)
+			trailingSpaceWidth := runewidth.StringWidth(plainEntry) - runewidth.StringWidth(trimmedEntry)
+			if trailingSpaceWidth >= rightSepWidth {
+				songEntry = ansi.Truncate(songEntry, ansi.StringWidth(songEntry)-rightSepWidth, "")
+			}
+			rightSepView = sepStyle.Render(rightSep)
+		}
+		return sepStyle.Render(leftSep) +
+			ss.SelectedItem.Render(songEntry) +
+			rightSepView
 	}
 	return songEntry
 }
@@ -1105,18 +1296,39 @@ func (m *Main) centeredMenuView(a *App, lines int) string {
 
 	entryLength := m.centeredEntryLength(a, titleLengths)
 
+	// Anchor every row using the nominal entry width. An overflowing selected
+	// item may append a dedicated right-separator cell; centering its actual
+	// width would shift the title one column left.
+	rowStartColumn := max((a.windowWidth-entryLength*m.getNumColumns())/2, 0)
+	rowStyle := lipgloss.NewStyle().Width(a.windowWidth)
+
 	var rows []string
 	for i := 0; i < lines; i++ {
 		index := i * m.getNumColumns()
 		menuIndex := m.getPageStartIndex() + index
-		left := m.formatEntry(allSongs[index], menuIndex, entryLength)
+		row := m.formatEntry(allSongs[index], menuIndex, entryLength)
 		if m.isDualColumn {
 			right := m.formatEntry(allSongs[index+1], menuIndex+1, entryLength)
-			row := layout.JoinHorizontal(lipgloss.Center, left, right)
-			rows = append(rows, lipgloss.NewStyle().Width(a.windowWidth).Align(lipgloss.Center).Render(row))
-		} else {
-			rows = append(rows, lipgloss.NewStyle().Width(a.windowWidth).Align(lipgloss.Center).Render(left))
+			if overflow := ansi.StringWidth(row) - entryLength; overflow > 0 {
+				// A left entry can grow for its dedicated right separator. Consume
+				// that growth from the right entry's structural leading spaces so
+				// the second column keeps its nominal start position.
+				plainRight := ansi.Strip(right)
+				leadingSpaceWidth := 0
+				for _, r := range plainRight {
+					if !unicode.IsSpace(r) {
+						break
+					}
+					leadingSpaceWidth += runewidth.RuneWidth(r)
+				}
+				trimWidth := min(overflow, leadingSpaceWidth)
+				if trimWidth > 0 {
+					right = ansi.Cut(right, trimWidth, ansi.StringWidth(right))
+				}
+			}
+			row = layout.JoinHorizontal(lipgloss.Center, row, right)
 		}
+		rows = append(rows, rowStyle.Render(strings.Repeat(" ", rowStartColumn)+row))
 	}
 	return layout.JoinVertical(lipgloss.Left, rows...)
 }
@@ -1167,11 +1379,14 @@ func (m *Main) menuListView(a *App) string {
 	if m.options.CenterEverything {
 		menuListBuilder.WriteString(m.centeredMenuView(a, lines))
 	} else {
+		// Each row is already fully rendered (styles baked in), so joining
+		// with plain newlines is equivalent to lipgloss.JoinVertical but
+		// avoids re-processing every row's ANSI content per frame.
 		var menuLines []string
 		for i := 0; i < lines; i++ {
 			menuLines = append(menuLines, m.menuLineView(a, i))
 		}
-		menuListBuilder.WriteString(lipgloss.JoinVertical(lipgloss.Left, menuLines...))
+		menuListBuilder.WriteString(strings.Join(menuLines, "\n"))
 	}
 
 	// fill blanks to maintain fixed page size
@@ -1184,7 +1399,7 @@ func (m *Main) menuListView(a *App) string {
 		if lines > 0 {
 			menuListBuilder.WriteByte('\n')
 		}
-		menuListBuilder.WriteString(lipgloss.JoinVertical(lipgloss.Left, fillLines...))
+		menuListBuilder.WriteString(strings.Join(fillLines, "\n"))
 	}
 
 	return menuListBuilder.String()
@@ -1209,6 +1424,24 @@ func truncateVisualWidth(s string, maxWidth int) string {
 	return s
 }
 
+// menuItemViewCacheEntry 是 menuItemView 单行渲染的缓存条目。键是渲染输入
+// 的一个子集：内容（title/subtitle）、选中/hover 状态、窗口尺寸、样式代与
+// subtitle 滚动相位。任一变化（翻页、hover、主题切换、滚动、数据刷新）都
+// 会自然失效。
+type menuItemViewCacheEntry struct {
+	title         string
+	subtitle      string
+	selected      bool
+	hovered       bool
+	windowWidth   int
+	maxIndexWidth int
+	dualColumn    bool
+	styleGen      uint64
+	scrollPhase   int64
+	view          string
+	width         int
+}
+
 func (m *Main) menuItemView(a *App, index int) (string, int) {
 	var (
 		menuItemBuilder strings.Builder
@@ -1221,6 +1454,25 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 
 	isSelected := m.isSelected(index)
 	isHovered := !m.inSearching && index == m.hoveredMenuItemIdx
+
+	// Row-level render cache: a mouse sweep changes only
+	// the hovered row; re-rendering every menu line with lipgloss on each
+	// hover change dominated CPU during mouse sweeps at high frame rates.
+	if index >= 0 && index < len(m.menuList) && m.menuItemCache != nil {
+		item := &m.menuList[index]
+		var scrollPhase int64
+		if m.options.Ticker != nil {
+			scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+		}
+		if e, ok := m.menuItemCache[index]; ok &&
+			e.title == item.Title && e.subtitle == item.Subtitle &&
+			e.selected == isSelected && e.hovered == isHovered &&
+			e.windowWidth == windowWidth && e.maxIndexWidth == maxIndexWidth &&
+			e.dualColumn == m.isDualColumn &&
+			e.styleGen == style.StyleGeneration() && e.scrollPhase == scrollPhase {
+			return e.view, e.width
+		}
+	}
 
 	// Resolve title style based on selection + hover state
 	ss := style.CurrentStyleSet()
@@ -1335,7 +1587,54 @@ func (m *Main) menuItemView(a *App, index int) (string, int) {
 
 	menuItemBuilder.WriteString(menuName)
 
-	return menuItemBuilder.String(), itemMaxLen
+	view := menuItemBuilder.String()
+
+	// Store the row render in the cache. Cap the map at
+	// two pages: scrolling past that means the page changed, and the old
+	// entries are useless anyway.
+	if index >= 0 && index < len(m.menuList) {
+		if m.menuItemCache == nil {
+			m.menuItemCache = make(map[int]menuItemViewCacheEntry, m.menuPageSize+2)
+		} else if len(m.menuItemCache) > m.menuPageSize*2 {
+			m.menuItemCache = make(map[int]menuItemViewCacheEntry, m.menuPageSize+2)
+		}
+		item := &m.menuList[index]
+		var scrollPhase int64
+		if m.options.Ticker != nil {
+			scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+		}
+		m.menuItemCache[index] = menuItemViewCacheEntry{
+			title:         item.Title,
+			subtitle:      item.Subtitle,
+			selected:      isSelected,
+			hovered:       isHovered,
+			windowWidth:   windowWidth,
+			maxIndexWidth: maxIndexWidth,
+			dualColumn:    m.isDualColumn,
+			styleGen:      style.StyleGeneration(),
+			scrollPhase:   scrollPhase,
+			view:          view,
+			width:         itemMaxLen,
+		}
+	}
+
+	return view, itemMaxLen
+}
+
+// menuLineViewCacheEntry 缓存 menuLineView 整行的组装结果。键覆盖左右列的
+// 内容、选中/hover 状态、窗口尺寸与样式代——鼠标划过只失效 hover 行，其余
+// 行整帧直接复用。
+type menuLineViewCacheEntry struct {
+	leftIndex, rightIndex        int
+	leftTitle, leftSubtitle      string
+	leftSelected, leftHovered    bool
+	rightTitle, rightSubtitle    string
+	rightSelected, rightHovered  bool
+	windowWidth, menuStartColumn int
+	dualColumn                   bool
+	styleGen                     uint64
+	scrollPhase                  int64
+	view                         string
 }
 
 func (m *Main) menuLineView(a *App, line int) string {
@@ -1347,6 +1646,39 @@ func (m *Main) menuLineView(a *App, line int) string {
 	}
 	if index >= len(m.menuList) {
 		return "" // beyond menu bounds — empty row
+	}
+
+	// Row-level render cache: assembling the row (gap +
+	// padding + JoinVertical) with lipgloss on every frame for every row was
+	// the remaining per-frame cost during mouse sweeps.
+	{
+		var rightIndex = -1
+		var rightItem *MenuItem
+		if m.isDualColumn && index+1 < len(m.menuList) {
+			rightIndex = index + 1
+			rightItem = &m.menuList[rightIndex]
+		}
+		var scrollPhase int64
+		if m.options.Ticker != nil {
+			scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+		}
+		gen := style.StyleGeneration()
+		if e, ok := m.menuLineCache[line]; ok {
+			leftItem := &m.menuList[index]
+			keyMatch := e.leftIndex == index &&
+				e.leftTitle == leftItem.Title && e.leftSubtitle == leftItem.Subtitle &&
+				e.leftSelected == m.isSelected(index) && e.leftHovered == (!m.inSearching && index == m.hoveredMenuItemIdx) &&
+				e.windowWidth == a.WindowWidth() && e.menuStartColumn == m.menuStartColumn &&
+				e.dualColumn == m.isDualColumn && e.styleGen == gen && e.scrollPhase == scrollPhase
+			if keyMatch && rightItem == nil {
+				return e.view
+			}
+			if keyMatch && rightItem != nil && e.rightIndex == rightIndex &&
+				e.rightTitle == rightItem.Title && e.rightSubtitle == rightItem.Subtitle &&
+				e.rightSelected == m.isSelected(rightIndex) && e.rightHovered == (!m.inSearching && rightIndex == m.hoveredMenuItemIdx) {
+				return e.view
+			}
+		}
 	}
 
 	menuItemStr, firstColumnWidth := m.menuItemView(a, index)
@@ -1370,6 +1702,38 @@ func (m *Main) menuLineView(a *App, line int) string {
 	if m.menuStartColumn > 4 {
 		row = lipgloss.NewStyle().Inherit(style.CurrentStyleSet().AppBackground).PaddingLeft(m.menuStartColumn - 4).Render(row)
 	}
+
+	// Store the assembled row, with the same cap as the
+	// per-item cache: page changes invalidate naturally via the key fields.
+	if m.menuLineCache == nil {
+		m.menuLineCache = make(map[int]menuLineViewCacheEntry, m.menuPageSize+2)
+	} else if len(m.menuLineCache) > m.menuPageSize*2 {
+		m.menuLineCache = make(map[int]menuLineViewCacheEntry, m.menuPageSize+2)
+	}
+	entry := menuLineViewCacheEntry{
+		leftIndex:       index,
+		leftTitle:       m.menuList[index].Title,
+		leftSubtitle:    m.menuList[index].Subtitle,
+		leftSelected:    m.isSelected(index),
+		leftHovered:     !m.inSearching && index == m.hoveredMenuItemIdx,
+		rightIndex:      -1,
+		windowWidth:     a.WindowWidth(),
+		menuStartColumn: m.menuStartColumn,
+		dualColumn:      m.isDualColumn,
+		styleGen:        style.StyleGeneration(),
+		view:            row,
+	}
+	if m.isDualColumn && index+1 < len(m.menuList) {
+		entry.rightIndex = index + 1
+		entry.rightTitle = m.menuList[index+1].Title
+		entry.rightSubtitle = m.menuList[index+1].Subtitle
+		entry.rightSelected = m.isSelected(index + 1)
+		entry.rightHovered = !m.inSearching && index+1 == m.hoveredMenuItemIdx
+	}
+	if m.options.Ticker != nil {
+		entry.scrollPhase = m.options.Ticker.PassedTime().Milliseconds() / 500
+	}
+	m.menuLineCache[line] = entry
 	return row
 }
 
@@ -1401,15 +1765,36 @@ func (m *Main) menuTitleY() int {
 
 // isOverBackButton checks if the given screen position falls within the back
 // button area shown before the menu title when inside a submenu.
-func (m *Main) isOverBackButton(x, y int, _ *App) bool {
+func (m *Main) isOverBackButton(x, y int, a *App) bool {
 	if m.menuStack.Len() <= 0 {
 		return false
 	}
 	if y != m.menuTitleY() {
 		return false
 	}
-	// The back icon "←" is rendered at column (menuStartColumn - backButtonWidth).
-	iconCol := m.menuStartColumn - backButtonWidth
+
+	var iconCol int
+	if m.options.CenterEverything {
+		// In centerEverything mode, the back button and title are centered together.
+		titleWidth := lipgloss.Width(m.menuTitle.String())
+		windowWidth := a.WindowWidth()
+
+		// Account for truncation
+		if titleWidth > windowWidth-4 {
+			titleWidth = windowWidth - 4
+		}
+
+		// Total content width: back icon (2 cols) + separator (1 col) + title
+		contentWidth := backButtonWidth + 1 + titleWidth
+
+		// Content starts at the centered position
+		contentStartCol := (windowWidth - contentWidth) / 2
+		iconCol = contentStartCol
+	} else {
+		// Default left-aligned mode
+		iconCol = m.menuStartColumn - backButtonWidth
+	}
+
 	return iconCol >= 0 && x >= iconCol && x < iconCol+backButtonWidth
 }
 
@@ -2537,7 +2922,12 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 			stateChanged = true
 		}
 		if stateChanged {
-			return m, tea.Sequence(a.RerenderCmd(true), a.SetMousePointer("default"))
+			// 与下方 hover 渲染合并逻辑一致：不立即全量重渲染（go-musicfox 定制）。
+			var cmds []tea.Cmd
+			if time.Since(m.lastViewAt) >= hoverRenderInterval {
+				cmds = append(cmds, a.RerenderCmd(true))
+			}
+			return m, tea.Sequence(append(cmds, a.SetMousePointer("default"))...)
 		}
 		return m, nil
 	}
@@ -2579,7 +2969,17 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 	// Compute commands for state changes
 	var cmds []tea.Cmd
 	if m.hoveredBreadcrumbIdx != oldBreadcrumbHover || m.hoveredMenuItemIdx != oldMenuItemHover || m.hoveredBackButton != oldBackButtonHover || m.hoveredTabIdx != oldTabHover {
-		cmds = append(cmds, a.RerenderCmd(true))
+		// Hover rendering is merged into the frame-rate render cycle: a mouse
+		// sweep changes the hovered row every frame, and rendering the full
+		// view per change drives CPU to a single core. State updates are
+		// cheap; the render fires only when the last frame is older than
+		// hoverRenderInterval (the ticker renders during playback anyway, so
+		// this only matters while idle). This bounds the render rate to the
+		// frame rate architecturally — mouse events never drive rendering.
+		//（go-musicfox 定制）。
+		if time.Since(m.lastViewAt) >= hoverRenderInterval {
+			cmds = append(cmds, a.RerenderCmd(true))
+		}
 	}
 	if m.hoverPointerActive != oldPointerActive {
 		if m.hoverPointerActive {
@@ -2594,6 +2994,12 @@ func (m *Main) mouseMotionHandle(mouse tea.Mouse, a *App) (Page, tea.Cmd) {
 	}
 	return m, nil
 }
+
+// hoverRenderInterval 是 hover 状态变化触发渲染的最小间隔。渲染频率被限制
+// 在帧率量级：播放时由 tick 驱动，空闲时 hover 变化至多按此间隔补一次渲染。
+// 必须明显大于 30fps 的 tick 间隔（33.33ms），否则每次 hover 变化都会在
+// 边界上越过阈值，合并失效（go-musicfox 定制）。
+const hoverRenderInterval = 50 * time.Millisecond
 
 // handleBreadcrumbClick handles a left-click on the status bar breadcrumb.
 // Navigates back to the clicked menu level. Returns nil if no clickable

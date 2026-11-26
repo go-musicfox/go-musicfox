@@ -32,8 +32,7 @@ func (l *ListRandomPlayMode) NextSong(currentIndex int, playlist []structs.Song,
 
 	// 如果随机序列为空或长度不匹配，重新生成
 	if len(l.randomOrder) != len(playlist) {
-		l.generateRandomOrder(len(playlist))
-		l.currentPos = l.findCurrentPosition(currentIndex)
+		l.regenerateOrder(currentIndex, playlist)
 	}
 
 	// 移动到下一个位置
@@ -65,8 +64,7 @@ func (l *ListRandomPlayMode) PreviousSong(currentIndex int, playlist []structs.S
 
 	// 如果随机序列为空或长度不匹配，重新生成
 	if len(l.randomOrder) != len(playlist) {
-		l.generateRandomOrder(len(playlist))
-		l.currentPos = l.findCurrentPosition(currentIndex)
+		l.regenerateOrder(currentIndex, playlist)
 	}
 
 	// 移动到上一个位置
@@ -95,16 +93,8 @@ func (l *ListRandomPlayMode) Initialize(currentIndex int, playlist []structs.Son
 		return ErrEmptyPlaylist
 	}
 
-	// 生成随机播放顺序
-	l.generateRandomOrder(len(playlist))
-
-	// 确保 currentIndex 在有效范围内
-	if currentIndex < 0 || currentIndex >= len(playlist) {
-		currentIndex = 0
-	}
-
-	// 找到当前歌曲在随机序列中的位置
-	l.currentPos = l.findCurrentPosition(currentIndex)
+	// 生成随机播放顺序，并保证从当前歌曲开始能依次播放完所有歌曲
+	l.regenerateOrder(currentIndex, playlist)
 
 	return nil
 }
@@ -127,18 +117,23 @@ func (l *ListRandomPlayMode) OnPlaylistChanged(currentIndex int, playlist []stru
 		return nil
 	}
 
-	// 重新生成随机播放顺序
-	l.generateRandomOrder(len(playlist))
-
-	// 确保 currentIndex 在有效范围内
-	if currentIndex < 0 || currentIndex >= len(playlist) {
-		currentIndex = 0
-	}
-
-	// 找到当前歌曲在新的随机序列中的位置
-	l.currentPos = l.findCurrentPosition(currentIndex)
+	// 重新生成随机播放顺序，并保证从当前歌曲开始能依次播放完所有歌曲
+	l.regenerateOrder(currentIndex, playlist)
 
 	return nil
+}
+
+// regenerateOrder 生成随机播放顺序，并将当前歌曲固定在序列开头，
+// 保证播放完当前歌曲后仍有剩余歌曲可播，且列表随机模式下能依次播放完所有歌曲
+func (l *ListRandomPlayMode) regenerateOrder(currentIndex int, playlist []structs.Song) {
+	l.generateRandomOrder(len(playlist))
+
+	// 将当前歌曲交换到序列开头
+	if pos := l.findCurrentPosition(currentIndex); pos > 0 {
+		l.randomOrder[0], l.randomOrder[pos] = l.randomOrder[pos], l.randomOrder[0]
+	}
+
+	l.currentPos = l.findCurrentPosition(currentIndex)
 }
 
 // generateRandomOrder 生成随机播放顺序
