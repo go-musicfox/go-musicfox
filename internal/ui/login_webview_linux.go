@@ -115,7 +115,11 @@ func (c *webviewLoginController) Open() {
 		return
 	}
 
-	errorx.Go(c.runGTK)
+	// WebKitGTK 2.54 requires WebKit to initialize on the process main
+	// thread; main() reserves it and runs ServeWebviewMainThread there.
+	if !runOnWebviewMainThread(c.runGTK) {
+		errorx.Go(c.runGTK)
+	}
 }
 
 // Close stops the GTK main loop so the GTK goroutine tears the window down on
