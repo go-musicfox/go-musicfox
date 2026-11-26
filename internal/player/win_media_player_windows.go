@@ -57,8 +57,12 @@ type winMediaPlayer struct {
 	curMusic URLMusic
 	timer    *Timer
 
-	volume    int
-	state     types.State
+	volume int
+	state  types.State
+	// failed 标记播放是否因设备错误而失败（如蓝牙断开且无可用音频输出设备）。
+	// 当 MediaFailed 事件触发时置为 true，防止后续 CurrentStateChanged(Stopped) 被误判为正常播放结束，
+	// 从而避免上层状态监听器不断调用 NextSong 导致疯狂切歌。
+	// 新歌曲开始播放或 MediaEnded 正常结束时重置为 false。
 	failed    atomic.Bool
 	timeChan  chan time.Duration
 	stateChan chan types.State
@@ -118,6 +122,14 @@ func (p *winMediaPlayer) buildWinPlayer() {
 	Must1(playbackSession.AddPlaybackStateChanged(stateHandler))
 
 	// current state changed(old version)
+	// 修复说明：当蓝牙断开且无可用音频设备时，WinRT 会触发 MediaFailed → CurrentStateChanged(Stopped) 事件链。
+	// 原实现将所有 Stopped 都映射为 types.Stopped，上层收到 Stopped 后会自动调用 NextSong，
+	// 而下一首歌同样因为无音频设备立即失败，形成"疯狂切歌"的死循环。
+	// 修复方案：
+	//   1. 如果 failed 标记为 true（即 MediaFailed 已触发），则将状态设为 types.Interrupted 而非 types.Stopped；
+	//   2. 如果 failed 为 false 但当前播放进度远未到达歌曲结尾，同样视为异常中断（Interrupted）；
+	//   3. 只有进度接近歌曲结尾时（≤3秒），才认为是正常播放结束（Stopped）。
+	// types.Interrupted 不会触发上层的自动下一首逻辑，从而阻断切歌循环。
 	curStateHandler := foundation.NewTypedEventHandler(
 		ole.NewGUID(playerEventGUID),
 		func(_ *foundation.TypedEventHandler, sender, _ unsafe.Pointer) {
@@ -130,12 +142,14 @@ func (p *winMediaPlayer) buildWinPlayer() {
 				p.Pause()
 				p.setState(types.Paused)
 			case playback.MediaPlayerStateStopped:
+				// 若 MediaFailed 已先行触发，此处的 Stopped 是失败后的附带状态变更，不应触发自动下一首
 				if p.failed.Load() {
 					p.Stop()
 					p.setState(types.Interrupted)
 					return
 				}
 				p.Stop()
+				// 通过播放进度判断是否为正常结束：进度接近歌曲时长视为正常结束，否则视为异常中断
 				if p.playbackEnded() {
 					p.setState(types.Stopped)
 				} else {
@@ -147,7 +161,7 @@ func (p *winMediaPlayer) buildWinPlayer() {
 	defer curStateHandler.Release()
 	Must1(p.player.AddCurrentStateChanged(curStateHandler))
 
-	// finished
+	// MediaEnded: 歌曲正常播放结束，清除失败标记，发送 Stopped 状态触发自动下一首
 	finishedHandler := foundation.NewTypedEventHandler(
 		ole.NewGUID(playerEventGUID),
 		func(_ *foundation.TypedEventHandler, _, _ unsafe.Pointer) {
@@ -157,6 +171,8 @@ func (p *winMediaPlayer) buildWinPlayer() {
 		},
 	)
 	defer finishedHandler.Release()
+	// MediaFailed: 播放失败（如音频设备断开、解码错误等），记录错误信息，
+	// 设置 failed 标记并发送 Interrupted 状态，阻止上层自动切歌
 	failedHandler := foundation.NewTypedEventHandler(
 		ole.NewGUID(playerFailedEventGUID),
 		func(_ *foundation.TypedEventHandler, _, args unsafe.Pointer) {
@@ -212,7 +228,7 @@ func (p *winMediaPlayer) listen() {
 		case p.curMusic = <-p.musicChan:
 			p.Pause()
 			reset()
-			p.failed.Store(false)
+			p.failed.Store(false) // 新歌曲开始播放，清除上一首的失败标记
 
 			uri = Must1(foundation.UriCreateUri(p.curMusic.URL))
 			mediaSource = Must1(core.MediaSourceCreateFromUri(uri))
@@ -244,6 +260,9 @@ func (p *winMediaPlayer) listen() {
 	}
 }
 
+// playbackEnded 判断当前歌曲是否已自然播放到结尾。
+// 用于在 CurrentStateChanged(Stopped) 事件中区分"正常播完"和"异常中断"：
+// 只有播放进度与歌曲总时长的差值 ≤ 3秒时，才认为是正常播放结束。
 func (p *winMediaPlayer) playbackEnded() bool {
 	duration := p.curMusic.Duration
 	if duration <= 0 {

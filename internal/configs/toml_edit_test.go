@@ -3,6 +3,7 @@ package configs
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -34,8 +35,12 @@ func TestSetTOMLValuePreservesLayoutAndFileMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := info.Mode().Perm(), os.FileMode(0o640); got != want {
-		t.Fatalf("config mode = %04o, want %04o", got, want)
+	// Windows has no Unix permission semantics, so the mode assertion only applies
+	// on POSIX platforms.
+	if runtime.GOOS != "windows" {
+		if got, want := info.Mode().Perm(), os.FileMode(0o640); got != want {
+			t.Fatalf("config mode = %04o, want %04o", got, want)
+		}
 	}
 }
 

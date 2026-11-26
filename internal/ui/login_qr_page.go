@@ -10,7 +10,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anhoder/foxful-cli/model"
-	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
 	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/mattn/go-runewidth"
@@ -75,10 +74,10 @@ func NewQRLoginPage(netease *Netease, from model.Page, afterLogin LoginCallback)
 		netease:    netease,
 		from:       from,
 		AfterLogin: afterLogin,
-		statusMsg:  model.T(MsgQRLoginGenerating),
+		statusMsg:  "正在生成二维码，请稍候...",
 		isExpired:  false,
 	}
-	page.loading = model.NewLoading(netease.MustMain(), &model.MenuItem{Title: model.T(MsgQRLoginPageTitle)})
+	page.loading = model.NewLoading(netease.MustMain(), &model.MenuItem{Title: "二维码登录"})
 	page.loading.DisplayNotOnlyOnMain()
 	return page
 }
@@ -127,7 +126,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 		p.uniKey = msg.uniKey
 		p.qrCodePath = msg.qrCodePath
 		p.isExpired = false
-		p.statusMsg = model.T(MsgQRLoginScanPrompt)
+		p.statusMsg = "请使用网易云音乐APP扫码"
 		return p, tickPolling(time.Second)
 
 	case tickPollingMsg:
@@ -139,7 +138,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 	case qrStatusMsg:
 		switch int(msg.code) {
 		case 803: // 登录成功
-			p.statusMsg = model.T(MsgQRLoginSuccess)
+			p.statusMsg = "登录成功！"
 			if p.qrCodePath != "" {
 				_ = os.Remove(p.qrCodePath)
 			}
@@ -149,7 +148,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 			}
 			return p.netease.MustMain(), cmd
 		case 800: // 已失效
-			p.statusMsg = model.T(MsgQRLoginExpiredAction)
+			p.statusMsg = "二维码已失效，请按 'b' 或 'esc' 返回"
 			p.isExpired = true
 			if p.qrCodePath != "" {
 				_ = os.Remove(p.qrCodePath)
@@ -157,19 +156,19 @@ func (p *QRLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 			}
 			return p, nil
 		case 801: // 等待扫码
-			p.statusMsg = model.T(MsgQRLoginWaitingScan)
+			p.statusMsg = "等待扫码..."
 			return p, tickPolling(time.Second)
 		case 802: // 已扫码待确认
-			p.statusMsg = model.T(MsgQRLoginWaitingConfirm)
+			p.statusMsg = "已扫码，请在手机上确认登录"
 			return p, tickPolling(time.Second)
 		default:
-			p.statusMsg = fmt.Sprintf(model.T(MsgQRLoginUnknownStatus), int(msg.code))
+			p.statusMsg = fmt.Sprintf("未知状态: %d，请返回重试", int(msg.code))
 			return p, nil
 		}
 
 	case qrErrorMsg:
 		p.loading.Complete()
-		p.statusMsg = util.SetFgStyle(model.T(MsgQRLoginError)+msg.err.Error(), lipgloss.BrightRed)
+		p.statusMsg = util.SetFgStyle("发生错误: "+msg.err.Error(), lipgloss.BrightRed)
 		return p, nil
 
 	case tea.KeyPressMsg:
@@ -180,7 +179,7 @@ func (p *QRLoginPage) Update(msg tea.Msg, a *model.App) (model.Page, tea.Cmd) {
 			if p.qrCodePath != "" && !p.isExpired {
 				err := open.Start(p.qrCodePath)
 				if err != nil {
-					p.statusMsg = util.SetFgStyle(model.T(MsgQRLoginOpenImageFailed)+err.Error(), lipgloss.BrightRed)
+					p.statusMsg = util.SetFgStyle("打开二维码失败: "+err.Error(), lipgloss.BrightRed)
 				}
 			}
 		}
@@ -221,16 +220,16 @@ func (p *QRLoginPage) View(a *model.App) string {
 		if padding < 0 {
 			padding = 0
 		}
-		space := style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding))
+		space := strings.Repeat(" ", padding)
 
 		if p.isExpired {
-			expiredMsg := model.T(MsgQRLoginExpired)
+			expiredMsg := "二维码已失效"
 			msgWidth := runewidth.StringWidth(expiredMsg)
 			msgPaddingLen := (qrWidth - msgWidth) / 2
 			if msgPaddingLen < 0 {
 				msgPaddingLen = 0
 			}
-			msgPadding := style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", msgPaddingLen))
+			msgPadding := strings.Repeat(" ", msgPaddingLen)
 
 			fullMsgLine := msgPadding + expiredMsg + msgPadding
 			for runewidth.StringWidth(fullMsgLine) < qrWidth {
@@ -261,7 +260,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 	if padding < 0 {
 		padding = 0
 	}
-	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
+	builder.WriteString(strings.Repeat(" ", padding))
 	builder.WriteString(p.statusMsg)
 	builder.WriteString("\n\n")
 
@@ -270,7 +269,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 	if padding < 0 {
 		padding = 0
 	}
-	builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
+	builder.WriteString(strings.Repeat(" ", padding))
 	builder.WriteString(util.SetFgStyle(bottomTip, lipgloss.BrightBlack))
 	builder.WriteString("\n")
 
@@ -280,7 +279,7 @@ func (p *QRLoginPage) View(a *model.App) string {
 		if padding < 0 {
 			padding = 0
 		}
-		builder.WriteString(style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", padding)))
+		builder.WriteString(strings.Repeat(" ", padding))
 		builder.WriteString(util.SetFgStyle(viewTip, lipgloss.BrightBlack))
 		builder.WriteString("\n")
 	} else {
