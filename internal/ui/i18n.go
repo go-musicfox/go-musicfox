@@ -56,21 +56,22 @@ const (
 	MsgQRLoginOpenImageFailed model.MessageID = "qr_login.open_image_failed"
 	MsgQRLoginGetCodeFailed   model.MessageID = "qr_login.get_code_failed"
 
-	MsgOperationFailed           model.MessageID = "operation.failed"
-	MsgOperationLogoutSuccess    model.MessageID = "operation.logout.success"
-	MsgOperationLogoutCleared    model.MessageID = "operation.logout.cleared"
-	MsgOperationLikeFailed       model.MessageID = "operation.like.failed"
-	MsgOperationLikeAdded        model.MessageID = "operation.like.added"
-	MsgOperationLikeRemoved      model.MessageID = "operation.like.removed"
-	MsgOperationFMDisliked       model.MessageID = "operation.fm.disliked"
-	MsgOperationDownloading      model.MessageID = "operation.download.downloading"
-	MsgOperationDownloadSuccess  model.MessageID = "operation.download.success"
-	MsgOperationDownloadExists   model.MessageID = "operation.download.exists"
-	MsgOperationDownloadFailed   model.MessageID = "operation.download.failed"
-	MsgOperationShareSuccess     model.MessageID = "operation.share.success"
-	MsgOperationShareFailed      model.MessageID = "operation.share.failed"
-	MsgOperationCacheCleared     model.MessageID = "operation.cache.cleared"
-	MsgOperationCacheClearFailed model.MessageID = "operation.cache.clear_failed"
+	MsgOperationFailed             model.MessageID = "operation.failed"
+	MsgOperationLogoutSuccess      model.MessageID = "operation.logout.success"
+	MsgOperationLogoutCleared      model.MessageID = "operation.logout.cleared"
+	MsgOperationLikeFailed         model.MessageID = "operation.like.failed"
+	MsgOperationLikeAdded          model.MessageID = "operation.like.added"
+	MsgOperationLikeRemoved        model.MessageID = "operation.like.removed"
+	MsgOperationFMDisliked         model.MessageID = "operation.fm.disliked"
+	MsgOperationDownloading        model.MessageID = "operation.download.downloading"
+	MsgOperationDownloadSuccess    model.MessageID = "operation.download.success"
+	MsgOperationDownloadExists     model.MessageID = "operation.download.exists"
+	MsgOperationDownloadFailed     model.MessageID = "operation.download.failed"
+	MsgOperationShareSuccess       model.MessageID = "operation.share.success"
+	MsgOperationShareFailed        model.MessageID = "operation.share.failed"
+	MsgOperationCacheCleared       model.MessageID = "operation.cache.cleared"
+	MsgOperationCacheClearFailed   model.MessageID = "operation.cache.clear_failed"
+	MsgOperationLoadPlaylistFailed model.MessageID = "operation.playlist.load_failed"
 
 	MsgMenuCurrentPlaylist    model.MessageID = "menu.current_playlist"
 	MsgMenuSimilarSongs       model.MessageID = "menu.similar_songs"
@@ -155,21 +156,22 @@ var zhMessages = map[model.MessageID]string{
 	MsgQRLoginOpenImageFailed: "打开二维码失败: ",
 	MsgQRLoginGetCodeFailed:   "无法获取二维码, code: %.0f",
 
-	MsgOperationFailed:           "操作失败",
-	MsgOperationLogoutSuccess:    "登出成功",
-	MsgOperationLogoutCleared:    "已清理用户信息",
-	MsgOperationLikeFailed:       "加入或移出歌单失败",
-	MsgOperationLikeAdded:        "已添加到我喜欢的歌曲",
-	MsgOperationLikeRemoved:      "已从我喜欢的歌曲移除",
-	MsgOperationFMDisliked:       "已标记为不喜欢",
-	MsgOperationDownloading:      "正在下载，请稍候...",
-	MsgOperationDownloadSuccess:  "下载完成",
-	MsgOperationDownloadExists:   "文件已存在",
-	MsgOperationDownloadFailed:   "下载失败",
-	MsgOperationShareSuccess:     "已复制到剪贴板",
-	MsgOperationShareFailed:      "分享失败",
-	MsgOperationCacheCleared:     "缓存已清除",
-	MsgOperationCacheClearFailed: "清除缓存失败",
+	MsgOperationFailed:             "操作失败",
+	MsgOperationLogoutSuccess:      "登出成功",
+	MsgOperationLogoutCleared:      "已清理用户信息",
+	MsgOperationLikeFailed:         "加入或移出歌单失败",
+	MsgOperationLikeAdded:          "已添加到我喜欢的歌曲",
+	MsgOperationLikeRemoved:        "已从我喜欢的歌曲移除",
+	MsgOperationFMDisliked:         "已标记为不喜欢",
+	MsgOperationDownloading:        "正在下载，请稍候...",
+	MsgOperationDownloadSuccess:    "下载完成",
+	MsgOperationDownloadExists:     "文件已存在",
+	MsgOperationDownloadFailed:     "下载失败",
+	MsgOperationShareSuccess:       "已复制到剪贴板",
+	MsgOperationShareFailed:        "分享失败",
+	MsgOperationCacheCleared:       "缓存已清除",
+	MsgOperationCacheClearFailed:   "清除缓存失败",
+	MsgOperationLoadPlaylistFailed: "加载歌单失败",
 
 	MsgMenuCurrentPlaylist:    "当前播放列表",
 	MsgMenuSimilarSongs:       "相似歌曲",
