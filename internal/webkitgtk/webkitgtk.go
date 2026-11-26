@@ -14,6 +14,7 @@ package webkitgtk
 
 import (
 	"log/slog"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -97,6 +98,10 @@ var (
 	gSignalConnectData func(instance uintptr, detailedSignal *byte, cHandler, data, destroyData uintptr, connectFlags int32) uint
 	gObjectUnref       func(object uintptr)
 	gTimeoutAdd        func(interval uint32, function, data uintptr) uint
+	gMainLoopNew       func(context uintptr, isRunning int32) uintptr
+	gMainLoopRun       func(loop uintptr)
+	gMainLoopQuit      func(loop uintptr)
+	gMainLoopUnref     func(loop uintptr)
 	gListLength        func(list uintptr) uint
 	gListNthData       func(list uintptr, n uint) uintptr
 	gListFree          func(list uintptr)
@@ -130,6 +135,10 @@ func init() {
 		}) &&
 			dlopen("libglib-2.0.so.0", func(lib uintptr) {
 				registerSymbol(&gTimeoutAdd, lib, "g_timeout_add")
+				registerSymbol(&gMainLoopNew, lib, "g_main_loop_new")
+				registerSymbol(&gMainLoopRun, lib, "g_main_loop_run")
+				registerSymbol(&gMainLoopQuit, lib, "g_main_loop_quit")
+				registerSymbol(&gMainLoopUnref, lib, "g_main_loop_unref")
 				registerSymbol(&gListLength, lib, "g_list_length")
 				registerSymbol(&gListNthData, lib, "g_list_nth_data")
 				registerSymbol(&gListFree, lib, "g_list_free")
@@ -487,18 +496,40 @@ func GtkWindowClose(window uintptr) {
 	gtkWindowClose(window)
 }
 
+// gtkMainLoop is the GMainLoop used when gtk_main() is unavailable (the
+// long-deprecated gtk_main/gtk_main_quit API is no longer exported by GTK
+// 4.22). It is written on the GTK thread and read by GtkMainQuit from other
+// goroutines.
+var gtkMainLoop atomic.Uintptr
+
 func GtkMain() {
-	if gtkMain == nil {
+	if gtkMain != nil {
+		gtkMain()
 		return
 	}
-	gtkMain()
+	if gMainLoopNew == nil || gMainLoopRun == nil {
+		return
+	}
+	loop := gMainLoopNew(0, 0)
+	if loop == 0 {
+		return
+	}
+	gtkMainLoop.Store(loop)
+	gMainLoopRun(loop)
+	gtkMainLoop.Store(0)
+	if gMainLoopUnref != nil {
+		gMainLoopUnref(loop)
+	}
 }
 
 func GtkMainQuit() {
-	if gtkMainQuit == nil {
+	if gtkMainQuit != nil {
+		gtkMainQuit()
 		return
 	}
-	gtkMainQuit()
+	if loop := gtkMainLoop.Load(); loop != 0 && gMainLoopQuit != nil {
+		gMainLoopQuit(loop)
+	}
 }
 
 // GObject/GLib.
