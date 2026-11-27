@@ -17,7 +17,7 @@ func (service *SongUrlService) SongUrl() (float64, []byte) {
 	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
 
 	options := &util.Options{
-		Crypto:  "linuxapi",
+		Crypto:  "weapi",
 		Cookies: []*http.Cookie{cookiesOS},
 		SkipUNM: service.SkipUNM,
 	}

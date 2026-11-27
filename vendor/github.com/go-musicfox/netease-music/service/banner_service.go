@@ -11,7 +11,7 @@ type BannerService struct {
 func (service *BannerService) Banner() (float64, []byte) {
 
 	options := &util.Options{
-		Crypto: "linuxapi",
+		Crypto: "weapi",
 	}
 
 	TYPE := make(map[string]string, 6)

@@ -10,7 +10,7 @@ type ToplistService struct {
 func (service *ToplistService) Toplist() (float64, []byte) {
 
 	options := &util.Options{
-		Crypto: "linuxapi",
+		Crypto: "weapi",
 	}
 	data := make(map[string]string)
 

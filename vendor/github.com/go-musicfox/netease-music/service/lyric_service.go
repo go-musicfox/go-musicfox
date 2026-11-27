@@ -15,7 +15,7 @@ func (service *LyricService) Lyric() (float64, []byte) {
 	cookiesOS := &http.Cookie{Name: "os", Value: "pc"}
 
 	options := &util.Options{
-		Crypto:  "linuxapi",
+		Crypto:  "weapi",
 		Cookies: []*http.Cookie{cookiesOS},
 	}
 	data := make(map[string]string)
