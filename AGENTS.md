@@ -1,5 +1,7 @@
 # go-musicfox 项目架构文档
 
+> 本文档描述**系统架构、模块职责与开发约定**。变更历史、bug 修复过程、临时规避方案与版本演进细节不写入本文档，判定标准见「文档记录边界」。
+
 ## 沟通语言准则
 
 ### 重要准则：与用户交流必须使用中文
@@ -23,10 +25,10 @@
 
 ```markdown
 ✓ 正确示例（中文交流）：
-"这个 PR 修复了歌词封面图圆角功能的性能问题，优化后 CPU 占用从 10% 降至 2%。"
+"这个 PR 优化了歌词封面图圆角渲染，CPU 占用从 10% 降至 2%。"
 
 ✗ 错误示例（英文交流）：
-"This PR fixes the performance issue with lyric cover cornerRadius feature..."
+"This PR optimizes the lyric cover cornerRadius rendering..."
 ```
 
 ## 编码行为准则
@@ -80,7 +82,7 @@
 将任务转化为可验证的目标：
 
 | 模糊表述 | 可验证目标 |
-|---------|-----------|
+|---|---|
 | "添加验证" | "为无效输入编写测试，然后让测试通过" |
 | "修复 bug" | "编写能复现问题的测试，然后让测试通过" |
 | "重构 X" | "确保重构前后测试都通过" |
@@ -107,10 +109,10 @@ go-musicfox 是基于 Go 和 bubbletea 的网易云音乐 TUI 客户端，支持
 - **UI 框架**：bubbletea + foxful-cli（部分定制）
 - **音频处理**：beep、go-mp3、go-flac
 - **存储**：BoltDB
-- **配置**：TOML + mapstructure；`configs.SetTOMLValue(path, keyPath, value)` 使用 `github.com/pelletier/go-toml/v2/unstable/edit` 按键路径保真编辑既有 TOML。`configs.UpgradeConfig(path)` 将内嵌默认 TOML 中用户文件缺失的叶子项追加到对应 table；`upgrade-config` 子命令调用它。两者均保留无关注释、布局、已有值、未知键与原文件权限，并以原子替换写回。
+- **配置**：TOML + mapstructure；`configs.SetTOMLValue(path, keyPath, value)` 按键路径保真编辑既有 TOML，`configs.UpgradeConfig(path)` 将内嵌默认 TOML 中缺失的叶子项补入对应 table（`upgrade-config` 子命令调用），两者均保留注释、布局、已有值、未知键与原文件权限
 - **API**：netease-music SDK
 
-**项目结构**：`cmd/` 入口 | `internal/` 核心业务（22个包） | `utils/` 工具 | `configs/` 嵌入式配置
+**项目结构**：`cmd/` 入口 | `internal/` 核心业务（22 个包） | `utils/` 工具 | `configs/` 嵌入式配置
 
 ## 核心架构
 
@@ -154,9 +156,9 @@ type Player interface {
 
 | 引擎 | 平台 | 特点 |
 |------|------|------|
-| Beep（默认） | 跨平台 | MP3/FLAC/OGG/WAV；可选 MP3 无缝播放，使用 go-mp3 时额外支持编码器延迟和尾部填充裁剪 |
+| Beep（默认） | 跨平台 | MP3/FLAC/OGG/WAV；可选 MP3 无缝播放 |
 | DLNA | 跨平台 | 设备投送 |
-| MPV | 跨平台 | IPC 控制（命令连接带排空 goroutine 防 mpv 发送缓冲堆积，切歌带 file-loaded 超时 watchdog 兜底）；自然结束(eof/error)时暂停但保留播放计时器，供 UI 切歌前读取 PlayedTime 完成上报 |
+| MPV | 跨平台 | IPC 控制；自然结束时暂停并保留播放计时供切歌上报 |
 | MPD | Linux | 远程服务器 |
 | AVFoundation | macOS | 原生集成 |
 | MediaPlayer | Windows | WinRT API |
@@ -167,24 +169,19 @@ type Player interface {
 
 支持 40+ 键盘操作、鼠标事件（单击/双击/滚轮/右键）、可配置快捷键。
 
-### 其他模块
+### 功能模块
 
-- **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式；未匹配的云盘歌曲（含旧播放快照）优先通过云盘歌词接口获取内嵌歌词，失败时回退普通歌曲歌词接口；`lyric.Service.LoadSong` 在调用线程登记请求并取消上次加载，再异步获取歌词，`SetSong` 保留同步接口。网络获取不持有状态锁，提交前检查取消状态，防止过期结果（含相同歌曲 ID 的旧请求）覆盖新歌词；`Stop` 取消加载并清空状态，播放器关闭时调用它。`track.Manager.GetLyric` 通过 `singleflight.DoChan` 合并请求，调用方可独立取消等待；共享请求使用 `context.WithoutCancel`，当前 SDK 不支持中断底层 HTTP 请求，共享请求继续至完成或 SDK 超时。歌词解析仍在状态锁内使用最新配置。
-- **Track 构造与测试**：`track.NewManager` 先应用选项，再补齐未指定的下载/歌词目录。隔离测试需同时注入下载目录、歌词目录及缓存实例，避免触发全局配置和用户目录初始化。
-- **播放列表**：列表循环/顺序/单曲循环/随机/无限随机/智能心动模式。列表随机（`internal/playlist/list_random.go`）先检查候选位置上下界，成功后才更新游标；队列不变时，边界失败保留随机顺序、游标和管理器当前歌曲。首位失败后下一首进入第二首；末曲自然结束后上一首进入随机顺序的倒数第二首，不重播末曲；单曲队列无前后曲，结束后不通过前后切歌重播。该行为修正了旧实现失败后游标漂移造成的重播与崩溃；快捷键、配置和存储格式不变，无需迁移。用户行为与兼容范围分别见 README「列表随机播放」和 `BACKWARD_COMPATIBILITY.md`；边界回归位于 `internal/playlist/list_random_test.go` 与 `internal/playlist/manager_test.go`。
-- **远程控制**：MPRIS(linux)、Now Playing(macOS)、System Media(Windows)。macOS 侧 `internal/macdriver/mediaplayer` 与 `internal/macdriver/cocoa/unnotifications.go` 的框架加载（Dlopen）失败不 panic 静默降级：MediaPlayer.framework 需 macOS 10.12.2+、UserNotifications.framework 需 10.14+，旧系统上 class 查找得 nil、objc 消息发送安全返回 0，对应功能（Now Playing 远程控制/系统通知）自动禁用而不影响主应用启动
-- **状态栏组件**：`model.DefaultStatusBar.Components` 可注入任意 `StatusBarComponent` 到居中区域；展示项只实现 `View`，可点击项额外实现 `InteractiveStatusBarComponent`，以自身局部坐标处理命中和事件。状态栏负责布局、边界与指针，不持有业务回调。播放队列适配器的 `musicfox` 前缀自行打开 `https://github.com/go-musicfox/go-musicfox`，队列位置与音质文本不触发。
-- **存储**：BoltDB，存储用户信息、播放状态、播放列表快照和桌面歌词窗口位置/显示器
-- **扫码登录**：二维码登录（`internal/ui/login_qr_page.go`）通过 `internal/ui/qr_login_client.go` 的 `qrGetKey` / `qrCheckStatus` 直接请求网易云接口，而非 `service.LoginQRService`。客户端基于 `github.com/imroc/req/v3` 的 `SetTLSFingerprintChrome()` 模拟 Chrome 的 TLS ClientHello 指纹并附带完整浏览器 Headers，规避服务端对非浏览器客户端的反爬检测（462）。`qrKeyClient` 请求 unikey 时不带 Cookie；轮询用 `newQRLoginClient(cookieJar)` 每次绑定最新的全局 CookieJar（`neteaseutil.GetGlobalCookieJar()`），避免登录 Cookie（`MUSIC_U`）写入过期 jar。轮询前 `util.ApplyRequestStrategy` 注入反风控 Cookie。462 拦截为网易云动态风控行为，与 IP/地域/频率相关，并非必现。
-- **实时频谱**：仅 macOS `osx` 播放引擎支持；`MTAudioProcessingTap` 经 PureGo 获取 PCM，由 `internal/player/spectrum.go` 异步分析。PCM 更新频谱目标值，`github.com/charmbracelet/harmonica` 的临界阻尼弹簧以每帧推进，避免 PCM 回调间隙使动画停顿。频谱分析与 UI 刷新均使用 `[main].frameRate`。`[main.visualizer]` 支持 `enable`、`maxHeight`（默认 `0` 为不限制；正数限制频谱行数）及 `fullCharHalfBlock`、`fullCharFullBlock`、`emptyCharBlock` 字符配置（各取首个 Unicode 字符，默认分别为 `▌`、`█`、空格）。`SpectrumRenderer` 将相邻频段分组为由低至高的横向进度条（低频在底部），以三态字符显示：满单元、使用前景/背景双色渐变的半单元、无样式空白单元，并以半单元为粒度提供双倍横向幅度分辨率。未限制时频谱会占满歌词与歌曲信息之间的可用行，顶部及歌曲信息前各保留一行空白。
-- **主题**：`[dark.app]` / `[light.app]` 的显式非透明 `background` 作为应用、菜单行、Startup 页面（普通内容和全屏特效）及 Search、Login、QR Login、Last.fm 授权/二维码授权/API account 等自定义页面完整窗口的终端单元格背景；未设置或 `transparent` 时 Startup 与自定义页面均不写入背景，Default 与 Transparent 保持终端透明。`[*.highlights]` 不提供菜单背景覆写。内置主题状态栏的面包屑与时间字体继承 Default 主题。仅 Transparent 主题通过 `statusBar.nuggetLabelFg` / `nuggetLabelBg` 将 `»` 配置为 Primary 前景、透明背景，并以 `statusBar.breadcrumbHover` 将面包屑 hover 前景设为 Primary；右键菜单 hover 文本也使用 `Primary`。菜单选中项的 `menuSelectedSepLeft` / `menuSelectedSepRight` 配置圆角分隔符；右侧符号优先替换原有末尾填充空格，无可替换空格时增加独立符号宽度，不压缩或截断正常内容。居中菜单始终按标称宽度计算起点，额外圆角单元格不会改变标题列；双列模式下左列额外单元格从右列结构性前导空格中吸收，右列起点保持不变。播放栏歌名、进度时间、hover 高亮、状态栏 `musicfox` 标识与进度条已填充渐变默认继承主题调色板（`[*.app]` 的 `playbarSong`、`playbarTime`、`playbarHover`、`statusBarLogo`、`playbarProgressStart` / `playbarProgressEnd` 可覆写）；`playbarMode` / `Volume` / `Playing` / `Paused` / `Heart*` / `Artist` 未配置时同样回落到调色板语义色而非固定 ANSI 值。用户通过快捷键或右键菜单切换主题时，会将名称保真写入 `theme.activeTheme`，下次启动加载该主题；系统外观变化仅切换当前主题的明暗变体。
-- **自定义表单页面**：`internal/ui/page_layout.go` 统一提供标题返回按钮、面包屑委托、输入框焦点/hover 样式、按钮本地化和文本光标定位；Search、Login 与 Last.fm API account 页面必须按其渲染结果记录命中坐标，并以 `pageSubmitButton` / `pageButton` 保持键盘和鼠标 active 状态一致。
-- **herdr 封面兼容**：通过 `HERDR_PANE_ID` 识别 herdr pane；`kitty.RequiresStaticImages()` 在 herdr 与 tmux 内均返回 true，旋转配置自动降级为 320px 静态封面。未嵌套 tmux 时，herdr 保持裸 Kitty 定位序列，不使用 tmux DCS 或同步刷新包装；静态图片经 `cover_renderer_limiter.go` 的 `writeImageLimited` 复用 768 KiB 单包、1 MiB/s 速率和失败/慢写冷却。共享限流类型和预算使用 `image` 命名，tmux 专用包装与 pane 定位仍独立。仅写入成功后更新静态封面缓存与位置，确保限流拒绝后仍会重试；`cover_renderer_herdr_test.go` 通过内存输出验证切歌限流、位置写失败及退避后的重试。限流器通过独立 `sync.Once` 初始化，不获取封面状态锁，避免调试写入与清理路径锁重入。用户说明见 `docs/herdr-cover.md`。该改动修复动画兼容与输出预算缺口，不代表 #671 的 macOS 内核死锁已根治；测试只使用内存写入替身，不主动重现整机卡死。
-- **封面图**：Kitty 封面图在应用背景预留的透明区域渲染，位于文本和单元格背景之下；popup 仅覆盖与其重叠的部分。背景排除矩形仅覆盖图像实际填充的前 `rows-1` 行，Kitty 未填充的末行仍由主题 `AppBackground` 绘制。独立页面若需清理封面，必须在 deferred `MenuToPage.BeforeEnterMenuHook` 中调用 `coverRenderer.ClearDisplayed()`，使删除发生在 loading 的 Main 帧之后、目标页面切换之前；Last.fm API account 入口遵循此规则。tmux（≥3.3 且 `allow-passthrough on`）内通过 DCS `tmux;` 透传支持 Kitty 图形协议（`internal/ui/kitty/detector.go` 检测外层终端、生成器返回裸序列、写入点经 `kitty.Wrap` 的 `ansi.TmuxPassthrough` 包裹序列，并查询 `#{allow-passthrough}` 校验选项确已开启、未开启或查询失败时禁用透传）；pane 环境被 tmux 3.4+ 覆盖（`TERM_PROGRAM=tmux`）时回退 `tmux show-environment` 会话环境探测外层终端，GNU screen 仍不支持。**安全默认**：tmux 透传属实验性功能，即使终端能力检测通过，`CoverRenderer.IsEnabled` 仍要求 `main.lyric.cover.tmuxPassthrough=true` 才会在 tmux 内真正输出图像；默认关闭，开启后由静态封面、缩图、限流与慢写冷却控制传输负载（#660）。配置注释描述当前行为，不将此前的大图传输故障表述为启用后的必然结果。开启后仍强制禁用旋转封面（仅静态封面），静态源图缩放到 320px，封面写入不再 `Stdout.Sync()`，完整图像 DCS 受 768 KiB 单包、持续 1 MiB/s、1 MiB burst 的运行时预算约束；写入超过 200ms 或失败时按 5 秒起、最高 30 秒的退避冷却熔断。写耗时仅作为 terminal/GPU pressure proxy（终端/GPU 压力代理），不是真实 GPU 指标。`--debug`/`main.debug` 会在封面大包写入时记录字节、耗时、进程 RSS 与限流状态（事件驱动，无周期性 heartbeat）；慢写（>200ms）会 Warn 并 `slogx.Flush`。tmux 模式下图片以外层终端绝对坐标定位（`tmux display -p` 查询 pane 偏移并折算 `status-position top` 时的状态栏高度、单 DCS 内含 `\e7`/`\e8` 保存恢复外层光标），避免失焦时画到其他 pane；偏移查询失败、限流或拥塞熔断时跳过绘制且状态不误标成功（复用指数退避避免逐帧重试和重复分配），偏移缓存随窗口尺寸变化失效。已知限制：图像落在外层终端而非 tmux 文字缓冲，切换 tmux window / zoom 时可能残留；后续以 Kitty Unicode placeholder（网格驻留）修复，不采用周期性 `tmux` 轮询。
-- **网页登录**：macOS / Windows / Linux 三平台（非三平台 `login_webview.go` 桩）。Login 页「网页登录」入口在 WebView 检测不可用时自动隐藏：`webviewLoginAvailable()` 按 build tag 实现运行时检测——macOS WebKit 系统自带恒可用；Windows 经 `webviewloader.GetAvailableCoreWebView2BrowserVersionString("")` 检测 WebView2 Runtime；Linux 以 `webkitgtk.WebKitGTKVersion() == 0` 判定 WebKitGTK 库缺失；不可用时按钮不渲染，鼠标 hover/点击与键盘 right 导航同步跳过。检测结果在 `NewLoginPage` 缓存于 `LoginPage.webviewAvailable`。可用时弹出原生 WebView 窗口加载 `https://music.163.com/#/login`，通过原生 cookie API 每 ~1s 轮询检测 `MUSIC_U` cookie（HttpOnly，`document.cookie` 读不到）。页面层 `internal/ui/login_webview_page.go` 平台无关，仿 QR 登录页用 `tea.Tick` 轮询消费事件（`WebviewLoginEvent{CookieString, WindowClosed}`，缓冲 4 channel select-default 永不 close）；拿到 cookie 后复用 `utils/app.ParseCookieFromStr` → `neteaseutil.SetGlobalCookieJar` → `apputils.RefreshCookieJar()` 链路校验，失败则保持窗口继续轮询。共享常量在 `login_webview_consts.go`。三平台实现：
-  - **macOS**：`internal/macdriver/webkit`（purego + objc 桥接，无 CGO）弹出 WKWebView，使用 `nonPersistentDataStore`（内存不落盘）；`WKHTTPCookieStore getAllCookies:`（macOS 27 改名，init 时经 `instancesRespondToSelector:` 兼容 `getAllCookiesWithCompletionHandler:`）轮询；block 回调运行在 WebKit 私有队列，只做数据 marshal 经 channel 回传。控制器 `internal/ui/login_webview_darwin.go` + 主线程派发 `login_webview_helper_darwin.go`（`MusicfoxWebviewLoginHelper`，仿 `internal/desktop_lyrics/helper_darwin.go` 的 performSelectorOnMainThread 模式）。窗口显示期间将全局 `SetActivationPolicy(Prohibited)`（`internal/runtime/runtime_darwin.go:26`）临时切换为 `Accessory` 并激活，关闭时恢复；所有退出路径（成功/用户关窗/取消）都恢复。
-  - **Windows**：`internal/ui/login_webview_windows.go`，依赖 `github.com/13thgoutham/go-webview2` v1.0.25（wailsapp/go-webview2 v1.0.23 的修复 fork，零 CGO，`pkg/webview2` 生成 COM 绑定 + `webviewloader` 从内存加载 WebView2Loader.dll）。单 UI 线程模型：messageLoop goroutine（`LockOSThread` + CoInitializeEx）承载建窗（RegisterClassExW/CreateWindowExW）→ 环境/控制器创建（回调经消息泵派发）→ `SetTimer` WM_TIMER 轮询 `GetCookieManager().GetCookies("")`（空 uri 取全部 cookie 含 HttpOnly）→ 消息循环退出后 `cleanup()`（`controller.Close()` + 经 IUnknown vtable Release 槽释放 COM 对象）。Close() 幂等 = 置 closed + `PostMessage(WM_CLOSE)`。WebView2 Runtime：Win11 自带，Win10 绝大多数已装。**依赖替换原因**：wailsapp/go-webview2 v1.0.23 生成的 `ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler` / `ICoreWebView2CallDevToolsProtocolMethodCompletedHandler` / `ICoreWebView2ExecuteScriptCompletedHandler` 三个 handler 的 Invoke 回调以 `string`（16 字节）承载 LPCWSTR 结果，新版 Go（≥1.22）`compileCallback` 逐参数限制 ≤ uintptr（8 字节）导致包 init 时 panic；上游无修复版本（最新即 v1.0.23，PR #36/#37 未合并），故改用 13thgoutham fork v1.0.25（含 PR #36/#37 的生成器级修复）；`make vendor` 后无需额外打补丁。
-  - **Linux**：`internal/webkitgtk`（purego 直调 WebKitGTK，零 CGO）运行时优先加载 6.0 栈（`libwebkitgtk-6.0.so.4` + `libgtk-4.so.1`），失败自动回退 4.1 栈（`libwebkit2gtk-4.1.so.0` + `libgtk-3.so.0`，覆盖 Debian 11/12、Ubuntu 22.04 等旧发行版）。6.0 使用 `WebKitNetworkSession` 与 `webkit_cookie_manager_get_all_cookies`，WebView 经 `g_object_new` 的 `"network-session"` 构造属性绑定会话（WebKitGTK 6.0 起移除了 `webkit_web_view_new_with_*` 便利构造函数，`webkit_web_view_new_with_network_session` 符号在任意版本都不存在）；4.1/4.0 使用旧版 `WebContext` / `CookieManager` API，其中 4.1 链接 libsoup 3、4.0 链接 libsoup 2，并通过带 URI 的 `webkit_cookie_manager_get_cookies` 查询 Cookie。所有支持栈都不可用不 panic（`WebKitGTKVersion()` 返回 0，导出函数降级 no-op，controller 走 WindowClosed 回退，且 Login 页「网页登录」入口自动隐藏）。**符号缺失降级**：库可加载（RTLD_LAZY）但缺少对应 API 符号时，`registerSymbol`（`purego.Dlsym` 失败静默跳过而非 `RegisterLibFunc` panic）使对应函数指针保持 nil，栈可用性检查判定该栈不可用并继续回退，最终 `WebKitGTKVersion()` 返回 0 走表单登录降级，不影响主应用启动。版本差异分发：`gtk_window_new` 带参/无参、`gtk_window_set_child` vs `gtk_container_add`、`gtk_widget_show_all`、窗口关闭信号 "close-request"（GTK4）vs "delete-event"（GTK3，均经 `GSignalConnectCloseRequest` 统一连接，回调统一 `func(window, extra uintptr) int32` 返回 0 允许关闭）。`internal/ui/login_webview_linux.go`：GTK 线程模型——`runGTK` goroutine（`LockOSThread`）内 `gtk_init_check` → 创建对应 API 栈的 WebView → `gtk_window_new` → `g_timeout_add` 轮询 Cookie → `gtk_main` 阻塞；Close() 幂等 = `gtk_main_quit`（跨线程安全）。无 DISPLAY/WAYLAND_DISPLAY 时直接发 WindowClosed 降级二维码登录。每次轮询释放 GList/SoupCookie/GError，退出时 `g_object_unref` window/webView/session。
+- **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式。`lyric.Service` 异步加载歌词并支持取消（新请求作废旧请求，`Stop` 清理状态）；`track.Manager.GetLyric` 用 `singleflight` 合并并发请求。未匹配的云盘歌曲优先获取云盘内嵌歌词，失败回退普通歌词接口。
+- **播放列表**：列表循环/顺序/单曲循环/随机/无限随机/智能心动模式。随机序由 `internal/playlist` 维护，队列不变时前后切歌在随机序内移动。
+- **远程控制**：MPRIS(Linux)、Now Playing(macOS)、System Media(Windows)。macOS 侧 `internal/macdriver` 在框架不可用时静默降级，禁用对应功能而不影响启动。
+- **状态栏组件**：`model.DefaultStatusBar.Components` 可注入 `StatusBarComponent`；需要交互的组件额外实现 `InteractiveStatusBarComponent`，以局部坐标处理命中。状态栏只负责布局与指针，不持有业务回调。
+- **存储**：BoltDB，保存用户信息、播放状态、播放列表快照、桌面歌词窗口位置/显示器。
+- **扫码登录**：`internal/ui/login_qr_page.go` 经 `internal/ui/qr_login_client.go` 直接请求网易云接口（非 `service.LoginQRService`），以 `req/v3` 的 `SetTLSFingerprintChrome()` 与完整浏览器 Headers 规避反爬检测；轮询每次绑定最新全局 CookieJar（`neteaseutil.GetGlobalCookieJar()`）。
+- **网页登录**：页面层 `internal/ui/login_webview_page.go` 平台无关，三平台实现均零 CGO——macOS WKWebView（`internal/macdriver/webkit`）、Windows WebView2（`internal/ui/login_webview_windows.go`，依赖 `13thgoutham/go-webview2` fork）、Linux WebKitGTK（`internal/webkitgtk`，优先 6.0 栈、回退 4.1）。通过原生 cookie API 轮询 HttpOnly 的 `MUSIC_U`；WebView 运行时不可用时「网页登录」入口自动隐藏。
+- **实时频谱**：仅 macOS `osx` 引擎支持；`MTAudioProcessingTap` 经 PureGo 取 PCM，`internal/player/spectrum.go` 异步分析，`harmonica` 弹簧按帧插值。配置项为 `[main].frameRate` 与 `[main.visualizer]`（`enable`、`maxHeight`、三种单元字符）。
+- **主题**：`[dark.app]` / `[light.app]` 的显式非透明 `background` 作为应用与自定义页面整窗背景；未设置或 `transparent` 时保持终端透明。语义色、状态栏、播放栏、菜单圆角分隔符（`menuSelectedSepLeft`/`menuSelectedSepRight`）与进度条渐变均可覆写，缺省回落到主题调色板。切换主题时以名称写入 `theme.activeTheme`，系统外观变化只切换当前主题的明暗变体。
+- **自定义表单页面**：`internal/ui/page_layout.go` 统一提供标题返回按钮、面包屑、输入框焦点/hover 样式与按钮文本；Search、Login、Last.fm API account 页面按其渲染结果记录命中坐标，并用 `pageSubmitButton`/`pageButton` 同步键盘与鼠标状态。
+- **封面图**：Kitty 协议图像渲染在应用背景预留的透明区域，位于文本与单元格背景之下。tmux 内通过 DCS 透传（需 tmux ≥3.3 且 `allow-passthrough on`），启用还要求 `main.lyric.cover.tmuxPassthrough=true`（默认关闭）；开启后强制静态封面、缩图并以 768 KiB 单包 / 1 MiB/s 预算限流，慢写触发退避冷却。herdr pane 使用裸 Kitty 定位序列与静态封面。独立页面清理封面须在 deferred `MenuToPage.BeforeEnterMenuHook` 中调用 `coverRenderer.ClearDisplayed()`。
 
 ## 开发指南
 
@@ -224,7 +221,7 @@ make vendor
 foxful-cli 是本项目的核心 UI 框架，位于 `vendor/github.com/anhoder/foxful-cli/`。更新流程：
 
 1. 在 `go.mod` 中使用 `replace` 指向本地 foxful-cli 仓库开发
-2. foxful-cli 改动完成后，在 `~/Desktop/foxful-cli` 中 commit 并推送
+2. foxful-cli 改动完成后，在本地仓库 commit 并推送
 3. 在 foxful-cli 仓库打 tag（如 `v1.0.5`）
 4. 在本项目 `go.mod` 中注释掉本地 `replace`，将版本升为新 tag
 5. 执行 `make vendor` 同步 vendor 目录
@@ -255,12 +252,12 @@ endif
 ```
 
 | Unix 写法 | Windows 替代 |
-|-----------|-------------|
+|---|---|
 | `which <cmd>` | `where <cmd>` |
 | `/dev/null` | `nul` |
 | `` `pwd` `` | `$(PACKAGE_ROOT)`（Make 变量） |
 | `<cmd> >/dev/null 2>&1` | `<cmd> >nul 2>&1` |
-| `<cmd> || { cmd2; }` | `<cmd> || ( cmd2 )` |
+| `<cmd>\|\|{ cmd2; }` | `<cmd>\|\|( cmd2 )` |
 | `hack/*.sh` | `hack/*.ps1`（PowerShell 实现） |
 
 **例外**：纯交叉编译/CI 内部工具（如 `hack/init_linux_env.sh`、`hack/init_windows_env.sh` 等 Docker 内部脚本），仅在 Linux Docker 容器中执行，无需适配 Windows。
@@ -272,45 +269,73 @@ endif
 **所有贡献者在修改代码后，必须检查并更新 AGENTS.md 文档，防止文档腐化。**
 
 #### 何时需要更新文档
-- 添加、删除或重命名核心文件或目录
-- 新增功能模块或组件
-- 修改项目结构或架构
-- 更改 API 接口或配置格式
-- 添加新的播放器引擎、菜单类型、渲染模式
-- 修改关键路径或重要流程
-- **快捷键变更**：新增、删除或修改快捷键后，必须同步更新 README 中的快捷键说明部分（help 菜单是动态从 keybindings 配置生成的，无需手动修改）
 
-#### 更新检查清单
-- [ ] 目录结构是否准确反映当前项目结构
-- [ ] 核心文件路径是否正确
-- [ ] 接口定义是否与代码一致
-- [ ] 新增功能的说明是否完整
-- [ ] 开发指南是否需要补充
-- [ ] 关键文件路径表格是否需要更新
+| 变更类型 | 动作 |
+|---|---|
+| 架构变更 | 必须立即更新 |
+| 新增/删除核心模块或组件 | 必须补充或移除对应说明 |
+| 新增播放器引擎、菜单类型、渲染模式 | 必须更新核心架构章节与开发指南 |
+| 公共接口或配置格式变化 | 必须更新接口定义与配置语义 |
+| 核心文件或目录重命名、迁移 | 及时更新路径与项目结构 |
+| 快捷键变更 | 必须同步 README 的快捷键说明（help 菜单由 keybindings 动态生成，无需手动修改） |
+| 细微修复、参数调优、bugfix | **不更新**（见「文档记录边界」） |
 
-#### 更新优先级
-| 变更类型 | 优先级 | 说明 |
-|---------|--------|------|
-| 架构变更 | **高** | 必须立即更新 |
-| 新增核心模块 | **高** | 必须添加说明 |
-| 文件路径变更 | **中** | 及时更新路径表 |
-| 细微修复 | **低** | 可批量更新 |
+### 重要准则：只记录架构与功能，不记录修复细节（文档记录边界）
 
-#### 维护建议
-- 保持文档与代码同步，避免技术债务积累
-- 使用一致的术语和格式
-- 添加代码示例时确保与实际代码匹配
-- 定期（如每月）审查文档完整性
-- PR 审查时应包含文档检查
+**AGENTS.md 是架构说明书，不是变更日志。** 任何写入的内容都必须描述系统"当前长什么样、为什么这样组织"，而不是"某次改动为什么被做"。
 
-#### 文档腐化警告信号
+#### 应当记录
+- 模块划分、职责边界与依赖方向
+- 公共接口、扩展点与注册方式（新增菜单/引擎/渲染器的步骤）
+- 配置项的语义与默认行为
+- 平台差异与降级策略（如某功能仅在特定平台可用）
+- 关键数据流（入口 → 初始化 → 运行 → 渲染）
+- 构建、依赖与发布流程
+
+#### 不应记录
+- **Bug 修复的因果叙事**：症状、根因、修复手法
+- **Issue / PR 编号引用**及其讨论上下文
+- **小改动与调优**：参数微调、格式化、日志、单点性能数字
+- **临时规避手段**：workaround、watchdog、冷却、重试次数的实现细节
+- **测试细节**：具体测试文件名、测试替身策略、回归用例清单
+- **变更历史**：与旧实现的对比、"此前错误/现在修正"的表述
+- **计划与限制清单**："后续将…"、"已知限制…"、"不代表…已根治"
+- **Agent 工作日志**：任务过程、调试结论、临时假设、已尝试但放弃的方案
+- **文件级实现内幕**：私有函数名、锁粒度、goroutine 编排等需要读代码才能理解的细节
+
+以上内容分别归属：变更历史 → `CHANGELOG.md` / Git log；用户可见行为 → `README.md`；特定子系统的深度设计 → 独立 `docs/*.md` 或代码注释。
+
+#### 写法要求
+- 使用现在时的陈述句描述现状，例如"tmux 内通过 DCS 透传…"，不写"本次修复了…"
+- 每个功能模块最多 3–5 条要点，单条不超过 3 行
+- 优先写配置键、接口名、包路径等稳定锚点，避免行号与临时符号
+- 同一事实只出现一次；细节已存在于 README/`docs/` 时只保留链接或一句摘要
+- 新增条目必须能回答"读者是否会因此改变对系统的理解"；答案为否即删除
+
+#### 判断标准
+提交前对每一条新增内容自问：
+
+1. 它是**现状描述**还是**变更说明**？后者不写入。
+2. 删掉它，新维护者是否仍能定位代码并正确扩展系统？能则删掉。
+3. 它是否只对某次修复有意义、对后续开发无指导价值？是则删除。
+4. 它是否依赖具体 issue、PR、commit 才能理解？是则删除。
+
+#### 检查清单
+- [ ] 目录结构与核心文件路径与实际代码一致
+- [ ] 接口定义与代码一致，无已删除 API
+- [ ] 新增功能只以"能力 + 入口 + 配置"的形式描述
+- [ ] 无 issue/PR 编号、无 bugfix 过程叙述、无测试文件清单
+- [ ] 无重复描述；与 README/CHANGELOG 无矛盾
+
+### 文档腐化警告信号
 - 文件路径与实际不符
 - 过时的 API 接口描述
 - 已删除功能仍出现在文档中
-- 章节结构混乱或重复
+- 章节被按时间顺序堆叠的改动说明填充
+- 出现"本次/此前/修复了/临时"等变更叙事词汇
 - 与 README/CHANGELOG 存在矛盾
 
-违反此准则可能导致：新贡献者无法理解项目结构、开发效率降低、文档失去参考价值、维护成本增加。
+违反此准则可能导致：新贡献者无法理解项目结构、文档失去参考价值、维护成本持续增加。
 
 ## Git 提交规范
 
@@ -318,46 +343,114 @@ endif
 
 **所有贡献者在提交代码时，必须遵循 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) 规范。**
 
+**Git Commit Message 必须全部使用英文**：标题、body、footer（含 `BREAKING CHANGE` 描述）不得出现中文或其他非英文自然语言。中文仅用于 PR 描述、Issue 讨论与代码审查意见。
+
 #### 提交格式
 
 ```
-<type>[optional scope]: <description>
+<type>(<scope>)!: <description>
 
-[optional body]
+<body>
 
-[optional footer(s)]
+<footer>
 ```
+
+- 标题行：`type` 必填，`scope` 可选，`!` 标记破坏性变更，冒号后接一个空格再接描述
+- 标题与 body、body 与 footer 之间各空一行
+- 只写标题的提交同样合法；无 body 时不要在标题后追加句点或列表符号
 
 #### Type 类型
 
 | Type | 说明 |
-|------|------|
+|---|---|
 | `feat` | 新功能开发 |
 | `fix` | Bug 修复 |
 | `docs` | 文档更新 |
 | `style` | 代码格式调整（不影响功能） |
-| `refactor` | 代码重构（既不修复bug也不添加功能） |
+| `refactor` | 代码重构（既不修复 bug 也不添加功能） |
 | `perf` | 性能优化 |
 | `test` | 测试相关 |
 | `chore` | 构建工具、辅助工具、配置变更 |
 | `revert` | 回滚提交 |
 
+`type` 必须与实际变更一致：行为变化不得用 `chore`/`docs` 隐藏，纯文档改动不得用 `feat`。
+
+#### Scope 约定
+
+可选、小写、单个模块。跨模块改动可省略 scope，或取影响最大的模块，不写 `ui,player` 这类组合。
+
+| Scope | 覆盖范围 |
+|---|---|
+| `ui` | `internal/ui` 页面、菜单、事件与渲染 |
+| `player` | `internal/player` 播放引擎与控制 |
+| `lyric` | 歌词获取、解析与渲染 |
+| `playlist` | 播放列表模式与随机序 |
+| `track` | `internal/track` 歌曲、缓存与目录管理 |
+| `login` | 扫码、网页登录与 Cookie 流程 |
+| `keybindings` | 快捷键定义与映射 |
+| `storage` | BoltDB 持久化与迁移 |
+| `configs` | 配置定义、升级与 TOML 编辑 |
+| `deps` | `go.mod` 与 vendor 更新 |
+| `build` | `Makefile`、`hack/` 与 CI |
+| `docs` | 文档 |
+
+#### 标题规则
+
+1. 全部英文，祈使句、现在时：`add`、`fix`、`remove`，不写 `added`、`fixes`、`updating`
+2. 不超过 50 字符（硬上限 72），结尾不加句号
+3. 描述具体行为：`fix(player): resume mpv after seek`，而不是 `fix: bug`、`update code`、`changes`
+4. 不写 issue 编号、不加 `[tag]` 前缀或 emoji
+5. scope 后描述使用小写开头（专有名词如 `MPV`、`Kitty` 保持原样）
+6. 禁止中文字符：标题、body、footer 与示例提交文本均不得包含中文
+
+#### Body 与 Footer
+
+- **Body**：说明动机与影响（为什么改、改变了哪些行为、兼容性后果），不复述 diff；每行不超过 72 字符，可用 `-` 列表
+- **`BREAKING CHANGE: <描述>`**：紧随 `!` 使用，写明破坏点与迁移方式；仅有 `!` 无法让人判断影响范围
+- **`Closes #<n>` / `Refs #<n>`**：关联 issue/PR；纯文档或内部重构不必强行关联
+- **`Co-authored-by: Name <email>`**：多作者协作
+- 依赖升级用 `deps` scope；仅调整构建脚本用 `build` scope；两者混在同一提交时以主要意图为准
+
+#### 提交粒度
+
+- 逻辑变更、格式化/重命名、vendor 同步分开提交，便于 review 与回滚
+- 不提交无关文件、调试输出、临时脚本与本地生成物
+- 回滚使用 `revert: <被回滚提交的标题>`，在 body 中引用原 commit hash 与原因
+
 #### 示例
 
-```
-feat(player): 添加 MPV 播放引擎支持
+功能（含 body 与 footer）：
 
-- 支持多种音频格式
-- 实现播放进度控制
-- 优化内存使用
+```
+feat(player): add mpv playback engine support
+
+Add an IPC-controlled backend so existing mpv users can reuse their
+audio filters and output configuration.
 
 Closes #123
 ```
 
-#### 规范要求
+修复（单行标题）：
 
-1. **必须使用英文**：提交信息、描述均使用英文
-2. **动词开头**：描述部分以动词开头，使用现在时态
-3. **长度限制**：标题不超过 50 字符
-4. **Body 可选**：复杂变更可添加详细说明，每行不超过 72 字符
-5. **引用 Issues**：在 footer 中使用 `Closes #xxx` 关联 Issue
+```
+fix(lyric): keep active line when switching render mode
+```
+
+破坏性变更：
+
+```
+refactor(configs)!: move visualizer options under [main.visualizer]
+
+BREAKING CHANGE: keys under `[main].spectrum` are no longer read; migrate
+them to `[main.visualizer]` before upgrading.
+```
+
+#### 提交前检查
+
+- [ ] 标题与 body、footer 全部为英文，无中文字符
+- [ ] 标题符合 `<type>(<scope>): <description>`，≤50 字符，英文祈使句，无句号
+- [ ] `type` 与实际变更一致，未用 `chore` 掩盖行为变化
+- [ ] body（如有）说明动机与影响，每行 ≤72 字符
+- [ ] 破坏性变更同时使用 `!` 与 `BREAKING CHANGE:` footer
+- [ ] 无无关文件、调试残留、临时产物；vendor 变更与代码变更已拆分
+- [ ] issue 关联写在 footer，而非标题
