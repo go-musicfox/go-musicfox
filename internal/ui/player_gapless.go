@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -103,10 +102,11 @@ func (p *Player) commitGaplessTransition(transition player.GaplessTransition) {
 	}
 	p.reporter.ReportEnd(transition.PlayedTime)
 	p.reporter.ReportStart(song)
-	errorx.Go(func() { p.lyricService.SetSong(context.Background(), song) }, true)
+	lyricLoadID := p.lyricService.BeginSong(song.Id)
 	p.LocatePlayingSong()
-	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+	p.updatePlayingInfo()
 	p.updateDesktopLyrics()
+	p.loadLyrics(song, lyricLoadID)
 	p.netease.Rerender(false)
 	go notify.Notify(notify.NotifyContent{
 		Title:   "正在播放: " + song.Name,

@@ -32,6 +32,7 @@ type State struct {
 	YRCEnabled      bool // Whether YRC mode is active
 	ShowTranslation bool // Whether translation display is enabled
 	OffsetMs        int64
+	CurrentSongID   int64
 }
 
 // FormatAsLRC serializes the State into a string that conforms to the LRC file format standard.
@@ -63,6 +64,8 @@ type Service struct {
 	// Raw data cache
 	lastLRCData   structs.LRCData
 	currentSongID int64
+	pendingSongID int64
+	loadID        uint64
 
 	// Parsed data
 	fragments      []LRCFragment
@@ -95,18 +98,38 @@ func NewService(fetcher Fetcher, showTranslation bool, initialOffset time.Durati
 	}
 }
 
-// SetSong loads lyrics for a new song.
-func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
+// BeginSong clears the previous lyrics and returns an ID for the new load.
+func (s *Service) BeginSong(songID int64) uint64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.resetState(true) // Preserve configuration on reset
+	s.loadID++
+	s.resetState(true)
+	s.pendingSongID = songID
+	return s.loadID
+}
 
+// SetSong loads and commits lyrics when loadID still identifies the latest song request.
+func (s *Service) SetSong(ctx context.Context, song structs.Song, loadID uint64) (bool, error) {
 	lrcData, err := s.fetcher.GetLyric(ctx, song)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch lyric data")
+		s.mu.RLock()
+		stale := loadID != s.loadID || song.Id != s.pendingSongID
+		s.mu.RUnlock()
+		if stale {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "failed to fetch lyric data")
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if loadID != s.loadID || song.Id != s.pendingSongID {
+		return false, nil
+	}
+
+	s.resetState(true)
+	s.pendingSongID = song.Id
 	s.lastLRCData = lrcData
 	s.currentSongID = song.Id
 
@@ -191,7 +214,7 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 		lrcFile, err := ReadLRC(strings.NewReader(lrcData.Original))
 		if err != nil {
 			if !s.skipParseErr {
-				return errors.Wrap(err, "failed to parse original lyric")
+				return false, errors.Wrap(err, "failed to parse original lyric")
 			}
 			slog.Debug("ignoring lyric parsing error", "error", err)
 		}
@@ -244,7 +267,7 @@ func (s *Service) SetSong(ctx context.Context, song structs.Song) error {
 	}
 
 	s.isRunning = true
-	return nil
+	return true, nil
 }
 
 // UpdatePosition updates the current playback position and computes the current lyric index.
@@ -343,6 +366,7 @@ func (s *Service) State() State {
 		YRCEnabled:          s.showYRC && len(s.yrcLines) > 0,
 		ShowTranslation:     s.showTranslation,
 		OffsetMs:            s.offset.Milliseconds(),
+		CurrentSongID:       s.currentSongID,
 	}
 }
 
@@ -350,6 +374,8 @@ func (s *Service) State() State {
 func (s *Service) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.loadID++
+	s.pendingSongID = 0
 	s.resetState(false) // Full reset
 }
 

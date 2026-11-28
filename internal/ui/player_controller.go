@@ -127,7 +127,7 @@ func (p *Player) likeOrDislike(isLike bool) {
 
 		// Refresh like list and update NowPlaying
 		likelist.RefreshLikeList(user.UserId)
-		p.stateHandler.SetPlayingInfo(p.PlayingInfo())
+		p.updatePlayingInfo()
 
 		// Send notification
 		title := "已添加到我喜欢的歌曲"
