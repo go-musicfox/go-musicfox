@@ -3,8 +3,9 @@ package player
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
 	"github.com/go-musicfox/go-musicfox/utils/timex"
@@ -46,6 +48,9 @@ type mpdPlayer struct {
 	curSongId      int
 	timer          *timex.Timer
 	latestPlayTime time.Time // 避免切歌时产生的stop信号造成影响
+
+	musicDir   string // cached MPD music_directory
+	stagedFile string // staged file inside music_directory, cleaned on track switch
 
 	volume    int
 	state     types.State
@@ -133,6 +138,42 @@ func (p *mpdPlayer) client() *mpd.Client {
 	return _client
 }
 
+// localURI converts a local file path into a URI MPD can add.
+// With a unix socket MPD accepts absolute paths directly; with TCP it can
+// only access files inside music_directory, so files located elsewhere are
+// hard-linked (or copied) into a staging directory.
+func (p *mpdPlayer) localURI(path string) (string, error) {
+	if p.conf.Network == "unix" {
+		return path, nil
+	}
+
+	if p.musicDir == "" {
+		p.musicDir = mpdConfigMusicDirectory(p.conf.ConfigFile)
+		if p.musicDir == "" {
+			p.musicDir = app.MusicCacheDir()
+		}
+	}
+
+	uri, staged, err := stageLocalFile(p.musicDir, path)
+	if err != nil {
+		return "", err
+	}
+	if staged != "" {
+		p.stagedFile = staged
+	}
+	return uri, nil
+}
+
+func (p *mpdPlayer) cleanupStaged() {
+	if p.stagedFile == "" {
+		return
+	}
+	if err := os.Remove(p.stagedFile); err != nil && !os.IsNotExist(err) {
+		slog.Warn("failed to remove mpd staged file", slogx.Error(err), slog.String("file", p.stagedFile))
+	}
+	p.stagedFile = ""
+}
+
 func (p *mpdPlayer) syncMpdStatus(subsystem string) {
 	status, err := p.client().Status()
 	mpdErrorHandler(err, true)
@@ -195,36 +236,48 @@ func (p *mpdPlayer) listen() {
 				if p.curSongId != 0 {
 					err = p.client().DeleteID(p.curSongId)
 					mpdErrorHandler(err, true)
+					p.curSongId = 0
 				}
 			}
+			p.cleanupStaged()
 
 			var (
 				url     = p.curMusic.URL
 				isLocal = strings.HasPrefix(p.curMusic.URL, "file://")
 			)
 			if isLocal {
-				url = path.Base(p.curMusic.URL)
-			}
-
-			if isLocal {
-				_, err = p.client().Rescan(url)
-				mpdErrorHandler(err, false)
-				for {
-					var attr map[string]string
-					if attr, err = p.client().Status(); err != nil {
+				url, err = p.localURI(strings.TrimPrefix(p.curMusic.URL, "file://"))
+				if err != nil {
+					slog.Error("failed to resolve mpd local music", slogx.Error(err), slog.String("url", p.curMusic.URL))
+					continue
+				}
+				// Absolute paths over a local socket bypass the database.
+				if !filepath.IsAbs(url) {
+					if _, err = p.client().Rescan(url); err != nil {
 						mpdErrorHandler(err, true)
-						break
-					}
-					if _, ok := attr["updating_db"]; ok {
 						continue
 					}
-					// 确保更新完成
-					break
+					for {
+						var attr map[string]string
+						if attr, err = p.client().Status(); err != nil {
+							mpdErrorHandler(err, true)
+							break
+						}
+						if _, ok := attr["updating_db"]; ok {
+							continue
+						}
+						// 确保更新完成
+						break
+					}
 				}
 			}
 
-			p.curSongId, err = p.client().AddID(url, 0)
-			mpdErrorHandler(err, false)
+			songID, addErr := p.client().AddID(url, 0)
+			if addErr != nil {
+				mpdErrorHandler(addErr, true)
+				continue
+			}
+			p.curSongId = songID
 
 			// 计时器
 			p.timer = timex.NewTimer(timex.Options{
@@ -241,8 +294,10 @@ func (p *mpdPlayer) listen() {
 				},
 			})
 
-			err = p.client().PlayID(p.curSongId)
-			mpdErrorHandler(err, false)
+			if err = p.client().PlayID(p.curSongId); err != nil {
+				mpdErrorHandler(err, true)
+				continue
+			}
 			if !isLocal {
 				// Doing this because github.com/fhs/gompd/v2/mpd hasn't implement "addtagid" yet
 				command := "addtagid %d %s %s"
@@ -421,6 +476,8 @@ func (p *mpdPlayer) Close() {
 
 	err = p.client().Close()
 	mpdErrorHandler(err, true)
+
+	p.cleanupStaged()
 
 	if p.conf.AutoStart {
 		cmd := exec.Command(p.conf.Bin)
