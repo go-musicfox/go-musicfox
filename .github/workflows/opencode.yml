@@ -32,10 +32,15 @@ jobs:
   opencode:
     if: |
       github.event_name == 'workflow_call' ||
-      contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
-      contains(github.event.comment.body, ' /opencode') ||
-      startsWith(github.event.comment.body, '/opencode')
+      (
+        contains(fromJson('["OWNER","MEMBER"]'), github.event.comment.author_association) &&
+        (
+          contains(github.event.comment.body, ' /oc') ||
+          startsWith(github.event.comment.body, '/oc') ||
+          contains(github.event.comment.body, ' /opencode') ||
+          startsWith(github.event.comment.body, '/opencode')
+        )
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,7 +54,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run opencode
-        uses: anomalyco/opencode/github@latest
+        uses: anomalyco/opencode/github@810c0eba1a7348036f8bdf61e6632d0c36c6876c # v1.19.5
         env:
           # ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
