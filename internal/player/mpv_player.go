@@ -375,19 +375,7 @@ func (p *mpvPlayer) watch() {
 					slog.Bool("isError", isError),
 				)
 
-				// 只有自然结束(eof)或出错才触发状态变更
-				if isEOF || isError {
-					slog.Info("mpv watch: 触发歌曲结束", slog.Bool("isEOF", isEOF))
-					if p.timer != nil {
-						slog.Debug("mpv watch: 停止timer")
-						p.timer.Stop()
-						p.timer = nil
-					}
-					p.setState(types.Stopped)
-					slog.Info("mpv watch: 状态已设为Stopped")
-				} else {
-					slog.Info("mpv watch: end-file忽略（非自然结束，可能是切歌中）")
-				}
+				p.handleEndFile(isEOF, isError)
 			}
 
 			// 切歌watchdog信号（加固）：file-loaded 表示新歌已成功加载
@@ -408,6 +396,29 @@ func (p *mpvPlayer) watch() {
 		case <-time.After(time.Second):
 		}
 	}
+}
+
+// handleEndFile 处理 mpv 的 end-file 事件。
+//
+// 自然结束(eof)或出错时冻结播放计时器但不置空：UI 收到 Stopped 后会先切换到
+// 下一首，并在切换前用 PlayedTime() 上报本次播放时长。若在此处把 timer 置空，
+// PlayedTime() 只能返回 0，上报会被「已播放不足 20 秒」门槛静默丢弃。
+// 下一次 handleNewSong 会 Stop 并替换该 timer。
+func (p *mpvPlayer) handleEndFile(isEOF, isError bool) {
+	// 只有自然结束(eof)或出错才触发状态变更；stop/new-file 属于切歌/停止流程
+	if !isEOF && !isError {
+		slog.Info("mpv watch: end-file忽略（非自然结束，可能是切歌中）")
+		return
+	}
+
+	slog.Info("mpv watch: 触发歌曲结束", slog.Bool("isEOF", isEOF))
+	if p.timer != nil {
+		// 保留 timer 指针，仅冻结其累计时长，供紧随其后的上报读取。
+		slog.Debug("mpv watch: 暂停timer（保留供上报读取）")
+		p.timer.Pause()
+	}
+	p.setState(types.Stopped)
+	slog.Info("mpv watch: 状态已设为Stopped")
 }
 
 func buildMpvMediaTitle(music URLMusic) string {

@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
@@ -75,6 +76,10 @@ func (m *MasterReporter) ReportEnd(passedTime time.Duration) {
 	}
 
 	if passedTime.Seconds() < 20 {
+		slog.Debug("skip report end: played time below threshold",
+			slog.Int64("songId", m.currentSong.Id),
+			slog.Duration("passedTime", passedTime),
+		)
 		return
 	}
 
