@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	goruntime "runtime"
 	"strings"
 
 	"github.com/anhoder/foxful-cli/util"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/runtime"
 	"github.com/go-musicfox/go-musicfox/internal/types"
+	"github.com/go-musicfox/go-musicfox/internal/ui"
 	mfoxapp "github.com/go-musicfox/go-musicfox/utils/app"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/filex"
@@ -20,13 +22,30 @@ import (
 )
 
 func main() {
+	// WebKitGTK 2.54 requires WTF::initializeMainThread() to run on the
+	// process main thread; otherwise creating a WebKitNetworkSession aborts
+	// inside JSC. Bubbletea owns the Go main goroutine, so in the app child
+	// process hand the (locked) process main thread to the GTK login window
+	// and let the TUI run on another goroutine.
+	if goruntime.GOOS == "linux" && errorx.IsChildProcess() {
+		goruntime.LockOSThread()
+		go func() {
+			defer os.Exit(0)
+			errorx.RunWrapped(runApp)
+		}()
+		ui.ServeWebviewMainThread()
+		return
+	}
+
 	// 以包装进程方式运行：崩溃（fatal error）时恢复终端并提示创建 issue。
 	// 子进程内可恢复的 panic 由 errorx.Recover 自行处理。
-	errorx.RunWrapped(func() {
-		// 尽早初始化日志（幂等），确保后续 panic/崩溃可被捕获到日志文件
-		slogx.Init()
-		runtime.Run(musicfox)
-	})
+	errorx.RunWrapped(runApp)
+}
+
+func runApp() {
+	// 尽早初始化日志（幂等），确保后续 panic/崩溃可被捕获到日志文件
+	slogx.Init()
+	runtime.Run(musicfox)
 }
 
 func musicfox() {

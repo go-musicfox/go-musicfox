@@ -15,6 +15,12 @@ import (
 // childEnv 标记包装进程的子进程。
 const childEnv = "MUSICFOX_INTERNAL_CHILD"
 
+// IsChildProcess reports whether the current process is the app child process
+// started by RunWrapped (as opposed to the wrapper process that spawned it).
+func IsChildProcess() bool {
+	return os.Getenv(childEnv) == "1"
+}
+
 // RunWrapped 以包装进程方式运行应用本体：
 //   - 子进程（app）退出码为 2（Go 运行时 fatal，如 cgo/purego 崩溃）时，
 //     恢复终端并打印友好提示，引导用户提交 issue 并附上日志；
