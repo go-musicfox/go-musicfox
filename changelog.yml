@@ -1,3 +1,413 @@
+- semver: 5.1.1
+  date: 2026-11-28T00:12:43+08:00
+  packager: go-musicfox
+  changes:
+    - commit: be6d839b642bc90c9750ffb181740a0c1b312d95
+      note: |-
+        fix(playlist): switch to netease-music v1.7.0 and v6 detail
+
+        - Bump github.com/go-musicfox/netease-music to v1.7.0 and re-vendor.
+        - Playlist detail now uses /api/v6/playlist/detail via the SDK.
+        - Validate the JSON business code and playlist object before rendering.
+        - Backfill songs by trackIds when the detail response omits tracks.
+        - Disable the local replace used during debugging.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 12169a71098f8b8607bcf655eaddabf57ca14daf
+      note: |-
+        fix(theme): bump foxful-cli to v1.1.6 for transparent popup surfaces (#662)
+
+        A transparent popup surface (lipgloss.NoColor) was encoded as an opaque
+        black SGR background by the popup render path, painting solid black
+        boxes
+        over help/confirm/update-log popups under the Transparent theme.
+        foxful-cli
+        v1.1.6 detects NoColor by type and leaves cells unpainted.
+
+        Closes #662
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 05625b3b3d2618d2922dab758f750f092aef90e0
+      note: 'fix: github actions error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: dbd9dc0e03ba26ff7899213501fe1dde34f9f8a0
+      note: |-
+        fix(ui): opt in tmux kitty covers with rate limits (#660)
+
+        * fix(ui): opt in tmux kitty covers with rate limits
+
+        Default-disable DCS image passthrough to avoid Ghostty/WindowServer
+        stalls; when enabled, keep static 320px covers and cap write bandwidth.
+
+        Co-authored-by: Cursor <cursoragent@cursor.com>
+
+        * docs: note tmux cover window-switch bleed as known limit
+
+        Absolute DCS placement leaves images on the outer terminal; document
+        the follow-up Unicode-placeholder fix instead of polling.
+
+        Co-authored-by: Cursor <cursoragent@cursor.com>
+
+        * fix(ui): align cover debug with upstream event style
+
+        Drop the 2s heartbeat/fsync loop; record RSS on env snapshot and
+        large/slow cover writes only, matching sparse upstream debug cost.
+
+        Co-authored-by: Cursor <cursoragent@cursor.com>
+
+        * chore(ui): clarify tmux cover safeguards
+
+        Describe the static, resized and rate-limited cover path introduced
+        by the preceding change. Replace categorical reboot warnings with
+        current behavior and keep detailed budgets in the documentation.
+
+        ---------
+
+        Co-authored-by: Cursor <cursoragent@cursor.com>
+      author:
+        name: Ziyue Ink Zhang
+        email: finkzhang@tencent.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c9fc48d3cbb75aba8f3142b5dc14ce5f41979277
+      note: |-
+        fix: AlignTranslationFragmentsToYRC ytlrc缺行 (#658)
+
+        1 ytlrc有缺行现象
+        まふまふ的单曲《猛独が襲う》: https://music.163.com/m/song?id=524152942 (来自@网易云音乐)
+        2 AlignTranslationFragmentsToYRC函数无法正常工作
+      author:
+        name: yigekuyou
+        email: 47034094+yigekuyou@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d4cf43dc3557f84f5d654f683f3f9a330dc08f26
+      note: |-
+        feat(ui): display kitty cover images inside tmux (#653)
+
+        * feat(ui): display kitty cover images inside tmux
+
+        Wrap kitty graphics APC sequences in tmux DCS passthrough
+        (\ePtmux;...) when running inside tmux, so covers work with
+        `set -g allow-passthrough on` (tmux >= 3.3). GNU screen remains
+        unsupported.
+
+        Outer terminal detection: tmux 3.4+ overwrites TERM_PROGRAM/TERM
+        in pane environments, so probe pane env first, then fall back to
+        `tmux show-environment` session env, which follows the attaching
+        client. CSI cursor sequences are left unwrapped so tmux moves
+        the pane cursor itself.
+
+        Placement inside tmux uses outer-terminal absolute coordinates:
+        query pane offsets via `tmux display -p` and wrap save-cursor,
+        absolute CUP, image and restore-cursor in a single DCS passthrough
+        so covers stay in their own pane when the pane is not focused.
+
+        Closes #652
+
+        * fix(ui): harden kitty tmux passthrough edge cases
+
+        Apply code review findings:
+
+        - Skip renderer state updates when pane offset queries fail so the
+          next frame retries instead of leaving the cover permanently gone;
+          add a 1s negative cache for failed queries to avoid forking tmux
+          on every frame while tmux is unhealthy
+        - Invalidate the pane offset cache on window resize so covers are
+          not placed at stale outer-terminal coordinates
+        - Share tmux command construction (socket extraction, -S flag,
+          timeout) between detection and geometry queries
+        - Move the geometry query in Close() out of the render lock
+        - Merge old-image deletion into the placement payload for the
+          animation path (single DCS, nothing sent when placement fails)
+        - Fix gofmt violations and expand cache/geometry test coverage
+
+        * fix(ui): prevent unbounded output when tmux placement fails
+
+        With cover spin enabled in tmux passthrough mode, animation frames
+        (multi-MB) were transmitted to stdout before the pane-offset query;
+        when the query kept failing (overloaded tmux server), each retry
+        rewrote every frame, and hover-triggered rerenders could drive the
+        loop even while playback is paused - flooding tmux at MB/s and
+        feeding back into the very slowness that causes query failures.
+
+        - Query pane offsets before generating or transmitting anything;
+          on failure send nothing and report the failure via renderResult
+        - Add exponential backoff for placement failures (1s doubling to
+          30s cap, reset on success) gating animation and static retries
+        - Count missing TMUX/TMUX_PANE environment as a query failure so
+          it hits the negative cache instead of failing instantly per frame
+
+        * fix(ui): address review findings for kitty tmux passthrough
+
+        - Wrap SetFrameGap/StartAnimation into the placement DCS packet in
+          tmux mode: bare APCs are consumed by tmux as pane titles (dropped
+          or polluting the title), so the spin animation never started
+        - Cap animation frame batches at 512 KiB in tmux mode: a wrapped
+          batch is one DCS packet and tmux drops packets larger than its
+          input-buffer-size option (default 1 MiB) entirely
+        - Fold the status line height into the pane offset when
+          status-position is top, so covers are not drawn below their target
+        - Verify allow-passthrough is actually enabled before turning on
+          passthrough mode; failing safe matches the pre-PR behavior
+        - Add regression test asserting no bare APC escapes the DCS packet
+      author:
+        name: Ziyue Ink Zhang
+        email: inkfinite@qq.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2e06a3bef0b389b1d2fa1a95de63b557a3ebd722
+      note: |-
+        fix(ci): potential fix for code scanning alert no. 7: Workflow does not contain permissions (#656)
+
+        Co-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 4532d82dd5bd003e7af97a271cea4a035ece252c
+      note: |-
+        fix(ci): potential fix for code scanning alert no. 9: Workflow does not contain permissions (#655)
+
+        Co-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 60baf920f9b6a2a9f4f11ca2151285b001bdcd1a
+      note: |-
+        fix(ci): potential fix for code scanning alert no. 10: Workflow does not contain permissions (#654)
+
+        Co-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2a91eb6590df4197cbd42d88f7f3037d83531fb5
+      note: |-
+        fix: braille 网格缓存 resize panic (#651)
+
+        * 已修复 braille 网格缓存 resize panic，含回归测试。
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * chore: upgrade upload-artifact action to version 6
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@88.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: a0502d7230e0ae189ba8a608c6c9312bca74ab06
+      note: 'chore(ci): update cache action version to v5'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: c907d0cd2dfcf5181fd7fee67034c345b6b1749d
+      note: 'fix: github actions'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fb768e4bcf9d06b5f899df067a57935dd025fea0
+      note: 'chore(docs): delete docs/mouse_support.md'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 81300e3595ff9a85195be9e5767cae3322f2cd20
+      note: |-
+        fix：解码前按内容魔数嗅探修正类型，修复FLAC误判为MP3 (#648)
+
+        * 解码前按内容魔数嗅探修正类型，修复FLAC误判为MP3。
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        * 下载按内容嗅探后缀落盘。
+
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+
+        ---------
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 96ad4097edac559ff54cd3dbedb35b7ad571645f
+      note: 'chore: update ask-anhoder skills'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: f35767564e947e3a2762b4f1d62c42979388f452
+      note: 'chore: update skills'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: cc02b82bfe406a9c74d286c10ec49e7d486adefc
+      note: 'feat: add ask-anhoder router skill and workflow guide'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d01836198155001dfdb99bef01984b34feaa66e6
+      note: 'feat: add workflow skills'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 51793963e54ea2870051e76bff8effb7f3285a3e
+      note: 'chore: configure agent PR pipeline'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: fafc111219a1376bb0ede4998d2ede4ca6d89e1b
+      note: 'chore: remove useless files'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: d1fd05d0de5801049671a774fc79f80400afaeaf
+      note: 'fix: unit test error'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 70717078c8f90fd89e806e48add60d7c387f270d
+      note: 'chore: upgrade github action'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
+    - commit: 7eac833fc803201e2466dcac44b7421f792c9840
+      note: |-
+        fix: 修复歌手右键崩溃：补全漏写的 baseMenu: base，并加固 getTargetSong 空指针防御。 (#644)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: ab8070000af0db937ebb90fcdd9c038b9feb44d6
+      note: |-
+        feat(player): add optional gapless playback (#639)
+
+        * feat(player): add optional gapless playback
+
+        * fix(player): keep gapless mp3 streaming until download completes
+
+        * fix(player): handle gapless exact EOF boundaries
+
+        * fix(player): harden gapless mp3 trimming
+      author:
+        name: DBeidachazi
+        email: 63102882+DBeidachazi@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 8b846fcbfa40ea0672a1f918a6ac277307a62be2
+      note: |-
+        chore: update README.md with new GitHub badges
+
+        Added additional badges for GitHub stars and forks.
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: d8d61cf97d4eb8bef933f9cfca28cc5603b897af
+      note: |-
+        fix: 修复 GTK3 下 WebView 登录窗口二次释放崩溃 (#641)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9ee439504b857f332e04e4e68dbc335804d442b7
+      note: |-
+        修复了 WebKitGTK 6.0 符号误用导致 Fedora 44 的回退 WARN。 (#627)
+
+        Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>
+        Co-authored-by: anhoder <anhoder@users.noreply.github.com>
+      author:
+        name: opencode-agent[bot]
+        email: 219766164+opencode-agent[bot]@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 2c288e8bf61b27e44cda5d0cbfca7352dc0e755e
+      note: 'chore: update scoop config & changelog [skip ci]'
+      author:
+        name: anhoder
+        email: anhoder@88.com
+      committer:
+        name: anhoder
+        email: anhoder@88.com
 - semver: 5.1.0
   date: 2026-08-10T23:01:46+08:00
   packager: go-musicfox

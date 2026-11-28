@@ -1,4 +1,37 @@
 
+5.1.1
+=============
+2026-11-27
+
+* fix(playlist): switch to netease-music v1.7.0 and v6 detail (be6d839b)
+* fix(theme): bump foxful-cli to v1.1.6 for transparent popup surfaces (#662) (12169a71)
+* fix: github actions error (05625b3b)
+* fix(ui): opt in tmux kitty covers with rate limits (#660) (dbd9dc0e)
+* fix: AlignTranslationFragmentsToYRC ytlrc缺行 (#658) (c9fc48d3)
+* feat(ui): display kitty cover images inside tmux (#653) (d4cf43dc)
+* fix(ci): potential fix for code scanning alert no. 7: Workflow does not contain permissions (#656) (2e06a3be)
+* fix(ci): potential fix for code scanning alert no. 9: Workflow does not contain permissions (#655) (4532d82d)
+* fix(ci): potential fix for code scanning alert no. 10: Workflow does not contain permissions (#654) (60baf920)
+* fix: braille 网格缓存 resize panic (#651) (2a91eb65)
+* chore(ci): update cache action version to v5 (a0502d72)
+* fix: github actions (c907d0cd)
+* chore(docs): delete docs/mouse_support.md (fb768e4b)
+* fix：解码前按内容魔数嗅探修正类型，修复FLAC误判为MP3 (#648) (81300e35)
+* chore: update ask-anhoder skills (96ad4097)
+* chore: update skills (f3576756)
+* feat: add ask-anhoder router skill and workflow guide (cc02b82b)
+* feat: add workflow skills (d0183619)
+* chore: configure agent PR pipeline (51793963)
+* chore: remove useless files (fafc1112)
+* fix: unit test error (d1fd05d0)
+* chore: upgrade github action (70717078)
+* fix: 修复歌手右键崩溃：补全漏写的 baseMenu: base，并加固 getTargetSong 空指针防御。 (#644) (7eac833f)
+* feat(player): add optional gapless playback (#639) (ab807000)
+* chore: update README.md with new GitHub badges (8b846fcb)
+* fix: 修复 GTK3 下 WebView 登录窗口二次释放崩溃 (#641) (d8d61cf9)
+* 修复了 WebKitGTK 6.0 符号误用导致 Fedora 44 的回退 WARN。 (#627) (9ee43950)
+* chore: update scoop config & changelog [skip ci] (2c288e8b)
+
 5.1.0
 =============
 2026-08-10
