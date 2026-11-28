@@ -54,3 +54,22 @@ func TestSongTitleBriefUsesCornerBrackets(t *testing.T) {
 		t.Fatalf("truncated songTitleBrief = %q, want %q", got, want)
 	}
 }
+
+func TestRunContextPageActionRequestsRerender(t *testing.T) {
+	called := false
+	actions := []ActionItem{{page: func() model.Page {
+		called = true
+		return nil
+	}}}
+
+	page, cmd := runContextAction(actions, 0, &model.App{})
+	if !called {
+		t.Fatal("page action was not called")
+	}
+	if page != nil {
+		t.Fatalf("page = %#v, want nil", page)
+	}
+	if cmd == nil {
+		t.Fatal("right-click page action did not request a rerender")
+	}
+}
