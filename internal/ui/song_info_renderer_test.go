@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/structs"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 )
@@ -55,6 +56,37 @@ func TestSongInfoHoverDoesNotLeakANSISequences(t *testing.T) {
 				t.Fatalf("hovered text underline = %v, want none", cell.Style.Underline)
 			}
 		})
+	}
+}
+
+func TestSongInfoUsesThemeSongColor(t *testing.T) {
+	app, netease := newFormPageTestApp(t)
+
+	songColor := lipgloss.Color("#123456")
+	theme := style.DefaultDarkTheme()
+	theme.Custom = configs.AppCustomStyles{PlaybarSong: style.Highlight{Fg: songColor}}
+	style.SetStyleSet(style.NewStyleSet(theme))
+	t.Cleanup(func() { style.SetStyleSet(style.DefaultStyleSet()) })
+
+	song := structs.Song{
+		Id:      1,
+		Name:    "主题歌名",
+		Artists: []structs.Artist{{Name: "测试歌手"}},
+	}
+	renderer := NewSongInfoRenderer(netease, songInfoTestState{song: song})
+	view, _ := renderer.View(app, app.MustMain())
+
+	plain := ansi.Strip(view)
+	textIndex := strings.Index(plain, song.Name)
+	if textIndex < 0 {
+		t.Fatalf("rendered song info does not contain %q: %q", song.Name, plain)
+	}
+	cell := formStyledScreen(view).CellAt(runewidth.StringWidth(plain[:textIndex]), 0)
+	if cell == nil {
+		t.Fatal("song name glyph cell is missing")
+	}
+	if !colorsEqual(cell.Style.Fg, songColor) {
+		t.Fatalf("song name foreground = %v, want theme playbarSong %v", cell.Style.Fg, songColor)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/anhoder/foxful-cli/style"
 	"github.com/anhoder/foxful-cli/util"
@@ -30,6 +31,29 @@ func TestFormatQueueAndQualityIncludesMusicfox(t *testing.T) {
 		statusTextStyle.Render(" · [1/2] · 无损")
 	if got := formatQueueAndQuality(player); got != want {
 		t.Fatalf("formatQueueAndQuality() = %q, want %q", got, want)
+	}
+}
+
+func TestFormatQueueAndQualityUsesThemeLogoColor(t *testing.T) {
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Player.SongLevel = service.Lossless
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	logoColor := lipgloss.Color("#123456")
+	theme := style.DefaultDarkTheme()
+	theme.Custom = configs.AppCustomStyles{StatusBarLogo: style.Highlight{Fg: logoColor}}
+	style.SetStyleSet(style.NewStyleSet(theme))
+	t.Cleanup(func() { style.SetStyleSet(style.DefaultStyleSet()) })
+
+	player := &Player{playlistManager: playlist.NewPlaylistManager()}
+	player.InitSongManager(0, []structs.Song{{Id: 1}, {Id: 2}})
+
+	statusTextStyle := style.CurrentStyleSet().StatusBarText
+	want := statusTextStyle.Foreground(logoColor).Render("musicfox") +
+		statusTextStyle.Render(" · [1/2] · 无损")
+	if got := formatQueueAndQuality(player); got != want {
+		t.Fatalf("formatQueueAndQuality() = %q, want themed logo %q", got, want)
 	}
 }
 

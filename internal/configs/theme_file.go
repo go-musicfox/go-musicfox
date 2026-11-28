@@ -82,19 +82,19 @@ type ThemeNotificationConfig struct {
 
 // StatusBarConfig maps to foxful-cli StyleSet status bar fields.
 type StatusBarConfig struct {
-	Bar             string `toml:"bar"`
-	Text            string `toml:"text"`
-	Breadcrumb      string `toml:"breadcrumb"`
-	BreadcrumbSep   string `toml:"breadcrumbSep"`
-	BreadcrumbHover string `toml:"breadcrumbHover"`
-	BreadcrumbClick string `toml:"breadcrumbClick"`
-	Time            string `toml:"time"`
-	Nugget          string `toml:"nugget"`
-	NuggetLabel     string `toml:"nuggetLabel"`
-	NuggetLabelFg          string  `toml:"nuggetLabelFg"`
-	NuggetLabelBg          string  `toml:"nuggetLabelBg"`
-	TimeSepLeft            *string `toml:"timeSepLeft"`
-	BreadcrumbSepRight     *string `toml:"breadcrumbSepRight"`
+	Bar                string  `toml:"bar"`
+	Text               string  `toml:"text"`
+	Breadcrumb         string  `toml:"breadcrumb"`
+	BreadcrumbSep      string  `toml:"breadcrumbSep"`
+	BreadcrumbHover    string  `toml:"breadcrumbHover"`
+	BreadcrumbClick    string  `toml:"breadcrumbClick"`
+	Time               string  `toml:"time"`
+	Nugget             string  `toml:"nugget"`
+	NuggetLabel        string  `toml:"nuggetLabel"`
+	NuggetLabelFg      string  `toml:"nuggetLabelFg"`
+	NuggetLabelBg      string  `toml:"nuggetLabelBg"`
+	TimeSepLeft        *string `toml:"timeSepLeft"`
+	BreadcrumbSepRight *string `toml:"breadcrumbSepRight"`
 }
 
 // MarkdownConfig holds glamour markdown theme presets.
@@ -113,13 +113,19 @@ type AppColorConfig struct {
 	LyricHighlight  string `toml:"lyricHighlight"`
 
 	// Playbar colors
-	PlaybarMode         string `toml:"playbarMode"`
-	PlaybarVolume       string `toml:"playbarVolume"`
-	PlaybarPlaying      string `toml:"playbarPlaying"`
-	PlaybarPaused       string `toml:"playbarPaused"`
-	PlaybarHeartLiked   string `toml:"playbarHeartLiked"`
-	PlaybarHeartUnliked string `toml:"playbarHeartUnliked"`
-	PlaybarArtist       string `toml:"playbarArtist"`
+	PlaybarMode          string `toml:"playbarMode"`
+	PlaybarVolume        string `toml:"playbarVolume"`
+	PlaybarPlaying       string `toml:"playbarPlaying"`
+	PlaybarPaused        string `toml:"playbarPaused"`
+	PlaybarHeartLiked    string `toml:"playbarHeartLiked"`
+	PlaybarHeartUnliked  string `toml:"playbarHeartUnliked"`
+	PlaybarArtist        string `toml:"playbarArtist"`
+	PlaybarSong          string `toml:"playbarSong"`
+	PlaybarTime          string `toml:"playbarTime"`
+	PlaybarHover         string `toml:"playbarHover"`
+	StatusBarLogo        string `toml:"statusBarLogo"`
+	PlaybarProgressStart string `toml:"playbarProgressStart"`
+	PlaybarProgressEnd   string `toml:"playbarProgressEnd"`
 
 	// Visualizer colors: "random" or hex color
 	VisualizerColorStart string `toml:"visualizerColorStart"`
@@ -321,8 +327,9 @@ func (v ThemeVariant) toTheme() style.Theme {
 		t.AppBackground = style.Highlight{Bg: parseColor(v.App.Background)}
 	}
 
-	// Custom app styles (wrapped as Highlight for foxful-cli resolution)
-	t.Custom = v.App.toCustomStyles()
+	// Custom app styles (wrapped as Highlight for foxful-cli resolution).
+	// Pass the resolved theme so missing playbar keys inherit its palette.
+	t.Custom = v.App.toCustomStyles(t)
 
 	return t
 }
@@ -346,6 +353,12 @@ type AppCustomStyles struct {
 	PlaybarHeartLiked     style.Highlight
 	PlaybarHeartUnliked   style.Highlight
 	PlaybarArtist         style.Highlight
+	PlaybarSong           style.Highlight
+	PlaybarTime           style.Highlight
+	PlaybarHover          style.Highlight
+	StatusBarLogo         style.Highlight
+	PlaybarProgressStart  style.Highlight
+	PlaybarProgressEnd    style.Highlight
 	LoginError            style.Highlight
 	LoginSuccess          style.Highlight
 	AuthStatus            style.Highlight
@@ -355,19 +368,28 @@ type AppCustomStyles struct {
 }
 
 // toCustomStyles converts AppColorConfig to an AppCustomStyles for Theme.Custom.
-func (c AppColorConfig) toCustomStyles() AppCustomStyles {
+// Playbar and progress colors fall back to the theme palette when the theme file
+// does not set them, so custom themes adapt to their own palette instead of
+// inheriting fixed ANSI approximations.
+func (c AppColorConfig) toCustomStyles(t style.Theme) AppCustomStyles {
 	return AppCustomStyles{
 		LyricActive:           fgHighlight(c.LyricActive, LyricActiveColor),
 		LyricTransition:       fgHighlight(c.LyricTransition, LyricTransitionColor),
 		LyricInactive:         fgHighlight(c.LyricInactive, LyricInactiveColor),
 		LyricHighlight:        fgHighlight(c.LyricHighlight, LyricWhiteColor),
-		PlaybarMode:           fgHighlight(c.PlaybarMode, PlaybarModeColor),
-		PlaybarVolume:         fgHighlight(c.PlaybarVolume, PlaybarVolumeColor),
-		PlaybarPlaying:        fgHighlight(c.PlaybarPlaying, PlaybarPlayingColor),
-		PlaybarPaused:         fgHighlight(c.PlaybarPaused, PlaybarPausedColor),
-		PlaybarHeartLiked:     fgHighlight(c.PlaybarHeartLiked, PlaybarHeartLikedColor),
-		PlaybarHeartUnliked:   fgHighlight(c.PlaybarHeartUnliked, PlaybarHeartUnlikedColor),
-		PlaybarArtist:         fgHighlight(c.PlaybarArtist, PlaybarArtistColor),
+		PlaybarMode:           fgHighlightOr(c.PlaybarMode, paletteColorOr(t.Accent, PlaybarModeColor)),
+		PlaybarVolume:         fgHighlightOr(c.PlaybarVolume, paletteColorOr(t.Info, PlaybarVolumeColor)),
+		PlaybarPlaying:        fgHighlightOr(c.PlaybarPlaying, paletteColorOr(t.Success, PlaybarPlayingColor)),
+		PlaybarPaused:         fgHighlightOr(c.PlaybarPaused, paletteColorOr(t.Warning, PlaybarPausedColor)),
+		PlaybarHeartLiked:     fgHighlightOr(c.PlaybarHeartLiked, paletteColorOr(t.Error, PlaybarHeartLikedColor)),
+		PlaybarHeartUnliked:   fgHighlightOr(c.PlaybarHeartUnliked, paletteColorOr(t.Muted, PlaybarHeartUnlikedColor)),
+		PlaybarArtist:         fgHighlightOr(c.PlaybarArtist, paletteColorOr(t.Muted, PlaybarArtistColor)),
+		PlaybarSong:           fgHighlightOr(c.PlaybarSong, paletteColorOr(t.Primary, PlaybarModeColor)),
+		PlaybarTime:           fgHighlightOr(c.PlaybarTime, paletteColorOr(t.Primary, PlaybarModeColor)),
+		PlaybarHover:          fgHighlightOr(c.PlaybarHover, paletteColorOr(t.Primary, PlaybarModeColor)),
+		StatusBarLogo:         fgHighlightOr(c.StatusBarLogo, paletteColorOr(t.Primary, PlaybarModeColor)),
+		PlaybarProgressStart:  fgHighlightOr(c.PlaybarProgressStart, paletteColorOr(t.Primary, PlaybarModeColor)),
+		PlaybarProgressEnd:    fgHighlightOr(c.PlaybarProgressEnd, paletteColorOr(t.Accent, PlaybarModeColor)),
 		LoginError:            fgHighlight(c.LoginError, LoginErrorColor),
 		LoginSuccess:          fgHighlight(c.LoginSuccess, LoginSuccessColor),
 		AuthStatus:            fgHighlight(c.AuthStatus, AuthStatusColor),
@@ -375,6 +397,23 @@ func (c AppColorConfig) toCustomStyles() AppCustomStyles {
 		ConfigTableSelectedFg: fgHighlight(c.ConfigTableSelectedFg, ConfigTableSelectedFgColor),
 		ConfigTableSelectedBg: bgHighlight(c.ConfigTableSelectedBg, ConfigTableSelectedBgColor),
 	}
+}
+
+// fgHighlightOr creates a Highlight from an explicit color, falling back to the
+// given palette color when the theme key is unset.
+func fgHighlightOr(hex string, fallback color.Color) style.Highlight {
+	if hex == "" {
+		return style.Highlight{Fg: fallback}
+	}
+	return style.Highlight{Fg: parseAppColor(hex, "")}
+}
+
+// paletteColorOr returns c when set, otherwise the given default color.
+func paletteColorOr(c color.Color, defaultHex string) color.Color {
+	if c != nil {
+		return c
+	}
+	return parseColor(defaultHex)
 }
 
 // fgHighlight creates a Highlight with the given foreground color,
@@ -542,6 +581,12 @@ type ResolvedAppStyles struct {
 	PlaybarHeartLiked     lipgloss.Style
 	PlaybarHeartUnliked   lipgloss.Style
 	PlaybarArtist         lipgloss.Style
+	PlaybarSong           lipgloss.Style
+	PlaybarTime           lipgloss.Style
+	PlaybarHover          lipgloss.Style
+	StatusBarLogo         lipgloss.Style
+	PlaybarProgressStart  lipgloss.Style
+	PlaybarProgressEnd    lipgloss.Style
 	LoginError            lipgloss.Style
 	LoginSuccess          lipgloss.Style
 	AuthStatus            lipgloss.Style
@@ -555,13 +600,32 @@ func GetCurrentAppColors() ResolvedAppStyles {
 	return style.CustomStyles[ResolvedAppStyles](style.CurrentStyleSet())
 }
 
+// IsUnsetColor reports whether c is nil or lipgloss' NoColor sentinel, meaning
+// the style did not carry an explicit color.
+func IsUnsetColor(c color.Color) bool {
+	if c == nil {
+		return true
+	}
+	_, unset := c.(lipgloss.NoColor)
+	return unset
+}
+
 // SafeGetForeground extracts the foreground color from a lipgloss.Style,
 // falling back to the provided default color string (ANSI name or hex).
 func SafeGetForeground(s lipgloss.Style, defaultStr string) color.Color {
-	if c := s.GetForeground(); c != nil {
+	if c := s.GetForeground(); !IsUnsetColor(c) {
 		return c
 	}
 	return parseColor(defaultStr)
+}
+
+// SafeGetForegroundColor extracts the foreground color from a lipgloss.Style,
+// falling back to the provided color.
+func SafeGetForegroundColor(s lipgloss.Style, fallback color.Color) color.Color {
+	if c := s.GetForeground(); !IsUnsetColor(c) {
+		return c
+	}
+	return fallback
 }
 
 // SafeGetBackground extracts the background color from a lipgloss.Style,
