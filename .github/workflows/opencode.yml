@@ -58,6 +58,6 @@ jobs:
           OPENCODE_PERMISSION: "${{ (github.event_name == 'workflow_call' && inputs.open_code_permission) || (github.event_name != 'workflow_call' && '{\"bash\": \"deny\"}') }}"
         with:
           # model: zhipuai-coding-plan/glm-4.7
-          model: "${{ (github.event_name == 'workflow_call' && inputs.model) || 'deepseek/deepseek-v4-flash' }}"
+          model: "${{ (github.event_name == 'workflow_call' && inputs.model) || 'deepseek/deepseek-flash' }}"
           agent: "${{ (github.event_name == 'workflow_call' && inputs.agent) || '' }}"
           prompt: "${{ (github.event_name == 'workflow_call' && inputs.prompt) || '' }}"
