@@ -21,4 +21,7 @@ jobs:
         标题：${{ github.event.issue.title }}
 
         ${{ github.event.issue.body }}
+
+        提交信息与 PR 标题遵循 AGENTS.md 的 Git 提交规范：必须为英文 Conventional Commits 格式
+        （如 `fix(ui): sync last song to remote controls`），不得包含中文，不超过 50 字符。
     secrets: inherit
