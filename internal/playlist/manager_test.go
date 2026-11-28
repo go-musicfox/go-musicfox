@@ -1,6 +1,7 @@
 package playlist
 
 import (
+	"errors"
 	"sync"
 	"testing"
 
@@ -378,5 +379,86 @@ func TestConcurrentAccess(t *testing.T) {
 	// 检查是否有错误
 	for err := range errorChan {
 		t.Errorf("Concurrent access error: %v", err)
+	}
+}
+
+func TestPlaylistManager_ListRandomBoundaryFailuresPreserveCurrentIndex(t *testing.T) {
+	playlist := createTestPlaylist(3)
+	manager := NewPlaylistManager().(*playlistManager)
+	if err := manager.Initialize(0, playlist); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SetPlayMode(types.PmListRandom); err != nil {
+		t.Fatal(err)
+	}
+	mode := manager.playMode.(*ListRandomPlayMode)
+	order := append([]int(nil), mode.randomOrder...)
+	for i := 0; i < 2; i++ {
+		if _, err := manager.PreviousSong(true); !errors.Is(err, ErrNoPreviousSong) {
+			t.Fatalf("PreviousSong error = %v", err)
+		}
+		if manager.GetCurrentIndex() != order[0] {
+			t.Fatalf("current index changed to %d", manager.GetCurrentIndex())
+		}
+		if song, err := manager.GetCurrentSong(); err != nil || song.Id != playlist[order[0]].Id {
+			t.Fatalf("current song after failed previous = %v, %v", song, err)
+		}
+	}
+	song, err := manager.NextSong(true)
+	if err != nil || song.Id != playlist[order[1]].Id {
+		t.Fatalf("NextSong = %v, %v", song, err)
+	}
+	for pos := 2; pos < len(order); pos++ {
+		song, err := manager.NextSong(false)
+		if err != nil || song.Id != playlist[order[pos]].Id {
+			t.Fatalf("advance = %v, %v; want song %d", song, err, playlist[order[pos]].Id)
+		}
+	}
+	lastIndex := manager.GetCurrentIndex()
+	for i := 0; i < 2; i++ {
+		if _, err := manager.NextSong(true); !errors.Is(err, ErrNoNextSong) {
+			t.Fatalf("NextSong boundary error = %v", err)
+		}
+		if manager.GetCurrentIndex() != lastIndex {
+			t.Fatalf("current index changed to %d", manager.GetCurrentIndex())
+		}
+		if song, err := manager.GetCurrentSong(); err != nil || song.Id != playlist[lastIndex].Id {
+			t.Fatalf("current song after failed next = %v, %v", song, err)
+		}
+	}
+	prev, err := manager.PreviousSong(true)
+	if err != nil || prev.Id != playlist[order[len(order)-2]].Id {
+		t.Fatalf("PreviousSong = %v, %v", prev, err)
+	}
+}
+
+func TestPlaylistManager_ListRandomSingleSongDoesNotRestart(t *testing.T) {
+	playlist := createTestPlaylist(1)
+	manager := NewPlaylistManager().(*playlistManager)
+	if err := manager.Initialize(0, playlist); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SetPlayMode(types.PmListRandom); err != nil {
+		t.Fatal(err)
+	}
+	for _, next := range []bool{false, true} {
+		if _, err := manager.NextSong(next); !errors.Is(err, ErrNoNextSong) {
+			t.Fatalf("NextSong error = %v", err)
+		}
+		if manager.GetCurrentIndex() != 0 {
+			t.Fatalf("current index = %d", manager.GetCurrentIndex())
+		}
+		if song, err := manager.GetCurrentSong(); err != nil || song.Id != playlist[0].Id {
+			t.Fatalf("current song after failed next = %v, %v", song, err)
+		}
+	}
+	if _, err := manager.PreviousSong(true); !errors.Is(err, ErrNoPreviousSong) {
+		t.Fatalf("PreviousSong error = %v", err)
+	}
+	if manager.GetCurrentIndex() != 0 {
+		t.Fatalf("current index after failed previous = %d", manager.GetCurrentIndex())
+	}
+	if song, err := manager.GetCurrentSong(); err != nil || song.Id != playlist[0].Id {
+		t.Fatalf("current song after failed previous = %v, %v", song, err)
 	}
 }
