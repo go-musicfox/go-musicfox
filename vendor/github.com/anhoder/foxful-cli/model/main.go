@@ -1065,10 +1065,25 @@ func (m *Main) TitleView(a *App) string {
 // to the menu title when inside a submenu.
 func (m *Main) backButtonIcon() string {
 	ss := style.CurrentStyleSet()
+	st := ss.BackButton
 	if m.hoveredBackButton {
-		return ss.BackButtonHover.Render("←")
+		st = ss.BackButtonHover
 	}
-	return ss.BackButton.Render("←")
+	// Paint the icon cell explicitly: its foreground SGR resets any background
+	// inherited from the enclosing row, which would leave a transparent cell
+	// (terminal/cover bleed-through) in opaque themes.
+	if bg := ss.AppBackground.GetBackground(); bg != nil {
+		if _, transparent := bg.(lipgloss.NoColor); !transparent {
+			// lipgloss reports an unset background as the NoColor sentinel
+			// rather than nil, so treat that as "no themed background".
+			cur := st.GetBackground()
+			_, curTransparent := cur.(lipgloss.NoColor)
+			if cur == nil || curTransparent {
+				st = st.Background(bg)
+			}
+		}
+	}
+	return st.Render("←")
 }
 
 // menuTitleViewContent renders the menu title content string.
@@ -1107,13 +1122,24 @@ func (m *Main) menuTitleViewContent(a *App, menuTitle *MenuItem) string {
 		}
 		styledTitle := ss.MenuTitle.Render(titleText)
 
+		content := styledTitle
 		if showBack {
-			backIcon := m.backButtonIcon()
-			sep := ss.AppBackground.Render(" ")
-			content := backIcon + sep + styledTitle
-			return layout.Place(windowWidth, 1, lipgloss.Center, lipgloss.Top, content)
+			content = m.backButtonIcon() + ss.AppBackground.Render(" ") + styledTitle
 		}
-		return layout.Place(windowWidth, 1, lipgloss.Center, lipgloss.Top, styledTitle)
+		// Center manually: layout.Place pads with unstyled spaces, which fall
+		// back to the terminal background and leave holes in opaque themes.
+		gap := max(windowWidth-lipgloss.Width(content), 0)
+		left := gap / 2
+		right := gap - left
+		var b strings.Builder
+		if left > 0 {
+			b.WriteString(ss.AppBackground.Render(strings.Repeat(" ", left)))
+		}
+		b.WriteString(content)
+		if right > 0 {
+			b.WriteString(ss.AppBackground.Render(strings.Repeat(" ", right)))
+		}
+		return b.String()
 	}
 
 	// Default left-aligned mode
@@ -1185,10 +1211,12 @@ func (m *Main) forceEntryLength(item *MenuItem, targetLength int) string {
 			Render(title)
 	}
 	// Case 2:
-	// Enough space for everything.
+	// Enough space for everything. Keep the content plain: the caller applies
+	// the menu/subtitle backgrounds over the whole entry, so any styles baked
+	// in here would reset that background mid-entry.
 	fullWidth := layout.Width(item.OriginString())
 	if fullWidth <= targetLength {
-		return lipgloss.NewStyle().Width(targetLength).Render(item.OriginString())
+		return lipgloss.NewStyle().Width(targetLength).Render(item.Title + " " + item.Subtitle)
 	}
 	// Case 3:
 	// Enough space for main title. Need to scroll subtitle.
@@ -1210,7 +1238,7 @@ func (m *Main) forceEntryLength(item *MenuItem, targetLength int) string {
 		currentWidth += rw
 	}
 	subtitle := lipgloss.NewStyle().Width(subtitleSpace).MaxWidth(subtitleSpace).Render(string(s))
-	return item.Title + style.CurrentStyleSet().AppBackground.Render(" ") + style.CurrentStyleSet().Subtitle.Render(subtitle)
+	return item.Title + " " + subtitle
 }
 
 func (m *Main) formatEntry(item *MenuItem, index int, targetLength int) string {
@@ -1271,7 +1299,7 @@ func (m *Main) formatEntry(item *MenuItem, index int, targetLength int) string {
 			ss.SelectedItem.Render(songEntry) +
 			rightSepView
 	}
-	return songEntry
+	return ss.MenuItem.Render(songEntry)
 }
 
 func (m *Main) centeredMenuView(a *App, lines int) string {
@@ -1300,7 +1328,14 @@ func (m *Main) centeredMenuView(a *App, lines int) string {
 	// item may append a dedicated right-separator cell; centering its actual
 	// width would shift the title one column left.
 	rowStartColumn := max((a.windowWidth-entryLength*m.getNumColumns())/2, 0)
-	rowStyle := lipgloss.NewStyle().Width(a.windowWidth)
+	// Pad the row's leading/trailing cells explicitly with the app background:
+	// lipgloss width padding lands after the entries' own SGR resets, so those
+	// cells would otherwise fall back to the terminal background.
+	rowBg := style.CurrentStyleSet().AppBackground
+	leftPad := ""
+	if rowStartColumn > 0 {
+		leftPad = rowBg.Render(strings.Repeat(" ", rowStartColumn))
+	}
 
 	var rows []string
 	for i := 0; i < lines; i++ {
@@ -1328,7 +1363,11 @@ func (m *Main) centeredMenuView(a *App, lines int) string {
 			}
 			row = layout.JoinHorizontal(lipgloss.Center, row, right)
 		}
-		rows = append(rows, rowStyle.Render(strings.Repeat(" ", rowStartColumn)+row))
+		row = leftPad + row
+		if pad := a.WindowWidth() - ansi.StringWidth(row); pad > 0 {
+			row += rowBg.Render(strings.Repeat(" ", pad))
+		}
+		rows = append(rows, row)
 	}
 	return layout.JoinVertical(lipgloss.Left, rows...)
 }
