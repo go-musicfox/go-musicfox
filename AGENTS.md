@@ -15,11 +15,18 @@
 - 文档编写（README、CHANGELOG 等除外，代码注释和提交信息仍使用英文）
 - AI 助手与用户的对话
 
-#### 例外情况
-- **代码注释**：使用英文（保持代码可读性和国际化标准）
+#### 例外情况：产物使用英文
+
+简言之：**与人交流用中文，进入仓库历史与标识系统的产物用英文。**
+
 - **Git Commit Message**：使用英文（遵循 Conventional Commits 规范）
+- **PR 标题**：使用英文（squash merge 后即成为提交标题）
+- **分支名与 tag**：使用英文
+- **代码注释**：使用英文（保持代码可读性和国际化标准）
 - **代码变量/函数命名**：使用英文（遵循 Go 语言惯例）
 - **API 文档和错误消息**：根据实际情况使用中文或英文
+
+PR 描述、review 评论与 issue 讨论属于交流，可使用中文；其中引用的代码、日志、命令行输出与提交信息保持原文，不要翻译。
 
 #### 示例
 
@@ -417,6 +424,18 @@ endif
 - 不提交无关文件、调试输出、临时脚本与本地生成物
 - 回滚使用 `revert: <被回滚提交的标题>`，在 body 中引用原 commit hash 与原因
 
+#### PR 标题
+
+PR 标题与 commit 标题同规则：`<type>(<scope>): <description>`，英文、祈使句、≤50 字符、结尾无句号、标题内不带 issue 编号。
+
+仓库使用 squash merge，**PR 标题会成为最终提交标题**，因此：
+
+- 不得省略 type，也不得写成一句话描述（如 `首曲前 Resume 致 nil timer 解引用`）
+- 不得使用中文；关联 issue 写在 body 的 `Closes #<n>` / `Refs #<n>`
+- 修正已有 PR 标题时同样适用，不因历史标题风格而放宽
+
+PR body 可使用中文，但引用的日志、代码与命令保持原文。
+
 #### 示例
 
 功能（含 body 与 footer）：
@@ -454,3 +473,4 @@ them to `[main.visualizer]` before upgrading.
 - [ ] 破坏性变更同时使用 `!` 与 `BREAKING CHANGE:` footer
 - [ ] 无无关文件、调试残留、临时产物；vendor 变更与代码变更已拆分
 - [ ] issue 关联写在 footer，而非标题
+- [ ] 创建或修改 PR 时：标题为英文 `<type>(<scope>): <description>`，不带 issue 编号与句号

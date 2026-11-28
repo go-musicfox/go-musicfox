@@ -5,19 +5,15 @@ subtask: true
 
 commit and push
 
-make sure it includes a prefix like
-docs:
-tui:
-core:
-ci:
-ignore:
-wip:
+Follow the Git rules in AGENTS.md.
 
-prefer to explain WHY something was done from an end user perspective instead of
-WHAT was done.
-
-do not do generic messages like "improved agent experience" be very specific
-about what user facing changes were made
+- Subject: `<type>(<scope>): <description>` — Conventional Commits, English only, imperative mood, lowercase description, no trailing period, no issue number, ≤50 characters.
+- Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `revert`.
+- Scope: the module you changed, e.g. `ui`, `player`, `lyric`, `playlist`, `track`, `login`, `keybindings`, `storage`, `configs`, `deps`, `build`, `docs`.
+- Body: explain WHY from an end user perspective instead of WHAT was done; wrap at 72 characters.
+- No generic messages like "improved agent experience"; be specific about the user-facing change.
+- Breaking changes: `<type>(<scope>)!:` plus a `BREAKING CHANGE:` footer describing the impact.
+- Chinese is not allowed in the subject, body, or footers.
 
 if there are conflicts DO NOT FIX THEM. notify me and I will fix them
 
