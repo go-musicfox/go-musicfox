@@ -22,6 +22,7 @@ type ProgressRenderer struct {
 
 	progressLastWidth float64
 	progressRamp      []color.Color
+	progressRampGen   uint64
 
 	cachedView      string
 	cachedLines     int
@@ -107,13 +108,18 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	case progressRenderModeSmooth:
 		fallthrough
 	default:
-		start, end := model.GetProgressColor()
-		if float64(width) != r.progressLastWidth || len(r.progressRamp) == 0 {
-			r.progressRamp = util.MakeRamp(start, end, float64(width))
+		if float64(width) != r.progressLastWidth || styleGen != r.progressRampGen || len(r.progressRamp) == 0 {
+			ramp := progressSmoothRamp(width)
+			if ramp == nil {
+				// No theme progress colors: keep the legacy random ramp.
+				start, end := model.GetProgressColor()
+				ramp = util.MakeRamp(start, end, float64(width))
+			}
+			r.progressRamp = ramp
 			r.progressLastWidth = float64(width)
+			r.progressRampGen = styleGen
 		}
-		ramp := r.progressRamp
-		progressView = model.Progress(&progressOptions, width, fullSize, ramp)
+		progressView = model.Progress(&progressOptions, width, fullSize, r.progressRamp)
 	}
 
 	var times string
@@ -128,11 +134,12 @@ func (r *ProgressRenderer) View(a *model.App, main *model.Main) (view string, li
 	// trailing fill transparent whenever the two stylesets diverge.
 	appBg := style.CurrentStyleSet().AppBackground
 	timesBg := configs.ResolveBackground(nil)
+	timeColor := configs.SafeGetForegroundColor(configs.GetCurrentAppColors().PlaybarTime, util.GetPrimaryColor())
 	var styledTimes string
 	if timesBg != nil {
-		styledTimes = util.SetFgBgStyle(times, util.GetPrimaryColor(), timesBg)
+		styledTimes = util.SetFgBgStyle(times, timeColor, timesBg)
 	} else {
-		styledTimes = util.SetFgStyle(times, util.GetPrimaryColor())
+		styledTimes = util.SetFgStyle(times, timeColor)
 	}
 
 	view = progressView + appBg.Render(" ") + styledTimes

@@ -1,0 +1,23 @@
+package service
+
+import (
+	"github.com/go-musicfox/netease-music/util"
+)
+
+type VoiceLyricService struct {
+	Id string `json:"id" form:"id"`
+}
+
+func (service *VoiceLyricService) VoiceLyric() (float64, []byte) {
+
+	options := &util.Options{
+		Crypto: "eapi",
+		Url:    "/api/voice/lyric/get",
+	}
+	data := make(map[string]string)
+	data["programId"] = service.Id
+
+	code, reBody, _ := util.CreateRequest("POST", "https://music.163.com/eapi/voice/lyric/get", data, options)
+
+	return code, reBody
+}

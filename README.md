@@ -423,6 +423,10 @@ DLNA 引擎允许你将音乐投送到兼容 DLNA 的设备（如智能电视、
      - Linux: `~/.config/go-musicfox/themes/mytheme.toml`
      - Windows: `%AppData%\go-musicfox\themes\mytheme.toml`）
    - 主题文件必须包含 `name` 字段和 `[dark]` 或 `[light]` 配置表
+   - 播放栏、状态栏标识与进度条可在 `[dark.app]` / `[light.app]` 中自定义：
+     `playbarSong`、`playbarTime`、`playbarHover`、`statusBarLogo`、`playbarProgressStart`、`playbarProgressEnd`；
+     未设置时继承主题调色板（`primary`、`accent`、`info`、`success`、`warning`、`error`、`muted`），
+     不再回落到固定的 ANSI 颜色；所有内置主题均已显式配置这些颜色，可直接参考
    - 详细配置参见 [内置主题示例](./utils/filex/embed/themes/)
 
 </details>

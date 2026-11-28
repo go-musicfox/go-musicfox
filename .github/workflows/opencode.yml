@@ -32,10 +32,15 @@ jobs:
   opencode:
     if: |
       github.event_name == 'workflow_call' ||
-      contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
-      contains(github.event.comment.body, ' /opencode') ||
-      startsWith(github.event.comment.body, '/opencode')
+      (
+        contains(fromJson('["OWNER","MEMBER"]'), github.event.comment.author_association) &&
+        (
+          contains(github.event.comment.body, ' /oc') ||
+          startsWith(github.event.comment.body, '/oc') ||
+          contains(github.event.comment.body, ' /opencode') ||
+          startsWith(github.event.comment.body, '/opencode')
+        )
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,7 +54,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run opencode
-        uses: anomalyco/opencode/github@latest
+        uses: anomalyco/opencode/github@f4e363c8295fa90a03dddc451882fffe8fbce357 # v1.19.6
         env:
           # ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
@@ -58,6 +63,6 @@ jobs:
           OPENCODE_PERMISSION: "${{ (github.event_name == 'workflow_call' && inputs.open_code_permission) || (github.event_name != 'workflow_call' && '{\"bash\": \"deny\"}') }}"
         with:
           # model: zhipuai-coding-plan/glm-4.7
-          model: "${{ (github.event_name == 'workflow_call' && inputs.model) || 'deepseek/deepseek-v4-flash' }}"
+          model: "${{ (github.event_name == 'workflow_call' && inputs.model) || 'deepseek/deepseek-flash' }}"
           agent: "${{ (github.event_name == 'workflow_call' && inputs.agent) || '' }}"
           prompt: "${{ (github.event_name == 'workflow_call' && inputs.prompt) || '' }}"

@@ -33,12 +33,14 @@ var (
 )
 
 type Options struct {
-	Crypto  string
-	Ua      string
-	Cookies []*http.Cookie
-	Token   string
-	Url     string
-	SkipUNM bool
+	Crypto     string
+	Ua         string
+	Cookies    []*http.Cookie
+	Token      string
+	Url        string
+	SkipUNM    bool
+	CheckToken string
+	Headers    map[string]string
 }
 
 func chooseUserAgent(ua string) string {
@@ -96,6 +98,12 @@ func CookieValueByName(cookies []*http.Cookie, name string, fallback string) str
 }
 
 func CreateRequest(method, url string, data map[string]string, options *Options) (resCode float64, resResp []byte, resCookies []*http.Cookie) {
+	if options != nil && options.Crypto == "xeapi" {
+		return createXeapiRequest(method, url, data, options)
+	}
+	if options != nil && options.Crypto == "neapi" {
+		return createNeapiRequest(method, url, data, options)
+	}
 	defer func() {
 		if resCode != 200 {
 			log.Printf("url: %s, method: %s, reqData: %#v, reqOptions: %+v, resCode: %f, resResp: %s, resCookies: %#v", url, method, data, options, resCode, resResp, resCookies)
@@ -139,6 +147,17 @@ func CreateRequest(method, url string, data map[string]string, options *Options)
 	req.Header.Set("User-Agent", chooseUserAgent(options.Ua))
 	req.Header.Set("os", os)
 	req.Header.Set("appver", appver)
+	if options.CheckToken != "" {
+		if token := fetchCheckToken(options.CheckToken); token != "" {
+			req.Header.Set("X-antiCheatToken", token)
+		}
+	}
+	if options.Token != "" {
+		req.Header.Set("X-antiCheatToken", options.Token)
+	}
+	for key, value := range options.Headers {
+		req.Header.Set(key, value)
+	}
 
 	options.Cookies = append(options.Cookies,
 		&http.Cookie{Name: "__remember_me", Value: "true"},
@@ -297,7 +316,7 @@ type request struct {
 // NewRequest 初始化并返回一个request结构体以进行发送请求前的准备
 func NewRequest(url string, cookie ...http.CookieJar) *request {
 	req := requests.Requests()
-	
+
 	if HTTPClientTimeout > 0 {
 		req.Client.Timeout = HTTPClientTimeout
 	}

@@ -4,6 +4,8 @@ import (
 	"image/color"
 	"math"
 
+	"github.com/lucasb-eyer/go-colorful"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 )
 
@@ -31,6 +33,35 @@ const (
 	progressRenderModeWave   progressRenderMode = "wave"
 	progressRenderModeGlow   progressRenderMode = "glow"
 )
+
+// progressSmoothRamp builds the filled progress gradient from the theme's
+// playbar progress colors. It returns nil when the theme does not define both,
+// letting the caller fall back to the legacy random ramp.
+func progressSmoothRamp(width int) []color.Color {
+	if width <= 0 {
+		return nil
+	}
+	appColors := configs.GetCurrentAppColors()
+	start := appColors.PlaybarProgressStart.GetForeground()
+	end := appColors.PlaybarProgressEnd.GetForeground()
+	if configs.IsUnsetColor(start) || configs.IsUnsetColor(end) {
+		return nil
+	}
+
+	cStart, okStart := colorful.MakeColor(start)
+	cEnd, okEnd := colorful.MakeColor(end)
+	ramp := make([]color.Color, width)
+	if !okStart || !okEnd {
+		for i := range ramp {
+			ramp[i] = start
+		}
+		return ramp
+	}
+	for i := range ramp {
+		ramp[i] = cStart.BlendLuv(cEnd, float64(i)/float64(width))
+	}
+	return ramp
+}
 
 func progressRampForMode(width int, fullSize int, animationTime float64, mode progressRenderMode) []color.Color {
 	if width <= 0 {

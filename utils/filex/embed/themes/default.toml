@@ -112,6 +112,15 @@ playbarHeartLiked = "Red"
 playbarHeartUnliked = "White"
 playbarArtist = "BrightBlack"
 
+# 播放栏歌名、进度时间、悬停高亮、状态栏 musicfox 标识
+playbarSong = "#EA403F"
+playbarTime = "#EA403F"
+playbarHover = "#EA403F"
+statusBarLogo = "#EA403F"
+# 进度条已填充渐变
+playbarProgressStart = "#EA403F"
+playbarProgressEnd = "#0000FF"
+
 # Visualizer colors: "random" or hex
 visualizerColorStart = "random"
 visualizerColorEnd = "random"
@@ -241,6 +250,15 @@ playbarPaused = "Yellow"
 playbarHeartLiked = "Red"
 playbarHeartUnliked = "White"
 playbarArtist = "BrightBlack"
+
+# 以下播放栏/状态栏颜色与当前主题调色板一致，可按需覆盖
+playbarSong = "#EA403F"
+playbarTime = "#EA403F"
+playbarHover = "#EA403F"
+statusBarLogo = "#EA403F"
+playbarProgressStart = "#EA403F"
+playbarProgressEnd = "#0000FF"
+
 visualizerColorStart = "random"
 visualizerColorEnd = "random"
 

@@ -65,7 +65,8 @@ func formatQueueAndQuality(player *Player) string {
 	qualityName := qualityDisplayName(quality)
 
 	statusTextStyle := style.CurrentStyleSet().StatusBarText
-	return statusTextStyle.Foreground(util.GetPrimaryColor()).Render(musicfoxStatusBarLabel) +
+	logoColor := configs.SafeGetForegroundColor(configs.GetCurrentAppColors().StatusBarLogo, util.GetPrimaryColor())
+	return statusTextStyle.Foreground(logoColor).Render(musicfoxStatusBarLabel) +
 		statusTextStyle.Render(fmt.Sprintf(" · %s · %s", position, qualityName))
 }
 

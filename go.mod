@@ -21,7 +21,7 @@ require (
 	github.com/frolovo22/tag v0.0.2
 	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
 	github.com/go-flac/flacpicture v0.3.0
-	github.com/go-musicfox/netease-music v1.6.0
+	github.com/go-musicfox/netease-music v1.7.0
 	github.com/go-musicfox/notificator v0.1.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/go-viper/mapstructure/v2 v2.4.0
@@ -86,7 +86,7 @@ require (
 	github.com/jfreymuth/oggvorbis v1.0.5 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/juju/go4 v0.0.0-20160222163258-40d72ab9641a // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/mewkiz/flac v1.0.8 // indirect
 	github.com/mewkiz/pkg v0.0.0-20230226050401-4010bf0fec14 // indirect

@@ -86,14 +86,17 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 	var (
 		builder  strings.Builder
 		segments []Segment
-		appColors = configs.GetCurrentAppColors()
-		artistColor = configs.SafeGetForeground(appColors.PlaybarArtist, configs.PlaybarArtistColor)
-		modeColor   = configs.SafeGetForeground(appColors.PlaybarMode, configs.PlaybarModeColor)
-		volumeColor = configs.SafeGetForeground(appColors.PlaybarVolume, configs.PlaybarVolumeColor)
-		playingColor = configs.SafeGetForeground(appColors.PlaybarPlaying, configs.PlaybarPlayingColor)
-		pausedColor  = configs.SafeGetForeground(appColors.PlaybarPaused, configs.PlaybarPausedColor)
+
+		appColors         = configs.GetCurrentAppColors()
+		artistColor       = configs.SafeGetForeground(appColors.PlaybarArtist, configs.PlaybarArtistColor)
+		modeColor         = configs.SafeGetForeground(appColors.PlaybarMode, configs.PlaybarModeColor)
+		volumeColor       = configs.SafeGetForeground(appColors.PlaybarVolume, configs.PlaybarVolumeColor)
+		playingColor      = configs.SafeGetForeground(appColors.PlaybarPlaying, configs.PlaybarPlayingColor)
+		pausedColor       = configs.SafeGetForeground(appColors.PlaybarPaused, configs.PlaybarPausedColor)
 		heartLikedColor   = configs.SafeGetForeground(appColors.PlaybarHeartLiked, configs.PlaybarHeartLikedColor)
 		heartUnlikedColor = configs.SafeGetForeground(appColors.PlaybarHeartUnliked, configs.PlaybarHeartUnlikedColor)
+		songColor         = configs.SafeGetForegroundColor(appColors.PlaybarSong, util.GetPrimaryColor())
+		hoverColor        = configs.SafeGetForegroundColor(appColors.PlaybarHover, util.GetPrimaryColor())
 	)
 
 	// Helper for adding a new segment
@@ -130,7 +133,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 			c := modeColor
 			modeBold := hoveredElement == PlaybarElementMode
 			if modeBold {
-				c = util.GetPrimaryColor()
+				c = hoverColor
 			}
 			addSegment(fmt.Sprintf("[%s] ", msg), c, false, modeBold)
 		}
@@ -140,14 +143,14 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		c := playingColor
 		stateBold := hoveredElement == PlaybarElementState
 		if stateBold {
-			c = util.GetPrimaryColor()
+			c = hoverColor
 		}
 		addSegment("♫ ♪ ♫ ♪ ", c, false, stateBold)
 	} else {
 		c := pausedColor
 		stateBold := hoveredElement == PlaybarElementState
 		if stateBold {
-			c = util.GetPrimaryColor()
+			c = hoverColor
 		}
 		addSegment("_ z Z Z ", c, false, stateBold)
 	}
@@ -161,7 +164,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		}
 		heartBold := hoveredElement == PlaybarElementHeart
 		if heartBold && !isLike {
-			icolor = util.GetPrimaryColor()
+			icolor = hoverColor
 		}
 		addSegment("♥ ", icolor, false, heartBold)
 	}
@@ -180,7 +183,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		// 优先保留歌曲名，歌手名用剩余空间
 		songMaxWidth := max(0, availableWidth-prefixUsedWidth-1) // -1 for space between
 		songName = runewidth.Truncate(songName, songMaxWidth, "")
-		addSegment(songName, util.GetPrimaryColor(), false, false)
+		addSegment(songName, songColor, false, false)
 		addText(" ")
 
 		// 剩余空间全部给歌手名
@@ -189,7 +192,7 @@ func (r *SongInfoRenderer) View(a *model.App, main *model.Main) (view string, li
 		c := artistColor
 		artistHovered := hoveredElement == PlaybarElementArtist
 		if artistHovered {
-			c = util.GetPrimaryColor()
+			c = hoverColor
 		}
 		addSegment(artistString, c, false, false)
 	}

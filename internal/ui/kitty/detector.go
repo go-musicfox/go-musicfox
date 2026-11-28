@@ -1,3 +1,4 @@
+// Package kitty implements terminal image encoding and transport helpers.
 package kitty
 
 import (
@@ -21,6 +22,19 @@ var (
 // wrapped in tmux DCS passthrough.
 func UseTmuxPassthrough() bool {
 	return tmuxPassthrough
+}
+
+// IsHerdr reports whether the process inherited a Herdr pane identity.
+// Outer terminal markers alone do not describe the pane's graphics support.
+func IsHerdr() bool {
+	return os.Getenv("HERDR_PANE_ID") != ""
+}
+
+// RequiresStaticImages applies the conservative image policy for multiplexers.
+// Herdr 0.9.0 does not implement native animation; tmux uses static images
+// to bound passthrough traffic. This is a policy, not a capability probe.
+func RequiresStaticImages() bool {
+	return UseTmuxPassthrough() || IsHerdr()
 }
 
 // SetTmuxPassthroughForTest overrides the package-level tmux passthrough
@@ -124,12 +138,7 @@ func detectDirectTerminalSupport(getenv func(string) string) bool {
 	}
 
 	// Konsole (KDE) - supports Kitty graphics protocol since version 22.04
-	konsoleVersion := getenv("KONSOLE_VERSION")
-	if konsoleVersion != "" {
-		return true
-	}
-
-	return false
+	return getenv("KONSOLE_VERSION") != ""
 }
 
 // tmuxSessionEnv queries the tmux session-level environment via
