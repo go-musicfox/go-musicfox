@@ -27,8 +27,8 @@ const (
 	DefaultRotationSize = 320
 )
 
-func imageTargetSize(spin, tmux bool) int {
-	if spin || tmux {
+func imageTargetSize(spin, staticOnly bool) int {
+	if spin || staticOnly {
 		return DefaultRotationSize
 	}
 	return 512
@@ -174,7 +174,7 @@ func (c *ImageCache) getOrFetchEntry(ctx context.Context, url string, cols, rows
 	// and much faster to process/encode for animations than 512px.
 	targetSize := imageTargetSize(
 		configs.AppConfig.Main.Lyric.Cover.Spin,
-		UseTmuxPassthrough(),
+		RequiresStaticImages(),
 	)
 	resized := resizeImageSquare(img, targetSize)
 
@@ -241,7 +241,8 @@ func (c *ImageCache) fetchImage(ctx context.Context, url string) (image.Image, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch image: %w", err)
 	}
-	defer resp.Body.Close()
+	// Closing a read-only response does not affect the decoded image.
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -550,95 +551,6 @@ func bilinearInterp(c00, c10, c01, c11 uint32, xWeight, yWeight float64) uint32 
 	bottom := float64(c01)*(1-xWeight) + float64(c11)*xWeight
 	// Interpolate in y direction
 	return uint32(top*(1-yWeight) + bottom*yWeight)
-}
-
-// applyRoundedCorners applies rounded corners to an image.
-// radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
-// applyRoundedCorners applies rounded corners to an image with anti-aliasing.
-// radiusPercent is the corner radius as a percentage of the image size (0.0-0.5).
-func applyRoundedCorners(src image.Image, radiusPercent float64) image.Image {
-	bounds := src.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	// Calculate corner radius
-	minDim := width
-	if height < minDim {
-		minDim = height
-	}
-	radius := float64(minDim) * radiusPercent // Use float for precision
-	if radius <= 0 {
-		return src
-	}
-
-	// Create output image with alpha channel
-	dst := image.NewRGBA(bounds)
-
-	// Draw the source image first
-	draw.Draw(dst, bounds, src, bounds.Min, draw.Src)
-
-	// Scan only the corner regions to apply transparency
-	// This optimization avoids calculating sqrt for the center of the image
-	intRadius := int(math.Ceil(radius))
-
-	for y := 0; y < height; y++ {
-		if y >= intRadius && y < height-intRadius {
-			continue
-		}
-
-		for x := 0; x < width; x++ {
-			if x >= intRadius && x < width-intRadius {
-				continue
-			}
-			factor := getCornerAlphaFactor(x, y, width, height, radius)
-			if factor < 1.0 {
-				r, g, b, a := dst.At(x, y).RGBA()
-				newA := uint8((float64(a>>8) * factor))
-				newR := uint8((float64(r>>8) * factor))
-				newG := uint8((float64(g>>8) * factor))
-				newB := uint8((float64(b>>8) * factor))
-				dst.SetRGBA(x, y, color.RGBA{R: newR, G: newG, B: newB, A: newA})
-			}
-		}
-	}
-
-	return dst
-}
-
-// getCornerAlphaFactor calculates the alpha factor for a pixel at (x, y).
-// based on its distance from the nearest corner arc center.
-// Returns a value between 0.0 (fully transparent) and 1.0 (fully opaque).
-func getCornerAlphaFactor(x, y, width, height int, radius float64) float64 {
-	// Determine which corner we are checking
-	var cx, cy float64 // Center of the corner circle
-
-	if x < int(radius) {
-		cx = radius
-	} else if x >= width-int(radius) {
-		cx = float64(width) - radius
-	} else {
-		return 1.0
-	}
-
-	if y < int(radius) {
-		cy = radius
-	} else if y >= height-int(radius) {
-		cy = float64(height) - radius
-	} else {
-		return 1.0
-	}
-
-	dx := float64(x) + 0.5 - cx
-	dy := float64(y) + 0.5 - cy
-	distance := math.Sqrt(dx*dx + dy*dy)
-
-	if distance < radius-0.5 {
-		return 1.0
-	} else if distance > radius+0.5 {
-		return 0.0
-	} else {
-		return 1.0 - (distance - (radius - 0.5))
-	}
 }
 
 // RotateImage rotates an image by the given angle in degrees.

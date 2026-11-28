@@ -207,35 +207,35 @@ func TestCoverWriteTraceHelpers(t *testing.T) {
 	}
 }
 
-func TestTmuxImageLimiterTokenBucket(t *testing.T) {
+func TestImageLimiterTokenBucket(t *testing.T) {
 	now := time.Unix(100, 0)
-	l := newTmuxImageLimiter(now)
+	l := newImageLimiter(now)
 
-	if decision := l.allow(now, tmuxImageSingleMaxBytes); !decision.allowed {
+	if decision := l.allow(now, imageSingleMaxBytes); !decision.allowed {
 		t.Fatalf("initial packet should be allowed: %+v", decision)
 	}
-	if decision := l.allow(now, tmuxImageSingleMaxBytes+1); decision.allowed || decision.reason != "single_packet_limit" {
+	if decision := l.allow(now, imageSingleMaxBytes+1); decision.allowed || decision.reason != "single_packet_limit" {
 		t.Fatalf("oversized packet should be rejected: %+v", decision)
 	}
-	if decision := l.allow(now, tmuxImageSingleMaxBytes); decision.allowed || decision.reason != "rate_limit" {
+	if decision := l.allow(now, imageSingleMaxBytes); decision.allowed || decision.reason != "rate_limit" {
 		t.Fatalf("packet exceeding remaining tokens should be rejected: %+v", decision)
 	}
-	if decision := l.allow(now.Add(time.Second), tmuxImageSingleMaxBytes); !decision.allowed {
+	if decision := l.allow(now.Add(time.Second), imageSingleMaxBytes); !decision.allowed {
 		t.Fatalf("tokens should refill after time advances: %+v", decision)
 	}
 
 	state := l.snapshot(now.Add(10 * time.Second))
-	if state.tokens != tmuxImageBurstBytes {
-		t.Fatalf("tokens should not refill past burst: got %d, want %d", state.tokens, tmuxImageBurstBytes)
+	if state.tokens != imageBurstBytes {
+		t.Fatalf("tokens should not refill past burst: got %d, want %d", state.tokens, imageBurstBytes)
 	}
 }
 
-func TestTmuxImageLimiterCooldown(t *testing.T) {
+func TestImageLimiterCooldown(t *testing.T) {
 	now := time.Unix(200, 0)
-	l := newTmuxImageLimiter(now)
+	l := newImageLimiter(now)
 	slow := coverWriteResult{written: 1, duration: coverWriteSlowThreshold + time.Millisecond}
 
-	want := tmuxSlowCooldownInitial
+	want := imageSlowCooldownInitial
 	for i := 0; i < 5; i++ {
 		if pressure := l.report(now, slow, 1); pressure != "slow" {
 			t.Fatalf("slow report pressure = %q, want slow", pressure)
@@ -248,7 +248,7 @@ func TestTmuxImageLimiterCooldown(t *testing.T) {
 			t.Fatalf("write during cooldown should be rejected: %+v", decision)
 		}
 		now = now.Add(want)
-		want = min(want*2, tmuxSlowCooldownMax)
+		want = min(want*2, imageSlowCooldownMax)
 	}
 
 	fast := coverWriteResult{written: 1, duration: time.Millisecond}
@@ -259,8 +259,8 @@ func TestTmuxImageLimiterCooldown(t *testing.T) {
 		t.Fatalf("fast write should reset cooldown: %+v", state)
 	}
 	l.report(now, slow, 1)
-	if state := l.snapshot(now); state.cooldownRemaining != tmuxSlowCooldownInitial {
-		t.Fatalf("cooldown after reset = %v, want %v", state.cooldownRemaining, tmuxSlowCooldownInitial)
+	if state := l.snapshot(now); state.cooldownRemaining != imageSlowCooldownInitial {
+		t.Fatalf("cooldown after reset = %v, want %v", state.cooldownRemaining, imageSlowCooldownInitial)
 	}
 }
 
@@ -285,8 +285,8 @@ func TestWritePositionedTmuxLimiterRejectsWithoutWriting(t *testing.T) {
 		return len(s), nil
 	}
 
-	r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(time.Now())}
-	if r.writePositioned(4, 5, strings.Repeat("x", tmuxImageSingleMaxBytes), true) {
+	r := &CoverRenderer{writeLimiter: newImageLimiter(time.Now())}
+	if r.writePositioned(4, 5, strings.Repeat("x", imageSingleMaxBytes), true) {
 		t.Fatal("oversized wrapped image should be rejected")
 	}
 	if called {
@@ -306,7 +306,7 @@ func TestWritePositionedTmuxRecordsWrappedBytes(t *testing.T) {
 	}
 
 	now := time.Now()
-	r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(now)}
+	r := &CoverRenderer{writeLimiter: newImageLimiter(now)}
 	const imageSeq = "\x1b_Gf=100;abc\x1b\\"
 	if !r.writePositioned(4, 5, imageSeq, true) {
 		t.Fatal("expected tmux image write to succeed")
@@ -315,7 +315,7 @@ func TestWritePositionedTmuxRecordsWrappedBytes(t *testing.T) {
 	if got != want {
 		t.Fatalf("stdout payload differs from wrapped positioned payload")
 	}
-	if state := r.tmuxImageLimiter.snapshot(now); state.admittedBytes != int64(len(want)) {
+	if state := r.writeLimiter.snapshot(now); state.admittedBytes != int64(len(want)) {
 		t.Fatalf("admitted bytes = %d, want %d", state.admittedBytes, len(want))
 	}
 }
@@ -332,11 +332,11 @@ func TestWritePositionedTmuxWriteFailure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			prepareTmuxWriteTest(t)
 			coverStdoutWrite = tt.write
-			r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(time.Now())}
+			r := &CoverRenderer{writeLimiter: newImageLimiter(time.Now())}
 			if r.writePositioned(4, 5, "image", false) {
 				t.Fatal("failed stdout write must not count as a successful render")
 			}
-			if state := r.tmuxImageLimiter.snapshot(time.Now()); state.cooldownRemaining <= 0 {
+			if state := r.writeLimiter.snapshot(time.Now()); state.cooldownRemaining <= 0 {
 				t.Fatal("failed stdout write should enter congestion cooldown")
 			}
 		})
@@ -344,6 +344,7 @@ func TestWritePositionedTmuxWriteFailure(t *testing.T) {
 }
 
 func TestWritePositionedDirectBypassesLimiter(t *testing.T) {
+	t.Setenv("HERDR_PANE_ID", "")
 	kitty.SetTmuxPassthroughForTest(false)
 	orig := coverStdoutWrite
 	t.Cleanup(func() { coverStdoutWrite = orig })
@@ -353,14 +354,14 @@ func TestWritePositionedDirectBypassesLimiter(t *testing.T) {
 		called = true
 		return 0, errors.New("best effort direct write")
 	}
-	r := &CoverRenderer{tmuxImageLimiter: newTmuxImageLimiter(time.Now())}
-	if !r.writePositioned(1, 1, strings.Repeat("x", tmuxImageBurstBytes+1), false) {
+	r := &CoverRenderer{writeLimiter: newImageLimiter(time.Now())}
+	if !r.writePositioned(1, 1, strings.Repeat("x", imageBurstBytes+1), false) {
 		t.Fatal("direct writes should preserve best-effort success behavior")
 	}
 	if !called {
 		t.Fatal("direct write should reach stdout regardless of tmux limiter")
 	}
-	if state := r.tmuxImageLimiter.snapshot(time.Now()); state.admittedBytes != 0 {
+	if state := r.writeLimiter.snapshot(time.Now()); state.admittedBytes != 0 {
 		t.Fatalf("direct write unexpectedly consumed limiter tokens: %+v", state)
 	}
 }
@@ -434,4 +435,59 @@ func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("Close hung with debug enabled")
 	}
+}
+
+func TestWritePositionedHerdrUsesLimiter(t *testing.T) {
+	t.Setenv("HERDR_PANE_ID", "1")
+	kitty.SetTmuxPassthroughForTest(false)
+	orig := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = orig })
+	var writes []string
+	coverStdoutWrite = func(s string) (int, error) { writes = append(writes, s); return len(s), nil }
+	r := &CoverRenderer{}
+	if r.writePositioned(1, 1, strings.Repeat("x", imageSingleMaxBytes+1), false) {
+		t.Fatal("herdr oversized image must be rejected")
+	}
+	if len(writes) != 0 {
+		t.Fatal("rejected image reached stdout")
+	}
+	if !r.writePositioned(1, 1, "image", false) {
+		t.Fatal("small image should be admitted")
+	}
+	if len(writes) != 1 || strings.Contains(writes[0], "tmux;") {
+		t.Fatal("herdr must use bare positioning without tmux wrapping")
+	}
+	if r.imageLimiter().snapshot(time.Now()).admittedBytes != int64(len(writes[0])) {
+		t.Fatal("herdr write was not charged to limiter")
+	}
+}
+
+func TestWritePositionedHerdrFailureEntersCooldown(t *testing.T) {
+	t.Setenv("HERDR_PANE_ID", "1")
+	kitty.SetTmuxPassthroughForTest(false)
+	orig := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = orig })
+	calls := 0
+	coverStdoutWrite = func(s string) (int, error) { calls++; return 0, errors.New("write failed") }
+	r := &CoverRenderer{}
+	if r.writePositioned(1, 1, "image", false) {
+		t.Fatal("failed image write reported success")
+	}
+	if r.writePositioned(1, 1, "image", false) || calls != 1 {
+		t.Fatal("cooldown must suppress subsequent writes")
+	}
+}
+
+func TestCoverDebugWriteWhileStateLocked(t *testing.T) {
+	previous := configs.AppConfig
+	previousWrite := coverStdoutWrite
+	coverStdoutWrite = func(s string) (int, error) { return len(s), nil }
+	defer func() { coverStdoutWrite = previousWrite }()
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Main.Debug = true
+	defer func() { configs.AppConfig = previous }()
+	r := &CoverRenderer{}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.writeStdout(strings.Repeat(" ", coverWriteTraceMinBytes))
 }
