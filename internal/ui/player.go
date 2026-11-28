@@ -306,6 +306,9 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 	})
 	slog.Info("Start play song", slog.String("url", url), slog.String("type", musicType), slog.Any("song", song))
 
+	// 更改终端窗口标题 https://ghostty.org/docs/vt/osc/2
+	fmt.Printf("\x1b]2;%s - %s\x1b\\", song.Name, song.ArtistName())
+
 	// 上报开始播放
 	p.reporter.ReportStart(song)
 
