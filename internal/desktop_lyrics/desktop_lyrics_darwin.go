@@ -131,16 +131,17 @@ type darwinController struct {
 	// does not reserve space for spectrum even if SpectrumEnabled is true.
 	spectrumAvailable bool
 
-	pendingMu       sync.Mutex
-	pendingCurLine  LyricLine
-	pendingNextLine LyricLine
-	pendingIndex    int
-	pendingTimeMs   int64
-	pendingPlaying  bool
-	font            cocoa.NSFont
-	origFontSz      float64
-	measureCacheKey string  // last measured text
-	measureCacheW   float64 // cached width for measureCacheKey
+	pendingMu               sync.Mutex
+	pendingCurLine          LyricLine
+	pendingNextLine         LyricLine
+	pendingIndex            int
+	pendingTimeMs           int64
+	pendingPlaying          bool
+	font                    cocoa.NSFont
+	origFontSz              float64
+	primaryInk, fallbackInk fontInk
+	measureCacheKey         string  // last measured text
+	measureCacheW           float64 // cached width for measureCacheKey
 
 	// Dynamic sizing
 	screenFrame     cocoa.NSRect // cached bounds of the selected screen
@@ -282,10 +283,29 @@ func (c *darwinController) ensureSpectrumLayers() {
 	}
 }
 
+func measureFontInk(font cocoa.NSFont) fontInk {
+	if font.ID == 0 {
+		return fontInk{}
+	}
+	return fontInk{
+		Above: float64(max(0, font.Ascender()) + max(0, font.Leading())),
+		Below: float64(max(0, -font.Descender())),
+	}
+}
+
 func (c *darwinController) createWindow() {
 	fontSize := c.origFontSz
 	padding := defaultWindowPadding
-	lineH := fontSize + defaultLineSpacing
+	// Font
+	c.font = cocoa.NSFont_SystemFontOfSize(cocoa.CGFloat(fontSize))
+	if c.cfg.FontName != "" {
+		namedFont := cocoa.NSFont_FontWithNameSize(c.cfg.FontName, cocoa.CGFloat(fontSize))
+		if namedFont.ID != 0 {
+			c.font = namedFont
+		}
+	}
+	c.primaryInk = measureFontInk(c.font)
+	c.fallbackInk = measureFontInk(cocoa.NSFont_FontWithNameSize("PingFang SC", cocoa.CGFloat(fontSize)))
 
 	lineCount := 2
 	if c.cfg.OneLineMode {
@@ -320,7 +340,7 @@ func (c *darwinController) createWindow() {
 	c.targetWinW = c.currentWinW
 
 	// Compute initial content size
-	labelH := 2*lineH + 2*defaultLineSpacing // needLargeHeight=true initially
+	labelH := lyricLabelHeight(c.origFontSz, defaultLineSpacing, defaultFontSize, c.primaryInk, c.fallbackInk, c.needLargeHeight)
 	contentW := c.currentWinW
 	contentH := float64(lineCount)*labelH + padding*2
 	if lineCount == 2 {
@@ -384,15 +404,6 @@ func (c *darwinController) createWindow() {
 
 	c.containerView.SetFrameOrigin(0, 0)
 	c.containerView.SetFrameSize(contentW, contentH)
-
-	// Font
-	c.font = cocoa.NSFont_SystemFontOfSize(cocoa.CGFloat(fontSize))
-	if c.cfg.FontName != "" {
-		namedFont := cocoa.NSFont_FontWithNameSize(c.cfg.FontName, cocoa.CGFloat(fontSize))
-		if namedFont.ID != 0 {
-			c.font = namedFont
-		}
-	}
 
 	// Colors
 	fgR, fgG, fgB := parseHexRGB(c.cfg.TextColor)
@@ -831,11 +842,7 @@ func (c *darwinController) resizeWindow(newW float64) {
 // then moves/resizes the window. If animate=true, uses NSAnimationContext.
 func (c *darwinController) layoutContent(animate bool) {
 	padding := defaultWindowPadding
-	lineH := c.origFontSz + defaultLineSpacing
-	labelH := lineH + defaultLineSpacing
-	if c.needLargeHeight {
-		labelH = 2*lineH + 2*defaultLineSpacing
-	}
+	labelH := lyricLabelHeight(c.origFontSz, defaultLineSpacing, defaultFontSize, c.primaryInk, c.fallbackInk, c.needLargeHeight)
 	lineCount := 2
 	if c.cfg.OneLineMode {
 		lineCount = 1

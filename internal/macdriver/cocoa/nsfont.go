@@ -16,8 +16,11 @@ func init() {
 var class_NSFont objc.Class
 
 var (
-	sel_fontWithNameSize   = objc.RegisterName("fontWithName:size:")
-	sel_systemFontOfSize   = objc.RegisterName("systemFontOfSize:")
+	sel_leading              = objc.RegisterName("leading")
+	sel_descender            = objc.RegisterName("descender")
+	sel_ascender             = objc.RegisterName("ascender")
+	sel_fontWithNameSize     = objc.RegisterName("fontWithName:size:")
+	sel_systemFontOfSize     = objc.RegisterName("systemFontOfSize:")
 	sel_boldSystemFontOfSize = objc.RegisterName("boldSystemFontOfSize:")
 	sel_sizeWithAttributes   = objc.RegisterName("sizeWithAttributes:")
 )
@@ -73,4 +76,16 @@ func MeasureTextSize(text string, font NSFont) CGSize {
 	attrs.SetValueForKey(key, font.NSObject)
 
 	return objc.Send[CGSize](nsStr.ID, sel_sizeWithAttributes, attrs.ID)
+}
+
+func (f NSFont) Ascender() CGFloat {
+	return objc.Send[CGFloat](f.ID, sel_ascender)
+}
+
+func (f NSFont) Descender() CGFloat {
+	return objc.Send[CGFloat](f.ID, sel_descender)
+}
+
+func (f NSFont) Leading() CGFloat {
+	return objc.Send[CGFloat](f.ID, sel_leading)
 }
