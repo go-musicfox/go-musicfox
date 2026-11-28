@@ -327,6 +327,7 @@ func AlignTranslationFragmentsToYRC(fragments []LRCFragment, yrcLines []YRCLine,
 		content = strings.TrimPrefix(content, "\ufeff")
 		procFragments[i] = processedFrag{content: content, timeMs: frag.StartTimeMs}
 	}
+	var indexTime int64 = -1
 
 	for i := range yrcLines {
 		var sb strings.Builder
@@ -342,14 +343,16 @@ func AlignTranslationFragmentsToYRC(fragments []LRCFragment, yrcLines []YRCLine,
 
 		var matchedTime int64 = -1
 		for _, frag := range procFragments {
+			if(frag.timeMs<=indexTime){continue}
 			if frag.content != "" && (lineText == frag.content || strings.Contains(frag.content, lineText) || strings.Contains(lineText, frag.content)) {
 				matchedTime = frag.timeMs
+				indexTime=matchedTime
 				break
 			}
 		}
 
 		if matchedTime != -1 {
-			if trans, ok := transFragments[matchedTime]; ok && trans != "" {
+			if trans, ok := transFragments[indexTime]; ok && trans != "" {
 				yrcLines[i].TranslatedLyric = trans
 			}
 		}
