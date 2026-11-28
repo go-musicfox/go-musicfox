@@ -51,6 +51,13 @@ func (s NSMutableAttributedString) AddAttribute(attrName string, color NSColor, 
 	s.Send(sel_attrStrAddAttributeValueRange, nsAttr.ID, color.ID, rng.Location, rng.Length)
 }
 
+// AddFontAttribute sets the font attribute over the specified range.
+func (s NSMutableAttributedString) AddFontAttribute(font NSFont, rng NSRange) {
+	nsAttr := core.NSString_alloc().InitWithUTF8String(NSFontAttributeName)
+	defer nsAttr.Release()
+	s.Send(sel_attrStrAddAttributeValueRange, nsAttr.ID, font.ID, rng.Location, rng.Length)
+}
+
 // AddParagraphStyle sets the paragraph style for the entire string range.
 func (s NSMutableAttributedString) AddParagraphStyle(style NSMutableParagraphStyle, rng NSRange) {
 	nsAttr := core.NSString_alloc().InitWithUTF8String(NSParagraphStyleAttributeName)

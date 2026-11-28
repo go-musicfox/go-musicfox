@@ -139,6 +139,7 @@ type darwinController struct {
 	pendingPlaying  bool
 	font            cocoa.NSFont
 	origFontSz      float64
+	lineH           float64 // rendered line height including CJK fallback metrics
 	measureCacheKey string  // last measured text
 	measureCacheW   float64 // cached width for measureCacheKey
 
@@ -285,7 +286,18 @@ func (c *darwinController) ensureSpectrumLayers() {
 func (c *darwinController) createWindow() {
 	fontSize := c.origFontSz
 	padding := defaultWindowPadding
-	lineH := fontSize + defaultLineSpacing
+
+	// Font must be resolved before measuring, since label heights are derived
+	// from the real rendered line height.
+	c.font = cocoa.NSFont_SystemFontOfSize(cocoa.CGFloat(fontSize))
+	if c.cfg.FontName != "" {
+		namedFont := cocoa.NSFont_FontWithNameSize(c.cfg.FontName, cocoa.CGFloat(fontSize))
+		if namedFont.ID != 0 {
+			c.font = namedFont
+		}
+	}
+	c.lineH = c.measureLineHeight()
+	lineH := c.lineH + defaultLineSpacing
 
 	lineCount := 2
 	if c.cfg.OneLineMode {
@@ -384,15 +396,6 @@ func (c *darwinController) createWindow() {
 
 	c.containerView.SetFrameOrigin(0, 0)
 	c.containerView.SetFrameSize(contentW, contentH)
-
-	// Font
-	c.font = cocoa.NSFont_SystemFontOfSize(cocoa.CGFloat(fontSize))
-	if c.cfg.FontName != "" {
-		namedFont := cocoa.NSFont_FontWithNameSize(c.cfg.FontName, cocoa.CGFloat(fontSize))
-		if namedFont.ID != 0 {
-			c.font = namedFont
-		}
-	}
 
 	// Colors
 	fgR, fgG, fgB := parseHexRGB(c.cfg.TextColor)
@@ -831,7 +834,11 @@ func (c *darwinController) resizeWindow(newW float64) {
 // then moves/resizes the window. If animate=true, uses NSAnimationContext.
 func (c *darwinController) layoutContent(animate bool) {
 	padding := defaultWindowPadding
-	lineH := c.origFontSz + defaultLineSpacing
+	measuredH := c.lineH
+	if measuredH <= 0 {
+		measuredH = c.origFontSz
+	}
+	lineH := measuredH + defaultLineSpacing
 	labelH := lineH + defaultLineSpacing
 	if c.needLargeHeight {
 		labelH = 2*lineH + 2*defaultLineSpacing
@@ -1082,6 +1089,61 @@ func (c *darwinController) measureTextWidth(text string) float64 {
 	c.measureCacheKey = text
 	c.measureCacheW = w
 	return w
+}
+
+// measureLineHeight returns the tallest line height among the configured font
+// and the fallback font used for CJK glyphs. Label frames are sized from this
+// value so fallback glyph descenders, which can extend below the primary
+// font's shallow descent, are not clipped by the text field's drawing area.
+func (c *darwinController) measureLineHeight() float64 {
+	if c.font.ID == 0 {
+		return c.origFontSz
+	}
+	lineH := cocoa.FontLineHeight(c.font)
+	fallback := cocoa.FontForString(c.font, "中")
+	if fallback.ID != 0 {
+		if fallbackH := cocoa.FontLineHeight(fallback); fallbackH > lineH {
+			lineH = fallbackH
+		}
+		fallback.ReleaseFont()
+	}
+	if lineH <= 0 {
+		lineH = c.origFontSz
+	}
+	return lineH
+}
+
+// applyFontAttributes writes an explicit font for each grapheme cluster, so
+// AppKit lays out fallback glyphs (e.g. CJK rendered by PingFang SC while the
+// configured font only covers Latin) with their own metrics instead of the
+// primary font's. Without this, a Latin-only font such as Apple Chancery
+// reserves too little space below the baseline and clips the CJK descenders.
+func (c *darwinController) applyFontAttributes(attr cocoa.NSMutableAttributedString, text string) {
+	if text == "" || c.font.ID == 0 {
+		return
+	}
+	fullRange := cocoa.NSRange{Location: 0, Length: utf16Length(text)}
+	attr.AddFontAttribute(c.font, fullRange)
+
+	nsText := core.NSString_alloc().InitWithUTF8String(text)
+	defer nsText.Release()
+
+	offset := 0
+	graphemes := uniseg.NewGraphemes(text)
+	for graphemes.Next() {
+		n := utf16Length(graphemes.Str())
+		if n == 0 {
+			continue
+		}
+		font := cocoa.FontForStringRange(c.font, nsText, offset, n)
+		if font.ID != 0 {
+			if font.ID != c.font.ID {
+				attr.AddFontAttribute(font, cocoa.NSRange{Location: offset, Length: n})
+			}
+			font.ReleaseFont()
+		}
+		offset += n
+	}
 }
 
 // getLinePlainText extracts the display text from a LyricLine.
@@ -1382,6 +1444,9 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			offset += wordLen
 		}
 
+		// Resolve explicit fonts so fallback glyphs use their own metrics.
+		c.applyFontAttributes(testAttr, plainText)
+
 		// Apply paragraph style for correct alignment
 		paraRange := cocoa.NSRange{Location: 0, Length: offset}
 
@@ -1396,8 +1461,7 @@ func (c *darwinController) setLabelText(label cocoa.NSTextField, line LyricLine,
 			"wordCount", len(line.Words), "timeMs", timeMs, "textLen", len(plainText))
 		testAttr.Release()
 	} else {
-		label.SetStringValue(line.Text)
-		label.SetTextColor(activeColor)
+		c.setLabelPlainText(label, line, activeColor, alignment)
 	}
 }
 
@@ -1435,6 +1499,9 @@ func (c *darwinController) setLabelPlainText(label cocoa.NSTextField, line Lyric
 	textLen := utf16Length(text)
 	colorRange := cocoa.NSRange{Location: 0, Length: textLen}
 	attrStr.AddAttribute(cocoa.NSForegroundColorAttributeName, inactiveColor, colorRange)
+
+	// Resolve explicit fonts so fallback glyphs use their own metrics.
+	c.applyFontAttributes(attrStr, text)
 
 	// Apply alignment via paragraph style
 	paraStyle := cocoa.NewParagraphStyle()
