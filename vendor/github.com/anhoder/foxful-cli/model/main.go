@@ -1742,6 +1742,15 @@ func (m *Main) menuLineView(a *App, line int) string {
 		row = lipgloss.NewStyle().Inherit(style.CurrentStyleSet().AppBackground).PaddingLeft(m.menuStartColumn - 4).Render(row)
 	}
 
+	// Pad the assembled row to the window width with the app background before
+	// it is joined into the frame. Block joining (layout.JoinVertical) pads
+	// shorter lines with unstyled spaces, which would leave the trailing cells
+	// transparent and expose the terminal background (#676: the 4-column black
+	// block on the right of single-column and narrow dual-column menus).
+	if pad := a.WindowWidth() - ansi.StringWidth(row); pad > 0 {
+		row += style.CurrentStyleSet().AppBackground.Render(strings.Repeat(" ", pad))
+	}
+
 	// Store the assembled row, with the same cap as the
 	// per-item cache: page changes invalidate naturally via the key fields.
 	if m.menuLineCache == nil {
