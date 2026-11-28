@@ -21,6 +21,7 @@ type Config struct {
 	Autoplay    AutoplayConfig    `koanf:"autoplay"`
 	UNM         UNMConfig         `koanf:"unm"`
 	Reporter    ReporterConfig    `koanf:"reporter"`
+	ExternalAPI ExternalAPIConfig `koanf:"externalApi"`
 	Keybindings KeybindingsConfig `koanf:"keybindings"`
 	Share       map[string]string `koanf:"share"`
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/go-musicfox/netease-music/service"
 
 	"github.com/go-musicfox/go-musicfox/internal/configs"
+	"github.com/go-musicfox/go-musicfox/internal/externalapi"
 	"github.com/go-musicfox/go-musicfox/internal/lyric"
 	"github.com/go-musicfox/go-musicfox/internal/player"
 	"github.com/go-musicfox/go-musicfox/internal/playlist"
@@ -97,6 +98,7 @@ type Player struct {
 
 	player.Player // 播放器
 	reporter      reporter.Service
+	externalAPI   *externalapi.Server
 }
 
 func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
@@ -189,6 +191,20 @@ func NewPlayer(n *Netease, lyricService *lyric.Service) *Player {
 			}
 		}
 	})
+
+	if configs.AppConfig.ExternalAPI.Enable {
+		server, err := externalapi.Start(p, externalapi.Options{
+			Enable:   true,
+			EnableWS: configs.AppConfig.ExternalAPI.EnableWS,
+			AllowLAN: configs.AppConfig.ExternalAPI.AllowLAN,
+			Port:     configs.AppConfig.ExternalAPI.Port,
+		})
+		if err != nil {
+			slog.Error("Failed to start SPlayer-compatible external API", "error", err)
+		} else {
+			p.externalAPI = server
+		}
+	}
 
 	return p
 }
@@ -527,6 +543,13 @@ func (p *Player) Close() error {
 	// 退出前上报
 	p.reporter.ReportEnd(p.PlayedTime())
 
+	if p.externalAPI != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		if err := p.externalAPI.Close(ctx); err != nil {
+			slog.Warn("Failed to close external API", "error", err)
+		}
+		cancel()
+	}
 	p.cancel()
 	if p.stateHandler != nil {
 		p.stateHandler.Release()

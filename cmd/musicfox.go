@@ -41,6 +41,9 @@ func musicfox() {
 		gf.BoolOpt(&commands.GlobalOptions.PProfMode, "pprof", "p", false, "enable PProf mode")
 		gf.BoolOpt(&commands.GlobalOptions.DebugMode, "debug", "", false, "enable debug log level")
 		gf.BoolOpt(&commands.GlobalOptions.PureMode, "pure", "", false, "start with default config in a temporary directory")
+		gf.BoolOpt(&commands.GlobalOptions.ExternalAPIMode, "external-api", "", false, "enable the SPlayer-Next compatible HTTP/WebSocket API")
+		gf.IntOpt(&commands.GlobalOptions.ExternalAPIPort, "external-api-port", "", 0, "override the external API port (default 14558)")
+		gf.BoolOpt(&commands.GlobalOptions.ExternalAPIAllowLAN, "external-api-allow-lan", "", false, "allow the external API to listen on the LAN")
 	}
 
 	// --pure flag: start with a temporary directory as MUSICFOX_ROOT

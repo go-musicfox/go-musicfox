@@ -464,3 +464,15 @@ curPlaylist = ["c", "C"]
 # 格式: "名称" = "模板字符串"
 # 详细用法请参考项目文档（README）
 [share]
+
+
+# SPlayer-Next compatible external HTTP/WebSocket API
+[externalApi]
+# 外部 API 会暴露本机播放控制能力，因此默认关闭。
+enable = false
+# 是否启用 /ws 事件与播放控制通道；关闭后 REST API 仍然可用。
+enableWs = true
+# 保持 false 时仅监听 127.0.0.1；开启后会监听所有网卡。
+allowLan = false
+# SPlayer-Next 默认使用 14558 端口。
+port = 14558
