@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/go-musicfox/go-musicfox/internal/configs"
 	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 )
@@ -416,6 +419,286 @@ func TestProcessRSSBytesDoesNotPanic(t *testing.T) {
 	_ = processRSSBytes()
 }
 
+func TestPlaceholderSegmentRequiresTmuxAndImage(t *testing.T) {
+	r := &CoverRenderer{
+		imageRendered:  true,
+		displayImageID: 42,
+		cols:           4,
+		rows:           3,
+		lastStartRow:   10,
+		lastStartCol:   5,
+	}
+
+	if _, _, ok := r.PlaceholderSegment(10); ok {
+		t.Fatal("expected ok=false outside tmux passthrough")
+	}
+
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	startCol, cells, ok := r.PlaceholderSegment(11)
+	if !ok {
+		t.Fatal("expected placeholder for absRow inside cover rect")
+	}
+	if startCol != 5 {
+		t.Fatalf("startCol = %d, want 5", startCol)
+	}
+	if got := ansi.StringWidth(cells); got != 4 {
+		t.Fatalf("placeholder cells StringWidth = %d, want 4", got)
+	}
+
+	if _, _, ok := r.PlaceholderSegment(9); ok {
+		t.Fatal("expected ok=false for row above cover")
+	}
+	if _, _, ok := r.PlaceholderSegment(13); ok {
+		t.Fatal("expected ok=false for row below cover")
+	}
+
+	r.displayImageID = 0
+	if _, _, ok := r.PlaceholderSegment(10); ok {
+		t.Fatal("expected ok=false without displayImageID")
+	}
+}
+
+func TestHideDisplayedLockedClearsUnicodeState(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	var writes int
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		writes++
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{
+		imageRendered:  true,
+		displayImageID: 7,
+		cachedSeq:      "stale",
+		animImageID:    3,
+	}
+	r.mu.Lock()
+	r.hideDisplayedLocked(nil)
+	r.mu.Unlock()
+
+	if r.imageRendered || r.displayImageID != 0 || r.cachedSeq != "" || r.animImageID != 0 {
+		t.Fatalf("hideDisplayedLocked left state: rendered=%v id=%d seq=%q anim=%d",
+			r.imageRendered, r.displayImageID, r.cachedSeq, r.animImageID)
+	}
+	if writes == 0 {
+		t.Fatal("expected a delete write for the previous image id")
+	}
+}
+
+func TestClearTmuxPlaceholderCellsWritesPaneLocalSpaces(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	var got string
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		got = s
+		return len(s), nil
+	}
+
+	r := &CoverRenderer{
+		lastStartRow: 10,
+		lastStartCol: 3,
+		cols:         4,
+		rows:         2,
+	}
+	r.mu.Lock()
+	r.clearTmuxPlaceholderCellsLocked(0, 0)
+	r.mu.Unlock()
+
+	if !strings.Contains(got, "\x1b7") || !strings.Contains(got, "\x1b8") {
+		t.Fatalf("expected cursor save/restore, got %q", got)
+	}
+	if !strings.Contains(got, "\x1b[10;3H") || !strings.Contains(got, "\x1b[11;3H") {
+		t.Fatalf("expected pane-local CUP to cover rows, got %q", got)
+	}
+	if strings.Contains(got, "\x1bPtmux;") {
+		t.Fatal("placeholder cell clear must not use tmux DCS passthrough")
+	}
+	if !strings.Contains(got, "    ") {
+		t.Fatal("expected spaces to overwrite placeholder cells")
+	}
+}
+
+func TestRemeasureHideClearsWithStashedOldGeometry(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	var got string
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		// Capture the space-clear payload (cursor save), not the delete write.
+		if strings.Contains(s, "\x1b7") {
+			got = s
+		}
+		return len(s), nil
+	}
+
+	// Unequal-split shrink: View already has the new (smaller) clamp while
+	// remasureAgainst still holds the previous left-pane cover rectangle.
+	r := &CoverRenderer{
+		imageRendered:        true,
+		displayImageID:       7,
+		lastStartRow:         10,
+		lastStartCol:         3,
+		cols:                 97,
+		rows:                 18,
+		remeasureAgainstCols: 115,
+		remeasureAgainstRows: 20,
+	}
+	r.mu.Lock()
+	r.applyRemeasureHideLocked(nil)
+	r.cols, r.rows = 97, 18
+	r.mu.Unlock()
+
+	oldSpaces := strings.Repeat(" ", 115)
+	if !strings.Contains(got, oldSpaces) {
+		t.Fatalf("clear must use stashed old cols=115, got %q", got)
+	}
+	// Stashed height 20 → lastStartRow + 19 = 29.
+	if !strings.Contains(got, "\x1b[29;3H") {
+		t.Fatalf("clear must cover stashed rows through row 29, got %q", got)
+	}
+	if r.cols != 97 || r.rows != 18 {
+		t.Fatalf("after remasure hide, caller assigns new clamp; got cols=%d rows=%d", r.cols, r.rows)
+	}
+}
+
+func TestUnicodeCoverGeomChanged(t *testing.T) {
+	if unicodeCoverGeomChanged(true, 20, 10, 20, 10) {
+		t.Fatal("unchanged cols/rows after pane remasure must not retransmit")
+	}
+	if !unicodeCoverGeomChanged(true, 20, 10, 18, 9) {
+		t.Fatal("cols/rows change must retransmit")
+	}
+	// Origin-only args are no longer part of the API; size-equal means no change
+	// even when the caller saw a lyric-driven startRow/startCol shift.
+	if unicodeCoverGeomChanged(true, 20, 10, 20, 10) {
+		t.Fatal("start-only change must not count as geom change")
+	}
+	if unicodeCoverGeomChanged(false, 20, 10, 18, 9) {
+		t.Fatal("no active display must not force retransmit from remasure alone")
+	}
+}
+
+func TestWindowSizeMsgTmuxUnicodeDebouncesHide(t *testing.T) {
+	kitty.SetTmuxPassthroughForTest(true)
+	t.Cleanup(func() { kitty.SetTmuxPassthroughForTest(false) })
+
+	var writes int
+	prevWrite := coverStdoutWrite
+	t.Cleanup(func() { coverStdoutWrite = prevWrite })
+	coverStdoutWrite = func(s string) (int, error) {
+		writes++
+		return len(s), nil
+	}
+
+	// IsEnabled requires kittySupport + config; stub a renderer that Update
+	// will accept via IsEnabled override path — set fields so IsEnabled is true.
+	previousConfig := configs.AppConfig
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Main.Lyric.Cover.Show = true
+	configs.AppConfig.Main.Lyric.Cover.TmuxPassthrough = true
+	t.Cleanup(func() { configs.AppConfig = previousConfig })
+
+	r := &CoverRenderer{
+		kittySupport:   true,
+		imageRendered:  true,
+		displayImageID: 7,
+		cols:           10,
+		rows:           5,
+		lastStartRow:   8,
+		lastStartCol:   2,
+		currentSongID:  99,
+	}
+	r.Update(tea.WindowSizeMsg{Width: 80, Height: 24}, nil)
+
+	if writes != 0 {
+		t.Fatalf("tmux unicode WindowSizeMsg must not hide/delete immediately, writes=%d", writes)
+	}
+	if r.forceRerender {
+		t.Fatal("tmux unicode WindowSizeMsg must not set forceRerender immediately")
+	}
+	if !r.resizePending {
+		t.Fatal("expected resizePending after WindowSizeMsg")
+	}
+	if r.remeasureAgainstCols != 10 || r.remeasureAgainstRows != 5 {
+		t.Fatalf("stashed against=%d×%d, want 10×5", r.remeasureAgainstCols, r.remeasureAgainstRows)
+	}
+	if r.cols != 0 || r.rows != 0 {
+		t.Fatalf("cols/rows must be zeroed for remasure, got %d×%d", r.cols, r.rows)
+	}
+	if r.skipFrames < 2 {
+		t.Fatalf("skipFrames=%d, want >= 2", r.skipFrames)
+	}
+	if r.imageRendered != true || r.displayImageID != 7 {
+		t.Fatal("display state must remain until remasure decides to hide")
+	}
+	if r.currentSongID != 99 || r.lastStartRow != 8 {
+		t.Fatal("origin/song must not be cleared on deferred remasure")
+	}
+
+	// Storm coalesce: second resize while skipping must not hide either.
+	r.Update(tea.WindowSizeMsg{Width: 81, Height: 24}, nil)
+	if writes != 0 {
+		t.Fatalf("coalesced WindowSizeMsg must not hide, writes=%d", writes)
+	}
+	if r.skipFrames < 2 {
+		t.Fatalf("coalesce must keep skipFrames floor, got %d", r.skipFrames)
+	}
+}
+
+func TestTmuxUnicodePositionOnlyMove(t *testing.T) {
+	if !tmuxUnicodePositionOnlyMove(true, false, false, true, true) {
+		t.Fatal("tmux unicode origin-only move must short-circuit without clear/retransmit")
+	}
+	if tmuxUnicodePositionOnlyMove(true, true, false, true, true) {
+		t.Fatal("forceRerender must not take the position-only path")
+	}
+	if tmuxUnicodePositionOnlyMove(true, false, true, true, true) {
+		t.Fatal("song change must not take the position-only path")
+	}
+	if tmuxUnicodePositionOnlyMove(true, false, false, false, true) {
+		t.Fatal("no position change is not a position-only move")
+	}
+	if tmuxUnicodePositionOnlyMove(true, false, false, true, false) {
+		t.Fatal("not already shown must fall through to first transmit")
+	}
+	if tmuxUnicodePositionOnlyMove(false, false, false, true, true) {
+		t.Fatal("non-tmux must not use the unicode position-only path")
+	}
+}
+
+func TestClampCoverGeometry(t *testing.T) {
+	sc, sr, c, r := clampCoverGeometry(90, 5, 20, 10, 100, 40)
+	if sc != 81 || c != 20 || sr != 5 || r != 10 {
+		t.Fatalf("expected clamp startCol into window, got sc=%d c=%d sr=%d r=%d", sc, c, sr, r)
+	}
+	sc, sr, c, r = clampCoverGeometry(1, 1, 50, 10, 40, 40)
+	if c != 40 || sc != 1 {
+		t.Fatalf("cols larger than window: sc=%d c=%d", sc, c)
+	}
+	_ = sr
+	_ = r
+}
+
+func TestPickTmuxUnicodeImageID(t *testing.T) {
+	if got := pickTmuxUnicodeImageID(42); got != 42 {
+		t.Fatalf("reuse: got %d, want 42", got)
+	}
+	if got := pickTmuxUnicodeImageID(0); got == 0 {
+		t.Fatal("zero current must allocate a new non-zero ID")
+	}
+}
+
 func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
 	prev := configs.AppConfig
 	t.Cleanup(func() { configs.AppConfig = prev })
@@ -433,5 +716,44 @@ func TestCoverCloseWithDebugDoesNotHang(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("Close hung with debug enabled")
+	}
+}
+
+func TestCoverDebugWriteWhileStateLocked(t *testing.T) {
+	previous := configs.AppConfig
+	previousWrite := coverStdoutWrite
+	coverStdoutWrite = func(s string) (int, error) { return len(s), nil }
+	defer func() { coverStdoutWrite = previousWrite }()
+	configs.AppConfig = &configs.Config{}
+	configs.AppConfig.Main.Debug = true
+	defer func() { configs.AppConfig = previous }()
+	r := &CoverRenderer{}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.writeStdout(strings.Repeat(" ", coverWriteTraceMinBytes))
+}
+
+func TestClearTmuxPlaceholderCellsAfterWindowShrinks(t *testing.T) {
+	previousMode := kitty.UseTmuxPassthrough()
+	kitty.SetTmuxPassthroughForTest(true)
+	defer kitty.SetTmuxPassthroughForTest(previousMode)
+	previousWrite := coverStdoutWrite
+	defer func() { coverStdoutWrite = previousWrite }()
+	var got string
+	coverStdoutWrite = func(s string) (int, error) { got += s; return len(s), nil }
+	r := &CoverRenderer{lastStartRow: 10, lastStartCol: 3, cols: 115, rows: 20}
+	r.mu.Lock()
+	r.clearTmuxPlaceholderCellsLocked(8, 11)
+	r.mu.Unlock()
+	want := "\x1b7\x1b[10;3H      \x1b[11;3H      \x1b8"
+	if got != want {
+		t.Fatalf("clear exceeded resized pane: %q, want %q", got, want)
+	}
+	got = ""
+	r.mu.Lock()
+	r.clearTmuxPlaceholderCellsLocked(2, 9)
+	r.mu.Unlock()
+	if got != "" {
+		t.Fatalf("off-screen cover must not move cursor: %q", got)
 	}
 }

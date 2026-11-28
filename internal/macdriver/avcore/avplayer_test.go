@@ -13,6 +13,11 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/macdriver/core"
 )
 
+// AppKit must run on the startup thread, including in the test executable.
+func init() {
+	runtime.LockOSThread()
+}
+
 func TestMain(m *testing.M) {
 	app := cocoa.NSApp()
 	if app.ID == 0 {

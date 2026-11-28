@@ -1,13 +1,16 @@
+// Package commands defines the musicfox CLI commands.
 package commands
 
 import (
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strconv"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
+	neteaseutil "github.com/go-musicfox/netease-music/util"
 	"github.com/gookit/gcli/v2"
 	"github.com/mattn/go-runewidth"
 
@@ -15,9 +18,9 @@ import (
 	"github.com/go-musicfox/go-musicfox/internal/storage"
 	"github.com/go-musicfox/go-musicfox/internal/types"
 	"github.com/go-musicfox/go-musicfox/internal/ui"
+	"github.com/go-musicfox/go-musicfox/internal/ui/kitty"
 	"github.com/go-musicfox/go-musicfox/utils/errorx"
 	"github.com/go-musicfox/go-musicfox/utils/slogx"
-	neteaseutil "github.com/go-musicfox/netease-music/util"
 )
 
 func NewPlayerCommand() *gcli.Command {
@@ -74,6 +77,9 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.TeaOptions = []tea.ProgramOption{
 				tea.WithHardTabs(false),
 			}
+			if cover := configs.AppConfig.Main.Lyric.Cover; cover.Show && cover.TmuxPassthrough && cover.TmuxSyncOutput && kitty.UseTmuxPassthrough() {
+				options.TeaOptions = append(options.TeaOptions, tea.WithOutput(&kitty.TmuxOutput{File: os.Stdout}))
+			}
 			options.LocalSearchMenu = ui.NewLocalSearchMenu(netease)
 			options.Components = append(options.Components, netease.Components()...)
 			options.KBControllers = append(options.KBControllers, eventHandler)
@@ -82,10 +88,10 @@ func runPlayer(_ *gcli.Command, _ []string) error {
 			options.DynamicRowCount = configs.AppConfig.Theme.DynamicMenuRows
 			options.CenterEverything = configs.AppConfig.Theme.CenterEverything
 
-		// 状态栏：若配置启用，注入队列位置与音质中间文本
-		if options.StatusBar != nil {
-			options.StatusBar = ui.NewQueueQualityStatusBar(netease.Player())
-		}
+			// 状态栏：若配置启用，注入队列位置与音质中间文本
+			if options.StatusBar != nil {
+				options.StatusBar = ui.NewQueueQualityStatusBar(netease.Player())
+			}
 
 			if options.DynamicRowCount {
 				// BottomHeight 是底部组件的最大预估高度，用于告诉 foxful-cli

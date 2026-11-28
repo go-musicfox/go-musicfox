@@ -186,3 +186,24 @@ func TestParseTmuxShowEnvironment(t *testing.T) {
 		}
 	}
 }
+
+func TestTmuxPassthroughAllowed(t *testing.T) {
+	for _, tt := range []struct {
+		value string
+		want  bool
+	}{
+		{"1", true},
+		{"on", true},
+		{"all", true},
+		{"0", false},
+		{"off", false},
+		{"", false},
+		{"unknown", false},
+	} {
+		t.Run(tt.value, func(t *testing.T) {
+			if got := tmuxPassthroughAllowed(tt.value); got != tt.want {
+				t.Errorf("tmuxPassthroughAllowed(%q) = %v, want %v", tt.value, got, tt.want)
+			}
+		})
+	}
+}
