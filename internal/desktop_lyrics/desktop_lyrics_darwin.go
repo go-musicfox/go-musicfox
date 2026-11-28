@@ -304,7 +304,15 @@ func (c *darwinController) createWindow() {
 			c.font = namedFont
 		}
 	}
+	// Measured once here from font line metrics (ascender/descender/leading,
+	// not glyph ink bounds); any future font-refresh path must re-measure both
+	// before calling layoutContent/resizeWindow.
 	c.primaryInk = measureFontInk(c.font)
+	// CJK-only floor: PingFang SC stands in for the system CJK fallback so
+	// mixed CJK/Latin lines under a Latin-only font are not clipped. It is not
+	// an upper bound for other scripts (Khmer, Devanagari, Tibetan fallbacks
+	// can be taller), and the real cascade font can differ (e.g. STKaiti under
+	// Apple Chancery).
 	c.fallbackInk = measureFontInk(cocoa.NSFont_FontWithNameSize("PingFang SC", cocoa.CGFloat(fontSize)))
 
 	lineCount := 2
@@ -340,7 +348,7 @@ func (c *darwinController) createWindow() {
 	c.targetWinW = c.currentWinW
 
 	// Compute initial content size
-	labelH := lyricLabelHeight(c.origFontSz, defaultLineSpacing, defaultFontSize, c.primaryInk, c.fallbackInk, c.needLargeHeight)
+	labelH := lyricLabelHeight(c.origFontSz, defaultLineSpacing, c.primaryInk, c.fallbackInk, c.needLargeHeight)
 	contentW := c.currentWinW
 	contentH := float64(lineCount)*labelH + padding*2
 	if lineCount == 2 {
@@ -842,7 +850,7 @@ func (c *darwinController) resizeWindow(newW float64) {
 // then moves/resizes the window. If animate=true, uses NSAnimationContext.
 func (c *darwinController) layoutContent(animate bool) {
 	padding := defaultWindowPadding
-	labelH := lyricLabelHeight(c.origFontSz, defaultLineSpacing, defaultFontSize, c.primaryInk, c.fallbackInk, c.needLargeHeight)
+	labelH := lyricLabelHeight(c.origFontSz, defaultLineSpacing, c.primaryInk, c.fallbackInk, c.needLargeHeight)
 	lineCount := 2
 	if c.cfg.OneLineMode {
 		lineCount = 1
