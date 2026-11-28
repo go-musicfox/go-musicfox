@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"log/slog"
 	"math"
 	"strconv"
 	"time"
@@ -22,7 +23,7 @@ func (n *neteaseReporter) reportStart(song structs.Song) {
 }
 
 func (n *neteaseReporter) reportEnd(song structs.Song, passedTime time.Duration) {
-	svc := n.buildNeteaseReportService(song, passedTime) 
+	svc := n.buildNeteaseReportService(song, passedTime)
 
 	switch {
 	case math.Abs(song.Duration.Seconds()-passedTime.Seconds()) <= 10:
@@ -30,7 +31,16 @@ func (n *neteaseReporter) reportEnd(song structs.Song, passedTime time.Duration)
 	default:
 		svc.EndType = "ui"
 	}
-	svc.Playend()
+	code, body, err := svc.Playend()
+	if err != nil || code != 200 {
+		slog.Warn("netease report end failed",
+			slog.Int64("songId", song.Id),
+			slog.Duration("passedTime", passedTime),
+			slog.Float64("code", code),
+			slog.Any("err", err),
+			slog.String("body", string(body)),
+		)
+	}
 }
 
 func (n *neteaseReporter) close() {}
