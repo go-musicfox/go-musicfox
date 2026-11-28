@@ -69,6 +69,16 @@ func TestBuiltinThemesStatusBarFontsMatchDefault(t *testing.T) {
 	}
 }
 
+func TestLoadBuiltinThemesReadsAllEmbeddedThemes(t *testing.T) {
+	themes := loadBuiltinThemes()
+	want := []string{"Default", "Transparent", "GitHub", "Dracula", "Nord", "Gruvbox"}
+	for _, name := range want {
+		if _, ok := themes[name]; !ok {
+			t.Fatalf("built-in theme %q was not loaded (got %d themes)", name, len(themes))
+		}
+	}
+}
+
 func TestTransparentThemeConfiguresPrimaryBreadcrumbLabel(t *testing.T) {
 	transparent, ok := loadBuiltinThemes()["Transparent"]
 	if !ok {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -66,7 +67,7 @@ func loadBuiltinThemes() map[string]*ThemeFile {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".toml") {
 			continue
 		}
-		data, err := filex.ReadFileFromEmbed(filepath.Join(BuiltinThemesDir, entry.Name()))
+		data, err := filex.ReadFileFromEmbed(path.Join(BuiltinThemesDir, entry.Name()))
 		if err != nil {
 			slog.Warn("failed to read built-in theme file", "file", entry.Name(), "err", err)
 			continue
