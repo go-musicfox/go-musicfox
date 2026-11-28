@@ -343,6 +343,9 @@ bin = "mpd"
 # 注意：配置文件中必须设置 pid_file，否则应用退出时无法正确关闭 mpd 进程
 configFile = ""
 # 与mpd服务的连接方式，可选: "tcp", "unix"
+# tcp 连接无法读取 music_directory 内的绝对路径：播放其外部的本地文件
+# （如下载目录）时，会将其硬链接（失败时复制）到 music_directory 下的
+# musicfox-staging 目录；unix 连接则直接添加绝对路径
 network = "unix"
 # 连接地址
 # network 为 "tcp" 时，填写 "ip:port" (如 "127.0.0.1:6600")
