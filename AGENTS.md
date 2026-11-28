@@ -169,7 +169,8 @@ type Player interface {
 
 ### 其他模块
 
-- **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式；未匹配的云盘歌曲（含旧播放快照）优先通过云盘歌词接口获取内嵌歌词，失败时回退普通歌曲歌词接口
+- **歌词**：LRC/YRC 格式，支持 smooth/wave/glow 渲染模式；未匹配的云盘歌曲（含旧播放快照）优先通过云盘歌词接口获取内嵌歌词，失败时回退普通歌曲歌词接口；`lyric.Service.LoadSong` 在调用线程登记请求并取消上次加载，再异步获取歌词，`SetSong` 保留同步接口。网络获取不持有状态锁，提交前检查取消状态，防止过期结果（含相同歌曲 ID 的旧请求）覆盖新歌词；`Stop` 取消加载并清空状态，播放器关闭时调用它。`track.Manager.GetLyric` 通过 `singleflight.DoChan` 合并请求，调用方可独立取消等待；共享请求使用 `context.WithoutCancel`，当前 SDK 不支持中断底层 HTTP 请求，共享请求继续至完成或 SDK 超时。歌词解析仍在状态锁内使用最新配置。
+- **Track 构造与测试**：`track.NewManager` 先应用选项，再补齐未指定的下载/歌词目录。隔离测试需同时注入下载目录、歌词目录及缓存实例，避免触发全局配置和用户目录初始化。
 - **播放列表**：列表循环/顺序/单曲循环/随机/无限随机/智能心动模式
 - **远程控制**：MPRIS(linux)、Now Playing(macOS)、System Media(Windows)。macOS 侧 `internal/macdriver/mediaplayer` 与 `internal/macdriver/cocoa/unnotifications.go` 的框架加载（Dlopen）失败不 panic 静默降级：MediaPlayer.framework 需 macOS 10.12.2+、UserNotifications.framework 需 10.14+，旧系统上 class 查找得 nil、objc 消息发送安全返回 0，对应功能（Now Playing 远程控制/系统通知）自动禁用而不影响主应用启动
 - **状态栏组件**：`model.DefaultStatusBar.Components` 可注入任意 `StatusBarComponent` 到居中区域；展示项只实现 `View`，可点击项额外实现 `InteractiveStatusBarComponent`，以自身局部坐标处理命中和事件。状态栏负责布局、边界与指针，不持有业务回调。播放队列适配器的 `musicfox` 前缀自行打开 `https://github.com/go-musicfox/go-musicfox`，队列位置与音质文本不触发。

@@ -295,9 +295,7 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 		return
 	}
 
-	errorx.Go(func() {
-		p.lyricService.SetSong(context.Background(), song)
-	}, true)
+	p.lyricService.LoadSong(context.Background(), song)
 
 	p.Play(player.URLMusic{
 		URL:  url,
@@ -528,6 +526,7 @@ func (p *Player) Close() error {
 	p.reporter.ReportEnd(p.PlayedTime())
 
 	p.cancel()
+	p.lyricService.Stop()
 	if p.stateHandler != nil {
 		p.stateHandler.Release()
 	}
