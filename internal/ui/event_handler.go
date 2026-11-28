@@ -279,6 +279,9 @@ func (h *EventHandler) handle(op keybindings.OperateType) (bool, model.Page, tea
 			}
 		}
 
+	case keybindings.OpToggleDesktopLyrics:
+		h.netease.toggleDesktopLyricsHandle()
+		return true, main, app.RerenderCmd(true)
 	case keybindings.OpSwitchTheme:
 		registry := configs.CurrentThemeRegistry()
 		newSS := registry.NextStyleSet(style.HasDarkBackground())

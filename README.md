@@ -455,6 +455,18 @@ emptyCharBlock = " "       # 空白字符
 </summary>
 macOS 原生桌面歌词窗口，支持 YRC 逐字高亮、频谱可视化和完整的视觉定制。
 
+在 TUI 主界面按 **`Ctrl+o`** 可实时开启或关闭桌面歌词，无需重启；状态会保存到
+`main.lyric.desktopLyrics.enable`，下次启动继续使用。即使启动时未启用，也可以直接按键开启。
+开启后在有歌词的播放状态下显示；暂停时遵循 `hideOnPause` 设置。关闭后再次开启会保留窗口位置。
+若配置保存失败，开关保持原状态并显示错误提示。
+
+可在配置文件的现有 `[keybindings.app]` 中自定义快捷键（修改按键后需重启）：
+
+```toml
+[keybindings.app]
+toggleDesktopLyrics = ["ctrl+o"]
+```
+
 #### 配置
 
 ```toml
@@ -629,6 +641,7 @@ musicfox upgrade-config
 | `actionOfSelected`                  | 对于选中项或当前播放的操作    | `m`                                          |
 | `actionOfPlayingSong`               | 对于当前播放的操作            | `M`                                          |
 | `switchTheme`                       | 切换主题样式                  | *(无，可通过右键菜单触发)*                      |
+| `toggleDesktopLyrics`               | 开关桌面歌词（仅 macOS，自动保存） | `Ctrl+o`                                     |
 | `toggleSortOrder`                   | 切换排序顺序（电台/播客列表） | `|`                                          |
 
 注意：

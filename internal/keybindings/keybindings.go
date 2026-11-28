@@ -118,6 +118,7 @@ const (
 	OpActionOfPlayingSong
 
 	OpSwitchTheme
+	OpToggleDesktopLyrics
 )
 
 var opNameToOperateMap = make(map[string]OperateType)
@@ -197,7 +198,8 @@ var keyBindingsRegistry = map[OperateType]OperationInfo{
 	OpActionOfSelected:    {name: "actionOfSelected", desc: "对于选中项或当前播放的操作"},
 	OpActionOfPlayingSong: {name: "actionOfPlayingSong", desc: "对于当前播放的操作"},
 
-	OpSwitchTheme: {name: "switchTheme", desc: "切换主题样式"},
+	OpSwitchTheme:         {name: "switchTheme", desc: "切换主题样式"},
+	OpToggleDesktopLyrics: {name: "toggleDesktopLyrics", desc: "开关桌面歌词（macOS）"},
 }
 
 // 默认操作 -> 快捷键数组映射
@@ -266,7 +268,8 @@ var defaultOtherOperateToKeys = map[OperateType][]string{
 	OpActionOfPlayingSong: {"M"},
 	OpToggleSortOrder:     {"|"},
 
-	OpSwitchTheme: {},
+	OpSwitchTheme:         {},
+	OpToggleDesktopLyrics: {"ctrl+o"},
 }
 
 var userOperateToKeys map[OperateType][]string

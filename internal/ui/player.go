@@ -708,8 +708,10 @@ func (p *Player) RenderTicker() model.Ticker {
 }
 
 func (p *Player) updateDesktopLyrics() {
-	dl := p.netease.DesktopLyrics()
-	if dl == nil {
+	p.netease.desktopLyricsMu.Lock()
+	defer p.netease.desktopLyricsMu.Unlock()
+	dl := p.netease.desktopLyrics
+	if dl == nil || !configs.AppConfig.Main.Lyric.DesktopLyrics.Enable {
 		return
 	}
 
@@ -734,6 +736,9 @@ func (p *Player) updateDesktopLyrics() {
 		}
 	case types.Paused:
 		if hasContent {
+			if !dl.IsVisible() {
+				dl.Show()
+			}
 			dl.Update(curLine, nextLine, currentIndex, currentTimeMs, false)
 		}
 	case types.Stopped:
