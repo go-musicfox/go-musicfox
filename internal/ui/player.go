@@ -319,10 +319,20 @@ func (p *Player) PlaySong(song structs.Song, direction PlayDirection) {
 }
 
 func (p *Player) StartPlay() {
-	if len(p.Playlist()) <= p.CurSongIndex() {
+	if index := p.CurSongIndex(); index < 0 || index >= len(p.Playlist()) {
 		return
 	}
 	p.PlaySong(p.CurSong(), DurationNext)
+}
+
+// SyncPlayingInfo pushes the current track and playback state to the system
+// remote control (MPRIS/Now Playing/SMTC). Call it after restoring the saved
+// playlist snapshot so the last song can be controlled right after startup.
+func (p *Player) SyncPlayingInfo() {
+	if p.stateHandler == nil {
+		return
+	}
+	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
 func (p *Player) Mode() types.Mode {
@@ -633,16 +643,36 @@ func (p *Player) SetVolume(volume int) {
 	p.stateHandler.SetPlayingInfo(p.PlayingInfo())
 }
 
+// resumeOrStart resumes when audio is already loaded; otherwise it starts the
+// current song from the beginning, which covers startup with a restored track.
+func (p *Player) resumeOrStart() {
+	if state := p.State(); state == types.Stopped || state == types.Unknown {
+		p.StartPlay()
+		return
+	}
+	p.Resume()
+}
+
+// toggleOrStart toggles play/pause when audio is loaded; otherwise it starts
+// the current song.
+func (p *Player) toggleOrStart() {
+	if state := p.State(); state == types.Stopped || state == types.Unknown {
+		p.StartPlay()
+		return
+	}
+	p.Toggle()
+}
+
 func (p *Player) handleControlSignal(signal CtrlSignal) {
 	switch signal.Type {
 	case CtrlPaused:
 		p.Pause()
 	case CtrlResume:
-		p.Resume()
+		p.resumeOrStart()
 	case CtrlStop:
 		p.Stop()
 	case CtrlToggle:
-		p.Toggle()
+		p.toggleOrStart()
 	case CtrlPrevious:
 		p.PreviousSong(true)
 	case CtrlNext:

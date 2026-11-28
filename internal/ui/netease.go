@@ -315,6 +315,11 @@ func (n *Netease) InitHook(_ *model.App) {
 			// 如果加载失败，记录错误但不影响启动
 			slog.Warn("Failed to load playlist state", slogx.Error(err))
 		}
+		// Sync the restored track to the system remote control so playback can
+		// be controlled after a silent startup without playing in-app first.
+		if n.player.CurSong().Id != 0 {
+			n.player.SyncPlayingInfo()
+		}
 		n.Rerender(false)
 
 		// 获取扩展信息
