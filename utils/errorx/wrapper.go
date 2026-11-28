@@ -63,23 +63,110 @@ func RunWrapped(app func()) {
 	os.Exit(exitErr.ExitCode())
 }
 
-// printWrapperCrashHint 打印崩溃提示：日志路径、日志尾部摘要与 issue 链接。
+// printWrapperCrashHint 打印崩溃提示：日志路径、崩溃现场（首个 panic/fatal/
+// signal 头及首个 goroutine）、寄存器尾部与 issue 链接。
 // 输出走 stdout/stderr（包装进程未被重定向），终端直接可见。
 func printWrapperCrashHint(code int) {
+	path := slogx.ResolveLogFilePath()
 	var b strings.Builder
 	fmt.Fprintf(&b, "\nmusicfox 异常退出（退出码 %d），可能发生了未预期的错误。\n\n", code)
-	fmt.Fprintf(&b, "错误详情已写入日志: %s\n", slogx.ResolveLogFilePath())
-	if tail := logTail(slogx.ResolveLogFilePath(), 8); len(tail) > 0 {
-		b.WriteString("\n日志尾部:\n")
-		for _, line := range tail {
+	fmt.Fprintf(&b, "错误详情已写入日志: %s\n", path)
+
+	head, reachedEOF := crashHead(path, 30)
+	if len(head) > 0 {
+		b.WriteString("\n日志崩溃现场:\n")
+		for _, line := range head {
 			fmt.Fprintf(&b, "  %s\n", line)
 		}
+		if !reachedEOF {
+			b.WriteString("  ...\n")
+		}
 	}
+	// 崩溃现场未覆盖日志末尾（或未能定位）时，补上寄存器等尾部信息。
+	if len(head) == 0 || !reachedEOF {
+		if tail := logTail(path, 8); len(tail) > 0 {
+			b.WriteString("\n日志尾部:\n")
+			for _, line := range tail {
+				fmt.Fprintf(&b, "  %s\n", line)
+			}
+		}
+	}
+
 	b.WriteString("\n请前往 GitHub 创建 Issue 反馈此问题，并附上上述日志文件:\n")
 	b.WriteString("https://github.com/go-musicfox/go-musicfox/issues/new?template=1_bug_report.yml\n")
 	fmt.Fprintf(&b, "\n版本: %s\n平台: %s/%s\n", appVersion(), runtime.GOOS, runtime.GOARCH)
 
 	_, _ = os.Stdout.WriteString(b.String())
+}
+
+// crashHeaderPrefixes 为 Go 运行时崩溃报告的强特征行首；优先按这些行定位
+// 当前崩溃报告的开头（panic/fatal error/signal），而非只看日志尾部寄存器。
+var crashHeaderPrefixes = []string{
+	"panic: ",
+	"fatal error: ",
+	"SIGSEGV:",
+	"SIGBUS:",
+	"SIGILL:",
+	"SIGFPE:",
+	"SIGABRT:",
+	"SIGTRAP:",
+	"SIGQUIT:",
+}
+
+// weakCrashHeaderPrefixes 仅在未找到强特征行时兜底，例如 runtime throw。
+var weakCrashHeaderPrefixes = []string{
+	"runtime: ",
+}
+
+// crashHead 返回日志中最后一次崩溃报告的开头 maxLines 行，覆盖崩溃头与首个
+// goroutine，reachedEOF 表示这些行是否已覆盖到文件末尾。
+func crashHead(path string, maxLines int) (lines []string, reachedEOF bool) {
+	if maxLines <= 0 {
+		return nil, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil || len(data) == 0 {
+		return nil, false
+	}
+	text := string(data)
+	start := lastHeaderOffset(text, crashHeaderPrefixes)
+	if start < 0 {
+		start = lastHeaderOffset(text, weakCrashHeaderPrefixes)
+	}
+	if start < 0 {
+		return nil, false
+	}
+
+	pos := start
+	for pos < len(text) && len(lines) < maxLines {
+		var line string
+		if nl := strings.IndexByte(text[pos:], '\n'); nl < 0 {
+			line = text[pos:]
+			pos = len(text)
+		} else {
+			line = text[pos : pos+nl]
+			pos += nl + 1
+		}
+		lines = append(lines, line)
+	}
+	return lines, pos >= len(text)
+}
+
+// lastHeaderOffset 返回 text 中最后一个以任一 prefix 开头（且位于行首）的
+// 子串起始偏移；未找到返回 -1。
+func lastHeaderOffset(text string, prefixes []string) int {
+	best := -1
+	for _, prefix := range prefixes {
+		if idx := strings.LastIndex(text, "\n"+prefix); idx >= 0 {
+			if idx+1 > best {
+				best = idx + 1
+			}
+		}
+		if strings.HasPrefix(text, prefix) && best < 0 {
+			best = 0
+		}
+	}
+	return best
 }
 
 // logTail 返回日志文件末尾最多 n 个非空行，用于提示中展示崩溃摘要。
