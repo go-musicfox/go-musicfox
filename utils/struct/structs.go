@@ -1,6 +1,7 @@
 package _struct
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/buger/jsonparser"
@@ -94,12 +95,33 @@ func GetRecentSongs(data []byte) (list []structs.Song) {
 
 // GetDailyPlaylists 获取每日推荐歌单
 func GetDailyPlaylists(data []byte) (list []structs.Playlist) {
-
-	_, _ = jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		if playlist, err := structs.NewPlaylistFromJson(value); err == nil {
-			list = append(list, playlist)
+	if !json.Valid(data) {
+		return
+	}
+	seen := make(map[int64]bool)
+	_, _ = jsonparser.ArrayEach(data, func(block []byte, _ jsonparser.ValueType, _ int, _ error) {
+		positionCode, _ := jsonparser.GetString(block, "positionCode")
+		if positionCode != "PAGE_RECOMMEND_SPECIAL_CLOUD_VILLAGE_PLAYLIST" {
+			return
 		}
-	}, "recommend")
+		_, _ = jsonparser.ArrayEach(block, func(resource []byte, _ jsonparser.ValueType, _ int, _ error) {
+			resourceType, _ := jsonparser.GetString(resource, "resourceType")
+			if resourceType != "playList" {
+				return
+			}
+			rawID, idType, _, _ := jsonparser.Get(resource, "resourceId")
+			if idType != jsonparser.String && idType != jsonparser.Number {
+				return
+			}
+			id, err := jsonparser.ParseInt(rawID)
+			name, _ := jsonparser.GetString(resource, "title")
+			if err != nil || id <= 0 || strings.TrimSpace(name) == "" || seen[id] {
+				return
+			}
+			seen[id] = true
+			list = append(list, structs.Playlist{Id: id, Name: name})
+		}, "dslData", "blockResource", "resources")
+	}, "data", "blocks")
 
 	return
 }

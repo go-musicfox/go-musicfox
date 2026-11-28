@@ -3,6 +3,7 @@ package ui
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/anhoder/foxful-cli/model"
@@ -155,8 +156,11 @@ func handleGenericContextAction(n *Netease, a *model.App, id string) (model.Page
 	main := a.MustMain()
 	switch id {
 	case "generic:refresh":
+		if menu, ok := main.CurMenu().(*DailyRecommendPlaylistsMenu); ok {
+			menu.fetchTime = time.Time{}
+		}
 		main.RefreshMenuWithLoading()
-		return nil, nil
+		return nil, a.RerenderCmd(true)
 	case "generic:toggle":
 		n.player.Toggle()
 		return nil, a.RerenderCmd(true)
